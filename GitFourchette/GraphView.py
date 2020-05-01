@@ -1,6 +1,6 @@
-from PySide2.QtCore import QAbstractItemModel, QModelIndex
-from PySide2.QtGui import Qt, QStandardItemModel, QStandardItem, QMouseEvent
-from PySide2.QtWidgets import QListView, QAbstractItemView, QMessageBox
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 import git
 
 import GraphDelegate
@@ -16,16 +16,36 @@ class GraphView(QListView):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
         self.setItemDelegate(GraphDelegate.GraphDelegate())
 
-    def fill(self, repo: git.Repo):
+    def fill(self, repo: git.Repo, progress: QProgressDialog):
         #model: QAbstractItemModel = self.model() ; model.clear()
         # Recreating a model on the fly is faster than clearing an existing one?
         model = QStandardItemModel()
-        model.appendRow(QStandardItem("*** UNCOMMITTED CHANGES ***"))
-        for commit in repo.iter_commits(repo.active_branch, max_count=999000):
+
+        pendingRow = QStandardItem("\tUncommitted Changes")
+        pendingRowFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont) #does this return a copy, though?
+        pendingRowFont.setItalic(True)
+        pendingRow.setFont(pendingRowFont)
+        model.appendRow(pendingRow)
+
+        i = 0
+        for commit in repo.iter_commits(repo.active_branch):#, max_count=999000):
+            if i != 0 and i % 1000 == 0:
+                progress.setLabelText(F"{i:,} commits loaded.")
+                QCoreApplication.processEvents()
+            if progress.wasCanceled():
+                raise Exception("Canceled!")
+            i += 1
             item = QStandardItem()
             item.setData(commit, Qt.DisplayRole)
             model.appendRow(item)
+        progress.setLabelText(F"{i:,} commits total.")
+        #progress.setCancelButton(None)
+        #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
+        #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
+        QCoreApplication.processEvents()
         self.setModel(model)
+        self.repaint()
+        QCoreApplication.processEvents()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if not self.currentIndex().isValid():

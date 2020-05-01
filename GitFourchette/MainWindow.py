@@ -4,6 +4,9 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import globals
 import os
+import traceback
+import psutil
+import gc
 
 from pathlib import Path
 
@@ -36,9 +39,15 @@ class MainWindow(QWidget):
 
         menubar = QMenuBar()
         fileMenu = menubar.addMenu("&File")
+        repoMenu = menubar.addMenu("&Repo")
         self.createFileMenu(fileMenu)
+        self.createRepoMenu(repoMenu)
 
         helpMenu = menubar.addMenu("&Help")
+        helpMenu.addAction("GC", lambda: gc.collect())
+        helpMenu.addAction("Memory", lambda: QMessageBox.about(
+            self, F"Memory usage", F"Memory: {psutil.Process(os.getpid()).memory_info().rss:,}"
+        ))
         helpMenu.addAction(F"About {globals.PROGRAM_NAME}", lambda: QMessageBox.about(
             self, F"About {globals.PROGRAM_NAME}", globals.PROGRAM_ABOUT))
         helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
@@ -89,40 +98,59 @@ class MainWindow(QWidget):
             QKeySequence.Quit)
 
     def createRepoMenu(self, m: QMenu):
+        m.clear()
+        m.addAction("Rename...", lambda: self.renameRepo())
+
+    def renameRepo(self):
+        text, ok = QInputDialog().getText(
+            self,
+            "Rename repo", "Enter new nickname for repo:",
+            QLineEdit.Normal,
+            globals.getRepoNickname(self.state.dir)
+        )
+        if ok:
+            globals.setRepoNickname(self.state.dir, text)
+
+    def unready(self):
+        return LockContext(self)
+
     def setRepo(self, gitRepoDirPath):
-        self.ready = False
-        oldState = self.state
-        try:
-            self.state = None # for isReady
-            print("Loading state...")
-            self.state = RepoState(gitRepoDirPath)
-            globals.addRepoToHistory(gitRepoDirPath)
-            print("OK. " + str(self.state.repo))
-            print(self.state.repo.active_branch)
-            print("Fill GV...")
-            self.graphView.fill(self.state.repo)
-            print("Done.")
-            shortname = os.path.basename(self.state.repo.working_tree_dir)
-            #shortpath = self.state.repo.working_tree_dir
-            #from pathlib import Path
-            #if shortpath.startswith(str(Path.home())):
-            #    shortpath = "~" + shortpath[len(str(Path.home())):]
-            self.setWindowTitle(F"{shortname} [{self.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
-        except git.exc.InvalidGitRepositoryError as e:
-            self.state = oldState
-            print(e)
-            QMessageBox.warning(
-                self,
-                "Invalid repository",
-                F"This directory does not appear to be a valid git repository:\n{gitRepoDirPath}")
-        except BaseException as e:
-            self.state = oldState
-            print(e)
-            QMessageBox.critical(
-                self,
-                "Error",
-                "Exception thrown while opening repository:\n\n" + str(e))
-        self.ready = True
+        with self.unready():
+            shortname = globals.getRepoNickname(gitRepoDirPath)
+            progress = QProgressDialog("Opening repository...", "Abort", 0, 0, self)
+            progress.setWindowModality(Qt.WindowModal)
+            progress.setWindowTitle(shortname)
+            progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+            progress.setMinimumWidth(2 * progress.fontMetrics().width("000,000,000 commits loaded."))
+            QCoreApplication.processEvents()
+            progress.show()
+            QCoreApplication.processEvents()
+            #import time; time.sleep(3)
+
+            oldState = self.state
+            self.state = None  # for isReady
+            try:
+                self.state = RepoState(gitRepoDirPath)
+                globals.addRepoToHistory(gitRepoDirPath)
+                self.graphView.fill(self.state.repo, progress)
+                self.setWindowTitle(F"{shortname} [{self.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
+                progress.close()
+            except git.exc.InvalidGitRepositoryError as e:
+                progress.close()
+                self.state = oldState
+                print(traceback.format_exc())
+                QMessageBox.warning(
+                    self,
+                    "Invalid repository",
+                    F"This directory does not appear to be a valid git repository:\n{gitRepoDirPath}")
+            except BaseException as e:
+                progress.close()
+                self.state = oldState
+                print(traceback.format_exc())
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    "Exception thrown while opening repository:\n\n" + str(e))
 
     def isReady(self):
         return self.ready and self.state != None
@@ -137,7 +165,17 @@ class MainWindow(QWidget):
         # Write window size and position to config file
         globals.appSettings.setValue("MainWindow/size", self.size())
         globals.appSettings.setValue("MainWindow/position", self.pos())
-
-        globals.appSettings.setValue("repos", [self.state.dir, "test"])
-
         e.accept()
+
+
+class LockContext(object):
+    w: MainWindow
+
+    def __init__(self, w):
+        self.w = w
+
+    def __enter__(self):
+        self.w.ready = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.w.ready = True

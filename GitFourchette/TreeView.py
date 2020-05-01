@@ -16,8 +16,9 @@ class TreeView(QListView):
         self.setIconSize(QSize(16, 16))
 
     def clear(self):
-        self.model().clear()
-        self.rowstuff = []
+        with self.uindo.unready():
+            self.model().clear()
+            self.rowstuff = []
 
     def fill(self, diff, untracked_files=[], clr=True):
         if clr:

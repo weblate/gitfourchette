@@ -62,3 +62,11 @@ def addRepoToHistory(repoDir):
     appSettings.endArray()
 
 
+def getRepoNickname(repoDir):
+    key = repoDir.replace('/', '.')
+    return appSettings.value("RepoNicknames/" + key, None) or os.path.basename(repoDir)
+
+
+def setRepoNickname(repoDir, nickname):
+    key = repoDir.replace('/', '.')
+    appSettings.setValue("RepoNicknames/" + key, nickname)
