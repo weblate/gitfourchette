@@ -9,26 +9,29 @@ import globals
 class TreeView(QListView):
     rowstuff = []
 
-    def __init__(self, parent:MainWindow.MainWindow=None):
+    def __init__(self, parent: MainWindow.MainWindow):
         super(__class__, self).__init__(parent)
         self.uindo = parent
         self.setModel(QStandardItemModel())
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setIconSize(QSize(16, 16))
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevent editing text after double-clicking
 
     def clear(self):
         with self.uindo.unready():
             self.model().clear()
             self.rowstuff = []
 
-    def fill(self, diff, untracked_files=[], clr=True):
-        if clr:
-            self.clear()
-        model:QStandardItemModel = self.model()
+    def fillDiff(self, diff):
+        model: QStandardItemModel = self.model()
         for f in diff:
             self.rowstuff.append(f)
             item = QStandardItem(f.a_path)
             item.setIcon(globals.statusIcons[f.change_type])
             model.appendRow(item)
+
+    def fillUntracked(self, untracked_files):
+        model: QStandardItemModel = self.model()
         for f in untracked_files:
             self.rowstuff.append(f)
             item = QStandardItem(F"🅄 {f}")

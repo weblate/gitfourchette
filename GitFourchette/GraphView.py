@@ -68,10 +68,11 @@ COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
 
         if current.row() == 0:
             self.uindo.treeView.clear()
-            self.uindo.treeView.fill(self.uindo.state.index.diff(None), self.uindo.state.repo.untracked_files)
+            self.uindo.treeView.fillDiff(self.uindo.state.index.diff(None))
+            self.uindo.treeView.fillUntracked(self.uindo.state.repo.untracked_files)
             return
 
         commit: git.Commit = current.data()
         self.uindo.treeView.clear()
         for parent in commit.parents:
-            self.uindo.treeView.fill(parent.diff(commit), clr=False)
+            self.uindo.treeView.fillDiff(parent.diff(commit))
