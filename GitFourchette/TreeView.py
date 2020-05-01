@@ -47,5 +47,5 @@ class TreeView(QListView):
             self.uindo.diffView.setDiffContents(self.uindo.state.repo, change)
         except BaseException as ex:
             import traceback
-            self.uindo.diffView.setShittyContents("Error\n" + "".join(traceback.TracebackException.from_exception(ex).format()))
+            self.uindo.diffView.setFailureContents("Error\n" + "".join(traceback.TracebackException.from_exception(ex).format()))
         QApplication.restoreOverrideCursor()
