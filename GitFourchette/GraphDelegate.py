@@ -1,6 +1,7 @@
 from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 from PySide2.QtCore import *
+import globals
 
 
 ColW_Author = 18
@@ -23,7 +24,7 @@ class GraphDelegate(QItemDelegate):
         data = {
             'hash': commit.hexsha[:7],
             'author': commit.author.email.split('@')[0],  # [:8],
-            'date': commit.authored_datetime.strftime("%d-%m-%y %H:%M"),
+            'date': commit.authored_datetime.strftime(globals.graphViewTimeFormat),
             'message': commit.message.split('\n')[0] or "¯\\_(ツ)_/¯"
         }
         painter.save()

@@ -22,3 +22,8 @@ monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
 appSettings = QSettings('GitFourchette', 'GitFourchette')
 
 SK_LAST_OPEN = "last_open"
+
+
+graphViewTimeFormat = appSettings.value("GraphView/TimeFormat", "%d-%m-%y %H:%M")
+appSettings.setValue("GraphView/TimeFormat", graphViewTimeFormat)
+
