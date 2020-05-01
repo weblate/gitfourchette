@@ -53,26 +53,45 @@ class MainWindow(QWidget):
         helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
 
         self.graphView = GraphView.GraphView(self)
-        self.treeView = TreeView.TreeView(self)
+        self.filesStack = QStackedWidget()
         self.diffView = DiffView.DiffView(self)
+        self.changedFilesView = TreeView.TreeView(self)
+        self.unstagedFilesView = TreeView.TreeView(self)
+        self.stagedFilesView = TreeView.TreeView(self)
 
-        vbox = QVBoxLayout()
-        vbox.setSpacing(0)
-        vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(menubar)
-        vsplitter = QSplitter(Qt.Vertical)
-        vbox.addWidget(vsplitter)
-        vsplitter.addWidget(self.graphView)
-        hsplitter = QSplitter(Qt.Horizontal)
-        vsplitter.addWidget(hsplitter)
-        hsplitter.addWidget(self.treeView)
-        hsplitter.addWidget(self.diffView)
-        vsplitter.setSizes([100, 150])
-        hsplitter.setSizes([100, 300])
+        windowVBox = QVBoxLayout()
+        windowVBox.setSpacing(0)
+        windowVBox.setContentsMargins(0, 0, 0, 0)
+        windowVBox.addWidget(menubar)
+
+        stageSplitter = QSplitter(Qt.Vertical)
+        stageSplitter.setHandleWidth(globals.splitterHandleWidth)
+        stageSplitter.addWidget(self.unstagedFilesView)
+        stageSplitter.addWidget(self.stagedFilesView)
+
+        self.filesStack.addWidget(self.changedFilesView)
+        self.filesStack.addWidget(stageSplitter)
+        self.filesStack.setCurrentIndex(0)
+
+        bottomSplitter = QSplitter(Qt.Horizontal)
+        bottomSplitter.setHandleWidth(globals.splitterHandleWidth)
+        bottomSplitter.addWidget(self.filesStack)
+        bottomSplitter.addWidget(self.diffView)
+
+        bottomSplitter.setSizes([100, 300])
+
+        mainSplitter = QSplitter(Qt.Vertical)
+        mainSplitter.setHandleWidth(globals.splitterHandleWidth)
+        mainSplitter.addWidget(self.graphView)
+        mainSplitter.addWidget(bottomSplitter)
+        mainSplitter.setSizes([100, 150])
+
+        windowVBox.addWidget(mainSplitter)
+
         self.setWindowTitle(globals.PROGRAM_NAME)
 
         self.setWindowIcon(QIcon("icons/logo.svg"))
-        self.setLayout(vbox)
+        self.setLayout(windowVBox)
 
         self.ready = True
 

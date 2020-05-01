@@ -34,8 +34,17 @@ appSettings = QSettings('GitFourchette', 'GitFourchette')
 SK_LAST_OPEN = "last_open"
 
 
-graphViewTimeFormat = appSettings.value("GraphView/TimeFormat", "%d-%m-%y %H:%M")
-appSettings.setValue("GraphView/TimeFormat", graphViewTimeFormat)
+
+def getValueAndWriteDefault(key, defaultValue):
+    if appSettings.contains(key):
+        return appSettings.value(key, defaultValue)
+    else:
+        appSettings.setValue(key, defaultValue)
+        return defaultValue
+
+
+graphViewTimeFormat = getValueAndWriteDefault("GraphView/TimeFormat", "%d-%m-%y %H:%M")
+splitterHandleWidth = int(getValueAndWriteDefault("SplitterHandleWidth", -1))
 
 
 def getRepoHistory() -> List[str]:
