@@ -52,3 +52,40 @@ class TreeView(QListView):
             import traceback
             self.uindo.diffView.setFailureContents("Error\n" + "".join(traceback.TracebackException.from_exception(ex).format()))
         QApplication.restoreOverrideCursor()
+
+
+class UnstagedView(TreeView):
+    def __init__(self, parent: MainWindow.MainWindow):
+        super(__class__, self).__init__(parent)
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+
+        action = QAction("Stage", self)
+        action.triggered.connect(self.stage)
+        self.addAction(action)
+
+    def stage(self):
+        git = self.uindo.state.repo.git
+        for si in self.selectedIndexes():
+            change = self.rowstuff[si.row()]
+            print(F"Staging: {change.a_path}")
+            git.add(change.a_path)
+            #self.uindo.state.index.add(change.a_path) # <- also works at first... but might add too many things after repeated staging/unstaging??
+        self.uindo.fillStageView()
+
+
+class StagedView(TreeView):
+    def __init__(self, parent: MainWindow.MainWindow):
+        super(__class__, self).__init__(parent)
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+
+        action = QAction("UnStage", self)
+        action.triggered.connect(self.unstage)
+        self.addAction(action)
+
+    def unstage(self):
+        git = self.uindo.state.repo.git
+        for si in self.selectedIndexes():
+            change = self.rowstuff[si.row()]
+            print(F"UnStaging: {change.a_path}")
+            git.restore(change.a_path, staged=True)
+        self.uindo.fillStageView()

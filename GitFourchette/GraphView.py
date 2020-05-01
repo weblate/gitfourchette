@@ -67,11 +67,7 @@ COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
         if not current.isValid(): return
 
         if current.row() == 0:
-            self.uindo.unstagedFilesView.clear()
-            self.uindo.unstagedFilesView.fillDiff(self.uindo.state.index.diff(None))
-            self.uindo.unstagedFilesView.fillUntracked(self.uindo.state.repo.untracked_files)
-            self.uindo.stagedFilesView.clear()
-            self.uindo.filesStack.setCurrentIndex(1)
+            self.uindo.fillStageView()
             return
 
         commit: git.Commit = current.data()

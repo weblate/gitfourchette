@@ -19,6 +19,10 @@ def compactPath(path: str) -> str:
 
 
 class RepoState:
+    dir: str
+    repo: git.Repo
+    index: git.IndexFile
+
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
         self.repo = git.Repo(dir)
@@ -26,6 +30,8 @@ class RepoState:
 
 
 class MainWindow(QWidget):
+    state: RepoState
+
     def __init__(self):
         super(__class__, self).__init__()
 
@@ -56,8 +62,8 @@ class MainWindow(QWidget):
         self.filesStack = QStackedWidget()
         self.diffView = DiffView.DiffView(self)
         self.changedFilesView = TreeView.TreeView(self)
-        self.unstagedFilesView = TreeView.TreeView(self)
-        self.stagedFilesView = TreeView.TreeView(self)
+        self.unstagedFilesView = TreeView.UnstagedView(self)
+        self.stagedFilesView = TreeView.StagedView(self)
 
         windowVBox = QVBoxLayout()
         windowVBox.setSpacing(0)
@@ -185,6 +191,15 @@ class MainWindow(QWidget):
         globals.appSettings.setValue("MainWindow/size", self.size())
         globals.appSettings.setValue("MainWindow/position", self.pos())
         e.accept()
+
+    def fillStageView(self):
+        with self.unready():
+            self.unstagedFilesView.clear()
+            self.unstagedFilesView.fillDiff(self.state.index.diff(None))
+            self.unstagedFilesView.fillUntracked(self.state.repo.untracked_files)
+            self.stagedFilesView.clear()
+            self.stagedFilesView.fillDiff(self.state.index.diff(self.state.repo.head.commit))
+            self.filesStack.setCurrentIndex(1)
 
 
 class LockContext(object):
