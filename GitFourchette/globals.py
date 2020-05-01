@@ -1,7 +1,9 @@
+from typing import List
 from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 from PySide2.QtCore import *
 import git
+import os
 
 TAB_SPACES = 4
 
@@ -27,9 +29,36 @@ for status in "ACDMRTUX":
 
 appSettings = QSettings('GitFourchette', 'GitFourchette')
 
+
+# for open dialog
 SK_LAST_OPEN = "last_open"
 
 
 graphViewTimeFormat = appSettings.value("GraphView/TimeFormat", "%d-%m-%y %H:%M")
 appSettings.setValue("GraphView/TimeFormat", graphViewTimeFormat)
+
+
+def getRepoHistory() -> List[str]:
+    history : List[str] = []
+    size = appSettings.beginReadArray("RepoHistory")
+    for i in range(0, size):
+        appSettings.setArrayIndex(i)
+        history.append(str(appSettings.value("Path")))
+    appSettings.endArray()
+    return history
+
+
+def addRepoToHistory(repoDir):
+    history: List[str] = getRepoHistory()
+    try:
+        history.remove(repoDir)
+    except ValueError:
+        pass
+    history.insert(0, repoDir)
+    appSettings.beginWriteArray("RepoHistory", len(history))
+    for i, value in enumerate(history):
+        appSettings.setArrayIndex(i)
+        appSettings.setValue("Path", value)
+    appSettings.endArray()
+
 

@@ -5,6 +5,15 @@ from PySide2.QtWidgets import *
 import globals
 import os
 
+from pathlib import Path
+
+
+def compactPath(path: str) -> str:
+    home = str(Path.home())
+    if path.startswith(str(home)):
+        path = "~" + path[len(home):]
+    return path
+
 
 class RepoState:
     def __init__(self, dir):
@@ -27,9 +36,7 @@ class MainWindow(QWidget):
 
         menubar = QMenuBar()
         fileMenu = menubar.addMenu("&File")
-        fileMenu.addAction("Open", lambda: self.open())
-        fileMenu.addSeparator()
-        fileMenu.addAction("Quit", lambda: self.close())
+        self.createFileMenu(fileMenu)
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {globals.PROGRAM_NAME}", lambda: QMessageBox.about(
@@ -60,6 +67,28 @@ class MainWindow(QWidget):
 
         self.ready = True
 
+    def createFileMenu(self, m: QMenu):
+        m.clear()
+
+        m.addAction(
+            "&Open",
+            lambda: self.open(),
+            QKeySequence.Open)
+
+        recentMenu = m.addMenu("Open &Recent")
+        for historic in globals.getRepoHistory():
+            recentMenu.addAction(
+                F"{globals.getRepoNickname(historic)} [{compactPath(historic)}]",
+                lambda h=historic: self.setRepo(h))
+
+        m.addSeparator()
+
+        m.addAction(
+            "&Quit",
+            lambda: self.close(),
+            QKeySequence.Quit)
+
+    def createRepoMenu(self, m: QMenu):
     def setRepo(self, gitRepoDirPath):
         self.ready = False
         oldState = self.state
@@ -67,6 +96,7 @@ class MainWindow(QWidget):
             self.state = None # for isReady
             print("Loading state...")
             self.state = RepoState(gitRepoDirPath)
+            globals.addRepoToHistory(gitRepoDirPath)
             print("OK. " + str(self.state.repo))
             print(self.state.repo.active_branch)
             print("Fill GV...")
