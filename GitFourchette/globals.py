@@ -19,6 +19,12 @@ This is my git frontend.<br>There are many like it but this one is mine.
 
 monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
 
+
+statusIcons = {}
+for status in "ACDMRTUX":
+    statusIcons[status] = QIcon(F"icons/status_{status.lower()}.svg")
+
+
 appSettings = QSettings('GitFourchette', 'GitFourchette')
 
 SK_LAST_OPEN = "last_open"

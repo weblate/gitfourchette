@@ -3,6 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 import MainWindow
+import globals
 
 
 class TreeView(QListView):
@@ -12,6 +13,7 @@ class TreeView(QListView):
         super(__class__, self).__init__(parent)
         self.uindo = parent
         self.setModel(QStandardItemModel())
+        self.setIconSize(QSize(16, 16))
 
     def clear(self):
         self.model().clear()
@@ -23,11 +25,8 @@ class TreeView(QListView):
         model:QStandardItemModel = self.model()
         for f in diff:
             self.rowstuff.append(f)
-            #shitty = chr(ord('🄰') + ord(f.change_type[0]) - ord('A'))
-            #item = QStandardItem(F"{shitty} {f.a_path}")
             item = QStandardItem(f.a_path)
-            item.setIcon(QIcon(F"icons/status_{f.change_type[0].lower()}.svg"))
-            self.setIconSize(QSize(16,16))
+            item.setIcon(globals.statusIcons[f.change_type])
             model.appendRow(item)
         for f in untracked_files:
             self.rowstuff.append(f)
