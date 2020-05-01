@@ -12,7 +12,11 @@ if __name__ == "__main__":
 
     import MainWindow
     window = MainWindow.MainWindow()
-    #window.setRepo("../dcmv")
     window.show()
+
+    import globals
+    history = globals.getRepoHistory()
+    if len(history) > 0:
+        window.setRepo(history[0])
 
     app.exec_()
