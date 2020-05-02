@@ -34,7 +34,8 @@ class TreeView(QListView):
         model: QStandardItemModel = self.model()
         for f in untracked_files:
             self.rowstuff.append(f)
-            item = QStandardItem(F"🅄 {f}")
+            item = QStandardItem(f + " (untracked)")
+            item.setIcon(globals.statusIcons['A'])
             model.appendRow(item)
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
