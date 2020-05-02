@@ -5,11 +5,10 @@ from PySide2.QtWidgets import *
 import globals
 import os
 import traceback
-import psutil
-import gc
-
 from pathlib import Path
 
+def splural(n: int) -> str:
+    return '' if n == 1 else 's'
 
 def compactPath(path: str) -> str:
     home = str(Path.home())
@@ -22,14 +21,17 @@ class RepoState:
     dir: str
     repo: git.Repo
     index: git.IndexFile
+    settings: QSettings
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
         self.repo = git.Repo(dir)
         self.index = self.repo.index
+        self.settings = QSettings(self.repo.common_dir + "/fourchette.ini", QSettings.Format.IniFormat)
+        self.settings.setValue("GitFourchette", globals.VERSION)
 
 
-class MainWindow(QWidget):
+class MainWindow(QMainWindow):
     state: RepoState
 
     def __init__(self):
@@ -50,30 +52,46 @@ class MainWindow(QWidget):
         self.createRepoMenu(repoMenu)
 
         helpMenu = menubar.addMenu("&Help")
-        helpMenu.addAction("GC", lambda: gc.collect())
-        helpMenu.addAction("Memory", lambda: QMessageBox.about(
-            self, F"Memory usage", F"Memory: {psutil.Process(os.getpid()).memory_info().rss:,}"
-        ))
-        helpMenu.addAction(F"About {globals.PROGRAM_NAME}", lambda: QMessageBox.about(
-            self, F"About {globals.PROGRAM_NAME}", globals.PROGRAM_ABOUT))
-        helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
+        helpMenu.addAction(F"About {globals.PROGRAM_NAME}", self.about)
+        helpMenu.addAction("About Qt", QMessageBox.aboutQt)
+        helpMenu.addSeparator()
+        helpMenu.addAction("Memory", self.memInfo)
 
         self.graphView = GraphView.GraphView(self)
         self.filesStack = QStackedWidget()
         self.diffView = DiffView.DiffView(self)
         self.changedFilesView = TreeView.TreeView(self)
-        self.unstagedFilesView = TreeView.UnstagedView(self)
-        self.stagedFilesView = TreeView.StagedView(self)
+        self.dirtyView = TreeView.UnstagedView(self)
+        self.stageView = TreeView.StagedView(self)
+
+        self.setMenuBar(menubar)
+        centralWidget = QWidget()
 
         windowVBox = QVBoxLayout()
-        windowVBox.setSpacing(0)
-        windowVBox.setContentsMargins(0, 0, 0, 0)
-        windowVBox.addWidget(menubar)
+        centralWidget.setLayout(windowVBox)
+        # windowVBox.setSpacing(0)
+        # windowVBox.setContentsMargins(0, 0, 0, 0)
 
+        self.dirtyLabel = QLabel("Dirty Files")
+        self.stageLabel = QLabel("Files Staged For Commit")
+
+        dirtyContainer = QWidget()
+        dirtyContainer.setLayout(QVBoxLayout())
+        dirtyContainer.layout().setContentsMargins(0,0,0,0)
+        dirtyContainer.layout().addWidget(self.dirtyLabel)
+        dirtyContainer.layout().addWidget(self.dirtyView)
+        stageContainer = QWidget()
+        stageContainer.setLayout(QVBoxLayout())
+        stageContainer.layout().setContentsMargins(0, 0, 0, 0)
+        stageContainer.layout().addWidget(self.stageLabel)
+        stageContainer.layout().addWidget(self.stageView)
+        commitButton = QPushButton("Commit")
+        commitButton.clicked.connect(self.commitFlow)
+        stageContainer.layout().addWidget(commitButton)
         stageSplitter = QSplitter(Qt.Vertical)
         stageSplitter.setHandleWidth(globals.splitterHandleWidth)
-        stageSplitter.addWidget(self.unstagedFilesView)
-        stageSplitter.addWidget(self.stagedFilesView)
+        stageSplitter.addWidget(dirtyContainer)
+        stageSplitter.addWidget(stageContainer)
 
         self.filesStack.addWidget(self.changedFilesView)
         self.filesStack.addWidget(stageSplitter)
@@ -92,14 +110,49 @@ class MainWindow(QWidget):
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
 
+        self.stageSplitter = stageSplitter
+        self.bottomSplitter = bottomSplitter
+        self.mainSplitter = mainSplitter
+
         windowVBox.addWidget(mainSplitter)
+
+        mainSplitter.setObjectName("MainSplitter")
+        bottomSplitter.setObjectName("BottomSplitter")
+        stageSplitter.setObjectName("StageSplitter")
+        self.splittersToSave = [mainSplitter, bottomSplitter, stageSplitter]
+        for sts in self.splittersToSave:
+            k = F"Splitters/{sts.objectName()}"
+            if globals.appSettings.contains(k):
+                sts.restoreState(globals.appSettings.value(k))
 
         self.setWindowTitle(globals.PROGRAM_NAME)
 
-        self.setWindowIcon(QIcon("icons/logo.svg"))
-        self.setLayout(windowVBox)
+        self.setWindowIcon(QIcon("Junk/gf2.png"))
+        self.setCentralWidget(centralWidget)
 
         self.ready = True
+
+    def about(self):
+        import sys, PySide2
+        about_text = F"""\
+        <h2>{globals.PROGRAM_NAME} {globals.VERSION}</h2>
+        <p><small>
+        {git.Git().version()}<br>
+        Python {sys.version}<br>
+        GitPython {git.__version__}<br>
+        Qt {PySide2.QtCore.__version__}<br>
+        PySide2 {PySide2.__version__}
+        </small></p>
+        <p>
+        This is my git frontend.<br>There are many like it but this one is mine.
+        </p>
+        """
+        QMessageBox.about(self, F"About {globals.PROGRAM_NAME}", about_text)
+
+    def memInfo(self):
+        import psutil, gc
+        gc.collect()
+        QMessageBox.information(self, F"Memory usage", F"{psutil.Process(os.getpid()).memory_info().rss:,}")
 
     def createFileMenu(self, m: QMenu):
         m.clear()
@@ -190,16 +243,41 @@ class MainWindow(QWidget):
         # Write window size and position to config file
         globals.appSettings.setValue("MainWindow/size", self.size())
         globals.appSettings.setValue("MainWindow/position", self.pos())
+        for sts in self.splittersToSave:
+            globals.appSettings.setValue(F"Splitters/{sts.objectName()}", sts.saveState())
         e.accept()
 
     def fillStageView(self):
         with self.unready():
-            self.unstagedFilesView.clear()
-            self.unstagedFilesView.fillDiff(self.state.index.diff(None))
-            self.unstagedFilesView.fillUntracked(self.state.repo.untracked_files)
-            self.stagedFilesView.clear()
-            self.stagedFilesView.fillDiff(self.state.index.diff(self.state.repo.head.commit))
+            self.dirtyView.clear()
+            self.dirtyView.fillDiff(self.state.index.diff(None))
+            self.dirtyView.fillUntracked(self.state.repo.untracked_files)
+            self.stageView.clear()
+            self.stageView.fillDiff(self.state.index.diff(self.state.repo.head.commit, R=True)) # R: prevent reversal
+
+            nDirty = self.dirtyView.model().rowCount()
+            nStaged = self.stageView.model().rowCount()
+            self.dirtyLabel.setText(F"{nDirty} dirty file{splural(nDirty)}:")
+            self.stageLabel.setText(F"{nStaged} file{splural(nStaged)} staged for commit:")
+
             self.filesStack.setCurrentIndex(1)
+
+    def commitFlow(self):
+        kDRAFT = "DraftMessage"
+        dlg = QInputDialog(self)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setWindowTitle("Commit")
+        # absurdly-long label text because setMinimumWidth has no effect - we should probably make a custom dialog instead
+        dlg.setLabelText("Enter commit message:                                                      ")
+        dlg.setTextValue(self.state.settings.value(kDRAFT, ""))
+        dlg.setOkButtonText("Commit")
+        rc = dlg.exec_()
+        message = dlg.textValue()
+        if rc == QDialog.DialogCode.Accepted:
+            self.state.settings.remove(kDRAFT)
+            self.state.index.commit(message)
+        else:
+            self.state.settings.setValue(kDRAFT, message)
 
 
 class LockContext(object):
