@@ -20,7 +20,11 @@ This is my git frontend.<br>There are many like it but this one is mine.
 """
 
 monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+monoFont.setPointSize(9)
+monoFontMetrics = QFontMetrics(monoFont)
 
+alternateFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
+alternateFont.setItalic(True)
 
 statusIcons = {}
 for status in "ACDMRTUX":

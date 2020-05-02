@@ -5,27 +5,33 @@ import difflib
 
 import globals
 
-contextFormat = QTextBlockFormat()
+normalBF = QTextBlockFormat()
+normalCF = QTextCharFormat()
+normalCF.setFont(globals.monoFont)
 
-plusFormat = QTextBlockFormat()
-plusFormat.setBackground(QColor(220, 254, 225))
+plusBF = QTextBlockFormat()
+plusBF.setBackground(QColor(220, 254, 225))
 
-minusFormat = QTextBlockFormat()
-minusFormat.setBackground(QColor(255, 227, 228))
+minusBF = QTextBlockFormat()
+minusBF.setBackground(QColor(255, 227, 228))
 
-arobaseFormat = QTextBlockFormat()
-arobaseFormat.setBackground(QColor(0, 0, 200))
+arobaseBF = QTextBlockFormat()
+arobaseCF = QTextCharFormat()
+arobaseCF.setFont(globals.alternateFont)
+arobaseCF.setForeground(QColor(0, 80, 240))
+
+warningFormat = QTextCharFormat()
+warningFormat.setForeground(QColor(255, 0, 0))
+warningFormat.setFont(globals.alternateFont)
 
 
 class DiffView(QTextEdit):
     def __init__(self, parent=None):
         super(__class__, self).__init__(parent)
-        self.setTabStopDistance(globals.TAB_SPACES * self.fontMetrics().horizontalAdvance(' '))
         self.setLineWrapMode(QTextEdit.NoWrap)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.doc = QTextDocument(self)
         self.setDocument(self.doc)
-        self.setFont(globals.monoFont)
 
     def setDiffContents(self, repo, change):
         if change.change_type == 'D':
@@ -33,6 +39,7 @@ class DiffView(QTextEdit):
             return
 
         self.doc.clear()
+        self.setTabStopDistance(globals.monoFontMetrics.horizontalAdvance(' ' * globals.TAB_SPACES))
         cursor: QTextCursor = QTextCursor(self.doc)
         firstBlock = True
 
@@ -50,22 +57,33 @@ class DiffView(QTextEdit):
             if line == "+++ \n" or line == "--- \n":
                 continue
 
-            fmt = contextFormat
-            trimFront = 1
-            trimBack = -1
+            bf, cf = normalBF, normalCF
+            trimFront, trimBack = 1, -1
             if line.startswith('@@'):
-                fmt = arobaseFormat
+                bf, cf = arobaseBF, arobaseCF
                 trimFront = 0
             elif line.startswith('+'):
-                fmt = plusFormat
+                bf = plusBF
             elif line.startswith('-'):
-                fmt = minusFormat
+                bf = minusBF
+
+            finalCR = False
+            if line.endswith("\r\n"):
+                trimBack -= 1
+                finalCR = True
 
             if not firstBlock:
                 cursor.insertBlock()
             firstBlock = False
-            cursor.setBlockFormat(fmt)
+            cursor.setBlockFormat(bf)
+            cursor.setCharFormat(cf)
             cursor.insertText(line[trimFront:trimBack])
+
+            if finalCR:
+                backup = cursor.charFormat()
+                cursor.setCharFormat(warningFormat)
+                cursor.insertText("<CR>")
+                cursor.setCharFormat(backup)
 
     def setFailureContents(self, message):
         self.clear()
