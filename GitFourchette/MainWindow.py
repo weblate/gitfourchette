@@ -25,18 +25,51 @@ def compactPath(path: str) -> str:
     return path
 
 
+class CommitMetadata:
+    commit: git.Commit
+    tags: []
+    refs: []
+
+    def __init__(self, commit: git.Commit):
+        self.commit = commit
+        self.tags = []
+        self.refs = []
+
+
 class RepoState:
     dir: str
     repo: git.Repo
     index: git.IndexFile
     settings: QSettings
+    commitMetadata: dict
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
         self.repo = git.Repo(dir)
         self.index = self.repo.index
+        print(self.repo.refs['origin/master'])
+        print(self.repo.remotes)
+        for remoteRef in self.repo.remotes[0].refs:
+            print("RR: " + str(remoteRef))
         self.settings = QSettings(self.repo.common_dir + "/fourchette.ini", QSettings.Format.IniFormat)
         self.settings.setValue("GitFourchette", globals.VERSION)
+
+        self.commitMetadata = {}
+        for tag in self.repo.tags:
+            self.getOrCreateMetadata(tag.commit).tags.append(tag.name)
+        for remote in self.repo.remotes:
+            for ref in remote.refs:
+                self.getOrCreateMetadata(ref.commit).refs.append(
+                    F"{ref.remote_name}/{ref.remote_head}")
+
+    def getOrCreateMetadata(self, commit) -> CommitMetadata:
+        key = commit.binsha
+        if key in self.commitMetadata:
+            return self.commitMetadata[key]
+        else:
+            v = CommitMetadata(commit)
+            self.commitMetadata[key] = v
+            return v
 
 
 class MainWindow(QMainWindow):
@@ -218,7 +251,7 @@ class MainWindow(QMainWindow):
             try:
                 self.state = RepoState(gitRepoDirPath)
                 globals.addRepoToHistory(gitRepoDirPath)
-                self.graphView.fill(self.state.repo, progress)
+                self.graphView.fill(progress)
                 self.setWindowTitle(F"{shortname} [{self.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
                 progress.close()
             except git.exc.InvalidGitRepositoryError as e:

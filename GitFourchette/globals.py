@@ -16,6 +16,11 @@ monoFontMetrics = QFontMetrics(monoFont)
 alternateFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
 alternateFont.setItalic(True)
 
+smallFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
+smallFont.setWeight(QFont.Light)
+smallFont.setPointSize(9)
+smallFontMetrics = QFontMetrics(smallFont)
+
 statusIcons = {}
 for status in "ACDMRTUX":
     statusIcons[status] = QIcon(F"icons/status_{status.lower()}.svg")

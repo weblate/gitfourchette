@@ -38,7 +38,8 @@ class GraphDelegate(QItemDelegate):
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
 
         if index.row() > 0:
-            commit: git.Commit = index.data()
+            bundle = index.data()
+            commit: git.Commit = bundle.commit
             message: str = commit.message.strip()
 
             newline = message.find('\n')
@@ -52,14 +53,18 @@ class GraphDelegate(QItemDelegate):
                 'hash': commit.hexsha[:globals.shortHashChars],
                 'author': commit.author.email.split('@')[0],  # [:8],
                 'date': commit.authored_datetime.strftime(globals.graphViewTimeFormat),
-                'message': message
+                'message': message,
+                'tags': bundle.tags,
+                'refs': bundle.refs
             }
         else:
             data = {
-                'hash': "?" * globals.shortHashChars,
+                'hash': "·" * globals.shortHashChars,
                 'author': "",
                 'date': "",
-                'message': index.data()
+                'message': index.data(),
+                'tags': [],
+                'refs': []
             }
             painter.setFont(globals.alternateFont)
 
@@ -73,6 +78,16 @@ class GraphDelegate(QItemDelegate):
             painter.drawText(charRect, Qt.AlignCenter, hashChar)
             charRect.translate(zw, 0)
         painter.restore()
+
+        # ------ tags
+        for tag in data['tags'] + data['refs']:
+            painter.save()
+            painter.setFont(globals.smallFont)
+            rect.setLeft(rect.right())
+            label = F"[{tag}] "
+            rect.setWidth(globals.smallFontMetrics.width(label) + 1)
+            painter.drawText(rect, label)
+            painter.restore()
 
         # ------ message
         rect.setLeft(rect.right())
