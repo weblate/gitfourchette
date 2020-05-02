@@ -6,9 +6,17 @@ import globals
 import os
 import traceback
 from pathlib import Path
+import re
 
-def splural(n: int) -> str:
-    return '' if n == 1 else 's'
+
+def fplural(fmt: str, n: int) -> str:
+    out = fmt.replace("#", str(n))
+    if n == 1:
+        out = re.sub(r"\^\w+", "", out)
+    else:
+        out = out.replace("^", "")
+    return out
+
 
 def compactPath(path: str) -> str:
     home = str(Path.home())
@@ -257,8 +265,8 @@ class MainWindow(QMainWindow):
 
             nDirty = self.dirtyView.model().rowCount()
             nStaged = self.stageView.model().rowCount()
-            self.dirtyLabel.setText(F"{nDirty} dirty file{splural(nDirty)}:")
-            self.stageLabel.setText(F"{nStaged} file{splural(nStaged)} staged for commit:")
+            self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
+            self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
 
             self.filesStack.setCurrentIndex(1)
 

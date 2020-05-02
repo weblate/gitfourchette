@@ -60,9 +60,13 @@ class UnstagedView(TreeView):
         super(__class__, self).__init__(parent)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
-        action = QAction("Stage", self)
-        action.triggered.connect(self.stage)
-        self.addAction(action)
+        stageAction = QAction("Stage", self)
+        stageAction.triggered.connect(self.stage)
+        self.addAction(stageAction)
+
+        restoreAction = QAction("Discard changes", self)
+        restoreAction.triggered.connect(self.restore)
+        self.addAction(restoreAction)
 
     def stage(self):
         git = self.uindo.state.repo.git
@@ -72,6 +76,23 @@ class UnstagedView(TreeView):
             git.add(change.a_path)
             #self.uindo.state.index.add(change.a_path) # <- also works at first... but might add too many things after repeated staging/unstaging??
         self.uindo.fillStageView()
+
+    def restore(self):
+        qmb = QMessageBox(
+            QMessageBox.Question,
+            "Discard changes",
+            MainWindow.fplural(F"Really discard changes to # file^s?\nThis cannot be undone!", len(self.selectedIndexes())),
+            QMessageBox.Yes | QMessageBox.Cancel)
+        yes = qmb.button(QMessageBox.Yes)
+        yes.setText("Discard changes")
+        qmb.exec_()
+        if qmb.clickedButton() != yes:
+            return
+        git = self.uindo.state.repo.git
+        for si in self.selectedIndexes():
+            change = self.rowstuff[si.row()]
+            print(F"Discarding: {change.a_path}")
+            git.restore(change.a_path)
 
 
 class StagedView(TreeView):
