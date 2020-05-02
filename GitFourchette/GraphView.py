@@ -21,11 +21,7 @@ class GraphView(QListView):
         # Recreating a model on the fly is faster than clearing an existing one?
         model = QStandardItemModel()
 
-        pendingRow = QStandardItem("\tUncommitted Changes")
-        pendingRowFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont) #does this return a copy, though?
-        pendingRowFont.setItalic(True)
-        pendingRow.setFont(pendingRowFont)
-        model.appendRow(pendingRow)
+        model.appendRow(QStandardItem("◆ Uncommitted Changes"))
 
         i = 0
         for commit in repo.iter_commits(repo.active_branch):#, max_count=999000):

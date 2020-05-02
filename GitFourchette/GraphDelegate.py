@@ -2,11 +2,14 @@ from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 from PySide2.QtCore import *
 import globals
+import git
 
 
-ColW_Author = 18
-ColW_Hash = 10
+XMargin = 4
+ColW_Author = 16
+ColW_Hash = globals.shortHashChars + 1
 ColW_Date = 16
+DEBUGRECTS = False
 
 
 # différence entre QItemDelegate et QStyledItemDelegate?
@@ -15,46 +18,81 @@ class GraphDelegate(QItemDelegate):
         super(__class__, self).__init__(parent)
 
     def paint(self, painter, option, index):
-        super(__class__, self).paint(painter, option, index)
-        if index.row() == 0:  # Uncommitted changes
-            return
-
         # print("Render Index Row: " +  str(index.row()))
-        commit = index.data()
-        data = {
-            'hash': commit.hexsha[:7],
-            'author': commit.author.email.split('@')[0],  # [:8],
-            'date': commit.authored_datetime.strftime(globals.graphViewTimeFormat),
-            'message': commit.message.split('\n')[0] or "¯\\_(ツ)_/¯"
-        }
+        # super(__class__, self).paint(painter, option, index)
+
         painter.save()
         metrics = painter.fontMetrics()
         zw = metrics.width('e')
+
+        palette: QPalette = option.palette
+        pcg = QPalette.ColorGroup.Current if option.state & QStyle.State_HasFocus else QPalette.ColorGroup.Disabled
+
         if option.state & QStyle.State_Selected:
-            painter.setPen(option.palette.color(QPalette.ColorRole.HighlightedText))
-        # ------ message
+            painter.fillRect(option.rect, palette.color(pcg, QPalette.ColorRole.Highlight))
+            painter.setPen(palette.color(QPalette.ColorRole.HighlightedText))
+
         rect = QRect(option.rect)
-        rect.setLeft(rect.left() + 5)
-        rect.setRight(option.rect.width() - (ColW_Author + ColW_Hash + ColW_Date) * zw)
-        mzg = metrics.elidedText(data['message'], Qt.ElideRight, rect.width())
-        painter.drawText(rect, mzg)
-        # ------ Author
-        rect.setX(rect.right())
-        rect.setWidth(ColW_Author * zw)
-        painter.drawText(rect, data['author'])
+        rect.setLeft(rect.left() + XMargin)
+        rect.setRight(rect.right() - XMargin)
+        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
+
+        if index.row() > 0:
+            commit: git.Commit = index.data()
+            message: str = commit.message.strip()
+
+            newline = message.find('\n')
+            if newline > -1:
+                messageContinued = newline < len(message) - 1
+                message = message[:newline]
+                if messageContinued:
+                    message += " [...]"
+
+            data = {
+                'hash': commit.hexsha[:globals.shortHashChars],
+                'author': commit.author.email.split('@')[0],  # [:8],
+                'date': commit.authored_datetime.strftime(globals.graphViewTimeFormat),
+                'message': message
+            }
+        else:
+            data = {
+                'hash': "?" * globals.shortHashChars,
+                'author': "",
+                'date': "",
+                'message': index.data()
+            }
+            painter.setFont(globals.alternateFont)
+
         # ------ Hash
-        # painter.setFont(monoFont)
+        rect.setWidth(ColW_Hash * zw)
+        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
+        charRect = QRect(rect.left(), rect.top(), zw, rect.height())
+        painter.save()
+        painter.setPen(palette.color(pcg, QPalette.ColorRole.PlaceholderText))
+        for hashChar in data['hash']:
+            painter.drawText(charRect, Qt.AlignCenter, hashChar)
+            charRect.translate(zw, 0)
+        painter.restore()
+
+        # ------ message
         rect.setLeft(rect.right())
-        nextX = rect.left() + ColW_Hash * zw
-        rect.setWidth(zw)
-        for c in data['hash']:
-            painter.drawText(rect, Qt.AlignCenter, c)
-            rect.setLeft(rect.left() + zw)
-            rect.setWidth(zw)
+        rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
+        mzg = metrics.elidedText(data['message'], Qt.ElideRight, rect.width())
+        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
+        painter.drawText(rect, mzg)
+
+        # ------ Author
+        rect.setLeft(rect.right())
+        rect.setWidth(ColW_Author * zw)
+        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
+        painter.drawText(rect, data['author'])
+
         # ------ Date
-        rect.setX(nextX)
+        rect.setLeft(rect.right())
         rect.setWidth(ColW_Date * zw)
+        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
         painter.drawText(rect, data['date'])
+
         # ----------------
         painter.restore()
         pass  # QStyledItemDelegate.paint(self, painter, option, index)

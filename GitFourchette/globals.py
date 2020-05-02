@@ -49,6 +49,7 @@ def getValueAndWriteDefault(key, defaultValue):
 
 graphViewTimeFormat = getValueAndWriteDefault("GraphView/TimeFormat", "%d-%m-%y %H:%M")
 splitterHandleWidth = int(getValueAndWriteDefault("SplitterHandleWidth", -1))
+shortHashChars = int(getValueAndWriteDefault("ShortHashChars", 7))
 
 
 def getRepoHistory() -> List[str]:
