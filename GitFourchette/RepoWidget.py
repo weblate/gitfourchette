@@ -82,11 +82,6 @@ class RepoWidget(QWidget):
         for sts in self.splittersToSave:
             globals.appSettings.setValue(F"Splitters/{sts.objectName()}", sts.saveState())
 
-    def fillRepoMenu(self, m: QMenu):
-        m.clear()
-        m.addAction("Push", self.push)
-        m.addAction("Rename...", self.renameRepo)
-
     def renameRepo(self):
         text, ok = QInputDialog().getText(
             self,

@@ -12,6 +12,7 @@ from util import compactPath
 
 class MainWindow(QMainWindow):
     repoWidget: RepoWidget
+    tabs: QTabWidget
 
     def __init__(self):
         super().__init__()
@@ -21,8 +22,13 @@ class MainWindow(QMainWindow):
         self.resize(globals.appSettings.value("MainWindow/size", QSize(800, 600)))
         self.move(globals.appSettings.value("MainWindow/position", QPoint(50, 50)))
 
-        self.repoWidget = RepoWidget(self)
-        self.setCentralWidget(self.repoWidget)
+        self.tabs = QTabWidget()
+        #self.tabs.setTabBarAutoHide(True)
+        self.tabs.setMovable(True)
+
+        self.repoWidget = None
+
+        self.setCentralWidget(self.tabs)
 
         self.makeMenu()
 
@@ -33,7 +39,8 @@ class MainWindow(QMainWindow):
         self.createFileMenu(fileMenu)
 
         repoMenu = menubar.addMenu("&Repo")
-        self.repoWidget.fillRepoMenu(repoMenu)
+        repoMenu.addAction("Push", lambda: self.repoWidget.push())
+        repoMenu.addAction("Rename...", lambda: self.repoWidget.renameRepo())
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {globals.PROGRAM_NAME}", self.about)
@@ -93,21 +100,23 @@ class MainWindow(QMainWindow):
             QCoreApplication.processEvents()
             #import time; time.sleep(3)
 
-            oldState = self.repoWidget.state
-            self.repoWidget.state = None  # for isReady
+            newRW = RepoWidget(self)
             try:
-                self.repoWidget.state = RepoState(gitRepoDirPath)
+                newRW.state = RepoState(gitRepoDirPath)
                 globals.addRepoToHistory(gitRepoDirPath)
-                self.repoWidget.graphView.fill(progress)
+                newRW.graphView.fill(progress)
+                self.tabs.addTab(newRW, shortname)
+                self.repoWidget = newRW
                 self.setWindowTitle(F"{shortname} [{self.repoWidget.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
             except BaseException as e:
+                newRW.destroy()
                 progress.close()
-                self.repoWidget.state = oldState
                 traceback.print_exc()
                 if isinstance(e, git.exc.InvalidGitRepositoryError):
                     QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{gitRepoDirPath}\" because it is not a git repository.")
                 else:
                     QMessageBox.critical(self, "Error", F"Couldn't open \"{gitRepoDirPath}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+                return
             finally:
                 progress.close()
 
