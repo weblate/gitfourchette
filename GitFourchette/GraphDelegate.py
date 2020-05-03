@@ -15,7 +15,7 @@ DEBUGRECTS = False
 # différence entre QItemDelegate et QStyledItemDelegate?
 class GraphDelegate(QItemDelegate):
     def __init__(self, parent=None):
-        super(__class__, self).__init__(parent)
+        super().__init__(parent)
 
     def paint(self, painter, option, index):
         # print("Render Index Row: " +  str(index.row()))

@@ -27,7 +27,7 @@ warningFormat.setFont(globals.alternateFont)
 
 class DiffView(QTextEdit):
     def __init__(self, parent=None):
-        super(__class__, self).__init__(parent)
+        super().__init__(parent)
         self.setLineWrapMode(QTextEdit.NoWrap)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.doc = QTextDocument(self)

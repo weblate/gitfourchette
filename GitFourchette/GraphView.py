@@ -3,20 +3,18 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import git
 
-import GraphDelegate
-import MainWindow
-
+from GraphDelegate import GraphDelegate
 
 class GraphView(QListView):
-    def __init__(self, parent:MainWindow.MainWindow=None):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.uindo = parent
+        self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
-        self.setItemDelegate(GraphDelegate.GraphDelegate())
+        self.setItemDelegate(GraphDelegate())
 
     def fill(self, progress: QProgressDialog):
-        repo = self.uindo.state.repo
+        repo = self.repoWidget.state.repo
 
         #model: QAbstractItemModel = self.model() ; model.clear()
         # Recreating a model on the fly is faster than clearing an existing one?
@@ -33,7 +31,7 @@ class GraphView(QListView):
                 raise Exception("Canceled!")
             i += 1
             item = QStandardItem()
-            item.setData(self.uindo.state.getOrCreateMetadata(commit), Qt.DisplayRole)
+            item.setData(self.repoWidget.state.getOrCreateMetadata(commit), Qt.DisplayRole)
             model.appendRow(item)
         progress.setLabelText(F"{i:,} commits total.")
         #progress.setCancelButton(None)
@@ -59,18 +57,19 @@ COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
         super().selectionChanged(selected, deselected)
 
-        if not self.uindo.isReady(): return
-
+        #if not self.repoWidget.isReady(): return
+        if len(selected.indexes()) == 0:
+            return
         current = selected.indexes()[0]
+        if not current.isValid():
+            return
 
-        if not current.isValid(): return
-
-        if current.row() == 0:
-            self.uindo.fillStageView()
+        if current.row() == 0: # uncommitted changes
+            self.repoWidget.fillStageView()
             return
 
         commit: git.Commit = current.data().commit
-        self.uindo.changedFilesView.clear()
+        self.repoWidget.changedFilesView.clear()
         for parent in commit.parents:
-            self.uindo.changedFilesView.fillDiff(parent.diff(commit))
-        self.uindo.filesStack.setCurrentIndex(0)
+            self.repoWidget.changedFilesView.fillDiff(parent.diff(commit))
+        self.repoWidget.filesStack.setCurrentIndex(0)

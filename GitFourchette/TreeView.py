@@ -3,26 +3,26 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 import git
-
-import MainWindow
 import globals
+from util import fplural
 
 
 class TreeView(QListView):
     rowstuff = []
 
-    def __init__(self, parent: MainWindow.MainWindow):
-        super(__class__, self).__init__(parent)
-        self.uindo = parent
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.repoWidget = parent
         self.setModel(QStandardItemModel())
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setIconSize(QSize(16, 16))
         self.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevent editing text after double-clicking
 
     def clear(self):
-        with self.uindo.unready():
-            self.model().clear()
-            self.rowstuff = []
+        #with self.uindo.unready():
+        #self.model().clear()
+        self.setModel(QStandardItemModel()) # do this instead of model.clear to avoid triggering selectionChanged a million times
+        self.rowstuff = []
 
     def fillDiff(self, diff: git.DiffIndex):
         model: QStandardItemModel = self.model()
@@ -43,28 +43,31 @@ class TreeView(QListView):
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
 
-        if not self.uindo.isReady(): return
+        #if not self.repoWidget.isReady(): return
 
+        indexes = list(selected.indexes())
+        if len(indexes) == 0:
+            return
         current = selected.indexes()[0]
 
         if not current.isValid():
-            self.uindo.diffView.clear()
+            self.repoWidget.diffView.clear()
             return
         QApplication.setOverrideCursor(Qt.WaitCursor)
         QApplication.processEvents()
         try:
             change = self.rowstuff[current.row()]
-            self.uindo.diffView.setDiffContents(self.uindo.state.repo, change)
+            self.repoWidget.diffView.setDiffContents(self.repoWidget.state.repo, change)
         except BaseException as ex:
             import traceback
             traceback.print_exc()
-            self.uindo.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
+            self.repoWidget.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
         QApplication.restoreOverrideCursor()
 
 
 class UnstagedView(TreeView):
-    def __init__(self, parent: MainWindow.MainWindow):
-        super(__class__, self).__init__(parent)
+    def __init__(self, parent):
+        super().__init__(parent)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
         stageAction = QAction("Stage", self)
@@ -76,26 +79,26 @@ class UnstagedView(TreeView):
         self.addAction(restoreAction)
 
     def stage(self):
-        git = self.uindo.state.repo.git
+        git = self.repoWidget.state.repo.git
         for si in self.selectedIndexes():
             change = self.rowstuff[si.row()]
             print(F"Staging: {change.a_path}")
             git.add(change.a_path)
             #self.uindo.state.index.add(change.a_path) # <- also works at first... but might add too many things after repeated staging/unstaging??
-        self.uindo.fillStageView()
+        self.repoWidget.fillStageView()
 
     def restore(self):
         qmb = QMessageBox(
             QMessageBox.Question,
             "Discard changes",
-            MainWindow.fplural(F"Really discard changes to # file^s?\nThis cannot be undone!", len(self.selectedIndexes())),
+            fplural(F"Really discard changes to # file^s?\nThis cannot be undone!", len(self.selectedIndexes())),
             QMessageBox.Yes | QMessageBox.Cancel)
         yes = qmb.button(QMessageBox.Yes)
         yes.setText("Discard changes")
         qmb.exec_()
         if qmb.clickedButton() != yes:
             return
-        git = self.uindo.state.repo.git
+        git = self.repoWidget.state.repo.git
         for si in self.selectedIndexes():
             change = self.rowstuff[si.row()]
             print(F"Discarding: {change.a_path}")
@@ -103,8 +106,8 @@ class UnstagedView(TreeView):
 
 
 class StagedView(TreeView):
-    def __init__(self, parent: MainWindow.MainWindow):
-        super(__class__, self).__init__(parent)
+    def __init__(self, parent):
+        super().__init__(parent)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
         action = QAction("UnStage", self)
@@ -112,9 +115,9 @@ class StagedView(TreeView):
         self.addAction(action)
 
     def unstage(self):
-        git = self.uindo.state.repo.git
+        git = self.repoWidget.state.repo.git
         for si in self.selectedIndexes():
             change = self.rowstuff[si.row()]
             print(F"UnStaging: {change.a_path}")
             git.restore(change.a_path, staged=True)
-        self.uindo.fillStageView()
+        self.repoWidget.fillStageView()
