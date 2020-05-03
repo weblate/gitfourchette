@@ -42,8 +42,8 @@ class MainWindow(QMainWindow):
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
         repoMenu = menubar.addMenu("&Repo")
-        repoMenu.addAction("Push", lambda: self.repoWidget.push())
-        repoMenu.addAction("Rename...", lambda: self.repoWidget.renameRepo())
+        repoMenu.addAction("Push", lambda: self.currentRepoWidget().push())
+        repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {globals.PROGRAM_NAME}", self.about)
