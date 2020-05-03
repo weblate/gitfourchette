@@ -35,7 +35,10 @@ class MainWindow(QMainWindow):
         menubar = QMenuBar()
 
         fileMenu = menubar.addMenu("&File")
-        self.createFileMenu(fileMenu)
+        fileMenu.addAction("&Open", self.openDialog, QKeySequence.Open)
+        self.recentMenu = fileMenu.addMenu("Open &Recent")
+        fileMenu.addSeparator()
+        fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
         repoMenu = menubar.addMenu("&Repo")
         repoMenu.addAction("Push", lambda: self.repoWidget.push())
@@ -47,6 +50,7 @@ class MainWindow(QMainWindow):
         helpMenu.addSeparator()
         helpMenu.addAction("Memory", self.memInfo)
 
+        self.fillRecentMenu()
         self.setMenuBar(menubar)
 
     def about(self):
@@ -71,20 +75,12 @@ class MainWindow(QMainWindow):
         gc.collect()
         QMessageBox.information(self, F"Memory usage", F"{psutil.Process(os.getpid()).memory_info().rss:,}")
 
-    def createFileMenu(self, m: QMenu):
-        m.clear()
-
-        m.addAction("&Open", self.open, QKeySequence.Open)
-
-        recentMenu = m.addMenu("Open &Recent")
+    def fillRecentMenu(self):
+        self.recentMenu.clear()
         for historic in globals.getRepoHistory():
-            recentMenu.addAction(
+            self.recentMenu.addAction(
                 F"{globals.getRepoNickname(historic)} [{compactPath(historic)}]",
-                lambda h=historic: self.setRepo(h))
-
-        m.addSeparator()
-
-        m.addAction("&Quit", self.close, QKeySequence.Quit)
+                lambda h=historic: self.openRepo(h))
 
     def onTabChange(self, i):
         if i < 0:
@@ -110,6 +106,7 @@ class MainWindow(QMainWindow):
         try:
             newRW.state = RepoState(gitRepoDirPath)
             globals.addRepoToHistory(gitRepoDirPath)
+            self.fillRecentMenu()
             newRW.graphView.fill(progress)
             newIndex = self.tabs.addTab(newRW, shortname)
             self.tabs.setCurrentIndex(newIndex)
@@ -125,7 +122,7 @@ class MainWindow(QMainWindow):
         finally:
             progress.close()
 
-    def open(self):
+    def openDialog(self):
         path = QFileDialog.getExistingDirectory(self, "Open repository", globals.appSettings.value(globals.SK_LAST_OPEN, "", type=str))
         if path:
             globals.appSettings.setValue(globals.SK_LAST_OPEN, path)
