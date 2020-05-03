@@ -7,7 +7,7 @@ import os
 import traceback
 from pathlib import Path
 import re
-
+import RemoteProgress
 
 def fplural(fmt: str, n: int) -> str:
     out = fmt.replace("#", str(n))
@@ -218,7 +218,36 @@ class MainWindow(QMainWindow):
 
     def createRepoMenu(self, m: QMenu):
         m.clear()
-        m.addAction("Rename...", lambda: self.renameRepo())
+        m.addAction("Push", self.push)
+        m.addAction("Rename...", self.renameRepo)
+
+    def push(self):
+        repo = self.state.repo
+        branch = repo.active_branch
+        tracking = repo.active_branch.tracking_branch()
+        remote = repo.remote(tracking.remote_name)
+        urls = list(remote.urls)
+
+        qmb = QMessageBox(self)
+        qmb.setWindowTitle("Push")
+        qmb.setIcon(QMessageBox.Question)
+        qmb.setText(F"""Confirm Push?
+To remote: "{remote.name}" at {'; '.join(urls)}
+Branch: "{branch.name}" tracking "{tracking.name}" """)
+        qmb.addButton("Push", QMessageBox.AcceptRole)
+        qmb.addButton("Cancel", QMessageBox.RejectRole)
+        if qmb.exec_() != QMessageBox.AcceptRole:
+            return
+
+        progress = RemoteProgress.RemoteProgress(self, "Push in progress")
+        try:
+            remote.push(progress=progress)
+        except BaseException as e:
+            traceback.print_exc()
+            QMessageBox.critical(self, "Error",
+                F"An exception was thrown while pushing.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+
+        progress.dlg.close()
 
     def renameRepo(self):
         text, ok = QInputDialog().getText(
