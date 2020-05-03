@@ -2,6 +2,8 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
+import git
+
 import MainWindow
 import globals
 
@@ -22,7 +24,7 @@ class TreeView(QListView):
             self.model().clear()
             self.rowstuff = []
 
-    def fillDiff(self, diff):
+    def fillDiff(self, diff: git.DiffIndex):
         model: QStandardItemModel = self.model()
         for f in diff:
             self.rowstuff.append(f)
@@ -38,9 +40,13 @@ class TreeView(QListView):
             item.setIcon(globals.statusIcons['A'])
             model.appendRow(item)
 
-    def currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        super(__class__, self).currentChanged(current, previous)
+    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+        super().selectionChanged(selected, deselected)
+
         if not self.uindo.isReady(): return
+
+        current = selected.indexes()[0]
+
         if not current.isValid():
             self.uindo.diffView.clear()
             return
@@ -51,7 +57,8 @@ class TreeView(QListView):
             self.uindo.diffView.setDiffContents(self.uindo.state.repo, change)
         except BaseException as ex:
             import traceback
-            self.uindo.diffView.setFailureContents("Error\n" + "".join(traceback.TracebackException.from_exception(ex).format()))
+            traceback.print_exc()
+            self.uindo.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
         QApplication.restoreOverrideCursor()
 
 

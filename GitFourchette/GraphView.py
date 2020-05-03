@@ -9,10 +9,9 @@ import MainWindow
 
 class GraphView(QListView):
     def __init__(self, parent:MainWindow.MainWindow=None):
-        super(__class__, self).__init__(parent)
+        super().__init__(parent)
         self.uindo = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        #self.setModel(QStandardItemModel())
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
         self.setItemDelegate(GraphDelegate.GraphDelegate())
 
@@ -56,11 +55,13 @@ COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
 
 {commit.message}""")
 
-    def currentChanged(self, current: QModelIndex, previous: QModelIndex):
+    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+        # do standard callback, such as scrolling the viewport if reaching the edges, etc.
+        super().selectionChanged(selected, deselected)
+
         if not self.uindo.isReady(): return
 
-        # do standard callback, such as scrolling the viewport if reaching the edges, etc.
-        super(__class__, self).currentChanged(current, previous)
+        current = selected.indexes()[0]
 
         if not current.isValid(): return
 
