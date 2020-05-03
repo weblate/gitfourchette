@@ -47,20 +47,19 @@ class RepoState:
         self.dir = os.path.abspath(dir)
         self.repo = git.Repo(dir)
         self.index = self.repo.index
-        print(self.repo.refs['origin/master'])
-        print(self.repo.remotes)
-        for remoteRef in self.repo.remotes[0].refs:
-            print("RR: " + str(remoteRef))
         self.settings = QSettings(self.repo.common_dir + "/fourchette.ini", QSettings.Format.IniFormat)
         self.settings.setValue("GitFourchette", globals.VERSION)
 
         self.commitMetadata = {}
         for tag in self.repo.tags:
-            self.getOrCreateMetadata(tag.commit).tags.append(tag.name)
+            try:
+                self.getOrCreateMetadata(tag.commit).tags.append(tag.name)
+            except BaseException as e:  # the linux repository has 2 tags pointing to trees instead of commits
+                print("Error loading tag")
+                traceback.print_exc()
         for remote in self.repo.remotes:
             for ref in remote.refs:
-                self.getOrCreateMetadata(ref.commit).refs.append(
-                    F"{ref.remote_name}/{ref.remote_head}")
+                self.getOrCreateMetadata(ref.commit).refs.append(F"{ref.remote_name}/{ref.remote_head}")
 
     def getOrCreateMetadata(self, commit) -> CommitMetadata:
         key = commit.binsha
@@ -94,7 +93,7 @@ class MainWindow(QMainWindow):
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {globals.PROGRAM_NAME}", self.about)
-        helpMenu.addAction("About Qt", QMessageBox.aboutQt)
+        helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
         helpMenu.addSeparator()
         helpMenu.addAction("Memory", self.memInfo)
 
@@ -282,23 +281,16 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
                 globals.addRepoToHistory(gitRepoDirPath)
                 self.graphView.fill(progress)
                 self.setWindowTitle(F"{shortname} [{self.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
-                progress.close()
-            except git.exc.InvalidGitRepositoryError as e:
-                progress.close()
-                self.state = oldState
-                print(traceback.format_exc())
-                QMessageBox.warning(
-                    self,
-                    "Invalid repository",
-                    F"This directory does not appear to be a valid git repository:\n{gitRepoDirPath}")
             except BaseException as e:
                 progress.close()
                 self.state = oldState
-                print(traceback.format_exc())
-                QMessageBox.critical(
-                    self,
-                    "Error",
-                    "Exception thrown while opening repository:\n\n" + str(e))
+                traceback.print_exc()
+                if isinstance(e, git.exc.InvalidGitRepositoryError):
+                    QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{gitRepoDirPath}\" because it is not a git repository.")
+                else:
+                    QMessageBox.critical(self, "Error", F"Couldn't open \"{gitRepoDirPath}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+            finally:
+                progress.close()
 
     def isReady(self):
         return self.ready and self.state != None
