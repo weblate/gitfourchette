@@ -1,18 +1,23 @@
-# https://stackoverflow.com/questions/20061898/gitpython-and-git-diff
-# https://www.saltycrane.com/blog/2008/01/pyqt4-qitemdelegate-example-with/
-
-import PySide2.QtWidgets
+from PySide2 import QtWidgets, QtGui
+import sys
 import signal
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     # initialize Qt before importing app modules so fonts are loaded correctly
-    app = PySide2.QtWidgets.QApplication([])
+    app = QtWidgets.QApplication(sys.argv)
+
+    pixmap = QtGui.QPixmap("icons/gf.png")
+    splash = QtWidgets.QSplashScreen(pixmap)
+    splash.show()
+    app.processEvents()
 
     import MainWindow
     window = MainWindow.MainWindow()
     window.show()
+
+    splash.finish(window)
 
     import globals
     history = globals.getRepoHistory()

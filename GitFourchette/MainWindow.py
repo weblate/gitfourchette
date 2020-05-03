@@ -167,7 +167,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(globals.PROGRAM_NAME)
 
-        self.setWindowIcon(QIcon("Junk/gf2.png"))
+        self.setWindowIcon(QIcon("icons/gf.png"))
         self.setCentralWidget(centralWidget)
 
         self.ready = True
