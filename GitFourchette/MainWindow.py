@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
         fileMenu = menubar.addMenu("&File")
         fileMenu.addAction("&Open", self.openDialog, QKeySequence.Open)
         self.recentMenu = fileMenu.addMenu("Open &Recent")
+        fileMenu.addAction("&Close Tab", self.closeTab, QKeySequence.Close)
         fileMenu.addSeparator()
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
@@ -81,6 +82,9 @@ class MainWindow(QMainWindow):
             self.recentMenu.addAction(
                 F"{globals.getRepoNickname(historic)} [{compactPath(historic)}]",
                 lambda h=historic: self.openRepo(h))
+
+    def currentRepoWidget(self) -> RepoWidget:
+        return self.tabs.widget(self.tabs.currentIndex())
 
     def onTabChange(self, i):
         if i < 0:
@@ -128,9 +132,13 @@ class MainWindow(QMainWindow):
             globals.appSettings.setValue(globals.SK_LAST_OPEN, path)
             self.openRepo(path)
 
+    def closeTab(self):
+        self.currentRepoWidget().cleanup()
+        self.tabs.removeTab(self.tabs.currentIndex())
+
     def closeEvent(self, e):
         # Write window size and position to config file
         globals.appSettings.setValue("MainWindow/size", self.size())
         globals.appSettings.setValue("MainWindow/position", self.pos())
-        self.repoWidget.saveSplitterStates()
+        self.currentRepoWidget().saveSplitterStates()
         e.accept()

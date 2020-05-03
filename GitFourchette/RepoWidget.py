@@ -78,6 +78,9 @@ class RepoWidget(QWidget):
             if globals.appSettings.contains(k):
                 sts.restoreState(globals.appSettings.value(k))
 
+    def cleanup(self):
+        self.state.repo.close()
+
     def saveSplitterStates(self):
         for sts in self.splittersToSave:
             globals.appSettings.setValue(F"Splitters/{sts.objectName()}", sts.saveState())
