@@ -22,6 +22,6 @@ if __name__ == "__main__":
     import globals
     history = globals.getRepoHistory()
     if len(history) > 0:
-        window.setRepo(history[0])
+        window.openRepo(history[0])
 
     app.exec_()
