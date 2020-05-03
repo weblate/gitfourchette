@@ -11,7 +11,6 @@ from util import compactPath
 
 
 class MainWindow(QMainWindow):
-    repoWidget: RepoWidget
     tabs: QTabWidget
 
     def __init__(self):
@@ -26,7 +25,7 @@ class MainWindow(QMainWindow):
         #self.tabs.setTabBarAutoHide(True)
         self.tabs.setMovable(True)
 
-        self.repoWidget = None
+        self.tabs.currentChanged.connect(self.onTabChange)
 
         self.setCentralWidget(self.tabs)
 
@@ -87,44 +86,50 @@ class MainWindow(QMainWindow):
 
         m.addAction("&Quit", self.close, QKeySequence.Quit)
 
-    def setRepo(self, gitRepoDirPath):
-            #with self.unready():
-            shortname = globals.getRepoNickname(gitRepoDirPath)
-            progress = QProgressDialog("Opening repository...", "Abort", 0, 0, self)
-            progress.setWindowModality(Qt.WindowModal)
-            progress.setWindowTitle(shortname)
-            progress.setWindowFlags(Qt.Dialog | Qt.Popup)
-            progress.setMinimumWidth(2 * progress.fontMetrics().width("000,000,000 commits loaded."))
-            QCoreApplication.processEvents()
-            progress.show()
-            QCoreApplication.processEvents()
-            #import time; time.sleep(3)
+    def onTabChange(self, i):
+        if i < 0:
+            self.setWindowTitle(globals.PROGRAM_NAME)
+            return
+        w: RepoWidget = self.tabs.widget(self.tabs.currentIndex())
+        shortname = globals.getRepoNickname(w.state.repo.working_tree_dir)
+        self.setWindowTitle(F"{shortname} [{w.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
 
-            newRW = RepoWidget(self)
-            try:
-                newRW.state = RepoState(gitRepoDirPath)
-                globals.addRepoToHistory(gitRepoDirPath)
-                newRW.graphView.fill(progress)
-                self.tabs.addTab(newRW, shortname)
-                self.repoWidget = newRW
-                self.setWindowTitle(F"{shortname} [{self.repoWidget.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
-            except BaseException as e:
-                newRW.destroy()
-                progress.close()
-                traceback.print_exc()
-                if isinstance(e, git.exc.InvalidGitRepositoryError):
-                    QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{gitRepoDirPath}\" because it is not a git repository.")
-                else:
-                    QMessageBox.critical(self, "Error", F"Couldn't open \"{gitRepoDirPath}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
-                return
-            finally:
-                progress.close()
+    def openRepo(self, gitRepoDirPath):
+        shortname = globals.getRepoNickname(gitRepoDirPath)
+        progress = QProgressDialog("Opening repository...", "Abort", 0, 0, self)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowTitle(shortname)
+        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+        progress.setMinimumWidth(2 * progress.fontMetrics().width("000,000,000 commits loaded."))
+        QCoreApplication.processEvents()
+        progress.show()
+        QCoreApplication.processEvents()
+        #import time; time.sleep(3)
+
+        newRW = RepoWidget(self)
+        try:
+            newRW.state = RepoState(gitRepoDirPath)
+            globals.addRepoToHistory(gitRepoDirPath)
+            newRW.graphView.fill(progress)
+            newIndex = self.tabs.addTab(newRW, shortname)
+            self.tabs.setCurrentIndex(newIndex)
+        except BaseException as e:
+            newRW.destroy()
+            progress.close()
+            traceback.print_exc()
+            if isinstance(e, git.exc.InvalidGitRepositoryError):
+                QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{gitRepoDirPath}\" because it is not a git repository.")
+            else:
+                QMessageBox.critical(self, "Error", F"Couldn't open \"{gitRepoDirPath}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+            return
+        finally:
+            progress.close()
 
     def open(self):
         path = QFileDialog.getExistingDirectory(self, "Open repository", globals.appSettings.value(globals.SK_LAST_OPEN, "", type=str))
         if path:
             globals.appSettings.setValue(globals.SK_LAST_OPEN, path)
-            self.setRepo(path)
+            self.openRepo(path)
 
     def closeEvent(self, e):
         # Write window size and position to config file
