@@ -13,10 +13,10 @@ monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
 monoFont.setPointSize(9)
 monoFontMetrics = QFontMetrics(monoFont)
 
-alternateFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
+alternateFont = QFont()
 alternateFont.setItalic(True)
 
-smallFont = QFontDatabase.systemFont(QFontDatabase.GeneralFont)
+smallFont = QFont()
 smallFont.setWeight(QFont.Light)
 smallFont.setPointSize(9)
 smallFontMetrics = QFontMetrics(smallFont)
