@@ -54,11 +54,14 @@ class DiffView(QTextEdit):
         b = b.decode('utf-8').splitlines(keepends=True)
 
         for line in difflib.unified_diff(a, b):
+            # skip bogus diff header
             if line == "+++ \n" or line == "--- \n":
                 continue
 
             bf, cf = normalBF, normalCF
-            trimFront, trimBack = 1, -1
+            trimFront, trimBack = 1, None
+            trailer = None
+
             if line.startswith('@@'):
                 bf, cf = arobaseBF, arobaseCF
                 trimFront = 0
@@ -66,24 +69,27 @@ class DiffView(QTextEdit):
                 bf = plusBF
             elif line.startswith('-'):
                 bf = minusBF
+            else:
+                pass # context line
 
-            finalCR = False
             if line.endswith("\r\n"):
-                trimBack -= 1
-                finalCR = True
+                trimBack = -2
+                trailer = "<CR>"
+            elif line.endswith("\n"):
+                trimBack = -1
 
             if not firstBlock:
                 cursor.insertBlock()
             firstBlock = False
+
             cursor.setBlockFormat(bf)
             cursor.setCharFormat(cf)
             cursor.insertText(line[trimFront:trimBack])
 
-            if finalCR:
-                backup = cursor.charFormat()
+            if trailer:
                 cursor.setCharFormat(warningFormat)
-                cursor.insertText("<CR>")
-                cursor.setCharFormat(backup)
+                cursor.insertText(trailer)
+                cursor.setCharFormat(cf)
 
     def setFailureContents(self, message):
         self.clear()
