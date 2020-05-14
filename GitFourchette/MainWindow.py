@@ -42,6 +42,8 @@ class MainWindow(QMainWindow):
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
         repoMenu = menubar.addMenu("&Repo")
+        repoMenu.addAction("&Refresh", self.refresh, QKeySequence.Refresh)
+        repoMenu.addSeparator()
         repoMenu.addAction("Push", lambda: self.currentRepoWidget().push())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
 
@@ -94,8 +96,10 @@ class MainWindow(QMainWindow):
         shortname = globals.getRepoNickname(w.state.repo.working_tree_dir)
         self.setWindowTitle(F"{shortname} [{w.state.repo.active_branch}] — {globals.PROGRAM_NAME}")
 
-    def openRepo(self, gitRepoDirPath):
-        shortname = globals.getRepoNickname(gitRepoDirPath)
+    def _loadRepo(self, rw: RepoWidget, path: str):
+        assert rw
+
+        shortname = globals.getRepoNickname(path)
         progress = QProgressDialog("Opening repository...", "Abort", 0, 0, self)
         progress.setWindowModality(Qt.WindowModal)
         progress.setWindowTitle(shortname)
@@ -106,25 +110,37 @@ class MainWindow(QMainWindow):
         QCoreApplication.processEvents()
         #import time; time.sleep(3)
 
-        newRW = RepoWidget(self)
         try:
-            newRW.state = RepoState(gitRepoDirPath)
-            globals.addRepoToHistory(gitRepoDirPath)
-            self.fillRecentMenu()
-            newRW.graphView.fill(progress)
-            newIndex = self.tabs.addTab(newRW, shortname)
-            self.tabs.setCurrentIndex(newIndex)
+            newState = RepoState(path)
         except BaseException as e:
-            newRW.destroy()
             progress.close()
             traceback.print_exc()
             if isinstance(e, git.exc.InvalidGitRepositoryError):
-                QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{gitRepoDirPath}\" because it is not a git repository.")
+                QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{path}\" because it is not a git repository.")
             else:
-                QMessageBox.critical(self, "Error", F"Couldn't open \"{gitRepoDirPath}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
-            return
-        finally:
-            progress.close()
+                QMessageBox.critical(self, "Error", F"Couldn't open \"{path}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+            return False
+
+        rw.state = newState
+        rw.graphView.fill(progress)
+        progress.close()
+        return True
+
+    def openRepo(self, repoPath):
+        newRW = RepoWidget(self)
+
+        if not self._loadRepo(newRW, repoPath):
+            newRW.destroy()
+
+        tabIndex = self.tabs.addTab(newRW, globals.getRepoNickname(repoPath))
+        self.tabs.setCurrentIndex(tabIndex)
+        
+        globals.addRepoToHistory(repoPath)
+        self.fillRecentMenu()
+
+    def refresh(self):
+        rw = self.currentRepoWidget()
+        self._loadRepo(rw, rw.state.repo.working_tree_dir)
 
     def openDialog(self):
         path = QFileDialog.getExistingDirectory(self, "Open repository", globals.appSettings.value(globals.SK_LAST_OPEN, "", type=str))
