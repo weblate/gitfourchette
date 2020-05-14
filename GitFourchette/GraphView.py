@@ -41,6 +41,7 @@ class GraphView(QListView):
         self.setModel(model)
         self.repaint()
         QCoreApplication.processEvents()
+        self.onSetCurrent()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if not self.currentIndex().isValid():
@@ -57,14 +58,20 @@ COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
         super().selectionChanged(selected, deselected)
 
-        #if not self.repoWidget.isReady(): return
         if len(selected.indexes()) == 0:
-            return
-        current = selected.indexes()[0]
-        if not current.isValid():
+            self.onSetCurrent(None)
+        else:
+            self.onSetCurrent(selected.indexes()[0])
+
+    def onSetCurrent(self, current=None):
+        # if current is None:
+        #     current = self.currentIndex()
+
+        if current is None or not current.isValid():
+            self.repoWidget.setNoCommitSelected()
             return
 
-        if current.row() == 0: # uncommitted changes
+        if current.row() == 0:  # uncommitted changes
             self.repoWidget.fillStageView()
             return
 

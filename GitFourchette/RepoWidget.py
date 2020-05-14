@@ -95,8 +95,13 @@ class RepoWidget(QWidget):
         if ok:
             globals.setRepoNickname(self.state.dir, text)
 
+    def setNoCommitSelected(self):
+        self.filesStack.setCurrentIndex(0)
+        self.changedFilesView.clear()
+
     def fillStageView(self):
-        #with self.unready():
+        """Fill Staged/Unstaged views with uncommitted changes"""
+
         self.dirtyView.clear()
         self.dirtyView.fillDiff(self.state.index.diff(None))
         self.dirtyView.fillUntracked(self.state.repo.untracked_files)
