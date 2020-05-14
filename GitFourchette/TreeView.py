@@ -7,8 +7,39 @@ import globals
 from util import fplural
 
 
+class TreeViewEntry_Diff:
+    def __init__(self, diff):
+        self.diff = diff
+
+    def clicked(self, rw):
+        rw.diffView.setDiffContents(rw.state.repo, self.diff)
+
+    def stage(self, rw):
+        print(F"Staging: {self.diff.a_path}")
+        # rw.state.index.add(self.diff.a_path) # <- also works at first... but might add too many things after repeated staging/unstaging??
+        rw.state.repo.git.add(self.diff.a_path)
+
+    def discard(self, rw):
+        print(F"Discarding: {self.diff.a_path}")
+        rw.state.repo.git.restore(self.diff.a_path)
+
+
+class TreeViewEntry_Untracked:
+    def __init__(self, path:str):
+        self.path = path
+
+    def clicked(self, rw):
+        rw.diffView.setUntrackedContents(rw.state.repo, self.path)
+
+    def stage(self, rw):
+        rw.state.repo.git.add(self.path)
+
+    def discard(self, rw):
+        QMessageBox.warning(rw, "Discard not implemented", "Untracked: " + self.path)
+
+
 class TreeView(QListView):
-    rowstuff = []
+    entries = []
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -22,12 +53,12 @@ class TreeView(QListView):
         #with self.uindo.unready():
         #self.model().clear()
         self.setModel(QStandardItemModel()) # do this instead of model.clear to avoid triggering selectionChanged a million times
-        self.rowstuff = []
+        self.entries = []
 
     def fillDiff(self, diff: git.DiffIndex):
         model: QStandardItemModel = self.model()
         for f in diff:
-            self.rowstuff.append(f)
+            self.entries.append(TreeViewEntry_Diff(f))
             item = QStandardItem(f.a_path)
             item.setIcon(globals.statusIcons[f.change_type])
             model.appendRow(item)
@@ -35,7 +66,7 @@ class TreeView(QListView):
     def fillUntracked(self, untracked_files):
         model: QStandardItemModel = self.model()
         for f in untracked_files:
-            self.rowstuff.append(f)
+            self.entries.append(TreeViewEntry_Untracked(f))
             item = QStandardItem(f + " (untracked)")
             item.setIcon(globals.statusIcons['A'])
             model.appendRow(item)
@@ -56,8 +87,7 @@ class TreeView(QListView):
         QApplication.setOverrideCursor(Qt.WaitCursor)
         QApplication.processEvents()
         try:
-            change = self.rowstuff[current.row()]
-            self.repoWidget.diffView.setDiffContents(self.repoWidget.state.repo, change)
+            self.entries[current.row()].clicked(self.repoWidget)
         except BaseException as ex:
             import traceback
             traceback.print_exc()
@@ -74,20 +104,16 @@ class UnstagedView(TreeView):
         stageAction.triggered.connect(self.stage)
         self.addAction(stageAction)
 
-        restoreAction = QAction("Discard changes", self)
-        restoreAction.triggered.connect(self.restore)
-        self.addAction(restoreAction)
+        discardAction = QAction("Discard changes", self)
+        discardAction.triggered.connect(self.discard)
+        self.addAction(discardAction)
 
     def stage(self):
-        git = self.repoWidget.state.repo.git
         for si in self.selectedIndexes():
-            change = self.rowstuff[si.row()]
-            print(F"Staging: {change.a_path}")
-            git.add(change.a_path)
-            #self.uindo.state.index.add(change.a_path) # <- also works at first... but might add too many things after repeated staging/unstaging??
+            self.entries[si.row()].stage(self.repoWidget)
         self.repoWidget.fillStageView()
 
-    def restore(self):
+    def discard(self):
         qmb = QMessageBox(
             QMessageBox.Question,
             "Discard changes",
@@ -98,11 +124,9 @@ class UnstagedView(TreeView):
         qmb.exec_()
         if qmb.clickedButton() != yes:
             return
-        git = self.repoWidget.state.repo.git
         for si in self.selectedIndexes():
-            change = self.rowstuff[si.row()]
-            print(F"Discarding: {change.a_path}")
-            git.restore(change.a_path)
+            self.entries[si.row()].discard(self.repoWidget)
+        self.repoWidget.fillStageView()
 
 
 class StagedView(TreeView):
@@ -115,9 +139,11 @@ class StagedView(TreeView):
         self.addAction(action)
 
     def unstage(self):
+        # everything that is staged is supposed to be a diff entry
         git = self.repoWidget.state.repo.git
         for si in self.selectedIndexes():
-            change = self.rowstuff[si.row()]
-            print(F"UnStaging: {change.a_path}")
-            git.restore(change.a_path, staged=True)
+            assert isinstance(self.entries[si.row()], TreeViewEntry_Diff)
+            diff = self.entries[si.row()].diff
+            print(F"UnStaging: {diff.a_path}")
+            git.restore(diff.a_path, staged=True)
         self.repoWidget.fillStageView()

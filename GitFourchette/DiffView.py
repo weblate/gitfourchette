@@ -14,9 +14,11 @@ normalCF.setFont(globals.monoFont)
 
 plusBF = QTextBlockFormat()
 plusBF.setBackground(QColor(220, 254, 225))
+plusCF = normalCF
 
 minusBF = QTextBlockFormat()
 minusBF.setBackground(QColor(255, 227, 228))
+minusCF = normalCF
 
 arobaseBF = QTextBlockFormat()
 arobaseCF = QTextCharFormat()
@@ -62,6 +64,14 @@ class DiffView(QTextEdit):
         self.setDocument(self.doc)
         self.setReadOnly(True)
 
+    def setUntrackedContents(self, repo: git.Repo, path: str):
+        self.doc.clear()
+        self.setTabStopDistance(globals.monoFontMetrics.horizontalAdvance(' ' * globals.TAB_SPACES))
+        cursor = QTextCursor(self.doc)
+        cursor.setBlockFormat(plusBF)
+        cursor.setBlockCharFormat(plusCF)
+        cursor.insertText(open(repo.working_tree_dir + '/' + path, 'rb').read().decode('utf-8'))
+
     def setDiffContents(self, repo, change : git.diff.Diffable):
         self.currentChange = change
         if change.change_type == 'D':
@@ -73,7 +83,11 @@ class DiffView(QTextEdit):
         cursor: QTextCursor = QTextCursor(self.doc)
         firstBlock = True
 
-        a = change.a_blob.data_stream.read()
+        # added files (that didn't exist before) don't have an a_blob
+        if change.a_blob:
+            a = change.a_blob.data_stream.read()
+        else:
+            a = b""
 
         if change.b_blob:
             b = change.b_blob.data_stream.read()
