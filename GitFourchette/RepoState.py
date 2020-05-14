@@ -2,7 +2,7 @@ import git
 import os
 import traceback
 from PySide2.QtCore import QSettings
-import globals
+import settings
 
 
 class CommitMetadata:
@@ -28,7 +28,7 @@ class RepoState:
         self.repo = git.Repo(dir)
         self.index = self.repo.index
         self.settings = QSettings(self.repo.common_dir + "/fourchette.ini", QSettings.Format.IniFormat)
-        self.settings.setValue("GitFourchette", globals.VERSION)
+        self.settings.setValue("GitFourchette", settings.VERSION)
 
         self.commitMetadata = {}
         for tag in self.repo.tags:

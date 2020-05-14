@@ -1,13 +1,13 @@
 from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 from PySide2.QtCore import *
-import globals
+import settings
 import git
 
 
 XMargin = 4
 ColW_Author = 16
-ColW_Hash = globals.shortHashChars + 1
+ColW_Hash = settings.shortHashChars + 1
 ColW_Date = 16
 DEBUGRECTS = False
 
@@ -50,23 +50,23 @@ class GraphDelegate(QItemDelegate):
                     message += " [...]"
 
             data = {
-                'hash': commit.hexsha[:globals.shortHashChars],
+                'hash': commit.hexsha[:settings.shortHashChars],
                 'author': commit.author.email.split('@')[0],  # [:8],
-                'date': commit.authored_datetime.strftime(globals.graphViewTimeFormat),
+                'date': commit.authored_datetime.strftime(settings.graphViewTimeFormat),
                 'message': message,
                 'tags': bundle.tags,
                 'refs': bundle.refs
             }
         else:
             data = {
-                'hash': "·" * globals.shortHashChars,
+                'hash': "·" * settings.shortHashChars,
                 'author': "",
                 'date': "",
                 'message': index.data(),
                 'tags': [],
                 'refs': []
             }
-            painter.setFont(globals.alternateFont)
+            painter.setFont(settings.alternateFont)
 
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
@@ -82,10 +82,10 @@ class GraphDelegate(QItemDelegate):
         # ------ tags
         for tag in data['tags'] + data['refs']:
             painter.save()
-            painter.setFont(globals.smallFont)
+            painter.setFont(settings.smallFont)
             rect.setLeft(rect.right())
             label = F"[{tag}] "
-            rect.setWidth(globals.smallFontMetrics.width(label) + 1)
+            rect.setWidth(settings.smallFontMetrics.width(label) + 1)
             painter.drawText(rect, label)
             painter.restore()
 

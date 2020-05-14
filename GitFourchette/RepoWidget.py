@@ -8,7 +8,7 @@ from GraphView import GraphView
 from RemoteProgress import RemoteProgress
 from util import fplural
 import traceback
-import globals
+import settings
 
 
 class RepoWidget(QWidget):
@@ -46,7 +46,7 @@ class RepoWidget(QWidget):
         commitButton.clicked.connect(self.commitFlow)
         stageContainer.layout().addWidget(commitButton)
         stageSplitter = QSplitter(Qt.Vertical)
-        stageSplitter.setHandleWidth(globals.splitterHandleWidth)
+        stageSplitter.setHandleWidth(settings.splitterHandleWidth)
         stageSplitter.addWidget(dirtyContainer)
         stageSplitter.addWidget(stageContainer)
 
@@ -55,13 +55,13 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentIndex(0)
 
         bottomSplitter = QSplitter(Qt.Horizontal)
-        bottomSplitter.setHandleWidth(globals.splitterHandleWidth)
+        bottomSplitter.setHandleWidth(settings.splitterHandleWidth)
         bottomSplitter.addWidget(self.filesStack)
         bottomSplitter.addWidget(self.diffView)
         bottomSplitter.setSizes([100, 300])
 
         mainSplitter = QSplitter(Qt.Vertical)
-        mainSplitter.setHandleWidth(globals.splitterHandleWidth)
+        mainSplitter.setHandleWidth(settings.splitterHandleWidth)
         mainSplitter.addWidget(self.graphView)
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
@@ -75,25 +75,25 @@ class RepoWidget(QWidget):
         self.splittersToSave = [mainSplitter, bottomSplitter, stageSplitter]
         for sts in self.splittersToSave:
             k = F"Splitters/{sts.objectName()}"
-            if globals.appSettings.contains(k):
-                sts.restoreState(globals.appSettings.value(k))
+            if settings.appSettings.contains(k):
+                sts.restoreState(settings.appSettings.value(k))
 
     def cleanup(self):
         self.state.repo.close()
 
     def saveSplitterStates(self):
         for sts in self.splittersToSave:
-            globals.appSettings.setValue(F"Splitters/{sts.objectName()}", sts.saveState())
+            settings.appSettings.setValue(F"Splitters/{sts.objectName()}", sts.saveState())
 
     def renameRepo(self):
         text, ok = QInputDialog().getText(
             self,
             "Rename repo", "Enter new nickname for repo:",
             QLineEdit.Normal,
-            globals.getRepoNickname(self.state.dir)
+            settings.getRepoNickname(self.state.dir)
         )
         if ok:
-            globals.setRepoNickname(self.state.dir, text)
+            settings.setRepoNickname(self.state.dir, text)
 
     def setNoCommitSelected(self):
         self.filesStack.setCurrentIndex(0)

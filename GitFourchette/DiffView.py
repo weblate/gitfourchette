@@ -6,11 +6,11 @@ import re
 import git
 from typing import List
 
-import globals
+import settings
 
 normalBF = QTextBlockFormat()
 normalCF = QTextCharFormat()
-normalCF.setFont(globals.monoFont)
+normalCF.setFont(settings.monoFont)
 
 plusBF = QTextBlockFormat()
 plusBF.setBackground(QColor(220, 254, 225))
@@ -22,12 +22,12 @@ minusCF = normalCF
 
 arobaseBF = QTextBlockFormat()
 arobaseCF = QTextCharFormat()
-arobaseCF.setFont(globals.alternateFont)
+arobaseCF.setFont(settings.alternateFont)
 arobaseCF.setForeground(QColor(0, 80, 240))
 
 warningFormat = QTextCharFormat()
 warningFormat.setForeground(QColor(255, 0, 0))
-warningFormat.setFont(globals.alternateFont)
+warningFormat.setFont(settings.alternateFont)
 
 
 hunkRE = re.compile(r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$")
@@ -66,7 +66,7 @@ class DiffView(QTextEdit):
 
     def setUntrackedContents(self, repo: git.Repo, path: str):
         self.doc.clear()
-        self.setTabStopDistance(globals.monoFontMetrics.horizontalAdvance(' ' * globals.TAB_SPACES))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.TAB_SPACES))
         cursor = QTextCursor(self.doc)
         cursor.setBlockFormat(plusBF)
         cursor.setBlockCharFormat(plusCF)
@@ -79,7 +79,7 @@ class DiffView(QTextEdit):
             return
 
         self.doc.clear()
-        self.setTabStopDistance(globals.monoFontMetrics.horizontalAdvance(' ' * globals.TAB_SPACES))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.TAB_SPACES))
         cursor: QTextCursor = QTextCursor(self.doc)
         firstBlock = True
 

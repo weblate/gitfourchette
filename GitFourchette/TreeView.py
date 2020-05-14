@@ -3,7 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 import git
-import globals
+import settings
 from util import fplural
 
 
@@ -60,7 +60,7 @@ class TreeView(QListView):
         for f in diff:
             self.entries.append(TreeViewEntry_Diff(f))
             item = QStandardItem(f.a_path)
-            item.setIcon(globals.statusIcons[f.change_type])
+            item.setIcon(settings.statusIcons[f.change_type])
             model.appendRow(item)
 
     def fillUntracked(self, untracked_files):
@@ -68,7 +68,7 @@ class TreeView(QListView):
         for f in untracked_files:
             self.entries.append(TreeViewEntry_Untracked(f))
             item = QStandardItem(f + " (untracked)")
-            item.setIcon(globals.statusIcons['A'])
+            item.setIcon(settings.statusIcons['A'])
             model.appendRow(item)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):

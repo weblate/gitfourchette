@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     splash.finish(window)
 
-    import globals
-    history = globals.getRepoHistory()
+    import settings
+    history = settings.getRepoHistory()
     if len(history) > 0:
         window.openRepo(history[0])
 
