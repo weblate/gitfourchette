@@ -128,6 +128,12 @@ class UnstagedView(TreeView):
             self.entries[si.row()].discard(self.repoWidget)
         self.repoWidget.fillStageView()
 
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key_Return:
+            self.stage()
+        else:
+            super().keyPressEvent(event)
+
 
 class StagedView(TreeView):
     def __init__(self, parent):
@@ -147,3 +153,9 @@ class StagedView(TreeView):
             print(F"UnStaging: {diff.a_path}")
             git.restore(diff.a_path, staged=True)
         self.repoWidget.fillStageView()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key_Return:
+            self.unstage()
+        else:
+            super().keyPressEvent(event)
