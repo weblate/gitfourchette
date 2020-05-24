@@ -6,6 +6,7 @@ import re
 import git
 from typing import List
 
+from patch import makePatch, LineData
 import settings
 
 normalBF = QTextBlockFormat()
@@ -43,13 +44,6 @@ def bisect(a, x, lo=0, hi=None, key=lambda x: x):
         else:
             lo = mid+1
     return lo
-
-
-class LineData:
-    cursorStart : int
-    lineA : int
-    lineB : int
-    data : str
 
 
 class DiffView(QTextEdit):
@@ -111,6 +105,7 @@ class DiffView(QTextEdit):
             ld.cursorStart = cursor.position()
             ld.lineA = lineA
             ld.lineB = lineB
+            ld.diffLineIndex = len(self.lineData)
             ld.data = line
             self.lineData.append(ld)
 
@@ -187,20 +182,9 @@ class DiffView(QTextEdit):
         
         print(F"stage lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
 
-        patch = ""
-        patch += F"--- a/{self.currentChange.a_path}\n"
-        patch += F"+++ b/{self.currentChange.b_path}\n"
+        biStart -= 1
 
-        for ld in self.lineData[biStart-1 : biEnd]:
-            if ld.data[0] in '@ ':
-                continue
-            hunkLenA = 0 if ld.data[0] == '+' else 1
-            hunkLenB = 0 if ld.data[0] == '-' else 1
-            patch += F"@@ -{ld.lineA},{hunkLenA} +{ld.lineB},{hunkLenB} @@\n"
-            patch += ld.data
-            #print(F"{ld.cursorStart}-{ld.cursorEnd} {ld.lineA} {ld.lineB} {ld.data.strip()}")
-
-        print(patch)
+        print(makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd))
 
     def discardLines(self):
         pass
