@@ -7,6 +7,7 @@ import git
 from typing import List
 
 from patch import makePatch, LineData
+import DiffActionSets
 import settings
 
 normalBF = QTextBlockFormat()
@@ -48,7 +49,9 @@ def bisect(a, x, lo=0, hi=None, key=lambda x: x):
 
 class DiffView(QTextEdit):
     lineData: List[LineData]
-    currentChange : git.diff.Diffable
+    currentActionSet: str
+    currentChange: git.Diff
+    currentGitRepo: git.Repo
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,6 +62,7 @@ class DiffView(QTextEdit):
         self.setReadOnly(True)
 
     def setUntrackedContents(self, repo: git.Repo, path: str):
+        self.currentActionSet = DiffActionSets.untracked
         self.doc.clear()
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.TAB_SPACES))
         cursor = QTextCursor(self.doc)
@@ -66,8 +70,11 @@ class DiffView(QTextEdit):
         cursor.setBlockCharFormat(plusCF)
         cursor.insertText(open(repo.working_tree_dir + '/' + path, 'rb').read().decode('utf-8'))
 
-    def setDiffContents(self, repo, change : git.diff.Diffable):
+    def setDiffContents(self, repo: git.Repo, change: git.diff.Diff, diffActionSet: str):
+        self.currentActionSet = diffActionSet
+        self.currentGitRepo = repo
         self.currentChange = change
+
         if change.change_type == 'D':
             self.setFailureContents("File was deleted.")
             return
@@ -160,13 +167,31 @@ class DiffView(QTextEdit):
     def contextMenuEvent(self, event: QContextMenuEvent):
         menu: QMenu = self.createStandardContextMenu()
         before = menu.actions()[0]
-        action1 = QAction("Stage Lines", self)
-        action1.triggered.connect(self.stageLines)
-        action2 = QAction("Discard Lines", self)
-        action2.triggered.connect(self.discardLines)
-        menu.insertAction(before, action1)
-        menu.insertAction(before, action2)
-        menu.insertSeparator(before)
+
+        actions = []
+
+        if self.currentActionSet is None:
+            pass
+        elif self.currentActionSet == DiffActionSets.untracked:
+            pass
+        elif self.currentActionSet == DiffActionSets.unstaged:
+            action1 = QAction("Stage Lines", self)
+            action1.triggered.connect(self.stageLines)
+            action2 = QAction("Discard Lines", self)
+            action2.triggered.connect(self.discardLines)
+            actions = [action1, action2]
+        elif self.currentActionSet == DiffActionSets.staged:
+            action1 = QAction("Unstage Lines", self)
+            action1.triggered.connect(self.unstageLines)
+            actions = [action1]
+        else:
+            print(F"unknown diff action set: {self.currentActionSet}")
+
+        if actions:
+            for a in actions:
+                menu.insertAction(before, a)
+            menu.insertSeparator(before)
+
         menu.exec_(event.globalPos())
 
     def stageLines(self):
@@ -186,5 +211,8 @@ class DiffView(QTextEdit):
 
         print(makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd))
 
+    def unstageLines(self):
+        QMessageBox.warning(self, "TODO", "TODO: unstageLines")
+
     def discardLines(self):
-        pass
+        QMessageBox.warning(self, "TODO", "TODO: discardLines")
