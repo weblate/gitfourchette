@@ -87,7 +87,7 @@ def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, 
             hunkPatch += line.data
             hunkLenA += 0 if line.data[0] == '+' else 1
             hunkLenB += 0 if line.data[0] == '-' else 1
-        patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB}\n"
+        patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB} @@\n"
         patch += hunkPatch
 
     return patch
