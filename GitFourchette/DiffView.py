@@ -5,8 +5,9 @@ import difflib
 import re
 import git
 from typing import List
+import traceback
 
-from patch import makePatch, LineData
+from patch import makePatch, applyPatch, LineData
 import DiffActionSets
 import settings
 
@@ -90,6 +91,7 @@ class DiffView(QTextEdit):
         else:
             a = b""
 
+        # Deleted file: no b_blob
         if change.b_blob:
             b = change.b_blob.data_stream.read()
         else:
@@ -209,7 +211,13 @@ class DiffView(QTextEdit):
 
         biStart -= 1
 
-        print(makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd))
+        patchData = makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd)
+
+        try:
+            applyPatch(self.currentGitRepo, patchData)
+        except git.GitCommandError as e:
+            traceback.print_exc()
+            QMessageBox.critical(self, "Failed to apply patch", str(e))
 
     def unstageLines(self):
         QMessageBox.warning(self, "TODO", "TODO: unstageLines")
