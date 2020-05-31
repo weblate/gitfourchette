@@ -63,6 +63,7 @@ class DiffView(QTextEdit):
         self.doc = QTextDocument(self)
         self.setDocument(self.doc)
         self.setReadOnly(True)
+        self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
     def setUntrackedContents(self, repo: git.Repo, path: str):
         self.currentActionSet = DiffActionSets.untracked
