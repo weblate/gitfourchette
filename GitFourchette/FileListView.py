@@ -56,7 +56,8 @@ class FileListView(QListView):
         self.entries = []
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setIconSize(QSize(16, 16))
+        iconSize = self.fontMetrics().height()
+        self.setIconSize(QSize(iconSize, iconSize))
         self.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevent editing text after double-clicking
         self.diffActionSet = diffActionSet
         self.clear()
@@ -69,6 +70,7 @@ class FileListView(QListView):
         self.entries.append(entry)
         item = QStandardItem()
         item.setText(entry.label)
+        item.setSizeHint(QSize(-1, self.fontMetrics().height()))  # Compact height
         item.setIcon(settings.statusIcons[entry.icon])
         if entry.tooltip:
             item.setToolTip(entry.tooltip)
