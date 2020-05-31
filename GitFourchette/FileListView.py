@@ -14,13 +14,16 @@ class Entry:
     path: str
     diff: git.Diff
     icon: str
+    tooltip: str
 
     @classmethod
     def Tracked(cls, diff: git.Diff):
         entry = cls()
         entry.diff = diff
-        entry.path = diff.a_path
         entry.icon = diff.change_type
+        # Prefer b_path; if it's a deletion, a_path may not be available
+        entry.path = diff.b_path or diff.a_path
+        entry.tooltip = str(diff)
         return entry
 
     @classmethod
@@ -29,6 +32,7 @@ class Entry:
         entry.diff = None
         entry.path = path
         entry.icon = 'A'
+        entry.tooltip = None
         return entry
 
 
@@ -55,6 +59,8 @@ class FileListView(QListView):
         item = QStandardItem()
         item.setText(entry.path)
         item.setIcon(settings.statusIcons[entry.icon])
+        if entry.tooltip:
+            item.setToolTip(entry.tooltip)
         self.model().appendRow(item)
 
     def fillDiff(self, diffIndex: git.DiffIndex):
