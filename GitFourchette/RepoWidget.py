@@ -51,9 +51,16 @@ class RepoWidget(QWidget):
         stageContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(self.stageLabel)
         stageContainer.layout().addWidget(self.stageView)
+        commitButtonsContainer = QWidget()
+        commitButtonsContainer.setLayout(QHBoxLayout())
+        commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
+        stageContainer.layout().addWidget(commitButtonsContainer)
         commitButton = QPushButton("Commit")
         commitButton.clicked.connect(self.commitFlow)
-        stageContainer.layout().addWidget(commitButton)
+        commitButtonsContainer.layout().addWidget(commitButton)
+        amendButton = QPushButton("Amend")
+        amendButton.clicked.connect(self.amendFlow)
+        commitButtonsContainer.layout().addWidget(amendButton)
         stageSplitter = QSplitter(Qt.Vertical)
         stageSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         stageSplitter.addWidget(dirtyContainer)
@@ -158,11 +165,11 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
 
         progress.dlg.close()
 
-    def commitFlow(self):
+    def _commitFlow(self, amend: bool):
         kDRAFT = "DraftMessage"
         dlg = QInputDialog(self)
         dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle("Commit")
+        dlg.setWindowTitle("Amend" if amend else "Commit")
         # absurdly-long label text because setMinimumWidth has no effect - we should probably make a custom dialog instead
         dlg.setLabelText("Enter commit message:                                                      ")
         dlg.setTextValue(self.state.settings.value(kDRAFT, ""))
@@ -171,6 +178,13 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         message = dlg.textValue()
         if rc == QDialog.DialogCode.Accepted:
             self.state.settings.remove(kDRAFT)
-            self.state.index.commit(message)
+            #self.state.index.commit(message, amend=amend)
+            self.state.repo.git.commit(m=message, amend=amend)
         else:
             self.state.settings.setValue(kDRAFT, message)
+
+    def commitFlow(self):
+        self._commitFlow(False)
+
+    def amendFlow(self):
+        self._commitFlow(True)
