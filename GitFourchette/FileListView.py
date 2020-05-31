@@ -32,7 +32,7 @@ class Entry:
         return entry
 
 
-class TreeView(QListView):
+class FileListView(QListView):
     entries: List[Entry]
     diffActionSet: str
 
@@ -97,7 +97,7 @@ class TreeView(QListView):
         return self.repoWidget.state.repo.git
 
 
-class UnstagedView(TreeView):
+class DirtyFileListView(FileListView):
     def __init__(self, parent):
         super().__init__(parent, DiffActionSets.unstaged)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
@@ -144,7 +144,7 @@ class UnstagedView(TreeView):
         self.repoWidget.fillStageView()
 
 
-class StagedView(TreeView):
+class StagedFileListView(FileListView):
     def __init__(self, parent):
         super().__init__(parent, DiffActionSets.staged)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)

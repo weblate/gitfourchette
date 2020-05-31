@@ -3,7 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 from RepoState import RepoState
 from DiffView import DiffView
-from TreeView import TreeView, UnstagedView, StagedView
+from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from RemoteProgress import RemoteProgress
 from util import fplural
@@ -22,9 +22,9 @@ class RepoWidget(QWidget):
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
         self.diffView = DiffView(self)
-        self.changedFilesView = TreeView(self)
-        self.dirtyView = UnstagedView(self)
-        self.stageView = StagedView(self)
+        self.changedFilesView = FileListView(self)
+        self.dirtyView = DirtyFileListView(self)
+        self.stageView = StagedFileListView(self)
 
         # windowVBox.setSpacing(0)
         # windowVBox.setContentsMargins(0, 0, 0, 0)
