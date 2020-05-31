@@ -201,7 +201,7 @@ class DiffView(QTextEdit):
 
         menu.exec_(event.globalPos())
 
-    def _applyLines(self, reverse):
+    def _applyLines(self, cached=True, reverse=False):
         cursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -216,10 +216,10 @@ class DiffView(QTextEdit):
 
         biStart -= 1
 
-        patchData = makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd)
+        patchData = makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd, cached=cached)
 
         try:
-            applyPatch(self.currentGitRepo, patchData, reverse)
+            applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
         except git.GitCommandError as e:
             traceback.print_exc()
             QMessageBox.critical(self, "Failed to apply patch", str(e))
@@ -233,7 +233,7 @@ class DiffView(QTextEdit):
         self._applyLines(reverse=True)
 
     def discardLines(self):
-        QMessageBox.warning(self, "TODO", "TODO: discardLines")
+        self._applyLines(cached=False, reverse=True)
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
@@ -245,6 +245,8 @@ class DiffView(QTextEdit):
         elif k == Qt.Key_Backspace or k == Qt.Key_Delete:
             if self.currentActionSet == DiffActionSets.staged:
                 self.unstageLines()
+            elif self.currentActionSet == DiffActionSets.unstaged:
+                self.discardLines()
             else:
                 QApplication.beep()
         else:
