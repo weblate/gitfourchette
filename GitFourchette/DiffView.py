@@ -49,6 +49,8 @@ def bisect(a, x, lo=0, hi=None, key=lambda x: x):
 
 
 class DiffView(QTextEdit):
+    patchApplied: Signal = Signal()
+
     lineData: List[LineData]
     currentActionSet: str
     currentChange: git.Diff
@@ -218,6 +220,8 @@ class DiffView(QTextEdit):
         except git.GitCommandError as e:
             traceback.print_exc()
             QMessageBox.critical(self, "Failed to apply patch", str(e))
+
+        self.patchApplied.emit()
 
     def stageLines(self):
         self._applyLines(reverse=False)

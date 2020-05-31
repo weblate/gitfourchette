@@ -29,6 +29,10 @@ class RepoWidget(QWidget):
         self.stageView.nonEmptySelectionChanged.connect(lambda: self.dirtyView.clearSelection())
         self.dirtyView.nonEmptySelectionChanged.connect(lambda: self.stageView.clearSelection())
 
+        self.diffView.patchApplied.connect(self.fillStageView)
+        self.stageView.patchApplied.connect(self.fillStageView)
+        self.dirtyView.patchApplied.connect(self.fillStageView)
+
         self.splitterStates = sharedSplitterStates or {}
 
         # windowVBox.setSpacing(0)

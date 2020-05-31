@@ -109,6 +109,8 @@ class FileListView(QListView):
 
 
 class DirtyFileListView(FileListView):
+    patchApplied: Signal = Signal()
+
     def __init__(self, parent):
         super().__init__(parent, DiffActionSets.unstaged)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
@@ -131,7 +133,7 @@ class DirtyFileListView(FileListView):
     def stage(self):
         for entry in self.selectedEntries():
             self.git().add(entry.path)
-        self.repoWidget.fillStageView()
+        self.patchApplied.emit()
 
     # Context menu action
     def discard(self):
@@ -152,10 +154,12 @@ class DirtyFileListView(FileListView):
                 self.git().restore(entry.path)  # self.diff.a_path)
             else:  # untracked file
                 QMessageBox.warning(self, "Discard", "Discard not implemented for untracked files: " + entry.path)
-        self.repoWidget.fillStageView()
+        self.patchApplied.emit()
 
 
 class StagedFileListView(FileListView):
+    patchApplied: Signal = Signal()
+
     def __init__(self, parent):
         super().__init__(parent, DiffActionSets.staged)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
@@ -175,4 +179,4 @@ class StagedFileListView(FileListView):
         for entry in self.selectedEntries():
             assert entry.diff is not None
             self.git().restore(entry.diff.a_path, staged=True)
-        self.repoWidget.fillStageView()
+        self.patchApplied.emit()
