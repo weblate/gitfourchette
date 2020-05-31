@@ -11,8 +11,18 @@ def fplural(fmt: str, n: int) -> str:
     return out
 
 
-def compactPath(path: str) -> str:
+def compactSystemPath(path: str) -> str:
     home = str(Path.home())
     if path.startswith(str(home)):
         path = "~" + path[len(home):]
     return path
+
+
+def compactRepoPath(path: str) -> str:
+    splitLong = path.split('/')
+    for i in range(len(splitLong) - 1):
+        if splitLong[i][0] == '.':
+            splitLong[i] = splitLong[i][:2]
+        else:
+            splitLong[i] = splitLong[i][0]
+    return '/'.join(splitLong)

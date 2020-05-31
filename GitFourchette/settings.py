@@ -53,12 +53,14 @@ class Prefs(BasePrefs):
     shortHashChars: int
     splitterHandleWidth: int
     shortTimeFormat: str
+    shortenDirectoryNames: bool
 
     def __init__(self):
         self.tabSize = 4
         self.shortHashChars = 7
         self.splitterHandleWidth = -1
         self.shortTimeFormat = "%d-%m-%y %H:%M"
+        self.shortenDirectoryNames = True
 
 
 class History(BasePrefs):

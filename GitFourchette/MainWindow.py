@@ -9,7 +9,7 @@ import os
 import traceback
 from RepoState import RepoState
 from RepoWidget import RepoWidget
-from util import compactPath
+from util import compactSystemPath
 
 
 class Session:
@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
         self.recentMenu.clear()
         for historic in settings.history.history:
             self.recentMenu.addAction(
-                F"{settings.history.getRepoNickname(historic)} [{compactPath(historic)}]",
+                F"{settings.history.getRepoNickname(historic)} [{compactSystemPath(historic)}]",
                 lambda h=historic: self.openRepo(h))
 
     def currentRepoWidget(self) -> RepoWidget:

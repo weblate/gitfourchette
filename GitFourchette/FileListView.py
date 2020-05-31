@@ -7,11 +7,12 @@ from typing import List, Generator
 
 import settings
 import DiffActionSets
-from util import fplural
+from util import fplural, compactRepoPath
 
 
 class Entry:
     path: str
+    label: str
     diff: git.Diff
     icon: str
     tooltip: str
@@ -24,6 +25,10 @@ class Entry:
         # Prefer b_path; if it's a deletion, a_path may not be available
         entry.path = diff.b_path or diff.a_path
         entry.tooltip = str(diff)
+        if settings.prefs.shortenDirectoryNames:
+            entry.label = compactRepoPath(entry.path)
+        else:
+            entry.label = entry.path
         return entry
 
     @classmethod
@@ -32,7 +37,11 @@ class Entry:
         entry.diff = None
         entry.path = path
         entry.icon = 'A'
-        entry.tooltip = None
+        entry.tooltip = entry.path + '\n(untracked file)'
+        if settings.prefs.shortenDirectoryNames:
+            entry.label = compactRepoPath(entry.path)
+        else:
+            entry.label = entry.path
         return entry
 
 
@@ -59,7 +68,7 @@ class FileListView(QListView):
     def addEntry(self, entry):
         self.entries.append(entry)
         item = QStandardItem()
-        item.setText(entry.path)
+        item.setText(entry.label)
         item.setIcon(settings.statusIcons[entry.icon])
         if entry.tooltip:
             item.setToolTip(entry.tooltip)
