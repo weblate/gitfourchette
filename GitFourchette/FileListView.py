@@ -37,6 +37,8 @@ class Entry:
 
 
 class FileListView(QListView):
+    nonEmptySelectionChanged: Signal = Signal()
+
     entries: List[Entry]
     diffActionSet: str
 
@@ -77,6 +79,9 @@ class FileListView(QListView):
         indexes = list(selected.indexes())
         if len(indexes) == 0:
             return
+
+        self.nonEmptySelectionChanged.emit()
+
         current = selected.indexes()[0]
 
         if not current.isValid():

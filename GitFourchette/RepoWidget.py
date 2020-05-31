@@ -26,6 +26,9 @@ class RepoWidget(QWidget):
         self.dirtyView = DirtyFileListView(self)
         self.stageView = StagedFileListView(self)
 
+        self.stageView.nonEmptySelectionChanged.connect(lambda: self.dirtyView.clearSelection())
+        self.dirtyView.nonEmptySelectionChanged.connect(lambda: self.stageView.clearSelection())
+
         self.splitterStates = sharedSplitterStates or {}
 
         # windowVBox.setSpacing(0)
