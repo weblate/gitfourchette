@@ -4,10 +4,11 @@ from PySide2.QtWidgets import *
 import git
 import traceback
 from typing import List, Generator
+from pathlib import Path
 
 import settings
 import DiffActionSets
-from util import fplural, compactRepoPath
+from util import fplural, compactRepoPath, showInFolder
 
 
 class Entry:
@@ -61,6 +62,15 @@ class FileListView(QListView):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevent editing text after double-clicking
         self.diffActionSet = diffActionSet
         self.clear()
+
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        showInFolderAction = QAction("Open Containing Folder", self)
+        showInFolderAction.triggered.connect(self.showInFolder)
+        self.addAction(showInFolderAction)
+
+    def showInFolder(self):
+        for entry in self.selectedEntries():
+            showInFolder(Path(self.repoWidget.state.repo.working_tree_dir) / entry.path)
 
     def clear(self):
         self.setModel(QStandardItemModel(self))  # do this instead of model.clear() to avoid triggering selectionChanged a million times
