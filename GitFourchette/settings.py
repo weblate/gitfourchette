@@ -118,7 +118,7 @@ alternateFont.setItalic(True)
 
 smallFont = QFont()
 smallFont.setWeight(QFont.Light)
-smallFont.setPointSize(9)
+#smallFont.setPointSize(9)
 smallFontMetrics = QFontMetrics(smallFont)
 
 statusIcons = {}
