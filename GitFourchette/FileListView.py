@@ -59,11 +59,11 @@ class FileListView(QListView):
 
     def fillDiff(self, diffIndex: git.DiffIndex):
         for diff in diffIndex:
-            self.addEntry(self.Entry.Tracked(diff))
+            self.addEntry(Entry.Tracked(diff))
 
     def fillUntracked(self, untracked: List[str]):
         for path in untracked:
-            self.addEntry(self.Entry.Untracked(path))
+            self.addEntry(Entry.Untracked(path))
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
