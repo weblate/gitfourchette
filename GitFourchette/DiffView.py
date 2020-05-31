@@ -196,7 +196,7 @@ class DiffView(QTextEdit):
 
         menu.exec_(event.globalPos())
 
-    def stageLines(self):
+    def _applyLines(self, reverse):
         cursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -206,21 +206,24 @@ class DiffView(QTextEdit):
 
         biStart = bisect(self.lineData, posStart, key=lambda ld: ld.cursorStart)
         biEnd = bisect(self.lineData, posEnd, biStart, key=lambda ld: ld.cursorStart)
-        
-        print(F"stage lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
+
+        print(F"{'un' if reverse else ''}stage lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
 
         biStart -= 1
 
         patchData = makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd)
 
         try:
-            applyPatch(self.currentGitRepo, patchData)
+            applyPatch(self.currentGitRepo, patchData, reverse)
         except git.GitCommandError as e:
             traceback.print_exc()
             QMessageBox.critical(self, "Failed to apply patch", str(e))
 
+    def stageLines(self):
+        self._applyLines(reverse=False)
+
     def unstageLines(self):
-        QMessageBox.warning(self, "TODO", "TODO: unstageLines")
+        self._applyLines(reverse=True)
 
     def discardLines(self):
         QMessageBox.warning(self, "TODO", "TODO: discardLines")

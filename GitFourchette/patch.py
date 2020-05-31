@@ -41,7 +41,7 @@ def extraContext(lineDataIter, contextLines: int) -> Generator[LineData, None, N
             raise Exception("Unknown diffChar")
 
 
-def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, ldEnd: int, contextLines: int = 3):
+def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, ldEnd: int, contextLines: int = 3) -> str:
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
@@ -96,12 +96,12 @@ def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, 
     return patch
 
 
-def applyPatch(repo: git.Repo, patchData: str):
+def applyPatch(repo: git.Repo, patchData: str, reverse: bool) -> str:
     prefix = F"gitfourchette-{os.path.basename(repo.working_tree_dir)}-"
     with tempfile.NamedTemporaryFile(mode='wb', suffix=".patch", prefix=prefix, delete=False) as patchFile:
         print(F"_____________ {patchFile.name} ______________\n{patchData}\n________________")
         patchFile.write(bytes(patchData, 'utf-8'))
         patchFile.flush()
-        return repo.git.apply('--cached', patchFile.name)
+        return repo.git.apply(patchFile.name, cached=True, reverse=reverse)
 
 
