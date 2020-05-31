@@ -73,10 +73,15 @@ COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
 
         if current.row() == 0:  # uncommitted changes
             self.repoWidget.fillStageView()
+            self.repoWidget.dirtyView.selectFirstRow()
             return
 
         commit: git.Commit = current.data().commit
-        self.repoWidget.changedFilesView.clear()
+
+        # TODO: use a signal for this instead of touching changedFilesView directly
+        cfv = self.repoWidget.changedFilesView
+        cfv.clear()
         for parent in commit.parents:
-            self.repoWidget.changedFilesView.fillDiff(parent.diff(commit))
+            cfv.fillDiff(parent.diff(commit))
+        cfv.selectFirstRow()
         self.repoWidget.filesStack.setCurrentIndex(0)

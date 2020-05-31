@@ -94,6 +94,13 @@ class FileListView(QListView):
         for path in untracked:
             self.addEntry(Entry.Untracked(path))
 
+    def selectFirstRow(self):
+        if self.model().rowCount() == 0:
+            self.repoWidget.diffView.clear()
+            self.clearSelection()
+        else:
+            self.setCurrentIndex(self.model().index(0, 0))
+
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
 
