@@ -147,6 +147,8 @@ class DiffView(QTextEdit):
                 trailer = "<CR>"
             elif line.endswith("\n"):
                 trimBack = -1
+            else:
+                trailer = "<no newline at end of file>"
 
             if not firstBlock:
                 cursor.insertBlock()

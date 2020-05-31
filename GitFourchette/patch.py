@@ -93,6 +93,10 @@ def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, 
         patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB} @@\n"
         patch += hunkPatch
 
+    # This is required for git to accept staging hunks without newlines at the end.
+    if not patch.endswith('\n'):
+        patch += "\n\\ No newline at end of file"
+
     return patch
 
 
