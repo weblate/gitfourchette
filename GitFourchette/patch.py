@@ -76,11 +76,11 @@ def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, 
     lastDiffLine = hunks[-1][-1].diffLineIndex
 
     # Extend first hunk with context upwards
-    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, bIsReference=cached):
+    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, bIsReference=not cached):
         hunks[0].insert(0, contextLine)
 
     # Extend last hunk with context downwards
-    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, bIsReference=cached):
+    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, bIsReference=not cached):
         hunks[-1].append(contextLine)
 
     # Assemble patch text
