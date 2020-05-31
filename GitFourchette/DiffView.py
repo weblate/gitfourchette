@@ -232,3 +232,18 @@ class DiffView(QTextEdit):
 
     def discardLines(self):
         QMessageBox.warning(self, "TODO", "TODO: discardLines")
+
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+        if k == Qt.Key_Return:
+            if self.currentActionSet == DiffActionSets.unstaged:
+                self.stageLines()
+            else:
+                QApplication.beep()
+        elif k == Qt.Key_Backspace or k == Qt.Key_Delete:
+            if self.currentActionSet == DiffActionSets.staged:
+                self.unstageLines()
+            else:
+                QApplication.beep()
+        else:
+            super().keyPressEvent(event)
