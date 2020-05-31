@@ -1,3 +1,5 @@
+from typing import List
+
 import git
 from PySide2.QtCore import *
 from PySide2.QtGui import *
@@ -10,17 +12,29 @@ from RepoWidget import RepoWidget
 from util import compactPath
 
 
+class Session:
+    openTabs: List[str]
+    activeTab: int
+    geometry: QRect
+
+
 class MainWindow(QMainWindow):
     tabs: QTabWidget
+    previousTabIndex: int
 
     def __init__(self):
         super().__init__()
 
+        self.sharedSplitterStates = {}
+
         self.setWindowTitle(settings.PROGRAM_NAME)
         self.setWindowIcon(QIcon("icons/gf.png"))
-        self.resize(settings.appSettings.value("MainWindow/size", QSize(800, 600)))
-        self.move(settings.appSettings.value("MainWindow/position", QPoint(50, 50)))
+        self.resize(QSize(800, 600))
+        self.move(QPoint(50, 50))
+        #self.resize(settings.appSettings.value("MainWindow/size", QSize(800, 600)))
+        #self.move(settings.appSettings.value("MainWindow/position", QPoint(50, 50)))
 
+        self.previousTabIndex = -1
         self.tabs = QTabWidget()
         #self.tabs.setTabBarAutoHide(True)
         self.tabs.setMovable(True)
@@ -80,26 +94,30 @@ class MainWindow(QMainWindow):
 
     def fillRecentMenu(self):
         self.recentMenu.clear()
-        for historic in settings.getRepoHistory():
+        for historic in settings.history.history:
             self.recentMenu.addAction(
-                F"{settings.getRepoNickname(historic)} [{compactPath(historic)}]",
+                F"{settings.history.getRepoNickname(historic)} [{compactPath(historic)}]",
                 lambda h=historic: self.openRepo(h))
 
     def currentRepoWidget(self) -> RepoWidget:
         return self.tabs.widget(self.tabs.currentIndex())
 
     def onTabChange(self, i):
+        #if self.previousTabIndex >= 0:
+        #    pw = self.tabs.widget(previous...) # also save splitter state after close
+        #    self.splitterStates = self
         if i < 0:
             self.setWindowTitle(settings.PROGRAM_NAME)
             return
-        w: RepoWidget = self.tabs.widget(self.tabs.currentIndex())
-        shortname = settings.getRepoNickname(w.state.repo.working_tree_dir)
+        w = self.currentRepoWidget()
+        w.restoreSplitterStates()
+        shortname = settings.history.getRepoNickname(w.state.repo.working_tree_dir)
         self.setWindowTitle(F"{shortname} [{w.state.repo.active_branch}] — {settings.PROGRAM_NAME}")
 
     def _loadRepo(self, rw: RepoWidget, path: str):
         assert rw
 
-        shortname = settings.getRepoNickname(path)
+        shortname = settings.history.getRepoNickname(path)
         progress = QProgressDialog("Opening repository...", "Abort", 0, 0, self)
         progress.setWindowModality(Qt.WindowModal)
         progress.setWindowTitle(shortname)
@@ -127,15 +145,15 @@ class MainWindow(QMainWindow):
         return True
 
     def openRepo(self, repoPath):
-        newRW = RepoWidget(self)
+        newRW = RepoWidget(self, self.sharedSplitterStates)
 
         if not self._loadRepo(newRW, repoPath):
             newRW.destroy()
 
-        tabIndex = self.tabs.addTab(newRW, settings.getRepoNickname(repoPath))
+        tabIndex = self.tabs.addTab(newRW, settings.history.getRepoNickname(repoPath))
         self.tabs.setCurrentIndex(tabIndex)
         
-        settings.addRepoToHistory(repoPath)
+        settings.history.addRepo(repoPath)
         self.fillRecentMenu()
 
     def refresh(self):
@@ -143,18 +161,36 @@ class MainWindow(QMainWindow):
         self._loadRepo(rw, rw.state.repo.working_tree_dir)
 
     def openDialog(self):
-        path = QFileDialog.getExistingDirectory(self, "Open repository", settings.appSettings.value(settings.SK_LAST_OPEN, "", type=str))
+        path = settings.history.openFileDialogLastPath
+        path = QFileDialog.getExistingDirectory(self, "Open repository", path)
         if path:
-            settings.appSettings.setValue(settings.SK_LAST_OPEN, path)
+            settings.history.openFileDialogLastPath = path
+            settings.history.write()
             self.openRepo(path)
 
     def closeTab(self):
         self.currentRepoWidget().cleanup()
         self.tabs.removeTab(self.tabs.currentIndex())
 
+    def tryLoadSession(self):
+        session = settings.Session()
+        if not session.load():
+            return
+        self.sharedSplitterStates = {k:settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
+        self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
+        self.show()
+        for r in session.tabs:
+            self.openRepo(r)
+        self.tabs.setCurrentIndex(session.activeTabIndex)
+
+    def saveSession(self):
+        session = settings.Session()
+        session.windowGeometry = settings.encodeBinary(self.saveGeometry())
+        session.splitterStates = {s.objectName(): settings.encodeBinary(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
+        session.tabs = [self.tabs.widget(i).state.repo.working_tree_dir for i in range(self.tabs.count())]
+        session.activeTabIndex = self.tabs.currentIndex()
+        session.write()
+
     def closeEvent(self, e):
-        # Write window size and position to config file
-        settings.appSettings.setValue("MainWindow/size", self.size())
-        settings.appSettings.setValue("MainWindow/position", self.pos())
-        self.currentRepoWidget().saveSplitterStates()
+        self.saveSession()
         e.accept()

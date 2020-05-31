@@ -14,7 +14,7 @@ import settings
 class RepoWidget(QWidget):
     state: RepoState
 
-    def __init__(self, parent):
+    def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
 
         self.state = None
@@ -25,6 +25,8 @@ class RepoWidget(QWidget):
         self.changedFilesView = FileListView(self)
         self.dirtyView = DirtyFileListView(self)
         self.stageView = StagedFileListView(self)
+
+        self.splitterStates = sharedSplitterStates or {}
 
         # windowVBox.setSpacing(0)
         # windowVBox.setContentsMargins(0, 0, 0, 0)
@@ -46,7 +48,7 @@ class RepoWidget(QWidget):
         commitButton.clicked.connect(self.commitFlow)
         stageContainer.layout().addWidget(commitButton)
         stageSplitter = QSplitter(Qt.Vertical)
-        stageSplitter.setHandleWidth(settings.splitterHandleWidth)
+        stageSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         stageSplitter.addWidget(dirtyContainer)
         stageSplitter.addWidget(stageContainer)
 
@@ -55,13 +57,13 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentIndex(0)
 
         bottomSplitter = QSplitter(Qt.Horizontal)
-        bottomSplitter.setHandleWidth(settings.splitterHandleWidth)
+        bottomSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         bottomSplitter.addWidget(self.filesStack)
         bottomSplitter.addWidget(self.diffView)
         bottomSplitter.setSizes([100, 300])
 
         mainSplitter = QSplitter(Qt.Vertical)
-        mainSplitter.setHandleWidth(settings.splitterHandleWidth)
+        mainSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         mainSplitter.addWidget(self.graphView)
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
@@ -69,31 +71,37 @@ class RepoWidget(QWidget):
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(mainSplitter)
 
+        # object names are required for state saving to work
         mainSplitter.setObjectName("MainSplitter")
         bottomSplitter.setObjectName("BottomSplitter")
         stageSplitter.setObjectName("StageSplitter")
         self.splittersToSave = [mainSplitter, bottomSplitter, stageSplitter]
-        for sts in self.splittersToSave:
-            k = F"Splitters/{sts.objectName()}"
-            if settings.appSettings.contains(k):
-                sts.restoreState(settings.appSettings.value(k))
+        # save splitter state in splitterMoved signal
+        for splitter in self.splittersToSave:
+            splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
+
+    def saveSplitterState(self, splitter: QSplitter):
+        self.splitterStates[splitter.objectName()] = splitter.saveState()
+
+    def restoreSplitterStates(self):
+        for splitter in self.splittersToSave:
+            try:
+                splitter.restoreState(self.splitterStates[splitter.objectName()])
+            except KeyError:
+                pass
 
     def cleanup(self):
         self.state.repo.close()
-
-    def saveSplitterStates(self):
-        for sts in self.splittersToSave:
-            settings.appSettings.setValue(F"Splitters/{sts.objectName()}", sts.saveState())
 
     def renameRepo(self):
         text, ok = QInputDialog().getText(
             self,
             "Rename repo", "Enter new nickname for repo:",
             QLineEdit.Normal,
-            settings.getRepoNickname(self.state.dir)
+            settings.history.getRepoNickname(self.state.dir)
         )
         if ok:
-            settings.setRepoNickname(self.state.dir, text)
+            settings.history.setRepoNickname(self.state.dir, text)
 
     def setNoCommitSelected(self):
         self.filesStack.setCurrentIndex(0)

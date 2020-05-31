@@ -65,7 +65,7 @@ class DiffView(QTextEdit):
     def setUntrackedContents(self, repo: git.Repo, path: str):
         self.currentActionSet = DiffActionSets.untracked
         self.doc.clear()
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.TAB_SPACES))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
         cursor = QTextCursor(self.doc)
         cursor.setBlockFormat(plusBF)
         cursor.setBlockCharFormat(plusCF)
@@ -81,7 +81,7 @@ class DiffView(QTextEdit):
             return
 
         self.doc.clear()
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.TAB_SPACES))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
         cursor: QTextCursor = QTextCursor(self.doc)
         firstBlock = True
 

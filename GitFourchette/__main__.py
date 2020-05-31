@@ -19,9 +19,6 @@ if __name__ == "__main__":
 
     splash.finish(window)
 
-    import settings
-    history = settings.getRepoHistory()
-    if len(history) > 0:
-        window.openRepo(history[0])
+    window.tryLoadSession()
 
     app.exec_()

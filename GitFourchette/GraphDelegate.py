@@ -7,7 +7,7 @@ import git
 
 XMargin = 4
 ColW_Author = 16
-ColW_Hash = settings.shortHashChars + 1
+ColW_Hash = settings.prefs.shortHashChars + 1
 ColW_Date = 16
 DEBUGRECTS = False
 
@@ -50,16 +50,16 @@ class GraphDelegate(QItemDelegate):
                     message += " [...]"
 
             data = {
-                'hash': commit.hexsha[:settings.shortHashChars],
+                'hash': commit.hexsha[:settings.prefs.shortHashChars],
                 'author': commit.author.email.split('@')[0],  # [:8],
-                'date': commit.authored_datetime.strftime(settings.graphViewTimeFormat),
+                'date': commit.authored_datetime.strftime(settings.prefs.shortTimeFormat),
                 'message': message,
                 'tags': bundle.tags,
                 'refs': bundle.refs
             }
         else:
             data = {
-                'hash': "·" * settings.shortHashChars,
+                'hash': "·" * settings.prefs.shortHashChars,
                 'author': "",
                 'date': "",
                 'message': index.data(),
