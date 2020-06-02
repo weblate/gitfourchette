@@ -3,7 +3,6 @@ from PySide2.QtGui import *
 from PySide2.QtCore import *
 import os
 import json
-from pathlib import Path
 
 VERSION = "0.1-preview"
 
@@ -28,7 +27,7 @@ def decodeBinary(encoded: str) -> QByteArray:
 class BasePrefs:
     def write(self):
         os.makedirs(prefsDir, exist_ok=True)
-        prefsPath = Path(prefsDir) / getattr(self, 'filename')
+        prefsPath = os.path.join(prefsDir, getattr(self, 'filename'))
         with open(prefsPath, 'w') as f:
             json.dump(self.__dict__, f, indent='\t')
 

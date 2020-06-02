@@ -3,8 +3,8 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import git
 import traceback
+import os
 from typing import List, Generator
-from pathlib import Path
 
 import settings
 import DiffActionSets
@@ -70,7 +70,7 @@ class FileListView(QListView):
 
     def showInFolder(self):
         for entry in self.selectedEntries():
-            showInFolder(Path(self.repoWidget.state.repo.working_tree_dir) / entry.path)
+            showInFolder(os.path.join(self.repo.working_tree_dir, entry.path))
 
     def clear(self):
         self.setModel(QStandardItemModel(self))  # do this instead of model.clear() to avoid triggering selectionChanged a million times
@@ -120,9 +120,9 @@ class FileListView(QListView):
         try:
             entry = self.entries[current.row()]
             if entry.diff is not None:
-                self.repoWidget.diffView.setDiffContents(self.repoWidget.state.repo, entry.diff, self.diffActionSet)
+                self.repoWidget.diffView.setDiffContents(self.repo, entry.diff, self.diffActionSet)
             else:
-                self.repoWidget.diffView.setUntrackedContents(self.repoWidget.state.repo, entry.path)
+                self.repoWidget.diffView.setUntrackedContents(self.repo, entry.path)
         except BaseException as ex:
             traceback.print_exc()
             self.repoWidget.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
@@ -132,8 +132,13 @@ class FileListView(QListView):
         for si in self.selectedIndexes():
             yield self.entries[si.row()]
 
+    @property
     def git(self):
         return self.repoWidget.state.repo.git
+
+    @property
+    def repo(self):
+        return self.repoWidget.state.repo
 
 
 class DirtyFileListView(FileListView):
@@ -182,7 +187,7 @@ class DirtyFileListView(FileListView):
 
         for entry in self.selectedEntries():
             if entry.diff is not None:  # tracked file
-                self.git().restore(entry.path)  # self.diff.a_path)
+                self.git.restore(entry.path)  # self.diff.a_path)
             else:  # untracked file
                 QMessageBox.warning(self, "Discard", "Discard not implemented for untracked files: " + entry.path)
         self.patchApplied.emit()
@@ -210,5 +215,5 @@ class StagedFileListView(FileListView):
         # everything that is staged is supposed to be a diff entry
         for entry in self.selectedEntries():
             assert entry.diff is not None
-            self.git().restore(entry.diff.a_path, staged=True)
+            self.git.restore(entry.diff.a_path, staged=True)
         self.patchApplied.emit()
