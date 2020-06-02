@@ -9,6 +9,7 @@ from typing import List, Generator
 import settings
 import DiffActionSets
 from util import fplural, compactRepoPath, showInFolder
+import trash
 
 
 class Entry:
@@ -187,9 +188,11 @@ class DirtyFileListView(FileListView):
 
         for entry in self.selectedEntries():
             if entry.diff is not None:  # tracked file
+                trash.trashGitDiff(self.repo, entry.diff)
                 self.git.restore(entry.path)  # self.diff.a_path)
             else:  # untracked file
-                QMessageBox.warning(self, "Discard", "Discard not implemented for untracked files: " + entry.path)
+                trash.trashUntracked(self.repo, entry.path)
+                os.remove(os.path.join(self.repo.working_tree_dir, entry.path))
         self.patchApplied.emit()
 
 
