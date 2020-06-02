@@ -9,7 +9,7 @@ import os
 import traceback
 from RepoState import RepoState
 from RepoWidget import RepoWidget
-from util import compactSystemPath
+from util import compactSystemPath, showInFolder
 
 
 class Session:
@@ -57,6 +57,7 @@ class MainWindow(QMainWindow):
 
         repoMenu = menubar.addMenu("&Repo")
         repoMenu.addAction("&Refresh", self.refresh, QKeySequence.Refresh)
+        repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
         repoMenu.addSeparator()
         repoMenu.addAction("Push", lambda: self.currentRepoWidget().push())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
@@ -159,6 +160,10 @@ class MainWindow(QMainWindow):
     def refresh(self):
         rw = self.currentRepoWidget()
         self._loadRepo(rw, rw.state.repo.working_tree_dir)
+
+    def openRepoFolder(self):
+        rw = self.currentRepoWidget()
+        showInFolder(rw.state.repo.working_tree_dir)
 
     def openDialog(self):
         path = settings.history.openFileDialogLastPath
