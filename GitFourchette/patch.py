@@ -2,6 +2,7 @@ import git
 import tempfile
 import copy
 import os
+import difflib
 from typing import List, Generator
 
 
@@ -11,6 +12,25 @@ class LineData:
     lineB: int  # line number in file 'B'
     diffLineIndex: int  # index of the diff line in the unified diff itself
     data: str
+
+
+def makePatchFromGitDiff(repo: git.Repo, change: git.Diff):
+    # added files (that didn't exist before) don't have an a_blob
+    if change.a_blob:
+        a = change.a_blob.data_stream.read()
+    else:
+        a = b""
+
+    # Deleted file: no b_blob
+    if change.b_blob:
+        b = change.b_blob.data_stream.read()
+    else:
+        b = open(os.path.join(repo.working_tree_dir, change.b_path), 'rb').read()
+
+    a = a.decode('utf-8').splitlines(keepends=True)
+    b = b.decode('utf-8').splitlines(keepends=True)
+
+    return difflib.unified_diff(a, b, fromfile=change.a_path, tofile=change.b_path)
 
 
 def extraContext(lineDataIter, contextLines: int, bIsReference: bool = True) -> Generator[LineData, None, None]:
@@ -49,7 +69,7 @@ def extraContext(lineDataIter, contextLines: int, bIsReference: bool = True) -> 
             raise Exception("Unknown diffChar")
 
 
-def makePatch(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, ldEnd: int, contextLines: int = 3, cached: bool = True) -> str:
+def makePatchFromLines(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, ldEnd: int, contextLines: int = 3, cached: bool = True) -> str:
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """

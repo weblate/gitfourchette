@@ -1,13 +1,12 @@
 from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 from PySide2.QtCore import *
-import difflib
 import re
 import git
 from typing import List
 import traceback
 
-from patch import makePatch, applyPatch, LineData
+import patch
 import DiffActionSets
 import settings
 
@@ -51,7 +50,7 @@ def bisect(a, x, lo=0, hi=None, key=lambda x: x):
 class DiffView(QTextEdit):
     patchApplied: Signal = Signal()
 
-    lineData: List[LineData]
+    lineData: List[patch.LineData]
     currentActionSet: str
     currentChange: git.Diff
     currentGitRepo: git.Repo
@@ -74,7 +73,7 @@ class DiffView(QTextEdit):
         cursor.setBlockCharFormat(plusCF)
         cursor.insertText(open(repo.working_tree_dir + '/' + path, 'rb').read().decode('utf-8'))
 
-    def setDiffContents(self, repo: git.Repo, change: git.diff.Diff, diffActionSet: str):
+    def setDiffContents(self, repo: git.Repo, change: git.Diff, diffActionSet: str):
         self.currentActionSet = diffActionSet
         self.currentGitRepo = repo
         self.currentChange = change
@@ -86,34 +85,18 @@ class DiffView(QTextEdit):
         self.doc.clear()
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
         cursor: QTextCursor = QTextCursor(self.doc)
+
         firstBlock = True
-
-        # added files (that didn't exist before) don't have an a_blob
-        if change.a_blob:
-            a = change.a_blob.data_stream.read()
-        else:
-            a = b""
-
-        # Deleted file: no b_blob
-        if change.b_blob:
-            b = change.b_blob.data_stream.read()
-        else:
-            b = open(repo.working_tree_dir + '/' + change.b_path, 'rb').read()
-
-        a = a.decode('utf-8').splitlines(keepends=True)
-        b = b.decode('utf-8').splitlines(keepends=True)
-
         self.lineData = []
-
         lineA = -1
         lineB = -1
 
-        for line in difflib.unified_diff(a, b):
-            # skip bogus diff header
-            if line == "+++ \n" or line == "--- \n":
+        for line in patch.makePatchFromGitDiff(repo, change):
+            # skip diff header
+            if line.startswith("+++ ") or line.startswith("--- "):
                 continue
 
-            ld = LineData()
+            ld = patch.LineData()
             ld.cursorStart = cursor.position()
             ld.lineA = lineA
             ld.lineB = lineB
@@ -216,10 +199,10 @@ class DiffView(QTextEdit):
 
         biStart -= 1
 
-        patchData = makePatch(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd, cached=cached)
+        patchData = patch.makePatchFromLines(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd, cached=cached)
 
         try:
-            applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
+            patch.applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
         except git.GitCommandError as e:
             traceback.print_exc()
             QMessageBox.critical(self, "Failed to apply patch", str(e))
