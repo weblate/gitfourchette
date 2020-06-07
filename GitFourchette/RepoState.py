@@ -9,11 +9,15 @@ class CommitMetadata:
     commit: git.Commit
     tags: []
     refs: []
+    lane: int
+    laneData: []
 
     def __init__(self, commit: git.Commit):
         self.commit = commit
         self.tags = []
         self.refs = []
+        self.lane = -1
+        self.laneData = []
 
 
 class RepoState:

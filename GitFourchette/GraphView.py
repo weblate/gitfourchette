@@ -5,6 +5,8 @@ import git
 import html
 
 from GraphDelegate import GraphDelegate
+from Lanes import Lanes
+import settings
 
 class GraphView(QListView):
     def __init__(self, parent):
@@ -22,19 +24,25 @@ class GraphView(QListView):
         model = QStandardItemModel()
 
         model.appendRow(QStandardItem("◆ Uncommitted Changes"))
-
-        i = 0
-        for commit in repo.iter_commits(repo.active_branch):#, max_count=999000):
+        commit: git.Commit
+        laneGen = Lanes()
+        i: int = 0
+        for i, commit in enumerate(repo.iter_commits(repo.active_branch)):#, max_count=999000):
             if i != 0 and i % 1000 == 0:
                 progress.setLabelText(F"{i:,} commits loaded.")
                 QCoreApplication.processEvents()
             if progress.wasCanceled():
                 raise Exception("Canceled!")
-            i += 1
+
+            meta = self.repoWidget.state.getOrCreateMetadata(commit)
+            meta.lane, meta.laneData = laneGen.step(commit.binsha, [p.binsha for p in commit.parents])
+
             item = QStandardItem()
-            item.setData(self.repoWidget.state.getOrCreateMetadata(commit), Qt.DisplayRole)
+            item.setData(meta, Qt.DisplayRole)
             model.appendRow(item)
+
         progress.setLabelText(F"{i:,} commits total.")
+
         #progress.setCancelButton(None)
         #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
         #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
