@@ -2,6 +2,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import git
+import html
 
 from GraphDelegate import GraphDelegate
 
@@ -47,12 +48,20 @@ class GraphView(QListView):
         if not self.currentIndex().isValid():
             return
         commit: git.Commit = self.currentIndex().data().commit
-        QMessageBox.about(None, F"Commit info {commit.hexsha[:7]}", F"""\
-SHA: {commit.hexsha}
-AUTHOR: {commit.author} <{commit.author.email}> {commit.authored_date}
-COMMITTER: {commit.committer} <{commit.committer.email}> {commit.committed_date}
-
-{commit.message}""")
+        QMessageBox.about(None, F"Commit info {commit.hexsha[:7]}", F"""<h2>Commit info</h2>
+<b>SHA</b><br>
+{commit.hexsha}
+<br><br>
+<b>Author</b><br>
+{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;
+<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}
+<br><br>
+<b>Committer</b><br>
+{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;
+<br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}
+<br><br>
+<b>Message</b><br>
+{html.escape(commit.message)}""")
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.

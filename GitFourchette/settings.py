@@ -52,6 +52,7 @@ class Prefs(BasePrefs):
     shortHashChars: int
     splitterHandleWidth: int
     shortTimeFormat: str
+    longTimeFormat: str
     shortenDirectoryNames: bool
 
     def __init__(self):
@@ -59,6 +60,7 @@ class Prefs(BasePrefs):
         self.shortHashChars = 7
         self.splitterHandleWidth = -1
         self.shortTimeFormat = "%d-%m-%y %H:%M"
+        self.longTimeFormat = "%c"
         self.shortenDirectoryNames = True
 
 
