@@ -54,6 +54,7 @@ class Prefs(BasePrefs):
     shortTimeFormat: str
     longTimeFormat: str
     shortenDirectoryNames: bool
+    largeFileThreshold: int
 
     def __init__(self):
         self.tabSize = 4
@@ -62,6 +63,7 @@ class Prefs(BasePrefs):
         self.shortTimeFormat = "%d-%m-%y %H:%M"
         self.longTimeFormat = "%c"
         self.shortenDirectoryNames = True
+        self.largeFileThreshold = 300000
 
 
 class History(BasePrefs):

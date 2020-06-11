@@ -116,8 +116,8 @@ class FileListView(QListView):
         if not current.isValid():
             self.repoWidget.diffView.clear()
             return
-        QApplication.setOverrideCursor(Qt.WaitCursor)
-        QApplication.processEvents()
+        #QApplication.setOverrideCursor(Qt.WaitCursor)
+        #QApplication.processEvents()
         try:
             entry = self.entries[current.row()]
             if entry.diff is not None:
@@ -127,7 +127,7 @@ class FileListView(QListView):
         except BaseException as ex:
             traceback.print_exc()
             self.repoWidget.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
-        QApplication.restoreOverrideCursor()
+        #QApplication.restoreOverrideCursor()
 
     def selectedEntries(self) -> Generator[Entry, None, None]:
         for si in self.selectedIndexes():

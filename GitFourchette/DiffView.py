@@ -82,6 +82,13 @@ class DiffView(QTextEdit):
             self.setFailureContents("File was deleted.")
             return
 
+        if change.b_blob and change.b_blob.size > settings.prefs.largeFileThreshold:
+            self.setFailureContents(F"Large file warning: {change.b_blob.size:,} bytes")
+            return
+        if change.a_blob and change.a_blob.size > settings.prefs.largeFileThreshold:
+            self.setFailureContents(F"Large file warning: {change.a_blob.size:,} bytes")
+            return
+
         self.doc.clear()
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
         cursor: QTextCursor = QTextCursor(self.doc)
