@@ -83,6 +83,8 @@ class RepoWidget(QWidget):
         mainSplitter.setSizes([100, 150])
 
         self.setLayout(QVBoxLayout())
+        self.layout().setSpacing(0)
+        self.layout().setMargin(0)
         self.layout().addWidget(mainSplitter)
 
         # object names are required for state saving to work
@@ -94,6 +96,10 @@ class RepoWidget(QWidget):
         for splitter in self.splittersToSave:
             splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
 
+        # remove frames for a cleaner look
+        for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView:
+            w.setFrameStyle(QFrame.NoFrame)
+
     def saveSplitterState(self, splitter: QSplitter):
         self.splitterStates[splitter.objectName()] = splitter.saveState()
 
@@ -101,6 +107,7 @@ class RepoWidget(QWidget):
         for splitter in self.splittersToSave:
             try:
                 splitter.restoreState(self.splitterStates[splitter.objectName()])
+                splitter.setHandleWidth(settings.prefs.splitterHandleWidth)
             except KeyError:
                 pass
 
