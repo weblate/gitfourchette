@@ -174,10 +174,17 @@ class DirtyFileListView(FileListView):
 
     # Context menu action
     def discard(self):
+        entries = list(self.selectedEntries())
+
+        if len(entries) == 1:
+            question = F"Really discard changes to {entries[0].path}?"
+        else:
+            question = F"Really discard changes to {len(entries)} files?"
+
         qmb = QMessageBox(
             QMessageBox.Question,
             "Discard changes",
-            fplural(F"Really discard changes to # file^s?\nThis cannot be undone!", len(self.selectedIndexes())),
+            F"{question}\nThis cannot be undone!",
             QMessageBox.Yes | QMessageBox.Cancel,
             self)
         yes = qmb.button(QMessageBox.Yes)
@@ -186,7 +193,7 @@ class DirtyFileListView(FileListView):
         if qmb.clickedButton() != yes:
             return
 
-        for entry in self.selectedEntries():
+        for entry in entries:
             if entry.diff is not None:  # tracked file
                 trash.trashGitDiff(self.repo, entry.diff)
                 self.git.restore(entry.path)  # self.diff.a_path)
