@@ -32,7 +32,11 @@ warningFormat.setForeground(QColor(255, 0, 0))
 warningFormat.setFont(settings.alternateFont)
 
 
-hunkRE = re.compile(r"^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$")
+# Examples of matches:
+# @@ -4,6 +4,7 @@
+# @@ -1 +1,165 @@
+# @@ -0,0 +1 @@
+hunkRE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@$")
 
 
 def bisect(a, x, lo=0, hi=None, key=lambda x: x):
