@@ -55,6 +55,9 @@ class Prefs(BasePrefs):
     longTimeFormat: str
     shortenDirectoryNames: bool
     largeFileThreshold: int
+    tabs_closeButton: bool
+    tabs_expanding: bool
+    tabs_autoHide: bool
 
     def __init__(self):
         self.tabSize = 4
@@ -64,6 +67,9 @@ class Prefs(BasePrefs):
         self.longTimeFormat = "%c"
         self.shortenDirectoryNames = True
         self.largeFileThreshold = 300000
+        self.tabs_closeButton = True
+        self.tabs_expanding = True
+        self.tabs_autoHide = False
 
 
 class History(BasePrefs):

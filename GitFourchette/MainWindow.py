@@ -10,6 +10,7 @@ import traceback
 from RepoState import RepoState
 from RepoWidget import RepoWidget
 from util import compactSystemPath, showInFolder
+from QTabWidget2 import QTabWidget2
 
 
 class Session:
@@ -19,8 +20,7 @@ class Session:
 
 
 class MainWindow(QMainWindow):
-    tabs: QTabWidget
-    previousTabIndex: int
+    tabs: QTabWidget2
 
     def __init__(self):
         super().__init__()
@@ -31,16 +31,10 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon("icons/gf.png"))
         self.resize(QSize(800, 600))
         self.move(QPoint(50, 50))
-        #self.resize(settings.appSettings.value("MainWindow/size", QSize(800, 600)))
-        #self.move(settings.appSettings.value("MainWindow/position", QPoint(50, 50)))
 
-        self.previousTabIndex = -1
-        self.tabs = QTabWidget()
-        #self.tabs.setTabBarAutoHide(True)
-        self.tabs.setMovable(True)
-
-        self.tabs.currentChanged.connect(self.onTabChange)
-
+        self.tabs = QTabWidget2(self)
+        self.tabs.stacked.currentChanged.connect(self.onTabChange)
+        self.tabs.tabCloseRequested.connect(self.closeTab)
         self.setCentralWidget(self.tabs)
 
         self.makeMenu()
@@ -51,7 +45,7 @@ class MainWindow(QMainWindow):
         fileMenu = menubar.addMenu("&File")
         fileMenu.addAction("&Open", self.openDialog, QKeySequence.Open)
         self.recentMenu = fileMenu.addMenu("Open &Recent")
-        fileMenu.addAction("&Close Tab", self.closeTab, QKeySequence.Close)
+        fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
         fileMenu.addSeparator()
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
@@ -95,13 +89,13 @@ class MainWindow(QMainWindow):
 
     def fillRecentMenu(self):
         self.recentMenu.clear()
-        for historic in settings.history.history:
+        for historic in reversed(settings.history.history):
             self.recentMenu.addAction(
                 F"{settings.history.getRepoNickname(historic)} [{compactSystemPath(historic)}]",
                 lambda h=historic: self.openRepo(h))
 
     def currentRepoWidget(self) -> RepoWidget:
-        return self.tabs.widget(self.tabs.currentIndex())
+        return self.tabs.currentWidget()
 
     def onTabChange(self, i):
         #if self.previousTabIndex >= 0:
@@ -153,7 +147,7 @@ class MainWindow(QMainWindow):
 
         tabIndex = self.tabs.addTab(newRW, settings.history.getRepoNickname(repoPath))
         self.tabs.setCurrentIndex(tabIndex)
-        
+
         settings.history.addRepo(repoPath)
         self.fillRecentMenu()
 
@@ -173,9 +167,12 @@ class MainWindow(QMainWindow):
             settings.history.write()
             self.openRepo(path)
 
-    def closeTab(self):
-        self.currentRepoWidget().cleanup()
-        self.tabs.removeTab(self.tabs.currentIndex())
+    def closeCurrentTab(self):
+        self.closeTab2(self.tabs.currentIndex())
+
+    def closeTab(self, index: int):
+        self.tabs.widget(index).cleanup()
+        self.tabs.removeTab(index)
 
     def tryLoadSession(self):
         session = settings.Session()
@@ -191,7 +188,10 @@ class MainWindow(QMainWindow):
     def saveSession(self):
         session = settings.Session()
         session.windowGeometry = settings.encodeBinary(self.saveGeometry())
-        session.splitterStates = {s.objectName(): settings.encodeBinary(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
+        if self.currentRepoWidget():
+            session.splitterStates = {s.objectName(): settings.encodeBinary(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
+        else:
+            session.splitterStates = {}
         session.tabs = [self.tabs.widget(i).state.repo.working_tree_dir for i in range(self.tabs.count())]
         session.activeTabIndex = self.tabs.currentIndex()
         session.write()
