@@ -73,7 +73,7 @@ class DiffView(QTextEdit):
         fullPath = os.path.join(repo.working_tree_dir, path)
 
         fileSize = os.path.getsize(fullPath)
-        if fileSize > settings.prefs.largeFileThreshold:
+        if fileSize > settings.prefs.diff_largeFileThreshold:
             self.setFailureContents(F"Large file warning: {fileSize:,} bytes")
             return
 
@@ -85,7 +85,7 @@ class DiffView(QTextEdit):
 
         self.currentActionSet = DiffActionSets.untracked
         self.doc.clear()
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
         cursor = QTextCursor(self.doc)
         cursor.setBlockFormat(plusBF)
         cursor.setBlockCharFormat(plusCF)
@@ -100,10 +100,10 @@ class DiffView(QTextEdit):
             self.setFailureContents("File was deleted.")
             return
 
-        if change.b_blob and change.b_blob.size > settings.prefs.largeFileThreshold:
+        if change.b_blob and change.b_blob.size > settings.prefs.diff_largeFileThreshold:
             self.setFailureContents(F"Large file warning: {change.b_blob.size:,} bytes")
             return
-        if change.a_blob and change.a_blob.size > settings.prefs.largeFileThreshold:
+        if change.a_blob and change.a_blob.size > settings.prefs.diff_largeFileThreshold:
             self.setFailureContents(F"Large file warning: {change.a_blob.size:,} bytes")
             return
 
@@ -114,7 +114,7 @@ class DiffView(QTextEdit):
             return
 
         self.doc.clear()
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
         cursor: QTextCursor = QTextCursor(self.doc)
 
         firstBlock = True
@@ -158,7 +158,8 @@ class DiffView(QTextEdit):
 
             if line.endswith("\r\n"):
                 trimBack = -2
-                trailer = "<CR>"
+                if settings.prefs.diff_showStrayCRs:
+                    trailer = "<CR>"
             elif line.endswith("\n"):
                 trimBack = -1
             else:

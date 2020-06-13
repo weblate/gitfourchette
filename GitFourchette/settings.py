@@ -48,25 +48,27 @@ class BasePrefs:
 class Prefs(BasePrefs):
     filename = "prefs.json"
 
-    tabSize: int
     shortHashChars: int
     splitterHandleWidth: int
     shortTimeFormat: str
     longTimeFormat: str
     shortenDirectoryNames: bool
-    largeFileThreshold: int
+    diff_tabSpaces: int
+    diff_largeFileThreshold: int
+    diff_showStrayCRs: bool
     tabs_closeButton: bool
     tabs_expanding: bool
     tabs_autoHide: bool
 
     def __init__(self):
-        self.tabSize = 4
         self.shortHashChars = 7
         self.splitterHandleWidth = -1
         self.shortTimeFormat = "%d-%m-%y %H:%M"
         self.longTimeFormat = "%c"
         self.shortenDirectoryNames = True
-        self.largeFileThreshold = 300000
+        self.diff_tabSpaces = 4
+        self.diff_largeFileThreshold = 300000
+        self.diff_showStrayCRs = True
         self.tabs_closeButton = True
         self.tabs_expanding = True
         self.tabs_autoHide = False
