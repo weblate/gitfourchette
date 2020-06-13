@@ -5,6 +5,7 @@ import re
 import git
 from typing import List
 import traceback
+import os
 
 import patch
 import DiffActionSets
@@ -69,13 +70,26 @@ class DiffView(QTextEdit):
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
     def setUntrackedContents(self, repo: git.Repo, path: str):
+        fullPath = os.path.join(repo.working_tree_dir, path)
+
+        fileSize = os.path.getsize(fullPath)
+        if fileSize > settings.prefs.largeFileThreshold:
+            self.setFailureContents(F"Large file warning: {fileSize:,} bytes")
+            return
+
+        try:
+            contents: str = open(fullPath, 'rb').read().decode('utf-8')
+        except UnicodeDecodeError as e:
+            self.setFailureContents(F"File appears to be binary.\n{e}")
+            return
+
         self.currentActionSet = DiffActionSets.untracked
         self.doc.clear()
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
         cursor = QTextCursor(self.doc)
         cursor.setBlockFormat(plusBF)
         cursor.setBlockCharFormat(plusCF)
-        cursor.insertText(open(repo.working_tree_dir + '/' + path, 'rb').read().decode('utf-8'))
+        cursor.insertText(contents)
 
     def setDiffContents(self, repo: git.Repo, change: git.Diff, diffActionSet: str):
         self.currentActionSet = diffActionSet
@@ -93,6 +107,12 @@ class DiffView(QTextEdit):
             self.setFailureContents(F"Large file warning: {change.a_blob.size:,} bytes")
             return
 
+        try:
+            patchLines: List[str] = patch.makePatchFromGitDiff(repo, change)
+        except UnicodeDecodeError as e:
+            self.setFailureContents(F"File appears to be binary.\n{e}")
+            return
+
         self.doc.clear()
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.tabSize))
         cursor: QTextCursor = QTextCursor(self.doc)
@@ -102,7 +122,7 @@ class DiffView(QTextEdit):
         lineA = -1
         lineB = -1
 
-        for line in patch.makePatchFromGitDiff(repo, change):
+        for line in patchLines:
             # skip diff header
             if line.startswith("+++ ") or line.startswith("--- "):
                 continue
