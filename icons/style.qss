@@ -1,0 +1,4 @@
+QSplitter::handle {
+   background-color: palette(Mid);
+   height: 1px;
+}

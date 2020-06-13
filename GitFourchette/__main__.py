@@ -20,6 +20,8 @@ if __name__ == "__main__":
 
     # initialize Qt before importing app modules so fonts are loaded correctly
     app = QtWidgets.QApplication(sys.argv)
+    with open("icons/style.qss", "r") as f:
+        app.setStyleSheet(f.read())
 
     pixmap = QtGui.QPixmap("icons/gf.png")
     splash = QtWidgets.QSplashScreen(pixmap)
