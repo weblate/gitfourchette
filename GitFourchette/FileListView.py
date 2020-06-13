@@ -52,9 +52,13 @@ class FileListView(QListView):
 
     entries: List[Entry]
     diffActionSet: str
+    selectedRowBeforeClear: int
 
     def __init__(self, parent, diffActionSet=None):
         super().__init__(parent)
+
+        self.selectedRowBeforeClear = -1
+
         self.entries = []
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -74,6 +78,12 @@ class FileListView(QListView):
             showInFolder(os.path.join(self.repo.working_tree_dir, entry.path))
 
     def clear(self):
+        # save selected index before clear so we can restore it after the widget is done being refreshed
+        try:
+            self.selectedRowBeforeClear = list(self.selectedIndexes())[-1].row()
+        except IndexError:
+            self.selectedRowBeforeClear = -1
+
         self.setModel(QStandardItemModel(self))  # do this instead of model.clear() to avoid triggering selectionChanged a million times
         self.entries.clear()
 
@@ -101,6 +111,18 @@ class FileListView(QListView):
             self.clearSelection()
         else:
             self.setCurrentIndex(self.model().index(0, 0))
+
+    def restoreSelectedRowAfterClear(self):
+        rowCount = self.model().rowCount()
+        if rowCount == 0 or self.selectedRowBeforeClear < 0:
+            return
+
+        if self.selectedRowBeforeClear >= rowCount:
+            row = rowCount-1
+        else:
+            row = self.selectedRowBeforeClear
+
+        self.setCurrentIndex(self.model().index(row, 0))
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
@@ -171,6 +193,9 @@ class DirtyFileListView(FileListView):
         for entry in self.selectedEntries():
             self.git().add(entry.path)
         self.patchApplied.emit()
+        # patchApplied.emit will most likely cause a refresh;
+        # restore selected row afterwards so the user can keep hitting enter to stage a series of files
+        self.restoreSelectedRowAfterClear()
 
     # Context menu action
     def discard(self):
@@ -201,6 +226,9 @@ class DirtyFileListView(FileListView):
                 trash.trashUntracked(self.repo, entry.path)
                 os.remove(os.path.join(self.repo.working_tree_dir, entry.path))
         self.patchApplied.emit()
+        # patchApplied.emit will most likely cause a refresh;
+        # restore selected row afterwards so the user can keep hitting delete to discard a series of files
+        self.restoreSelectedRowAfterClear()
 
 
 class StagedFileListView(FileListView):
@@ -227,3 +255,6 @@ class StagedFileListView(FileListView):
             assert entry.diff is not None
             self.git.restore(entry.diff.a_path, staged=True)
         self.patchApplied.emit()
+        # patchApplied.emit will most likely cause a refresh;
+        # restore selected row afterwards so the user can keep hitting enter to unstage a series of files
+        self.restoreSelectedRowAfterClear()
