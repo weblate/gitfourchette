@@ -32,7 +32,7 @@ class QTabBar2(QTabBar):
 
 
 class QTabWidget2(QWidget):
-    tabCloseRequested: Signal = Signal()
+    tabCloseRequested: Signal = Signal(int)
 
     def __init__(self, parent):
         super().__init__(parent)

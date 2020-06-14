@@ -169,7 +169,7 @@ class MainWindow(QMainWindow):
             self.openRepo(path)
 
     def closeCurrentTab(self):
-        self.closeTab2(self.tabs.currentIndex())
+        self.closeTab(self.tabs.currentIndex())
 
     def closeTab(self, index: int):
         self.tabs.widget(index).cleanup()
