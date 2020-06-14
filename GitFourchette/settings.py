@@ -72,6 +72,7 @@ class Prefs(BasePrefs):
         self.tabs_closeButton = True
         self.tabs_expanding = True
         self.tabs_autoHide = False
+        self.showMemoryIndicator = True
 
 
 class History(BasePrefs):

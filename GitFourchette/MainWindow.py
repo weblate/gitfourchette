@@ -7,6 +7,9 @@ from PySide2.QtWidgets import *
 import settings
 import os
 import traceback
+import psutil
+import gc
+
 from RepoState import RepoState
 from RepoWidget import RepoWidget
 from util import compactSystemPath, showInFolder
@@ -37,7 +40,25 @@ class MainWindow(QMainWindow):
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.setCentralWidget(self.tabs)
 
+        self.memoryIndicator = QPushButton("Mem")
+        self.memoryIndicator.setMaximumHeight(16)
+        self.memoryIndicator.setMinimumWidth(128)
+        self.memoryIndicator.clicked.connect(lambda e: [gc.collect(), print("GC!"), self.updateMemoryIndicator()])
+        self.memoryIndicator.setToolTip("Force GC")
+
         self.makeMenu()
+
+        self.initialChildren = list(self.findChildren(QObject))
+
+    def updateMemoryIndicator(self):
+        nChildren = len(self.findChildren(QObject))
+        rss = psutil.Process(os.getpid()).memory_info().rss
+        self.memoryIndicator.setText(F"{rss // 1024:,}K {nChildren}Q")
+
+    def paintEvent(self, event:QPaintEvent):
+        if settings.prefs.showMemoryIndicator:
+            self.updateMemoryIndicator()
+        super().paintEvent(event)
 
     def makeMenu(self):
         menubar = QMenuBar()
@@ -59,11 +80,24 @@ class MainWindow(QMainWindow):
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {settings.PROGRAM_NAME}", self.about)
         helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
-        helpMenu.addSeparator()
-        helpMenu.addAction("Memory", self.memInfo)
 
         self.fillRecentMenu()
-        self.setMenuBar(menubar)
+
+        # couldn't get menubar.cornerWidget to work, otherwise we could've used that
+        if False:  # traditional menu bar
+            self.setMenuBar(menuBar)
+        else:  # extended menu bar
+            menuContainer = QWidget()
+            menuContainer.setLayout(QHBoxLayout())
+            menuContainer.layout().setSpacing(0)
+            menuContainer.layout().setMargin(0)
+            menuContainer.layout().addWidget(menubar)
+            #menuContainer.layout().addSpacing(8)
+            #menuContainer.layout().addWidget(self.tabs.tabs, 1)
+            menuContainer.layout().addSpacing(8)
+            menuContainer.layout().addWidget(self.memoryIndicator)
+            self.setMenuWidget(menuContainer)
+            menubar.adjustSize()
 
     def about(self):
         import sys, PySide2
@@ -81,11 +115,6 @@ class MainWindow(QMainWindow):
         </p>
         """
         QMessageBox.about(self, F"About {settings.PROGRAM_NAME}", about_text)
-
-    def memInfo(self):
-        import psutil, gc
-        gc.collect()
-        QMessageBox.information(self, F"Memory usage", F"{psutil.Process(os.getpid()).memory_info().rss:,}")
 
     def fillRecentMenu(self):
         self.recentMenu.clear()
