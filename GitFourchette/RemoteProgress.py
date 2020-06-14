@@ -46,3 +46,6 @@ class RemoteProgress(git.RemoteProgress):
         self.dlg.repaint()
         QCoreApplication.processEvents()
         print(F"Update: {op_code} {op} | {cur_count} | {max_count} | {message}")
+
+    def close(self):
+        self.dlg.close()

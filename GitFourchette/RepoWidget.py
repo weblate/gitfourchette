@@ -7,8 +7,13 @@ from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from RemoteProgress import RemoteProgress
 from util import fplural
+from typing import List
+import git
 import traceback
 import settings
+
+
+PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
 
 
 class RepoWidget(QWidget):
@@ -165,14 +170,38 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             return
 
         progress = RemoteProgress(self, "Push in progress")
-        try:
-            remote.push(progress=progress)
-        except BaseException as e:
-            traceback.print_exc()
-            QMessageBox.critical(self, "Error",
-                F"An exception was thrown while pushing.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+        pushInfos: List[git.PushInfo]
 
-        progress.dlg.close()
+        try:
+            pushInfos = remote.push(progress=progress)
+        except BaseException as e:
+            progress.close()
+            traceback.print_exc()
+            QMessageBox.critical(self, "Push",
+                F"An exception was thrown while pushing.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+            return
+
+        progress.close()
+
+        if len(pushInfos) == 0:
+            QMessageBox.critical(self, "Push", "The push operation failed without a result.")
+            return
+
+        failed = False
+        report = ""
+        for info in pushInfos:
+            if 0 != (info.flags & PUSHINFO_FAILFLAGS):
+                failed = True
+            report += F"{info.remote_ref_string}: {info.summary.strip()}\n"
+            print(F"push info: {info}, summary: {info.summary.strip()}, local ref: {info.local_ref}; remote ref: {info.remote_ref_string}")
+
+        report = report.rstrip()
+        if failed:
+            report = "Push failed.\n\n" + report
+            QMessageBox.warning(self, "Push failed", report)
+        else:
+            report = "Push successful!\n\n" + report
+            QMessageBox.information(self, "Push successful", report)
 
     def _commitFlow(self, amend: bool):
         kDRAFT = "DraftMessage"
