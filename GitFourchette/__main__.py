@@ -23,16 +23,9 @@ if __name__ == "__main__":
     with open("icons/style.qss", "r") as f:
         app.setStyleSheet(f.read())
 
-    pixmap = QtGui.QPixmap("icons/gf.png")
-    splash = QtWidgets.QSplashScreen(pixmap)
-    splash.show()
-    app.processEvents()
-
     import MainWindow
     window = MainWindow.MainWindow()
     window.show()
-
-    splash.finish(window)
 
     try:
         window.tryLoadSession()
