@@ -77,14 +77,19 @@ class FileListView(QListView):
         for entry in self.selectedEntries():
             showInFolder(os.path.join(self.repo.working_tree_dir, entry.path))
 
+    def _setBlankModel(self):
+        if self.model():
+            self.model().deleteLater()  # avoid memory leak
+        # do this instead of model.clear() to avoid triggering selectionChanged a million times
+        self.setModel(QStandardItemModel(self))
+
     def clear(self):
         # save selected index before clear so we can restore it after the widget is done being refreshed
         try:
             self.selectedRowBeforeClear = list(self.selectedIndexes())[-1].row()
         except IndexError:
             self.selectedRowBeforeClear = -1
-
-        self.setModel(QStandardItemModel(self))  # do this instead of model.clear() to avoid triggering selectionChanged a million times
+        self._setBlankModel()
         self.entries.clear()
 
     def addEntry(self, entry):

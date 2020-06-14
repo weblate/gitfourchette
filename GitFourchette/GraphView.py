@@ -8,6 +8,7 @@ from GraphDelegate import GraphDelegate
 from Lanes import Lanes
 import settings
 
+
 class GraphView(QListView):
     def __init__(self, parent):
         super().__init__(parent)
@@ -16,14 +17,19 @@ class GraphView(QListView):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
         self.setItemDelegate(GraphDelegate())
 
+    def _replaceModel(self, model):
+        if self.model():
+            self.model().deleteLater()  # avoid memory leak
+        self.setModel(model)
+
     def fill(self, progress: QProgressDialog):
         repo = self.repoWidget.state.repo
 
         #model: QAbstractItemModel = self.model() ; model.clear()
         # Recreating a model on the fly is faster than clearing an existing one?
-        model = QStandardItemModel()
+        model = QStandardItemModel(self)
 
-        model.appendRow(QStandardItem("◆ Uncommitted Changes"))
+        model.appendRow(QStandardItem("Uncommitted Changes"))
         commit: git.Commit
         laneGen = Lanes()
         i: int = 0
@@ -34,6 +40,7 @@ class GraphView(QListView):
             if progress.wasCanceled():
                 raise Exception("Canceled!")
 
+            # TODO: using commit.parents is very slow. We should do our own thing with git commands.
             meta = self.repoWidget.state.getOrCreateMetadata(commit)
             meta.lane, meta.laneData = laneGen.step(commit.binsha, [p.binsha for p in commit.parents])
 
@@ -47,7 +54,7 @@ class GraphView(QListView):
         #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
         #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
         QCoreApplication.processEvents()
-        self.setModel(model)
+        self._replaceModel(model)
         self.repaint()
         QCoreApplication.processEvents()
         self.onSetCurrent()

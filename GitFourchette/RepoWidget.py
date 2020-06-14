@@ -114,7 +114,7 @@ class RepoWidget(QWidget):
     def cleanup(self):
         if self.state and self.state.repo:
             self.state.repo.close()
-            self.state.repo = None
+            self.state = None
 
     def renameRepo(self):
         text, ok = QInputDialog().getText(

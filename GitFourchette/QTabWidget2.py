@@ -99,8 +99,12 @@ class QTabWidget2(QWidget):
     def count(self) -> int:
         return self.stacked.count()
 
-    def removeTab(self, i: int):
+    def removeTab(self, i: int, destroy: bool):
+        widget = self.stacked.widget(i)
         # remove widget from stacked view _before_ removing the tab,
         # because removing the tab may send a tab change event
-        self.stacked.removeWidget(self.stacked.widget(i))
+        self.stacked.removeWidget(widget)
         self.tabs.removeTab(i)
+        if destroy:
+            # QStackedWidget does not delete the widget in removeWidget, so we must do it manually.
+            widget.deleteLater()

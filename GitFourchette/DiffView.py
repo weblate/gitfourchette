@@ -64,10 +64,21 @@ class DiffView(QTextEdit):
         super().__init__(parent)
         self.setLineWrapMode(QTextEdit.NoWrap)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.doc = QTextDocument(self)
-        self.setDocument(self.doc)
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+
+    def _replaceDocument(self, document: QTextDocument, forceWrap: bool = False):
+        oldDocument = self.document()
+        if oldDocument:
+            oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
+        self.setDocument(document)
+
+        # now reset defaults that are lost when changing documents
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
+        if forceWrap:
+            self.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        else:
+            self.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
     def setUntrackedContents(self, repo: git.Repo, path: str):
         fullPath = os.path.join(repo.working_tree_dir, path)
@@ -84,12 +95,12 @@ class DiffView(QTextEdit):
             return
 
         self.currentActionSet = DiffActionSets.untracked
-        self.doc.clear()
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
-        cursor = QTextCursor(self.doc)
+        document = QTextDocument(self)  # recreating a document is faster than clearing the existing one
+        cursor = QTextCursor(document)
         cursor.setBlockFormat(plusBF)
         cursor.setBlockCharFormat(plusCF)
         cursor.insertText(contents)
+        self._replaceDocument(document)
 
     def setDiffContents(self, repo: git.Repo, change: git.Diff, diffActionSet: str):
         self.currentActionSet = diffActionSet
@@ -113,9 +124,8 @@ class DiffView(QTextEdit):
             self.setFailureContents(F"File appears to be binary.\n{e}")
             return
 
-        self.doc.clear()
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
-        cursor: QTextCursor = QTextCursor(self.doc)
+        document = QTextDocument(self)  # recreating a document is faster than clearing the existing one
+        cursor: QTextCursor = QTextCursor(document)
 
         firstBlock = True
         self.lineData = []
@@ -179,12 +189,14 @@ class DiffView(QTextEdit):
                 cursor.insertText(trailer)
                 cursor.setCharFormat(cf)
 
+        self._replaceDocument(document)
+
     def setFailureContents(self, message):
-        self.clear()
-        self.setFont(QFontDatabase.systemFont(QFontDatabase.GeneralFont))
-        self.setFontWeight(QFont.Weight.Bold)
-        self.setTextColor(QColor(200, 0, 0))
-        self.insertPlainText(message)
+        document = QTextDocument(self)
+        cursor = QTextCursor(document)
+        cursor.setCharFormat(warningFormat)
+        cursor.insertText(message)
+        self._replaceDocument(document, forceWrap=True)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         menu: QMenu = self.createStandardContextMenu()

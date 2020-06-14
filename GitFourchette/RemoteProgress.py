@@ -28,6 +28,7 @@ class RemoteProgress(git.RemoteProgress):
     def __init__(self, parent, title):
         super(__class__, self).__init__()
         self.dlg = QProgressDialog("Reticulating Splines...", "Abort", 0, 0, parent)
+        self.dlg.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
         self.dlg.setWindowModality(Qt.WindowModal)
         self.dlg.setWindowTitle(title)
         self.dlg.setWindowFlags(Qt.Dialog | Qt.Popup)
