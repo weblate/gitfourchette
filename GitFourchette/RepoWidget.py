@@ -209,26 +209,32 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             report = "Push successful!\n\n" + report
             QMessageBox.information(self, "Push successful", report)
 
-    def _commitFlow(self, amend: bool):
-        kDRAFT = "DraftMessage"
+    def _commitFlowDialog(self, initialText, title, prompt, buttonCaption) -> (bool, str):
         dlg = QInputDialog(self)
         dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle("Amend" if amend else "Commit")
+        dlg.setWindowTitle(title)
         # absurdly-long label text because setMinimumWidth has no effect - we should probably make a custom dialog instead
-        dlg.setLabelText("Enter commit message:                                                      ")
-        dlg.setTextValue(self.state.settings.value(kDRAFT, ""))
-        dlg.setOkButtonText("Commit")
+        dlg.setLabelText(prompt + (" "*50))
+        dlg.setTextValue(initialText)
+        dlg.setOkButtonText(buttonCaption)
         rc = dlg.exec_()
         message = dlg.textValue()
-        if rc == QDialog.DialogCode.Accepted:
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+        return rc == QDialog.DialogCode.Accepted, message
+
+    def commitFlow(self):
+        kDRAFT = "DraftMessage"
+        confirm, message = self._commitFlowDialog(
+            self.state.settings.value(kDRAFT, ""), "Commit", "Enter commit message:", "Commit")
+        if confirm:
             self.state.settings.remove(kDRAFT)
             #self.state.index.commit(message, amend=amend)
-            self.state.repo.git.commit(m=message, amend=amend)
+            self.state.repo.git.commit(m=message)
         else:
             self.state.settings.setValue(kDRAFT, message)
 
-    def commitFlow(self):
-        self._commitFlow(False)
-
     def amendFlow(self):
-        self._commitFlow(True)
+        confirm, message = self._commitFlowDialog(
+            self.state.repo.head.commit.message, "Amend", "Amend commit message:", "Amend")
+        if confirm:
+            self.state.repo.git.commit(m=message, amend=True)
