@@ -97,7 +97,6 @@ class GraphView(QListView):
 
         if current.row() == 0:  # uncommitted changes
             self.repoWidget.fillStageView()
-            self.repoWidget.dirtyView.selectFirstRow()
             return
 
         commit: git.Commit = current.data().commit

@@ -34,14 +34,14 @@ class RepoWidget(QWidget):
         self.stageView.nonEmptySelectionChanged.connect(lambda: self.dirtyView.clearSelection())
         self.dirtyView.nonEmptySelectionChanged.connect(lambda: self.stageView.clearSelection())
 
-        self.diffView.patchApplied.connect(self.fillStageView)
-        self.stageView.patchApplied.connect(self.fillStageView)
-        self.dirtyView.patchApplied.connect(self.fillStageView)
+        # Refresh file list views after applying a patch...
+        self.diffView.patchApplied.connect(self.fillStageView)  # ...from the diff view (partial line patch);
+        self.stageView.patchApplied.connect(self.fillStageView)  # ...from the staged file view (unstage entire file);
+        self.dirtyView.patchApplied.connect(self.fillStageView)  # ...and from the dirty file view (stage entire file).
+        # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
+        # which will trigger the diff view to be refreshed as well.
 
         self.splitterStates = sharedSplitterStates or {}
-
-        # windowVBox.setSpacing(0)
-        # windowVBox.setContentsMargins(0, 0, 0, 0)
 
         self.dirtyLabel = QLabel("Dirty Files")
         self.stageLabel = QLabel("Files Staged For Commit")
@@ -150,6 +150,12 @@ class RepoWidget(QWidget):
         self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
 
         self.filesStack.setCurrentIndex(1)
+
+        # After patchApplied.emit has caused a refresh of the dirty/staged file views,
+        # restore selected row in appropriate file list view so the user can keep hitting
+        # enter (del) to stage (unstage) a series of files.
+        self.dirtyView.restoreSelectedRowAfterClear()
+        self.stageView.restoreSelectedRowAfterClear()
 
     def push(self):
         repo = self.state.repo

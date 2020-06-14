@@ -198,9 +198,6 @@ class DirtyFileListView(FileListView):
         for entry in self.selectedEntries():
             self.git().add(entry.path)
         self.patchApplied.emit()
-        # patchApplied.emit will most likely cause a refresh;
-        # restore selected row afterwards so the user can keep hitting enter to stage a series of files
-        self.restoreSelectedRowAfterClear()
 
     # Context menu action
     def discard(self):
@@ -231,9 +228,6 @@ class DirtyFileListView(FileListView):
                 trash.trashUntracked(self.repo, entry.path)
                 os.remove(os.path.join(self.repo.working_tree_dir, entry.path))
         self.patchApplied.emit()
-        # patchApplied.emit will most likely cause a refresh;
-        # restore selected row afterwards so the user can keep hitting delete to discard a series of files
-        self.restoreSelectedRowAfterClear()
 
 
 class StagedFileListView(FileListView):
@@ -260,6 +254,3 @@ class StagedFileListView(FileListView):
             assert entry.diff is not None
             self.git.restore(entry.diff.a_path, staged=True)
         self.patchApplied.emit()
-        # patchApplied.emit will most likely cause a refresh;
-        # restore selected row afterwards so the user can keep hitting enter to unstage a series of files
-        self.restoreSelectedRowAfterClear()
