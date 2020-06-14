@@ -11,6 +11,7 @@ class CommitMetadata:
     refs: []
     lane: int
     laneData: []
+    bold: bool
 
     def __init__(self, commit: git.Commit):
         self.commit = commit
@@ -18,6 +19,7 @@ class CommitMetadata:
         self.refs = []
         self.lane = -1
         self.laneData = []
+        self.bold = False
 
 
 class RepoState:

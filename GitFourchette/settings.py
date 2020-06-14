@@ -128,6 +128,9 @@ monoFontMetrics = QFontMetrics(monoFont)
 alternateFont = QFont()
 alternateFont.setItalic(True)
 
+boldFont = QFont()
+boldFont.setBold(True)
+
 smallFont = QFont()
 smallFont.setWeight(QFont.Light)
 #smallFont.setPointSize(9)

@@ -23,7 +23,7 @@ class GraphView(QListView):
         self.setModel(model)
 
     def fill(self, progress: QProgressDialog):
-        repo = self.repoWidget.state.repo
+        repo: git.Repo = self.repoWidget.state.repo
 
         #model: QAbstractItemModel = self.model() ; model.clear()
         # Recreating a model on the fly is faster than clearing an existing one?
@@ -33,6 +33,7 @@ class GraphView(QListView):
         commit: git.Commit
         laneGen = Lanes()
         i: int = 0
+        boldCommitSha = repo.active_branch.commit.binsha
         for i, commit in enumerate(repo.iter_commits(repo.active_branch)):#, max_count=999000):
             if i != 0 and i % 1000 == 0:
                 progress.setLabelText(F"{i:,} commits loaded.")
@@ -43,6 +44,8 @@ class GraphView(QListView):
             # TODO: using commit.parents is very slow. We should do our own thing with git commands.
             meta = self.repoWidget.state.getOrCreateMetadata(commit)
             meta.lane, meta.laneData = laneGen.step(commit.binsha, [p.binsha for p in commit.parents])
+
+            meta.bold = boldCommitSha == commit.binsha
 
             item = QStandardItem()
             item.setData(meta, Qt.DisplayRole)

@@ -24,8 +24,6 @@ class GraphDelegate(QItemDelegate):
         # super(__class__, self).paint(painter, option, index)
 
         painter.save()
-        metrics = painter.fontMetrics()
-        zw = metrics.width('e')
 
         palette: QPalette = option.palette
         pcg = QPalette.ColorGroup.Current if option.state & QStyle.State_HasFocus else QPalette.ColorGroup.Disabled
@@ -61,6 +59,9 @@ class GraphDelegate(QItemDelegate):
             }
 
             assert meta.lane >= 0
+
+            if meta.bold:
+                painter.setFont(settings.boldFont)
         else:
             meta = None
             data = {
@@ -72,6 +73,10 @@ class GraphDelegate(QItemDelegate):
                 'refs': []
             }
             painter.setFont(settings.alternateFont)
+
+        # get metrics now that we've set the font
+        metrics = painter.fontMetrics()
+        zw = metrics.width('e')
 
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
