@@ -37,6 +37,11 @@ class GraphDelegate(QItemDelegate):
         rect.setRight(rect.right() - XMargin)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
 
+        # get font metrics before setting a custom font,
+        # so that alignments are consistent in all commits regardless of bold or italic
+        metrics = painter.fontMetrics()
+        zw = metrics.width('0')
+
         if index.row() > 0:
             meta = index.data()
 
@@ -72,10 +77,6 @@ class GraphDelegate(QItemDelegate):
                 'refs': []
             }
             painter.setFont(settings.alternateFont)
-
-        # get metrics now that we've set the font
-        metrics = painter.fontMetrics()
-        zw = metrics.width('e')
 
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
