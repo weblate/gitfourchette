@@ -3,6 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import git
 import html
+import datetime
 
 from GraphDelegate import GraphDelegate
 from Lanes import Lanes
@@ -30,28 +31,62 @@ class GraphView(QListView):
         model = QStandardItemModel(self)
 
         model.appendRow(QStandardItem("Uncommitted Changes"))
-        commit: git.Commit
         laneGen = Lanes()
         i: int = 0
-        boldCommitSha = repo.active_branch.commit.binsha
-        for i, commit in enumerate(repo.iter_commits(repo.active_branch)):#, max_count=999000):
-            if i != 0 and i % 1000 == 0:
-                progress.setLabelText(F"{i:,} commits loaded.")
+
+        boldCommitHash = repo.active_branch.commit.hexsha
+        self.repoWidget.state.getOrCreateMetadata(boldCommitHash).bold = True
+
+        progress.setLabelText("Talking to git...")
+        QCoreApplication.processEvents()
+        timeA = datetime.datetime.now()
+        output = repo.git.log(topo_order=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%B')
+        split = output.split('\x00')
+        del split[0]
+        split[-1] += '\n'
+        commitCount = len(split)
+        progress.setMaximum(commitCount)
+
+        timeB = datetime.datetime.now()
+
+        progress.setLabelText(F"Processing {commitCount:,} commits.")
+
+        for i, commitData in enumerate(split):
+            if i % 10000 == 0:
+                #progress.setLabelText(F"Processing commit {i:,} of {commitCount:,}")
+                progress.setValue(i)
                 QCoreApplication.processEvents()
             if progress.wasCanceled():
-                raise Exception("Canceled!")
+                print("aborted")
+                QMessageBox.warning(self, "Loading aborted", F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
+                break
 
-            # TODO: using commit.parents is very slow. We should do our own thing with git commands.
-            meta = self.repoWidget.state.getOrCreateMetadata(commit)
-            meta.lane, meta.laneData = laneGen.step(commit.binsha, [p.binsha for p in commit.parents])
+            hash, parentHashes, author, authorEmail, authorDate, body = commitData.split('\n', 5)
 
-            meta.bold = boldCommitSha == commit.binsha
+            meta = self.repoWidget.state.getOrCreateMetadata(hash)
+            meta.author = author
+            meta.authorEmail = authorEmail
+            meta.authorTimestamp = int(authorDate)
+            meta.body = body
+
+            # compute lanes
+            meta.lane, meta.laneData = laneGen.step(hash, parentHashes.split())
 
             item = QStandardItem()
             item.setData(meta, Qt.DisplayRole)
             model.appendRow(item)
 
+        timeC = datetime.datetime.now()
+
+        print(int((timeC - timeB).total_seconds() * 1000), int((timeB - timeA).total_seconds() * 1000))
+
         progress.setLabelText(F"{i:,} commits total.")
+        progress.setValue(commitCount)
+
+        QCoreApplication.processEvents()
+        import pickle
+        with open(F'/tmp/gitfourchette-{settings.history.getRepoNickname(repo.working_tree_dir)}.pickle', 'wb') as handle:
+            pickle.dump(self.repoWidget.state.commitMetadata, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         #progress.setCancelButton(None)
         #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
@@ -65,7 +100,8 @@ class GraphView(QListView):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if not self.currentIndex().isValid():
             return
-        commit: git.Commit = self.currentIndex().data().commit
+        repo: git.Repo = self.repoWidget.state.repo
+        commit: git.Commit = self.currentIndex().data().commit(repo)
         QMessageBox.about(None, F"Commit info {commit.hexsha[:7]}", F"""<h2>Commit info</h2>
 <b>SHA</b><br>
 {commit.hexsha}
@@ -102,7 +138,8 @@ class GraphView(QListView):
             self.repoWidget.fillStageView()
             return
 
-        commit: git.Commit = current.data().commit
+        repo: git.Repo = self.repoWidget.state.repo
+        commit: git.Commit = current.data().commit(repo)
 
         # TODO: use a signal for this instead of touching changedFilesView directly
         cfv = self.repoWidget.changedFilesView

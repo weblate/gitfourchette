@@ -1,8 +1,8 @@
 from PySide2.QtWidgets import *
 from PySide2.QtGui import *
 from PySide2.QtCore import *
+from datetime import datetime
 import settings
-import git
 from Lanes import Lanes
 
 
@@ -39,9 +39,8 @@ class GraphDelegate(QItemDelegate):
 
         if index.row() > 0:
             meta = index.data()
-            commit: git.Commit = meta.commit
-            message: str = commit.message.strip()
 
+            message: str = meta.body.strip()
             newline = message.find('\n')
             if newline > -1:
                 messageContinued = newline < len(message) - 1
@@ -50,9 +49,9 @@ class GraphDelegate(QItemDelegate):
                     message += " [...]"
 
             data = {
-                'hash': commit.hexsha[:settings.prefs.shortHashChars],
-                'author': commit.author.email.split('@')[0],  # [:8],
-                'date': commit.authored_datetime.strftime(settings.prefs.shortTimeFormat),
+                'hash': meta.hexsha[:settings.prefs.shortHashChars],
+                'author': meta.authorEmail.split('@')[0],  # [:8],
+                'date': datetime.fromtimestamp(meta.authorTimestamp).strftime(settings.prefs.shortTimeFormat),
                 'message': message,
                 'tags': meta.tags,
                 'refs': meta.refs
