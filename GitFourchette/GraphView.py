@@ -40,7 +40,7 @@ class GraphView(QListView):
         progress.setLabelText("Talking to git...")
         QCoreApplication.processEvents()
         timeA = datetime.datetime.now()
-        output = repo.git.log(topo_order=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%B')
+        output = repo.git.log(topo_order=True, all=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%B')
         split = output.split('\x00')
         del split[0]
         split[-1] += '\n'

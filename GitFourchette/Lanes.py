@@ -5,44 +5,46 @@ class Lanes:
 
     def __init__(self):
         self.lanes = []
-        self.peakLanes = 0
+
+    def _findFreeLane(self, result, startAt=0) -> int:
+        try:
+            return self.lanes.index(None, startAt)
+        except ValueError:
+            # all lanes taken: create one on the right
+            free = len(self.lanes)
+            self.lanes.append(None)
+            result.append(0)
+            return free
 
     def step(self, commit, parents):
-        if 0 == len(self.lanes):  # first call: put first commit in first lane
-            self.lanes.append(commit)
-
         result = [0] * len(self.lanes)
 
-        # cached index of the first free lane
-        freeLane = len(self.lanes)
-
-        myLane = self.lanes.index(commit)
+        # the main lane for this commit is the leftmost lane reserved for it
+        try:
+            myLane = self.lanes.index(commit)
+        except ValueError:
+            # this commit is the tip of a branch
+            myLane = self._findFreeLane(result)
 
         for i, lane in enumerate(self.lanes):
             if lane == commit:
+                # tie up loose ends
                 result[i] |= Lanes.FORK_UP
                 self.lanes[i] = None
             elif lane is not None:
+                # continue parallel lane that isn't mine
                 result[i] |= Lanes.STRAIGHT
-            # cache first free lane (re-test self.lanes[i] because we might have freed a lane above)
-            if self.lanes[i] is None and i < freeLane:
-                freeLane = i
 
-        # continue straight line
+        # hand over my main lane to my first parent
         if len(parents) > 0:
             self.lanes[myLane] = parents[0]
             result[myLane] |= Lanes.FORK_DOWN
 
-        # add new branches
+        # add new branches for my other parents
+        freeLane = 0
         for parent in parents[1:]:
-            # find a free lane
-            try:
-                freeLane = self.lanes.index(None, freeLane)
-            except ValueError:
-                # all lanes taken: add new lane
-                freeLane = len(self.lanes)
-                self.lanes.append(None)
-                result.append(0)
+            # find a free lane or create one if none is available
+            freeLane = self._findFreeLane(result, freeLane)
             # fill it in
             self.lanes[freeLane] = parent
             result[freeLane] |= Lanes.FORK_DOWN
