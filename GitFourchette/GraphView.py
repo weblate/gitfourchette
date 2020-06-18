@@ -40,7 +40,7 @@ class GraphView(QListView):
         progress.setLabelText("Talking to git...")
         QCoreApplication.processEvents()
         timeA = datetime.datetime.now()
-        output = repo.git.log(topo_order=True, all=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%B')
+        output = repo.git.log(topo_order=True, all=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
         split = output.split('\x00')
         del split[0]
         split[-1] += '\n'
@@ -50,6 +50,8 @@ class GraphView(QListView):
         timeB = datetime.datetime.now()
 
         progress.setLabelText(F"Processing {commitCount:,} commits.")
+
+        nextLocal = set()
 
         for i, commitData in enumerate(split):
             if i % 10000 == 0:
@@ -61,7 +63,9 @@ class GraphView(QListView):
                 QMessageBox.warning(self, "Loading aborted", F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
                 break
 
-            hash, parentHashes, author, authorEmail, authorDate, body = commitData.split('\n', 5)
+            hash, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
+
+            parentHashes = parentHashesRaw.split()
 
             meta = self.repoWidget.state.getOrCreateMetadata(hash)
             meta.author = author
@@ -69,8 +73,19 @@ class GraphView(QListView):
             meta.authorTimestamp = int(authorDate)
             meta.body = body
 
+            if hash in nextLocal:
+                meta.hasLocal = True
+                nextLocal.remove(hash)
+            elif refName.startswith("refs/heads/"):
+                meta.hasLocal = True
+            else:
+                meta.hasLocal = False
+            if meta.hasLocal:
+                for p in parentHashes:
+                    nextLocal.add(p)
+
             # compute lanes
-            meta.lane, meta.laneData = laneGen.step(hash, parentHashes.split())
+            meta.lane, meta.laneData = laneGen.step(hash, parentHashes)
 
             item = QStandardItem()
             item.setData(meta, Qt.DisplayRole)

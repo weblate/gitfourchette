@@ -16,6 +16,7 @@ class CommitMetadata:
     lane: int
     laneData: []
     bold: bool
+    hasLocal: bool
 
     def __init__(self, hexsha: str):
         self.hexsha = hexsha
@@ -28,6 +29,7 @@ class CommitMetadata:
         self.lane = -1
         self.laneData = []
         self.bold = False
+        self.hasLocal = False
 
     def commit(self, repo: git.Repo):
         return repo.commit(self.hexsha)
@@ -54,9 +56,17 @@ class RepoState:
             except BaseException as e:  # the linux repository has 2 tags pointing to trees instead of commits
                 print("Error loading tag")
                 traceback.print_exc()
+        for ref in self.repo.refs:
+            try:
+                self.getOrCreateMetadata(ref.commit.hexsha).refs.append(ref.name)
+            except BaseException as e:
+                print("Error loading ref")
+                traceback.print_exc()
+        """
         for remote in self.repo.remotes:
             for ref in remote.refs:
                 self.getOrCreateMetadata(ref.commit.hexsha).refs.append(F"{ref.remote_name}/{ref.remote_head}")
+        """
 
     def getOrCreateMetadata(self, key) -> CommitMetadata:
         if key in self.commitMetadata:

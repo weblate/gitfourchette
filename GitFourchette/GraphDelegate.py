@@ -116,9 +116,19 @@ class GraphDelegate(QItemDelegate):
             painter.restore()
 
         # ------ tags
-        for tag in data['tags'] + data['refs']:
+        for ref in data['refs']:
             painter.save()
             painter.setFont(settings.smallFont)
+            painter.setPen(QColor(Qt.darkMagenta))
+            rect.setLeft(rect.right())
+            label = F"[{ref}] "
+            rect.setWidth(settings.smallFontMetrics.width(label) + 1)
+            painter.drawText(rect, label)
+            painter.restore()
+        for tag in data['tags']:
+            painter.save()
+            painter.setFont(settings.smallFont)
+            painter.setPen(QColor(Qt.darkYellow))
             rect.setLeft(rect.right())
             label = F"[{tag}] "
             rect.setWidth(settings.smallFontMetrics.width(label) + 1)
@@ -126,6 +136,8 @@ class GraphDelegate(QItemDelegate):
             painter.restore()
 
         # ------ message
+        if meta and not meta.hasLocal:
+            painter.setPen(QColor(Qt.gray))
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
         mzg = metrics.elidedText(data['message'], Qt.ElideRight, rect.width())
