@@ -4,6 +4,7 @@ import traceback
 from PySide2.QtCore import QSettings, QCoreApplication
 from PySide2.QtWidgets import QProgressDialog
 from datetime import datetime
+import pickle
 from typing import List
 
 import settings
@@ -168,3 +169,21 @@ class RepoState:
         self.order = metas
 
         return metas
+
+    def loadCommitDump(self, path):#, progress):
+        #progress.setLabelText("Unpickling.")
+        #QCoreApplication.processEvents()
+        timeA = datetime.now()
+        with open(path, 'rb') as handle:
+            metas = pickle.load(handle)
+        #progress.setLabelText("Lookup table.")
+        #QCoreApplication.processEvents()
+        for m in metas:
+            self.commitMetadata[m.hexsha] = m
+        timeB = datetime.now()
+        print(int((timeB - timeA).total_seconds() * 1000))
+        return metas
+
+    def writeCommitDump(self, path):
+        with open(path, 'wb') as f:
+            pickle.dump(self.order, f, protocol=pickle.HIGHEST_PROTOCOL)

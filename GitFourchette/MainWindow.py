@@ -77,6 +77,11 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Push", lambda: self.currentRepoWidget().push())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
 
+        repoMenu = menubar.addMenu("&Debug")
+        repoMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
+        repoMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
+        repoMenu.addAction("Load Graph...", self.debug_loadGraphDump)
+
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {settings.PROGRAM_NAME}", self.about)
         helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
@@ -255,3 +260,33 @@ class MainWindow(QMainWindow):
     def closeEvent(self, e):
         self.saveSession()
         e.accept()
+
+    def debug_loadGraphDump(self):
+        rw = self.currentRepoWidget()
+        shortname = settings.history.getRepoNickname(rw.state.repo.working_tree_dir)
+        path = QFileDialog.getOpenFileName(self, "Load graph dump")
+        if not path:
+            return
+
+        progress = QProgressDialog("Load graph dump", "Abort", 0, 0, self)
+        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowTitle(shortname)
+        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+        QCoreApplication.processEvents()
+        progress.show()
+        QCoreApplication.processEvents()
+
+        orderedMetadata = self.currentRepoWidget().state.loadCommitDump(path[0])
+        rw.graphView.fill(orderedMetadata)
+
+        progress.close()
+
+    def debug_saveGraphDump(self):
+        rw = self.currentRepoWidget()
+        shortname = settings.history.getRepoNickname(rw.state.repo.working_tree_dir)
+        path = QFileDialog.getSaveFileName(self, "Save graph dump", shortname + ".gfgraphdump")
+        if not path:
+            return
+        print(path)
+        rw.state.writeCommitDump(path[0])
