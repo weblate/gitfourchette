@@ -153,8 +153,22 @@ class MainWindow(QMainWindow):
         QCoreApplication.processEvents()
         #import time; time.sleep(3)
 
+        PROGRESS_TICK_INTERVAL = 10000
+
+        def progressTick(progress: QProgressDialog, i: int):
+            if i % PROGRESS_TICK_INTERVAL != 0:
+                return
+            progress.setValue(i)
+            QCoreApplication.processEvents()
+            if progress.wasCanceled():
+                print("aborted")
+                QMessageBox.warning(progress.parent(), "Loading aborted",
+                                    F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
+                raise KeyboardInterrupt
+
         try:
             newState = RepoState(path)
+            orderedMetadata = newState.loadCommitList(progress, progressTick)
         except BaseException as e:
             progress.close()
             traceback.print_exc()
@@ -165,8 +179,18 @@ class MainWindow(QMainWindow):
             return False
 
         rw.state = newState
-        rw.graphView.fill(progress)
+
+        progress.setLabelText(F"Filling model.")
+        progress.setMaximum(0)
+        progress.setValue(0)
+        QCoreApplication.processEvents()
+        rw.graphView.fill(orderedMetadata)
+
         progress.close()
+        #progress.setCancelButton(None)
+        #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
+        #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
+        QCoreApplication.processEvents()
         return True
 
     def openRepo(self, repoPath):

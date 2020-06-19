@@ -4,6 +4,7 @@ import traceback
 from PySide2.QtCore import QSettings, QCoreApplication
 from PySide2.QtWidgets import QProgressDialog
 from datetime import datetime
+from typing import List
 
 import settings
 from Lanes import Lanes
@@ -49,6 +50,7 @@ class RepoState:
     settings: QSettings
     commitMetadata: dict
     currentCommitAtRef: dict
+    order: List[CommitMetadata]
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
@@ -108,7 +110,7 @@ class RepoState:
         commitCount = len(split)
 
         progress.setLabelText(F"Processing {commitCount:,} commits ({len(output)//1024:,} KB).")
-        progress.setMaximum(4 * commitCount)
+        progress.setMaximum(3 * commitCount + 1)
 
         metas = []
 
@@ -163,11 +165,6 @@ class RepoState:
         print(int((timeC - timeB).total_seconds() * 1000), int((timeB - timeA).total_seconds() * 1000))
         print(refs)
 
-        '''
-        QCoreApplication.processEvents()
-        import pickle
-        with open(F'/tmp/gitfourchette-{settings.history.getRepoNickname(repo.working_tree_dir)}.pickle', 'wb') as handle:
-            pickle.dump(self.repoWidget.state.commitMetadata, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        '''
+        self.order = metas
 
         return metas

@@ -7,19 +7,6 @@ import html
 from GraphDelegate import GraphDelegate
 import settings
 
-PROGRESS_TICK_INTERVAL = 10000
-
-
-def progressTick(progress: QProgressDialog, i: int):
-    if i % PROGRESS_TICK_INTERVAL != 0:
-        return
-    progress.setValue(i)
-    QCoreApplication.processEvents()
-    if progress.wasCanceled():
-        print("aborted")
-        QMessageBox.warning(progress.parent(), "Loading aborted", F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
-        raise KeyboardInterrupt
-
 
 class GraphView(QListView):
     def __init__(self, parent):
@@ -34,28 +21,14 @@ class GraphView(QListView):
             self.model().deleteLater()  # avoid memory leak
         self.setModel(model)
 
-    def fill(self, progress: QProgressDialog):
+    def fill(self, orderedCommitMetadata):
         model = QStandardItemModel(self)  # creating a model from scratch seems faster than clearing an existing one
-
-        orderedMetadata = self.repoWidget.state.loadCommitList(progress, progressTick)
-
-        progress.setLabelText(F"Filling model.")
         model.appendRow(QStandardItem("Uncommitted Changes"))
-        for i, meta in enumerate(orderedMetadata):
-            progressTick(progress, i + 3 * len(orderedMetadata))
+        for i, meta in enumerate(orderedCommitMetadata):
             item = QStandardItem()
             item.setData(meta, Qt.DisplayRole)
             model.appendRow(item)
-
         self._replaceModel(model)
-
-        progress.setLabelText(F"{len(orderedMetadata):,} commits total.")
-        progress.setMaximum(progress.maximum())
-
-        #progress.setCancelButton(None)
-        #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
-        #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
-        QCoreApplication.processEvents()
         self.onSetCurrent()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
