@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
         assert rw
 
         shortname = settings.history.getRepoNickname(path)
-        progress = QProgressDialog("Opening repository...", "Abort", 0, 0, self)
+        progress = QProgressDialog("Opening repository.", "Abort", 0, 0, self)
         progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
         progress.setWindowModality(Qt.WindowModal)
         progress.setWindowTitle(shortname)

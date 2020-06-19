@@ -9,6 +9,19 @@ from GraphDelegate import GraphDelegate
 from Lanes import Lanes
 import settings
 
+PROGRESS_TICK_INTERVAL = 10000
+
+
+def progressTick(progress: QProgressDialog, i: int):
+    if i % PROGRESS_TICK_INTERVAL != 0:
+        return
+    progress.setValue(i)
+    QCoreApplication.processEvents()
+    if progress.wasCanceled():
+        print("aborted")
+        QMessageBox.warning(progress.parent(), "Loading aborted", F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
+        raise KeyboardInterrupt
+
 
 class GraphView(QListView):
     def __init__(self, parent):
@@ -37,78 +50,103 @@ class GraphView(QListView):
         boldCommitHash = repo.active_branch.commit.hexsha
         self.repoWidget.state.getOrCreateMetadata(boldCommitHash).bold = True
 
-        progress.setLabelText("Talking to git...")
+        progress.setLabelText("Git.")
         QCoreApplication.processEvents()
         timeA = datetime.datetime.now()
         output = repo.git.log(topo_order=True, all=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
+
+        timeB = datetime.datetime.now()
+
+        progress.setLabelText("Split.")
+        QCoreApplication.processEvents()
         split = output.split('\x00')
         del split[0]
         split[-1] += '\n'
         commitCount = len(split)
-        progress.setMaximum(commitCount)
 
-        timeB = datetime.datetime.now()
+        progress.setLabelText(F"Processing {commitCount:,} commits ({len(output)//1024:,} KB).")
+        progress.setMaximum(4 * commitCount)
 
-        progress.setLabelText(F"Processing {commitCount:,} commits.")
+        metas = []
 
-        nextLocal = set()
+        refs = {}
 
         for i, commitData in enumerate(split):
-            if i % 10000 == 0:
-                #progress.setLabelText(F"Processing commit {i:,} of {commitCount:,}")
-                progress.setValue(i)
-                QCoreApplication.processEvents()
-            if progress.wasCanceled():
-                print("aborted")
-                QMessageBox.warning(self, "Loading aborted", F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
-                break
+            progressTick(progress, i)
 
             hash, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
 
             parentHashes = parentHashesRaw.split()
+
+            if refName and refName not in refs:
+                refs[refName] = hash
 
             meta = self.repoWidget.state.getOrCreateMetadata(hash)
             meta.author = author
             meta.authorEmail = authorEmail
             meta.authorTimestamp = int(authorDate)
             meta.body = body
+            meta.parentHashes = parentHashes
+            meta.mainRefName = refName
+            metas.append(meta)
 
-            if hash in nextLocal:
+        print(refs)
+        self.repoWidget.state.currentCommitAtRef = refs
+
+        progress.setLabelText(F"Filling model.")
+        for i, meta in enumerate(metas):
+            progressTick(progress, commitCount + i)
+            item = QStandardItem()
+            item.setData(meta, Qt.DisplayRole)
+            model.appendRow(item)
+
+        self._replaceModel(model)
+        #self.repaint()
+
+        progress.setLabelText(F"Tracing commit availability.")
+        nextLocal = set()
+        for i, meta in enumerate(metas):
+            progressTick(progress, commitCount * 2 + i)
+            if meta.hexsha in nextLocal:
                 meta.hasLocal = True
-                nextLocal.remove(hash)
-            elif refName.startswith("refs/heads/"):
+                nextLocal.remove(meta.hexsha)
+            elif meta.mainRefName == "HEAD" or meta.mainRefName.startswith("refs/heads/"):
                 meta.hasLocal = True
             else:
                 meta.hasLocal = False
             if meta.hasLocal:
-                for p in parentHashes:
+                for p in meta.parentHashes:
                     nextLocal.add(p)
+        assert(len(nextLocal) == 0)
 
+        #self.repaint()
+
+        progress.setLabelText(F"Drawing graph.")
+        for i, meta in enumerate(metas):
+            progressTick(progress, commitCount * 3 + i)
             # compute lanes
-            meta.lane, meta.laneData = laneGen.step(hash, parentHashes)
+            meta.lane, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
 
-            item = QStandardItem()
-            item.setData(meta, Qt.DisplayRole)
-            model.appendRow(item)
+        #self.repaint()
 
         timeC = datetime.datetime.now()
 
         print(int((timeC - timeB).total_seconds() * 1000), int((timeB - timeA).total_seconds() * 1000))
 
         progress.setLabelText(F"{i:,} commits total.")
-        progress.setValue(commitCount)
+        progress.setValue(0)
+        progress.setMaximum(0) #progress.maximum())
 
+        '''
         QCoreApplication.processEvents()
         import pickle
         with open(F'/tmp/gitfourchette-{settings.history.getRepoNickname(repo.working_tree_dir)}.pickle', 'wb') as handle:
             pickle.dump(self.repoWidget.state.commitMetadata, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        '''
 
         #progress.setCancelButton(None)
         #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
         #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
-        QCoreApplication.processEvents()
-        self._replaceModel(model)
-        self.repaint()
         QCoreApplication.processEvents()
         self.onSetCurrent()
 

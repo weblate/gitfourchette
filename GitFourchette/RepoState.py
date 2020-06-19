@@ -6,11 +6,14 @@ import settings
 
 
 class CommitMetadata:
+    # Immutable attributes
     hexsha: str
     author: str
     authorEmail: str
     authorTimestamp: int
     body: str
+
+    # Attributes that may change as the repository evolves
     tags: []
     refs: []
     lane: int
@@ -26,8 +29,8 @@ class CommitMetadata:
         self.body = ""
         self.tags = []
         self.refs = []
-        self.lane = -1
-        self.laneData = []
+        self.lane = 0
+        self.laneData = None
         self.bold = False
         self.hasLocal = False
 
@@ -41,6 +44,7 @@ class RepoState:
     index: git.IndexFile
     settings: QSettings
     commitMetadata: dict
+    currentCommitAtRef: dict
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
@@ -62,6 +66,9 @@ class RepoState:
             except BaseException as e:
                 print("Error loading ref")
                 traceback.print_exc()
+
+        self.currentCommitAtRef = {}
+
         """
         for remote in self.repo.remotes:
             for ref in remote.refs:
