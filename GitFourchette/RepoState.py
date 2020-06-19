@@ -1,8 +1,12 @@
 import git
 import os
 import traceback
-from PySide2.QtCore import QSettings
+from PySide2.QtCore import QSettings, QCoreApplication
+from PySide2.QtWidgets import QProgressDialog
+from datetime import datetime
+
 import settings
+from Lanes import Lanes
 
 
 class CommitMetadata:
@@ -83,3 +87,87 @@ class RepoState:
             self.commitMetadata[key] = v
             return v
 
+    def loadCommitList(self, progress: QProgressDialog, progressTick):
+        repo: git.Repo = self.repo
+
+        boldCommitHash = repo.active_branch.commit.hexsha
+        self.getOrCreateMetadata(boldCommitHash).bold = True
+
+        progress.setLabelText("Git.")
+        QCoreApplication.processEvents()
+        timeA = datetime.now()
+        output = repo.git.log(topo_order=True, all=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
+
+        timeB = datetime.now()
+
+        progress.setLabelText("Split.")
+        QCoreApplication.processEvents()
+        split = output.split('\x00')
+        del split[0]
+        split[-1] += '\n'
+        commitCount = len(split)
+
+        progress.setLabelText(F"Processing {commitCount:,} commits ({len(output)//1024:,} KB).")
+        progress.setMaximum(4 * commitCount)
+
+        metas = []
+
+        refs = {}
+
+        for i, commitData in enumerate(split):
+            progressTick(progress, i + commitCount * 0)
+
+            hash, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
+
+            parentHashes = parentHashesRaw.split()
+
+            if refName and refName not in refs:
+                refs[refName] = hash
+
+            meta = self.getOrCreateMetadata(hash)
+            meta.author = author
+            meta.authorEmail = authorEmail
+            meta.authorTimestamp = int(authorDate)
+            meta.body = body
+            meta.parentHashes = parentHashes
+            meta.mainRefName = refName
+            metas.append(meta)
+
+        self.currentCommitAtRef = refs
+
+        progress.setLabelText(F"Tracing commit availability.")
+        nextLocal = set()
+        for i, meta in enumerate(metas):
+            progressTick(progress, i + commitCount * 1)
+            if meta.hexsha in nextLocal:
+                meta.hasLocal = True
+                nextLocal.remove(meta.hexsha)
+            elif meta.mainRefName == "HEAD" or meta.mainRefName.startswith("refs/heads/"):
+                meta.hasLocal = True
+            else:
+                meta.hasLocal = False
+            if meta.hasLocal:
+                for p in meta.parentHashes:
+                    nextLocal.add(p)
+        assert(len(nextLocal) == 0)
+
+        laneGen = Lanes()
+        progress.setLabelText(F"Drawing graph.")
+        for i, meta in enumerate(metas):
+            progressTick(progress, i + commitCount * 2)
+            # compute lanes
+            meta.lane, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
+
+        timeC = datetime.now()
+
+        print(int((timeC - timeB).total_seconds() * 1000), int((timeB - timeA).total_seconds() * 1000))
+        print(refs)
+
+        '''
+        QCoreApplication.processEvents()
+        import pickle
+        with open(F'/tmp/gitfourchette-{settings.history.getRepoNickname(repo.working_tree_dir)}.pickle', 'wb') as handle:
+            pickle.dump(self.repoWidget.state.commitMetadata, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        '''
+
+        return metas
