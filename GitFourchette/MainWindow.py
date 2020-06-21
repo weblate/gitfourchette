@@ -13,6 +13,7 @@ import gc
 from RepoState import RepoState
 from RepoWidget import RepoWidget
 from util import compactSystemPath, showInFolder
+from status import gstatus
 from QTabWidget2 import QTabWidget2
 
 
@@ -40,13 +41,27 @@ class MainWindow(QMainWindow):
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.setCentralWidget(self.tabs)
 
+        self.makeMenu()
+
         self.memoryIndicator = QPushButton("Mem")
         self.memoryIndicator.setMaximumHeight(16)
         self.memoryIndicator.setMinimumWidth(128)
         self.memoryIndicator.clicked.connect(lambda e: [gc.collect(), print("GC!"), self.updateMemoryIndicator()])
         self.memoryIndicator.setToolTip("Force GC")
-
-        self.makeMenu()
+        self.statusProgress = QProgressBar(self)
+        self.statusProgress.setMaximumHeight(16)
+        self.statusProgress.setMaximumWidth(128)
+        self.statusProgress.setVisible(False)
+        self.statusProgress.setTextVisible(False)
+        gstatus.statusText.connect(self.updateStatusMessage)
+        gstatus.progressMaximum.connect(lambda v: self.statusProgress.setMaximum(v))
+        gstatus.progressValue.connect(lambda v: [self.statusProgress.setVisible(True), self.statusProgress.setValue(v)])
+        gstatus.progressDisable.connect(lambda: self.statusProgress.setVisible(False))
+        self.statusBar = QStatusBar(self)
+        self.statusBar.setSizeGripEnabled(False)
+        self.statusBar.addPermanentWidget(self.statusProgress)
+        self.statusBar.addPermanentWidget(self.memoryIndicator)
+        self.setStatusBar(self.statusBar)
 
         self.initialChildren = list(self.findChildren(QObject))
 
@@ -54,6 +69,10 @@ class MainWindow(QMainWindow):
         nChildren = len(self.findChildren(QObject))
         rss = psutil.Process(os.getpid()).memory_info().rss
         self.memoryIndicator.setText(F"{rss // 1024:,}K {nChildren}Q")
+
+    def updateStatusMessage(self, message):
+        self.statusBar.showMessage(message)
+        QCoreApplication.processEvents()
 
     def paintEvent(self, event:QPaintEvent):
         if settings.prefs.showMemoryIndicator:
@@ -97,10 +116,9 @@ class MainWindow(QMainWindow):
             menuContainer.layout().setSpacing(0)
             menuContainer.layout().setMargin(0)
             menuContainer.layout().addWidget(menubar)
-            #menuContainer.layout().addSpacing(8)
-            #menuContainer.layout().addWidget(self.tabs.tabs, 1)
             menuContainer.layout().addSpacing(8)
-            menuContainer.layout().addWidget(self.memoryIndicator)
+            menuContainer.layout().addWidget(self.tabs.tabs, 1)
+            self.tabs.tabs.setMaximumHeight(menubar.height())
             self.setMenuWidget(menuContainer)
             menubar.adjustSize()
 
