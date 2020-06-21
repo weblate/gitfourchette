@@ -46,6 +46,8 @@ class RepoWidget(QWidget):
         self.dirtyLabel = QLabel("Dirty Files")
         self.stageLabel = QLabel("Files Staged For Commit")
 
+        self.previouslySearchedTerm = None
+
         dirtyContainer = QWidget()
         dirtyContainer.setLayout(QVBoxLayout())
         dirtyContainer.layout().setContentsMargins(0,0,0,0)
@@ -238,3 +240,38 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             self.state.repo.head.commit.message, "Amend", "Amend commit message:", "Amend")
         if confirm:
             self.state.repo.git.commit(m=message, amend=True)
+
+    def findFlow(self):
+        dlg = QInputDialog(self)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setWindowTitle("Find Commit")
+        dlg.setLabelText("Search for partial commit hash or message:")
+        if self.previouslySearchedTerm:
+            dlg.setTextValue(self.previouslySearchedTerm)
+        dlg.setOkButtonText("Find")
+        rc = dlg.exec_()
+        verbatimTerm: str = dlg.textValue()
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+        if rc != QDialog.DialogCode.Accepted:
+            return
+
+        message = verbatimTerm.lower().strip()
+        if not message:
+            return
+
+        self.previouslySearchedTerm = verbatimTerm
+
+        likelyHash = False
+        if len(message) <= 40:
+            try:
+                int(message, 16)
+                likelyHash = True
+            except ValueError:
+                pass
+
+        for i, meta in enumerate(self.state.order):
+            if (message in meta.body.lower()) or (likelyHash and message in meta.hexsha):
+                self.graphView.setCurrentIndex(self.graphView.model().index(1 + i, 0))
+                return
+
+        QApplication.beep()

@@ -95,6 +95,8 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
         repoMenu.addAction("Push", lambda: self.currentRepoWidget().push())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
+        repoMenu.addSeparator()
+        repoMenu.addAction("&Find...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
 
         repoMenu = menubar.addMenu("&Debug")
         repoMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
