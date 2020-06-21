@@ -11,6 +11,7 @@ ColW_Author = 16
 ColW_Hash = settings.prefs.shortHashChars + 1
 ColW_Date = 16
 LaneW = 10
+MAX_LANES = 32
 DEBUGRECTS = False
 
 
@@ -92,6 +93,8 @@ class GraphDelegate(QItemDelegate):
         # ------ Graph
         rect.setLeft(rect.right())
         if meta is not None:
+            rect.setRight(rect.left() + LaneW / 2 + min(MAX_LANES, len(meta.laneData)) * LaneW)
+
             painter.save()
             painter.setRenderHints(QPainter.Antialiasing, True)
 
@@ -101,7 +104,10 @@ class GraphDelegate(QItemDelegate):
             middle = (rect.top() + rect.bottom()) / 2
 
             painter.setPen(QPen(Qt.darkGray, 2))
-            for lane, mask in enumerate(meta.laneData):
+
+            # Draw lane lines.
+            # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
+            for lane, mask in enumerate(meta.laneData[:MAX_LANES]):
                 if 0 != (mask & Lanes.STRAIGHT):
                     painter.drawLine(x + lane * LaneW, top, x + lane * LaneW, bottom)
                 if 0 != (mask & Lanes.FORK_UP):
@@ -109,10 +115,16 @@ class GraphDelegate(QItemDelegate):
                 if 0 != (mask & Lanes.FORK_DOWN):
                     painter.drawLine(x + meta.lane * LaneW, middle, x + lane * LaneW, bottom)
 
-            painter.setBrush(QColor(Qt.darkGray))
-            painter.drawEllipse(QPoint(x + meta.lane * LaneW, middle), 2, 2)
+            if len(meta.laneData) > MAX_LANES:
+                extraText = F"+{len(meta.laneData) - MAX_LANES} lanes >>>  "
+                painter.drawText(rect, Qt.AlignRight, extraText)
 
-            rect.setRight(x + LaneW * len(meta.laneData))
+            # draw bullet point for this commit if it's within the lanes that are shown
+            if meta.lane < MAX_LANES:
+                painter.setBrush(QColor(Qt.darkGray))
+                painter.drawEllipse(QPoint(x + meta.lane * LaneW, middle), 2, 2)
+
+            rect.setRight(x + LaneW * min(MAX_LANES, len(meta.laneData)))
             painter.restore()
 
         # ------ tags
