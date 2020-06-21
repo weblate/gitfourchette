@@ -3,6 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtCore import *
 from datetime import datetime
 import settings
+import colors
 from Lanes import Lanes
 
 
@@ -43,6 +44,8 @@ class GraphDelegate(QItemDelegate):
         metrics = painter.fontMetrics()
         zw = metrics.width('0')
 
+        debugHighlightColor: QColor = None
+
         if index.row() > 0:
             meta = index.data()
 
@@ -67,6 +70,10 @@ class GraphDelegate(QItemDelegate):
 
             if meta.bold:
                 painter.setFont(settings.boldFont)
+
+            if meta.debugPrefix:
+                data['hash'] = data['hash'][:-1] + '-' + meta.debugPrefix
+                debugHighlightColor = colors.rainbow[meta.debugRefreshId % len(colors.rainbow)]
         else:
             meta = None
             data = {
@@ -82,6 +89,8 @@ class GraphDelegate(QItemDelegate):
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
+        if debugHighlightColor:
+            painter.fillRect(rect, debugHighlightColor)
         charRect = QRect(rect.left(), rect.top(), zw, rect.height())
         painter.save()
         painter.setPen(palette.color(pcg, QPalette.ColorRole.PlaceholderText))

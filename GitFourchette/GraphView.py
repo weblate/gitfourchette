@@ -24,12 +24,18 @@ class GraphView(QListView):
     def fill(self, orderedCommitMetadata):
         model = QStandardItemModel(self)  # creating a model from scratch seems faster than clearing an existing one
         model.appendRow(QStandardItem("Uncommitted Changes"))
+        model.insertRows(1, len(orderedCommitMetadata))
         for i, meta in enumerate(orderedCommitMetadata):
-            item = QStandardItem()
-            item.setData(meta, Qt.DisplayRole)
-            model.appendRow(item)
+            model.setData(model.index(1 + i, 0), meta, Qt.DisplayRole)
         self._replaceModel(model)
         self.onSetCurrent()
+
+    def patchFill(self, trimStartRows, orderedCommitMetadata):
+        model = self.model()
+        model.removeRows(1, trimStartRows)
+        model.insertRows(1, len(orderedCommitMetadata))
+        for i, meta in enumerate(orderedCommitMetadata):
+            model.setData(model.index(1 + i, 0), meta, Qt.DisplayRole)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if not self.currentIndex().isValid():

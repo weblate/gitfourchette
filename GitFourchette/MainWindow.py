@@ -9,6 +9,8 @@ import os
 import traceback
 import psutil
 import gc
+import pickle
+import zlib
 
 from RepoState import RepoState
 from RepoWidget import RepoWidget
@@ -90,7 +92,7 @@ class MainWindow(QMainWindow):
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
         repoMenu = menubar.addMenu("&Repo")
-        repoMenu.addAction("&Refresh", self.refresh, QKeySequence.Refresh)
+        repoMenu.addAction("&Refresh", self.quickRefresh, QKeySequence.Refresh)
         repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
         repoMenu.addSeparator()
         repoMenu.addAction("Push", lambda: self.currentRepoWidget().push())
@@ -181,8 +183,6 @@ class MainWindow(QMainWindow):
         PROGRESS_TICK_INTERVAL = 10000
 
         def progressTick(progress: QProgressDialog, i: int):
-            if i % PROGRESS_TICK_INTERVAL != 0:
-                return
             progress.setValue(i)
             QCoreApplication.processEvents()
             if progress.wasCanceled():
@@ -230,6 +230,15 @@ class MainWindow(QMainWindow):
 
         settings.history.addRepo(repoPath)
         self.fillRecentMenu()
+
+    def quickRefresh(self):
+        rw = self.currentRepoWidget()
+        frontTrim, frontNewMetas = rw.state.loadTaintedCommitsOnly()
+        if not frontNewMetas:
+            assert frontTrim == 0
+            return
+        rw.graphView.patchFill(frontTrim, frontNewMetas)
+        gstatus.clearProgress()
 
     def refresh(self):
         rw = self.currentRepoWidget()
@@ -283,30 +292,60 @@ class MainWindow(QMainWindow):
 
     def debug_loadGraphDump(self):
         rw = self.currentRepoWidget()
-        shortname = settings.history.getRepoNickname(rw.state.repo.working_tree_dir)
-        path = QFileDialog.getOpenFileName(self, "Load graph dump")
+        path, _ = QFileDialog.getOpenFileName(self, "Load graph dump")
         if not path:
             return
 
         progress = QProgressDialog("Load graph dump", "Abort", 0, 0, self)
         progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
         progress.setWindowModality(Qt.WindowModal)
-        progress.setWindowTitle(shortname)
+        progress.setWindowTitle(rw.state.shortName)
         progress.setWindowFlags(Qt.Dialog | Qt.Popup)
         QCoreApplication.processEvents()
+        progress.setMaximum(5)
         progress.show()
         QCoreApplication.processEvents()
 
-        orderedMetadata = self.currentRepoWidget().state.loadCommitDump(path[0])
+        progress.setValue(0)
+        with open(path, 'rb') as f:
+            raw = f.read()
+        progress.setValue(1)
+        unpacked = zlib.decompress(raw)
+        progress.setValue(2)
+        dump = pickle.loads(unpacked)
+        progress.setValue(3)
+        orderedMetadata = rw.state.loadCommitDump(dump)
+        progress.setValue(4)
         rw.graphView.fill(orderedMetadata)
 
         progress.close()
 
     def debug_saveGraphDump(self):
         rw = self.currentRepoWidget()
-        shortname = settings.history.getRepoNickname(rw.state.repo.working_tree_dir)
-        path = QFileDialog.getSaveFileName(self, "Save graph dump", shortname + ".gfgraphdump")
+        path, _ = QFileDialog.getSaveFileName(self, "Save graph dump", rw.state.shortName + ".gfgraphdump")
         if not path:
             return
         print(path)
-        rw.state.writeCommitDump(path[0])
+
+        progress = QProgressDialog("Save graph dump", "Abort", 0, 0, self)
+        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowTitle(rw.state.shortName)
+        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+        QCoreApplication.processEvents()
+        progress.setMaximum(4)
+        progress.show()
+        QCoreApplication.processEvents()
+
+        progress.setValue(0)
+        dump = rw.state.makeCommitDump()
+        progress.setValue(1)
+        raw = pickle.dumps(dump)
+        progress.setValue(2)
+        compressed = zlib.compress(raw)
+        progress.setValue(3)
+        with open(path, 'wb') as f:
+            f.write(compressed)
+
+        progress.setValue(4)
+        progress.close()
