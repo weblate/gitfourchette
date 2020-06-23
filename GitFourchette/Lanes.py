@@ -1,6 +1,7 @@
 from zlib import crc32
 
 import collections
+import bisect
 
 
 class Lanes:
@@ -14,14 +15,14 @@ class Lanes:
         self.withChecksum = withChecksum
         self.check = 0
         self.freeLanes = []
+        self.paintData = []
 
     def step(self, commit, parents):
         lanes = self.lanes
         freeLanes = self.freeLanes
 
-        def findFreeLane(startAt=0) -> int:
+        def findFreeLane() -> int:
             if freeLanes:
-                freeLanes.sort()
                 return freeLanes.pop(0)
             else:
                 # all lanes taken: create one on the right
@@ -38,42 +39,44 @@ class Lanes:
         for i in freeLanes:
             paint[i] = 0
 
+        hasParents = len(parents) != 0
+
         # comb through lanes and update draw data
         allMyLanes = self.laneLookup.get(commit)
         if allMyLanes is not None:
-            myLane = allMyLanes[0]
+            myLane = min(allMyLanes)  # slightly faster than looking for the min in the loop
+            #myLane = allMyLanes[0]
             for i in allMyLanes:
                 # tie up loose ends
                 paint[i] = Lanes.FORK_UP
                 lanes[i] = None  # free up lane
-                if i < myLane:  # find leftmost lane that is mine
-                    myLane = i
-                freeLanes.append(i)
+                if i != myLane or not hasParents:
+                    bisect.insort(freeLanes, i)
+                #if i < myLane: myLane = i
+                #bisect.insort(freeLanes,i)
+            #if hasParents: freeLanes.remove(myLane)
             del self.laneLookup[commit]
         else:
             # this commit is the tip of a branch
             myLane = findFreeLane()
-            freeLanes.append(myLane)
 
         # hand over my main lane to my first parent
-        if len(parents) > 0:
+        if hasParents:
             lanes[myLane] = parents[0]
             self.laneLookup[parents[0]].append(myLane)
-            freeLanes.remove(myLane)  # TODO: pas efficace! on vient de le mettre, et on le ré-enlève...
             paint[myLane] |= Lanes.FORK_DOWN
 
         # add new branches for my other parents
         freeLane = 0
         for parent in parents[1:]:
             # find a free lane or create one if none is available
-            freeLane = findFreeLane(freeLane)
+            freeLane = findFreeLane()
             # fill it in
             lanes[freeLane] = parent
             paint[freeLane] |= Lanes.FORK_DOWN
             self.laneLookup[parent].append(freeLane)
 
         # compact free lanes on the right
-        freeLanes.sort()
         while len(lanes) > 0 and lanes[-1] is None:
             assert freeLanes[-1] == len(lanes)-1
             freeLanes.pop()
