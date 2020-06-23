@@ -116,12 +116,14 @@ class GraphDelegate(QItemDelegate):
 
             # Draw lane lines.
             # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
-            for lane, mask in enumerate(meta.laneData[:MAX_LANES]):
-                if 0 != (mask & Lanes.STRAIGHT):
-                    painter.drawLine(x + lane * LaneW, top, x + lane * LaneW, bottom)
-                if 0 != (mask & Lanes.FORK_UP):
+            for lane, (p, c) in enumerate(zip(meta.pLaneData[:MAX_LANES], meta.laneData[:MAX_LANES])):
+                if p and p == c:
+                    painter.drawLine(x + lane * LaneW, top, x + lane * LaneW+1, bottom)
+            for lane, p in enumerate(meta.pLaneData[:MAX_LANES]):
+                if meta.hexsha == p:
                     painter.drawLine(x + lane * LaneW, top, x + meta.lane * LaneW, middle)
-                if 0 != (mask & Lanes.FORK_DOWN):
+            for lane, n in enumerate(meta.laneData[:MAX_LANES]):
+                if n in meta.parentHashes and (lane >= len(meta.pLaneData) or meta.pLaneData[lane] != n):
                     painter.drawLine(x + meta.lane * LaneW, middle, x + lane * LaneW, bottom)
 
             if len(meta.laneData) > MAX_LANES:

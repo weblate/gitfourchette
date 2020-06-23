@@ -212,7 +212,7 @@ class RepoState:
             if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
                 progressTick(i)
             # compute lanes
-            meta.lane, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
+            meta.lane, meta.pLaneData, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
 
     def getTaintedCommits(self) -> Set[str]:
         repo = self.repo
