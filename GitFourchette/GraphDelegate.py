@@ -116,15 +116,32 @@ class GraphDelegate(QItemDelegate):
 
             # Draw lane lines.
             # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
-            for lane, (p, c) in enumerate(zip(meta.pLaneData[:MAX_LANES], meta.laneData[:MAX_LANES])):
-                if p and p == c:
-                    painter.drawLine(x + lane * LaneW, top, x + lane * LaneW+1, bottom)
-            for lane, p in enumerate(meta.pLaneData[:MAX_LANES]):
+            def getColor(i):
+                return colors.rainbow[i % len(colors.rainbow)]
+            pRemap = []
+            nRemap = []
+            k = 0
+            for i in range(len(meta.pLaneData)):
+                pRemap.append(k)
+                if meta.pLaneData[i]:
+                    k += 1
+            k = 0
+            for i in range(len(meta.laneData)):
+                nRemap.append(k)
+                if meta.laneData[i]:
+                    k += 1
+            for i, (p, n) in enumerate(zip(meta.pLaneData[:MAX_LANES], meta.laneData[:MAX_LANES])):
+                if p and p == n:
+                    painter.setPen(QPen(getColor(i), 2))
+                    painter.drawLine(x + pRemap[i] * LaneW, top, x + nRemap[i] * LaneW, bottom)
+            for i, p in enumerate(meta.pLaneData[:MAX_LANES]):
                 if meta.hexsha == p:
-                    painter.drawLine(x + lane * LaneW, top, x + meta.lane * LaneW, middle)
-            for lane, n in enumerate(meta.laneData[:MAX_LANES]):
-                if n in meta.parentHashes and (lane >= len(meta.pLaneData) or meta.pLaneData[lane] != n):
-                    painter.drawLine(x + meta.lane * LaneW, middle, x + lane * LaneW, bottom)
+                    painter.setPen(QPen(getColor(i), 2))
+                    painter.drawLine(x + pRemap[i] * LaneW, top, x + nRemap[meta.lane] * LaneW, middle)
+            for i, n in enumerate(meta.laneData[:MAX_LANES]):
+                if n in meta.parentHashes and (i >= len(meta.pLaneData) or meta.pLaneData[i] != n):
+                    painter.setPen(QPen(getColor(i), 2))
+                    painter.drawLine(x + nRemap[meta.lane] * LaneW, middle, x + nRemap[i] * LaneW, bottom)
 
             if len(meta.laneData) > MAX_LANES:
                 extraText = F"+{len(meta.laneData) - MAX_LANES} lanes >>>  "
@@ -132,10 +149,13 @@ class GraphDelegate(QItemDelegate):
 
             # draw bullet point for this commit if it's within the lanes that are shown
             if meta.lane < MAX_LANES:
-                painter.setBrush(QColor(Qt.darkGray))
-                painter.drawEllipse(QPoint(x + meta.lane * LaneW, middle), 2, 2)
+                c = getColor(meta.lane)
+                painter.setPen(QPen(c, 2))
+                painter.setBrush(c)
+                painter.drawEllipse(QPoint(x + nRemap[meta.lane] * LaneW, middle), 2, 2)
 
-            rect.setRight(x + LaneW * min(MAX_LANES, len(meta.laneData)))
+            mpr = max(pRemap) if pRemap else 0
+            rect.setRight(x + LaneW * min(MAX_LANES, 1+max(mpr, max(nRemap))))
             painter.restore()
 
         # ------ tags
