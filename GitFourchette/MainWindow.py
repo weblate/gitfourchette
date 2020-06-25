@@ -197,10 +197,29 @@ class MainWindow(QMainWindow):
         except BaseException as e:
             progress.close()
             traceback.print_exc()
+
+            known = path in settings.history.history
+
+            message = F"Couldn't open \"{path}\""
+
             if isinstance(e, git.exc.InvalidGitRepositoryError):
-                QMessageBox.warning(self, "Invalid repository", F"Couldn't open \"{path}\" because it is not a git repository.")
+                message += " because it is not a git repository."
+            elif isinstance(e, git.exc.NoSuchPathError):
+                message += " because this path does not exist."
             else:
-                QMessageBox.critical(self, "Error", F"Couldn't open \"{path}\" because an exception was thrown.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+                message += F".\nException thrown: {e.__class__.__name__}\n{e}\nCheck stderr for details."
+
+            qmb = QMessageBox(self)
+            qmb.setIcon(QMessageBox.Critical)
+            qmb.setWindowTitle("Reopen repository" if known else "Open repository")
+            ok = qmb.addButton("OK", QMessageBox.RejectRole)
+            if known:
+                nukeButton = qmb.addButton("Remove from recents", QMessageBox.DestructiveRole)
+            qmb.setDefaultButton(ok)
+            qmb.setText(message)
+            qmb.exec_()
+            if qmb.clickedButton() == nukeButton:
+                settings.history.removeRepo(path)
             return False
 
         rw.state = newState

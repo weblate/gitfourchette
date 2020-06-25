@@ -105,6 +105,10 @@ class History(BasePrefs):
         self.nicknames[path] = nickname
         self.write()
 
+    def removeRepo(self, path):
+        self.history.remove(path)
+        self.write()
+
 
 class Session(BasePrefs):
     filename = "session.json"
