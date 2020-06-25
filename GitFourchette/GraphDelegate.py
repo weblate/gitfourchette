@@ -4,16 +4,111 @@ from PySide2.QtCore import *
 from datetime import datetime
 import settings
 import colors
-from Lanes import Lanes
+from Lanes import Lanes, MAX_LANES
+from RepoState import CommitMetadata
 
 
 XMargin = 4
 ColW_Author = 16
 ColW_Hash = settings.prefs.shortHashChars + 1
 ColW_Date = 16
-LaneW = 10
-MAX_LANES = 32
+
+FLATTEN_LANES = True
+LANE_WIDTH = 12
+LANE_THICKNESS = 2
+DOT_RADIUS = 3
+
 DEBUGRECTS = False
+
+
+def getColor(i):
+    return colors.rainbow[i % len(colors.rainbow)]
+
+
+# Draw lane lines.
+def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
+    painter.save()
+    painter.setRenderHints(QPainter.Antialiasing, True)
+
+    x = rect.left() + LANE_WIDTH / 2
+    top = rect.top()
+    bottom = rect.bottom()
+    middle = (rect.top() + rect.bottom()) / 2
+
+    # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
+    lanesAbove = meta.pLaneData[:MAX_LANES]
+    lanesBelow = meta.laneData[:MAX_LANES]
+    MY_LANE = meta.lane
+    TOTAL = max(len(lanesAbove), len(lanesBelow))
+
+    remapAbove = []
+    remapBelow = []
+    if FLATTEN_LANES:
+        ai, bi = -1, -1
+        for i in range(TOTAL):
+            if i < len(lanesAbove) and lanesAbove[i]: ai += 1
+            if i < len(lanesBelow) and lanesBelow[i]: bi += 1
+            remapAbove.append(ai)
+            remapBelow.append(bi)
+        FLAT_TOTAL = max(ai, bi)
+    else:
+        remap = list(range(TOTAL))
+        remapAbove = remap
+        remapBelow = remap
+        FLAT_TOTAL = TOTAL
+
+    rect.setRight(x + FLAT_TOTAL * LANE_WIDTH)
+
+    # find out position of my lane
+    myRemap = -1
+    if MY_LANE < len(remapBelow):
+        myRemap = remapBelow[MY_LANE]
+    if myRemap < 0 and MY_LANE < len(remapAbove):
+        myRemap = remapAbove[MY_LANE]
+    mx = x + myRemap * LANE_WIDTH
+
+    # parent info for Fork Down
+    parentsRemaining = set(meta.parentHashes)
+    parent0 = meta.parentHashes[0] if len(meta.parentHashes) > 0 else None
+
+    # draw lines
+    for i in range(TOTAL):
+        commitAbove = lanesAbove[i] if i < len(lanesAbove) else None
+        commitBelow = lanesBelow[i] if i < len(lanesBelow) else None
+        ax = x + remapAbove[i] * LANE_WIDTH
+        bx = x + remapBelow[i] * LANE_WIDTH
+
+        painter.setPen(QPen(getColor(i), LANE_THICKNESS))
+
+        # Straight
+        if commitAbove and commitAbove == commitBelow:
+            painter.drawLine(ax, top, bx, bottom)
+
+        # Fork Up
+        if commitAbove == meta.hexsha:
+            painter.drawLine(ax, top, mx, middle)
+
+        # Fork Down
+        if commitBelow in parentsRemaining and (commitBelow != parent0 or i == MY_LANE):
+            painter.drawLine(mx, middle, bx, bottom)
+            parentsRemaining.remove(commitBelow)
+
+    # show warning if we have too many lanes
+    if len(meta.laneData) > MAX_LANES:
+        extraText = F"+{len(meta.laneData) - MAX_LANES} lanes >>>  "
+        painter.drawText(rect, Qt.AlignRight, extraText)
+
+    # draw bullet point for this commit if it's within the lanes that are shown
+    if MY_LANE < MAX_LANES:
+        c = getColor(MY_LANE)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(c)
+        painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
+
+    painter.restore()
+
+    # add some padding to the right
+    rect.setRight(rect.right() + LANE_WIDTH)
 
 
 # différence entre QItemDelegate et QStyledItemDelegate?
@@ -102,61 +197,7 @@ class GraphDelegate(QItemDelegate):
         # ------ Graph
         rect.setLeft(rect.right())
         if meta is not None:
-            rect.setRight(rect.left() + LaneW / 2 + min(MAX_LANES, len(meta.laneData)) * LaneW)
-
-            painter.save()
-            painter.setRenderHints(QPainter.Antialiasing, True)
-
-            x = rect.left() + LaneW / 2
-            top = rect.top()
-            bottom = rect.bottom()
-            middle = (rect.top() + rect.bottom()) / 2
-
-            painter.setPen(QPen(Qt.darkGray, 2))
-
-            # Draw lane lines.
-            # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
-            def getColor(i):
-                return colors.rainbow[i % len(colors.rainbow)]
-            pRemap = []
-            nRemap = []
-            k = 0
-            for i in range(len(meta.pLaneData)):
-                pRemap.append(k)
-                if meta.pLaneData[i]:
-                    k += 1
-            k = 0
-            for i in range(len(meta.laneData)):
-                nRemap.append(k)
-                if meta.laneData[i]:
-                    k += 1
-            for i, (p, n) in enumerate(zip(meta.pLaneData[:MAX_LANES], meta.laneData[:MAX_LANES])):
-                if p and p == n:
-                    painter.setPen(QPen(getColor(i), 2))
-                    painter.drawLine(x + pRemap[i] * LaneW, top, x + nRemap[i] * LaneW, bottom)
-            for i, p in enumerate(meta.pLaneData[:MAX_LANES]):
-                if meta.hexsha == p:
-                    painter.setPen(QPen(getColor(i), 2))
-                    painter.drawLine(x + pRemap[i] * LaneW, top, x + nRemap[meta.lane] * LaneW, middle)
-            for i, n in enumerate(meta.laneData[:MAX_LANES]):
-                if n in meta.parentHashes and (i >= len(meta.pLaneData) or meta.pLaneData[i] != n):
-                    painter.setPen(QPen(getColor(i), 2))
-                    painter.drawLine(x + nRemap[meta.lane] * LaneW, middle, x + nRemap[i] * LaneW, bottom)
-
-            if len(meta.laneData) > MAX_LANES:
-                extraText = F"+{len(meta.laneData) - MAX_LANES} lanes >>>  "
-                painter.drawText(rect, Qt.AlignRight, extraText)
-
-            # draw bullet point for this commit if it's within the lanes that are shown
-            if meta.lane < MAX_LANES:
-                c = getColor(meta.lane)
-                painter.setPen(QPen(c, 2))
-                painter.setBrush(c)
-                painter.drawEllipse(QPoint(x + nRemap[meta.lane] * LaneW, middle), 2, 2)
-
-            mpr = max(pRemap) if pRemap else 0
-            rect.setRight(x + LaneW * min(MAX_LANES, 1+max(mpr, max(nRemap))))
-            painter.restore()
+            drawLanes(meta, painter, rect)
 
         # ------ tags
         for ref in data['refs']:

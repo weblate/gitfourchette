@@ -1,21 +1,24 @@
-from zlib import crc32
-
+import sys
 import collections
 import bisect
 
+# - Using shortened int hashes instead of full hash strings doesn't seem to affect memory use much.
+# - With a keyframe/replay approach (take snapshot every 100 steps, replay 99 other steps from keyframe),
+#   we might not even need to keep 'self.lanes' around.
+
+MAX_LANES = 32
+
 
 class Lanes:
-    FORK_UP = 1
-    FORK_DOWN = 2
-    STRAIGHT = 4
-
-    def __init__(self, withChecksum=False):
+    def __init__(self):
         self.lanes = []
         self.laneLookup = collections.defaultdict(list)
-        self.withChecksum = withChecksum
         self.check = 0
         self.freeLanes = []
         self.pCopy = []
+        self.nBytes = 0
+        self.nLanesPeak = 0
+        self.nLanesTotal = 0
 
     def step(self, commit, parents):
         lanes = self.lanes
@@ -51,8 +54,10 @@ class Lanes:
             lanes[myLane] = parents[0]
             self.laneLookup[parents[0]].append(myLane)
 
-        # add new branches for my other parents
+        # add new branches to the right for my other parents that don't have a reserved lane already
         for parent in parents[1:]:
+            if self.laneLookup[parent]:  # a lane is already reserved for this parent
+                continue
             # find a free lane or create one if none is available
             freeLane = findFreeLane()
             # fill it in
@@ -65,15 +70,13 @@ class Lanes:
             freeLanes.pop()
             del lanes[-1]
 
-        if self.withChecksum:
-            pass #self.updateChecksum(paint)
-
         pCopy = self.pCopy
-        nCopy = lanes[:32].copy()
+        nCopy = lanes[:MAX_LANES].copy()
         self.pCopy = nCopy
-        return myLane, pCopy, nCopy
 
-    def updateChecksum(self, result):
-        self.check = crc32(len(result).to_bytes(4, 'little'), self.check)
-        for r in result:
-            self.check = crc32(r.to_bytes(1, 'little'), self.check)
+        # Some stats
+        #self.nLanesPeak = max(len(lanes), self.nLanesPeak)
+        #self.nLanesTotal += len(lanes)
+        #self.nBytes += sys.getsizeof(lanes)
+
+        return myLane, pCopy, nCopy

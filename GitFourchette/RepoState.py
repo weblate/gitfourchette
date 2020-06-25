@@ -32,7 +32,8 @@ class CommitMetadata:
     refs: List[str]
     mainRefName: str
     lane: int
-    laneData: List[int]
+    pLaneData: List[str]
+    laneData: List[str]
     bold: bool
     hasLocal: bool
     debugPrefix: str
@@ -50,6 +51,7 @@ class CommitMetadata:
         self.refs = []
         self.mainRefName = None
         self.lane = 0
+        self.pLaneData = None
         self.laneData = None
         self.bold = False
         self.hasLocal = True
