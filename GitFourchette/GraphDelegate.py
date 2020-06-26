@@ -6,6 +6,7 @@ import settings
 import colors
 from Lanes import Lanes, MAX_LANES
 from RepoState import CommitMetadata
+from util import sign
 
 
 XMargin = 4
@@ -71,6 +72,8 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
     parentsRemaining = set(meta.parentHashes)
     parent0 = meta.parentHashes[0] if len(meta.parentHashes) > 0 else None
 
+    path = QPainterPath()
+
     # draw lines
     for i in range(TOTAL):
         commitAbove = lanesAbove[i] if i < len(lanesAbove) else None
@@ -78,20 +81,31 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
         ax = x + remapAbove[i] * LANE_WIDTH
         bx = x + remapBelow[i] * LANE_WIDTH
 
-        painter.setPen(QPen(getColor(i), LANE_THICKNESS))
+        # position of lane `i` relative to MY_LANE: can be -1 (left), 0 (same), or +1 (right)
+        direction = sign(i - MY_LANE)
 
         # Straight
         if commitAbove and commitAbove == commitBelow:
-            painter.drawLine(ax, top, bx, bottom)
+            path.moveTo(ax, top)
+            path.cubicTo(ax,middle, bx,middle, bx,bottom)
 
         # Fork Up
         if commitAbove == meta.hexsha:
-            painter.drawLine(ax, top, mx, middle)
+            path.moveTo(mx, middle)
+            path.lineTo(ax-direction*0.75*LANE_WIDTH, middle)
+            path.quadTo(ax,middle, ax,top)
 
         # Fork Down
         if commitBelow in parentsRemaining and (commitBelow != parent0 or i == MY_LANE):
-            painter.drawLine(mx, middle, bx, bottom)
+            path.moveTo(mx, middle)
+            path.lineTo(bx-direction*0.75*LANE_WIDTH, middle)
+            path.quadTo(bx,middle, bx,bottom)
             parentsRemaining.remove(commitBelow)
+
+        if not path.isEmpty():
+            painter.setPen(QPen(getColor(i), LANE_THICKNESS))
+            painter.drawPath(path)
+            path.clear()
 
     # show warning if we have too many lanes
     if len(meta.laneData) > MAX_LANES:
