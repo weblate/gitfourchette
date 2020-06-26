@@ -134,10 +134,9 @@ class GraphDelegate(QItemDelegate):
         rect.setRight(rect.right() - XMargin)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
 
-        # get font metrics before setting a custom font,
-        # so that alignments are consistent in all commits regardless of bold or italic
-        metrics = painter.fontMetrics()
-        zw = metrics.width('0')
+        # Get metrics of '0' before setting a custom font,
+        # so that alignments are consistent in all commits regardless of bold or italic.
+        zw = painter.fontMetrics().width('0')
 
         debugHighlightColor: QColor = None
 
@@ -180,6 +179,10 @@ class GraphDelegate(QItemDelegate):
                 'refs': []
             }
             painter.setFont(settings.alternateFont)
+
+        # Get metrics now so the message gets elided according to the custom font style
+        # that may have been just set for this commit.
+        metrics = painter.fontMetrics()
 
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
