@@ -15,7 +15,7 @@ ColW_Hash = settings.prefs.shortHashChars + 1
 ColW_Date = 16
 
 FLATTEN_LANES = True
-LANE_WIDTH = 12
+LANE_WIDTH = 10
 LANE_THICKNESS = 2
 DOT_RADIUS = 3
 
@@ -31,10 +31,11 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
     painter.save()
     painter.setRenderHints(QPainter.Antialiasing, True)
 
-    x = rect.left() + LANE_WIDTH / 2
-    top = rect.top()
-    bottom = rect.bottom()
-    middle = (rect.top() + rect.bottom()) / 2
+    # Ensure all coordinates below are integers so our straight lines don't look blurry
+    x = int(rect.left() + LANE_WIDTH // 2)
+    top = int(rect.y())
+    bottom = int(rect.y() + rect.height())  # Don't use rect.bottom(), which for historical reasons doesn't return what we want (see Qt docs)
+    middle = (top + bottom) // 2
 
     # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
     lanesAbove = meta.pLaneData[:MAX_LANES]
@@ -75,6 +76,9 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
     path = QPainterPath()
 
     # draw lines
+    # TODO: range(TOTAL-1,-1,-1) makes junctions more readable,
+    # TODO: but we should draw "straight" lines (unaffected by the
+    # TODO: commit) underneath junction lines
     for i in range(TOTAL):
         commitAbove = lanesAbove[i] if i < len(lanesAbove) else None
         commitBelow = lanesBelow[i] if i < len(lanesBelow) else None
@@ -92,18 +96,22 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
         # Fork Up
         if commitAbove == meta.hexsha:
             path.moveTo(mx, middle)
-            path.lineTo(ax-direction*0.75*LANE_WIDTH, middle)
+            path.lineTo(ax-direction*LANE_WIDTH, middle)
             path.quadTo(ax,middle, ax,top)
 
         # Fork Down
         if commitBelow in parentsRemaining and (commitBelow != parent0 or i == MY_LANE):
             path.moveTo(mx, middle)
-            path.lineTo(bx-direction*0.75*LANE_WIDTH, middle)
+            path.lineTo(bx-direction*LANE_WIDTH, middle)
             path.quadTo(bx,middle, bx,bottom)
             parentsRemaining.remove(commitBelow)
 
         if not path.isEmpty():
-            painter.setPen(QPen(getColor(i), LANE_THICKNESS))
+            # white outline
+            painter.setPen(QPen(Qt.white, LANE_THICKNESS + 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+            painter.drawPath(path)
+            # actual color
+            painter.setPen(QPen(getColor(i), LANE_THICKNESS, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
             painter.drawPath(path)
             path.clear()
 
