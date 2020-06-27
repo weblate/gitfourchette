@@ -186,9 +186,9 @@ class DirtyFileListView(FileListView):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k == Qt.Key_Return:
+        if k in settings.KEYS_ACCEPT:
             self.stage()
-        elif k == Qt.Key_Backspace or k == Qt.Key_Delete:
+        elif k in settings.KEYS_REJECT:
             self.discard()
         else:
             super().keyPressEvent(event)
@@ -243,7 +243,7 @@ class StagedFileListView(FileListView):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k == Qt.Key_Return or k == Qt.Key.Key_Backspace or k == Qt.Key.Key_Delete:
+        if k in settings.KEYS_ACCEPT + settings.KEYS_REJECT:
             self.unstage()
         else:
             super().keyPressEvent(event)

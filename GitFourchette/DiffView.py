@@ -264,12 +264,12 @@ class DiffView(QTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k == Qt.Key_Return:
+        if k in settings.KEYS_ACCEPT:
             if self.currentActionSet == DiffActionSets.unstaged:
                 self.stageLines()
             else:
                 QApplication.beep()
-        elif k == Qt.Key_Backspace or k == Qt.Key_Delete:
+        elif k in settings.KEYS_REJECT:
             if self.currentActionSet == DiffActionSets.staged:
                 self.unstageLines()
             elif self.currentActionSet == DiffActionSets.unstaged:

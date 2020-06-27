@@ -23,6 +23,9 @@ FORCE_NEW_LANES_RIGHTMOST = False  # experimental
 DEBUGRECTS = False
 
 
+KEYS_ACCEPT = [Qt.Key_Enter, Qt.Key_Return]  # Enter = on keypad; Return = main keys
+KEYS_REJECT = [Qt.Key_Delete, Qt.Key_Backspace]
+
 
 SHORT_DATE_PRESETS = {
     'ISO': '%Y-%m-%d %H:%M',
