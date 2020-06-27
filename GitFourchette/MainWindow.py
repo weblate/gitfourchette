@@ -245,7 +245,7 @@ class MainWindow(QMainWindow):
             newRW.destroy()
             return  # don't create the tab if opening the repo failed
 
-        tabIndex = self.tabs.addTab(newRW, settings.history.getRepoNickname(repoPath))
+        tabIndex = self.tabs.addTab(newRW, settings.history.getRepoNickname(repoPath), repoPath)
         self.tabs.setCurrentIndex(tabIndex)
 
         settings.history.addRepo(repoPath)

@@ -77,9 +77,11 @@ class QTabWidget2(QWidget):
         self.stacked.removeWidget(w)
         self.stacked.insertWidget(toIndex, w)
 
-    def addTab(self, w: QWidget, name: str):
+    def addTab(self, w: QWidget, name: str, toolTip: str = None):
         i1 = self.stacked.addWidget(w)
         i2 = self.tabs.addTab(name)
+        if toolTip:
+            self.tabs.setTabToolTip(i2, toolTip)
         assert i1 == i2
         return i1
 
