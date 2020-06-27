@@ -1,6 +1,8 @@
 import sys
 import collections
 import bisect
+from typing import List
+from dataclasses import dataclass
 
 # - Using shortened int hashes instead of full hash strings doesn't seem to affect memory use much.
 # - With a keyframe/replay approach (take snapshot every 100 steps, replay 99 other steps from keyframe),
@@ -9,7 +11,14 @@ import bisect
 from settings import MAX_LANES, FORCE_NEW_LANES_RIGHTMOST
 
 
-class Lanes:
+@dataclass  # gives us an equality operator as required by partial repo refresh
+class LaneFrame:
+    myLane: int
+    lanesAbove: List[str]
+    lanesBelow: List[str]
+
+
+class LaneGenerator:
     def __init__(self):
         self.lanes = []
         self.laneLookup = collections.defaultdict(list)
@@ -20,7 +29,7 @@ class Lanes:
         self.nLanesPeak = 0
         self.nLanesTotal = 0
 
-    def step(self, commit, parents):
+    def step(self, commit, parents) -> LaneFrame:
         lanes = self.lanes
         freeLanes = self.freeLanes
 
@@ -79,4 +88,5 @@ class Lanes:
         self.nLanesTotal += len(lanes)
         self.nBytes += sys.getsizeof(lanes)
 
-        return myLane, pCopy, nCopy
+        frame = LaneFrame(myLane, pCopy, nCopy)
+        return frame

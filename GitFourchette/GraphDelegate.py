@@ -4,8 +4,7 @@ from PySide2.QtCore import *
 from datetime import datetime
 import settings
 import colors
-from settings import FLATTEN_LANES, DEBUGRECTS
-from Lanes import Lanes, MAX_LANES
+from settings import FLATTEN_LANES, DEBUGRECTS, MAX_LANES
 from RepoState import CommitMetadata
 from util import sign
 
@@ -36,9 +35,9 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
     middle = (top + bottom) // 2
 
     # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
-    lanesAbove = meta.pLaneData[:MAX_LANES]
-    lanesBelow = meta.laneData[:MAX_LANES]
-    MY_LANE = meta.lane
+    lanesAbove = meta.laneFrame.lanesAbove[:MAX_LANES]
+    lanesBelow = meta.laneFrame.lanesBelow[:MAX_LANES]
+    MY_LANE = meta.laneFrame.myLane
     TOTAL = max(len(lanesAbove), len(lanesBelow))
 
     remapAbove = []
@@ -114,8 +113,8 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
             path.clear()
 
     # show warning if we have too many lanes
-    if len(meta.laneData) > MAX_LANES:
-        extraText = F"+{len(meta.laneData) - MAX_LANES} lanes >>>  "
+    if len(meta.laneFrame.lanesBelow) > MAX_LANES:
+        extraText = F"+{len(meta.laneFrame.lanesBelow) - MAX_LANES} lanes >>>  "
         painter.drawText(rect, Qt.AlignRight, extraText)
 
     # draw bullet point for this commit if it's within the lanes that are shown
@@ -180,7 +179,8 @@ class GraphDelegate(QItemDelegate):
                 'refs': meta.refs
             }
 
-            assert meta.lane >= 0
+            assert meta.laneFrame, "lane frame missing from commit metadata"
+            assert meta.laneFrame.myLane >= 0, "illegal lane number"
 
             if meta.bold:
                 painter.setFont(settings.boldFont)

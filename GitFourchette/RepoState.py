@@ -8,7 +8,7 @@ from typing import List, Set
 
 import settings
 from Benchmark import Benchmark
-from Lanes import Lanes
+from lanes import LaneGenerator, LaneFrame
 from status import gstatus
 from settings import TOPO_ORDER
 
@@ -33,9 +33,7 @@ class CommitMetadata:
     tags: List[str]
     refs: List[str]
     mainRefName: str
-    lane: int
-    pLaneData: List[str]
-    laneData: List[str]
+    laneFrame: LaneFrame
     bold: bool
     hasLocal: bool
     debugPrefix: str
@@ -52,9 +50,7 @@ class CommitMetadata:
         self.tags = []
         self.refs = []
         self.mainRefName = None
-        self.lane = 0
-        self.pLaneData = None
-        self.laneData = None
+        self.laneFrame = None
         self.bold = False
         self.hasLocal = True
         self.debugPrefix = None
@@ -257,12 +253,12 @@ class RepoState:
 
     @staticmethod
     def computeLanes(metas, progressTick=None):
-        laneGen = Lanes()
+        laneGen = LaneGenerator()
         for i, meta in enumerate(metas):
             if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
                 progressTick(i)
             # compute lanes
-            meta.lane, meta.pLaneData, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
+            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
         print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,}")
 
     def getTaintedCommits(self) -> Set[str]:
@@ -318,7 +314,7 @@ class RepoState:
         refs = {}
         lastTainted = None
         nUnknownCommits = 0
-        laneGen = Lanes()
+        laneGen = LaneGenerator()
 
         gstatus.setProgressValue(2)
 
@@ -341,8 +337,8 @@ class RepoState:
 
             lastTainted = meta.hexsha
 
-            pLane, pLaneData = meta.lane, meta.laneData
-            meta.lane, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
+            pLaneFrame = meta.laneFrame
+            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
 
             meta.debugRefreshId = self.debugRefreshId
             meta.debugPrefix = "R"  # Redrawn
@@ -357,7 +353,7 @@ class RepoState:
                 wantToSee.remove(meta.hexsha)
                 if len(wantToSee) == 0:
                     #assert wasKnown #<-- assertion incorrect if the entire repository changes
-                    if meta.lane != pLane or meta.laneData != pLaneData:
+                    if pLaneFrame != meta.laneFrame:
                         # known commit, but lane data mismatch
                         meta.debugPrefix = "L"  # Lane Mismatch
                         wantToSee.update(meta.parentHashes)
