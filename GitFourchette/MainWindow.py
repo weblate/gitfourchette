@@ -213,6 +213,7 @@ class MainWindow(QMainWindow):
             qmb.setIcon(QMessageBox.Critical)
             qmb.setWindowTitle("Reopen repository" if known else "Open repository")
             ok = qmb.addButton("OK", QMessageBox.RejectRole)
+            nukeButton = None
             if known:
                 nukeButton = qmb.addButton("Remove from recents", QMessageBox.DestructiveRole)
             qmb.setDefaultButton(ok)
