@@ -8,8 +8,8 @@ aqua    = QColor(0x7FDBFF)
 teal    = QColor(0x39CCCC)
 olive   = QColor(0x3D9970)
 green   = QColor(0x2ECC40)
-lime    = QColor(0x01FF70)
-yellow  = QColor(0xFFDC00)
+lime    = QColor(0x00EE66)
+yellow  = QColor(0xFFBB00)
 orange  = QColor(0xFF851B)
 red     = QColor(0xFF4136)
 fuchsia = QColor(0xF012BE)
@@ -24,8 +24,8 @@ rainbow = [
     navy, blue, aqua, teal, olive, green, lime, yellow, orange, red, maroon, fuchsia, purple
 ]
 
-rainbowLight = [
-    orange, red, maroon, fuchsia, purple, blue, aqua, teal, olive, green, lime, yellow
+rainbowBright = [
+    orange, yellow, lime, teal, blue, purple, fuchsia, red
 ]
 
 grayscale = [

@@ -23,7 +23,7 @@ DEBUGRECTS = False
 
 
 def getColor(i):
-    return colors.rainbow[i % len(colors.rainbow)]
+    return colors.rainbowBright[i % len(colors.rainbowBright)]
 
 
 # Draw lane lines.
