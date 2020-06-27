@@ -6,7 +6,7 @@ import bisect
 # - With a keyframe/replay approach (take snapshot every 100 steps, replay 99 other steps from keyframe),
 #   we might not even need to keep 'self.lanes' around.
 
-MAX_LANES = 32
+from settings import MAX_LANES, FORCE_NEW_LANES_RIGHTMOST
 
 
 class Lanes:
@@ -25,7 +25,7 @@ class Lanes:
         freeLanes = self.freeLanes
 
         def findFreeLane() -> int:
-            if freeLanes:
+            if not FORCE_NEW_LANES_RIGHTMOST and freeLanes:
                 return freeLanes.pop(0)
             else:
                 # all lanes taken: create one on the right
@@ -75,8 +75,8 @@ class Lanes:
         self.pCopy = nCopy
 
         # Some stats
-        #self.nLanesPeak = max(len(lanes), self.nLanesPeak)
-        #self.nLanesTotal += len(lanes)
-        #self.nBytes += sys.getsizeof(lanes)
+        self.nLanesPeak = max(len(lanes), self.nLanesPeak)
+        self.nLanesTotal += len(lanes)
+        self.nBytes += sys.getsizeof(lanes)
 
         return myLane, pCopy, nCopy

@@ -7,8 +7,10 @@ from datetime import datetime
 from typing import List, Set
 
 import settings
+from Benchmark import Benchmark
 from Lanes import Lanes
 from status import gstatus
+from settings import TOPO_ORDER
 
 
 PROGRESS_INTERVAL = 5000
@@ -110,12 +112,26 @@ class RepoState:
         return settings.history.getRepoNickname(self.repo.working_tree_dir)
 
     def getOrCreateMetadata(self, key) -> CommitMetadata:
+        assert len(key) == 40, 'metadata key should be 40-byte hex sha'
         if key in self.commitMetadata:
             return self.commitMetadata[key]
         else:
             v = CommitMetadata(key)
             self.commitMetadata[key] = v
             return v
+
+    @staticmethod
+    def getGitOutput(repo: git.Repo) -> List[str]:
+        output = repo.git.log(
+            topo_order=TOPO_ORDER,
+            all=True,
+            pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
+        split = output.split('\x00')
+        outputBytes = len(output)
+        del output
+        del split[0]
+        split[-1] += '\n'
+        return split, outputBytes
 
     def getOrCreateMetadataFromGitLogOutput(self, commitData):
         hash, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
@@ -129,10 +145,51 @@ class RepoState:
         meta.authorEmail = authorEmail
         meta.authorTimestamp = int(authorDate)
         meta.body = body
+        #meta.body = body[:120]
+        #if len(body) > 120:
+        #        meta.body += "<snip>"
         meta.parentHashes = parentHashes
+        #meta.parentIHashes = [int(h[:7], 16) for h in parentHashes]
         meta.mainRefName = refName
 
         return meta, wasKnown
+
+    @staticmethod
+    def getGitProcess(repo: git.Repo) -> git.Git.AutoInterrupt:
+        # Todo: Interesting flags: -z; --log-size
+        # Todo: handle failure
+        # Todo: should we literally call 'git', or does gitpython provide a better name for us
+        cmd = [
+            'git',
+            'log',
+            '--all',
+            '--pretty=tformat:%H%n%P%n%an%n%ae%n%at%n%S%n%B%n%x00'  # format vs tformat?
+        ]
+        if TOPO_ORDER:
+            cmd.append('--topo-order')
+        return repo.git.execute(cmd, as_process=True)
+
+    def getOrCreateMetadataFromGitStdout(self, stdout):
+        hash = next(stdout)[:-1]
+        wasKnown = hash in self.commitMetadata
+        meta = self.getOrCreateMetadata(hash)
+        #meta.inthash = int(hash[:7], 16)
+        meta.parentHashes = next(stdout)[:-1].split()
+        #meta.parentIHashes = [int(h[:7], 16) for h in meta.parentHashes]
+        meta.author = next(stdout)[:-1]
+        meta.authorEmail = next(stdout)[:-1]
+        meta.authorTimestamp = int(next(stdout)[:-1])
+        meta.mainRefName = next(stdout)[:-1]
+        meta.body = ''
+        while True:
+            line = next(stdout)
+            if line.startswith('\x00'):
+                break
+            else:
+                meta.body += line
+        assert '\x00' not in meta.body
+        return meta, wasKnown
+
 
     def setBoldCommit(self, hexsha: str):
         if self.boldCommitHash and self.boldCommitHash in self.commitMetadata:
@@ -175,19 +232,10 @@ class RepoState:
 
         progress.setLabelText("Computing lanes")
         QCoreApplication.processEvents()
-        self.computeLanes(metas, lambda i: progressTick(progress, i + commitCount * 2))
+        with Benchmark("ComputeLanes " + self.shortName):
+            self.computeLanes(metas, lambda i: progressTick(progress, i + commitCount * 2))
 
         return metas
-
-    @staticmethod
-    def getGitOutput(repo: git.Repo) -> List[str]:
-        output = repo.git.log(topo_order=True, all=True, pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
-        split = output.split('\x00')
-        outputBytes = len(output)
-        del output
-        del split[0]
-        split[-1] += '\n'
-        return split, outputBytes
 
     @staticmethod
     def traceCommitAvailability(metas, progressTick=None):
@@ -205,7 +253,7 @@ class RepoState:
             if meta.hasLocal:
                 for p in meta.parentHashes:
                     nextLocal.add(p)
-        assert(len(nextLocal) == 0)
+        assert len(nextLocal) == 0, "there are unreachable commits at the bottom of the graph"
 
     @staticmethod
     def computeLanes(metas, progressTick=None):
@@ -215,6 +263,7 @@ class RepoState:
                 progressTick(i)
             # compute lanes
             meta.lane, meta.pLaneData, meta.laneData = laneGen.step(meta.hexsha, meta.parentHashes)
+        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,}")
 
     def getTaintedCommits(self) -> Set[str]:
         repo = self.repo
@@ -247,6 +296,10 @@ class RepoState:
         return tainted
 
     def loadTaintedCommitsOnly(self):
+        processWrapper = self.getGitProcess(self.repo)
+        import subprocess, io
+        realProc: subprocess.Popen = processWrapper.proc
+        stdoutWrapper = io.TextIOWrapper(realProc.stdout, encoding='utf-8')
         gstatus.setText(F"{self.shortName}: checking for new commits...")
         self.setBoldCommit(self.repo.active_branch.commit.hexsha)
         wantToSee: set = self.getTaintedCommits()
@@ -269,12 +322,18 @@ class RepoState:
 
         gstatus.setProgressValue(2)
 
-        for i, commitData in enumerate(split):
-            # progressTick(progress, i + commitCount * 0)
+        #for i, commitData in enumerate(split):
+        i = 0
+        while True:
             if i % 10000 == 0:
+                print("Commits processed:", i)
                 QCoreApplication.processEvents()
+            i += 1
 
-            meta, wasKnown = self.getOrCreateMetadataFromGitLogOutput(commitData)
+            try:
+                meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
+            except StopIteration:
+                break
             metas.append(meta)
 
             if meta.mainRefName and meta.mainRefName not in refs:

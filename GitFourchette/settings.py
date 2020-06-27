@@ -16,6 +16,25 @@ QCoreApplication.setApplicationName("GitFourchette")  # used by QStandardPaths
 prefsDir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
 
 
+TOPO_ORDER = True  # false: experimental
+MAX_LANES = 32
+FLATTEN_LANES = False
+FORCE_NEW_LANES_RIGHTMOST = False  # experimental
+DEBUGRECTS = False
+
+
+
+SHORT_DATE_PRESETS = {
+    'ISO': '%Y-%m-%d %H:%M',
+    'd/m/y': '%d/%m/%y %H:%M',
+    'd-m-y': '%d-%m-%y %H:%M',
+    'd.m.y': '%d.%m.%y %H:%M',
+    'm/d/y': '%m/%d/%y %I:%M %p',
+    'Euro': '%a %d %b %Y %H:%M',
+    'US': '%a, %b %d, %Y %I:%M %p'
+}
+
+
 def encodeBinary(b: QByteArray) -> str:
     return b.toBase64().data().decode('utf-8')
 
@@ -63,7 +82,7 @@ class Prefs(BasePrefs):
     def __init__(self):
         self.shortHashChars = 7
         self.splitterHandleWidth = -1
-        self.shortTimeFormat = "%d-%m-%y %H:%M"
+        self.shortTimeFormat = "%Y-%m-%d %H:%M"
         self.longTimeFormat = "%c"
         self.shortenDirectoryNames = True
         self.diff_tabSpaces = 4

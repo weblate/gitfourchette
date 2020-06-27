@@ -4,6 +4,7 @@ from PySide2.QtCore import *
 from datetime import datetime
 import settings
 import colors
+from settings import FLATTEN_LANES, DEBUGRECTS
 from Lanes import Lanes, MAX_LANES
 from RepoState import CommitMetadata
 from util import sign
@@ -14,12 +15,9 @@ ColW_Author = 16
 ColW_Hash = settings.prefs.shortHashChars + 1
 ColW_Date = 16
 
-FLATTEN_LANES = True
 LANE_WIDTH = 10
 LANE_THICKNESS = 2
 DOT_RADIUS = 3
-
-DEBUGRECTS = False
 
 
 def getColor(i):
