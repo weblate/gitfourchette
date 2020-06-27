@@ -212,17 +212,31 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             QMessageBox.information(self, "Push successful", report)
 
     def _commitFlowDialog(self, initialText, title, prompt, buttonCaption) -> (bool, str):
-        dlg = QInputDialog(self)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle(title)
-        # absurdly-long label text because setMinimumWidth has no effect - we should probably make a custom dialog instead
-        dlg.setLabelText(prompt + (" "*50))
-        dlg.setTextValue(initialText)
-        dlg.setOkButtonText(buttonCaption)
-        rc = dlg.exec_()
-        message = dlg.textValue()
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
-        return rc == QDialog.DialogCode.Accepted, message
+        while True:
+            dlg = QInputDialog(self)
+            dlg.setInputMode(QInputDialog.TextInput)
+            dlg.setWindowTitle(title)
+            # absurdly-long label text because setMinimumWidth has no effect - we should probably make a custom dialog instead
+            dlg.setLabelText(prompt + (" "*50))
+            dlg.setTextValue(initialText)
+            dlg.setOkButtonText(buttonCaption)
+
+            rc = dlg.exec_()
+            accepted = rc == QDialog.DialogCode.Accepted
+
+            message = dlg.textValue()
+            dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+
+            if rc == QDialog.DialogCode.Accepted and not message.strip():
+                rc2 = QMessageBox.warning(
+                    self, title + " failed", "The commit message cannot be empty.",
+                    QMessageBox.Retry | QMessageBox.Cancel, QMessageBox.Retry)
+                if rc2 == QMessageBox.Retry:
+                    continue
+                else:
+                    accepted = False
+
+            return accepted, message
 
     def commitFlow(self):
         kDRAFT = "DraftMessage"
