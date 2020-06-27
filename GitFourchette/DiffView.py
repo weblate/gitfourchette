@@ -10,6 +10,7 @@ import os
 import patch
 import DiffActionSets
 import settings
+from status import gstatus
 
 normalBF = QTextBlockFormat()
 normalCF = QTextCharFormat()
@@ -244,6 +245,11 @@ class DiffView(QTextEdit):
         biStart -= 1
 
         patchData = patch.makePatchFromLines(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd, cached=cached)
+
+        if not patchData:
+            gstatus.setText("Nothing to patch. Select one or more red or green lines before applying.")
+            QApplication.beep()
+            return
 
         try:
             patch.applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)

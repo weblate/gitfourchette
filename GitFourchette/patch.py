@@ -90,7 +90,7 @@ def makePatchFromLines(a_path: str, b_path: str, lineData: List[LineData], ldSta
 
     if len(hunks) == 0:
         print("patch is empty")
-        return
+        return None
 
     firstDiffLine = hunks[0][0].diffLineIndex
     lastDiffLine = hunks[-1][-1].diffLineIndex
@@ -104,6 +104,7 @@ def makePatchFromLines(a_path: str, b_path: str, lineData: List[LineData], ldSta
         hunks[-1].append(contextLine)
 
     # Assemble patch text
+    allLinesWereContext = True
     patch = ""
     patch += F"--- a/{a_path}\n"
     patch += F"+++ b/{b_path}\n"
@@ -114,16 +115,23 @@ def makePatchFromLines(a_path: str, b_path: str, lineData: List[LineData], ldSta
         hunkLenA = 0
         hunkLenB = 0
         for line in hunkLines:
-            assert line.data[0] in ' +-'
+            initial = line.data[0]
+            assert initial in ' +-', "unrecognized initial character in patch line"
             hunkPatch += line.data
-            hunkLenA += 0 if line.data[0] == '+' else 1
-            hunkLenB += 0 if line.data[0] == '-' else 1
+            hunkLenA += 0 if initial == '+' else 1
+            hunkLenB += 0 if initial == '-' else 1
+            if initial != ' ':
+                allLinesWereContext = False
         patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB} @@\n"
         patch += hunkPatch
 
     # This is required for git to accept staging hunks without newlines at the end.
     if not patch.endswith('\n'):
         patch += "\n\\ No newline at end of file"
+
+    if allLinesWereContext:
+        print("all lines were context!")
+        return None
 
     return patch
 
