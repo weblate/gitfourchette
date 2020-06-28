@@ -282,6 +282,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             self.state.repo.head.commit.message, "Amend", "Amend commit message:", "Amend")
         if confirm:
             self.state.repo.git.commit(m=message, amend=True)
+            self.quickRefresh()
 
     def findFlow(self):
         dlg = QInputDialog(self)
