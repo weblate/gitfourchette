@@ -268,12 +268,7 @@ class MainWindow(QMainWindow):
 
     def quickRefresh(self):
         rw = self.currentRepoWidget()
-        frontTrim, frontNewMetas = rw.state.loadTaintedCommitsOnly()
-        if not frontNewMetas:
-            assert frontTrim == 0
-            return
-        rw.graphView.patchFill(frontTrim, frontNewMetas)
-        gstatus.clearProgress()
+        rw.quickRefresh()
 
     def refresh(self):
         rw = self.currentRepoWidget()

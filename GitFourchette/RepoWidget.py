@@ -11,7 +11,11 @@ from typing import List
 import git
 import traceback
 import settings
+from status import gstatus
 
+
+FILESSTACK_READONLY_CARD = 0
+FILESSTACK_STAGE_CARD = 1
 
 PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
 
@@ -79,9 +83,11 @@ class RepoWidget(QWidget):
         stageSplitter.addWidget(dirtyContainer)
         stageSplitter.addWidget(stageContainer)
 
+        assert FILESSTACK_READONLY_CARD == self.filesStack.count()
         self.filesStack.addWidget(self.changedFilesView)
+        assert FILESSTACK_STAGE_CARD == self.filesStack.count()
         self.filesStack.addWidget(stageSplitter)
-        self.filesStack.setCurrentIndex(0)
+        self.filesStack.setCurrentIndex(FILESSTACK_READONLY_CARD)
 
         bottomSplitter = QSplitter(Qt.Horizontal)
         bottomSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
@@ -168,7 +174,7 @@ class RepoWidget(QWidget):
         self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
         self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
 
-        self.filesStack.setCurrentIndex(1)
+        self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
 
         # After patchApplied.emit has caused a refresh of the dirty/staged file views,
         # restore selected row in appropriate file list view so the user can keep hitting
@@ -310,3 +316,13 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
                 return
 
         QApplication.beep()
+
+    def quickRefresh(self):
+        frontTrim, frontNewMetas = self.state.loadTaintedCommitsOnly()
+        if not frontNewMetas:
+            assert frontTrim == 0
+            return
+        self.graphView.patchFill(frontTrim, frontNewMetas)
+        if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
+            self.fillStageView()
+        gstatus.clearProgress()
