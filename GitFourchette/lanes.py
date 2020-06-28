@@ -28,6 +28,7 @@ class LaneGenerator:
         self.nBytes = 0
         self.nLanesPeak = 0
         self.nLanesTotal = 0
+        self.nLanesVacant = 0
 
     def step(self, commit, parents) -> LaneFrame:
         lanes = self.lanes
@@ -86,6 +87,7 @@ class LaneGenerator:
         # Some stats
         self.nLanesPeak = max(len(lanes), self.nLanesPeak)
         self.nLanesTotal += len(lanes)
+        self.nLanesVacant += len(self.freeLanes)
         self.nBytes += sys.getsizeof(lanes)
 
         frame = LaneFrame(myLane, pCopy, nCopy)

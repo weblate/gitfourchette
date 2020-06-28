@@ -259,7 +259,7 @@ class RepoState:
                 progressTick(i)
             # compute lanes
             meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
-        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,}")
+        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
 
     def getTaintedCommits(self) -> Set[str]:
         repo = self.repo
