@@ -1,8 +1,10 @@
 import git
+import io
 import os
+import subprocess
 import traceback
 from PySide2.QtCore import QSettings, QCoreApplication
-from PySide2.QtWidgets import QProgressDialog
+from PySide2.QtWidgets import QProgressDialog, QMessageBox
 from datetime import datetime
 from typing import List, Set
 
@@ -80,15 +82,15 @@ class RepoState:
         for tag in self.repo.tags:
             try:
                 self.getOrCreateMetadata(tag.commit.hexsha).tags.append(tag.name)
-            except BaseException as e:  # the linux repository has 2 tags pointing to trees instead of commits
-                print("Error loading tag")
-                traceback.print_exc()
+            except ValueError as e:  # the linux repository has 2 tags pointing to trees instead of commits
+                print("Error loading tag:",e)
+                #traceback.print_exc()
         for ref in self.repo.refs:
             try:
                 self.getOrCreateMetadata(ref.commit.hexsha).refs.append(ref.name)
-            except BaseException as e:
-                print("Error loading ref")
-                traceback.print_exc()
+            except ValueError as e:
+                print("Error loading ref:",e)
+                #traceback.print_exc()
 
         self.boldCommitHash = None
 
@@ -122,19 +124,6 @@ class RepoState:
     def getStagedChanges(self):
         return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
 
-    @staticmethod
-    def getGitOutput(repo: git.Repo) -> List[str]:
-        output = repo.git.log(
-            topo_order=TOPO_ORDER,
-            all=True,
-            pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
-        split = output.split('\x00')
-        outputBytes = len(output)
-        del output
-        del split[0]
-        split[-1] += '\n'
-        return split, outputBytes
-
     def getOrCreateMetadataFromGitLogOutput(self, commitData):
         hash, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
 
@@ -157,7 +146,7 @@ class RepoState:
         return meta, wasKnown
 
     @staticmethod
-    def getGitProcess(repo: git.Repo) -> git.Git.AutoInterrupt:
+    def getGitProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
         # Todo: Interesting flags: -z; --log-size
         # Todo: handle failure
         # Todo: should we literally call 'git', or does gitpython provide a better name for us
@@ -167,11 +156,21 @@ class RepoState:
             '--all',
             '--pretty=tformat:%H%n%P%n%an%n%ae%n%at%n%S%n%B%n%x00'  # format vs tformat?
         ]
+
         if TOPO_ORDER:
             cmd.append('--topo-order')
-        return repo.git.execute(cmd, as_process=True)
 
-    def getOrCreateMetadataFromGitStdout(self, stdout):
+        procWrapper: git.Git.AutoInterrupt = repo.git.execute(cmd, as_process=True)
+
+        proc: subprocess.Popen = procWrapper.proc
+
+        # It's important to NOT fail on encoding errors, because we don't want
+        # to stop loading the commit history because of one faulty commit.
+        stdoutWrapper = io.TextIOWrapper(proc.stdout, encoding='utf-8', errors='backslashreplace')
+
+        return procWrapper, stdoutWrapper
+
+    def getOrCreateMetadataFromGitStdout(self, stdout: io.TextIOWrapper):
         hash = next(stdout)[:-1]
         wasKnown = hash in self.commitMetadata
         meta = self.getOrCreateMetadata(hash)
@@ -182,6 +181,8 @@ class RepoState:
         meta.authorEmail = next(stdout)[:-1]
         meta.authorTimestamp = int(next(stdout)[:-1])
         meta.mainRefName = next(stdout)[:-1]
+
+        # Read body, which can be an unlimited number of lines until the \x00 character.
         meta.body = ''
         while True:
             line = next(stdout)
@@ -190,8 +191,8 @@ class RepoState:
             else:
                 meta.body += line
         assert '\x00' not in meta.body
-        return meta, wasKnown
 
+        return meta, wasKnown
 
     def setBoldCommit(self, hexsha: str):
         if self.boldCommitHash and self.boldCommitHash in self.commitMetadata:
@@ -200,72 +201,67 @@ class RepoState:
         self.boldCommitHash = hexsha
         self.getOrCreateMetadata(hexsha).bold = True
 
-    def loadCommitList(self, progress: QProgressDialog, progressTick):
+    def loadCommitList(self, progress: QProgressDialog):
+        procWrapper, stdoutWrapper = self.getGitProcess(self.repo)
+
         self.setBoldCommit(self.repo.active_branch.commit.hexsha)
 
-        progress.setLabelText("Calling git")
-        QCoreApplication.processEvents()
-        split, outputBytes = self.getGitOutput(self.repo)
-        commitCount = len(split)
+        bench = Benchmark("GRAND TOTAL"); bench.__enter__()
+
         metas = []
         refs = {}
+        laneGen = LaneGenerator()
+        nextLocal = set()
 
-        progress.setLabelText(F"Processing {commitCount:,} commits ({outputBytes//1024:,} KB)")
-        progress.setMaximum(3 * commitCount + 1)
+        i = 0
+        while True:
+            if i % PROGRESS_INTERVAL == 0:
+                progress.setLabelText(F"{i:,} commits processed.")
+                QCoreApplication.processEvents()
+                if progress.wasCanceled():
+                    QMessageBox.warning(progress.parent(),
+                        "Loading aborted",
+                        F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
+                    break
+            i += 1
 
-        for i, commitData in enumerate(split):
-            if 0 == i % PROGRESS_INTERVAL:
-                progressTick(progress, i + commitCount * 0)
+            try:
+                meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
+            except StopIteration:
+                break
 
-            meta, wasKnown = self.getOrCreateMetadataFromGitLogOutput(commitData)
             metas.append(meta)
 
             if meta.mainRefName and meta.mainRefName not in refs:
                 refs[meta.mainRefName] = meta.hexsha
 
+            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
+
+            self.traceOneCommitAvailability(nextLocal, meta)
+
         gstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
+
+        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
 
         self.order = metas
         self.currentRefs = refs
 
-        progress.setLabelText("Tracing commit availability")
-        QCoreApplication.processEvents()
-        self.traceCommitAvailability(metas, lambda i: progressTick(progress, i + commitCount * 1))
-
-        progress.setLabelText("Computing lanes")
-        QCoreApplication.processEvents()
-        with Benchmark("ComputeLanes " + self.shortName):
-            self.computeLanes(metas, lambda i: progressTick(progress, i + commitCount * 2))
+        bench.__exit__(None, None, None)
 
         return metas
 
     @staticmethod
-    def traceCommitAvailability(metas, progressTick=None):
-        nextLocal = set()
-        for i, meta in enumerate(metas):
-            if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
-                progressTick(i)
-            if meta.hexsha in nextLocal:
-                meta.hasLocal = True
-                nextLocal.remove(meta.hexsha)
-            elif meta.mainRefName == "HEAD" or meta.mainRefName.startswith("refs/heads/"):
-                meta.hasLocal = True
-            else:
-                meta.hasLocal = False
-            if meta.hasLocal:
-                for p in meta.parentHashes:
-                    nextLocal.add(p)
-        assert len(nextLocal) == 0, "there are unreachable commits at the bottom of the graph"
-
-    @staticmethod
-    def computeLanes(metas, progressTick=None):
-        laneGen = LaneGenerator()
-        for i, meta in enumerate(metas):
-            if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
-                progressTick(i)
-            # compute lanes
-            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
-        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
+    def traceOneCommitAvailability(nextLocal: set, meta: CommitMetadata):
+        if meta.hexsha in nextLocal:
+            meta.hasLocal = True
+            nextLocal.remove(meta.hexsha)
+        elif meta.mainRefName == "HEAD" or meta.mainRefName.startswith("refs/heads/"):
+            meta.hasLocal = True
+        else:
+            meta.hasLocal = False
+        if meta.hasLocal:
+            for p in meta.parentHashes:
+                nextLocal.add(p)
 
     def getTaintedCommits(self) -> Set[str]:
         repo = self.repo
@@ -298,13 +294,13 @@ class RepoState:
         return tainted
 
     def loadTaintedCommitsOnly(self):
-        processWrapper = self.getGitProcess(self.repo)
-        import subprocess, io
-        realProc: subprocess.Popen = processWrapper.proc
-        stdoutWrapper = io.TextIOWrapper(realProc.stdout, encoding='utf-8')
         gstatus.setText(F"{self.shortName}: checking for new commits...")
-        self.setBoldCommit(self.repo.active_branch.commit.hexsha)
+
+        procWrapper, stdoutWrapper = self.getGitProcess(self.repo)
+
         wantToSee: set = self.getTaintedCommits()
+
+        self.setBoldCommit(self.repo.active_branch.commit.hexsha)
 
         if len(wantToSee) == 0:
             gstatus.setText(F"{self.shortName}: no new commits to draw")
@@ -315,7 +311,6 @@ class RepoState:
         gstatus.setProgressMaximum(5)
         gstatus.setProgressValue(1)
 
-        split, _ = self.getGitOutput(self.repo)
         metas = []
         refs = {}
         lastTainted = None
@@ -324,10 +319,9 @@ class RepoState:
 
         gstatus.setProgressValue(2)
 
-        #for i, commitData in enumerate(split):
         i = 0
         while True:
-            if i % 10000 == 0:
+            if i % PROGRESS_INTERVAL == 0:
                 print("Commits processed:", i)
                 QCoreApplication.processEvents()
             i += 1
@@ -382,8 +376,7 @@ class RepoState:
 
         # todo: this will do a pass on all commits. Can we look at fewer commits?
         self.traceCommitAvailability(self.order)
-        # Recompute lanes only on redrawn commits
-        self.computeLanes(metas)
+
         self.currentRefs = refs
 
         gstatus.setProgressValue(4)
@@ -402,3 +395,96 @@ class RepoState:
         dump.order = [c.hexsha for c in self.order]
         dump.currentRefs = self.currentRefs
         return dump
+
+    # --- Code graveyard for "sequential" history loading (i.e. call git first, THEN parse its output)
+    # We can nuke this when we're done benchmarking
+    '''
+    def loadCommitList_Sequential(self, progress: QProgressDialog):
+        def progressTick(progress: QProgressDialog, i: int):
+            progress.setValue(i)
+            QCoreApplication.processEvents()
+            if progress.wasCanceled():
+                print("aborted")
+                QMessageBox.warning(progress.parent(), "Loading aborted",
+                                    F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
+                raise KeyboardInterrupt
+
+        self.setBoldCommit(self.repo.active_branch.commit.hexsha)
+
+        bench = Benchmark("Calling Git")
+        bench.__enter__()
+
+        progress.setLabelText("Calling git")
+        QCoreApplication.processEvents()
+        split, outputBytes = self.getGitOutput(self.repo)
+        commitCount = len(split)
+        metas = []
+        refs = {}
+
+        bench.__exit__(None, None, None)
+
+        with Benchmark("Processing"):
+            progress.setLabelText(F"Processing {commitCount:,} commits ({outputBytes//1024:,} KB)")
+            progress.setMaximum(3 * commitCount + 1)
+
+            for i, commitData in enumerate(split):
+                if 0 == i % PROGRESS_INTERVAL:
+                    progressTick(progress, i + commitCount * 0)
+
+                meta, wasKnown = self.getOrCreateMetadataFromGitLogOutput(commitData)
+                metas.append(meta)
+
+                if meta.mainRefName and meta.mainRefName not in refs:
+                    refs[meta.mainRefName] = meta.hexsha
+
+        gstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
+
+        self.order = metas
+        self.currentRefs = refs
+
+        progress.setLabelText("Tracing commit availability")
+        QCoreApplication.processEvents()
+        self.traceCommitAvailability(metas, lambda i: progressTick(progress, i + commitCount * 1))
+
+        progress.setLabelText("Computing lanes")
+        QCoreApplication.processEvents()
+        with Benchmark("ComputeLanes " + self.shortName):
+            self.computeLanes(metas, lambda i: progressTick(progress, i + commitCount * 2))
+
+        bench.name = "grand total"; bench.__exit__(None, None, None)
+
+        return metas
+
+    @staticmethod
+    def getGitOutput(repo: git.Repo) -> List[str]:
+        output = repo.git.log(
+            topo_order=TOPO_ORDER,
+            all=True,
+            pretty='tformat:%x00%H%n%P%n%an%n%ae%n%at%n%S%n%B')
+        split = output.split('\x00')
+        outputBytes = len(output)
+        del output
+        del split[0]
+        split[-1] += '\n'
+        return split, outputBytes
+
+    @staticmethod
+    def computeLanes(metas, progressTick=None):
+        laneGen = LaneGenerator()
+        for i, meta in enumerate(metas):
+            if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
+                progressTick(i)
+            # compute lanes
+            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
+        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
+    '''
+
+    @staticmethod
+    def traceCommitAvailability(metas, progressTick=None):
+        nextLocal = set()
+        for i, meta in enumerate(metas):
+            if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
+                progressTick(i)
+            RepoState.traceOneCommitAvailability(nextLocal, meta)
+        assert len(nextLocal) == 0, "there are unreachable commits at the bottom of the graph"
+

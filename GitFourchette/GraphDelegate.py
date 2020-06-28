@@ -179,8 +179,8 @@ class GraphDelegate(QItemDelegate):
                 'refs': meta.refs
             }
 
-            assert meta.laneFrame, "lane frame missing from commit metadata"
-            assert meta.laneFrame.myLane >= 0, "illegal lane number"
+            #assert meta.laneFrame, "lane frame missing from commit metadata"
+            #assert meta.laneFrame.myLane >= 0, "illegal lane number"
 
             if meta.bold:
                 painter.setFont(settings.boldFont)
@@ -219,7 +219,7 @@ class GraphDelegate(QItemDelegate):
 
         # ------ Graph
         rect.setLeft(rect.right())
-        if meta is not None:
+        if meta is not None and meta.laneFrame:
             drawLanes(meta, painter, rect)
 
         # ------ tags

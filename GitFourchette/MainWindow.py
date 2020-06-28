@@ -193,20 +193,10 @@ class MainWindow(QMainWindow):
         QCoreApplication.processEvents()
         #import time; time.sleep(3)
 
-        PROGRESS_TICK_INTERVAL = 10000
-
-        def progressTick(progress: QProgressDialog, i: int):
-            progress.setValue(i)
-            QCoreApplication.processEvents()
-            if progress.wasCanceled():
-                print("aborted")
-                QMessageBox.warning(progress.parent(), "Loading aborted",
-                                    F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
-                raise KeyboardInterrupt
-
         try:
             newState = RepoState(path)
-            orderedMetadata = newState.loadCommitList(progress, progressTick)
+            #orderedMetadata = newState.loadCommitList_Sequential(progress)
+            orderedMetadata = newState.loadCommitList(progress)
         except BaseException as e:
             progress.close()
             traceback.print_exc()
