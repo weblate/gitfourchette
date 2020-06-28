@@ -46,7 +46,7 @@ class GraphView(QListView):
             return
 
         repo: git.Repo = self.repoWidget.state.repo
-        commit: git.Commit = self.currentIndex().data().commit(repo)
+        commit: git.Commit = repo.commit(self.currentIndex().data().hexsha)
 
         msg = commit.message.strip()
         msg = html.escape(msg)
