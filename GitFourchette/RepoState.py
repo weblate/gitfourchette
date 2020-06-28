@@ -148,7 +148,6 @@ class RepoState:
     @staticmethod
     def getGitProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
         # Todo: Interesting flags: -z; --log-size
-        # Todo: handle failure
 
         assert repo.git.GIT_PYTHON_GIT_EXECUTABLE, "GIT_PYTHON_EXECUTABLE wasn't set properly"
 
@@ -230,6 +229,13 @@ class RepoState:
             try:
                 meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
             except StopIteration:
+                proc: subprocess.Popen = procWrapper.proc
+                status = proc.poll()
+                assert status is not None, "git process stopped without a return code?"
+                if status != 0:
+                    stderrWrapper = io.TextIOWrapper(proc.stderr, errors='backslashreplace')
+                    stderr = stderrWrapper.readline().strip()
+                    raise git.GitCommandError(procWrapper.args, status, stderr)
                 break
 
             metas.append(meta)
