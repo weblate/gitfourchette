@@ -18,6 +18,11 @@ def newTrashFileName(repo: git.Repo, suffix: str) -> str:
     return path
 
 
+def trashRawPatch(repo: git.Repo, patch: str):
+    with open(newTrashFileName(repo, '.patch'), 'w') as f:
+        f.write(patch)
+
+
 def trashGitDiff(repo: git.Repo, diff: git.Diff):
     if diff.change_type == 'D':
         # It doesn't make sense to back up a file deletion

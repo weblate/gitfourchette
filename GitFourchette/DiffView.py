@@ -11,6 +11,7 @@ import patch
 import DiffActionSets
 import settings
 from status import gstatus
+import trash
 
 normalBF = QTextBlockFormat()
 normalCF = QTextCharFormat()
@@ -229,7 +230,7 @@ class DiffView(QTextEdit):
 
         menu.exec_(event.globalPos())
 
-    def _applyLines(self, cached=True, reverse=False):
+    def _applyLines(self, cached=True, reverse=False, trashBackup=False):
         cursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -251,6 +252,9 @@ class DiffView(QTextEdit):
             QApplication.beep()
             return
 
+        if trashBackup:
+            trash.trashRawPatch(self.currentGitRepo, patchData)
+
         try:
             patch.applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
         except git.GitCommandError as e:
@@ -266,7 +270,7 @@ class DiffView(QTextEdit):
         self._applyLines(reverse=True)
 
     def discardLines(self):
-        self._applyLines(cached=False, reverse=True)
+        self._applyLines(cached=False, reverse=True, trashBackup=True)
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
