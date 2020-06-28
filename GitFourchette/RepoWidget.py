@@ -144,10 +144,10 @@ class RepoWidget(QWidget):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
         self.dirtyView.clear()
-        self.dirtyView.fillDiff(self.state.index.diff(None))
-        self.dirtyView.fillUntracked(self.state.repo.untracked_files)
+        self.dirtyView.fillDiff(self.state.getDirtyChanges())
+        self.dirtyView.fillUntracked(self.state.getUntrackedFiles())
         self.stageView.clear()
-        self.stageView.fillDiff(self.state.index.diff(self.state.repo.head.commit, R=True))  # R: prevent reversal
+        self.stageView.fillDiff(self.state.getStagedChanges())  # R: prevent reversal
 
         nDirty = self.dirtyView.model().rowCount()
         nStaged = self.stageView.model().rowCount()
@@ -242,6 +242,10 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             return accepted, message
 
     def commitFlow(self):
+        if 0 == len(self.state.getStagedChanges()):
+            QMessageBox.warning(self, "Commit", "No changes staged for commit.")
+            return
+
         kDRAFT = "DraftMessage"
         confirm, message = self._commitFlowDialog(
             self.state.settings.value(kDRAFT, ""), "Commit", "Enter commit message:", "Commit")

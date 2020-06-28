@@ -116,6 +116,15 @@ class RepoState:
             self.commitMetadata[key] = v
             return v
 
+    def getDirtyChanges(self):
+        return self.index.diff(None)
+
+    def getUntrackedFiles(self):
+        return self.repo.untracked_files
+
+    def getStagedChanges(self):
+        return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
+
     @staticmethod
     def getGitOutput(repo: git.Repo) -> List[str]:
         output = repo.git.log(
