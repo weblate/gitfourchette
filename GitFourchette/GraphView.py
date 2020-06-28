@@ -40,22 +40,38 @@ class GraphView(QListView):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if not self.currentIndex().isValid():
             return
+
         repo: git.Repo = self.repoWidget.state.repo
         commit: git.Commit = self.currentIndex().data().commit(repo)
-        QMessageBox.about(None, F"Commit info {commit.hexsha[:7]}", F"""<h2>Commit info</h2>
-<b>SHA</b><br>
-{commit.hexsha}
-<br><br>
-<b>Author</b><br>
-{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;
-<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}
-<br><br>
-<b>Committer</b><br>
-{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;
-<br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}
-<br><br>
-<b>Message</b><br>
-{html.escape(commit.message)}""")
+
+        msg = commit.message.strip()
+        msg = html.escape(msg)
+        msg = msg.replace('\n', '<br>')  # Qt 5.15 does support 'pre-wrap',
+        # but it inserts too many blank lines when there are 2 consecutive line breaks.
+
+        markup = F"""<p style='font-size: large'>{msg}</p>
+            <br>
+            <table>
+            <tr>
+                <td><b>SHA</b></td>
+                <td>{commit.hexsha}</td>
+            </tr>
+            <tr>
+                <td><b>Author</b></td>
+                <td>
+                    {html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;
+                    <br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}
+                </td>
+            </tr>
+            <tr>
+                <td><b>Committer</b></td>
+                <td>
+                    {html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;
+                    <br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}
+                </td>
+            </td>
+            </table>"""
+        QMessageBox.information(self, F"Commit info {commit.hexsha[:7]}", markup)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
