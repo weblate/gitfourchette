@@ -182,6 +182,10 @@ class RepoWidget(QWidget):
         self.dirtyView.restoreSelectedRowAfterClear()
         self.stageView.restoreSelectedRowAfterClear()
 
+        # If no file is selected in either FileListView, clear the diffView of any residual diff.
+        if 0 == (len(self.dirtyView.selectedIndexes()) + len(self.stageView.selectedIndexes())):
+            self.diffView.clear()
+
     def push(self):
         repo = self.state.repo
         branch = repo.active_branch
