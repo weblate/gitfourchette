@@ -155,7 +155,7 @@ class GraphDelegate(QItemDelegate):
 
         # Get metrics of '0' before setting a custom font,
         # so that alignments are consistent in all commits regardless of bold or italic.
-        zw = painter.fontMetrics().width('0')
+        zw = painter.fontMetrics().horizontalAdvance('0')
 
         debugHighlightColor: QColor = None
 
@@ -229,7 +229,7 @@ class GraphDelegate(QItemDelegate):
             painter.setPen(QColor(Qt.darkMagenta))
             rect.setLeft(rect.right())
             label = F"[{ref}] "
-            rect.setWidth(settings.smallFontMetrics.width(label) + 1)
+            rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
             painter.drawText(rect, label)
             painter.restore()
         for tag in data['tags']:
@@ -238,7 +238,7 @@ class GraphDelegate(QItemDelegate):
             painter.setPen(QColor(Qt.darkYellow))
             rect.setLeft(rect.right())
             label = F"[{tag}] "
-            rect.setWidth(settings.smallFontMetrics.width(label) + 1)
+            rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
             painter.drawText(rect, label)
             painter.restore()
 

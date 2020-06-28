@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
         progress.setWindowModality(Qt.WindowModal)
         progress.setWindowTitle(shortname)
         progress.setWindowFlags(Qt.Dialog | Qt.Popup)
-        progress.setMinimumWidth(2 * progress.fontMetrics().width("000,000,000 commits loaded."))
+        progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
         QCoreApplication.processEvents()
         progress.show()
         QCoreApplication.processEvents()
