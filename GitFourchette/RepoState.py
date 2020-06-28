@@ -149,9 +149,11 @@ class RepoState:
     def getGitProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
         # Todo: Interesting flags: -z; --log-size
         # Todo: handle failure
-        # Todo: should we literally call 'git', or does gitpython provide a better name for us
+
+        assert repo.git.GIT_PYTHON_GIT_EXECUTABLE, "GIT_PYTHON_EXECUTABLE wasn't set properly"
+
         cmd = [
-            'git',
+            repo.git.GIT_PYTHON_GIT_EXECUTABLE,
             'log',
             '--all',
             '--pretty=tformat:%H%n%P%n%an%n%ae%n%at%n%S%n%B%n%x00'  # format vs tformat?
