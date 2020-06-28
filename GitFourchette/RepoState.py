@@ -56,9 +56,6 @@ class CommitMetadata:
         self.debugPrefix = None
         self.debugRefreshId = 0
 
-    def commit(self, repo: git.Repo):
-        return repo.commit(self.hexsha)
-
 
 class RepoState:
     dir: str

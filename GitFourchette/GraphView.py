@@ -9,6 +9,10 @@ import settings
 
 
 class GraphView(QListView):
+    uncommittedChangesClicked = Signal()
+    emptyClicked = Signal()
+    commitClicked = Signal(str)
+
     def __init__(self, parent):
         super().__init__(parent)
         self.repoWidget = parent
@@ -83,24 +87,9 @@ class GraphView(QListView):
             self.onSetCurrent(selected.indexes()[0])
 
     def onSetCurrent(self, current=None):
-        # if current is None:
-        #     current = self.currentIndex()
-
         if current is None or not current.isValid():
-            self.repoWidget.setNoCommitSelected()
-            return
-
-        if current.row() == 0:  # uncommitted changes
-            self.repoWidget.fillStageView()
-            return
-
-        repo: git.Repo = self.repoWidget.state.repo
-        commit: git.Commit = current.data().commit(repo)
-
-        # TODO: use a signal for this instead of touching changedFilesView directly
-        cfv = self.repoWidget.changedFilesView
-        cfv.clear()
-        for parent in commit.parents:
-            cfv.fillDiff(parent.diff(commit))
-        cfv.selectFirstRow()
-        self.repoWidget.filesStack.setCurrentIndex(0)
+            self.emptyClicked.emit()
+        elif current.row() == 0:  # uncommitted changes
+            self.uncommittedChangesClicked.emit()
+        else:
+            self.commitClicked.emit(current.data().hexsha)

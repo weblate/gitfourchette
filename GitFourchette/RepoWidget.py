@@ -43,6 +43,10 @@ class RepoWidget(QWidget):
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
+        self.graphView.emptyClicked.connect(self.setNoCommitSelected)
+        self.graphView.commitClicked.connect(self.onCommitClicked)
+        self.graphView.uncommittedChangesClicked.connect(self.fillStageView) #onUncommittedChangesClicked)
+
         self.splitterStates = sharedSplitterStates or {}
 
         self.dirtyLabel = QLabel("Dirty Files")
@@ -139,6 +143,16 @@ class RepoWidget(QWidget):
     def setNoCommitSelected(self):
         self.filesStack.setCurrentIndex(0)
         self.changedFilesView.clear()
+
+    def onCommitClicked(self, hexsha: str):
+        commit = self.state.repo.commit(hexsha)
+
+        self.changedFilesView.clear()
+        for parent in commit.parents:
+            self.changedFilesView.fillDiff(parent.diff(commit))
+        self.changedFilesView.selectFirstRow()
+
+        self.filesStack.setCurrentIndex(0)
 
     def fillStageView(self):
         """Fill Staged/Unstaged views with uncommitted changes"""
