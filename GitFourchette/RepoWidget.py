@@ -323,8 +323,8 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         frontTrim, frontNewMetas = self.state.loadTaintedCommitsOnly()
         if not frontNewMetas:
             assert frontTrim == 0
-            return
-        self.graphView.patchFill(frontTrim, frontNewMetas)
+        else:
+            self.graphView.patchFill(frontTrim, frontNewMetas)
         if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
             self.fillStageView()
         gstatus.clearProgress()
