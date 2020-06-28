@@ -25,7 +25,8 @@ def makePatchFromGitDiff(repo: git.Repo, change: git.Diff):
     if change.b_blob:
         b = change.b_blob.data_stream.read()
     else:
-        b = open(os.path.join(repo.working_tree_dir, change.b_path), 'rb').read()
+        with open(os.path.join(repo.working_tree_dir, change.b_path), 'rb') as f:
+            b = f.read()
 
     a = a.decode('utf-8').splitlines(keepends=True)
     b = b.decode('utf-8').splitlines(keepends=True)

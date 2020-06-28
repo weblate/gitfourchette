@@ -91,7 +91,8 @@ class DiffView(QTextEdit):
             return
 
         try:
-            contents: str = open(fullPath, 'rb').read().decode('utf-8')
+            with open(fullPath, 'rb') as f:
+                contents: str = f.read().decode('utf-8')
         except UnicodeDecodeError as e:
             self.setFailureContents(F"File appears to be binary.\n{e}")
             return
