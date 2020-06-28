@@ -53,27 +53,23 @@ class GraphView(QListView):
         msg = msg.replace('\n', '<br>')  # Qt 5.15 does support 'pre-wrap',
         # but it inserts too many blank lines when there are 2 consecutive line breaks.
 
+        authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" + \
+            F"<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}"
+
+        if (commit.author.email == commit.committer.email
+                and commit.author.name == commit.committer.name
+                and commit.authored_datetime == commit.committed_datetime):
+            committerMarkup = F"<i>(same as author)</i>"
+        else:
+            committerMarkup = F"{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;" + \
+                F"<br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}"
+
         markup = F"""<p style='font-size: large'>{msg}</p>
             <br>
             <table>
-            <tr>
-                <td><b>SHA</b></td>
-                <td>{commit.hexsha}</td>
-            </tr>
-            <tr>
-                <td><b>Author</b></td>
-                <td>
-                    {html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;
-                    <br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}
-                </td>
-            </tr>
-            <tr>
-                <td><b>Committer</b></td>
-                <td>
-                    {html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;
-                    <br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}
-                </td>
-            </td>
+            <tr><td><b>SHA </b></td><td>{commit.hexsha}</td></tr>
+            <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
+            <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
             </table>"""
         QMessageBox.information(self, F"Commit info {commit.hexsha[:7]}", markup)
 
