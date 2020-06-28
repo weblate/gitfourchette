@@ -273,6 +273,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             self.state.settings.remove(kDRAFT)
             #self.state.index.commit(message, amend=amend)
             self.state.repo.git.commit(m=message)
+            self.quickRefresh()
         else:
             self.state.settings.setValue(kDRAFT, message)
 
