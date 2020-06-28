@@ -123,8 +123,15 @@ class History(BasePrefs):
         else:
             return os.path.basename(path)
 
-    def setRepoNickname(self, path, nickname):
-        self.nicknames[path] = nickname
+    def setRepoNickname(self, path: str, nickname: str):
+        nickname = nickname.strip()
+        if not nickname:
+            if path not in self.nicknames:
+                # no nickname given, no existing nickname in history: no-op
+                return
+            del self.nicknames[path]
+        else:
+            self.nicknames[path] = nickname
         self.write()
 
     def removeRepo(self, path):

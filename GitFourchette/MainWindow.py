@@ -41,6 +41,7 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget2(self)
         self.tabs.stacked.currentChanged.connect(self.onTabChange)
         self.tabs.tabCloseRequested.connect(self.closeTab)
+        self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
         self.setCentralWidget(self.tabs)
 
         self.makeMenu()
@@ -168,6 +169,15 @@ class MainWindow(QMainWindow):
         shortname = settings.history.getRepoNickname(w.state.repo.working_tree_dir)
         self.setWindowTitle(F"{shortname} [{w.state.repo.active_branch}] — {settings.PROGRAM_NAME}")
 
+    def onTabContextMenu(self, globalPoint: QPoint, i: int):
+        rw: RepoWidget = self.tabs.stacked.widget(i)
+        menu = QMenu()
+        menu.addAction("Close Tab", lambda: self.closeTab(i))
+        menu.addAction("Open Repo Folder", lambda: self.openRepoFolder(rw))
+        menu.addAction("Rename", rw.renameRepo)
+        #self.tabs.tabs.
+        menu.exec_(globalPoint)
+
     def _loadRepo(self, rw: RepoWidget, path: str):
         assert rw
 
@@ -248,8 +258,10 @@ class MainWindow(QMainWindow):
             newRW.destroy()
             return  # don't create the tab if opening the repo failed
 
-        tabIndex = self.tabs.addTab(newRW, settings.history.getRepoNickname(repoPath), repoPath)
+        tabIndex = self.tabs.addTab(newRW, newRW.state.shortName, repoPath)
         self.tabs.setCurrentIndex(tabIndex)
+
+        newRW.nameChange.connect(lambda: self.tabs.tabs.setTabText(self.tabs.stacked.indexOf(newRW), newRW.state.shortName))
 
         settings.history.addRepo(repoPath)
         self.fillRecentMenu()
@@ -267,8 +279,9 @@ class MainWindow(QMainWindow):
         rw = self.currentRepoWidget()
         self._loadRepo(rw, rw.state.repo.working_tree_dir)
 
-    def openRepoFolder(self):
-        rw = self.currentRepoWidget()
+    def openRepoFolder(self, rw: RepoWidget = None):
+        if not rw:
+            rw = self.currentRepoWidget()
         showInFolder(rw.state.repo.working_tree_dir)
 
     def openDialog(self):

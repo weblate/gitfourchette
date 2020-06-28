@@ -17,6 +17,8 @@ PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.P
 
 
 class RepoWidget(QWidget):
+    nameChange: Signal = Signal()
+
     state: RepoState
 
     def __init__(self, parent, sharedSplitterStates=None):
@@ -124,14 +126,15 @@ class RepoWidget(QWidget):
             self.state = None
 
     def renameRepo(self):
-        text, ok = QInputDialog().getText(
+        qid = QInputDialog()
+        text, ok = qid.getText(
             self,
-            "Rename repo", "Enter new nickname for repo:",
+            "Rename repo", "Enter new nickname for repo, or enter blank line to reset:",
             QLineEdit.Normal,
-            settings.history.getRepoNickname(self.state.dir)
-        )
+            settings.history.getRepoNickname(self.state.dir))
         if ok:
             settings.history.setRepoNickname(self.state.dir, text)
+            self.nameChange.emit()
 
     def setNoCommitSelected(self):
         self.filesStack.setCurrentIndex(0)

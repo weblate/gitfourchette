@@ -33,6 +33,7 @@ class QTabBar2(QTabBar):
 
 class QTabWidget2(QWidget):
     tabCloseRequested: Signal = Signal(int)
+    tabContextMenuRequested: Signal = Signal(QPoint, int)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -57,6 +58,14 @@ class QTabWidget2(QWidget):
         layout.addWidget(self.tabs)
         layout.addWidget(self.stacked)
         self.setLayout(layout)
+
+        self.tabs.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabs.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+
+    def onCustomContextMenuRequested(self, localPoint: QPoint):
+        globalPoint = self.tabs.mapToGlobal(localPoint)
+        index = self.tabs.tabAt(localPoint)
+        self.tabContextMenuRequested.emit(globalPoint, index)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         if (watched == self.tabs and
