@@ -1,13 +1,11 @@
-from PySide2 import QtWidgets, QtGui
+from PySide2.QtWidgets import QApplication
 import sys
 import signal
-import traceback
+from util import excMessageBox
 
 
 def excepthook(exctype, value, tb):
-    # run default exception hook that we backed up earlier
-    sys._excepthook(exctype, value, tb)
-    QtWidgets.QMessageBox.critical(None, "Unhandled exception", F"{value.__class__.__name__}: {value}")
+    excMessageBox(value)
 
 
 if __name__ == "__main__":
@@ -19,7 +17,7 @@ if __name__ == "__main__":
     sys.excepthook = excepthook
 
     # initialize Qt before importing app modules so fonts are loaded correctly
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     with open("icons/style.qss", "r") as f:
         app.setStyleSheet(f.read())
 
@@ -30,8 +28,6 @@ if __name__ == "__main__":
     try:
         window.tryLoadSession()
     except BaseException as e:
-        traceback.print_exc()
-        QtWidgets.QMessageBox.critical(window, "Error",
-            F"Couldn't resume previous session.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+        excMessageBox(e, "Resume Session", "Failed to resume previous session.")
 
     app.exec_()

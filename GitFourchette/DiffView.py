@@ -4,7 +4,6 @@ from PySide2.QtCore import *
 import re
 import git
 from typing import List
-import traceback
 import os
 
 import patch
@@ -12,6 +11,7 @@ import DiffActionSets
 import settings
 from status import gstatus
 import trash
+from util import excMessageBox
 
 normalBF = QTextBlockFormat()
 normalCF = QTextCharFormat()
@@ -259,8 +259,7 @@ class DiffView(QTextEdit):
         try:
             patch.applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
         except git.GitCommandError as e:
-            traceback.print_exc()
-            QMessageBox.critical(self, "Failed to apply patch", str(e))
+            excMessageBox(e, "Apply Patch", "Failed to apply patch.", parent=self)
 
         self.patchApplied.emit()
 

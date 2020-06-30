@@ -6,7 +6,6 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import settings
 import os
-import traceback
 import psutil
 import gc
 import pickle
@@ -14,7 +13,7 @@ import zlib
 
 from RepoState import RepoState
 from RepoWidget import RepoWidget
-from util import compactSystemPath, showInFolder
+from util import compactSystemPath, showInFolder, excMessageBox
 from status import gstatus
 from QTabWidget2 import QTabWidget2
 
@@ -197,9 +196,8 @@ class MainWindow(QMainWindow):
             newState = RepoState(path)
             #orderedMetadata = newState.loadCommitList_Sequential(progress)
             orderedMetadata = newState.loadCommitList(progress)
-        except BaseException as e:
+        except (git.exc.InvalidGitRepositoryError, git.exc.NoSuchPathError) as e:
             progress.close()
-            traceback.print_exc()
 
             known = path in settings.history.history
 

@@ -1,7 +1,9 @@
 import re
 from pathlib import Path
+import traceback
 from PySide2.QtCore import *
 from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 
 def sign(x):
@@ -67,3 +69,21 @@ def showInFolder(pathStr):
     dirPath = path if path.is_dir() else path.parent
     QDesktopServices.openUrl(QUrl(str(dirPath)))
 
+
+
+def excMessageBox(exc, title="Unhandled Exception", message="An exception was thrown.", parent=None):
+    summary = traceback.format_exception_only(exc.__class__, exc)
+    summary = ''.join(summary).strip()
+
+    details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+    details = ''.join(details).strip()
+
+    qmb = QMessageBox(QMessageBox.Critical, title, F"{message}\n{summary}", parent=parent)
+    qmb.setDetailedText(details)
+    qmb.setFixedWidth(1200)
+
+    horizontalSpacer = QSpacerItem(600, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+    layout = qmb.layout()
+    layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
+
+    qmb.exec_()

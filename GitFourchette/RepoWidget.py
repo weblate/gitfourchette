@@ -6,10 +6,9 @@ from DiffView import DiffView
 from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from RemoteProgress import RemoteProgress
-from util import fplural
+from util import fplural, excMessageBox
 from typing import List
 import git
-import traceback
 import settings
 from status import gstatus
 
@@ -211,9 +210,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             pushInfos = remote.push(progress=progress)
         except BaseException as e:
             progress.close()
-            traceback.print_exc()
-            QMessageBox.critical(self, "Push",
-                F"An exception was thrown while pushing.\n{e.__class__.__name__}: {e}.\nCheck stderr for details.")
+            excMessageBox(e, "Push", "An error occurred while pushing.", parent=self)
             return
 
         progress.close()
