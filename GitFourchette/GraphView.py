@@ -6,6 +6,7 @@ import html
 
 from GraphDelegate import GraphDelegate
 import settings
+from util import messageSummary
 
 
 class GraphView(QListView):
@@ -48,12 +49,15 @@ class GraphView(QListView):
         repo: git.Repo = self.repoWidget.state.repo
         commit: git.Commit = repo.commit(self.currentIndex().data().hexsha)
 
-        msg = commit.message.strip()
-        msg = html.escape(msg)
-        msg = msg.replace('\n', '<br>')  # Qt 5.15 does support 'pre-wrap',
-        # but it inserts too many blank lines when there are 2 consecutive line breaks.
+        summary, contd = messageSummary(commit.message)
 
-        authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" + \
+        postSummary = ""
+        nLines = len(commit.message.rstrip().split('\n'))
+        if contd:
+            postSummary = F"<br>\u25bc <i>click &ldquo;Show Details&rdquo; to reveal full message " \
+                  F"({nLines} lines)</i>"
+
+        authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" \
             F"<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}"
 
         if (commit.author.email == commit.committer.email
@@ -61,17 +65,24 @@ class GraphView(QListView):
                 and commit.authored_datetime == commit.committed_datetime):
             committerMarkup = F"<i>(same as author)</i>"
         else:
-            committerMarkup = F"{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;" + \
+            committerMarkup = F"{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;" \
                 F"<br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}"
 
-        markup = F"""<p style='font-size: large'>{msg}</p>
+        markup = F"""<span style='font-size: large'>{summary}</span>{postSummary}
             <br>
             <table>
             <tr><td><b>SHA </b></td><td>{commit.hexsha}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
             </table>"""
-        QMessageBox.information(self, F"Commit info {commit.hexsha[:7]}", markup)
+        messageBox = QMessageBox(
+            QMessageBox.Information,
+            F"Commit info {commit.hexsha[:settings.prefs.shortHashChars]}",
+            markup,
+            parent=self)
+        if contd:
+            messageBox.setDetailedText(commit.message)
+        messageBox.exec_()
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.

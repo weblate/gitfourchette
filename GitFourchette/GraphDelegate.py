@@ -6,7 +6,7 @@ import settings
 import colors
 from settings import FLATTEN_LANES, DEBUGRECTS, MAX_LANES
 from RepoState import CommitMetadata
-from util import sign
+from util import sign, messageSummary
 
 
 XMargin = 4
@@ -162,19 +162,13 @@ class GraphDelegate(QItemDelegate):
         if index.row() > 0:
             meta = index.data()
 
-            message: str = meta.body.strip()
-            newline = message.find('\n')
-            if newline > -1:
-                messageContinued = newline < len(message) - 1
-                message = message[:newline]
-                if messageContinued:
-                    message += " [...]"
+            summary, contd = messageSummary(meta.body)
 
             data = {
                 'hash': meta.hexsha[:settings.prefs.shortHashChars],
                 'author': meta.authorEmail.split('@')[0],  # [:8],
                 'date': datetime.fromtimestamp(meta.authorTimestamp).strftime(settings.prefs.shortTimeFormat),
-                'message': message,
+                'message': summary,
                 'tags': meta.tags,
                 'refs': meta.refs
             }

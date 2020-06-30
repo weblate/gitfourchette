@@ -70,6 +70,17 @@ def showInFolder(pathStr):
     QDesktopServices.openUrl(QUrl(str(dirPath)))
 
 
+def messageSummary(body: str):
+    messageContinued = False
+    message: str = body.strip()
+    newline = message.find('\n')
+    if newline > -1:
+        messageContinued = newline < len(message) - 1
+        message = message[:newline]
+        if messageContinued:
+            message += " [...]"
+    return message, messageContinued
+
 
 def excMessageBox(exc, title="Unhandled Exception", message="An exception was thrown.", parent=None):
     summary = traceback.format_exception_only(exc.__class__, exc)
