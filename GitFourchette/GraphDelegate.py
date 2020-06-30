@@ -247,21 +247,23 @@ class GraphDelegate(QItemDelegate):
             painter.setPen(QColor(Qt.gray))
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
-        mzg = metrics.elidedText(data['message'], Qt.ElideRight, rect.width())
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        painter.drawText(rect, mzg)
+        painter.drawText(rect,
+                metrics.elidedText(data['message'], Qt.ElideRight, rect.width()))
 
         # ------ Author
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Author * zw)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        painter.drawText(rect, data['author'])
+        painter.drawText(rect,
+                metrics.elidedText(data['author'], Qt.ElideRight, rect.width()))
 
         # ------ Date
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Date * zw)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        painter.drawText(rect, data['date'])
+        painter.drawText(rect,
+                metrics.elidedText(data['date'], Qt.ElideRight, rect.width()))
 
         # ----------------
         painter.restore()
