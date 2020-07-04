@@ -292,8 +292,16 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             report = "Push failed.\n\n" + report
             QMessageBox.warning(self, "Push failed", report)
         else:
+            self.quickRefresh()
             report = "Push successful!\n\n" + report
             QMessageBox.information(self, "Push successful", report)
+
+    def pull(self):
+        repo = self.state.repo
+        branch = repo.active_branch
+        tracking = repo.active_branch.tracking_branch()
+        remote = repo.remote(tracking.remote_name)
+        remote.fetch()
 
     def _commitFlowDialog(self, initialText, title, prompt, buttonCaption) -> (bool, str):
         while True:
@@ -386,6 +394,12 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             assert frontTrim == 0
         else:
             self.graphView.patchFill(frontTrim, frontNewMetas)
+
+        self.state.refreshTagAndRefCaches()
+
+        # force redraw visible portion of the graph view to reflect any changed tags/refs
+        self.graphView.setDirtyRegion(QRegion(0, 0, self.graphView.width(), self.graphView.height()))
+
         if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
             self.fillStageViewAsync()
         gstatus.clearProgress()

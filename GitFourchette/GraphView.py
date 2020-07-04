@@ -19,7 +19,7 @@ class GraphView(QListView):
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
-        self.setItemDelegate(GraphDelegate())
+        self.setItemDelegate(GraphDelegate(parent, parent=self))
 
     def _replaceModel(self, model):
         if self.model():

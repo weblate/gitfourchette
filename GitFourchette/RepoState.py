@@ -7,6 +7,7 @@ from PySide2.QtCore import QSettings, QCoreApplication, QMutex, QMutexLocker
 from PySide2.QtWidgets import QProgressDialog, QMessageBox
 from datetime import datetime
 from typing import List, Set
+import collections
 
 import settings
 from Benchmark import Benchmark
@@ -32,8 +33,6 @@ class CommitMetadata:
     parentHashes: List[str]
 
     # Attributes that may change as the repository evolves
-    tags: List[str]
-    refs: List[str]
     mainRefName: str
     laneFrame: LaneFrame
     bold: bool
@@ -49,8 +48,6 @@ class CommitMetadata:
         self.body = ""
         self.parentHashes = []
         self.debugPrefix = None
-        self.tags = []
-        self.refs = []
         self.mainRefName = None
         self.laneFrame = None
         self.bold = False
@@ -70,6 +67,8 @@ class RepoState:
     order: List[CommitMetadata]
     debugRefreshId: int
     mutex: QMutex
+    refCache: collections.defaultdict
+    tagCache: collections.defaultdict
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
@@ -80,18 +79,10 @@ class RepoState:
         self.debugRefreshId = 0
 
         self.commitMetadata = {}
-        for tag in self.repo.tags:
-            try:
-                self.getOrCreateMetadata(tag.commit.hexsha).tags.append(tag.name)
-            except ValueError as e:  # the linux repository has 2 tags pointing to trees instead of commits
-                print("Error loading tag:",e)
-                #traceback.print_exc()
-        for ref in self.repo.refs:
-            try:
-                self.getOrCreateMetadata(ref.commit.hexsha).refs.append(ref.name)
-            except ValueError as e:
-                print("Error loading ref:",e)
-                #traceback.print_exc()
+
+        self.refCache = collections.defaultdict(list)
+        self.tagCache = collections.defaultdict(list)
+        self.refreshTagAndRefCaches()
 
         self.boldCommitHash = None
 
@@ -100,11 +91,17 @@ class RepoState:
         # QRecursiveMutex causes problems
         self.mutex = QMutex(QMutex.Recursive)
 
-        """
-        for remote in self.repo.remotes:
-            for ref in remote.refs:
-                self.getOrCreateMetadata(ref.commit.hexsha).refs.append(F"{ref.remote_name}/{ref.remote_head}")
-        """
+    def refreshTagAndRefCaches(self):
+        def _refresh(cache, refList):
+            cache.clear()
+            for ref in refList:
+                try:
+                    cache[ref.commit.hexsha].append(ref.name)
+                except ValueError as e:
+                    print("Error loading tag/ref:", e)
+                    # traceback.print_exc()
+        _refresh(self.tagCache, self.repo.tags)
+        _refresh(self.refCache, self.repo.refs)
 
     @property
     def shortName(self) -> str:

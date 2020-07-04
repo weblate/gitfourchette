@@ -5,7 +5,7 @@ from datetime import datetime
 import settings
 import colors
 from settings import FLATTEN_LANES, DEBUGRECTS, MAX_LANES
-from RepoState import CommitMetadata
+from RepoState import CommitMetadata, RepoState
 from util import sign, messageSummary
 
 
@@ -132,8 +132,13 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
 
 # différence entre QItemDelegate et QStyledItemDelegate?
 class GraphDelegate(QItemDelegate):
-    def __init__(self, parent=None):
+    def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
+        self.repoWidget = repoWidget
+
+    @property
+    def state(self) -> RepoState:
+        return self.repoWidget.state
 
     def paint(self, painter, option, index):
         # print("Render Index Row: " +  str(index.row()))
@@ -169,8 +174,6 @@ class GraphDelegate(QItemDelegate):
                 'author': meta.authorEmail.split('@')[0],  # [:8],
                 'date': datetime.fromtimestamp(meta.authorTimestamp).strftime(settings.prefs.shortTimeFormat),
                 'message': summary,
-                'tags': meta.tags,
-                'refs': meta.refs
             }
 
             #assert meta.laneFrame, "lane frame missing from commit metadata"
@@ -189,8 +192,6 @@ class GraphDelegate(QItemDelegate):
                 'author': "",
                 'date': "",
                 'message': index.data(),
-                'tags': [],
-                'refs': []
             }
             painter.setFont(settings.alternateFont)
 
@@ -217,24 +218,22 @@ class GraphDelegate(QItemDelegate):
             drawLanes(meta, painter, rect)
 
         # ------ tags
-        for ref in data['refs']:
+        def drawTagOrRef(name, color):
             painter.save()
             painter.setFont(settings.smallFont)
-            painter.setPen(QColor(Qt.darkMagenta))
+            painter.setPen(color)
             rect.setLeft(rect.right())
-            label = F"[{ref}] "
+            label = F"[{name}] "
             rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
             painter.drawText(rect, label)
             painter.restore()
-        for tag in data['tags']:
-            painter.save()
-            painter.setFont(settings.smallFont)
-            painter.setPen(QColor(Qt.darkYellow))
-            rect.setLeft(rect.right())
-            label = F"[{tag}] "
-            rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
-            painter.drawText(rect, label)
-            painter.restore()
+        if meta is not None:
+            if meta.hexsha in self.state.refCache:
+                for ref in self.state.refCache[meta.hexsha]:
+                    drawTagOrRef(ref, Qt.darkMagenta)
+            if meta.hexsha in self.state.tagCache:
+                for tag in self.state.tagCache[meta.hexsha]:
+                    drawTagOrRef(tag, Qt.darkYellow)
 
         # ------ message
         if meta and not meta.hasLocal:
