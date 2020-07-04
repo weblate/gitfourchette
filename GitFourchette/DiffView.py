@@ -41,38 +41,26 @@ class DiffView(QTextEdit):
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
-    def _replaceDocument(self, document: QTextDocument, forceWrap: bool = False):
+    def replaceDocument(self, repo: git.Repo, diff: git.Diff, diffActionSet: str, dm: DiffModel):
         oldDocument = self.document()
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
-        self.setDocument(document)
+
+        self.currentActionSet = diffActionSet
+        self.currentGitRepo = repo
+        self.currentChange = diff
+
+        self.setDocument(dm.document)
+        self.lineData = dm.lineData
 
         # now reset defaults that are lost when changing documents
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
-        if forceWrap:
+        if dm.forceWrap:
             self.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         else:
             self.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
         self.setCursorWidth(2)
-
-    def setUntrackedContents(self, repo: git.Repo, path: str):
-        self.currentActionSet = DiffActionSets.untracked
-        self.currentGitRepo = repo
-        self.currentChange = None
-
-        dmodel = DiffModel.fromUntrackedFile(repo, path)
-        self.lineData = dmodel.lineData
-        self._replaceDocument(dmodel.document, dmodel.forceWrap)
-
-    def setDiffContents(self, repo: git.Repo, change: git.Diff, diffActionSet: str):
-        self.currentActionSet = diffActionSet
-        self.currentGitRepo = repo
-        self.currentChange = change
-
-        dmodel = DiffModel.fromGitDiff(repo, change)
-        self.lineData = dmodel.lineData
-        self._replaceDocument(dmodel.document, dmodel.forceWrap)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         menu: QMenu = self.createStandardContextMenu()

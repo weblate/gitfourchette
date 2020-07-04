@@ -2,6 +2,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
+import DiffModel
 from Benchmark import Benchmark
 from RepoState import RepoState
 from DiffView import DiffView
@@ -57,7 +58,7 @@ class RepoWidget(QWidget):
 
         for v in [self.dirtyView, self.stageView, self.changedFilesView]:
             v.nothingClicked.connect(self.diffView.clear)
-            v.entryClicked.connect(self.onFileEntryClicked)
+            v.entryClicked.connect(self.loadDiffAsync)
 
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
@@ -171,15 +172,17 @@ class RepoWidget(QWidget):
 
     def loadCommitAsync(self, hexsha: str):
         def work(progress_callback):
+            assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 commit = self.state.repo.commit(hexsha)
                 return [p.diff(commit) for p in commit.parents]
 
         def onComplete(parentDiffs):
+            assert QThread.currentThread() is QApplication.instance().thread()
             self.changedFilesView.clear()
             for d in parentDiffs:
                 self.changedFilesView.fillDiff(d)
-            self.changedFilesView.selectFirstRow()  # TODO: this should be async!
+            self.changedFilesView.selectFirstRow()
             self.filesStack.setCurrentIndex(0)
 
         self._startAsyncWorker(work, onComplete, "Loading commit...")
@@ -197,17 +200,24 @@ class RepoWidget(QWidget):
             lambda o: self._fillStageView(*o),
             "Refreshing index...")
 
-    def onFileEntryClicked(self, entry, diffActionSet):
+    def loadDiffAsync(self, entry, diffActionSet):
         repo = self.state.repo
-        try:
+
+        def work(progress_callback):
+            assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 if entry.diff is not None:
-                    self.diffView.setDiffContents(repo, entry.diff, diffActionSet)
+                    dm = DiffModel.fromGitDiff(repo, entry.diff)
                 else:
-                    self.diffView.setUntrackedContents(repo, entry.path)
-        except BaseException as ex:
-            traceback.print_exc()
-            self.repoWidget.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
+                    dm = DiffModel.fromUntrackedFile(repo, entry.path)
+                dm.document.moveToThread(QApplication.instance().thread())
+                return dm
+
+        def onComplete(dm):
+            assert QThread.currentThread() is QApplication.instance().thread()
+            self.diffView.replaceDocument(repo, entry.diff, diffActionSet, dm)
+
+        self._startAsyncWorker(work, onComplete, "Loading diff...")
 
     def _fillStageView(self, dirtyChanges, untrackedFiles, stagedChanges):
         """Fill Staged/Unstaged views with uncommitted changes"""
