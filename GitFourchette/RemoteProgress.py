@@ -32,7 +32,7 @@ class RemoteProgress(git.RemoteProgress):
         self.dlg.setWindowModality(Qt.WindowModal)
         self.dlg.setWindowTitle(title)
         self.dlg.setWindowFlags(Qt.Dialog | Qt.Popup)
-        self.dlg.setMinimumWidth(2 * self.dlg.fontMetrics().width("000,000,000 commits loaded."))
+        self.dlg.setMinimumWidth(2 * self.dlg.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
         self.dlg.show()
         self.dlg.repaint()
         QCoreApplication.processEvents()
