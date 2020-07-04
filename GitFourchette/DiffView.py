@@ -4,7 +4,6 @@ from PySide2.QtCore import *
 import re
 import git
 from typing import List
-import os
 
 import patch
 import DiffActionSets
@@ -12,34 +11,7 @@ import settings
 from status import gstatus
 import trash
 from util import excMessageBox
-
-normalBF = QTextBlockFormat()
-normalCF = QTextCharFormat()
-normalCF.setFont(settings.monoFont)
-
-plusBF = QTextBlockFormat()
-plusBF.setBackground(QColor(220, 254, 225))
-plusCF = normalCF
-
-minusBF = QTextBlockFormat()
-minusBF.setBackground(QColor(255, 227, 228))
-minusCF = normalCF
-
-arobaseBF = QTextBlockFormat()
-arobaseCF = QTextCharFormat()
-arobaseCF.setFont(settings.alternateFont)
-arobaseCF.setForeground(QColor(0, 80, 240))
-
-warningFormat = QTextCharFormat()
-warningFormat.setForeground(QColor(255, 0, 0))
-warningFormat.setFont(settings.alternateFont)
-
-
-# Examples of matches:
-# @@ -4,6 +4,7 @@
-# @@ -1 +1,165 @@
-# @@ -0,0 +1 @@
-hunkRE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@$")
+import DiffModel
 
 
 def bisect(a, x, lo=0, hi=None, key=lambda x: x):
@@ -82,124 +54,25 @@ class DiffView(QTextEdit):
         else:
             self.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
 
+        self.setCursorWidth(2)
+
     def setUntrackedContents(self, repo: git.Repo, path: str):
-        fullPath = os.path.join(repo.working_tree_dir, path)
-
-        fileSize = os.path.getsize(fullPath)
-        if fileSize > settings.prefs.diff_largeFileThreshold:
-            self.setFailureContents(F"Large file warning: {fileSize:,} bytes")
-            return
-
-        try:
-            with open(fullPath, 'rb') as f:
-                contents: str = f.read().decode('utf-8')
-        except UnicodeDecodeError as e:
-            self.setFailureContents(F"File appears to be binary.\n{e}")
-            return
-
         self.currentActionSet = DiffActionSets.untracked
-        document = QTextDocument(self)  # recreating a document is faster than clearing the existing one
-        cursor = QTextCursor(document)
-        cursor.setBlockFormat(plusBF)
-        cursor.setBlockCharFormat(plusCF)
-        cursor.insertText(contents)
-        self._replaceDocument(document)
+        self.currentGitRepo = repo
+        self.currentChange = None
+
+        dmodel = DiffModel.fromUntrackedFile(repo, path)
+        self.lineData = dmodel.lineData
+        self._replaceDocument(dmodel.document, dmodel.forceWrap)
 
     def setDiffContents(self, repo: git.Repo, change: git.Diff, diffActionSet: str):
         self.currentActionSet = diffActionSet
         self.currentGitRepo = repo
         self.currentChange = change
 
-        if change.change_type == 'D':
-            self.setFailureContents("File was deleted.")
-            return
-
-        if change.b_blob and change.b_blob.size > settings.prefs.diff_largeFileThreshold:
-            self.setFailureContents(F"Large file warning: {change.b_blob.size:,} bytes")
-            return
-        if change.a_blob and change.a_blob.size > settings.prefs.diff_largeFileThreshold:
-            self.setFailureContents(F"Large file warning: {change.a_blob.size:,} bytes")
-            return
-
-        try:
-            patchLines: List[str] = patch.makePatchFromGitDiff(repo, change)
-        except UnicodeDecodeError as e:
-            self.setFailureContents(F"File appears to be binary.\n{e}")
-            return
-
-        document = QTextDocument(self)  # recreating a document is faster than clearing the existing one
-        cursor: QTextCursor = QTextCursor(document)
-
-        firstBlock = True
-        self.lineData = []
-        lineA = -1
-        lineB = -1
-
-        for line in patchLines:
-            # skip diff header
-            if line.startswith("+++ ") or line.startswith("--- "):
-                continue
-
-            ld = patch.LineData()
-            ld.cursorStart = cursor.position()
-            ld.lineA = lineA
-            ld.lineB = lineB
-            ld.diffLineIndex = len(self.lineData)
-            ld.data = line
-            self.lineData.append(ld)
-
-            bf, cf = normalBF, normalCF
-            trimFront, trimBack = 1, None
-            trailer = None
-
-            if line.startswith('@@'):
-                bf, cf = arobaseBF, arobaseCF
-                trimFront = 0
-                hunkMatch = hunkRE.match(line)
-                lineA = int(hunkMatch.group(1))
-                lineB = int(hunkMatch.group(3))
-            elif line.startswith('+'):
-                bf = plusBF
-                lineB += 1
-            elif line.startswith('-'):
-                bf = minusBF
-                lineA += 1
-            else:
-                # context line
-                lineA += 1
-                lineB += 1
-
-            if line.endswith("\r\n"):
-                trimBack = -2
-                if settings.prefs.diff_showStrayCRs:
-                    trailer = "<CR>"
-            elif line.endswith("\n"):
-                trimBack = -1
-            else:
-                trailer = "<no newline at end of file>"
-
-            if not firstBlock:
-                cursor.insertBlock()
-                ld.cursorStart = cursor.position()
-            firstBlock = False
-
-            cursor.setBlockFormat(bf)
-            cursor.setCharFormat(cf)
-            cursor.insertText(line[trimFront:trimBack])
-
-            if trailer:
-                cursor.setCharFormat(warningFormat)
-                cursor.insertText(trailer)
-                cursor.setCharFormat(cf)
-
-        self._replaceDocument(document)
-
-    def setFailureContents(self, message):
-        document = QTextDocument(self)
-        cursor = QTextCursor(document)
-        cursor.setCharFormat(warningFormat)
-        cursor.insertText(message)
-        self._replaceDocument(document, forceWrap=True)
+        dmodel = DiffModel.fromGitDiff(repo, change)
+        self.lineData = dmodel.lineData
+        self._replaceDocument(dmodel.document, dmodel.forceWrap)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         menu: QMenu = self.createStandardContextMenu()
