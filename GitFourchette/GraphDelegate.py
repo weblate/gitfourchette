@@ -217,7 +217,7 @@ class GraphDelegate(QItemDelegate):
             rect.setLeft(rect.right())
             label = F"[{name}] "
             rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
-            painter.drawText(rect, label)
+            painter.drawText(rect, Qt.AlignVCenter, label)
             painter.restore()
         if meta is not None:
             if meta.hexsha in self.state.refCache:
@@ -233,21 +233,21 @@ class GraphDelegate(QItemDelegate):
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        painter.drawText(rect,
+        painter.drawText(rect, Qt.AlignVCenter,
                 metrics.elidedText(data['message'], Qt.ElideRight, rect.width()))
 
         # ------ Author
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Author * zw)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        painter.drawText(rect,
+        painter.drawText(rect, Qt.AlignVCenter,
                 metrics.elidedText(data['author'], Qt.ElideRight, rect.width()))
 
         # ------ Date
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Date * zw)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        painter.drawText(rect,
+        painter.drawText(rect, Qt.AlignVCenter,
                 metrics.elidedText(data['date'], Qt.ElideRight, rect.width()))
 
         # ------ Debug (show redrawn rows from last refresh)
@@ -264,4 +264,6 @@ class GraphDelegate(QItemDelegate):
 
     def sizeHint(self, option, index):
         # return QStyledItemDelegate.sizeHint(self, option, index)
-        return QItemDelegate.sizeHint(self, option, index)
+        r = QItemDelegate.sizeHint(self, option, index)
+        r.setHeight(r.height() * settings.prefs.graph_lineHeight)
+        return r
