@@ -234,8 +234,14 @@ class RepoState:
                 meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
             except StopIteration:
                 proc: subprocess.Popen = procWrapper.proc
+                # Check git log's return code.
+                # On Windows, the process seems to take a while to shut down after we catch StopIteration.
                 status = proc.poll()
-                assert status is not None, "git process stopped without a return code?"
+                if status is None:
+                    print("Giving some more time for Git to quit...")
+                    # This will raise a TimeoutExpired if git is really stuck.
+                    status = proc.wait(3)
+                assert status is not None, F"git process stopped without a return code?"
                 if status != 0:
                     stderrWrapper = io.TextIOWrapper(proc.stderr, errors='backslashreplace')
                     stderr = stderrWrapper.readline().strip()
@@ -371,6 +377,7 @@ class RepoState:
                         wantToSee.update(meta.parentHashes)
                     else:
                         # stop iterating because there's no more hashes we want to see
+                        # TODO: Maybe we should kill git here?
                         break
 
         gstatus.setProgressValue(3)
