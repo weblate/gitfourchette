@@ -120,6 +120,10 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
         repoMenu.addAction("&Find...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
 
+        goMenu = menubar.addMenu("&Go")
+        goMenu.addAction("&Next Tab", self.nextTab, QKeySequence(Qt.CTRL + Qt.Key_Tab))
+        goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_Tab))
+
         debugMenu = menubar.addMenu("&Debug")
         debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
         debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
@@ -303,6 +307,24 @@ class MainWindow(QMainWindow):
         self.tabs.widget(index).cleanup()
         self.tabs.removeTab(index, destroy=True)
         gc.collect()
+
+    def nextTab(self):
+        if self.tabs.count() == 0:
+            QApplication.beep()
+            return
+        index = self.tabs.currentIndex()
+        index += 1
+        index %= self.tabs.count()
+        self.tabs.tabs.setCurrentIndex(index)
+
+    def previousTab(self):
+        if self.tabs.count() == 0:
+            QApplication.beep()
+            return
+        index = self.tabs.currentIndex()
+        index += self.tabs.count() - 1
+        index %= self.tabs.count()
+        self.tabs.tabs.setCurrentIndex(index)
 
     def tryLoadSession(self):
         session = settings.Session()
