@@ -101,6 +101,8 @@ class MainWindow(QMainWindow):
         self.recentMenu = fileMenu.addMenu("Open &Recent")
         fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
         fileMenu.addSeparator()
+        fileMenu.addAction("&Settings...", self.openSettings, QKeySequence.Preferences)
+        fileMenu.addSeparator()
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
         repoMenu = menubar.addMenu("&Repo")
@@ -140,6 +142,10 @@ class MainWindow(QMainWindow):
             self.tabs.tabs.setMaximumHeight(menubar.height())
             self.setMenuWidget(menuContainer)
             menubar.adjustSize()
+
+    def openSettings(self):
+        prefsPath = settings.prefs.write()
+        QDesktopServices.openUrl('file:///' + prefsPath)
 
     def about(self):
         import sys, PySide2

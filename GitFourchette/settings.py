@@ -52,6 +52,7 @@ class BasePrefs:
         prefsPath = os.path.join(prefsDir, getattr(self, 'filename'))
         with open(prefsPath, 'w') as f:
             json.dump(self.__dict__, f, indent='\t')
+        return prefsPath
 
     def load(self):
         prefsPath = QStandardPaths.locate(QStandardPaths.AppConfigLocation, getattr(self, 'filename'))
