@@ -53,11 +53,6 @@ class MainWindow(QMainWindow):
 
         self.makeMenu()
 
-        self.memoryIndicator = QPushButton("Mem")
-        self.memoryIndicator.setMaximumHeight(16)
-        self.memoryIndicator.setMinimumWidth(128)
-        self.memoryIndicator.clicked.connect(lambda e: [gc.collect(), print("GC!"), self.updateMemoryIndicator()])
-        self.memoryIndicator.setToolTip("Force GC")
         self.statusProgress = QProgressBar(self)
         self.statusProgress.setMaximumHeight(16)
         self.statusProgress.setMaximumWidth(128)
@@ -70,7 +65,15 @@ class MainWindow(QMainWindow):
         self.statusBar = QStatusBar(self)
         self.statusBar.setSizeGripEnabled(False)
         self.statusBar.addPermanentWidget(self.statusProgress)
-        self.statusBar.addPermanentWidget(self.memoryIndicator)
+        if settings.prefs.debug_showMemoryIndicator:
+            self.memoryIndicator = QPushButton("Mem")
+            self.memoryIndicator.setMaximumHeight(16)
+            self.memoryIndicator.setMinimumWidth(128)
+            self.memoryIndicator.clicked.connect(lambda e: [gc.collect(), print("GC!"), self.updateMemoryIndicator()])
+            self.memoryIndicator.setToolTip("Force GC")
+            self.statusBar.addPermanentWidget(self.memoryIndicator)
+        else:
+            self.memoryIndicator = None
         self.setStatusBar(self.statusBar)
 
         self.initialChildren = list(self.findChildren(QObject))
@@ -89,7 +92,7 @@ class MainWindow(QMainWindow):
         # where loadCommitAsync -> loadDiffAsync -> loadCommitAsync -> loadDiffAsync...
 
     def paintEvent(self, event:QPaintEvent):
-        if settings.prefs.showMemoryIndicator:
+        if settings.prefs.debug_showMemoryIndicator:
             self.updateMemoryIndicator()
         super().paintEvent(event)
 
@@ -129,8 +132,8 @@ class MainWindow(QMainWindow):
         self.fillRecentMenu()
 
         # couldn't get menubar.cornerWidget to work, otherwise we could've used that
-        if False:  # traditional menu bar
-            self.setMenuBar(menuBar)
+        if not settings.prefs.tabs_mergeWithMenubar:  # traditional menu bar
+            self.setMenuBar(menubar)
         else:  # extended menu bar
             menuContainer = QWidget()
             menuContainer.setLayout(QHBoxLayout())

@@ -82,6 +82,7 @@ class Prefs(BasePrefs):
     tabs_closeButton: bool
     tabs_expanding: bool
     tabs_autoHide: bool
+    tabs_mergeWithMenubar: bool
     graph_lineHeight: float
 
     def __init__(self):
@@ -96,7 +97,8 @@ class Prefs(BasePrefs):
         self.tabs_closeButton = True
         self.tabs_expanding = True
         self.tabs_autoHide = False
-        self.showMemoryIndicator = True
+        self.tabs_mergeWithMenubar = True
+        self.debug_showMemoryIndicator = True
         self.graph_lineHeight = 1.0
 
 
