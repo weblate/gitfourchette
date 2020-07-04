@@ -48,7 +48,8 @@ class Entry:
 
 
 class FileListView(QListView):
-    nonEmptySelectionChanged: Signal = Signal()
+    nothingClicked = Signal()
+    entryClicked = Signal(object, str)
 
     entries: List[Entry]
     diffActionSet: str
@@ -112,7 +113,7 @@ class FileListView(QListView):
 
     def selectFirstRow(self):
         if self.model().rowCount() == 0:
-            self.repoWidget.diffView.clear()
+            self.nothingClicked.emit()
             self.clearSelection()
         else:
             self.setCurrentIndex(self.model().index(0, 0))
@@ -136,25 +137,11 @@ class FileListView(QListView):
         if len(indexes) == 0:
             return
 
-        self.nonEmptySelectionChanged.emit()
+        self.nothingClicked.emit()
 
         current = selected.indexes()[0]
-
-        if not current.isValid():
-            self.repoWidget.diffView.clear()
-            return
-        #QApplication.setOverrideCursor(Qt.WaitCursor)
-        #QApplication.processEvents()
-        try:
-            entry = self.entries[current.row()]
-            if entry.diff is not None:
-                self.repoWidget.diffView.setDiffContents(self.repo, entry.diff, self.diffActionSet)
-            else:
-                self.repoWidget.diffView.setUntrackedContents(self.repo, entry.path)
-        except BaseException as ex:
-            traceback.print_exc()
-            self.repoWidget.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
-        #QApplication.restoreOverrideCursor()
+        if current.isValid():
+            self.entryClicked.emit(self.entries[current.row()], self.diffActionSet)
 
     def selectedEntries(self) -> Generator[Entry, None, None]:
         for si in self.selectedIndexes():
@@ -196,7 +183,7 @@ class DirtyFileListView(FileListView):
     # Context menu action
     def stage(self):
         for entry in self.selectedEntries():
-            self.git().add(entry.path)
+            self.git.add(entry.path)
         self.patchApplied.emit()
 
     # Context menu action

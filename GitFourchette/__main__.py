@@ -5,6 +5,8 @@ from util import excMessageBox
 
 
 def excepthook(exctype, value, tb):
+    sys._excepthook(exctype, value, tb)
+    # todo: this is not thread safe!
     excMessageBox(value)
 
 

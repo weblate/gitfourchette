@@ -3,7 +3,7 @@ import io
 import os
 import subprocess
 import traceback
-from PySide2.QtCore import QSettings, QCoreApplication
+from PySide2.QtCore import QSettings, QCoreApplication, QMutex, QMutexLocker
 from PySide2.QtWidgets import QProgressDialog, QMessageBox
 from datetime import datetime
 from typing import List, Set
@@ -69,6 +69,7 @@ class RepoState:
     boldCommitHash: str
     order: List[CommitMetadata]
     debugRefreshId: int
+    mutex: QMutex
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
@@ -96,6 +97,9 @@ class RepoState:
 
         self.currentRefs = {}
 
+        # QRecursiveMutex causes problems
+        self.mutex = QMutex(QMutex.Recursive)
+
         """
         for remote in self.repo.remotes:
             for ref in remote.refs:
@@ -105,6 +109,9 @@ class RepoState:
     @property
     def shortName(self) -> str:
         return settings.history.getRepoNickname(self.repo.working_tree_dir)
+
+    def mutexLocker(self) -> QMutexLocker:
+        return QMutexLocker(self.mutex)
 
     def getOrCreateMetadata(self, key) -> CommitMetadata:
         assert len(key) == 40, 'metadata key should be 40-byte hex sha'

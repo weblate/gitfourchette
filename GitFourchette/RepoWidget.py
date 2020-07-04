@@ -1,6 +1,8 @@
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
+
+from Benchmark import Benchmark
 from RepoState import RepoState
 from DiffView import DiffView
 from FileListView import FileListView, DirtyFileListView, StagedFileListView
@@ -10,7 +12,10 @@ from util import fplural, excMessageBox
 from typing import List
 import git
 import settings
+import traceback
+from Worker import Worker
 from status import gstatus
+from FileListView import Entry
 
 
 FILESSTACK_READONLY_CARD = 0
@@ -27,6 +32,10 @@ class RepoWidget(QWidget):
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
 
+        # Thread pool for accessing the repo
+        self.threadpool = QThreadPool(self)
+        self.threadpool.setMaxThreadCount(1)
+
         self.state = None
 
         self.graphView = GraphView(self)
@@ -36,19 +45,23 @@ class RepoWidget(QWidget):
         self.dirtyView = DirtyFileListView(self)
         self.stageView = StagedFileListView(self)
 
-        self.stageView.nonEmptySelectionChanged.connect(lambda: self.dirtyView.clearSelection())
-        self.dirtyView.nonEmptySelectionChanged.connect(lambda: self.stageView.clearSelection())
+        self.stageView.nothingClicked.connect(self.dirtyView.clearSelection)
+        self.dirtyView.nothingClicked.connect(self.stageView.clearSelection)
 
         # Refresh file list views after applying a patch...
-        self.diffView.patchApplied.connect(self.fillStageView)  # ...from the diff view (partial line patch);
-        self.stageView.patchApplied.connect(self.fillStageView)  # ...from the staged file view (unstage entire file);
-        self.dirtyView.patchApplied.connect(self.fillStageView)  # ...and from the dirty file view (stage entire file).
+        self.diffView.patchApplied.connect(self.fillStageViewAsync)  # ...from the diff view (partial line patch);
+        self.stageView.patchApplied.connect(self.fillStageViewAsync)  # ...from the staged file view (unstage entire file);
+        self.dirtyView.patchApplied.connect(self.fillStageViewAsync)  # ...and from the dirty file view (stage entire file).
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
+        for v in [self.dirtyView, self.stageView, self.changedFilesView]:
+            v.nothingClicked.connect(self.diffView.clear)
+            v.entryClicked.connect(self.onFileEntryClicked)
+
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
-        self.graphView.commitClicked.connect(self.onCommitClicked)
-        self.graphView.uncommittedChangesClicked.connect(self.fillStageView) #onUncommittedChangesClicked)
+        self.graphView.commitClicked.connect(self.loadCommitAsync)
+        self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -149,24 +162,61 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentIndex(0)
         self.changedFilesView.clear()
 
-    def onCommitClicked(self, hexsha: str):
-        commit = self.state.repo.commit(hexsha)
+    def _startAsyncWorker(self, work, onComplete, caption):
+        w = Worker(work)
+        w.signals.result.connect(onComplete)
+        w.signals.finished.connect(gstatus.clearIndeterminateProgressCaption)
+        gstatus.setIndeterminateProgressCaption(caption)
+        self.threadpool.start(w)
 
-        self.changedFilesView.clear()
-        for parent in commit.parents:
-            self.changedFilesView.fillDiff(parent.diff(commit))
-        self.changedFilesView.selectFirstRow()
+    def loadCommitAsync(self, hexsha: str):
+        def work(progress_callback):
+            with self.state.mutexLocker():
+                commit = self.state.repo.commit(hexsha)
+                return [p.diff(commit) for p in commit.parents]
 
-        self.filesStack.setCurrentIndex(0)
+        def onComplete(parentDiffs):
+            self.changedFilesView.clear()
+            for d in parentDiffs:
+                self.changedFilesView.fillDiff(d)
+            self.changedFilesView.selectFirstRow()  # TODO: this should be async!
+            self.filesStack.setCurrentIndex(0)
 
-    def fillStageView(self):
+        self._startAsyncWorker(work, onComplete, "Loading commit...")
+
+    def fillStageViewAsync(self):
+        def work(progress_callback):
+            with self.state.mutexLocker():
+                dirtyChanges = self.state.getDirtyChanges()
+                untrackedFiles = self.state.getUntrackedFiles()
+                stagedChanges = self.state.getStagedChanges()
+            return (dirtyChanges, untrackedFiles, stagedChanges)
+
+        self._startAsyncWorker(
+            work,
+            lambda o: self._fillStageView(*o),
+            "Refreshing index...")
+
+    def onFileEntryClicked(self, entry, diffActionSet):
+        repo = self.state.repo
+        try:
+            with self.state.mutexLocker():
+                if entry.diff is not None:
+                    self.diffView.setDiffContents(repo, entry.diff, diffActionSet)
+                else:
+                    self.diffView.setUntrackedContents(repo, entry.path)
+        except BaseException as ex:
+            traceback.print_exc()
+            self.repoWidget.diffView.setFailureContents(F"Error displaying diff: {repr(ex)}")
+
+    def _fillStageView(self, dirtyChanges, untrackedFiles, stagedChanges):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
         self.dirtyView.clear()
-        self.dirtyView.fillDiff(self.state.getDirtyChanges())
-        self.dirtyView.fillUntracked(self.state.getUntrackedFiles())
+        self.dirtyView.fillDiff(dirtyChanges)
+        self.dirtyView.fillUntracked(untrackedFiles)
         self.stageView.clear()
-        self.stageView.fillDiff(self.state.getStagedChanges())  # R: prevent reversal
+        self.stageView.fillDiff(stagedChanges)
 
         nDirty = self.dirtyView.model().rowCount()
         nStaged = self.stageView.model().rowCount()
@@ -327,5 +377,5 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         else:
             self.graphView.patchFill(frontTrim, frontNewMetas)
         if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
-            self.fillStageView()
+            self.fillStageViewAsync()
         gstatus.clearProgress()
