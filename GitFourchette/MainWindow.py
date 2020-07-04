@@ -120,10 +120,10 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
         repoMenu.addAction("&Find...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
 
-        repoMenu = menubar.addMenu("&Debug")
-        repoMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
-        repoMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
-        repoMenu.addAction("Load Graph...", self.debug_loadGraphDump)
+        debugMenu = menubar.addMenu("&Debug")
+        debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
+        debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
+        debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {settings.PROGRAM_NAME}", self.about)
