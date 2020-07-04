@@ -98,3 +98,13 @@ def excMessageBox(exc, title="Unhandled Exception", message="An exception was th
     layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
 
     qmb.exec_()
+
+
+def excStrings(exc):
+    summary = traceback.format_exception_only(exc.__class__, exc)
+    summary = ''.join(summary).strip()
+
+    details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+    details = ''.join(details).strip()
+
+    return summary, details

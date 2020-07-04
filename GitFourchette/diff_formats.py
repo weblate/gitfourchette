@@ -1,6 +1,7 @@
 from PySide2.QtGui import *
 
 import settings
+import colors
 
 normalBF = QTextBlockFormat()
 normalCF = QTextCharFormat()
@@ -19,6 +20,10 @@ arobaseCF = QTextCharFormat()
 arobaseCF.setFont(settings.alternateFont)
 arobaseCF.setForeground(QColor(0, 80, 240))
 
-warningFormat = QTextCharFormat()
-warningFormat.setForeground(QColor(255, 0, 0))
-warningFormat.setFont(settings.alternateFont)
+warningFormat1 = QTextCharFormat()
+warningFormat1.setForeground(QColor(200, 30, 0))
+warningFormat1.setFont(settings.boldFont)
+
+warningFormat2 = QTextCharFormat()
+warningFormat2.setForeground(QColor(200, 30, 0))
+#warningFormat2.setFont(settings.alternateFont)

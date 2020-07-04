@@ -4,6 +4,7 @@ import os
 from typing import List
 from dataclasses import dataclass
 import patch
+from util import excStrings
 from diff_formats import *
 
 
@@ -21,11 +22,17 @@ class DiffModel:
     forceWrap: bool
 
 
-def fromFailureMessage(message):
+def fromFailureMessage(message, details=""):
     document = QTextDocument()
     cursor = QTextCursor(document)
-    cursor.setCharFormat(warningFormat)
+    cursor.setCharFormat(warningFormat1)
     cursor.insertText(message)
+    if details:
+        cursor.insertBlock()
+        cursor.setCharFormat(warningFormat2)
+        if details.startswith("Traceback"):
+            cursor.insertText('\n')
+        cursor.insertText(details)
     return DiffModel(document, None, True)
 
 
@@ -39,8 +46,9 @@ def fromUntrackedFile(repo: git.Repo, path: str):
     try:
         with open(fullPath, 'rb') as f:
             contents: str = f.read().decode('utf-8')
-    except UnicodeDecodeError as e:
-        return fromFailureMessage(F"File appears to be binary.\n{e}")
+    except UnicodeDecodeError as exc:
+        summary, details = excStrings(exc)
+        return fromFailureMessage("File appears to be binary.", summary)
 
     document = QTextDocument()  # recreating a document is faster than clearing the existing one
     cursor = QTextCursor(document)
@@ -52,10 +60,6 @@ def fromUntrackedFile(repo: git.Repo, path: str):
 
 
 def fromGitDiff(repo: git.Repo, change: git.Diff):
-    #self.currentActionSet = diffActionSet
-    #self.currentGitRepo = repo
-    #self.currentChange = change
-
     if change.change_type == 'D':
         return fromFailureMessage("File was deleted.")
 
@@ -66,8 +70,9 @@ def fromGitDiff(repo: git.Repo, change: git.Diff):
 
     try:
         patchLines: List[str] = patch.makePatchFromGitDiff(repo, change)
-    except UnicodeDecodeError as e:
-        return fromFailureMessage(F"File appears to be binary.\n{e}")
+    except UnicodeDecodeError as exc:
+        summary, details = excStrings(exc)
+        return fromFailureMessage("File appears to be binary.", summary)
 
     document = QTextDocument()  # recreating a document is faster than clearing the existing one
     cursor: QTextCursor = QTextCursor(document)
@@ -130,7 +135,7 @@ def fromGitDiff(repo: git.Repo, change: git.Diff):
         cursor.insertText(line[trimFront:trimBack])
 
         if trailer:
-            cursor.setCharFormat(warningFormat)
+            cursor.setCharFormat(warningFormat1)
             cursor.insertText(trailer)
             cursor.setCharFormat(cf)
 

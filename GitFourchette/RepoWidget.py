@@ -9,7 +9,7 @@ from DiffView import DiffView
 from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from RemoteProgress import RemoteProgress
-from util import fplural, excMessageBox
+from util import fplural, excMessageBox, excStrings
 from typing import List
 import git
 import settings
@@ -171,7 +171,7 @@ class RepoWidget(QWidget):
         self.threadpool.start(w)
 
     def loadCommitAsync(self, hexsha: str):
-        def work(progress_callback):
+        def work(progress_callback) -> List[git.DiffIndex]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 commit = self.state.repo.commit(hexsha)
@@ -206,10 +206,14 @@ class RepoWidget(QWidget):
         def work(progress_callback):
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
-                if entry.diff is not None:
-                    dm = DiffModel.fromGitDiff(repo, entry.diff)
-                else:
-                    dm = DiffModel.fromUntrackedFile(repo, entry.path)
+                try:
+                    if entry.diff is not None:
+                        dm = DiffModel.fromGitDiff(repo, entry.diff)
+                    else:
+                        dm = DiffModel.fromUntrackedFile(repo, entry.path)
+                except BaseException as exc:
+                    summary, details = excStrings(exc)
+                    dm = DiffModel.fromFailureMessage(summary, details)
                 dm.document.moveToThread(QApplication.instance().thread())
                 return dm
 
