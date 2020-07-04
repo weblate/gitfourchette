@@ -162,8 +162,6 @@ class GraphDelegate(QItemDelegate):
         # so that alignments are consistent in all commits regardless of bold or italic.
         zw = painter.fontMetrics().horizontalAdvance('0')
 
-        debugHighlightColor: QColor = None
-
         if index.row() > 0:
             meta = index.data()
 
@@ -181,10 +179,6 @@ class GraphDelegate(QItemDelegate):
 
             if meta.bold:
                 painter.setFont(settings.boldFont)
-
-            if meta.debugPrefix:
-                data['hash'] = data['hash'][:-1] + '-' + meta.debugPrefix
-                debugHighlightColor = colors.rainbow[meta.debugRefreshId % len(colors.rainbow)]
         else:
             meta = None
             data = {
@@ -202,8 +196,6 @@ class GraphDelegate(QItemDelegate):
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
-        if debugHighlightColor:
-            painter.fillRect(rect, debugHighlightColor)
         charRect = QRect(rect.left(), rect.top(), zw, rect.height())
         painter.save()
         painter.setPen(palette.color(pcg, QPalette.ColorRole.PlaceholderText))
@@ -257,6 +249,14 @@ class GraphDelegate(QItemDelegate):
         if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
         painter.drawText(rect,
                 metrics.elidedText(data['date'], Qt.ElideRight, rect.width()))
+
+        # ------ Debug (show redrawn rows from last refresh)
+        if meta and meta.debugPrefix:
+            rect = QRect(option.rect)
+            rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * zw)
+            rect.setRight(rect.left() + 2*zw)
+            painter.fillRect(rect, colors.rainbow[meta.debugRefreshId % len(colors.rainbow)])
+            painter.drawText(rect, "-"+meta.debugPrefix)
 
         # ----------------
         painter.restore()
