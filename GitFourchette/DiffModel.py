@@ -59,17 +59,14 @@ def fromUntrackedFile(repo: git.Repo, path: str):
     return DiffModel(document, None, False)
 
 
-def fromGitDiff(repo: git.Repo, change: git.Diff):
-    if change.change_type == 'D':
-        return fromFailureMessage("File was deleted.")
-
+def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = False):
     if change.b_blob and change.b_blob.size > settings.prefs.diff_largeFileThreshold:
         return fromFailureMessage(F"Large file warning: {change.b_blob.size:,} bytes")
     if change.a_blob and change.a_blob.size > settings.prefs.diff_largeFileThreshold:
         return fromFailureMessage(F"Large file warning: {change.a_blob.size:,} bytes")
 
     try:
-        patchLines: List[str] = patch.makePatchFromGitDiff(repo, change)
+        patchLines: List[str] = patch.makePatchFromGitDiff(repo, change, allowRawFileAccess)
     except UnicodeDecodeError as exc:
         summary, details = excStrings(exc)
         return fromFailureMessage("File appears to be binary.", summary)

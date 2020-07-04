@@ -2,6 +2,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
+import DiffActionSets
 import DiffModel
 from Benchmark import Benchmark
 from RepoState import RepoState
@@ -208,7 +209,8 @@ class RepoWidget(QWidget):
             with self.state.mutexLocker():
                 try:
                     if entry.diff is not None:
-                        dm = DiffModel.fromGitDiff(repo, entry.diff)
+                        allowRawFileAccess = diffActionSet in DiffActionSets.allowRawFileAccess
+                        dm = DiffModel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
                     else:
                         dm = DiffModel.fromUntrackedFile(repo, entry.path)
                 except BaseException as exc:

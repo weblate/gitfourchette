@@ -14,7 +14,7 @@ class LineData:
     data: str
 
 
-def makePatchFromGitDiff(repo: git.Repo, change: git.Diff):
+def makePatchFromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = False):
     # added files (that didn't exist before) don't have an a_blob
     if change.a_blob:
         a = change.a_blob.data_stream.read()
@@ -22,11 +22,18 @@ def makePatchFromGitDiff(repo: git.Repo, change: git.Diff):
         a = b""
 
     # Deleted file: no b_blob
-    if change.b_blob:
+    if change.change_type == "D":
+        assert not change.b_blob
+        b = b""
+    elif change.b_blob:
         b = change.b_blob.data_stream.read()
-    else:
+    elif allowRawFileAccess:
+        # If there is no b-blob and it's not a D-change,
+        # then it's probably an M-change that isn't committed yet.
         with open(os.path.join(repo.working_tree_dir, change.b_path), 'rb') as f:
             b = f.read()
+    else:
+        b = b""
 
     a = a.decode('utf-8').splitlines(keepends=True)
     b = b.decode('utf-8').splitlines(keepends=True)

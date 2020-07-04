@@ -27,7 +27,7 @@ def trashGitDiff(repo: git.Repo, diff: git.Diff):
     if diff.change_type == 'D':
         # It doesn't make sense to back up a file deletion
         return
-    lines = patch.makePatchFromGitDiff(repo, diff)
+    lines = patch.makePatchFromGitDiff(repo, diff, True)
     with open(newTrashFileName(repo, '.patch'), 'w') as f:
         f.writelines(lines)
 
