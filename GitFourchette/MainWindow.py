@@ -6,7 +6,6 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import settings
 import os
-import psutil
 import gc
 import pickle
 import zlib
@@ -16,6 +15,15 @@ from RepoWidget import RepoWidget
 from util import compactSystemPath, showInFolder, excMessageBox
 from status import gstatus
 from QTabWidget2 import QTabWidget2
+
+
+try:
+    import psutil
+except ImportError:
+    print("psutil isn't available. The memory indicator will not work.")
+    psutilAvailable = False
+else:
+    psutilAvailable = True
 
 
 class Session:
@@ -69,8 +77,11 @@ class MainWindow(QMainWindow):
 
     def updateMemoryIndicator(self):
         nChildren = len(self.findChildren(QObject))
-        rss = psutil.Process(os.getpid()).memory_info().rss
-        self.memoryIndicator.setText(F"{rss // 1024:,}K {nChildren}Q")
+        if psutilAvailable:
+            rss = psutil.Process(os.getpid()).memory_info().rss
+            self.memoryIndicator.setText(F"{rss // 1024:,}K {nChildren}Q")
+        else:
+            self.memoryIndicator.setText(F"{nChildren}Q")
 
     def updateStatusMessage(self, message):
         self.statusBar.showMessage(message)
