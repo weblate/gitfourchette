@@ -44,7 +44,7 @@ class BasePrefs:
     def write(self):
         os.makedirs(prefsDir, exist_ok=True)
         prefsPath = os.path.join(prefsDir, getattr(self, 'filename'))
-        with open(prefsPath, 'w') as f:
+        with open(prefsPath, 'w', encoding='utf-8') as f:
             json.dump(self.__dict__, f, indent='\t')
         return prefsPath
 

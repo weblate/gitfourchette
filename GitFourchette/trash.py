@@ -19,7 +19,7 @@ def newTrashFileName(repo: git.Repo, suffix: str) -> str:
 
 
 def trashRawPatch(repo: git.Repo, patch: str):
-    with open(newTrashFileName(repo, '.patch'), 'w') as f:
+    with open(newTrashFileName(repo, '.patch'), 'w', encoding='utf-8') as f:
         f.write(patch)
 
 
@@ -28,7 +28,7 @@ def trashGitDiff(repo: git.Repo, diff: git.Diff):
         # It doesn't make sense to back up a file deletion
         return
     lines = patch.makePatchFromGitDiff(repo, diff, True)
-    with open(newTrashFileName(repo, '.patch'), 'w') as f:
+    with open(newTrashFileName(repo, '.patch'), 'w', encoding='utf-8') as f:
         f.writelines(lines)
 
 
