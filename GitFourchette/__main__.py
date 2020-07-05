@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QSysInfo
 import sys
 import signal
 from util import excMessageBox
@@ -24,6 +24,14 @@ if __name__ == "__main__":
     with open("icons/style.qss", "r") as f:
         app.setStyleSheet(f.read())
     app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
+
+    # Hack so we don't get out-of-place Tahoma on Windows.
+    # TODO: Check whether Qt 6 has made this unnecessary (when it comes out).
+    if QSysInfo.productType() == "windows":
+        # Get QMenu's font (which is correct) instead of using raw Segoe UI,
+        # because some locales might use a different font than Segoe.
+        sysFont = QApplication.font("QMenu")
+        QApplication.setFont(sysFont)
 
     import settings
     if settings.prefs.qtStyle:
