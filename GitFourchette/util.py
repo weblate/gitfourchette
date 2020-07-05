@@ -83,6 +83,8 @@ def messageSummary(body: str):
 
 
 def excMessageBox(exc, title="Unhandled Exception", message="An exception was thrown.", parent=None):
+    traceback.print_exc()
+
     summary = traceback.format_exception_only(exc.__class__, exc)
     summary = ''.join(summary).strip()
 
@@ -91,9 +93,8 @@ def excMessageBox(exc, title="Unhandled Exception", message="An exception was th
 
     qmb = QMessageBox(QMessageBox.Critical, title, F"{message}\n{summary}", parent=parent)
     qmb.setDetailedText(details)
-    qmb.setFixedWidth(1200)
 
-    horizontalSpacer = QSpacerItem(600, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
+    horizontalSpacer = QSpacerItem(500, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
     layout = qmb.layout()
     layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
 
