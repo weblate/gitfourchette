@@ -3,7 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 import re
-from settings import prefs, PROGRAM_NAME
+from settings import prefs, monoFont, PROGRAM_NAME
 
 
 def prettifyCamelCase(x):
@@ -70,6 +70,11 @@ class PrefsDialog(QDialog):
                     i += 1
                 qcb.textActivated.connect(lambda v, k=k: self.assign(k, v))
                 form.addRow(caption, qcb)
+            elif k == 'diff_font':
+                qfcb = QFontComboBox()
+                qfcb.setCurrentFont(monoFont)
+                qfcb.currentFontChanged.connect(lambda v, k=k: self.assign(k, v.toString()))
+                form.addRow(caption, qfcb)
             elif t is str:
                 qle = QLineEdit(value, self)
                 form.addRow(caption, qle)

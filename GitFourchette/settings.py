@@ -86,6 +86,7 @@ class Prefs(BasePrefs):
     longTimeFormat              : str           = "%c"
     shortenDirectoryNames       : bool          = True
     showStatusBar               : bool          = True
+    diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4
     diff_largeFileThreshold     : int           = 300000
     diff_showStrayCRs           : bool          = True
@@ -154,6 +155,8 @@ history.load()
 
 monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
 monoFont.setPointSize(9)
+if prefs.diff_font:
+    monoFont.fromString(prefs.diff_font)
 monoFontMetrics = QFontMetrics(monoFont)
 
 alternateFont = QFont()
