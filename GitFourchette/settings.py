@@ -86,9 +86,9 @@ class Prefs(BasePrefs):
     tabs_closeButton            : bool          = True
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False
-    tabs_mergeWithMenubar       : bool          = True
-    graph_lineHeight            : float         = 1.0
+    tabs_mergeWithMenubar       : bool          = False
     graph_topoOrder             : bool          = True
+    graph_rowHeight             : float         = 1.0
     graph_maxLanes              : int           = 32
     graph_flattenLanes          : bool          = True
     graph_newLanesAlwaysRightmost:bool          = False
