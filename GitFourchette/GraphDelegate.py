@@ -62,6 +62,12 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
         myRemap = remapAbove[MY_LANE]
     mx = x + myRemap * LANE_WIDTH
 
+    # draw bullet point _outline_ for this commit, beneath everything else, if it's within the lanes that are shown
+    if MY_LANE < MAX_LANES:
+        painter.setPen(QPen(Qt.white, 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
+
     # parent info for Fork Down
     parentsRemaining = set(meta.parentHashes)
     parent0 = meta.parentHashes[0] if len(meta.parentHashes) > 0 else None
