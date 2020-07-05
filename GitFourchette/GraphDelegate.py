@@ -9,11 +9,6 @@ from RepoState import CommitMetadata, RepoState
 from util import sign, messageSummary
 
 
-XMargin = 4
-ColW_Author = 16
-ColW_Hash = settings.prefs.shortHashChars + 1
-ColW_Date = 16
-
 LANE_WIDTH = 10
 LANE_THICKNESS = 2
 DOT_RADIUS = 3
@@ -143,6 +138,11 @@ class GraphDelegate(QItemDelegate):
     def paint(self, painter, option, index):
         # print("Render Index Row: " +  str(index.row()))
         # super(__class__, self).paint(painter, option, index)
+
+        XMargin = 4
+        ColW_Author = 16
+        ColW_Hash = settings.prefs.shortHashChars + 1
+        ColW_Date = 16
 
         painter.save()
 

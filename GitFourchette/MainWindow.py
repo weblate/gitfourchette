@@ -15,6 +15,7 @@ from RepoWidget import RepoWidget
 from util import compactSystemPath, showInFolder, excMessageBox
 from status import gstatus
 from QTabWidget2 import QTabWidget2
+from PrefsDialog import PrefsDialog
 
 
 try:
@@ -53,7 +54,7 @@ class MainWindow(QMainWindow):
 
         self.makeMenu()
 
-        self.statusProgress = QProgressBar(self)
+        self.statusProgress = QProgressBar()
         self.statusProgress.setMaximumHeight(16)
         self.statusProgress.setMaximumWidth(128)
         self.statusProgress.setVisible(False)
@@ -62,7 +63,7 @@ class MainWindow(QMainWindow):
         gstatus.progressMaximum.connect(lambda v: self.statusProgress.setMaximum(v))
         gstatus.progressValue.connect(lambda v: [self.statusProgress.setVisible(True), self.statusProgress.setValue(v)])
         gstatus.progressDisable.connect(lambda: self.statusProgress.setVisible(False))
-        self.statusBar = QStatusBar(self)
+        self.statusBar = QStatusBar()
         self.statusBar.setSizeGripEnabled(False)
         self.statusBar.addPermanentWidget(self.statusProgress)
         if settings.prefs.debug_showMemoryIndicator:
@@ -74,7 +75,8 @@ class MainWindow(QMainWindow):
             self.statusBar.addPermanentWidget(self.memoryIndicator)
         else:
             self.memoryIndicator = None
-        self.setStatusBar(self.statusBar)
+        if settings.prefs.showStatusBar:
+            self.setStatusBar(self.statusBar)
 
         self.initialChildren = list(self.findChildren(QObject))
 
@@ -92,7 +94,7 @@ class MainWindow(QMainWindow):
         # where loadCommitAsync -> loadDiffAsync -> loadCommitAsync -> loadDiffAsync...
 
     def paintEvent(self, event:QPaintEvent):
-        if settings.prefs.debug_showMemoryIndicator:
+        if self.memoryIndicator:
             self.updateMemoryIndicator()
         super().paintEvent(event)
 
@@ -124,10 +126,11 @@ class MainWindow(QMainWindow):
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence(Qt.CTRL + Qt.Key_Tab))
         goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_Tab))
 
-        debugMenu = menubar.addMenu("&Debug")
-        debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
-        debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
-        debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
+        if settings.prefs.debug_showDebugMenu:
+            debugMenu = menubar.addMenu("&Debug")
+            debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
+            debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
+            debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"About {settings.PROGRAM_NAME}", self.about)
@@ -151,8 +154,22 @@ class MainWindow(QMainWindow):
             menubar.adjustSize()
 
     def openSettings(self):
-        prefsPath = settings.prefs.write()
-        QDesktopServices.openUrl('file:///' + prefsPath)
+        dlg = PrefsDialog(self)
+        rc = dlg.exec_()
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+        if rc != PrefsDialog.Accepted:
+            return
+        if not dlg.prefDiff:  # No changes were made to the prefs
+            return
+        # Apply changes from prefDiff to the actual prefs
+        for k in dlg.prefDiff:
+            settings.prefs.__dict__[k] = dlg.prefDiff[k]
+        # Write prefs to disk
+        settings.prefs.write()
+        QMessageBox.warning(
+            self,
+            "Apply Settings",
+            F"Some changes may require restarting {settings.PROGRAM_NAME} to take effect.")
 
     def about(self):
         import sys, PySide2
