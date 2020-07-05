@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 VERSION = "0.1-preview"
 
-PROGRAM_NAME = "GitFourchette🅪"
+PROGRAM_NAME = "GitFourchette"
 
 QCoreApplication.setApplicationVersion(VERSION)
 QCoreApplication.setApplicationName("GitFourchette")  # used by QStandardPaths
