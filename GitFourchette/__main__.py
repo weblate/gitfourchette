@@ -1,4 +1,5 @@
 from PySide2.QtWidgets import QApplication
+from PySide2.QtCore import Qt
 import sys
 import signal
 from util import excMessageBox
@@ -22,6 +23,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     with open("icons/style.qss", "r") as f:
         app.setStyleSheet(f.read())
+    app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
 
     import MainWindow
     window = MainWindow.MainWindow()
