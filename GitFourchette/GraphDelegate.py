@@ -126,8 +126,7 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
     rect.setRight(rect.right() + LANE_WIDTH)
 
 
-# différence entre QItemDelegate et QStyledItemDelegate?
-class GraphDelegate(QItemDelegate):
+class GraphDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
         self.repoWidget = repoWidget
@@ -137,8 +136,20 @@ class GraphDelegate(QItemDelegate):
         return self.repoWidget.state
 
     def paint(self, painter, option, index):
+        hasFocus = option.state & QStyle.State_HasFocus
+        isSelected = option.state & QStyle.State_Selected
+
+        # Draw selection background _underneath_ the style's default graphics.
+        # This is a workaround for the "windowsvista" style, which does not draw a solid color background for
+        # selected items -- instead, it draws a very slight alpha overlay on _top_ of the item.
+        # The problem is that its palette still returns white for foreground text, so the result would be unreadable
+        # if we didn't draw a strong solid-color background. Most other styles draw their own background as a solid
+        # color, so this rect is probably not visible outside of "windowsvista".
+        if hasFocus and isSelected:
+            painter.fillRect(option.rect, option.palette.color(QPalette.ColorRole.Highlight))
+
         # print("Render Index Row: " +  str(index.row()))
-        # super(__class__, self).paint(painter, option, index)
+        super().paint(painter, option, index)
 
         XMargin = 4
         ColW_Author = 16
@@ -148,11 +159,12 @@ class GraphDelegate(QItemDelegate):
         painter.save()
 
         palette: QPalette = option.palette
-        pcg = QPalette.ColorGroup.Current if option.state & QStyle.State_HasFocus else QPalette.ColorGroup.Disabled
+        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
 
-        if option.state & QStyle.State_Selected:
-            painter.fillRect(option.rect, palette.color(pcg, QPalette.ColorRole.Highlight))
-            painter.setPen(palette.color(QPalette.ColorRole.HighlightedText))
+        if isSelected:
+            #if option.state & QStyle.State_HasFocus:
+            #    painter.fillRect(option.rect, palette.color(pcg, QPalette.ColorRole.Highlight))
+            painter.setPen(palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
 
         rect = QRect(option.rect)
         rect.setLeft(rect.left() + XMargin)
@@ -164,29 +176,18 @@ class GraphDelegate(QItemDelegate):
 
         if index.row() > 0:
             meta = index.data()
-
-            summary, contd = messageSummary(meta.body)
-
-            data = {
-                'hash': meta.hexsha[:settings.prefs.shortHashChars],
-                'author': meta.authorEmail.split('@')[0],  # [:8],
-                'date': datetime.fromtimestamp(meta.authorTimestamp).strftime(settings.prefs.shortTimeFormat),
-                'message': summary,
-            }
-
-            #assert meta.laneFrame, "lane frame missing from commit metadata"
-            #assert meta.laneFrame.myLane >= 0, "illegal lane number"
-
+            summaryText, contd = messageSummary(meta.body)
+            hashText = meta.hexsha[:settings.prefs.shortHashChars]
+            authorText = meta.authorEmail.split('@')[0]
+            dateText = datetime.fromtimestamp(meta.authorTimestamp).strftime(settings.prefs.shortTimeFormat)
             if meta.bold:
                 painter.setFont(settings.boldFont)
         else:
             meta = None
-            data = {
-                'hash': "·" * settings.prefs.shortHashChars,
-                'author': "",
-                'date': "",
-                'message': index.data(),
-            }
+            summaryText = "Uncommitted Changes"
+            hashText = "·" * settings.prefs.shortHashChars
+            authorText = ""
+            dateText = ""
             painter.setFont(settings.alternateFont)
 
         # Get metrics now so the message gets elided according to the custom font style
@@ -197,8 +198,8 @@ class GraphDelegate(QItemDelegate):
         rect.setWidth(ColW_Hash * zw)
         charRect = QRect(rect.left(), rect.top(), zw, rect.height())
         painter.save()
-        painter.setPen(palette.color(pcg, QPalette.ColorRole.PlaceholderText))
-        for hashChar in data['hash']:
+        painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
+        for hashChar in hashText:
             painter.drawText(charRect, Qt.AlignCenter, hashChar)
             charRect.translate(zw, 0)
         painter.restore()
@@ -226,40 +227,39 @@ class GraphDelegate(QItemDelegate):
                 for tag in self.state.tagCache[meta.hexsha]:
                     drawTagOrRef(tag, Qt.darkYellow)
 
+        def elide(text):
+            return metrics.elidedText(text, Qt.ElideRight, rect.width())
+
         # ------ message
         if meta and not meta.hasLocal:
             painter.setPen(QColor(Qt.gray))
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
-        painter.drawText(rect, Qt.AlignVCenter,
-                metrics.elidedText(data['message'], Qt.ElideRight, rect.width()))
+        painter.drawText(rect, Qt.AlignVCenter, elide(summaryText))
 
         # ------ Author
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Author * zw)
-        painter.drawText(rect, Qt.AlignVCenter,
-                metrics.elidedText(data['author'], Qt.ElideRight, rect.width()))
+        painter.drawText(rect, Qt.AlignVCenter, elide(authorText))
 
         # ------ Date
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Date * zw)
-        painter.drawText(rect, Qt.AlignVCenter,
-                metrics.elidedText(data['date'], Qt.ElideRight, rect.width()))
+        painter.drawText(rect, Qt.AlignVCenter, elide(dateText))
 
         # ------ Debug (show redrawn rows from last refresh)
-        if meta and meta.debugPrefix:
+        if settings.prefs.debug_showDirtyCommitsAfterRefresh and meta and meta.debugPrefix:
             rect = QRect(option.rect)
             rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * zw)
-            rect.setRight(rect.left() + 2*zw)
+            rect.setRight(rect.left() + 3*zw)
             painter.fillRect(rect, colors.rainbow[meta.debugRefreshId % len(colors.rainbow)])
-            painter.drawText(rect, "-"+meta.debugPrefix)
+            painter.drawText(rect, Qt.AlignVCenter, "-"+meta.debugPrefix)
 
         # ----------------
         painter.restore()
         pass  # QStyledItemDelegate.paint(self, painter, option, index)
 
     def sizeHint(self, option, index):
-        # return QStyledItemDelegate.sizeHint(self, option, index)
-        r = QItemDelegate.sizeHint(self, option, index)
-        r.setHeight(r.height() * settings.prefs.graph_lineHeight)
+        r = super().sizeHint(option, index)
+        r.setHeight(r.height() * settings.prefs.graph_rowHeight)
         return r
