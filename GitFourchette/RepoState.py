@@ -208,7 +208,7 @@ class RepoState:
     def loadCommitList(self, progress: QProgressDialog):
         procWrapper, stdoutWrapper = self.getGitProcess(self.repo)
 
-        self.setBoldCommit(self.repo.active_branch.commit.hexsha)
+        self.setBoldCommit(self.repo.head.commit.hexsha)
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
@@ -317,7 +317,7 @@ class RepoState:
 
         wantToSee: set = self.getTaintedCommits()
 
-        self.setBoldCommit(self.repo.active_branch.commit.hexsha)
+        self.setBoldCommit(self.repo.head.commit.hexsha)
 
         if len(wantToSee) == 0:
             gstatus.setText(F"{self.shortName}: no new commits to draw")

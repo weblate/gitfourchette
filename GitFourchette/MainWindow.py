@@ -207,8 +207,14 @@ class MainWindow(QMainWindow):
             return
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
-        shortname = settings.history.getRepoNickname(w.state.repo.working_tree_dir)
-        self.setWindowTitle(F"{shortname} [{w.state.repo.active_branch}] — {settings.PROGRAM_NAME}")
+        shortname = w.state.shortName
+        repo = w.state.repo
+        inBrackets = ""
+        if repo.head.is_detached:
+            inBrackets = F"detached HEAD @ {repo.head.commit.hexsha[:settings.prefs.shortHashChars]}"
+        else:
+            inBrackets = str(repo.active_branch)
+        self.setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
         rw: RepoWidget = self.tabs.stacked.widget(i)
