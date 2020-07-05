@@ -4,7 +4,6 @@ from PySide2.QtCore import *
 from datetime import datetime
 import settings
 import colors
-from settings import FLATTEN_LANES, DEBUGRECTS, MAX_LANES
 from RepoState import CommitMetadata, RepoState
 from util import sign, messageSummary
 
@@ -29,6 +28,8 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
     bottom = int(rect.y() + rect.height())  # Don't use rect.bottom(), which for historical reasons doesn't return what we want (see Qt docs)
     middle = (top + bottom) // 2
 
+    MAX_LANES = settings.prefs.graph_maxLanes
+
     # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
     lanesAbove = meta.laneFrame.lanesAbove[:MAX_LANES]
     lanesBelow = meta.laneFrame.lanesBelow[:MAX_LANES]
@@ -37,7 +38,7 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
 
     remapAbove = []
     remapBelow = []
-    if FLATTEN_LANES:
+    if settings.prefs.graph_flattenLanes:
         ai, bi = -1, -1
         for i in range(TOTAL):
             if i < len(lanesAbove) and lanesAbove[i]: ai += 1
@@ -156,7 +157,6 @@ class GraphDelegate(QItemDelegate):
         rect = QRect(option.rect)
         rect.setLeft(rect.left() + XMargin)
         rect.setRight(rect.right() - XMargin)
-        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
 
         # Get metrics of '0' before setting a custom font,
         # so that alignments are consistent in all commits regardless of bold or italic.
@@ -195,7 +195,6 @@ class GraphDelegate(QItemDelegate):
 
         # ------ Hash
         rect.setWidth(ColW_Hash * zw)
-        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
         charRect = QRect(rect.left(), rect.top(), zw, rect.height())
         painter.save()
         painter.setPen(palette.color(pcg, QPalette.ColorRole.PlaceholderText))
@@ -232,21 +231,18 @@ class GraphDelegate(QItemDelegate):
             painter.setPen(QColor(Qt.gray))
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
-        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
         painter.drawText(rect, Qt.AlignVCenter,
                 metrics.elidedText(data['message'], Qt.ElideRight, rect.width()))
 
         # ------ Author
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Author * zw)
-        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
         painter.drawText(rect, Qt.AlignVCenter,
                 metrics.elidedText(data['author'], Qt.ElideRight, rect.width()))
 
         # ------ Date
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Date * zw)
-        if DEBUGRECTS: painter.drawRoundedRect(rect, 4, 4)
         painter.drawText(rect, Qt.AlignVCenter,
                 metrics.elidedText(data['date'], Qt.ElideRight, rect.width()))
 

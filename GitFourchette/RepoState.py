@@ -13,7 +13,6 @@ import settings
 from Benchmark import Benchmark
 from lanes import LaneGenerator, LaneFrame
 from status import gstatus
-from settings import TOPO_ORDER
 
 
 PROGRESS_INTERVAL = 5000
@@ -162,7 +161,7 @@ class RepoState:
             '--pretty=tformat:%H%n%P%n%an%n%ae%n%at%n%S%n%B%n%x00'  # format vs tformat?
         ]
 
-        if TOPO_ORDER:
+        if settings.prefs.graph_topoOrder:
             cmd.append('--topo-order')
 
         procWrapper: git.Git.AutoInterrupt = repo.git.execute(cmd, as_process=True)

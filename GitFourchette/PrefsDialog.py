@@ -75,6 +75,13 @@ class PrefsDialog(QDialog):
                 qfcb.setCurrentFont(monoFont)
                 qfcb.currentFontChanged.connect(lambda v, k=k: self.assign(k, v.toString()))
                 form.addRow(caption, qfcb)
+            elif k == 'graph_topoOrder':
+                qcb = QComboBox()
+                qcb.addItem("Chronological")
+                qcb.addItem("Topological")
+                qcb.setCurrentIndex(1 if value else 0)
+                qcb.currentIndexChanged.connect(lambda v, k=k: self.assign(k, v == 1))
+                form.addRow("Commit Order", qcb)
             elif t is str:
                 qle = QLineEdit(value, self)
                 form.addRow(caption, qle)

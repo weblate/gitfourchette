@@ -17,13 +17,6 @@ QCoreApplication.setApplicationName("GitFourchette")  # used by QStandardPaths
 prefsDir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
 
 
-TOPO_ORDER = True  # false: experimental
-MAX_LANES = 32
-FLATTEN_LANES = False
-FORCE_NEW_LANES_RIGHTMOST = False  # experimental
-DEBUGRECTS = False
-
-
 KEYS_ACCEPT = [Qt.Key_Enter, Qt.Key_Return]  # Enter = on keypad; Return = main keys
 KEYS_REJECT = [Qt.Key_Delete, Qt.Key_Backspace]
 
@@ -95,6 +88,10 @@ class Prefs(BasePrefs):
     tabs_autoHide               : bool          = False
     tabs_mergeWithMenubar       : bool          = True
     graph_lineHeight            : float         = 1.0
+    graph_topoOrder             : bool          = True
+    graph_maxLanes              : int           = 32
+    graph_flattenLanes          : bool          = True
+    graph_newLanesAlwaysRightmost:bool          = False
     debug_showDebugMenu         : bool          = True
     debug_showMemoryIndicator   : bool          = True
 

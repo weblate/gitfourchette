@@ -8,7 +8,7 @@ from dataclasses import dataclass
 # - With a keyframe/replay approach (take snapshot every 100 steps, replay 99 other steps from keyframe),
 #   we might not even need to keep 'self.lanes' around.
 
-from settings import MAX_LANES, FORCE_NEW_LANES_RIGHTMOST
+import settings
 
 
 @dataclass  # gives us an equality operator as required by partial repo refresh
@@ -29,13 +29,15 @@ class LaneGenerator:
         self.nLanesPeak = 0
         self.nLanesTotal = 0
         self.nLanesVacant = 0
+        self.MAX_LANES = settings.prefs.graph_maxLanes
+        self.FORCE_NEW_LANES_RIGHTMOST = settings.prefs.graph_newLanesAlwaysRightmost
 
     def step(self, commit, parents) -> LaneFrame:
         lanes = self.lanes
         freeLanes = self.freeLanes
 
         def findFreeLane() -> int:
-            if not FORCE_NEW_LANES_RIGHTMOST and freeLanes:
+            if not self.FORCE_NEW_LANES_RIGHTMOST and freeLanes:
                 return freeLanes.pop(0)
             else:
                 # all lanes taken: create one on the right
@@ -81,7 +83,7 @@ class LaneGenerator:
             del lanes[-1]
 
         pCopy = self.pCopy
-        nCopy = lanes[:MAX_LANES].copy()
+        nCopy = lanes[:self.MAX_LANES].copy()
         self.pCopy = nCopy
 
         # Some stats
