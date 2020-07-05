@@ -60,7 +60,17 @@ class PrefsDialog(QDialog):
                 qtw.addTab(w, category or "General")
                 pCategory = category
 
-            if t is str:
+            if k == 'qtStyle':
+                qcb = QComboBox()
+                i = 0
+                for availableStyle in QStyleFactory.keys():
+                    qcb.addItem(availableStyle)
+                    if prefs.qtStyle == availableStyle:
+                        qcb.setCurrentIndex(i)
+                    i += 1
+                qcb.textActivated.connect(lambda v, k=k: self.assign(k, v))
+                form.addRow(caption, qcb)
+            elif t is str:
                 qle = QLineEdit(value, self)
                 form.addRow(caption, qle)
                 qle.textEdited.connect(lambda v, k=k: self.assign(k, v))

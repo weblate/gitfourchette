@@ -25,6 +25,10 @@ if __name__ == "__main__":
         app.setStyleSheet(f.read())
     app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
 
+    import settings
+    if settings.prefs.qtStyle:
+        app.setStyle(settings.prefs.qtStyle)
+
     import MainWindow
     window = MainWindow.MainWindow()
     window.show()

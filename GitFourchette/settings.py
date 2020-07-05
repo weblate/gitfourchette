@@ -79,6 +79,7 @@ class BasePrefs:
 class Prefs(BasePrefs):
     filename = "prefs.json"
 
+    qtStyle                     : str           = ""
     shortHashChars              : int           = 7
     splitterHandleWidth         : int           = -1
     shortTimeFormat             : str           = "%Y-%m-%d %H:%M"
