@@ -3,6 +3,7 @@ from PySide2.QtGui import *
 from PySide2.QtCore import *
 import os
 import json
+from dataclasses import dataclass, field
 
 VERSION = "0.1-preview"
 
@@ -62,57 +63,47 @@ class BasePrefs:
             obj = json.load(f)
             for k in obj:
                 if k.startswith('_'):
+                    print(F"{prefsPath}: skipping illegal key: {k}")
+                    continue
+                if k not in self.__dict__:
+                    print(F"{prefsPath}: skipping unknown key: {k}")
+                    continue
+                if type(obj[k]) != type(self.__dict__[k]):
+                    print(F"{prefsPath}: value type mismatch for {k}: expected {type(obj[k])}, got {type(self.__dict__[k])}")
                     continue
                 self.__dict__[k] = obj[k]
-                #print(F"{k} {type(obj[k])}")
         return True
 
 
+@dataclass
 class Prefs(BasePrefs):
     filename = "prefs.json"
 
-    shortHashChars: int
-    splitterHandleWidth: int
-    shortTimeFormat: str
-    longTimeFormat: str
-    shortenDirectoryNames: bool
-    diff_tabSpaces: int
-    diff_largeFileThreshold: int
-    diff_showStrayCRs: bool
-    tabs_closeButton: bool
-    tabs_expanding: bool
-    tabs_autoHide: bool
-    tabs_mergeWithMenubar: bool
-    graph_lineHeight: float
-
-    def __init__(self):
-        self.shortHashChars = 7
-        self.splitterHandleWidth = -1
-        self.shortTimeFormat = "%Y-%m-%d %H:%M"
-        self.longTimeFormat = "%c"
-        self.shortenDirectoryNames = True
-        self.diff_tabSpaces = 4
-        self.diff_largeFileThreshold = 300000
-        self.diff_showStrayCRs = True
-        self.tabs_closeButton = True
-        self.tabs_expanding = True
-        self.tabs_autoHide = False
-        self.tabs_mergeWithMenubar = True
-        self.debug_showMemoryIndicator = True
-        self.graph_lineHeight = 1.0
+    shortHashChars              : int           = 7
+    splitterHandleWidth         : int           = -1
+    shortTimeFormat             : str           = "%Y-%m-%d %H:%M"
+    longTimeFormat              : str           = "%c"
+    shortenDirectoryNames       : bool          = True
+    showStatusBar               : bool          = True
+    diff_tabSpaces              : int           = 4
+    diff_largeFileThreshold     : int           = 300000
+    diff_showStrayCRs           : bool          = True
+    tabs_closeButton            : bool          = True
+    tabs_expanding              : bool          = True
+    tabs_autoHide               : bool          = False
+    tabs_mergeWithMenubar       : bool          = True
+    graph_lineHeight            : float         = 1.0
+    debug_showDebugMenu         : bool          = True
+    debug_showMemoryIndicator   : bool          = True
 
 
+@dataclass
 class History(BasePrefs):
     filename = "history.json"
 
-    openFileDialogLastPath: str
-    history: List[str]
-    nicknames: Dict
-
-    def __init__(self):
-        self.openFileDialogLastPath = None
-        self.history = []
-        self.nicknames = {}
+    openFileDialogLastPath      : str           = ""
+    history                     : List[str]     = field(default_factory=list)
+    nicknames                   : Dict          = field(default_factory=dict)
 
     def addRepo(self, path):
         try:
@@ -144,13 +135,14 @@ class History(BasePrefs):
         self.write()
 
 
+@dataclass
 class Session(BasePrefs):
     filename = "session.json"
 
-    tabs: List[str]
-    activeTabIndex: int
-    windowGeometry: str
-    splitterStates: Dict
+    tabs                        : List[str]     = field(default_factory=list)
+    activeTabIndex              : int           = -1
+    windowGeometry              : str           = ""
+    splitterStates              : Dict          = field(default_factory=dict)
 
 
 prefs = Prefs()
