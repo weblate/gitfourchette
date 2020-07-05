@@ -42,10 +42,11 @@ class RemoteProgress(git.RemoteProgress):
         cur_count = int(cur_count)
         max_count = int(max_count)
         op = progressOpcodeToString(op_code)
-        self.dlg.setLabelText(F"{op}... {cur_count} of {max_count}\n{message}")
+        print(F"Update: {op_code} {op} | {cur_count} | {max_count} | {message}")
+        # self.dlg.setLabelText(F"{op}... {cur_count} of {max_count}\n{message}") # <<< hangs on windows due to '\n' in text???
+        self.dlg.setLabelText(F"{op}: {cur_count} of {max_count}: {message}")
         self.dlg.repaint()
         QCoreApplication.processEvents()
-        print(F"Update: {op_code} {op} | {cur_count} | {max_count} | {message}")
 
     def close(self):
         self.dlg.close()
