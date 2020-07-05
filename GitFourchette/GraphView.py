@@ -6,7 +6,7 @@ import html
 
 from GraphDelegate import GraphDelegate
 import settings
-from util import messageSummary
+from util import messageSummary, fplural
 
 
 class GraphView(QListView):
@@ -57,6 +57,10 @@ class GraphView(QListView):
             postSummary = F"<br>\u25bc <i>click &ldquo;Show Details&rdquo; to reveal full message " \
                   F"({nLines} lines)</i>"
 
+        parentHashes = [p.hexsha[:settings.prefs.shortHashChars] for p in commit.parents]
+        parentLabelMarkup = html.escape(fplural('# Parent^s', len(parentHashes)))
+        parentValueMarkup = html.escape(', '.join(parentHashes))
+
         authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" \
             F"<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}"
 
@@ -71,7 +75,8 @@ class GraphView(QListView):
         markup = F"""<span style='font-size: large'>{summary}</span>{postSummary}
             <br>
             <table>
-            <tr><td><b>SHA </b></td><td>{commit.hexsha}</td></tr>
+            <tr><td><b>Full Hash </b></td><td>{commit.hexsha}</td></tr>
+            <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
             </table>"""
