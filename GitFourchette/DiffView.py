@@ -92,7 +92,7 @@ class DiffView(QTextEdit):
 
         menu.exec_(event.globalPos())
 
-    def _applyLines(self, cached=True, reverse=False, trashBackup=False):
+    def _applyLines(self, operation: str):
         cursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -103,35 +103,53 @@ class DiffView(QTextEdit):
         biStart = bisect(self.lineData, posStart, key=lambda ld: ld.cursorStart)
         biEnd = bisect(self.lineData, posEnd, biStart, key=lambda ld: ld.cursorStart)
 
-        print(F"{'un' if reverse else ''}stage lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
+        if operation == 'discard':
+            reverse = True
+            cached = False
+        elif operation == 'stage':
+            reverse = False
+            cached = True
+        elif operation == 'unstage':
+            reverse = True
+            cached = True
+        else:
+            raise ValueError(F"unsupported operation for _applyLines")
+
+        print(F"{operation} lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
 
         biStart -= 1
 
-        patchData = patch.makePatchFromLines(self.currentChange.a_path, self.currentChange.b_path, self.lineData, biStart, biEnd, cached=cached)
+        patchData = patch.makePatchFromLines(
+            self.currentChange.a_path,
+            self.currentChange.b_path,
+            self.lineData,
+            biStart,
+            biEnd,
+            plusLinesAreContext=reverse)
 
         if not patchData:
             gstatus.setText("Nothing to patch. Select one or more red or green lines before applying.")
             QApplication.beep()
             return
 
-        if trashBackup:
+        if operation == 'discard':
             trash.trashRawPatch(self.currentGitRepo, patchData)
 
         try:
             patch.applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
         except git.GitCommandError as e:
-            excMessageBox(e, "Apply Patch", "Failed to apply patch.", parent=self)
+            excMessageBox(e, F"{operation.title()}: Apply Patch", F"Failed to apply patch for operation “{operation}”.", parent=self)
 
         self.patchApplied.emit()
 
     def stageLines(self):
-        self._applyLines(reverse=False)
+        self._applyLines('stage')
 
     def unstageLines(self):
-        self._applyLines(reverse=True)
+        self._applyLines('unstage')
 
     def discardLines(self):
-        self._applyLines(cached=False, reverse=True, trashBackup=True)
+        self._applyLines('discard')
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()

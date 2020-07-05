@@ -41,13 +41,13 @@ def makePatchFromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: b
     return difflib.unified_diff(a, b, fromfile=change.a_path, tofile=change.b_path)
 
 
-def extraContext(lineDataIter, contextLines: int, bIsReference: bool = True) -> Generator[LineData, None, None]:
+def extraContext(lineDataIter, contextLines: int, plusLinesAreContext: bool) -> Generator[LineData, None, None]:
     """
     Generates a finite amount of 'context' LineDatas from
     the LineData iterator given as input.
     """
 
-    if not bIsReference:
+    if not plusLinesAreContext:
         # A is our reference version. We ignore any differences with B.
         # '-' is a line that exists in A (not in B). Treat line as context.
         # '+' is a line that isn't in A (only in B). Ignore line.
@@ -77,7 +77,14 @@ def extraContext(lineDataIter, contextLines: int, bIsReference: bool = True) -> 
             raise Exception("Unknown diffChar")
 
 
-def makePatchFromLines(a_path: str, b_path: str, lineData: List[LineData], ldStart: int, ldEnd: int, contextLines: int = 3, cached: bool = True) -> str:
+def makePatchFromLines(
+        a_path: str,
+        b_path: str,
+        lineData: List[LineData],
+        ldStart: int,
+        ldEnd: int,
+        plusLinesAreContext: bool,
+        contextLines: int = 3) -> str:
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
@@ -104,11 +111,11 @@ def makePatchFromLines(a_path: str, b_path: str, lineData: List[LineData], ldSta
     lastDiffLine = hunks[-1][-1].diffLineIndex
 
     # Extend first hunk with context upwards
-    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, bIsReference=not cached):
+    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, plusLinesAreContext):
         hunks[0].insert(0, contextLine)
 
     # Extend last hunk with context downwards
-    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, bIsReference=not cached):
+    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, plusLinesAreContext):
         hunks[-1].append(contextLine)
 
     # Assemble patch text
