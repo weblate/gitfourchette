@@ -11,7 +11,7 @@ from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from RemoteProgress import RemoteProgress
 from util import fplural, excMessageBox, excStrings
-from typing import List
+from typing import List, Callable, Tuple
 import git
 import settings
 import traceback
@@ -164,15 +164,93 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentIndex(0)
         self.changedFilesView.clear()
 
-    def _startAsyncWorker(self, work, onComplete, caption):
+    def _startAsyncWorker(
+            self,
+            priority: int,
+            work: Callable[[], object],
+            onComplete: Callable[[object], None],
+            caption: str):
+        """
+        Starts a worker thread in the background, especially to perform
+        long operations on the repository.
+
+        Only one worker may be running at once; and only one worker may be
+        queued at a time.
+
+        :param priority: Integer value passed on to `QThreadPool.start()`.
+
+        :param work: Function to run asynchronously. Returns an object.
+
+        :param onComplete: Completion callback to run on the GUI thread when
+        ``work`` is complete. Takes the object returned by ``work`` as its
+        input parameter.
+
+        :param caption: Shown in status.
+        """
+
+        # This callback gets executed when the worker's async function has completed successfully.
+        def callback(o):
+            # Clear status caption _before_ running onComplete,
+            # because onComplete may start another worker that sets status.
+            gstatus.clearIndeterminateProgressCaption()
+            # Finally run completion
+            onComplete(o)
+
         w = Worker(work)
-        w.signals.result.connect(onComplete)
-        w.signals.finished.connect(gstatus.clearIndeterminateProgressCaption)
+        w.signals.result.connect(callback)
         gstatus.setIndeterminateProgressCaption(caption)
-        self.threadpool.start(w)
+
+        # Remove any pending worker from the queue.
+        # TODO: we should prevent the currently-running worker's completion callback from running as well.
+        self.threadpool.clear()
+
+        # Queue our worker.
+        self.threadpool.start(w, priority)
+
+    def fillStageViewAsync(self):
+        """Fill Staged/Unstaged views with uncommitted changes"""
+
+        def work() -> Tuple:
+            assert QThread.currentThread() is not QApplication.instance().thread()
+            with self.state.mutexLocker():
+                dirtyChanges = self.state.getDirtyChanges()
+                untrackedFiles = self.state.getUntrackedFiles()
+                stagedChanges = self.state.getStagedChanges()
+            return dirtyChanges, untrackedFiles, stagedChanges
+
+        def onComplete(result):
+            assert QThread.currentThread() is QApplication.instance().thread()
+            dirtyChanges, untrackedFiles, stagedChanges = result
+
+            self.dirtyView.clear()
+            self.dirtyView.fillDiff(dirtyChanges)
+            self.dirtyView.fillUntracked(untrackedFiles)
+            self.stageView.clear()
+            self.stageView.fillDiff(stagedChanges)
+
+            nDirty = self.dirtyView.model().rowCount()
+            nStaged = self.stageView.model().rowCount()
+            self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
+            self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
+
+            self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
+
+            # After patchApplied.emit has caused a refresh of the dirty/staged file views,
+            # restore selected row in appropriate file list view so the user can keep hitting
+            # enter (del) to stage (unstage) a series of files.
+            self.dirtyView.restoreSelectedRowAfterClear()
+            self.stageView.restoreSelectedRowAfterClear()
+
+            # If no file is selected in either FileListView, clear the diffView of any residual diff.
+            if 0 == (len(self.dirtyView.selectedIndexes()) + len(self.stageView.selectedIndexes())):
+                self.diffView.clear()
+
+        self._startAsyncWorker(1000, work, onComplete, "Refreshing index...")
 
     def loadCommitAsync(self, hexsha: str):
-        def work(progress_callback) -> List[git.DiffIndex]:
+        """Load commit details into Changed Files view"""
+
+        def work() -> List[git.DiffIndex]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 commit = self.state.repo.commit(hexsha)
@@ -186,25 +264,14 @@ class RepoWidget(QWidget):
             self.changedFilesView.selectFirstRow()
             self.filesStack.setCurrentIndex(0)
 
-        self._startAsyncWorker(work, onComplete, "Loading commit...")
-
-    def fillStageViewAsync(self):
-        def work(progress_callback):
-            with self.state.mutexLocker():
-                dirtyChanges = self.state.getDirtyChanges()
-                untrackedFiles = self.state.getUntrackedFiles()
-                stagedChanges = self.state.getStagedChanges()
-            return (dirtyChanges, untrackedFiles, stagedChanges)
-
-        self._startAsyncWorker(
-            work,
-            lambda o: self._fillStageView(*o),
-            "Refreshing index...")
+        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{hexsha[:settings.prefs.shortHashChars]}”...")
 
     def loadDiffAsync(self, entry, diffActionSet):
+        """Load a file diff into the Diff View"""
+
         repo = self.state.repo
 
-        def work(progress_callback):
+        def work():
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 try:
@@ -223,33 +290,7 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is QApplication.instance().thread()
             self.diffView.replaceDocument(repo, entry.diff, diffActionSet, dm)
 
-        self._startAsyncWorker(work, onComplete, "Loading diff...")
-
-    def _fillStageView(self, dirtyChanges, untrackedFiles, stagedChanges):
-        """Fill Staged/Unstaged views with uncommitted changes"""
-
-        self.dirtyView.clear()
-        self.dirtyView.fillDiff(dirtyChanges)
-        self.dirtyView.fillUntracked(untrackedFiles)
-        self.stageView.clear()
-        self.stageView.fillDiff(stagedChanges)
-
-        nDirty = self.dirtyView.model().rowCount()
-        nStaged = self.stageView.model().rowCount()
-        self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
-        self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
-
-        self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
-
-        # After patchApplied.emit has caused a refresh of the dirty/staged file views,
-        # restore selected row in appropriate file list view so the user can keep hitting
-        # enter (del) to stage (unstage) a series of files.
-        self.dirtyView.restoreSelectedRowAfterClear()
-        self.stageView.restoreSelectedRowAfterClear()
-
-        # If no file is selected in either FileListView, clear the diffView of any residual diff.
-        if 0 == (len(self.dirtyView.selectedIndexes()) + len(self.stageView.selectedIndexes())):
-            self.diffView.clear()
+        self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”...")
 
     def push(self):
         repo = self.state.repo

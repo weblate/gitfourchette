@@ -24,10 +24,12 @@ class GlobalStatusSignalContainer(QObject):
         self.progressMaximum.emit(0)
         self.progressValue.emit(0)
         self.statusText.emit(arg)
+        print("[status]", arg)
 
     def clearIndeterminateProgressCaption(self):
         self.progressDisable.emit()
         self.statusText.emit(None)
+        print("[status] ———")
 
 
 gstatus = GlobalStatusSignalContainer()
