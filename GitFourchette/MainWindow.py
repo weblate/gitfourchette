@@ -238,7 +238,7 @@ class MainWindow(QMainWindow):
             newState = RepoState(path)
             #orderedMetadata = newState.loadCommitList_Sequential(progress)
             orderedMetadata = newState.loadCommitList(progress)
-        except (git.exc.InvalidGitRepositoryError, git.exc.NoSuchPathError) as e:
+        except BaseException as e:
             progress.close()
 
             known = path in settings.history.history
@@ -250,7 +250,9 @@ class MainWindow(QMainWindow):
             elif isinstance(e, git.exc.NoSuchPathError):
                 message += " because this path does not exist."
             else:
-                message += F".\nException thrown: {e.__class__.__name__}\n{e}\nCheck stderr for details."
+                message += " because an exception was thrown."
+                excMessageBox(e, message=message)
+                return False
 
             qmb = QMessageBox(self)
             qmb.setIcon(QMessageBox.Critical)

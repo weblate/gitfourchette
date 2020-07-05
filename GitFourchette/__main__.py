@@ -32,10 +32,5 @@ if __name__ == "__main__":
     import MainWindow
     window = MainWindow.MainWindow()
     window.show()
-
-    try:
-        window.tryLoadSession()
-    except BaseException as e:
-        excMessageBox(e, "Resume Session", "Failed to resume previous session.")
-
+    window.tryLoadSession()
     app.exec_()
