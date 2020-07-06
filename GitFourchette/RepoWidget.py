@@ -18,6 +18,7 @@ import traceback
 from Worker import Worker
 from status import gstatus
 from FileListView import Entry
+from CommitDialog import CommitDialog
 
 
 FILESSTACK_READONLY_CARD = 0
@@ -383,21 +384,22 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             return
 
         kDRAFT = "DraftMessage"
-        confirm, message = self._commitFlowDialog(
-            self.state.settings.value(kDRAFT, ""), "Commit", "Enter commit message:", "Commit")
-        if confirm:
+        initialText = self.state.settings.value(kDRAFT, "")
+        cd = CommitDialog(initialText, False, self)
+        rc = cd.exec_()
+        if rc == QDialog.DialogCode.Accepted:
             self.state.settings.remove(kDRAFT)
-            #self.state.index.commit(message, amend=amend)
-            self.state.repo.git.commit(m=message)
+            self.state.repo.git.commit(message=cd.getFullMessage())
             self.quickRefresh()
         else:
-            self.state.settings.setValue(kDRAFT, message)
+            self.state.settings.setValue(kDRAFT, cd.getFullMessage())
 
     def amendFlow(self):
-        confirm, message = self._commitFlowDialog(
-            self.state.repo.head.commit.message, "Amend", "Amend commit message:", "Amend")
-        if confirm:
-            self.state.repo.git.commit(m=message, amend=True)
+        initialText = self.state.repo.head.commit.message
+        cd = CommitDialog(initialText, True, self)
+        rc = cd.exec_()
+        if rc == QDialog.DialogCode.Accepted:
+            self.state.repo.git.commit(message=cd.getFullMessage(), amend=True)
             self.quickRefresh()
 
     def findFlow(self):
