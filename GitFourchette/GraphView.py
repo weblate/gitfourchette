@@ -25,6 +25,9 @@ class GraphView(QListView):
         getInfoAction = QAction("Get Info...", self)
         getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
         self.addAction(getInfoAction)
+        checkoutAction = QAction("Check Out...", self)
+        checkoutAction.triggered.connect(self.checkoutCurrentCommit)
+        self.addAction(checkoutAction)
 
     def _replaceModel(self, model):
         if self.model():
@@ -96,6 +99,23 @@ class GraphView(QListView):
         if contd:
             messageBox.setDetailedText(commit.message)
         messageBox.exec_()
+
+    def checkoutCurrentCommit(self):
+        if not self.currentIndex().isValid():
+            return
+
+        from RepoWidget import RepoWidget
+        rw : RepoWidget = self.repoWidget
+        repo: git.Repo = rw.state.repo
+        hexsha = self.currentIndex().data().hexsha
+
+        def work():
+            repo.git.checkout(hexsha)
+
+        def onComplete(_):
+            rw.quickRefresh()
+
+        rw._startAsyncWorker(1000, work, onComplete, F"Checking out “{hexsha}”...")
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
