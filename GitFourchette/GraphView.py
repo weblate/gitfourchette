@@ -21,6 +21,11 @@ class GraphView(QListView):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
         self.setItemDelegate(GraphDelegate(parent, parent=self))
 
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        getInfoAction = QAction("Get Info...", self)
+        getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
+        self.addAction(getInfoAction)
+
     def _replaceModel(self, model):
         if self.model():
             self.model().deleteLater()  # avoid memory leak
@@ -43,6 +48,9 @@ class GraphView(QListView):
             model.setData(model.index(1 + i, 0), meta, Qt.DisplayRole)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
+        self.getInfoOnCurrentCommit()
+
+    def getInfoOnCurrentCommit(self):
         if not self.currentIndex().isValid():
             return
 
