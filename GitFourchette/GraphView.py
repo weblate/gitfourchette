@@ -7,6 +7,7 @@ import html
 from GraphDelegate import GraphDelegate
 import settings
 from util import messageSummary, fplural
+from RepoState import CommitMetadata
 
 
 class GraphView(QListView):
@@ -28,6 +29,9 @@ class GraphView(QListView):
         checkoutAction = QAction("Check Out...", self)
         checkoutAction.triggered.connect(self.checkoutCurrentCommit)
         self.addAction(checkoutAction)
+        cherrypickAction = QAction("Cherry Pick...", self)
+        cherrypickAction.triggered.connect(self.cherrypickCurrentCommit)
+        self.addAction(cherrypickAction)
 
     def _replaceModel(self, model):
         if self.model():
@@ -53,12 +57,27 @@ class GraphView(QListView):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         self.getInfoOnCurrentCommit()
 
-    def getInfoOnCurrentCommit(self):
+    @property
+    def repo(self) -> git.Repo:
+        return self.repoWidget.state.repo
+
+    @property
+    def currentCommitHash(self):
         if not self.currentIndex().isValid():
             return
+        data : CommitMetadata = self.currentIndex().data()
+        if not data:  # Uncommitted Changes has no bound data
+            return
+        return data.hexsha
 
-        repo: git.Repo = self.repoWidget.state.repo
-        commit: git.Commit = repo.commit(self.currentIndex().data().hexsha)
+    def getInfoOnCurrentCommit(self):
+        commitHash = self.currentCommitHash
+        if not commitHash:
+            return
+
+        # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
+
+        commit: git.Commit = self.repo.commit(commitHash)
 
         summary, contd = messageSummary(commit.message)
 
@@ -91,31 +110,40 @@ class GraphView(QListView):
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
             </table>"""
-        messageBox = QMessageBox(
-            QMessageBox.Information,
-            F"Commit info {commit.hexsha[:settings.prefs.shortHashChars]}",
-            markup,
-            parent=self)
-        if contd:
-            messageBox.setDetailedText(commit.message)
+
+        title = F"Commit info {commit.hexsha[:settings.prefs.shortHashChars]}"
+
+        details = commit.message if contd else None
+
+        messageBox = QMessageBox(QMessageBox.Information, title, markup, parent=self)
+        messageBox.setDetailedText(details)
         messageBox.exec_()
 
     def checkoutCurrentCommit(self):
-        if not self.currentIndex().isValid():
+        commitHash = self.currentCommitHash
+        if not commitHash:
             return
 
-        from RepoWidget import RepoWidget
-        rw : RepoWidget = self.repoWidget
-        repo: git.Repo = rw.state.repo
-        hexsha = self.currentIndex().data().hexsha
-
         def work():
-            repo.git.checkout(hexsha)
+            self.repo.git.checkout(commitHash)
 
         def onComplete(_):
-            rw.quickRefresh()
+            self.repoWidget.quickRefresh()
 
-        rw._startAsyncWorker(1000, work, onComplete, F"Checking out “{hexsha}”...")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{commitHash}”...")
+
+    def cherrypickCurrentCommit(self):
+        commitHash = self.currentCommitHash
+        if not commitHash:
+            return
+
+        def work():
+            self.repo.git.cherry_pick(commitHash)
+
+        def onComplete(_):
+            self.repoWidget.quickRefresh()
+
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{commitHash}”...")
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
