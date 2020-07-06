@@ -217,6 +217,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
+        if i < 0:  # Right mouse button released outside tabs
+            return
         rw: RepoWidget = self.tabs.stacked.widget(i)
         menu = QMenu()
         menu.addAction("Close Tab", lambda: self.closeTab(i))
