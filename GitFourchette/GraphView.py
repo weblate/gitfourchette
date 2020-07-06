@@ -57,6 +57,13 @@ class GraphView(QListView):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         self.getInfoOnCurrentCommit()
 
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+        if k in settings.KEYS_ACCEPT:
+            self.getInfoOnCurrentCommit()
+        else:
+            super().keyPressEvent(event)
+
     @property
     def repo(self) -> git.Repo:
         return self.repoWidget.state.repo
