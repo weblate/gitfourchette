@@ -1,9 +1,12 @@
 import re
-from pathlib import Path
+import os
 import traceback
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
+
+
+HOME = os.path.abspath(os.path.expanduser('~'))
 
 
 def sign(x):
@@ -25,9 +28,10 @@ def fplural(fmt: str, n: int) -> str:
 
 
 def compactSystemPath(path: str) -> str:
-    home = str(Path.home())
-    if path.startswith(str(home)):
-        path = "~" + path[len(home):]
+    # Normalize path first, which also turns forward slashes to backslashes on Windows.
+    path = os.path.abspath(path)
+    if path.startswith(HOME):
+        path = "~" + path[len(HOME):]
     return path
 
 
@@ -46,28 +50,28 @@ def showInFolder(pathStr):
     Show a file or folder with explorer/finder.
     Source: https://stackoverflow.com/a/46019091/3388962
     """
-    path = Path(pathStr).absolute()
+    path = os.path.abspath(pathStr)
     product = QSysInfo.productType()
     if product == 'windows':
-        if path.is_dir():
-            args = ['/select,', str(path)]
+        if not os.path.isdir(path):  # If it's a file, select it within the folder.
+            args = ['/select,', path]
         else:
-            args = [str(path)]
+            args = [path]  # If it's a folder, open it.
         if QProcess.startDetached('explorer', args):
             return
     elif product == 'osx':  # TODO: "The returned string will be updated for Qt 6"
         args = [
             '-e', 'tell application "Finder"',
             '-e', 'activate',
-            '-e', F'select POSIX file "{str(path)}"',
+            '-e', F'select POSIX file "{path}"',
             '-e', 'end tell',
             '-e', 'return'
         ]
         if not QProcess.execute('/usr/bin/osascript', args):
             return
     # Fallback.
-    dirPath = path if path.is_dir() else path.parent
-    QDesktopServices.openUrl(QUrl(str(dirPath)))
+    dirPath = path if os.path.isdir(path) else os.path.pardir(path)
+    QDesktopServices.openUrl(QUrl(dirPath))
 
 
 def messageSummary(body: str):
