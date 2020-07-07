@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
         if not w.state:
-            self._loadRepo(w, w.pathPending)
+            self._loadRepo(w, w.workingTreeDir)
         shortname = w.state.shortName
         repo = w.state.repo
         inBrackets = ""
@@ -226,6 +226,10 @@ class MainWindow(QMainWindow):
         menu.addAction("Close Tab", lambda: self.closeTab(i))
         menu.addAction("Open Repo Folder", lambda: self.openRepoFolder(rw))
         menu.addAction("Rename", rw.renameRepo)
+        if rw.state:
+            menu.addAction("Unload", lambda: self.unloadTab(i))
+        else:
+            menu.addAction("Load", lambda: self.loadTab(i))
         #self.tabs.tabs.
         menu.exec_(globalPoint)
 
@@ -287,25 +291,27 @@ class MainWindow(QMainWindow):
         rw.graphView.fill(orderedMetadata)
 
         progress.close()
-        #progress.setCancelButton(None)
-        #progress.setWindowFlags(progress.windowFlags() & ~Qt.WindowCloseButtonHint)
-        #progress.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
-        QCoreApplication.processEvents()
+
+        self.refreshTabText(rw)
+
         return True
 
-    def openRepo(self, repoPath):
+    def openRepo(self, repoPath, foreground=True):
         newRW = RepoWidget(self, self.sharedSplitterStates)
 
-        #if not self._loadRepo(newRW, repoPath):
-        #    newRW.destroy()
-        #    return  # don't create the tab if opening the repo failed
+        if foreground:
+            if not self._loadRepo(newRW, repoPath):
+                newRW.destroy()
+                return  # don't create the tab if opening the repo failed
+        else:
+            newRW.pathPending = repoPath
 
-        newRW.pathPending = repoPath
+        tabIndex = self.tabs.addTab(newRW, newRW.getTitle(), repoPath)
 
-        tabIndex = self.tabs.addTab(newRW, "NewRepo", repoPath) #"#newRW.state.shortName, repoPath)
-        #self.tabs.setCurrentIndex(tabIndex)
+        if foreground:
+            self.tabs.setCurrentIndex(tabIndex)
 
-        newRW.nameChange.connect(lambda: self.tabs.tabs.setTabText(self.tabs.stacked.indexOf(newRW), newRW.state.shortName))
+        newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
 
         settings.history.addRepo(repoPath)
         self.fillRecentMenu()
@@ -316,12 +322,12 @@ class MainWindow(QMainWindow):
 
     def refresh(self):
         rw = self.currentRepoWidget()
-        self._loadRepo(rw, rw.state.repo.working_tree_dir)
+        self._loadRepo(rw, rw.workingTreeDir)
 
     def openRepoFolder(self, rw: RepoWidget = None):
         if not rw:
             rw = self.currentRepoWidget()
-        showInFolder(rw.state.repo.working_tree_dir)
+        showInFolder(rw.workingTreeDir)
 
     def openDialog(self):
         path = settings.history.openFileDialogLastPath
@@ -338,6 +344,20 @@ class MainWindow(QMainWindow):
         self.tabs.widget(index).cleanup()
         self.tabs.removeTab(index, destroy=True)
         gc.collect()
+
+    def refreshTabText(self, rw):
+        index = self.tabs.stacked.indexOf(rw)
+        self.tabs.tabs.setTabText(index, rw.getTitle())
+
+    def unloadTab(self, index: int):
+        rw : RepoWidget = self.tabs.widget(index)
+        rw.cleanup()
+        gc.collect()
+        self.refreshTabText(rw)
+
+    def loadTab(self, index: int):
+        rw : RepoWidget = self.tabs.widget(index)
+        self._loadRepo(rw, rw.workingTreeDir)
 
     def nextTab(self):
         if self.tabs.count() == 0:
@@ -364,9 +384,12 @@ class MainWindow(QMainWindow):
         self.sharedSplitterStates = {k:settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
         self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
         self.show()
+        self.tabs.stacked.currentChanged.disconnect(self.onTabChange)
         for r in session.tabs:
-            self.openRepo(r)
+            self.openRepo(r, foreground=False)
         self.tabs.setCurrentIndex(session.activeTabIndex)
+        self.onTabChange(session.activeTabIndex)
+        self.tabs.stacked.currentChanged.connect(self.onTabChange)
 
     def saveSession(self):
         session = settings.Session()
@@ -375,7 +398,7 @@ class MainWindow(QMainWindow):
             session.splitterStates = {s.objectName(): settings.encodeBinary(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
         else:
             session.splitterStates = {}
-        session.tabs = [self.tabs.widget(i).state.repo.working_tree_dir for i in range(self.tabs.count())]
+        session.tabs = [self.tabs.widget(i).workingTreeDir for i in range(self.tabs.count())]
         session.activeTabIndex = self.tabs.currentIndex()
         session.write()
 

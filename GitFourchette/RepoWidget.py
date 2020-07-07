@@ -31,6 +31,7 @@ class RepoWidget(QWidget):
     nameChange: Signal = Signal()
 
     state: RepoState
+    pathPending: str
 
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
@@ -40,6 +41,7 @@ class RepoWidget(QWidget):
         self.threadpool.setMaxThreadCount(1)
 
         self.state = None
+        self.pathPending = None
 
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
@@ -145,8 +147,30 @@ class RepoWidget(QWidget):
             except KeyError:
                 pass
 
+    @property
+    def workingTreeDir(self):
+        if self.state:
+            return self.state.repo.working_tree_dir
+        else:
+            return self.pathPending
+
+    def getTitle(self):
+        if self.state:
+            return self.state.shortName
+        elif self.pathPending:
+            return F"({settings.history.getRepoNickname(self.pathPending)})"
+        else:
+            return "???"
+
     def cleanup(self):
         if self.state and self.state.repo:
+            self.changedFilesView._setBlankModel()
+            self.dirtyView._setBlankModel()
+            self.stageView._setBlankModel()
+            self.graphView._replaceModel(None)
+            self.diffView.clear()
+            # Save path if we want to reload the repo later
+            self.pathPending = str(self.state.repo.working_tree_dir)
             self.state.repo.close()
             self.state = None
 
