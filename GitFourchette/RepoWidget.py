@@ -411,6 +411,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         initialText = self.state.settings.value(kDRAFT, "")
         cd = CommitDialog(initialText, False, self)
         rc = cd.exec_()
+        cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
             self.state.settings.remove(kDRAFT)
             self.state.repo.git.commit(message=cd.getFullMessage())
@@ -422,6 +423,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         initialText = self.state.repo.head.commit.message
         cd = CommitDialog(initialText, True, self)
         rc = cd.exec_()
+        cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
             self.state.repo.git.commit(message=cd.getFullMessage(), amend=True)
             self.quickRefresh()
