@@ -207,6 +207,8 @@ class MainWindow(QMainWindow):
             return
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
+        if not w.state:
+            self._loadRepo(w, w.pathPending)
         shortname = w.state.shortName
         repo = w.state.repo
         inBrackets = ""
@@ -294,12 +296,14 @@ class MainWindow(QMainWindow):
     def openRepo(self, repoPath):
         newRW = RepoWidget(self, self.sharedSplitterStates)
 
-        if not self._loadRepo(newRW, repoPath):
-            newRW.destroy()
-            return  # don't create the tab if opening the repo failed
+        #if not self._loadRepo(newRW, repoPath):
+        #    newRW.destroy()
+        #    return  # don't create the tab if opening the repo failed
 
-        tabIndex = self.tabs.addTab(newRW, newRW.state.shortName, repoPath)
-        self.tabs.setCurrentIndex(tabIndex)
+        newRW.pathPending = repoPath
+
+        tabIndex = self.tabs.addTab(newRW, "NewRepo", repoPath) #"#newRW.state.shortName, repoPath)
+        #self.tabs.setCurrentIndex(tabIndex)
 
         newRW.nameChange.connect(lambda: self.tabs.tabs.setTabText(self.tabs.stacked.indexOf(newRW), newRW.state.shortName))
 
