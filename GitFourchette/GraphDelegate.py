@@ -265,7 +265,7 @@ class GraphDelegate(QStyledItemDelegate):
         painter.restore()
         pass  # QStyledItemDelegate.paint(self, painter, option, index)
 
-    def sizeHint(self, option, index):
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         r = super().sizeHint(option, index)
         r.setHeight(r.height() * settings.prefs.graph_rowHeight)
         return r

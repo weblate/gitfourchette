@@ -21,15 +21,18 @@ KEYS_ACCEPT = [Qt.Key_Enter, Qt.Key_Return]  # Enter = on keypad; Return = main 
 KEYS_REJECT = [Qt.Key_Delete, Qt.Key_Backspace]
 
 
-SHORT_DATE_PRESETS = {
-    'ISO': '%Y-%m-%d %H:%M',
-    'd/m/y': '%d/%m/%y %H:%M',
-    'd-m-y': '%d-%m-%y %H:%M',
-    'd.m.y': '%d.%m.%y %H:%M',
-    'm/d/y': '%m/%d/%y %I:%M %p',
-    'Euro': '%a %d %b %Y %H:%M',
-    'US': '%a, %b %d, %Y %I:%M %p'
-}
+SHORT_DATE_PRESETS = [
+    ('ISO', '%Y-%m-%d %H:%M'),
+    ('Universal', '%d %b %Y %H:%M'),
+    ('European', '%d/%m/%Y %H:%M'),
+    ('American', '%m/%d/%Y %I:%M %p'),
+]
+
+# Don't use %Z (capital Z) for the named timezones, we can't get them from git.
+# However, timezone offsets (%z) work fine.
+LONG_DATE_PRESETS = [
+    ("Full", "%c %z")
+]
 
 
 def encodeBinary(b: QByteArray) -> str:
@@ -75,8 +78,8 @@ class Prefs(BasePrefs):
     qtStyle                     : str           = ""
     shortHashChars              : int           = 7
     splitterHandleWidth         : int           = -1
-    shortTimeFormat             : str           = "%Y-%m-%d %H:%M"
-    longTimeFormat              : str           = "%c"
+    shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
+    longTimeFormat              : str           = LONG_DATE_PRESETS[0][1]
     shortenDirectoryNames       : bool          = True
     showStatusBar               : bool          = True
     diff_font                   : str           = ""
