@@ -208,7 +208,9 @@ class MainWindow(QMainWindow):
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
         if not w.state:
-            self._loadRepo(w, w.workingTreeDir)
+            success = self._loadRepo(w, w.workingTreeDir)
+            if not success:
+                return
         shortname = w.state.shortName
         repo = w.state.repo
         inBrackets = ""
