@@ -87,7 +87,7 @@ class PrefsDialog(QDialog):
                 control = self.fontControl(prefKey, prefValue)
             elif prefKey == 'graph_topoOrder':
                 caption = "Commit Order"
-                control = self.namedBoolControl(prefKey, prefValue, "Chronological", "Topological")
+                control = self.boolRadioControl(prefKey, prefValue, falseName="Chronological", trueName="Topological")
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
             elif prefKey == 'longTimeFormat':
@@ -144,12 +144,22 @@ class PrefsDialog(QDialog):
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, float(v) if v else 0.0))
         return control
 
-    def namedBoolControl(self, prefKey, prefValue, falseName, trueName):
-        control = QComboBox()
-        control.addItem(falseName)
-        control.addItem(trueName)
-        control.setCurrentIndex(1 if prefValue else 0)
-        control.currentIndexChanged.connect(lambda v, k=prefKey: self.assign(k, v == 1))
+    def boolRadioControl(self, prefKey, prefValue, falseName, trueName):
+        falseButton = QRadioButton(falseName)
+        falseButton.setChecked(not prefValue)
+        falseButton.toggled.connect(lambda b: self.assign(prefKey, not b))
+
+        trueButton = QRadioButton(trueName)
+        trueButton.setChecked(prefValue)
+        trueButton.toggled.connect(lambda b: self.assign(prefKey, b))
+
+        layout = QVBoxLayout()
+        layout.setMargin(0)
+        layout.setSpacing(0)
+        layout.addWidget(trueButton)
+        layout.addWidget(falseButton)
+        control = QWidget()
+        control.setLayout(layout)
         return control
 
     def qtStyleControl(self, prefKey, prefValue):
