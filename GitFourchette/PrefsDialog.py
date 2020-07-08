@@ -3,7 +3,28 @@ from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 import datetime
 import re
-from settings import prefs, monoFont, PROGRAM_NAME, SHORT_DATE_PRESETS, LONG_DATE_PRESETS
+from settings import prefs, PROGRAM_NAME, SHORT_DATE_PRESETS, LONG_DATE_PRESETS
+
+
+def _boxWidget(layout, *controls):
+    layout.setSpacing(0)
+    layout.setMargin(0)
+    for control in controls:
+        if control == "stretch":
+            layout.addStretch()
+        else:
+            layout.addWidget(control)
+    w = QWidget()
+    w.setLayout(layout)
+    return w
+
+
+def vBoxWidget(*controls):
+    return _boxWidget(QVBoxLayout(), *controls)
+
+
+def hBoxWidget(*controls):
+    return _boxWidget(QHBoxLayout(), *controls)
 
 
 def prettifyCamelCase(x):
@@ -56,14 +77,12 @@ class PrefsDialog(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-        layout = QVBoxLayout()
 
         # Delta to on-disk preferences.
         self.prefDiff = {}
 
         tabWidget = QTabWidget(self)
         tabWidget.setTabPosition(QTabWidget.TabPosition.North)
-        layout.addWidget(tabWidget)
 
         pCategory = "~~~dummy~~~"
         form: QFormLayout = None
@@ -109,6 +128,8 @@ class PrefsDialog(QDialog):
             else:
                 form.addRow(control)
 
+        layout = QVBoxLayout()
+        layout.addWidget(tabWidget)
         layout.addWidget(buttonBox)
         self.setLayout(layout)
 
@@ -122,10 +143,43 @@ class PrefsDialog(QDialog):
             self.prefDiff[k] = v
 
     def fontControl(self, prefKey, prefValue):
+        def onSizeChanged(strValue):
+            points = int(strValue) if strValue else 11
+            font = control.currentFont()
+            font.setPointSize(points)
+            self.assign(prefKey, font.toString())
+            control.setCurrentFont(font)
+
+        font = QFont()
+        font.fromString(prefValue)
+
         control = QFontComboBox()
-        control.setCurrentFont(monoFont)  # TODO : use prefValue
-        control.currentFontChanged.connect(lambda v, k=prefKey: self.assign(k, v.toString()))
-        return control
+        control.setCurrentFont(font)  # TODO : use prefValue
+        control.currentFontChanged.connect(lambda v, k=prefKey: [
+            self.assign(k, v.toString()) ])
+
+        sizeControl = QLineEdit(str(font.pointSize()), self)
+        sizeControl.setValidator(QIntValidator())
+        sizeControl.textEdited.connect(onSizeChanged)
+        sizeControl.setMaximumWidth(sizeControl.fontMetrics().horizontalAdvance("000000"))
+
+        fixedWidthFilter = QCheckBox("Show fixed-width only")
+        fixedWidthFilter.stateChanged.connect(lambda v:
+                control.setFontFilters(QFontComboBox.AllFonts if v == Qt.CheckState.Unchecked else QFontComboBox.MonospacedFonts))
+        if QFontDatabase().isFixedPitch(font.family()):
+            fixedWidthFilter.setCheckState(Qt.CheckState.Checked)
+        else:
+            fixedWidthFilter.setCheckState(Qt.CheckState.Unchecked)
+
+        return vBoxWidget(
+            control,
+            fixedWidthFilter,
+            hBoxWidget(
+                QLabel("Size:  "),
+                sizeControl,
+                "stretch"
+            )
+        )
 
     def strControl(self, prefKey, prefValue):
         control = QLineEdit(prefValue, self)
@@ -153,14 +207,7 @@ class PrefsDialog(QDialog):
         trueButton.setChecked(prefValue)
         trueButton.toggled.connect(lambda b: self.assign(prefKey, b))
 
-        layout = QVBoxLayout()
-        layout.setMargin(0)
-        layout.setSpacing(0)
-        layout.addWidget(trueButton)
-        layout.addWidget(falseButton)
-        control = QWidget()
-        control.setLayout(layout)
-        return control
+        return vBoxWidget(trueButton, falseButton)
 
     def qtStyleControl(self, prefKey, prefValue):
         control = QComboBox()
@@ -206,10 +253,4 @@ class PrefsDialog(QDialog):
 
         control.setEditText(prefValue)
 
-        group = QWidget()
-        group.setLayout(QVBoxLayout())
-        group.layout().setMargin(0)
-        group.layout().setSpacing(0)
-        group.layout().addWidget(control)
-        group.layout().addWidget(preview)
-        return group
+        return vBoxWidget(control, preview)
