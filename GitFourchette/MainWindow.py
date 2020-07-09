@@ -228,8 +228,11 @@ class MainWindow(QMainWindow):
         rw: RepoWidget = self.tabs.stacked.widget(i)
         menu = QMenu()
         menu.addAction("Close Tab", lambda: self.closeTab(i))
+        menu.addAction("Close Other Tabs", lambda: self.closeOtherTabs(i))
+        menu.addSeparator()
         menu.addAction("Open Repo Folder", lambda: self.openRepoFolder(rw))
         menu.addAction("Rename", rw.renameRepo)
+        menu.addSeparator()
         if rw.state:
             menu.addAction("Unload", lambda: self.unloadTab(i))
         else:
@@ -344,9 +347,21 @@ class MainWindow(QMainWindow):
     def closeCurrentTab(self):
         self.closeTab(self.tabs.currentIndex())
 
-    def closeTab(self, index: int):
+    def closeTab(self, index: int, collect: bool = True):
         self.tabs.widget(index).cleanup()
         self.tabs.removeTab(index, destroy=True)
+        gc.collect()
+
+    def closeOtherTabs(self, index: int):
+        # First, set this tab as active so an active tab that gets closed doesn't trigger other tabs to load.
+        self.tabs.setCurrentIndex(index)
+
+        # Now close all tabs in reverse order but skip the index we want to keep.
+        start = self.tabs.count()-1
+        for i in range(start, -1, -1):
+            if i != index:
+                self.closeTab(i, False)
+
         gc.collect()
 
     def refreshTabText(self, rw):
