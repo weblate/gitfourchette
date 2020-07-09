@@ -216,10 +216,10 @@ class PrefsDialog(QDialog):
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)
-        for i, availableStyle in enumerate(QStyleFactory.keys()):
+        for availableStyle in QStyleFactory.keys():
             control.addItem(availableStyle)
             if prefValue == availableStyle:
-                control.setCurrentIndex(i)
+                control.setCurrentIndex(control.count() - 1)
         control.textActivated.connect(lambda v, k=prefKey: self.assign(k, v))
         return control
 
