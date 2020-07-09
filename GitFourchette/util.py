@@ -70,7 +70,7 @@ def showInFolder(pathStr):
         if not QProcess.execute('/usr/bin/osascript', args):
             return
     # Fallback.
-    dirPath = path if os.path.isdir(path) else os.path.pardir(path)
+    dirPath = path if os.path.isdir(path) else os.path.dirname(path)
     QDesktopServices.openUrl(QUrl(dirPath))
 
 
