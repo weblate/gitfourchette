@@ -27,6 +27,12 @@ FILESSTACK_STAGE_CARD = 1
 PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
 
 
+def sanitizeSearchTerm(x):
+    if not x:
+        return None
+    return x.strip().lower()
+
+
 class RepoWidget(QWidget):
     nameChange: Signal = Signal()
 
@@ -428,6 +434,34 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             self.state.repo.git.commit(message=cd.getFullMessage(), amend=True)
             self.quickRefresh()
 
+    def _search(self, searchRange):
+        message = self.previouslySearchedTerm
+        message = sanitizeSearchTerm(message)
+        if not message:
+            QMessageBox.warning(self, "Find", "Invalid search term.")
+            return
+
+        likelyHash = False
+        if len(message) <= 40:
+            try:
+                int(message, 16)
+                likelyHash = True
+            except ValueError:
+                pass
+
+        model = self.graphView.model()
+
+        for i in searchRange:
+            modelIndex = model.index(i, 0)
+            meta = model.data(modelIndex)
+            if meta is None:
+                continue
+            if (message in meta.body.lower()) or (likelyHash and message in meta.hexsha):
+                self.graphView.setCurrentIndex(modelIndex)
+                return
+
+        QMessageBox.information(self, "Find", F"No more occurrences of “{message}”.")
+
     def findFlow(self):
         dlg = QInputDialog(self)
         dlg.setInputMode(QInputDialog.TextInput)
@@ -441,27 +475,27 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
         if rc != QDialog.DialogCode.Accepted:
             return
-
-        message = verbatimTerm.lower().strip()
-        if not message:
-            return
-
         self.previouslySearchedTerm = verbatimTerm
+        self._search(range(0, self.graphView.model().rowCount()))
 
-        likelyHash = False
-        if len(message) <= 40:
-            try:
-                int(message, 16)
-                likelyHash = True
-            except ValueError:
-                pass
+    def _findNextOrPrevious(self, findNext):
+        if not sanitizeSearchTerm(self.previouslySearchedTerm):
+            QMessageBox.warning(self, "Find", "Please use “Find” to specify a search term before using “Find Next” or “Find Previous”.")
+            return
+        if len(self.graphView.selectedIndexes()) == 0:
+            QMessageBox.warning(self, "Find", "Please select a commit from whence to resume the search.")
+            return
+        start = self.graphView.currentIndex().row()
+        if findNext:
+            self._search(range(1 + start, self.graphView.model().rowCount()))
+        else:
+            self._search(range(start - 1, -1, -1))
 
-        for i, meta in enumerate(self.state.order):
-            if (message in meta.body.lower()) or (likelyHash and message in meta.hexsha):
-                self.graphView.setCurrentIndex(self.graphView.model().index(1 + i, 0))
-                return
+    def findNext(self):
+        self._findNextOrPrevious(True)
 
-        QApplication.beep()
+    def findPrevious(self):
+        self._findNextOrPrevious(False)
 
     def quickRefresh(self):
         frontTrim, frontNewMetas = self.state.loadTaintedCommitsOnly()

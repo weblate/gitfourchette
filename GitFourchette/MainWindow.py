@@ -121,6 +121,8 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
         repoMenu.addSeparator()
         repoMenu.addAction("&Find...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
+        repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
+        repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
 
         goMenu = menubar.addMenu("&Go")
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence(Qt.CTRL + Qt.Key_Tab))
