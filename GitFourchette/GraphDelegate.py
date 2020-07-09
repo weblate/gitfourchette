@@ -18,7 +18,7 @@ def getColor(i):
 
 
 # Draw lane lines.
-def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
+def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor: QColor):
     painter.save()
     painter.setRenderHints(QPainter.Antialiasing, True)
 
@@ -64,7 +64,7 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
 
     # draw bullet point _outline_ for this commit, beneath everything else, if it's within the lanes that are shown
     if MY_LANE < MAX_LANES:
-        painter.setPen(QPen(Qt.white, 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+        painter.setPen(QPen(outlineColor, 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
 
@@ -107,7 +107,7 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect):
 
         if not path.isEmpty():
             # white outline
-            painter.setPen(QPen(Qt.white, LANE_THICKNESS + 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+            painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
             painter.drawPath(path)
             # actual color
             painter.setPen(QPen(getColor(i), LANE_THICKNESS, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
@@ -153,6 +153,9 @@ class GraphDelegate(QStyledItemDelegate):
         # color, so this rect is probably not visible outside of "windowsvista".
         if hasFocus and isSelected:
             painter.fillRect(option.rect, option.palette.color(QPalette.ColorRole.Highlight))
+
+        #outlineColor = Qt.White()
+        outlineColor = option.palette.color(QPalette.ColorRole.Background)
 
         # print("Render Index Row: " +  str(index.row()))
         super().paint(painter, option, index)
@@ -213,7 +216,7 @@ class GraphDelegate(QStyledItemDelegate):
         # ------ Graph
         rect.setLeft(rect.right())
         if meta is not None and meta.laneFrame:
-            drawLanes(meta, painter, rect)
+            drawLanes(meta, painter, rect, outlineColor)
 
         # ------ tags
         def drawTagOrRef(name, color):
