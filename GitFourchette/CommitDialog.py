@@ -12,10 +12,10 @@ class CommitDialog(QDialog):
 
         if isAmend:
             prompt = "Amend commit message"
-            buttonCaption = "Amend"
+            buttonCaption = "&Amend"
         else:
             prompt = "Enter commit summary"
-            buttonCaption = "Commit"
+            buttonCaption = "&Commit"
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.accept)
