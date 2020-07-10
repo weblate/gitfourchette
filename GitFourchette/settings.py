@@ -86,6 +86,7 @@ class Prefs(BasePrefs):
     diff_tabSpaces              : int           = 4
     diff_largeFileThreshold     : int           = 300000
     diff_showStrayCRs           : bool          = True
+    diff_colorblindFriendlyColors : bool        = False
     tabs_closeButton            : bool          = True
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False

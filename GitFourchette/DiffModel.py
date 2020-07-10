@@ -103,10 +103,10 @@ def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = Fal
             lineA = int(hunkMatch.group(1))
             lineB = int(hunkMatch.group(3))
         elif line.startswith('+'):
-            bf = plusBF
+            bf, cf = plusBF, plusCF
             lineB += 1
         elif line.startswith('-'):
-            bf = minusBF
+            bf, cf = minusBF, minusCF
             lineA += 1
         else:
             # context line

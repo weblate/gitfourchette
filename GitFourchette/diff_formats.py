@@ -8,12 +8,23 @@ normalCF = QTextCharFormat()
 normalCF.setFont(settings.monoFont)
 
 plusBF = QTextBlockFormat()
-plusBF.setBackground(QColor(220, 254, 225))
-plusCF = normalCF
+plusCF = QTextCharFormat(normalCF)
 
 minusBF = QTextBlockFormat()
-minusBF.setBackground(QColor(255, 227, 228))
-minusCF = normalCF
+minusCF = QTextCharFormat(normalCF)
+
+if settings.prefs.diff_colorblindFriendlyColors:
+    minusColor = QColor(colors.orange)
+    plusColor  = QColor(colors.teal)
+else:
+    minusColor = QColor(0xff5555)   # Lower-saturation alternative for e.g. foreground text: 0x993333
+    plusColor  = QColor(0x55ff55)   # Lower-saturation alternative for e.g. foreground text: 0x339933
+
+minusColor.setAlpha(0x58)
+plusColor.setAlpha(0x58)
+
+plusBF.setBackground(plusColor)
+minusBF.setBackground(minusColor)
 
 arobaseBF = QTextBlockFormat()
 arobaseCF = QTextCharFormat()
