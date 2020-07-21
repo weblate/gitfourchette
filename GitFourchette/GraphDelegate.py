@@ -154,8 +154,7 @@ class GraphDelegate(QStyledItemDelegate):
         if hasFocus and isSelected:
             painter.fillRect(option.rect, option.palette.color(QPalette.ColorRole.Highlight))
 
-        #outlineColor = Qt.White()
-        outlineColor = option.palette.color(QPalette.ColorRole.Background)
+        outlineColor = option.palette.color(QPalette.ColorRole.Base)
 
         # print("Render Index Row: " +  str(index.row()))
         super().paint(painter, option, index)
