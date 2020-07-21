@@ -232,7 +232,8 @@ class PrefsDialog(QDialog):
             self.assign(prefKey, text)
 
         def onCurrentIndexChanged(i):
-            if i < 0: return
+            if i < 0 or i >= len(presets):
+                return
             control.setCurrentIndex(-1)
             control.setEditText(presets[i][1])
 
