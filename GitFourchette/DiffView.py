@@ -36,8 +36,7 @@ class DiffView(QTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setLineWrapMode(QTextEdit.NoWrap)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        #self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
@@ -55,10 +54,10 @@ class DiffView(QTextEdit):
 
         # now reset defaults that are lost when changing documents
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
-        if dm.forceWrap:
-            self.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        if dm.forceWrap or settings.prefs.diff_wordWrap:
+            self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
         else:
-            self.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+            self.setWordWrapMode(QTextOption.NoWrap)
 
         self.setCursorWidth(2)
 
