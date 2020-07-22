@@ -9,6 +9,7 @@ from RepoState import RepoState
 from DiffView import DiffView
 from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
+from Sidebar import Sidebar
 from RemoteProgress import RemoteProgress
 from util import fplural, excMessageBox, excStrings
 from typing import List, Callable, Tuple
@@ -55,6 +56,7 @@ class RepoWidget(QWidget):
         self.changedFilesView = FileListView(self)
         self.dirtyView = DirtyFileListView(self)
         self.stageView = StagedFileListView(self)
+        self.sidebar = Sidebar(self)
 
         self.stageView.nothingClicked.connect(self.dirtyView.clearSelection)
         self.dirtyView.nothingClicked.connect(self.stageView.clearSelection)
@@ -124,22 +126,29 @@ class RepoWidget(QWidget):
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
 
+        sideSplitter = QSplitter(Qt.Horizontal)
+        sideSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
+        sideSplitter.addWidget(self.sidebar)
+        sideSplitter.addWidget(mainSplitter)
+        sideSplitter.setSizes([100, 500])
+
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
         self.layout().setMargin(0)
-        self.layout().addWidget(mainSplitter)
+        self.layout().addWidget(sideSplitter)
 
         # object names are required for state saving to work
         mainSplitter.setObjectName("MainSplitter")
         bottomSplitter.setObjectName("BottomSplitter")
         stageSplitter.setObjectName("StageSplitter")
-        self.splittersToSave = [mainSplitter, bottomSplitter, stageSplitter]
+        sideSplitter.setObjectName("SideSplitter")
+        self.splittersToSave = [mainSplitter, bottomSplitter, stageSplitter, sideSplitter]
         # save splitter state in splitterMoved signal
         for splitter in self.splittersToSave:
             splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
 
         # remove frames for a cleaner look
-        for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView:
+        for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView, self.sidebar:
             w.setFrameStyle(QFrame.NoFrame)
 
     def saveSplitterState(self, splitter: QSplitter):

@@ -296,6 +296,7 @@ class MainWindow(QMainWindow):
         progress.setValue(0)
         QCoreApplication.processEvents()
         rw.graphView.fill(orderedMetadata)
+        rw.sidebar.fill(newState.repo)
 
         progress.close()
 
