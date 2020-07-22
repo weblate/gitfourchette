@@ -163,6 +163,8 @@ class PrefsDialog(QDialog):
         sizeControl.textEdited.connect(onSizeChanged)
         sizeControl.setMaximumWidth(sizeControl.fontMetrics().horizontalAdvance("000000"))
 
+        # TODO: after unchecking the filter checkbox, the QFontComboBox isn't fully repopulated because its item count seems to be fixed
+        '''
         fixedWidthFilter = QCheckBox("Show fixed-width only")
         fixedWidthFilter.stateChanged.connect(lambda v:
                 control.setFontFilters(QFontComboBox.AllFonts if v == Qt.CheckState.Unchecked else QFontComboBox.MonospacedFonts))
@@ -170,10 +172,11 @@ class PrefsDialog(QDialog):
             fixedWidthFilter.setCheckState(Qt.CheckState.Checked)
         else:
             fixedWidthFilter.setCheckState(Qt.CheckState.Unchecked)
+        '''
 
         return vBoxWidget(
             control,
-            fixedWidthFilter,
+            #fixedWidthFilter,
             hBoxWidget(
                 QLabel("Size:  "),
                 sizeControl,
