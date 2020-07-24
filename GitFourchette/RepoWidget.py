@@ -76,6 +76,8 @@ class RepoWidget(QWidget):
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
 
+        self.sidebar.branchClicked.connect(self.selectBranch)
+
         self.splitterStates = sharedSplitterStates or {}
 
         self.dirtyLabel = QLabel("Dirty Files")
@@ -332,6 +334,9 @@ class RepoWidget(QWidget):
 
         self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”...")
 
+    # -------------------------------------------------------------------------
+    # Push
+
     def push(self):
         repo = self.state.repo
         branch = repo.active_branch
@@ -383,12 +388,19 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             report = "Push successful!\n\n" + report
             QMessageBox.information(self, "Push successful", report)
 
+    # -------------------------------------------------------------------------
+    # Pull
+    # (WIP)
+
     def pull(self):
         repo = self.state.repo
         branch = repo.active_branch
         tracking = repo.active_branch.tracking_branch()
         remote = repo.remote(tracking.remote_name)
         remote.fetch()
+
+    # -------------------------------------------------------------------------
+    # Commit, amend
 
     def _commitFlowDialog(self, initialText, title, prompt, buttonCaption) -> (bool, str):
         while True:
@@ -442,6 +454,9 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         if rc == QDialog.DialogCode.Accepted:
             self.state.repo.git.commit(message=cd.getFullMessage(), amend=True)
             self.quickRefresh()
+
+    # -------------------------------------------------------------------------
+    # Find, find next
 
     def _search(self, searchRange):
         message = self.previouslySearchedTerm
@@ -506,6 +521,8 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
     def findPrevious(self):
         self._findNextOrPrevious(False)
 
+    # -------------------------------------------------------------------------
+
     def quickRefresh(self):
         frontTrim, frontNewMetas = self.state.loadTaintedCommitsOnly()
         if not frontNewMetas:
@@ -521,3 +538,22 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
             self.fillStageViewAsync()
         gstatus.clearProgress()
+
+    # -------------------------------------------------------------------------
+
+    def selectBranch(self, branchName: str):
+        repo = self.state.repo
+        branch: git.Head = next(filter(lambda b: b.name == branchName, repo.branches))
+        commitHash = branch.commit.hexsha
+
+        model = self.graphView.model()
+        for i in range(model.rowCount()):
+            modelIndex = model.index(i, 0)
+            meta = model.data(modelIndex)
+            if meta is None:
+                continue
+            if commitHash == meta.hexsha:
+                self.graphView.setCurrentIndex(modelIndex)
+                return
+        QApplication.beep()
+

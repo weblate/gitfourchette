@@ -6,6 +6,8 @@ import git
 
 
 class Sidebar(QTreeView):
+    branchClicked = Signal(str)
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -19,6 +21,10 @@ class Sidebar(QTreeView):
         branchesParent = QStandardItem("Local Branches")
         for branch in repo.branches:
             item = QStandardItem(branch.name)
+            item.setData({
+                'type': 'branch',
+                'name': branch.name
+            }, Qt.UserRole)
             branchesParent.appendRow(item)
         model.appendRow(branchesParent)
 
@@ -50,4 +56,17 @@ class Sidebar(QTreeView):
         if self.model():
             self.model().deleteLater()  # avoid memory leak
         self.setModel(model)
+
+    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+        # do standard callback, such as scrolling the viewport if reaching the edges, etc.
+        super().selectionChanged(selected, deselected)
+        if len(selected.indexes()) == 0:
+            return
+        i0 : QModelIndex = selected.indexes()[0]
+        data = i0.data(Qt.UserRole)
+        if not data:
+            return
+        if data['type'] == 'branch':
+            self.branchClicked.emit(data['name'])
+
 
