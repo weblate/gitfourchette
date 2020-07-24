@@ -76,7 +76,8 @@ class RepoWidget(QWidget):
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
 
-        self.sidebar.branchClicked.connect(self.selectBranch)
+        self.sidebar.refClicked.connect(self.selectRef)
+        self.sidebar.tagClicked.connect(self.selectTag)
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -541,11 +542,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
 
     # -------------------------------------------------------------------------
 
-    def selectBranch(self, branchName: str):
-        repo = self.state.repo
-        branch: git.Head = next(filter(lambda b: b.name == branchName, repo.branches))
-        commitHash = branch.commit.hexsha
-
+    def selectCommit(self, commitHash: str):
         model = self.graphView.model()
         for i in range(model.rowCount()):
             modelIndex = model.index(i, 0)
@@ -556,4 +553,14 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
                 self.graphView.setCurrentIndex(modelIndex)
                 return
         QApplication.beep()
+
+    def selectRef(self, refName: str):
+        repo = self.state.repo
+        ref: git.Reference = next(filter(lambda ref: ref.name == refName, repo.refs))
+        self.selectCommit(ref.commit.hexsha)
+
+    def selectTag(self, tagName: str):
+        repo = self.state.repo
+        tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
+        self.selectCommit(tag.commit.hexsha)
 

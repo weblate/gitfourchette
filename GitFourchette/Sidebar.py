@@ -6,7 +6,8 @@ import git
 
 
 class Sidebar(QTreeView):
-    branchClicked = Signal(str)
+    refClicked = Signal(str)
+    tagClicked = Signal(str)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -21,10 +22,7 @@ class Sidebar(QTreeView):
         branchesParent = QStandardItem("Local Branches")
         for branch in repo.branches:
             item = QStandardItem(branch.name)
-            item.setData({
-                'type': 'branch',
-                'name': branch.name
-            }, Qt.UserRole)
+            item.setData({'type': 'ref', 'name': branch.name }, Qt.UserRole)
             branchesParent.appendRow(item)
         model.appendRow(branchesParent)
 
@@ -37,13 +35,23 @@ class Sidebar(QTreeView):
                 if refShortName.startswith(remotePrefix):
                     refShortName = refShortName[len(remotePrefix):]
                 item = QStandardItem(refShortName)
+                item.setData({'type': 'ref', 'name': ref.name}, Qt.UserRole)
                 remoteParent.appendRow(item)
             model.appendRow(remoteParent)
+
+        reff: git.Reference
+        for reff in repo.refs:
+            print(reff.name, reff.object)
+            try:
+                print("\tTAG:",reff.tag)
+            except AttributeError:
+                pass
 
         tagsParent = QStandardItem("Tags")
         tag: git.Tag
         for tag in repo.tags:
             item = QStandardItem(tag.name)
+            item.setData({'type': 'tag', 'name': tag.name}, Qt.UserRole)
             tagsParent.appendRow(item)
         model.appendRow(tagsParent)
 
@@ -57,16 +65,16 @@ class Sidebar(QTreeView):
             self.model().deleteLater()  # avoid memory leak
         self.setModel(model)
 
-    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
-        # do standard callback, such as scrolling the viewport if reaching the edges, etc.
-        super().selectionChanged(selected, deselected)
-        if len(selected.indexes()) == 0:
+    def currentChanged(self, current: QModelIndex, previous: QModelIndex):
+        super().currentChanged(current, previous)
+        if not current.isValid():
             return
-        i0 : QModelIndex = selected.indexes()[0]
-        data = i0.data(Qt.UserRole)
+        data = current.data(Qt.UserRole)
         if not data:
             return
-        if data['type'] == 'branch':
-            self.branchClicked.emit(data['name'])
+        if data['type'] == 'ref':
+            self.refClicked.emit(data['name'])
+        elif data['type'] == 'tag':
+            self.tagClicked.emit(data['name'])
 
 
