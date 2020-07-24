@@ -217,23 +217,18 @@ class GraphDelegate(QStyledItemDelegate):
         if meta is not None and meta.laneFrame:
             drawLanes(meta, painter, rect, outlineColor)
 
-        # ------ tags
-        def drawTagOrRef(name, color):
-            painter.save()
-            painter.setFont(settings.smallFont)
-            painter.setPen(color)
-            rect.setLeft(rect.right())
-            label = F"[{name}] "
-            rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
-            painter.drawText(rect, Qt.AlignVCenter, label)
-            painter.restore()
-        if meta is not None:
-            if meta.hexsha in self.state.refCache:
-                for ref in self.state.refCache[meta.hexsha]:
-                    drawTagOrRef(ref, Qt.darkMagenta)
-            if meta.hexsha in self.state.tagCache:
-                for tag in self.state.tagCache[meta.hexsha]:
-                    drawTagOrRef(tag, Qt.darkYellow)
+        # ------ Refs
+        if meta is not None and meta.hexsha in self.state.refsByCommit:
+            for refName, isTag in self.state.refsByCommit[meta.hexsha]:
+                refColor = Qt.darkYellow if isTag else Qt.darkMagenta
+                painter.save()
+                painter.setFont(settings.smallFont)
+                painter.setPen(refColor)
+                rect.setLeft(rect.right())
+                label = F"[{refName}] "
+                rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
+                painter.drawText(rect, Qt.AlignVCenter, label)
+                painter.restore()
 
         def elide(text):
             return metrics.elidedText(text, Qt.ElideRight, rect.width())

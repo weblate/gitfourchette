@@ -531,7 +531,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         else:
             self.graphView.patchFill(frontTrim, frontNewMetas)
 
-        self.state.refreshTagAndRefCaches()
+        self.state.refreshRefsByCommitCache()
 
         # force redraw visible portion of the graph view to reflect any changed tags/refs
         self.graphView.setDirtyRegion(QRegion(0, 0, self.graphView.width(), self.graphView.height()))

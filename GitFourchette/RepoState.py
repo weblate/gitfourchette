@@ -66,8 +66,7 @@ class RepoState:
     order: List[CommitMetadata]
     debugRefreshId: int
     mutex: QMutex
-    refCache: collections.defaultdict
-    tagCache: collections.defaultdict
+    refsByCommit: collections.defaultdict
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
@@ -79,9 +78,8 @@ class RepoState:
 
         self.commitMetadata = {}
 
-        self.refCache = collections.defaultdict(list)
-        self.tagCache = collections.defaultdict(list)
-        self.refreshTagAndRefCaches()
+        self.refsByCommit = collections.defaultdict(list)
+        self.refreshRefsByCommitCache()
 
         self.boldCommitHash = None
 
@@ -90,17 +88,12 @@ class RepoState:
         # QRecursiveMutex causes problems
         self.mutex = QMutex(QMutex.Recursive)
 
-    def refreshTagAndRefCaches(self):
-        def _refresh(cache, refList):
-            cache.clear()
-            for ref in refList:
-                try:
-                    cache[ref.commit.hexsha].append(ref.name)
-                except ValueError as e:
-                    print("Error loading tag/ref:", e)
-                    # traceback.print_exc()
-        _refresh(self.tagCache, self.repo.tags)
-        _refresh(self.refCache, self.repo.refs)
+    def refreshRefsByCommitCache(self):
+        self.refsByCommit.clear()
+        ref: git.Reference
+        for ref in self.repo.refs:
+            isTag = hasattr(ref, 'tag')
+            self.refsByCommit[ref.object.hexsha].append( (ref.name, isTag) )
 
     @property
     def shortName(self) -> str:
