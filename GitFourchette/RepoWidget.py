@@ -34,6 +34,10 @@ def sanitizeSearchTerm(x):
     return x.strip().lower()
 
 
+def unimplementedDialog(featureName="UNIMPLEMENTED"):
+    QMessageBox.warning(None, featureName, F"This feature isn't implemented yet\n({featureName})")
+
+
 class RepoWidget(QWidget):
     nameChange: Signal = Signal()
 
@@ -78,6 +82,11 @@ class RepoWidget(QWidget):
 
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.tagClicked.connect(self.selectTag)
+        self.sidebar.checkOutBranch.connect(self.checkOutBranchAsync)
+        self.sidebar.renameBranch.connect(self.renameBranchAsync)
+        self.sidebar.mergeBranchIntoActive.connect(lambda name: unimplementedDialog("Merge Other Branch Into Active Branch"))
+        self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
+        self.sidebar.deleteBranch.connect(lambda name: unimplementedDialog("Delete Branch"))
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -339,6 +348,33 @@ class RepoWidget(QWidget):
             self.diffView.replaceDocument(repo, entry.diff, diffActionSet, dm)
 
         self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”")
+
+    def checkOutBranchAsync(self, newBranch: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                repo.git.checkout(newBranch)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Checking out branch “{newBranch}”")
+
+    def renameBranchAsync(self, oldName:str, newName:str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
+                repo.git.branch(oldName, newName, m=True)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Renaming branch “{oldName}” to “{newName}”")
 
     # -------------------------------------------------------------------------
     # Push

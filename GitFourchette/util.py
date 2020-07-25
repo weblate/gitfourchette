@@ -45,6 +45,11 @@ def compactRepoPath(path: str) -> str:
     return '/'.join(splitLong)
 
 
+# Ampersands from user strings must be sanitized for QLabel.
+def labelQuote(text: str) -> str:
+    return F"“{text.replace('&', '&&')}”"
+
+
 def showInFolder(pathStr):
     """
     Show a file or folder with explorer/finder.

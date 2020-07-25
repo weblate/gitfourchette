@@ -1,13 +1,46 @@
+from dataclasses import dataclass
+
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 from PySide2.QtWidgets import *
 
 import git
 
+from util import labelQuote
+
+
+@dataclass
+class SidebarEntry:
+    type: str
+    name: str
+
+    def isRef(self):
+        return self.type in ['localref', 'remoteref']
+
+    def isLocalRef(self):
+        return self.type == 'localref'
+
+    def isTag(self):
+        return self.type == 'tag'
+
+
+# TODO: we should just use a custom model
+def SidebarItem(name: str, data=None) -> QStandardItem:
+    item = QStandardItem(name)
+    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+    if data:
+        item.setData(data, Qt.UserRole)
+    return item
+
 
 class Sidebar(QTreeView):
     refClicked = Signal(str)
     tagClicked = Signal(str)
+    checkOutBranch = Signal(str)
+    renameBranch = Signal(str, str)
+    mergeBranchIntoActive = Signal(str)
+    rebaseActiveOntoBranch = Signal(str)
+    deleteBranch = Signal(str)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -16,42 +49,83 @@ class Sidebar(QTreeView):
         self.setUniformRowHeights(True)
         self.setHeaderHidden(True)
 
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+
+    def onCustomContextMenuRequested(self, localPoint: QPoint):
+        globalPoint = self.mapToGlobal(localPoint)
+        index = self.indexAt(localPoint)
+        data: SidebarEntry = index.data(Qt.UserRole)
+        if data.isLocalRef():
+            menu = QMenu()
+
+            if data.name != self.activeBranchName:
+                menu.addAction(
+                    F"Checkout {labelQuote(data.name)}",
+                    lambda: self.checkOutBranch.emit(data.name))
+                menu.addSeparator()
+                menu.addAction(
+                    F"Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",
+                    lambda: self.mergeBranchIntoActive.emit(data.name))
+                menu.addAction(
+                    F"Rebase {labelQuote(self.activeBranchName)} onto {labelQuote(data.name)}...",
+                    lambda: self.rebaseActiveOntoBranch.emit(data.name))
+
+            menu.addSeparator()
+            menu.addAction("Rename...", lambda: self._renameBranchFlow(data.name))
+            menu.addAction("Delete...", lambda: self.deleteBranch.emit(data.name))
+
+            menu.addSeparator()
+            a = menu.addAction(F"Show In Graph")
+            a.setCheckable(True)
+            a.setChecked(True)
+
+            menu.exec_(globalPoint)
+
+    def _renameBranchFlow(self, oldName):
+        dlg = QInputDialog(self)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setWindowTitle("Rename Branch")
+        dlg.setLabelText(F"Enter new name for branch {labelQuote(oldName)}:")
+        dlg.setTextValue(oldName)
+        dlg.setOkButtonText("Rename")
+        rc = dlg.exec_()
+        newName: str = dlg.textValue()
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+        if rc != QDialog.DialogCode.Accepted:
+            return
+        self.renameBranch.emit(oldName, newName)
+
     def fill(self, repo: git.Repo):
         model = QStandardItemModel()
 
-        branchesParent = QStandardItem("Local Branches")
+        self.activeBranchName = repo.active_branch.name
+
+        branchesParent = SidebarItem("Local Branches")
         for branch in repo.branches:
-            item = QStandardItem(branch.name)
-            item.setData({'type': 'ref', 'name': branch.name }, Qt.UserRole)
+            caption = branch.name
+            if repo.active_branch == branch:
+                caption = F">{caption}<"
+            item = SidebarItem(caption, SidebarEntry('localref', branch.name))
             branchesParent.appendRow(item)
         model.appendRow(branchesParent)
 
         remote: git.Remote
         for remote in repo.remotes:
-            remoteParent = QStandardItem(F"Remote “{remote.name}”")
+            remoteParent = SidebarItem(F"Remote “{remote.name}”")
             remotePrefix = remote.name + '/'
             for ref in remote.refs:
                 refShortName = ref.name
                 if refShortName.startswith(remotePrefix):
                     refShortName = refShortName[len(remotePrefix):]
-                item = QStandardItem(refShortName)
-                item.setData({'type': 'ref', 'name': ref.name}, Qt.UserRole)
+                item = SidebarItem(refShortName, SidebarEntry('remoteref', ref.name))
                 remoteParent.appendRow(item)
             model.appendRow(remoteParent)
-
-        reff: git.Reference
-        for reff in repo.refs:
-            print(reff.name, reff.object)
-            try:
-                print("\tTAG:",reff.tag)
-            except AttributeError:
-                pass
 
         tagsParent = QStandardItem("Tags")
         tag: git.Tag
         for tag in repo.tags:
-            item = QStandardItem(tag.name)
-            item.setData({'type': 'tag', 'name': tag.name}, Qt.UserRole)
+            item = SidebarItem(tag.name, SidebarEntry('tag', tag.name))
             tagsParent.appendRow(item)
         model.appendRow(tagsParent)
 
@@ -72,9 +146,9 @@ class Sidebar(QTreeView):
         data = current.data(Qt.UserRole)
         if not data:
             return
-        if data['type'] == 'ref':
-            self.refClicked.emit(data['name'])
-        elif data['type'] == 'tag':
-            self.tagClicked.emit(data['name'])
+        if data.isRef():
+            self.refClicked.emit(data.name)
+        elif data.isTag():
+            self.tagClicked.emit(data.name)
 
 
