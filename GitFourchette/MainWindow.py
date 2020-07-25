@@ -209,10 +209,14 @@ class MainWindow(QMainWindow):
             return
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
+
+        # If we don't have a RepoState, then the tab is lazy-loaded.
+        # We need to load it now.
         if not w.state:
             success = self._loadRepo(w, w.workingTreeDir)
             if not success:
                 return
+
         shortname = w.state.shortName
         repo = w.state.repo
         inBrackets = ""
@@ -400,14 +404,32 @@ class MainWindow(QMainWindow):
         session = settings.Session()
         if not session.load():
             return
+
         self.sharedSplitterStates = {k:settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
         self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
         self.show()
+
+        # Normally, changing the current tab will load the corresponding repo in the background.
+        # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
         self.tabs.stacked.currentChanged.disconnect(self.onTabChange)
+
+        # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
         for r in session.tabs:
-            self.openRepo(r, foreground=False)
+            try:
+                self.openRepo(r, foreground=False)
+            except BaseException as exc:
+                excMessageBox(exc, title="Restore Session")
+
+        # Set the current tab.
         self.tabs.setCurrentIndex(session.activeTabIndex)
-        self.onTabChange(session.activeTabIndex)
+
+        # Load the current tab's repo. Catch exceptions so __main__ doesn't get aborted.
+        try:
+            self.onTabChange(session.activeTabIndex)
+        except BaseException as exc:
+            excMessageBox(exc, title="Restore Session")
+
+        # Now reconnect the signal.
         self.tabs.stacked.currentChanged.connect(self.onTabChange)
 
     def saveSession(self):
