@@ -2,8 +2,6 @@
 
 
 from PySide2.QtCore import *
-import sys
-import traceback
 
 
 class WorkerSignals(QObject):
@@ -16,7 +14,7 @@ class WorkerSignals(QObject):
         No data
 
     error
-        `tuple` (exctype, value, traceback.format_exc() )
+        BaseException object
 
     result
         `object` data returned from processing, anything
@@ -28,7 +26,7 @@ class WorkerSignals(QObject):
     finished = Signal()
     error = Signal(tuple)
     result = Signal(object)
-    progress = Signal(int)
+    #progress = Signal(int)
 
 
 class Worker(QRunnable):
@@ -66,10 +64,8 @@ class Worker(QRunnable):
         # Retrieve args/kwargs here; and fire processing using them
         try:
             result = self.fn(*self.args, **self.kwargs)
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        except BaseException as exc:
+            self.signals.error.emit(exc)
         else:
             self.signals.result.emit(result)  # Return the result of the processing
         finally:

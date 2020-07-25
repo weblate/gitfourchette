@@ -137,7 +137,7 @@ class GraphView(QListView):
         def onComplete(_):
             self.repoWidget.quickRefresh()
 
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{commitHash}”...")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{commitHash[:settings.prefs.shortHashChars]}”")
 
     def cherrypickCurrentCommit(self):
         commitHash = self.currentCommitHash
@@ -150,7 +150,7 @@ class GraphView(QListView):
         def onComplete(_):
             self.repoWidget.quickRefresh()
 
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{commitHash}”...")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{commitHash[:settings.prefs.shortHashChars]}”")
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.

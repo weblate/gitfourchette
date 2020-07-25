@@ -239,9 +239,13 @@ class RepoWidget(QWidget):
             # Finally run completion
             onComplete(o)
 
+        def errorCallback(exc: BaseException):
+            excMessageBox(exc, title=caption, message=F"Operation failed: {caption}")
+
         w = Worker(work)
         w.signals.result.connect(callback)
-        gstatus.setIndeterminateProgressCaption(caption)
+        w.signals.error.connect(errorCallback)
+        gstatus.setIndeterminateProgressCaption(caption + "...")
 
         # Remove any pending worker from the queue.
         # TODO: we should prevent the currently-running worker's completion callback from running as well.
@@ -288,7 +292,7 @@ class RepoWidget(QWidget):
             if 0 == (len(self.dirtyView.selectedIndexes()) + len(self.stageView.selectedIndexes())):
                 self.diffView.clear()
 
-        self._startAsyncWorker(1000, work, onComplete, "Refreshing index...")
+        self._startAsyncWorker(1000, work, onComplete, "Refreshing index")
 
     def loadCommitAsync(self, hexsha: str):
         """Load commit details into Changed Files view"""
@@ -307,7 +311,7 @@ class RepoWidget(QWidget):
             self.changedFilesView.selectFirstRow()
             self.filesStack.setCurrentIndex(0)
 
-        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{hexsha[:settings.prefs.shortHashChars]}”...")
+        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{hexsha[:settings.prefs.shortHashChars]}”")
 
     def loadDiffAsync(self, entry, diffActionSet):
         """Load a file diff into the Diff View"""
@@ -333,7 +337,7 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is QApplication.instance().thread()
             self.diffView.replaceDocument(repo, entry.diff, diffActionSet, dm)
 
-        self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”...")
+        self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”")
 
     # -------------------------------------------------------------------------
     # Push
