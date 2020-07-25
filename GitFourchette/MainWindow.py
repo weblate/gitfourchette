@@ -259,6 +259,17 @@ class MainWindow(QMainWindow):
             newState = RepoState(path)
             #orderedMetadata = newState.loadCommitList_Sequential(progress)
             orderedMetadata = newState.loadCommitList(progress)
+
+            rw.state = newState
+
+            progress.setLabelText(F"Filling model.")
+            progress.setMaximum(0)
+            progress.setValue(0)
+
+            rw.graphView.fill(orderedMetadata)
+            rw.sidebar.fill(newState.repo)
+
+            self.refreshTabText(rw)
         except BaseException as e:
             progress.close()
 
@@ -289,19 +300,7 @@ class MainWindow(QMainWindow):
                 settings.history.removeRepo(path)
             return False
 
-        rw.state = newState
-
-        progress.setLabelText(F"Filling model.")
-        progress.setMaximum(0)
-        progress.setValue(0)
-        QCoreApplication.processEvents()
-        rw.graphView.fill(orderedMetadata)
-        rw.sidebar.fill(newState.repo)
-
         progress.close()
-
-        self.refreshTabText(rw)
-
         return True
 
     def openRepo(self, repoPath, foreground=True):
