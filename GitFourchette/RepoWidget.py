@@ -237,7 +237,8 @@ class RepoWidget(QWidget):
             # because onComplete may start another worker that sets status.
             gstatus.clearIndeterminateProgressCaption()
             # Finally run completion
-            onComplete(o)
+            if onComplete is not None:
+                onComplete(o)
 
         def errorCallback(exc: BaseException):
             excMessageBox(exc, title=caption, message=F"Operation failed: {caption}")
