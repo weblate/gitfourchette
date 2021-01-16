@@ -3,7 +3,7 @@ import tempfile
 import copy
 import os
 import difflib
-from typing import List, Generator
+from typing import List, Generator, Iterator
 
 
 class LineData:
@@ -11,10 +11,14 @@ class LineData:
     lineA: int  # line number in file 'A'
     lineB: int  # line number in file 'B'
     diffLineIndex: int  # index of the diff line in the unified diff itself
-    data: str
+    data: bytes
 
 
-def makePatchFromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = False):
+def makePatchFromGitDiff(
+        repo: git.Repo,
+        change: git.Diff,
+        allowRawFileAccess: bool = False
+) -> Iterator[bytes]:
     # added files (that didn't exist before) don't have an a_blob
     if change.a_blob:
         a = change.a_blob.data_stream.read()
@@ -35,13 +39,20 @@ def makePatchFromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: b
     else:
         b = b""
 
-    a = a.decode('utf-8').splitlines(keepends=True)
-    b = b.decode('utf-8').splitlines(keepends=True)
+    return difflib.diff_bytes(
+        difflib.unified_diff,
+        a.splitlines(keepends=True),
+        b.splitlines(keepends=True),
+        fromfile=change.a_rawpath,
+        tofile=change.b_rawpath
+    )
 
-    return difflib.unified_diff(a, b, fromfile=change.a_path, tofile=change.b_path)
 
-
-def extraContext(lineDataIter, contextLines: int, plusLinesAreContext: bool) -> Generator[LineData, None, None]:
+def extraContext(
+        lineDataIter: Iterator[LineData],
+        contextLines: int,
+        plusLinesAreContext: bool
+) -> Generator[LineData, None, None]:
     """
     Generates a finite amount of 'context' LineDatas from
     the LineData iterator given as input.
@@ -51,22 +62,21 @@ def extraContext(lineDataIter, contextLines: int, plusLinesAreContext: bool) -> 
         # A is our reference version. We ignore any differences with B.
         # '-' is a line that exists in A (not in B). Treat line as context.
         # '+' is a line that isn't in A (only in B). Ignore line.
-        contextPrefix, ignorePrefix = '-', '+'
+        contextPrefix, ignorePrefix = b'-', b'+'
     else:
         # B is our reference version. We ignore any differences with A.
         # '+' is a line that exists in B (not in A). Treat line as context
         # '-' is a line that isn't in B (only in A). Ignore line.
-        contextPrefix, ignorePrefix = '+', '-'
+        contextPrefix, ignorePrefix = b'+', b'-'
 
-    ld: LineData
     for ld in lineDataIter:
-        diffChar = ld.data[0]
-        if diffChar == '@':
+        diffChar = ld.data[0:1]
+        if diffChar == b'@':
             # Hunk separator. It's useless to keep looking for context in this direction.
             break
-        elif diffChar == contextPrefix or diffChar == ' ':  # Context
+        elif diffChar == contextPrefix or diffChar == b' ':  # Context
             contextLD = copy.copy(ld)
-            contextLD.data = ' ' + ld.data[1:]  # doctor the line to be context
+            contextLD.data = b' ' + ld.data[1:]  # doctor the line to be context
             yield contextLD
             contextLines -= 1
             if contextLines <= 0:  # stop if we have enough context
@@ -84,7 +94,8 @@ def makePatchFromLines(
         ldStart: int,
         ldEnd: int,
         plusLinesAreContext: bool,
-        contextLines: int = 3) -> str:
+        contextLines: int = 3
+) -> bytes:
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
@@ -95,7 +106,7 @@ def makePatchFromLines(
     hunkLines = None
     for i in range(ldStart, ldEnd):
         ld = lineData[i]
-        if ld.data[0] == '@':
+        if ld.data[0:1] == b'@':
             hunkLines = None
         else:
             if not hunkLines:
@@ -120,29 +131,27 @@ def makePatchFromLines(
 
     # Assemble patch text
     allLinesWereContext = True
-    patch = ""
-    patch += F"--- a/{a_path}\n"
-    patch += F"+++ b/{b_path}\n"
+    patch = F"--- a/{a_path}\n+++ b/{b_path}\n".encode()
     for hunkLines in hunks:
-        hunkPatch = ""
+        hunkPatch = b""
         hunkStartA = hunkLines[0].lineA
         hunkStartB = hunkLines[0].lineB
         hunkLenA = 0
         hunkLenB = 0
         for line in hunkLines:
-            initial = line.data[0]
-            assert initial in ' +-', "unrecognized initial character in patch line"
+            initial = line.data[0:1]
+            assert initial in b' +-', "unrecognized initial character in patch line"
             hunkPatch += line.data
-            hunkLenA += 0 if initial == '+' else 1
-            hunkLenB += 0 if initial == '-' else 1
-            if initial != ' ':
+            hunkLenA += 0 if initial == b'+' else 1
+            hunkLenB += 0 if initial == b'-' else 1
+            if initial != b' ':
                 allLinesWereContext = False
-        patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB} @@\n"
+        patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB} @@\n".encode()
         patch += hunkPatch
 
     # This is required for git to accept staging hunks without newlines at the end.
-    if not patch.endswith('\n'):
-        patch += "\n\\ No newline at end of file"
+    if not patch.endswith(b'\n'):
+        patch += b"\n\\ No newline at end of file"
 
     if allLinesWereContext:
         print("all lines were context!")
@@ -151,12 +160,10 @@ def makePatchFromLines(
     return patch
 
 
-def applyPatch(repo: git.Repo, patchData: str, cached: bool = True, reverse: bool = False) -> str:
+def applyPatch(repo: git.Repo, patchData: bytes, cached: bool = True, reverse: bool = False) -> str:
     prefix = F"gitfourchette-{os.path.basename(repo.working_tree_dir)}-"
     with tempfile.NamedTemporaryFile(mode='wb', suffix=".patch", prefix=prefix, delete=False) as patchFile:
-        print(F"_____________ {patchFile.name} ______________\n{patchData}\n________________")
-        patchFile.write(bytes(patchData, 'utf-8'))
+        #print(F"_____________ {patchFile.name} ______________\n{patchData.decode('utf-8', errors='replace')}\n________________")
+        patchFile.write(patchData)
         patchFile.flush()
         return repo.git.apply(patchFile.name, cached=cached, reverse=reverse)
-
-

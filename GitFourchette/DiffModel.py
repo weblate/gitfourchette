@@ -45,7 +45,7 @@ def fromUntrackedFile(repo: git.Repo, path: str):
 
     try:
         with open(fullPath, 'rb') as f:
-            contents: str = f.read().decode('utf-8')
+            contents: str = f.read().decode('utf-8', errors='replace')
     except UnicodeDecodeError as exc:
         summary, details = excStrings(exc)
         return fromFailureMessage("File appears to be binary.", summary)
@@ -66,7 +66,7 @@ def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = Fal
         return fromFailureMessage(F"Large file warning: {change.a_blob.size:,} bytes")
 
     try:
-        patchLines: List[str] = patch.makePatchFromGitDiff(repo, change, allowRawFileAccess)
+        binaryPatchGenerator = patch.makePatchFromGitDiff(repo, change, allowRawFileAccess)
     except UnicodeDecodeError as exc:
         summary, details = excStrings(exc)
         return fromFailureMessage("File appears to be binary.", summary)
@@ -79,33 +79,35 @@ def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = Fal
     lineA = -1
     lineB = -1
 
-    for line in patchLines:
+    for rawLine in binaryPatchGenerator:
         # skip diff header
-        if line.startswith("+++ ") or line.startswith("--- "):
+        if rawLine.startswith(b"+++ ") or rawLine.startswith(b"--- "):
             continue
+
+        textLine = rawLine.decode('utf-8', errors='replace')
 
         ld = patch.LineData()
         ld.cursorStart = cursor.position()
         ld.lineA = lineA
         ld.lineB = lineB
         ld.diffLineIndex = len(lineData)
-        ld.data = line
+        ld.data = rawLine
         lineData.append(ld)
 
         bf, cf = normalBF, normalCF
         trimFront, trimBack = 1, None
         trailer = None
 
-        if line.startswith('@@'):
+        if rawLine.startswith(b'@@'):
             bf, cf = arobaseBF, arobaseCF
             trimFront = 0
-            hunkMatch = hunkRE.match(line)
+            hunkMatch = hunkRE.match(textLine)
             lineA = int(hunkMatch.group(1))
             lineB = int(hunkMatch.group(3))
-        elif line.startswith('+'):
+        elif rawLine.startswith(b'+'):
             bf, cf = plusBF, plusCF
             lineB += 1
-        elif line.startswith('-'):
+        elif rawLine.startswith(b'-'):
             bf, cf = minusBF, minusCF
             lineA += 1
         else:
@@ -113,11 +115,11 @@ def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = Fal
             lineA += 1
             lineB += 1
 
-        if line.endswith("\r\n"):
+        if rawLine.endswith(b'\r\n'):
             trimBack = -2
             if settings.prefs.diff_showStrayCRs:
                 trailer = "<CR>"
-        elif line.endswith("\n"):
+        elif rawLine.endswith(b'\n'):
             trimBack = -1
         else:
             trailer = "<no newline at end of file>"
@@ -129,7 +131,7 @@ def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = Fal
 
         cursor.setBlockFormat(bf)
         cursor.setCharFormat(cf)
-        cursor.insertText(line[trimFront:trimBack])
+        cursor.insertText(textLine[trimFront:trimBack])
 
         if trailer:
             cursor.setCharFormat(warningFormat1)
