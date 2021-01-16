@@ -6,7 +6,7 @@ setup(
     package_dir={'': 'GitFourchette'},
     python_requires='>=3',
     install_requires=[
-        'PySide2>=5',
+        'PySide6>=6',
         'GitPython>=3',
         'psutil'
     ],

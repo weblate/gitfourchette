@@ -1,7 +1,7 @@
 # Based on https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
 
 
-from PySide2.QtCore import *
+from PySide6.QtCore import *
 
 
 class WorkerSignals(QObject):

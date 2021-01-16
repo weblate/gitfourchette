@@ -1,5 +1,5 @@
-from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import Qt, QSysInfo
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QSysInfo
 import sys
 import signal
 from util import excMessageBox
@@ -23,7 +23,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     with open("icons/style.qss", "r") as f:
         app.setStyleSheet(f.read())
-    app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
 
     # Hack so we don't get out-of-place Tahoma on Windows.
     # TODO: Check whether Qt 6 has made this unnecessary (when it comes out).

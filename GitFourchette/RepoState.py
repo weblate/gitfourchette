@@ -3,8 +3,8 @@ import io
 import os
 import subprocess
 import traceback
-from PySide2.QtCore import QSettings, QCoreApplication, QMutex, QMutexLocker
-from PySide2.QtWidgets import QProgressDialog, QMessageBox
+from PySide6.QtCore import QSettings, QCoreApplication, QMutex, QMutexLocker
+from PySide6.QtWidgets import QProgressDialog, QMessageBox
 from datetime import datetime
 from typing import List, Set
 import collections
@@ -85,8 +85,7 @@ class RepoState:
 
         self.currentRefs = {}
 
-        # QRecursiveMutex causes problems
-        self.mutex = QMutex(QMutex.Recursive)
+        self.mutex = QMutex()
 
     def refreshRefsByCommitCache(self):
         self.refsByCommit.clear()

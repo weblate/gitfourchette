@@ -1,9 +1,9 @@
 from typing import List
 
 import git
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 import settings
 import os
 import gc
@@ -174,15 +174,15 @@ class MainWindow(QMainWindow):
             F"Some changes may require restarting {settings.PROGRAM_NAME} to take effect.")
 
     def about(self):
-        import sys, PySide2
+        import sys, PySide6
         about_text = F"""\
         <h2>{settings.PROGRAM_NAME} {settings.VERSION}</h2>
         <p><small>
         {git.Git().version()}<br>
         Python {sys.version}<br>
         GitPython {git.__version__}<br>
-        Qt {PySide2.QtCore.__version__}<br>
-        PySide2 {PySide2.__version__}
+        Qt {PySide6.QtCore.__version__}<br>
+        PySide6 {PySide6.__version__}
         </small></p>
         <p>
         This is my git frontend.<br>There are many like it but this one is mine.

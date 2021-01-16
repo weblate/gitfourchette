@@ -1,6 +1,6 @@
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtWidgets import *
 
 import settings
 
@@ -17,13 +17,13 @@ class QTabBar2(QTabBar):
     """
 
     def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MidButton:
+        if event.button() == Qt.MiddleButton:
             self.middleClickedIndex = self.tabAt(event.pos())
         else:
             super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MidButton:
+        if event.button() == Qt.MiddleButton:
             i = self.tabAt(event.pos())
             if i >= 0 and i == self.middleClickedIndex:
                 self.tabCloseRequested.emit(i)

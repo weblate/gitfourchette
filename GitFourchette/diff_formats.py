@@ -1,4 +1,4 @@
-from PySide2.QtGui import *
+from PySide6.QtGui import *
 
 import settings
 import colors

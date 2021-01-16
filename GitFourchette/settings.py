@@ -1,6 +1,6 @@
 from typing import List, Dict
-from PySide2.QtGui import *
-from PySide2.QtCore import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
 import os
 import json
 from dataclasses import dataclass, field
@@ -176,3 +176,5 @@ smallFontMetrics = QFontMetrics(smallFont)
 statusIcons = {}
 for status in "ACDMRTUX":
     statusIcons[status] = QIcon(F"icons/status_{status.lower()}.svg")
+
+# Note: if icons don't show up, you may need to install the 'qt6-svg' package

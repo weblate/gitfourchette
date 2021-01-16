@@ -1,6 +1,6 @@
 # Color scheme based on https://clrs.cc/
 
-from PySide2.QtGui import QColor
+from PySide6.QtGui import QColor
 
 navy    = QColor(0x001F3F)
 blue    = QColor(0x0074D9)
