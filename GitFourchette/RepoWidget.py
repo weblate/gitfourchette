@@ -97,17 +97,17 @@ class RepoWidget(QWidget):
 
         dirtyContainer = QWidget()
         dirtyContainer.setLayout(QVBoxLayout())
-        dirtyContainer.layout().setMargin(0)
+        dirtyContainer.layout().setContentsMargins(0, 0, 0, 0)
         dirtyContainer.layout().addWidget(self.dirtyLabel)
         dirtyContainer.layout().addWidget(self.dirtyView)
         stageContainer = QWidget()
         stageContainer.setLayout(QVBoxLayout())
-        stageContainer.layout().setMargin(0)
+        stageContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(self.stageLabel)
         stageContainer.layout().addWidget(self.stageView)
         commitButtonsContainer = QWidget()
         commitButtonsContainer.setLayout(QHBoxLayout())
-        commitButtonsContainer.layout().setMargin(0)
+        commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(commitButtonsContainer)
         commitButton = QPushButton("&Commit")
         commitButton.clicked.connect(self.commitFlow)
@@ -146,7 +146,7 @@ class RepoWidget(QWidget):
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
-        self.layout().setMargin(0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(sideSplitter)
 
         # object names are required for state saving to work

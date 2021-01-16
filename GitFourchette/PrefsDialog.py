@@ -8,7 +8,7 @@ from settings import prefs, PROGRAM_NAME, SHORT_DATE_PRESETS, LONG_DATE_PRESETS
 
 def _boxWidget(layout, *controls):
     layout.setSpacing(0)
-    layout.setMargin(0)
+    layout.setContentsMargins(0, 0, 0, 0)
     for control in controls:
         if control == "stretch":
             layout.addStretch()

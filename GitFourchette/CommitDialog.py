@@ -53,7 +53,7 @@ class CommitDialog(QDialog):
 
         summaryRowLayout = QHBoxLayout()
         summaryRowLayout.setSpacing(0)
-        summaryRowLayout.setMargin(0)
+        summaryRowLayout.setContentsMargins(0, 0, 0, 0)
         summaryRowLayout.addWidget(self.summaryEditor)
         summaryRowLayout.addWidget(counterLabel)
         summaryRow = QWidget()

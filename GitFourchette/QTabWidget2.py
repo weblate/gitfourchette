@@ -53,7 +53,7 @@ class QTabWidget2(QWidget):
         #self.tabs.installEventFilter(self)
 
         layout = QVBoxLayout()
-        layout.setMargin(0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.tabs)
         layout.addWidget(self.stacked)

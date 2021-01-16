@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
             menuContainer = QWidget()
             menuContainer.setLayout(QHBoxLayout())
             menuContainer.layout().setSpacing(0)
-            menuContainer.layout().setMargin(0)
+            menuContainer.layout().setContentsMargins(0, 0, 0, 0)
             menuContainer.layout().addWidget(menubar)
             menuContainer.layout().addSpacing(8)
             menuContainer.layout().addWidget(self.tabs.tabs, 1)
