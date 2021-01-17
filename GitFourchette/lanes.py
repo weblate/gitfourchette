@@ -1,7 +1,6 @@
 import sys
 import collections
 import bisect
-from typing import List
 from dataclasses import dataclass
 
 # - Using shortened int hashes instead of full hash strings doesn't seem to affect memory use much.
@@ -14,8 +13,8 @@ import settings
 @dataclass  # gives us an equality operator as required by partial repo refresh
 class LaneFrame:
     myLane: int
-    lanesAbove: List[str]
-    lanesBelow: List[str]
+    lanesAbove: list[str]
+    lanesBelow: list[str]
 
 
 class LaneGenerator:

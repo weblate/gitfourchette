@@ -3,7 +3,7 @@ import tempfile
 import copy
 import os
 import difflib
-from typing import List, Generator, Iterator
+from typing import Generator, Iterator
 
 
 class LineData:
@@ -99,7 +99,7 @@ def extraContext(
 def makePatchFromLines(
         a_path: str,
         b_path: str,
-        lineData: List[LineData],
+        lineData: list[LineData],
         ldStart: int,
         ldEnd: int,
         plusLinesAreContext: bool,

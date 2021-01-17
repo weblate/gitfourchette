@@ -1,10 +1,8 @@
 import git
 import re
 import os
-from typing import List
 from dataclasses import dataclass
 import patch
-from util import excStrings
 from diff_formats import *
 
 
@@ -19,7 +17,7 @@ hunkRE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@$")
 @dataclass
 class DiffModel:
     document: QTextDocument
-    lineData: list
+    lineData: list[patch.LineData]
     forceWrap: bool
 
 

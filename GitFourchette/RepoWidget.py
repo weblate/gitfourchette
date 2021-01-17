@@ -12,7 +12,7 @@ from GraphView import GraphView
 from Sidebar import Sidebar
 from RemoteProgress import RemoteProgress
 from util import fplural, excMessageBox, excStrings
-from typing import List, Callable, Tuple
+from typing import Callable
 import git
 import settings
 import traceback
@@ -267,7 +267,7 @@ class RepoWidget(QWidget):
     def fillStageViewAsync(self):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
-        def work() -> Tuple:
+        def work() -> tuple[git.DiffIndex, list[str], git.DiffIndex]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 dirtyChanges = self.state.getDirtyChanges()
@@ -307,7 +307,7 @@ class RepoWidget(QWidget):
     def loadCommitAsync(self, hexsha: str):
         """Load commit details into Changed Files view"""
 
-        def work() -> List[git.DiffIndex]:
+        def work() -> list[git.DiffIndex]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 commit = self.state.repo.commit(hexsha)
@@ -398,7 +398,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
             return
 
         progress = RemoteProgress(self, "Push in progress")
-        pushInfos: List[git.PushInfo]
+        pushInfos: list[git.PushInfo]
 
         try:
             pushInfos = remote.push(progress=progress)

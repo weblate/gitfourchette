@@ -1,4 +1,3 @@
-from typing import List, Dict
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 import os
@@ -107,8 +106,8 @@ class History(BasePrefs):
     filename = "history.json"
 
     openFileDialogLastPath      : str           = ""
-    history                     : List[str]     = field(default_factory=list)
-    nicknames                   : Dict          = field(default_factory=dict)
+    history                     : list[str]     = field(default_factory=list)
+    nicknames                   : dict          = field(default_factory=dict)
 
     def addRepo(self, path):
         try:
@@ -144,10 +143,10 @@ class History(BasePrefs):
 class Session(BasePrefs):
     filename = "session.json"
 
-    tabs                        : List[str]     = field(default_factory=list)
+    tabs                        : list[str]     = field(default_factory=list)
     activeTabIndex              : int           = -1
     windowGeometry              : str           = ""
-    splitterStates              : Dict          = field(default_factory=dict)
+    splitterStates              : dict          = field(default_factory=dict)
 
 
 prefs = Prefs()

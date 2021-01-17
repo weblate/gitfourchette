@@ -3,7 +3,6 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 import re
 import git
-from typing import List
 
 import patch
 import DiffActionSets
@@ -29,7 +28,7 @@ def bisect(a, x, lo=0, hi=None, key=lambda x: x):
 class DiffView(QTextEdit):
     patchApplied: Signal = Signal()
 
-    lineData: List[patch.LineData]
+    lineData: list[patch.LineData]
     currentActionSet: str
     currentChange: git.Diff
     currentGitRepo: git.Repo

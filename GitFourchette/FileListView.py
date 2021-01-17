@@ -2,9 +2,8 @@ from PySide6.QtCore import *
 from PySide6.QtGui import *
 from PySide6.QtWidgets import *
 import git
-import traceback
 import os
-from typing import List, Generator
+from typing import Generator
 
 import settings
 import DiffActionSets
@@ -51,7 +50,7 @@ class FileListView(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(object, str)
 
-    entries: List[Entry]
+    entries: list[Entry]
     diffActionSet: str
     selectedRowBeforeClear: int
 
@@ -107,7 +106,7 @@ class FileListView(QListView):
         for diff in diffIndex:
             self.addEntry(Entry.Tracked(diff))
 
-    def fillUntracked(self, untracked: List[str]):
+    def fillUntracked(self, untracked: list[str]):
         for path in untracked:
             self.addEntry(Entry.Untracked(path))
 

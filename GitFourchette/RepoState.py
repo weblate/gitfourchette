@@ -6,7 +6,6 @@ import traceback
 from PySide6.QtCore import QSettings, QCoreApplication, QMutex, QMutexLocker
 from PySide6.QtWidgets import QProgressDialog, QMessageBox
 from datetime import datetime
-from typing import List, Set
 import collections
 
 import settings
@@ -18,6 +17,7 @@ from status import gstatus
 PROGRESS_INTERVAL = 5000
 
 
+# For debugging
 class Dump:
     pass
 
@@ -29,7 +29,7 @@ class CommitMetadata:
     authorEmail: str
     authorTimestamp: int
     body: str
-    parentHashes: List[str]
+    parentHashes: list[str]
 
     # Attributes that may change as the repository evolves
     mainRefName: str
@@ -63,7 +63,7 @@ class RepoState:
     commitMetadata: dict
     currentRefs: dict
     boldCommitHash: str
-    order: List[CommitMetadata]
+    order: list[CommitMetadata]
     debugRefreshId: int
     mutex: QMutex
     refsByCommit: collections.defaultdict
@@ -110,13 +110,13 @@ class RepoState:
             self.commitMetadata[key] = v
             return v
 
-    def getDirtyChanges(self):
+    def getDirtyChanges(self) -> git.DiffIndex:
         return self.index.diff(None)
 
-    def getUntrackedFiles(self):
+    def getUntrackedFiles(self) -> list[str]:
         return self.repo.untracked_files
 
-    def getStagedChanges(self):
+    def getStagedChanges(self) -> git.DiffIndex:
         return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
 
     def getOrCreateMetadataFromGitLogOutput(self, commitData):
@@ -272,7 +272,7 @@ class RepoState:
             for p in meta.parentHashes:
                 nextLocal.add(p)
 
-    def getTaintedCommits(self) -> Set[str]:
+    def getTaintedCommits(self) -> set[str]:
         repo = self.repo
 
         tainted = set()
@@ -393,12 +393,14 @@ class RepoState:
 
         return lastTaintedIndex+1, metas
 
+    # For debugging
     def loadCommitDump(self, dump: Dump):
         self.commitMetadata = dump.data
         self.order = [self.commitMetadata[k] for k in dump.order]
         self.currentRefs = dump.currentRefs
         return self.order
 
+    # For debugging
     def makeCommitDump(self) -> Dump:
         dump = Dump()
         dump.data = self.commitMetadata
