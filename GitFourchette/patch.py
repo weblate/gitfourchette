@@ -14,10 +14,16 @@ class LineData:
     data: bytes
 
 
+# Error raised by makePatchFromGitDiff when the diffed file appears to be binary.
+class LooksLikeBinaryError(Exception):
+    pass
+
+
 def makePatchFromGitDiff(
         repo: git.Repo,
         change: git.Diff,
-        allowRawFileAccess: bool = False
+        allowRawFileAccess: bool = False,
+        allowBinaryPatch: bool = False,
 ) -> Iterator[bytes]:
     # added files (that didn't exist before) don't have an a_blob
     if change.a_blob:
@@ -38,6 +44,9 @@ def makePatchFromGitDiff(
             b = f.read()
     else:
         b = b""
+
+    if (not allowBinaryPatch) and ((b'\x00' in a) or (b'\x00' in b)):
+        raise LooksLikeBinaryError()
 
     return difflib.diff_bytes(
         difflib.unified_diff,
