@@ -20,6 +20,9 @@ class SidebarEntry:
     def isLocalRef(self):
         return self.type == 'localref'
 
+    def isRemoteRef(self):
+        return self.type == 'remoteref'
+
     def isTag(self):
         return self.type == 'tag'
 
@@ -41,6 +44,7 @@ class Sidebar(QTreeView):
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     deleteBranch = Signal(str)
+    newTrackingBranch = Signal(str, str)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -82,6 +86,11 @@ class Sidebar(QTreeView):
 
             menu.exec_(globalPoint)
 
+        if data.isRemoteRef():
+            menu = QMenu()
+            menu.addAction(F"New local branch tracking {labelQuote(data.name)}...", lambda: self._newTrackingBranchFlow(data.name))
+            menu.exec_(globalPoint)
+
     def _renameBranchFlow(self, oldName):
         dlg = QInputDialog(self)
         dlg.setInputMode(QInputDialog.TextInput)
@@ -95,6 +104,20 @@ class Sidebar(QTreeView):
         if rc != QDialog.DialogCode.Accepted:
             return
         self.renameBranch.emit(oldName, newName)
+
+    def _newTrackingBranchFlow(self, remoteBranchName):
+        dlg = QInputDialog(self)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setWindowTitle(F"New Tracking Branch")
+        dlg.setLabelText(F"Enter name for a new local branch that will track remote branch {labelQuote(remoteBranchName)}:")
+        dlg.setTextValue(remoteBranchName[remoteBranchName.find('/')+1:])
+        dlg.setOkButtonText("Create")
+        rc = dlg.exec_()
+        localBranchName: str = dlg.textValue()
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+        if rc != QDialog.DialogCode.Accepted:
+            return
+        self.newTrackingBranch.emit(localBranchName, remoteBranchName)
 
     def fill(self, repo: git.Repo):
         model = QStandardItemModel()

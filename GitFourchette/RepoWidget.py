@@ -87,6 +87,7 @@ class RepoWidget(QWidget):
         self.sidebar.mergeBranchIntoActive.connect(lambda name: unimplementedDialog("Merge Other Branch Into Active Branch"))
         self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
         self.sidebar.deleteBranch.connect(lambda name: unimplementedDialog("Delete Branch"))
+        self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -375,6 +376,19 @@ class RepoWidget(QWidget):
             self.sidebar.fill(repo)
 
         self._startAsyncWorker(2000, work, onComplete, F"Renaming branch “{oldName}” to “{newName}”")
+
+    def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                repo.git.branch('--track', localBranchName, remoteBranchName)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
 
     # -------------------------------------------------------------------------
     # Push
