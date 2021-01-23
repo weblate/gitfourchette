@@ -315,7 +315,7 @@ class MainWindow(QMainWindow):
         else:
             newRW.pathPending = repoPath
 
-        tabIndex = self.tabs.addTab(newRW, newRW.getTitle(), repoPath)
+        tabIndex = self.tabs.addTab(newRW, newRW.getTitle(), compactSystemPath(repoPath))
 
         if foreground:
             self.tabs.setCurrentIndex(tabIndex)
