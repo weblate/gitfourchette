@@ -39,7 +39,7 @@ def SidebarItem(name: str, data=None) -> QStandardItem:
 class Sidebar(QTreeView):
     refClicked = Signal(str)
     tagClicked = Signal(str)
-    checkOutBranch = Signal(str)
+    switchToBranch = Signal(str)
     renameBranch = Signal(str, str)
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
@@ -65,8 +65,8 @@ class Sidebar(QTreeView):
 
             if data.name != self.activeBranchName:
                 menu.addAction(
-                    F"Checkout {labelQuote(data.name)}",
-                    lambda: self.checkOutBranch.emit(data.name))
+                    F"Switch to {labelQuote(data.name)}",
+                    lambda: self.switchToBranch.emit(data.name))
                 menu.addSeparator()
                 menu.addAction(
                     F"Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",

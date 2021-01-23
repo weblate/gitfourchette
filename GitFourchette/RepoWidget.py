@@ -82,7 +82,7 @@ class RepoWidget(QWidget):
 
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.tagClicked.connect(self.selectTag)
-        self.sidebar.checkOutBranch.connect(self.checkOutBranchAsync)
+        self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.renameBranch.connect(self.renameBranchAsync)
         self.sidebar.mergeBranchIntoActive.connect(lambda name: unimplementedDialog("Merge Other Branch Into Active Branch"))
         self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
@@ -350,18 +350,18 @@ class RepoWidget(QWidget):
 
         self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”")
 
-    def checkOutBranchAsync(self, newBranch: str):
+    def switchToBranchAsync(self, newBranch: str):
         repo = self.state.repo
 
         def work():
             with self.state.mutexLocker():
-                repo.git.checkout(newBranch)
+                repo.git.switch("--no-guess", newBranch)
 
         def onComplete(_):
             self.quickRefresh()
             self.sidebar.fill(repo)
 
-        self._startAsyncWorker(2000, work, onComplete, F"Checking out branch “{newBranch}”")
+        self._startAsyncWorker(2000, work, onComplete, F"Switching to branch “{newBranch}”")
 
     def renameBranchAsync(self, oldName:str, newName:str):
         repo = self.state.repo
