@@ -62,6 +62,7 @@ class RepoState:
     settings: QSettings
     commitMetadata: dict
     currentRefs: dict
+    superproject: str
     boldCommitHash: str
     order: list[CommitMetadata]
     debugRefreshId: int
@@ -81,6 +82,8 @@ class RepoState:
         self.refsByCommit = collections.defaultdict(list)
         self.refreshRefsByCommitCache()
 
+        self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
+
         self.boldCommitHash = None
 
         self.currentRefs = {}
@@ -96,7 +99,12 @@ class RepoState:
 
     @property
     def shortName(self) -> str:
-        return settings.history.getRepoNickname(self.repo.working_tree_dir)
+        prefix = ""
+        if self.superproject:
+            superprojectNickname = settings.history.getRepoNickname(self.superproject)
+            prefix = superprojectNickname + ": "
+
+        return prefix + settings.history.getRepoNickname(self.repo.working_tree_dir)
 
     def mutexLocker(self) -> QMutexLocker:
         return QMutexLocker(self.mutex)
