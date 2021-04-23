@@ -36,31 +36,41 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
     MY_LANE = meta.laneFrame.myLane
     TOTAL = max(len(lanesAbove), len(lanesBelow))
 
-    remapAbove = []
-    remapBelow = []
+    # Compute horizontal positions for each lane above and below this row.
+    lanePositionsAbove = []
+    lanePositionsBelow = []
     if settings.prefs.graph_flattenLanes:
+        # Flatten the lanes so there are no horizontal gaps in-between the lanes.
         ai, bi = -1, -1
         for i in range(TOTAL):
             if i < len(lanesAbove) and lanesAbove[i]: ai += 1
             if i < len(lanesBelow) and lanesBelow[i]: bi += 1
-            remapAbove.append(ai)
-            remapBelow.append(bi)
+            lanePositionsAbove.append(ai)
+            lanePositionsBelow.append(bi)
         FLAT_TOTAL = max(ai, bi)
     else:
-        remap = list(range(TOTAL))
-        remapAbove = remap
-        remapBelow = remap
+        # Straightforward lane positions (lane position == lane ID)
+        straightforwardMapping = list(range(TOTAL))
+        lanePositionsAbove = straightforwardMapping
+        lanePositionsBelow = straightforwardMapping
         FLAT_TOTAL = TOTAL
 
-    rect.setRight(x + FLAT_TOTAL * LANE_WIDTH)
+    # Find out at which position to draw the commit's bullet point.
+    myLanePosition = -1
+    # First, attempt to put bullet point in parent lane's position (below).
+    if myLanePosition < 0 and MY_LANE < len(lanePositionsBelow):
+        myLanePosition = lanePositionsBelow[MY_LANE]
+    # If that didn't work (commit has no parents), put bullet point in child lane's position (above).
+    if myLanePosition < 0 and MY_LANE < len(lanePositionsAbove):
+        myLanePosition = lanePositionsAbove[MY_LANE]
+    # If that still didn't work, we have a lone commit without parents or children; just toss the bullet to the right.
+    if myLanePosition < 0:
+        FLAT_TOTAL += 1
+        myLanePosition = FLAT_TOTAL
+        assert myLanePosition == MY_LANE, "expecting LaneGenerator to put lone commits on the rightmost column"
 
-    # find out position of my lane
-    myRemap = -1
-    if MY_LANE < len(remapBelow):
-        myRemap = remapBelow[MY_LANE]
-    if myRemap < 0 and MY_LANE < len(remapAbove):
-        myRemap = remapAbove[MY_LANE]
-    mx = x + myRemap * LANE_WIDTH
+    rect.setRight(x + FLAT_TOTAL * LANE_WIDTH)
+    mx = x + myLanePosition * LANE_WIDTH
 
     # draw bullet point _outline_ for this commit, beneath everything else, if it's within the lanes that are shown
     if MY_LANE < MAX_LANES:
@@ -81,8 +91,8 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
     for i in range(TOTAL):
         commitAbove = lanesAbove[i] if i < len(lanesAbove) else None
         commitBelow = lanesBelow[i] if i < len(lanesBelow) else None
-        ax = x + remapAbove[i] * LANE_WIDTH
-        bx = x + remapBelow[i] * LANE_WIDTH
+        ax = x + lanePositionsAbove[i] * LANE_WIDTH
+        bx = x + lanePositionsBelow[i] * LANE_WIDTH
 
         # position of lane `i` relative to MY_LANE: can be -1 (left), 0 (same), or +1 (right)
         direction = sign(i - MY_LANE)
