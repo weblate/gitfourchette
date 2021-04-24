@@ -28,6 +28,9 @@ class SidebarEntry:
     def isTag(self):
         return self.type == 'tag'
 
+    def isRemote(self):
+        return self.type == 'remote'
+
 
 # TODO: we should just use a custom model
 def SidebarItem(name: str, data=None) -> QStandardItem:
@@ -48,6 +51,7 @@ class Sidebar(QTreeView):
     rebaseActiveOntoBranch = Signal(str)
     deleteBranch = Signal(str)
     newTrackingBranch = Signal(str, str)
+    editRemoteURL = Signal(str, str)
 
     currentGitRepo: git.Repo
 
@@ -112,6 +116,11 @@ class Sidebar(QTreeView):
             menu.addAction(F"New local branch tracking {labelQuote(data.name)}...", lambda: self._newTrackingBranchFlow(data.name))
             menu.exec_(globalPoint)
 
+        if data.isRemote():
+            menu = QMenu()
+            menu.addAction(F"Edit URL...", lambda: self._editRemoteURLFlow(data.name))
+            menu.exec_(globalPoint)
+
     def _editTrackingBranchFlow(self, localBranchName):
         dlg = TrackedBranchDialog(self.currentGitRepo, localBranchName, self)
         rc = dlg.exec_()
@@ -141,6 +150,15 @@ class Sidebar(QTreeView):
         if ok:
             self.newTrackingBranch.emit(localBranchName, remoteBranchName)
 
+    def _editRemoteURLFlow(self, remoteName):
+        newURL, ok = textInputDialog(
+            self,
+            "Edit Remote URL",
+            F"Enter new URL for remote <b>{labelQuote(remoteName)}</b>:",
+            self.currentGitRepo.remote(remoteName).url)
+        if ok:
+            self.editRemoteURL.emit(remoteName, newURL)
+
     def fill(self, repo: git.Repo):
         model = QStandardItemModel()
 
@@ -160,7 +178,8 @@ class Sidebar(QTreeView):
 
         remote: git.Remote
         for remote in repo.remotes:
-            remoteParent = SidebarItem(F"Remote “{remote.name}”")
+            remoteData = SidebarEntry('remote', remote.name)
+            remoteParent = SidebarItem(F"Remote “{remote.name}”", remoteData)
             remotePrefix = remote.name + '/'
             for ref in remote.refs:
                 refShortName = ref.name

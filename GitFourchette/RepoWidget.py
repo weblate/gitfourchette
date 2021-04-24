@@ -89,6 +89,7 @@ class RepoWidget(QWidget):
         self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
         self.sidebar.deleteBranch.connect(lambda name: unimplementedDialog("Delete Branch"))
         self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
+        self.sidebar.editRemoteURL.connect(self.editRemoteURLAsync)
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -407,6 +408,20 @@ class RepoWidget(QWidget):
             self.sidebar.fill(repo)
 
         self._startAsyncWorker(2000, work, onComplete, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
+
+    def editRemoteURLAsync(self, remoteName: str, newURL: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                remote = repo.remote(remoteName)
+                remote.set_url(newURL)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Edit remote “{remoteName}” URL")
 
     # -------------------------------------------------------------------------
     # Push
