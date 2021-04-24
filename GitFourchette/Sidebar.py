@@ -6,7 +6,7 @@ from PySide6.QtWidgets import *
 
 import git
 
-from util import labelQuote
+from util import labelQuote, textInputDialog
 from TrackedBranchDialog import TrackedBranchDialog
 
 
@@ -122,32 +122,24 @@ class Sidebar(QTreeView):
         self.editTrackingBranch.emit(localBranchName, newTrackingBranchName)
 
     def _renameBranchFlow(self, oldName):
-        dlg = QInputDialog(self)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle("Rename Branch")
-        dlg.setLabelText(F"Enter new name for branch {labelQuote(oldName)}:")
-        dlg.setTextValue(oldName)
-        dlg.setOkButtonText("Rename")
-        rc = dlg.exec_()
-        newName: str = dlg.textValue()
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
-        if rc != QDialog.DialogCode.Accepted:
-            return
-        self.renameBranch.emit(oldName, newName)
+        newName, ok = textInputDialog(
+            self,
+            "Rename Branch",
+            F"Enter new name for branch <b>{labelQuote(oldName)}</b>:",
+            oldName,
+            okButtonText="Rename")
+        if ok:
+            self.renameBranch.emit(oldName, newName)
 
     def _newTrackingBranchFlow(self, remoteBranchName):
-        dlg = QInputDialog(self)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle(F"New Tracking Branch")
-        dlg.setLabelText(F"Enter name for a new local branch that will track remote branch {labelQuote(remoteBranchName)}:")
-        dlg.setTextValue(remoteBranchName[remoteBranchName.find('/')+1:])
-        dlg.setOkButtonText("Create")
-        rc = dlg.exec_()
-        localBranchName: str = dlg.textValue()
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
-        if rc != QDialog.DialogCode.Accepted:
-            return
-        self.newTrackingBranch.emit(localBranchName, remoteBranchName)
+        localBranchName, ok = textInputDialog(
+            self,
+            "New Tracking Branch",
+            F"Enter name for a new local branch that will track remote branch {labelQuote(remoteBranchName)}:",
+            remoteBranchName[remoteBranchName.find('/') + 1:],
+            okButtonText="Create")
+        if ok:
+            self.newTrackingBranch.emit(localBranchName, remoteBranchName)
 
     def fill(self, repo: git.Repo):
         model = QStandardItemModel()

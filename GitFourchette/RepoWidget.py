@@ -11,7 +11,7 @@ from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from Sidebar import Sidebar
 from RemoteProgress import RemoteProgress
-from util import fplural, excMessageBox, excStrings
+from util import fplural, excMessageBox, excStrings, textInputDialog
 from typing import Callable
 import git
 import settings
@@ -204,14 +204,14 @@ class RepoWidget(QWidget):
             self.state = None
 
     def renameRepo(self):
-        qid = QInputDialog()
-        text, ok = qid.getText(
+        text, ok = textInputDialog(
             self,
-            "Rename repo", "Enter new nickname for repo, or enter blank line to reset:",
-            QLineEdit.Normal,
-            settings.history.getRepoNickname(self.state.dir))
+            "Edit Repo Nickname",
+            "Enter new nickname for repo, or enter blank line to reset:",
+            settings.history.getRepoNickname(self.workingTreeDir),
+            okButtonText="Rename")
         if ok:
-            settings.history.setRepoNickname(self.state.dir, text)
+            settings.history.setRepoNickname(self.workingTreeDir, text)
             self.nameChange.emit()
 
     def setNoCommitSelected(self):

@@ -118,3 +118,30 @@ def excStrings(exc):
     details = ''.join(details).strip()
 
     return summary, details
+
+
+def textInputDialog(
+        parent: QWidget,
+        title: str,
+        label: str,
+        text: str,
+        okButtonText: str = None):
+    dlg = QInputDialog(parent)
+
+    dlg.setInputMode(QInputDialog.TextInput)
+    dlg.setWindowTitle(title)
+    if label:
+        dlg.setLabelText(label)
+    if text:
+        dlg.setTextValue(text)
+    if okButtonText:
+        dlg.setOkButtonText(okButtonText)
+
+    # This size isn't guaranteed. But it'll expand the dialog horizontally if the label is shorter.
+    dlg.resize(400, 128)
+
+    rc = dlg.exec_()
+
+    text = dlg.textValue()
+    dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+    return text, rc == QDialog.DialogCode.Accepted
