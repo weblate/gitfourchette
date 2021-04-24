@@ -7,15 +7,14 @@ class CommitDialog(QDialog):
     def __init__(self, initialText: str, isAmend: bool, parent):
         super().__init__(parent)
 
-        self.setWindowTitle(F"Commit")
-
-
         if isAmend:
             prompt = "Amend commit message"
             buttonCaption = "&Amend"
+            self.setWindowTitle("Amend Commit")
         else:
             prompt = "Enter commit summary"
             buttonCaption = "&Commit"
+            self.setWindowTitle("Commit")
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.accept)
