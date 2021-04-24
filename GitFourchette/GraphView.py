@@ -168,3 +168,6 @@ class GraphView(QListView):
             self.uncommittedChangesClicked.emit()
         else:
             self.commitClicked.emit(current.data().hexsha)
+
+    def selectUncommittedChanges(self):
+        self.setCurrentIndex(self.model().index(0, 0))

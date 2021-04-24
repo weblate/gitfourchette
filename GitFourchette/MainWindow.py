@@ -122,7 +122,9 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
 
-        goMenu = menubar.addMenu("&Go")
+        goMenu:QMenu = menubar.addMenu("&Go")
+        goMenu.addAction("&Uncommitted Changes", self.selectUncommittedChanges, QKeySequence(Qt.CTRL + Qt.Key_U))
+        goMenu.addSeparator()
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence(Qt.CTRL + Qt.Key_Tab))
         goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_Tab))
 
@@ -397,6 +399,9 @@ class MainWindow(QMainWindow):
         index += self.tabs.count() - 1
         index %= self.tabs.count()
         self.tabs.tabs.setCurrentIndex(index)
+
+    def selectUncommittedChanges(self):
+        self.currentRepoWidget().graphView.selectUncommittedChanges()
 
     def tryLoadSession(self):
         session = settings.Session()
