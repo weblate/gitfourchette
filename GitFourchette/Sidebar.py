@@ -7,12 +7,14 @@ from PySide6.QtWidgets import *
 import git
 
 from util import labelQuote
+from TrackedBranchDialog import TrackedBranchDialog
 
 
 @dataclass
 class SidebarEntry:
     type: str
     name: str
+    trackingBranch: str = None
 
     def isRef(self):
         return self.type in ['localref', 'remoteref']
@@ -41,13 +43,18 @@ class Sidebar(QTreeView):
     tagClicked = Signal(str)
     switchToBranch = Signal(str)
     renameBranch = Signal(str, str)
+    editTrackingBranch = Signal(str, str)
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     deleteBranch = Signal(str)
     newTrackingBranch = Signal(str, str)
 
+    currentGitRepo: git.Repo
+
     def __init__(self, parent):
         super().__init__(parent)
+
+        self.currentGitRepo = None
 
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setUniformRowHeights(True)
@@ -60,26 +67,40 @@ class Sidebar(QTreeView):
         globalPoint = self.mapToGlobal(localPoint)
         index = self.indexAt(localPoint)
         data: SidebarEntry = index.data(Qt.UserRole)
+
+        if not data:
+            return
+
         if data.isLocalRef():
             menu = QMenu()
 
             if data.name != self.activeBranchName:
                 menu.addAction(
-                    F"Switch to {labelQuote(data.name)}",
+                    F"&Switch to {labelQuote(data.name)}",
                     lambda: self.switchToBranch.emit(data.name))
                 menu.addSeparator()
                 menu.addAction(
-                    F"Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",
+                    F"&Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",
                     lambda: self.mergeBranchIntoActive.emit(data.name))
                 menu.addAction(
-                    F"Rebase {labelQuote(self.activeBranchName)} onto {labelQuote(data.name)}...",
+                    F"&Rebase {labelQuote(self.activeBranchName)} onto {labelQuote(data.name)}...",
                     lambda: self.rebaseActiveOntoBranch.emit(data.name))
 
             menu.addSeparator()
-            menu.addAction("Rename...", lambda: self._renameBranchFlow(data.name))
-            menu.addAction("Delete...", lambda: self.deleteBranch.emit(data.name))
+
+            if data.trackingBranch:
+                trackingActionCaption = F"&Tracking {labelQuote(data.trackingBranch)}..."
+            else:
+                trackingActionCaption = "&Tracking nothing..."
+            menu.addAction(trackingActionCaption, lambda: self._editTrackingBranchFlow(data.name))
 
             menu.addSeparator()
+
+            menu.addAction("Re&name...", lambda: self._renameBranchFlow(data.name))
+            menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data.name))
+
+            menu.addSeparator()
+
             a = menu.addAction(F"Show In Graph")
             a.setCheckable(True)
             a.setChecked(True)
@@ -90,6 +111,15 @@ class Sidebar(QTreeView):
             menu = QMenu()
             menu.addAction(F"New local branch tracking {labelQuote(data.name)}...", lambda: self._newTrackingBranchFlow(data.name))
             menu.exec_(globalPoint)
+
+    def _editTrackingBranchFlow(self, localBranchName):
+        dlg = TrackedBranchDialog(self.currentGitRepo, localBranchName, self)
+        rc = dlg.exec_()
+        newTrackingBranchName = dlg.newTrackingBranchName
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
+        if rc != QDialog.DialogCode.Accepted:
+            return
+        self.editTrackingBranch.emit(localBranchName, newTrackingBranchName)
 
     def _renameBranchFlow(self, oldName):
         dlg = QInputDialog(self)
@@ -129,7 +159,10 @@ class Sidebar(QTreeView):
             caption = branch.name
             if repo.active_branch == branch:
                 caption = F">{caption}<"
-            item = SidebarItem(caption, SidebarEntry('localref', branch.name))
+            data = SidebarEntry('localref', branch.name)
+            if branch.tracking_branch():
+                data.trackingBranch = branch.tracking_branch().name
+            item = SidebarItem(caption, data)
             branchesParent.appendRow(item)
         model.appendRow(branchesParent)
 
@@ -152,6 +185,7 @@ class Sidebar(QTreeView):
             tagsParent.appendRow(item)
         model.appendRow(tagsParent)
 
+        self.currentGitRepo = repo
         self._replaceModel(model)
 
         # expand branch container

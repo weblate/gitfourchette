@@ -84,6 +84,7 @@ class RepoWidget(QWidget):
         self.sidebar.tagClicked.connect(self.selectTag)
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.renameBranch.connect(self.renameBranchAsync)
+        self.sidebar.editTrackingBranch.connect(self.editTrackingBranchAsync)
         self.sidebar.mergeBranchIntoActive.connect(lambda name: unimplementedDialog("Merge Other Branch Into Active Branch"))
         self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
         self.sidebar.deleteBranch.connect(lambda name: unimplementedDialog("Delete Branch"))
@@ -389,6 +390,23 @@ class RepoWidget(QWidget):
             self.sidebar.fill(repo)
 
         self._startAsyncWorker(2000, work, onComplete, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
+
+    def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                localBranch: git.Head = repo.heads[localBranchName]
+                remoteBranch: git.Reference = None
+                if remoteBranchName:
+                    remoteBranch = repo.refs[remoteBranchName]
+                localBranch.set_tracking_branch(remoteBranch)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
 
     # -------------------------------------------------------------------------
     # Push
