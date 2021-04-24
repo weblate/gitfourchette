@@ -8,10 +8,20 @@ from typing import Generator, Iterator
 
 class LineData:
     cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
+    
     lineA: int  # line number in file 'A'
+
     lineB: int  # line number in file 'B'
+
     diffLineIndex: int  # index of the diff line in the unified diff itself
+
+    """
+    Raw line diff data.
+    The first byte shall be one of ' ', '-', or '+'.
+    The remaining of the byte string is the raw line bytes, including line terminator.
+    """
     data: bytes
+
 
 
 # Error raised by makePatchFromGitDiff when the diffed file appears to be binary.
