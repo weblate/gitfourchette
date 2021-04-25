@@ -90,6 +90,7 @@ class RepoWidget(QWidget):
         self.sidebar.deleteBranch.connect(lambda name: unimplementedDialog("Delete Branch"))
         self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
         self.sidebar.editRemoteURL.connect(self.editRemoteURLAsync)
+        self.sidebar.pushBranch.connect(lambda name: self.push(name))
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -427,10 +428,14 @@ class RepoWidget(QWidget):
     # Push
     # TODO: make async!
 
-    def push(self):
+    def push(self, branchName: str = None):
         repo = self.state.repo
-        branch = repo.active_branch
-        tracking = repo.active_branch.tracking_branch()
+
+        if not branchName:
+            branchName = repo.active_branch.name
+
+        branch = repo.heads[branchName]
+        tracking = branch.tracking_branch()
 
         if not tracking:
             QMessageBox.warning(
@@ -447,11 +452,12 @@ class RepoWidget(QWidget):
         urls = list(remote.urls)
 
         qmb = QMessageBox(self)
-        qmb.setWindowTitle("Push")
+        qmb.setWindowTitle(F"Push “{branchName}”")
         qmb.setIcon(QMessageBox.Question)
-        qmb.setText(F"""Confirm Push?
-To remote: "{remote.name}" at {'; '.join(urls)}
-Branch: "{branch.name}" tracking "{tracking.name}" """)
+        qmb.setText(F"""Confirm Push?<br>
+            <br>Branch: <b>“{branch.name}”</b>
+            <br>Tracking: <b>“{tracking.name}”</b>
+            <br>Will be pushed to remote: <b>{'; '.join(urls)}</b>""")
         qmb.addButton("Push", QMessageBox.AcceptRole)
         qmb.addButton("Cancel", QMessageBox.RejectRole)
         if qmb.exec_() != QMessageBox.AcceptRole:
@@ -461,7 +467,7 @@ Branch: "{branch.name}" tracking "{tracking.name}" """)
         pushInfos: list[git.PushInfo]
 
         try:
-            pushInfos = remote.push(progress=progress)
+            pushInfos = remote.push(refspec=branchName, progress=progress)
         except BaseException as e:
             progress.close()
             excMessageBox(e, "Push", "An error occurred while pushing.", parent=self)

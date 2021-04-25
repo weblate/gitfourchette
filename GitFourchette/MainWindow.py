@@ -115,7 +115,7 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Commit...", lambda: self.currentRepoWidget().commitFlow(), QKeySequence(Qt.CTRL + Qt.Key_K))
         repoMenu.addAction("Amend Last Commit...", lambda: self.currentRepoWidget().amendFlow(), QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_K))
         repoMenu.addSeparator()
-        repoMenu.addAction("Push...", lambda: self.currentRepoWidget().push())
+        repoMenu.addAction("Push Active Branch...", lambda: self.currentRepoWidget().push())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
         repoMenu.addSeparator()
         repoMenu.addAction("&Find...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)

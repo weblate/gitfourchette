@@ -50,6 +50,7 @@ class Sidebar(QTreeView):
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     deleteBranch = Signal(str)
+    pushBranch = Signal(str)
     newTrackingBranch = Signal(str, str)
     editRemoteURL = Signal(str, str)
 
@@ -93,10 +94,12 @@ class Sidebar(QTreeView):
             menu.addSeparator()
 
             if data.trackingBranch:
-                trackingActionCaption = F"&Tracking {labelQuote(data.trackingBranch)}..."
+                menu.addAction(F"&Push to {labelQuote(data.trackingBranch)}...", lambda: self.pushBranch.emit(data.name))
             else:
-                trackingActionCaption = "&Tracking nothing..."
-            menu.addAction(trackingActionCaption, lambda: self._editTrackingBranchFlow(data.name))
+                a = menu.addAction("&Push: no tracked branch")
+                a.setEnabled(False)
+
+            menu.addAction("Set &Tracked Branch...", lambda: self._editTrackingBranchFlow(data.name))
 
             menu.addSeparator()
 
