@@ -11,7 +11,7 @@ from FileListView import FileListView, DirtyFileListView, StagedFileListView
 from GraphView import GraphView
 from Sidebar import Sidebar
 from RemoteProgress import RemoteProgress
-from util import fplural, excMessageBox, excStrings, textInputDialog
+from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog
 from typing import Callable
 import git
 import settings
@@ -425,11 +425,24 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
     # Push
+    # TODO: make async!
 
     def push(self):
         repo = self.state.repo
         branch = repo.active_branch
         tracking = repo.active_branch.tracking_branch()
+
+        if not tracking:
+            QMessageBox.warning(
+                self,
+                "Cannot Push a Non-Remote-Tracking Branch",
+                F"""Can’t push local branch <b>{labelQuote(branch.name)}</b>
+                because it isn’t tracking any remote branch.
+                <br><br>To set a remote branch to track, right-click on
+                local branch {labelQuote(branch.name)} in the sidebar,
+                and pick “Tracking”.""")
+            return
+
         remote = repo.remote(tracking.remote_name)
         urls = list(remote.urls)
 
