@@ -1,13 +1,14 @@
-import sys
-import collections
-import bisect
 from dataclasses import dataclass
+import bisect
+import collections
+import settings
+import sys
+
 
 # - Using shortened int hashes instead of full hash strings doesn't seem to affect memory use much.
 # - With a keyframe/replay approach (take snapshot every 100 steps, replay 99 other steps from keyframe),
 #   we might not even need to keep 'self.lanes' around.
 
-import settings
 
 
 @dataclass  # gives us an equality operator as required by partial repo refresh

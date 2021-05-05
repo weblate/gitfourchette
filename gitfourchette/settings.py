@@ -1,8 +1,7 @@
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-import os
-import json
+from allqt import *
 from dataclasses import dataclass, field
+import json
+import os
 
 VERSION = "0.1-preview"
 

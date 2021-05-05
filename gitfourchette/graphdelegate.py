@@ -1,11 +1,9 @@
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
+from allqt import *
 from datetime import datetime
-import settings
-import colors
-from RepoState import CommitMetadata, RepoState
+from repostate import CommitMetadata, RepoState
 from util import sign, messageSummary
+import colors
+import settings
 
 
 LANE_WIDTH = 10

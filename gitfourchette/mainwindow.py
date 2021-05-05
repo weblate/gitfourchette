@@ -1,19 +1,16 @@
-import git
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-import settings
-import os
-import gc
-import pickle
-import zlib
-
-from RepoState import RepoState
-from RepoWidget import RepoWidget
+from allqt import *
+from globalstatus import globalstatus
+from prefsdialog import PrefsDialog
+from qtabwidget2 import QTabWidget2
+from repostate import RepoState
+from repowidget import RepoWidget
 from util import compactSystemPath, showInFolder, excMessageBox
-from status import gstatus
-from QTabWidget2 import QTabWidget2
-from PrefsDialog import PrefsDialog
+import gc
+import git
+import os
+import pickle
+import settings
+import zlib
 
 
 try:
@@ -57,10 +54,10 @@ class MainWindow(QMainWindow):
         self.statusProgress.setMaximumWidth(128)
         self.statusProgress.setVisible(False)
         self.statusProgress.setTextVisible(False)
-        gstatus.statusText.connect(self.updateStatusMessage)
-        gstatus.progressMaximum.connect(lambda v: self.statusProgress.setMaximum(v))
-        gstatus.progressValue.connect(lambda v: [self.statusProgress.setVisible(True), self.statusProgress.setValue(v)])
-        gstatus.progressDisable.connect(lambda: self.statusProgress.setVisible(False))
+        globalstatus.statusText.connect(self.updateStatusMessage)
+        globalstatus.progressMaximum.connect(lambda v: self.statusProgress.setMaximum(v))
+        globalstatus.progressValue.connect(lambda v: [self.statusProgress.setVisible(True), self.statusProgress.setValue(v)])
+        globalstatus.progressDisable.connect(lambda: self.statusProgress.setVisible(False))
         self.statusBar = QStatusBar()
         self.statusBar.setSizeGripEnabled(False)
         self.statusBar.addPermanentWidget(self.statusProgress)
@@ -177,6 +174,9 @@ class MainWindow(QMainWindow):
         import sys, PySide6
         about_text = F"""\
         <h2>{settings.PROGRAM_NAME} {settings.VERSION}</h2>
+        <p>
+        The no-frills git GUI for Linux
+        </p>
         <p><small>
         {git.Git().version()}<br>
         Python {sys.version}<br>
@@ -184,9 +184,6 @@ class MainWindow(QMainWindow):
         Qt {PySide6.QtCore.__version__}<br>
         PySide6 {PySide6.__version__}
         </small></p>
-        <p>
-        This is my git frontend.<br>There are many like it but this one is mine.
-        </p>
         """
         QMessageBox.about(self, F"About {settings.PROGRAM_NAME}", about_text)
 
@@ -408,7 +405,7 @@ class MainWindow(QMainWindow):
         if not session.load():
             return
 
-        self.sharedSplitterStates = {k:settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
+        self.sharedSplitterStates = {k: settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
         self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
         self.show()
 

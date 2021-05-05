@@ -1,7 +1,5 @@
+from allqt import *
 import git
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
 
 
 def progressOpcodeToString(op_code):
@@ -24,7 +22,7 @@ def progressOpcodeToString(op_code):
         return "Unknown Progress Opcode"
 
 
-class RemoteProgress(git.RemoteProgress):
+class RemoteProgressDialog(git.RemoteProgress):
     def __init__(self, parent, title):
         super(__class__, self).__init__()
         self.dlg = QProgressDialog("Reticulating Splines...", "Abort", 0, 0, parent)

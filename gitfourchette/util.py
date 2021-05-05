@@ -1,9 +1,7 @@
-import re
+from allqt import *
 import os
+import re
 import traceback
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
 
 
 HOME = os.path.abspath(os.path.expanduser('~'))
@@ -16,6 +14,18 @@ def sign(x):
         return 1
     else:
         return 0
+
+
+def bisect(a, x, lo=0, hi=None, key=lambda x: x):
+    assert lo >= 0, "low must be non-negative"
+    hi = hi or len(a)
+    while lo < hi:
+        mid = (lo+hi)//2
+        if x < key(a[mid]):
+            hi = mid
+        else:
+            lo = mid+1
+    return lo
 
 
 def hasFlag(value, flag):

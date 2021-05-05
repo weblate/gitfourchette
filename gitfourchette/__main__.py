@@ -1,8 +1,8 @@
+from PySide6.QtCore import QSysInfo
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt, QSysInfo
-import sys
-import signal
 from util import excMessageBox
+import signal
+import sys
 
 
 def excepthook(exctype, value, tb):
@@ -33,11 +33,13 @@ if __name__ == "__main__":
         QApplication.setFont(sysFont)
 
     import settings
+
     if settings.prefs.qtStyle:
         app.setStyle(settings.prefs.qtStyle)
 
-    import MainWindow
-    window = MainWindow.MainWindow()
+    import mainwindow
+
+    window = mainwindow.MainWindow()
     window.show()
     window.tryLoadSession()
     app.exec_()

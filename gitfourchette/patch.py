@@ -1,9 +1,9 @@
-import git
-import tempfile
-import copy
-import os
-import difflib
 from typing import Generator, Iterator
+import copy
+import difflib
+import git
+import os
+import tempfile
 
 
 class LineData:

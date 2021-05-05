@@ -1,9 +1,8 @@
-import os
-import git
 import datetime
-import zipfile
+import git
+import os
 import patch
-
+import zipfile
 
 TRASH_DIR_NAME = "GitFourchetteTrash"
 TRASH_TIME_FORMAT = '%Y%m%d_%H%M%S_%f'

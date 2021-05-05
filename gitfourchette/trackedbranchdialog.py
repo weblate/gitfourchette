@@ -1,9 +1,6 @@
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-
-import git
+from allqt import *
 from util import labelQuote
+import git
 
 
 class TrackedBranchDialog(QDialog):

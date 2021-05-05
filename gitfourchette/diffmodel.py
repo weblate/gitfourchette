@@ -1,9 +1,9 @@
-import git
-import re
-import os
 from dataclasses import dataclass
+from diffformats import *
+import git
+import os
 import patch
-from diff_formats import *
+import re
 
 
 # Hunk header pattern.

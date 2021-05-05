@@ -1,28 +1,11 @@
-from PySide6.QtWidgets import *
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-import re
+from allqt import *
+from diffmodel import DiffModel
+from globalstatus import globalstatus
+from util import bisect, excMessageBox
 import git
-
 import patch
-import DiffActionSets
 import settings
-from status import gstatus
 import trash
-from util import excMessageBox
-import DiffModel
-
-
-def bisect(a, x, lo=0, hi=None, key=lambda x: x):
-    assert lo >= 0, "low must be non-negative"
-    hi = hi or len(a)
-    while lo < hi:
-        mid = (lo+hi)//2
-        if x < key(a[mid]):
-            hi = mid
-        else:
-            lo = mid+1
-    return lo
 
 
 class DiffView(QTextEdit):
@@ -68,15 +51,15 @@ class DiffView(QTextEdit):
 
         if self.currentActionSet is None:
             pass
-        elif self.currentActionSet == DiffActionSets.untracked:
+        elif self.currentActionSet == diffactionsets.untracked:
             pass
-        elif self.currentActionSet == DiffActionSets.unstaged:
+        elif self.currentActionSet == diffactionsets.unstaged:
             action1 = QAction("Stage Lines", self)
             action1.triggered.connect(self.stageLines)
             action2 = QAction("Discard Lines", self)
             action2.triggered.connect(self.discardLines)
             actions = [action1, action2]
-        elif self.currentActionSet == DiffActionSets.staged:
+        elif self.currentActionSet == diffactionsets.staged:
             action1 = QAction("Unstage Lines", self)
             action1.triggered.connect(self.unstageLines)
             actions = [action1]
@@ -126,7 +109,7 @@ class DiffView(QTextEdit):
             plusLinesAreContext=reverse)
 
         if not patchData:
-            gstatus.setText("Nothing to patch. Select one or more red or green lines before applying.")
+            globalstatus.setText("Nothing to patch. Select one or more red or green lines before applying.")
             QApplication.beep()
             return
 
@@ -152,14 +135,14 @@ class DiffView(QTextEdit):
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
         if k in settings.KEYS_ACCEPT:
-            if self.currentActionSet == DiffActionSets.unstaged:
+            if self.currentActionSet == diffactionsets.unstaged:
                 self.stageLines()
             else:
                 QApplication.beep()
         elif k in settings.KEYS_REJECT:
-            if self.currentActionSet == DiffActionSets.staged:
+            if self.currentActionSet == diffactionsets.staged:
                 self.unstageLines()
-            elif self.currentActionSet == DiffActionSets.unstaged:
+            elif self.currentActionSet == diffactionsets.unstaged:
                 self.discardLines()
             else:
                 QApplication.beep()

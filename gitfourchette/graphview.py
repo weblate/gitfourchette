@@ -1,13 +1,10 @@
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from allqt import *
+from graphdelegate import GraphDelegate
+from repostate import CommitMetadata
+from util import messageSummary, fplural
 import git
 import html
-
-from GraphDelegate import GraphDelegate
 import settings
-from util import messageSummary, fplural
-from RepoState import CommitMetadata
 
 
 class GraphView(QListView):

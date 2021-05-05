@@ -1,9 +1,7 @@
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
+from allqt import *
+from settings import prefs, PROGRAM_NAME, SHORT_DATE_PRESETS
 import datetime
 import re
-from settings import prefs, PROGRAM_NAME, SHORT_DATE_PRESETS, LONG_DATE_PRESETS
 
 
 def _boxWidget(layout, *controls):

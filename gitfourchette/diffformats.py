@@ -1,7 +1,6 @@
 from PySide6.QtGui import *
-
-import settings
 import colors
+import settings
 
 normalBF = QTextBlockFormat()
 normalCF = QTextCharFormat()

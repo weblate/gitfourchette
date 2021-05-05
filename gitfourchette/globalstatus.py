@@ -32,5 +32,5 @@ class GlobalStatusSignalContainer(QObject):
         print("[status] ———")
 
 
-gstatus = GlobalStatusSignalContainer()
+globalstatus = GlobalStatusSignalContainer()
 

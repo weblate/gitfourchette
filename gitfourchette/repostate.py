@@ -1,17 +1,13 @@
+from allqt import *
+from benchmark import Benchmark
+from globalstatus import globalstatus
+from graphgenerator import LaneGenerator, LaneFrame
+import collections
 import git
 import io
 import os
-import subprocess
-import traceback
-from PySide6.QtCore import QSettings, QCoreApplication, QMutex, QMutexLocker
-from PySide6.QtWidgets import QProgressDialog, QMessageBox
-from datetime import datetime
-import collections
-
 import settings
-from Benchmark import Benchmark
-from lanes import LaneGenerator, LaneFrame
-from status import gstatus
+import subprocess
 
 
 PROGRESS_INTERVAL = 5000
@@ -256,7 +252,7 @@ class RepoState:
 
             self.traceOneCommitAvailability(nextLocal, meta)
 
-        gstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
+        globalstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
 
         print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
 
@@ -311,7 +307,7 @@ class RepoState:
         return tainted
 
     def loadTaintedCommitsOnly(self):
-        gstatus.setText(F"{self.shortName}: checking for new commits...")
+        globalstatus.setText(F"{self.shortName}: checking for new commits...")
 
         procWrapper, stdoutWrapper = self.getGitProcess(self.repo)
 
@@ -320,13 +316,13 @@ class RepoState:
         self.setBoldCommit(self.repo.head.commit.hexsha)
 
         if len(wantToSee) == 0:
-            gstatus.setText(F"{self.shortName}: no new commits to draw")
+            globalstatus.setText(F"{self.shortName}: no new commits to draw")
             return 0, []
 
         self.debugRefreshId += 1
 
-        gstatus.setProgressMaximum(5)
-        gstatus.setProgressValue(1)
+        globalstatus.setProgressMaximum(5)
+        globalstatus.setProgressValue(1)
 
         metas = []
         refs = {}
@@ -334,7 +330,7 @@ class RepoState:
         nUnknownCommits = 0
         laneGen = LaneGenerator()
 
-        gstatus.setProgressValue(2)
+        globalstatus.setProgressValue(2)
 
         i = 0
         while True:
@@ -379,7 +375,7 @@ class RepoState:
                         # TODO: Maybe we should kill git here?
                         break
 
-        gstatus.setProgressValue(3)
+        globalstatus.setProgressValue(3)
 
         print(F"last tainted hash: {lastTainted}")
 
@@ -390,14 +386,14 @@ class RepoState:
         self.order = metas + self.order[lastTaintedIndex+1:]
         print(F"new order: {len(self.order)}")
 
-        gstatus.setText(F"{self.shortName}: loaded {nUnknownCommits:,} new commits; redrew {len(metas):,} rows; last tainted hash {lastTainted[:7]}")
+        globalstatus.setText(F"{self.shortName}: loaded {nUnknownCommits:,} new commits; redrew {len(metas):,} rows; last tainted hash {lastTainted[:7]}")
 
         # todo: this will do a pass on all commits. Can we look at fewer commits?
         self.traceCommitAvailability(self.order)
 
         self.currentRefs = refs
 
-        gstatus.setProgressValue(4)
+        globalstatus.setProgressValue(4)
 
         return lastTaintedIndex+1, metas
 

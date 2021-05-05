@@ -1,25 +1,22 @@
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-
-import DiffActionSets
-import DiffModel
-from Benchmark import Benchmark
-from RepoState import RepoState
-from DiffView import DiffView
-from FileListView import FileListView, DirtyFileListView, StagedFileListView
-from GraphView import GraphView
-from Sidebar import Sidebar
-from RemoteProgress import RemoteProgress
-from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog
+from allqt import *
+from commitdialog import CommitDialog
+from diffmodel import DiffModel
+from diffview import DiffView
+from dirtyfilelistview import DirtyFileListView
+from filelistview import FileListView
+from globalstatus import globalstatus
+from graphview import GraphView
+from remoteprogressdialog import RemoteProgressDialog
+from repostate import RepoState
+from sidebar import Sidebar
+from stagedfilelistview import StagedFileListView
 from typing import Callable
+from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog
+from worker import Worker
+import diffactionsets
+import diffmodel
 import git
 import settings
-import traceback
-from Worker import Worker
-from status import gstatus
-from FileListView import Entry
-from CommitDialog import CommitDialog
 
 
 FILESSTACK_READONLY_CARD = 0
@@ -248,7 +245,7 @@ class RepoWidget(QWidget):
         def callback(o):
             # Clear status caption _before_ running onComplete,
             # because onComplete may start another worker that sets status.
-            gstatus.clearIndeterminateProgressCaption()
+            globalstatus.clearIndeterminateProgressCaption()
             # Finally run completion
             if onComplete is not None:
                 onComplete(o)
@@ -259,7 +256,7 @@ class RepoWidget(QWidget):
         w = Worker(work)
         w.signals.result.connect(callback)
         w.signals.error.connect(errorCallback)
-        gstatus.setIndeterminateProgressCaption(caption + "...")
+        globalstatus.setIndeterminateProgressCaption(caption + "...")
 
         # Remove any pending worker from the queue.
         # TODO: we should prevent the currently-running worker's completion callback from running as well.
@@ -315,10 +312,12 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 commit = self.state.repo.commit(hexsha)
+                #import time; time.sleep(1) #to debug out-of-order events
                 return [p.diff(commit) for p in commit.parents]
 
         def onComplete(parentDiffs):
             assert QThread.currentThread() is QApplication.instance().thread()
+            #import time; time.sleep(1) #to debug out-of-order events
             self.changedFilesView.clear()
             for d in parentDiffs:
                 self.changedFilesView.fillDiff(d)
@@ -337,17 +336,17 @@ class RepoWidget(QWidget):
             with self.state.mutexLocker():
                 try:
                     if entry.diff is not None:
-                        allowRawFileAccess = diffActionSet in DiffActionSets.allowRawFileAccess
-                        dm = DiffModel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
+                        allowRawFileAccess = diffActionSet in diffactionsets.allowRawFileAccess
+                        dm = diffmodel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
                     else:
-                        dm = DiffModel.fromUntrackedFile(repo, entry.path)
+                        dm = diffmodel.fromUntrackedFile(repo, entry.path)
                 except BaseException as exc:
                     summary, details = excStrings(exc)
-                    dm = DiffModel.fromFailureMessage(summary, details)
+                    dm = diffmodel.fromFailureMessage(summary, details)
                 dm.document.moveToThread(QApplication.instance().thread())
                 return dm
 
-        def onComplete(dm):
+        def onComplete(dm: DiffModel):
             assert QThread.currentThread() is QApplication.instance().thread()
             self.diffView.replaceDocument(repo, entry.diff, diffActionSet, dm)
 
@@ -463,7 +462,7 @@ class RepoWidget(QWidget):
         if qmb.exec_() != QMessageBox.AcceptRole:
             return
 
-        progress = RemoteProgress(self, "Push in progress")
+        progress = RemoteProgressDialog(self, "Push in progress")
         pushInfos: list[git.PushInfo]
 
         try:
@@ -618,7 +617,7 @@ class RepoWidget(QWidget):
 
         if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
             self.fillStageViewAsync()
-        gstatus.clearProgress()
+        globalstatus.clearProgress()
 
     # -------------------------------------------------------------------------
 

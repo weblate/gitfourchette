@@ -1,13 +1,8 @@
+from allqt import *
 from dataclasses import dataclass
-
-from PySide6.QtCore import *
-from PySide6.QtGui import *
-from PySide6.QtWidgets import *
-
-import git
-
+from trackedbranchdialog import TrackedBranchDialog
 from util import labelQuote, textInputDialog
-from TrackedBranchDialog import TrackedBranchDialog
+import git
 
 
 @dataclass
