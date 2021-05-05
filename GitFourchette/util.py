@@ -18,6 +18,10 @@ def sign(x):
         return 0
 
 
+def hasFlag(value, flag):
+    return (value & flag) == flag
+
+
 def fplural(fmt: str, n: int) -> str:
     out = fmt.replace("#", str(n))
     if n == 1:

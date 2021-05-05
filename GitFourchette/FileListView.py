@@ -7,7 +7,7 @@ from typing import Generator
 
 import settings
 import DiffActionSets
-from util import fplural, compactRepoPath, showInFolder
+from util import fplural, compactRepoPath, showInFolder, hasFlag
 import trash
 
 
@@ -142,6 +142,21 @@ class FileListView(QListView):
         if current.isValid():
             self.entryClicked.emit(self.entries[current.row()], self.diffActionSet)
 
+    def mouseMoveEvent(self, event: QMouseEvent):
+        """
+        By default, ExtendedSelection lets the user select multiple items by
+        holding down LMB and dragging. This event handler enforces single-item
+        selection unless the user holds down Shift or Ctrl.
+        """
+        isLMB = hasFlag(event.buttons(), Qt.LeftButton)
+        isShift = hasFlag(event.modifiers(), Qt.ShiftModifier)
+        isCtrl = hasFlag(event.modifiers(), Qt.ControlModifier)
+
+        if isLMB and not isShift and not isCtrl:
+            self.mousePressEvent(event)  # re-route event as if it were a click event
+        else:
+            super().mouseMoveEvent(event)
+
     def selectedEntries(self) -> Generator[Entry, None, None]:
         for si in self.selectedIndexes():
             yield self.entries[si.row()]
@@ -160,6 +175,8 @@ class DirtyFileListView(FileListView):
 
     def __init__(self, parent):
         super().__init__(parent, DiffActionSets.unstaged)
+
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
         stageAction = QAction("Stage", self)
@@ -221,6 +238,8 @@ class StagedFileListView(FileListView):
 
     def __init__(self, parent):
         super().__init__(parent, DiffActionSets.staged)
+
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
         action = QAction("Unstage", self)
