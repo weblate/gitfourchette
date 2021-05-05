@@ -1,10 +1,10 @@
 from allqt import *
+from dialogs.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
-from prefsdialog import PrefsDialog
-from qtabwidget2 import QTabWidget2
 from repostate import RepoState
-from repowidget import RepoWidget
 from util import compactSystemPath, showInFolder, excMessageBox
+from widgets.customtabwidget import CustomTabWidget
+from widgets.repowidget import RepoWidget
 import gc
 import git
 import os
@@ -29,7 +29,7 @@ class Session:
 
 
 class MainWindow(QMainWindow):
-    tabs: QTabWidget2
+    tabs: CustomTabWidget
 
     def __init__(self):
         super().__init__()
@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
         self.resize(QSize(800, 600))
         self.move(QPoint(50, 50))
 
-        self.tabs = QTabWidget2(self)
+        self.tabs = CustomTabWidget(self)
         self.tabs.stacked.currentChanged.connect(self.onTabChange)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
@@ -171,7 +171,7 @@ class MainWindow(QMainWindow):
             F"Some changes may require restarting {settings.PROGRAM_NAME} to take effect.")
 
     def about(self):
-        import sys, PySide6
+        import sys
         about_text = F"""\
         <h2>{settings.PROGRAM_NAME} {settings.VERSION}</h2>
         <p>
@@ -181,8 +181,8 @@ class MainWindow(QMainWindow):
         {git.Git().version()}<br>
         Python {sys.version}<br>
         GitPython {git.__version__}<br>
-        Qt {PySide6.QtCore.__version__}<br>
-        PySide6 {PySide6.__version__}
+        Qt {qtVersion}<br>
+        PySide {qtBindingVersion}
         </small></p>
         """
         QMessageBox.about(self, F"About {settings.PROGRAM_NAME}", about_text)

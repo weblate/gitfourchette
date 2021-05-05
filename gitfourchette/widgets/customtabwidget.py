@@ -2,7 +2,7 @@ from allqt import *
 import settings
 
 
-class QTabBar2(QTabBar):
+class CustomTabBar(QTabBar):
     def __init__(self, parent):
         super().__init__(parent)
         self.middleClickedIndex = -1
@@ -28,7 +28,7 @@ class QTabBar2(QTabBar):
             super().mouseReleaseEvent(event)
 
 
-class QTabWidget2(QWidget):
+class CustomTabWidget(QWidget):
     tabCloseRequested: Signal = Signal(int)
     tabContextMenuRequested: Signal = Signal(QPoint, int)
 
@@ -37,7 +37,7 @@ class QTabWidget2(QWidget):
 
         self.stacked = QStackedWidget(self)
 
-        self.tabs = QTabBar2(self)#(self)
+        self.tabs = CustomTabBar(self)
         self.tabs.tabMoved.connect(self.onTabMoved)
         self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)

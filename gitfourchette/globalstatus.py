@@ -1,4 +1,4 @@
-from PySide6.QtCore import QObject, Signal
+from allqt import QObject, Signal
 
 
 class GlobalStatusSignalContainer(QObject):

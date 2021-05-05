@@ -1,6 +1,6 @@
 from allqt import *
 from dataclasses import dataclass
-from trackedbranchdialog import TrackedBranchDialog
+from dialogs.trackedbranchdialog import TrackedBranchDialog
 from util import labelQuote, textInputDialog
 import git
 

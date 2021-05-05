@@ -1,5 +1,5 @@
 from allqt import *
-from filelistview import FileListView
+from widgets.filelistview import FileListView
 import diffactionsets
 import settings
 

@@ -2,6 +2,7 @@ from allqt import *
 from diffmodel import DiffModel
 from globalstatus import globalstatus
 from util import bisect, excMessageBox
+import diffactionsets
 import git
 import patch
 import settings

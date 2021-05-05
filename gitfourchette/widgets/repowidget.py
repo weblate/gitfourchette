@@ -1,17 +1,17 @@
 from allqt import *
-from commitdialog import CommitDialog
+from dialogs.commitdialog import CommitDialog
+from dialogs.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
-from diffview import DiffView
-from dirtyfilelistview import DirtyFileListView
-from filelistview import FileListView
 from globalstatus import globalstatus
-from graphview import GraphView
-from remoteprogressdialog import RemoteProgressDialog
 from repostate import RepoState
-from sidebar import Sidebar
-from stagedfilelistview import StagedFileListView
 from typing import Callable
 from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog
+from widgets.diffview import DiffView
+from widgets.dirtyfilelistview import DirtyFileListView
+from widgets.filelistview import FileListView
+from widgets.graphview import GraphView
+from widgets.sidebar import Sidebar
+from widgets.stagedfilelistview import StagedFileListView
 from worker import Worker
 import diffactionsets
 import diffmodel

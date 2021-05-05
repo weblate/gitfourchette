@@ -1,5 +1,4 @@
-from PySide6.QtCore import QSysInfo
-from PySide6.QtWidgets import QApplication
+from allqt import *
 from util import excMessageBox
 import signal
 import sys
@@ -37,7 +36,7 @@ if __name__ == "__main__":
     if settings.prefs.qtStyle:
         app.setStyle(settings.prefs.qtStyle)
 
-    import mainwindow
+    from widgets import mainwindow
 
     window = mainwindow.MainWindow()
     window.show()
