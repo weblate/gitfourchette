@@ -63,6 +63,8 @@ class Sidebar(QTreeView):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
+        self.setObjectName("sidebar")  # for styling
+
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.mapToGlobal(localPoint)
         index = self.indexAt(localPoint)

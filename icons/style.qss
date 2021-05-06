@@ -6,3 +6,13 @@ QSplitter::handle {
 QMenuBar {
     border: 0;
 }
+
+QTreeView#sidebar {
+    background: palette(window);
+}
+
+QTreeView::branch:selected:!active,
+QTreeView::item:selected:!active,
+QListView::item:selected:!active {
+    background-color: palette(mid);
+}
