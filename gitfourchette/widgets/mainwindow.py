@@ -2,7 +2,7 @@ from allqt import *
 from dialogs.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
-from util import compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext
+from util import compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext
 from widgets.customtabwidget import CustomTabWidget
 from widgets.repowidget import RepoWidget
 import gc
@@ -416,26 +416,22 @@ class MainWindow(QMainWindow):
 
         # Normally, changing the current tab will load the corresponding repo in the background.
         # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
-        self.tabs.stacked.currentChanged.disconnect(self.onTabChange)
+        with QSignalBlockerContext(self.tabs.stacked):
+            # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
+            for r in session.tabs:
+                try:
+                    self.openRepo(r, foreground=False)
+                except BaseException as exc:
+                    excMessageBox(exc, title="Restore Session")
 
-        # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
-        for r in session.tabs:
+            # Set the current tab.
+            self.tabs.setCurrentIndex(session.activeTabIndex)
+
+            # Load the current tab's repo. Catch exceptions so __main__ doesn't get aborted.
             try:
-                self.openRepo(r, foreground=False)
+                self.onTabChange(session.activeTabIndex)
             except BaseException as exc:
                 excMessageBox(exc, title="Restore Session")
-
-        # Set the current tab.
-        self.tabs.setCurrentIndex(session.activeTabIndex)
-
-        # Load the current tab's repo. Catch exceptions so __main__ doesn't get aborted.
-        try:
-            self.onTabChange(session.activeTabIndex)
-        except BaseException as exc:
-            excMessageBox(exc, title="Restore Session")
-
-        # Now reconnect the signal.
-        self.tabs.stacked.currentChanged.connect(self.onTabChange)
 
     def saveSession(self):
         session = settings.Session()

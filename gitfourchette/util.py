@@ -161,6 +161,22 @@ def textInputDialog(
     return text, rc == QDialog.DialogCode.Accepted
 
 
+class QSignalBlockerContext:
+    """
+    Context manager wrapper around QSignalBlocker.
+    """
+    def __init__(self, objectToBlock: QObject):
+        self.objectToBlock = objectToBlock
+
+    def __enter__(self):
+        self.blocker = QSignalBlocker(self.objectToBlock)
+
+    def __exit__(self, excType, excValue, excTraceback):
+        if self.blocker:
+            self.blocker.unblock()
+            self.blocker = None
+
+
 class DisableWidgetContext:
     def __init__(self, objectToBlock: QWidget):
         self.objectToBlock = objectToBlock
