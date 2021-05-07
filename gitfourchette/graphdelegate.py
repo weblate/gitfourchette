@@ -144,6 +144,7 @@ class GraphDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
         self.repoWidget = repoWidget
+        self.hashCharWidth = 0
 
     @property
     def state(self) -> RepoState:
@@ -170,7 +171,7 @@ class GraphDelegate(QStyledItemDelegate):
         XMargin = 4
         ColW_Author = 16
         ColW_Hash = settings.prefs.shortHashChars + 1
-        ColW_Date = 16
+        ColW_Date = 20
 
         painter.save()
 
@@ -188,7 +189,8 @@ class GraphDelegate(QStyledItemDelegate):
 
         # Get metrics of '0' before setting a custom font,
         # so that alignments are consistent in all commits regardless of bold or italic.
-        zw = painter.fontMetrics().horizontalAdvance('0')
+        if self.hashCharWidth == 0:
+            self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
 
         if index.row() > 0:
             meta = index.data()
@@ -211,13 +213,13 @@ class GraphDelegate(QStyledItemDelegate):
         metrics = painter.fontMetrics()
 
         # ------ Hash
-        rect.setWidth(ColW_Hash * zw)
-        charRect = QRect(rect.left(), rect.top(), zw, rect.height())
+        rect.setWidth(ColW_Hash * self.hashCharWidth)
+        charRect = QRect(rect.left(), rect.top(), self.hashCharWidth, rect.height())
         painter.save()
         painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
         for hashChar in hashText:
             painter.drawText(charRect, Qt.AlignCenter, hashChar)
-            charRect.translate(zw, 0)
+            charRect.translate(self.hashCharWidth, 0)
         painter.restore()
 
         # ------ Graph
@@ -245,24 +247,24 @@ class GraphDelegate(QStyledItemDelegate):
         if meta and not meta.hasLocal:
             painter.setPen(QColor(Qt.gray))
         rect.setLeft(rect.right())
-        rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * zw - XMargin)
+        rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
         painter.drawText(rect, Qt.AlignVCenter, elide(summaryText))
 
         # ------ Author
         rect.setLeft(rect.right())
-        rect.setWidth(ColW_Author * zw)
+        rect.setWidth(ColW_Author * self.hashCharWidth)
         painter.drawText(rect, Qt.AlignVCenter, elide(authorText))
 
         # ------ Date
         rect.setLeft(rect.right())
-        rect.setWidth(ColW_Date * zw)
+        rect.setWidth(ColW_Date * self.hashCharWidth)
         painter.drawText(rect, Qt.AlignVCenter, elide(dateText))
 
         # ------ Debug (show redrawn rows from last refresh)
         if settings.prefs.debug_showDirtyCommitsAfterRefresh and meta and meta.debugPrefix:
             rect = QRect(option.rect)
-            rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * zw)
-            rect.setRight(rect.left() + 3*zw)
+            rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * self.hashCharWidth)
+            rect.setRight(rect.left() + 3*self.hashCharWidth)
             painter.fillRect(rect, colors.rainbow[meta.debugRefreshId % len(colors.rainbow)])
             painter.drawText(rect, Qt.AlignVCenter, "-"+meta.debugPrefix)
 
