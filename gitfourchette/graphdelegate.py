@@ -274,5 +274,5 @@ class GraphDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         r = super().sizeHint(option, index)
-        r.setHeight(r.height() * settings.prefs.graph_rowHeight)
+        r.setHeight(r.height() * settings.prefs.graph_rowHeightPercent / 100.0)
         return r
