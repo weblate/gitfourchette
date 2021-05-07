@@ -109,6 +109,8 @@ class PrefsDialog(QDialog):
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
             elif prefKey == 'longTimeFormat':
                 continue  # Don't expose the setting for this
+            elif prefKey == 'shortHashChars':
+                control = self.boundedIntControl(prefKey, prefValue, 0, 40)
             elif t is str:
                 control = self.strControl(prefKey, prefValue)
             elif t is int:
@@ -192,6 +194,19 @@ class PrefsDialog(QDialog):
         control.setValidator(QIntValidator())
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, int(v) if v else 0))
         return control
+
+    def boundedIntControl(self, prefKey, prefValue, minValue, maxValue):
+        label = QLabel(str(prefValue), self)
+        label.setMinimumWidth(label.fontMetrics().horizontalAdvance("000"))
+
+        control = QSlider(Qt.Horizontal, self)
+        control.setMinimumWidth(40*3)
+        control.setMinimum(minValue)
+        control.setMaximum(maxValue)
+        control.setValue(prefValue)
+        control.valueChanged.connect(lambda v, k=prefKey: self.assign(k, v))
+        control.valueChanged.connect(lambda v: label.setText(str(v)))
+        return hBoxWidget(label, control)
 
     def floatControl(self, prefKey, prefValue):
         control = QLineEdit(str(prefValue), self)
