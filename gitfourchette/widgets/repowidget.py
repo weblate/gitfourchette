@@ -5,7 +5,7 @@ from diffmodel import DiffModel
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
-from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog
+from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog, QSignalBlockerContext
 from widgets.diffview import DiffView
 from widgets.dirtyfilelistview import DirtyFileListView
 from widgets.filelistview import FileListView
@@ -281,17 +281,21 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is QApplication.instance().thread()
             dirtyChanges, untrackedFiles, stagedChanges = result
 
-            self.dirtyView.clear()
-            self.dirtyView.fillDiff(dirtyChanges)
-            self.dirtyView.fillUntracked(untrackedFiles)
-            self.stageView.clear()
-            self.stageView.fillDiff(stagedChanges)
+            # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
+            with QSignalBlockerContext(self.dirtyView):
+                self.dirtyView.clear()
+                self.dirtyView.fillDiff(dirtyChanges)
+                self.dirtyView.fillUntracked(untrackedFiles)
+            with QSignalBlockerContext(self.stageView):
+                self.stageView.clear()
+                self.stageView.fillDiff(stagedChanges)
 
             nDirty = self.dirtyView.model().rowCount()
             nStaged = self.stageView.model().rowCount()
             self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
-            self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
+            self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
 
+            # Switch to correct card in filesStack to show dirtyView and stageView
             self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
 
             # After patchApplied.emit has caused a refresh of the dirty/staged file views,
@@ -319,11 +323,16 @@ class RepoWidget(QWidget):
         def onComplete(parentDiffs):
             assert QThread.currentThread() is QApplication.instance().thread()
             #import time; time.sleep(1) #to debug out-of-order events
-            self.changedFilesView.clear()
-            for d in parentDiffs:
-                self.changedFilesView.fillDiff(d)
+
+            # Reset changed files view. Block its signals as we refill it to prevent updating the diff view.
+            with QSignalBlockerContext(self.changedFilesView):
+                self.changedFilesView.clear()
+                for d in parentDiffs:
+                    self.changedFilesView.fillDiff(d)
             self.changedFilesView.selectFirstRow()
-            self.filesStack.setCurrentIndex(0)
+
+            # Switch to correct card in filesStack to show changedFilesView
+            self.filesStack.setCurrentIndex(FILESSTACK_READONLY_CARD)
 
         self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{hexsha[:settings.prefs.shortHashChars]}”")
 
