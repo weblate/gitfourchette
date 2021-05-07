@@ -1,6 +1,6 @@
 from allqt import *
 from typing import Generator
-from util import compactRepoPath, showInFolder, hasFlag
+from util import compactRepoPath, showInFolder, hasFlag, QSignalBlockerContext
 import git
 import os
 import settings
@@ -87,6 +87,10 @@ class FileListView(QListView):
         self._setBlankModel()
         self.entries.clear()
 
+    def clearSelectionSilently(self):
+        with QSignalBlockerContext(self):
+            self.clearSelection()
+
     def addEntry(self, entry):
         self.entries.append(entry)
         item = QStandardItem()
@@ -129,13 +133,14 @@ class FileListView(QListView):
 
         indexes = list(selected.indexes())
         if len(indexes) == 0:
+            self.nothingClicked.emit()
             return
-
-        self.nothingClicked.emit()
 
         current = selected.indexes()[0]
         if current.isValid():
             self.entryClicked.emit(self.entries[current.row()], self.diffActionSet)
+        else:
+            self.nothingClicked.emit()
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """

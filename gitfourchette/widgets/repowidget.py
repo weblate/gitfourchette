@@ -59,8 +59,9 @@ class RepoWidget(QWidget):
         self.stageView = StagedFileListView(self)
         self.sidebar = Sidebar(self)
 
-        self.stageView.nothingClicked.connect(self.dirtyView.clearSelection)
-        self.dirtyView.nothingClicked.connect(self.stageView.clearSelection)
+        # The staged files and unstaged files view are mutually exclusive.
+        self.stageView.entryClicked.connect(self.dirtyView.clearSelectionSilently)
+        self.dirtyView.entryClicked.connect(self.stageView.clearSelectionSilently)
 
         # Refresh file list views after applying a patch...
         self.diffView.patchApplied.connect(self.fillStageViewAsync)  # ...from the diff view (partial line patch);
