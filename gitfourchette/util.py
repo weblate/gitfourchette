@@ -159,3 +159,14 @@ def textInputDialog(
     text = dlg.textValue()
     dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
     return text, rc == QDialog.DialogCode.Accepted
+
+
+class DisableWidgetContext:
+    def __init__(self, objectToBlock: QWidget):
+        self.objectToBlock = objectToBlock
+
+    def __enter__(self):
+        self.objectToBlock.setEnabled(False)
+
+    def __exit__(self, excType, excValue, excTraceback):
+        self.objectToBlock.setEnabled(True)

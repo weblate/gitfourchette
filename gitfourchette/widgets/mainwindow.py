@@ -2,7 +2,7 @@ from allqt import *
 from dialogs.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
-from util import compactSystemPath, showInFolder, excMessageBox
+from util import compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext
 from widgets.customtabwidget import CustomTabWidget
 from widgets.repowidget import RepoWidget
 import gc
@@ -204,15 +204,20 @@ class MainWindow(QMainWindow):
         if i < 0:
             self.setWindowTitle(settings.PROGRAM_NAME)
             return
+
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
 
         # If we don't have a RepoState, then the tab is lazy-loaded.
         # We need to load it now.
         if not w.state:
-            success = self._loadRepo(w, w.workingTreeDir)
-            if not success:
-                return
+            # Disable tabs widget while we're loading the repo to prevent tabs
+            # from accidentally being dragged while the UI is locking up
+            with DisableWidgetContext(self.tabs):
+                # Load repo
+                success = self._loadRepo(w, w.workingTreeDir)
+                if not success:
+                    return
 
         shortname = w.state.shortName
         repo = w.state.repo
