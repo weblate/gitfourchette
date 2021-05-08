@@ -2,6 +2,7 @@ from allqt import *
 from dialogs.commitdialog import CommitDialog
 from dialogs.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
+from filelistentry import FileListEntry
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
@@ -335,7 +336,7 @@ class RepoWidget(QWidget):
 
         self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{hexsha[:settings.prefs.shortHashChars]}”")
 
-    def loadDiffAsync(self, entry, diffActionSet):
+    def loadDiffAsync(self, entry: FileListEntry, stagingState: StagingState):
         """Load a file diff into the Diff View"""
 
         repo = self.state.repo

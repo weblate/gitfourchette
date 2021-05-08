@@ -1,4 +1,5 @@
 from allqt import *
+from filelistentry import FileListEntry
 from typing import Generator
 from util import compactRepoPath, showInFolder, hasFlag, QSignalBlockerContext
 import git
@@ -6,48 +7,13 @@ import os
 import settings
 
 
-class Entry:
-    path: str
-    label: str
-    diff: git.Diff
-    icon: str
-    tooltip: str
-
-    @classmethod
-    def Tracked(cls, diff: git.Diff):
-        entry = cls()
-        entry.diff = diff
-        entry.icon = diff.change_type
-        # Prefer b_path; if it's a deletion, a_path may not be available
-        entry.path = diff.b_path or diff.a_path
-        entry.tooltip = str(diff)
-        if settings.prefs.shortenDirectoryNames:
-            entry.label = compactRepoPath(entry.path)
-        else:
-            entry.label = entry.path
-        return entry
-
-    @classmethod
-    def Untracked(cls, path: str):
-        entry = cls()
-        entry.diff = None
-        entry.path = path
-        entry.icon = 'A'
-        entry.tooltip = entry.path + '\n(untracked file)'
-        if settings.prefs.shortenDirectoryNames:
-            entry.label = compactRepoPath(entry.path)
-        else:
-            entry.label = entry.path
-        return entry
-
-
 class FileListView(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(object, str)
 
-    entries: list[Entry]
     diffActionSet: str
     selectedRowBeforeClear: int
+    entries: list[FileListEntry]
 
     def __init__(self, parent, diffActionSet=None):
         super().__init__(parent)
@@ -91,10 +57,14 @@ class FileListView(QListView):
         with QSignalBlockerContext(self):
             self.clearSelection()
 
-    def addEntry(self, entry):
+    def addEntry(self, entry: FileListEntry):
         self.entries.append(entry)
         item = QStandardItem()
-        item.setText(entry.label)
+        if settings.prefs.shortenDirectoryNames:
+            label = compactRepoPath(entry.path)
+        else:
+            label = entry.path
+        item.setText(label)
         item.setSizeHint(QSize(-1, self.fontMetrics().height()))  # Compact height
         item.setIcon(settings.statusIcons[entry.icon])
         if entry.tooltip:
@@ -103,11 +73,11 @@ class FileListView(QListView):
 
     def fillDiff(self, diffIndex: git.DiffIndex):
         for diff in diffIndex:
-            self.addEntry(Entry.Tracked(diff))
+            self.addEntry(FileListEntry.Tracked(diff))
 
     def fillUntracked(self, untracked: list[str]):
         for path in untracked:
-            self.addEntry(Entry.Untracked(path))
+            self.addEntry(FileListEntry.Untracked(path))
 
     def selectFirstRow(self):
         if self.model().rowCount() == 0:
@@ -157,7 +127,7 @@ class FileListView(QListView):
         else:
             super().mouseMoveEvent(event)
 
-    def selectedEntries(self) -> Generator[Entry, None, None]:
+    def selectedEntries(self) -> Generator[FileListEntry, None, None]:
         for si in self.selectedIndexes():
             yield self.entries[si.row()]
 
