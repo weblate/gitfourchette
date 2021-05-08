@@ -14,7 +14,6 @@ from widgets.sidebar import Sidebar
 from widgets.stagedfilelistview import StagedFileListView
 from worker import Worker
 import diffactionsets
-import diffmodel
 import git
 import settings
 
@@ -347,12 +346,12 @@ class RepoWidget(QWidget):
                 try:
                     if entry.diff is not None:
                         allowRawFileAccess = diffActionSet in diffactionsets.allowRawFileAccess
-                        dm = diffmodel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
+                        dm = DiffModel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
                     else:
-                        dm = diffmodel.fromUntrackedFile(repo, entry.path)
+                        dm = DiffModel.fromUntrackedFile(repo, entry.path)
                 except BaseException as exc:
                     summary, details = excStrings(exc)
-                    dm = diffmodel.fromFailureMessage(summary, details)
+                    dm = DiffModel.fromFailureMessage(summary, details)
                 dm.document.moveToThread(QApplication.instance().thread())
                 return dm
 
