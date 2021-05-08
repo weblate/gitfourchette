@@ -1,6 +1,6 @@
 from allqt import *
 from widgets.filelistview import FileListView
-import diffactionsets
+from stagingstate import StagingState
 import os
 import settings
 import trash
@@ -10,7 +10,7 @@ class DirtyFileListView(FileListView):
     patchApplied: Signal = Signal()
 
     def __init__(self, parent):
-        super().__init__(parent, diffactionsets.unstaged)
+        super().__init__(parent, StagingState.UNSTAGED)
 
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)

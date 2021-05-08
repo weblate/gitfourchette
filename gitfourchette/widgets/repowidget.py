@@ -3,6 +3,7 @@ from dialogs.commitdialog import CommitDialog
 from dialogs.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
 from filelistentry import FileListEntry
+from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
@@ -14,7 +15,6 @@ from widgets.graphview import GraphView
 from widgets.sidebar import Sidebar
 from widgets.stagedfilelistview import StagedFileListView
 from worker import Worker
-import diffactionsets
 import git
 import settings
 
@@ -54,7 +54,7 @@ class RepoWidget(QWidget):
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
         self.diffView = DiffView(self)
-        self.changedFilesView = FileListView(self)
+        self.changedFilesView = FileListView(self, StagingState.COMMITTED)
         self.dirtyView = DirtyFileListView(self)
         self.stageView = StagedFileListView(self)
         self.sidebar = Sidebar(self)
@@ -346,7 +346,7 @@ class RepoWidget(QWidget):
             with self.state.mutexLocker():
                 try:
                     if entry.diff is not None:
-                        allowRawFileAccess = diffActionSet in diffactionsets.allowRawFileAccess
+                        allowRawFileAccess = stagingState.allowsRawFileAccess()
                         dm = DiffModel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
                     else:
                         dm = DiffModel.fromUntrackedFile(repo, entry.path)
@@ -358,8 +358,8 @@ class RepoWidget(QWidget):
 
         def onComplete(dm: DiffModel):
             assert QThread.currentThread() is QApplication.instance().thread()
-            self.diffView.replaceDocument(repo, entry.diff, diffActionSet, dm)
 
+            self.diffView.replaceDocument(repo, entry.diff, stagingState, dm)
         self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”")
 
     def switchToBranchAsync(self, newBranch: str):

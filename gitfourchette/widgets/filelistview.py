@@ -1,5 +1,6 @@
 from allqt import *
 from filelistentry import FileListEntry
+from stagingstate import StagingState
 from typing import Generator
 from util import compactRepoPath, showInFolder, hasFlag, QSignalBlockerContext
 import git
@@ -9,16 +10,17 @@ import settings
 
 class FileListView(QListView):
     nothingClicked = Signal()
-    entryClicked = Signal(object, str)
+    entryClicked = Signal(object, StagingState)
 
-    diffActionSet: str
     selectedRowBeforeClear: int
     entries: list[FileListEntry]
+    stagingState: StagingState
 
-    def __init__(self, parent, diffActionSet=None):
+    def __init__(self, parent: QWidget, stagingState: StagingState):
         super().__init__(parent)
 
         self.selectedRowBeforeClear = -1
+        self.stagingState = stagingState
 
         self.entries = []
         self.repoWidget = parent
@@ -26,7 +28,6 @@ class FileListView(QListView):
         iconSize = self.fontMetrics().height()
         self.setIconSize(QSize(iconSize, iconSize))
         self.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevent editing text after double-clicking
-        self.diffActionSet = diffActionSet
         self.clear()
 
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
@@ -108,7 +109,7 @@ class FileListView(QListView):
 
         current = selected.indexes()[0]
         if current.isValid():
-            self.entryClicked.emit(self.entries[current.row()], self.diffActionSet)
+            self.entryClicked.emit(self.entries[current.row()], self.stagingState)
         else:
             self.nothingClicked.emit()
 
@@ -131,6 +132,7 @@ class FileListView(QListView):
         for si in self.selectedIndexes():
             yield self.entries[si.row()]
 
+    # TODO: don't stage/unstage ourselves; expose stage/unstage events via signals
     @property
     def git(self):
         return self.repoWidget.state.repo.git

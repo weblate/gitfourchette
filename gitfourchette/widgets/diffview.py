@@ -1,8 +1,8 @@
 from allqt import *
 from diffmodel import DiffModel
+from stagingstate import StagingState
 from globalstatus import globalstatus
 from util import bisect, excMessageBox
-import diffactionsets
 import git
 import patch
 import settings
@@ -13,7 +13,7 @@ class DiffView(QTextEdit):
     patchApplied: Signal = Signal()
 
     lineData: list[patch.LineData]
-    currentActionSet: str
+    currentStagingState: StagingState
     currentChange: git.Diff
     currentGitRepo: git.Repo
 
@@ -23,12 +23,12 @@ class DiffView(QTextEdit):
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
-    def replaceDocument(self, repo: git.Repo, diff: git.Diff, diffActionSet: str, dm: DiffModel):
+    def replaceDocument(self, repo: git.Repo, diff: git.Diff, stagingState: StagingState, dm: DiffModel):
         oldDocument = self.document()
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
 
-        self.currentActionSet = diffActionSet
+        self.currentStagingState = stagingState
         self.currentGitRepo = repo
         self.currentChange = diff
 
@@ -50,22 +50,20 @@ class DiffView(QTextEdit):
 
         actions = []
 
-        if self.currentActionSet is None:
+        if self.currentStagingState in [None, StagingState.COMMITTED, StagingState.UNTRACKED]:
             pass
-        elif self.currentActionSet == diffactionsets.untracked:
-            pass
-        elif self.currentActionSet == diffactionsets.unstaged:
+        elif self.currentStagingState == StagingState.UNSTAGED:
             action1 = QAction("Stage Lines", self)
             action1.triggered.connect(self.stageLines)
             action2 = QAction("Discard Lines", self)
             action2.triggered.connect(self.discardLines)
             actions = [action1, action2]
-        elif self.currentActionSet == diffactionsets.staged:
+        elif self.currentStagingState == StagingState.STAGED:
             action1 = QAction("Unstage Lines", self)
             action1.triggered.connect(self.unstageLines)
             actions = [action1]
         else:
-            print(F"unknown diff action set: {self.currentActionSet}")
+            QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
 
         if actions:
             for a in actions:
@@ -136,14 +134,14 @@ class DiffView(QTextEdit):
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
         if k in settings.KEYS_ACCEPT:
-            if self.currentActionSet == diffactionsets.unstaged:
+            if self.currentStagingState == StagingState.UNSTAGED:
                 self.stageLines()
             else:
                 QApplication.beep()
         elif k in settings.KEYS_REJECT:
-            if self.currentActionSet == diffactionsets.staged:
+            if self.currentStagingState == StagingState.STAGED:
                 self.unstageLines()
-            elif self.currentActionSet == diffactionsets.unstaged:
+            elif self.currentStagingState == StagingState.UNSTAGED:
                 self.discardLines()
             else:
                 QApplication.beep()

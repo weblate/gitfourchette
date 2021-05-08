@@ -1,6 +1,6 @@
 from allqt import *
+from stagingstate import StagingState
 from widgets.filelistview import FileListView
-import diffactionsets
 import settings
 
 
@@ -8,7 +8,7 @@ class StagedFileListView(FileListView):
     patchApplied: Signal = Signal()
 
     def __init__(self, parent):
-        super().__init__(parent, diffactionsets.staged)
+        super().__init__(parent, StagingState.STAGED)
 
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
