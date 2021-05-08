@@ -3,10 +3,18 @@ from diffmodel import DiffModel
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from util import bisect, excMessageBox
+import enum
 import git
 import patch
 import settings
 import trash
+
+
+@enum.unique
+class PatchPurpose(enum.IntEnum):
+    STAGE = enum.auto()
+    UNSTAGE = enum.auto()
+    DISCARD = enum.auto()
 
 
 class DiffView(QTextEdit):
@@ -72,7 +80,7 @@ class DiffView(QTextEdit):
 
         menu.exec_(event.globalPos())
 
-    def _applyLines(self, operation: str):
+    def _applyLines(self, operation: PatchPurpose):
         cursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -83,13 +91,13 @@ class DiffView(QTextEdit):
         biStart = bisect(self.lineData, posStart, key=lambda ld: ld.cursorStart)
         biEnd = bisect(self.lineData, posEnd, biStart, key=lambda ld: ld.cursorStart)
 
-        if operation == 'discard':
+        if operation == PatchPurpose.DISCARD:
             reverse = True
             cached = False
-        elif operation == 'stage':
+        elif operation == PatchPurpose.STAGE:
             reverse = False
             cached = True
-        elif operation == 'unstage':
+        elif operation == PatchPurpose.UNSTAGE:
             reverse = True
             cached = True
         else:
@@ -108,11 +116,10 @@ class DiffView(QTextEdit):
             plusLinesAreContext=reverse)
 
         if not patchData:
-            globalstatus.setText("Nothing to patch. Select one or more red or green lines before applying.")
-            QApplication.beep()
+            QMessageBox.information(self, "Nothing to patch", "Select one or more red or green lines before applying a partial patch.")
             return
 
-        if operation == 'discard':
+        if operation == PatchPurpose.DISCARD:
             trash.trashRawPatch(self.currentGitRepo, patchData)
 
         try:
@@ -123,13 +130,13 @@ class DiffView(QTextEdit):
         self.patchApplied.emit()
 
     def stageLines(self):
-        self._applyLines('stage')
+        self._applyLines(PatchPurpose.STAGE)
 
     def unstageLines(self):
-        self._applyLines('unstage')
+        self._applyLines(PatchPurpose.UNSTAGE)
 
     def discardLines(self):
-        self._applyLines('discard')
+        self._applyLines(PatchPurpose.DISCARD)
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
