@@ -265,7 +265,7 @@ class GraphDelegate(QStyledItemDelegate):
             rect = QRect(option.rect)
             rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * self.hashCharWidth)
             rect.setRight(rect.left() + 3*self.hashCharWidth)
-            painter.fillRect(rect, colors.rainbow[meta.debugRefreshId % len(colors.rainbow)])
+            painter.fillRect(rect, colors.rainbow[meta.batchID % len(colors.rainbow)])
             painter.drawText(rect, Qt.AlignVCenter, "-"+meta.debugPrefix)
 
         # ----------------

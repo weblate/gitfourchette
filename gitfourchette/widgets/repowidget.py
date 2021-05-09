@@ -750,11 +750,11 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def quickRefresh(self):
-        frontTrim, frontNewMetas = self.state.loadTaintedCommitsOnly()
-        if not frontNewMetas:
-            assert frontTrim == 0
+        nRowsRemovedAtTop, newRowsAtTop = self.state.loadTaintedCommitsOnly()
+        if not newRowsAtTop:
+            assert nRowsRemovedAtTop == 0
         else:
-            self.graphView.patchFill(frontTrim, frontNewMetas)
+            self.graphView.patchFill(nRowsRemovedAtTop, newRowsAtTop)
 
         self.state.refreshRefsByCommitCache()
 

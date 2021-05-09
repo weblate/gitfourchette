@@ -266,7 +266,6 @@ class MainWindow(QMainWindow):
 
         try:
             newState = RepoState(path)
-            #orderedMetadata = newState.loadCommitList_Sequential(progress)
             orderedMetadata = newState.loadCommitList(progress)
 
             rw.state = newState

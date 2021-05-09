@@ -1,8 +1,9 @@
 from allqt import *
 from benchmark import Benchmark
+from commitmetadata import CommitMetadata
+from collections import defaultdict
 from globalstatus import globalstatus
-from graphgenerator import LaneGenerator, LaneFrame
-import collections
+from graphgenerator import LaneGenerator
 import git
 import io
 import os
@@ -18,52 +19,40 @@ class Dump:
     pass
 
 
-class CommitMetadata:
-    # Immutable attributes
-    hexsha: str
-    author: str
-    authorEmail: str
-    authorTimestamp: int
-    body: str
-    parentHashes: list[str]
-
-    # Attributes that may change as the repository evolves
-    mainRefName: str
-    laneFrame: LaneFrame
-    bold: bool
-    hasLocal: bool
-    debugPrefix: str
-    debugRefreshId: int
-
-    def __init__(self, hexsha: str):
-        self.hexsha = hexsha
-        self.author = ""
-        self.authorEmail = ""
-        self.authorTimestamp = 0
-        self.body = ""
-        self.parentHashes = []
-        self.debugPrefix = None
-        self.mainRefName = None
-        self.laneFrame = None
-        self.bold = False
-        self.hasLocal = True
-        self.debugPrefix = None
-        self.debugRefreshId = 0
-
-
 class RepoState:
     dir: str
     repo: git.Repo
     index: git.IndexFile
     settings: QSettings
-    commitMetadata: dict
-    currentRefs: dict
+
+    # ordered list of commits
+    commitSequence: list[CommitMetadata]
+
+    # commit hexsha --> cached commit metadata
+    # (values are shared with commitSequence)
+    commitLookup: dict[str, CommitMetadata]
+
+    # ref name --> commit hexsha at tip of ref
+    currentRefs: dict[str, str]
+
+    # path of superproject if this is a submodule
     superproject: str
-    boldCommitHash: str
-    order: list[CommitMetadata]
-    debugRefreshId: int
+
+    # hash of the active commit (to make it bold)
+    activeCommitHexsha: str
+
+    # Everytime we refresh, new rows may be inserted at the top of the graph.
+    # This may push existing rows down, away from the top of the graph.
+    # To avoid recomputing offsetFromTop for every commit metadata,
+    # we keep track of the general offset of every batch of rows created by every refresh.
+    batchOffsets: list[int]
+
+    currentBatchID: int
+
     mutex: QMutex
-    refsByCommit: collections.defaultdict
+
+    # commit hexsha --> list of (refName, isTag flag)
+    refsByCommit: defaultdict[str, list[tuple[str, bool]]]
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
@@ -71,16 +60,16 @@ class RepoState:
         self.index = self.repo.index
         self.settings = QSettings(self.repo.common_dir + "/fourchette.ini", QSettings.Format.IniFormat)
         self.settings.setValue("GitFourchette", settings.VERSION)
-        self.debugRefreshId = 0
+        self.currentBatchID = 0
 
-        self.commitMetadata = {}
+        self.commitLookup = {}
 
-        self.refsByCommit = collections.defaultdict(list)
+        self.refsByCommit = defaultdict(list)
         self.refreshRefsByCommitCache()
 
         self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
 
-        self.boldCommitHash = None
+        self.activeCommitHexsha = None
 
         self.currentRefs = {}
 
@@ -105,13 +94,16 @@ class RepoState:
     def mutexLocker(self) -> QMutexLocker:
         return QMutexLocker(self.mutex)
 
-    def getOrCreateMetadata(self, key) -> CommitMetadata:
-        assert len(key) == 40, 'metadata key should be 40-byte hex sha'
-        if key in self.commitMetadata:
-            return self.commitMetadata[key]
+    def getOrCreateMetadata(self, hexsha) -> CommitMetadata:
+        assert len(hexsha) == 40, 'metadata key should be 40-byte hexsha'
+        if hexsha in self.commitLookup:
+            return self.commitLookup[hexsha]
         else:
-            v = CommitMetadata(key)
-            self.commitMetadata[key] = v
+            # We don't know anything about this commit yet except for its hash.
+            # Create a metadata object for it now so we can start referring to the object.
+            # The details about the commit will be filled in later.
+            v = CommitMetadata(hexsha)
+            self.commitLookup[hexsha] = v
             return v
 
     def getDirtyChanges(self) -> git.DiffIndex:
@@ -124,13 +116,18 @@ class RepoState:
         return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
 
     def getOrCreateMetadataFromGitLogOutput(self, commitData):
-        hash, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
+        hexsha, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
 
         parentHashes = parentHashesRaw.split()
 
-        wasKnown = hash in self.commitMetadata
+        wasKnown = hexsha in self.commitLookup
 
-        meta = self.getOrCreateMetadata(hash)
+        meta = self.getOrCreateMetadata(hexsha)
+
+        assert meta.parentHashes is None, "commit metadata already filled out, but this is supposed to be " \
+                                          "the first time we encounter this commit's details!"
+
+        # Fill in commit details.
         meta.author = author
         meta.authorEmail = authorEmail
         meta.authorTimestamp = int(authorDate)
@@ -172,7 +169,7 @@ class RepoState:
 
     def getOrCreateMetadataFromGitStdout(self, stdout: io.TextIOWrapper):
         hash = next(stdout)[:-1]
-        wasKnown = hash in self.commitMetadata
+        wasKnown = hash in self.commitLookup
         meta = self.getOrCreateMetadata(hash)
         #meta.inthash = int(hash[:7], 16)
         meta.parentHashes = next(stdout)[:-1].split()
@@ -195,10 +192,10 @@ class RepoState:
         return meta, wasKnown
 
     def setBoldCommit(self, hexsha: str):
-        if self.boldCommitHash and self.boldCommitHash in self.commitMetadata:
-            self.commitMetadata[self.boldCommitHash].bold = False
-            self.boldCommitHash = None
-        self.boldCommitHash = hexsha
+        if self.activeCommitHexsha and (self.activeCommitHexsha in self.commitLookup):
+            self.commitLookup[self.activeCommitHexsha].bold = False
+            self.activeCommitHexsha = None
+        self.activeCommitHexsha = hexsha
         self.getOrCreateMetadata(hexsha).bold = True
 
     def loadCommitList(self, progress: QProgressDialog):
@@ -223,6 +220,7 @@ class RepoState:
                         "Loading aborted",
                         F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
                     break
+            offsetFromTop = i
             i += 1
 
             try:
@@ -243,6 +241,8 @@ class RepoState:
                     raise git.GitCommandError(procWrapper.args, status, stderr)
                 break
 
+            meta.offsetInBatch = offsetFromTop
+
             metas.append(meta)
 
             if meta.mainRefName and meta.mainRefName not in refs:
@@ -256,8 +256,10 @@ class RepoState:
 
         print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
 
-        self.order = metas
+        self.commitSequence = metas
+        self.batchOffsets = [0]
         self.currentRefs = refs
+        self.currentBatchID = 0
 
         bench.__exit__(None, None, None)
 
@@ -319,7 +321,7 @@ class RepoState:
             globalstatus.setText(F"{self.shortName}: no new commits to draw")
             return 0, []
 
-        self.debugRefreshId += 1
+        self.currentBatchID += 1
 
         globalstatus.setProgressMaximum(5)
         globalstatus.setProgressValue(1)
@@ -337,6 +339,7 @@ class RepoState:
             if i % PROGRESS_INTERVAL == 0:
                 print("Commits processed:", i)
                 QCoreApplication.processEvents()
+            offsetFromTop = i
             i += 1
 
             try:
@@ -353,7 +356,8 @@ class RepoState:
             pLaneFrame = meta.laneFrame
             meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
 
-            meta.debugRefreshId = self.debugRefreshId
+            meta.offsetInBatch = offsetFromTop
+            meta.batchID = self.currentBatchID
             meta.debugPrefix = "R"  # Redrawn
             meta.red = True
 
@@ -379,36 +383,44 @@ class RepoState:
 
         print(F"last tainted hash: {lastTainted}")
 
-        for lastTaintedIndex, v in enumerate(self.order):
+        nAddedAtTop = len(metas)
+        nRemovedAtTop = 1
+
+        for v in self.commitSequence:
             if v.hexsha == lastTainted:
                 break
+            else:
+                nRemovedAtTop += 1
 
-        self.order = metas + self.order[lastTaintedIndex+1:]
-        print(F"new order: {len(self.order)}")
+        self.commitSequence = metas + self.commitSequence[nRemovedAtTop:]
+
+        assert self.currentBatchID == len(self.batchOffsets)
+        self.batchOffsets = [previousOffset + nAddedAtTop - nRemovedAtTop for previousOffset in self.batchOffsets]
+        self.batchOffsets.append(0)
 
         globalstatus.setText(F"{self.shortName}: loaded {nUnknownCommits:,} new commits; redrew {len(metas):,} rows; last tainted hash {lastTainted[:7]}")
 
         # todo: this will do a pass on all commits. Can we look at fewer commits?
-        self.traceCommitAvailability(self.order)
+        self.traceCommitAvailability(self.commitSequence)
 
         self.currentRefs = refs
 
         globalstatus.setProgressValue(4)
 
-        return lastTaintedIndex+1, metas
+        return nRemovedAtTop, metas
 
     # For debugging
     def loadCommitDump(self, dump: Dump):
-        self.commitMetadata = dump.data
-        self.order = [self.commitMetadata[k] for k in dump.order]
+        self.commitLookup = dump.data
+        self.commitSequence = [self.commitLookup[k] for k in dump.order]
         self.currentRefs = dump.currentRefs
-        return self.order
+        return self.commitSequence
 
     # For debugging
     def makeCommitDump(self) -> Dump:
         dump = Dump()
-        dump.data = self.commitMetadata
-        dump.order = [c.hexsha for c in self.order]
+        dump.data = self.commitLookup
+        dump.order = [c.hexsha for c in self.commitSequence]
         dump.currentRefs = self.currentRefs
         return dump
 

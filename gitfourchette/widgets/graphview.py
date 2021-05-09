@@ -82,6 +82,7 @@ class GraphView(QListView):
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
 
         commit: git.Commit = self.repo.commit(commitHash)
+        data: CommitMetadata = self.currentIndex().data()
 
         summary, contd = messageSummary(commit.message)
 
@@ -113,6 +114,11 @@ class GraphView(QListView):
             <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
+            <tr><td><b>Debug</b></td><td>
+                batch {data.batchID},
+                offset {self.repoWidget.state.batchOffsets[data.batchID]+data.offsetInBatch}
+                ({self.repoWidget.state.batchOffsets[data.batchID]}+{data.offsetInBatch})
+                </td></tr>
             </table>"""
 
         title = F"Commit info {commit.hexsha[:settings.prefs.shortHashChars]}"
