@@ -1,26 +1,20 @@
 from allqt import *
+from bisect import bisect_left, bisect_right
 from diffmodel import DiffModel
 from stagingstate import StagingState
-from globalstatus import globalstatus
-from util import bisect, excMessageBox
-import enum
+from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
+from util import excMessageBox
 import git
-import patch
 import settings
 import trash
-
-
-@enum.unique
-class PatchPurpose(enum.IntEnum):
-    STAGE = enum.auto()
-    UNSTAGE = enum.auto()
-    DISCARD = enum.auto()
 
 
 class DiffView(QTextEdit):
     patchApplied: Signal = Signal()
 
-    lineData: list[patch.LineData]
+    lineData: list[LineData]
+    lineCursorStartCache: list[int]
+    lineHunkIDCache: list[int]
     currentStagingState: StagingState
     currentChange: git.Diff
     currentGitRepo: git.Repo
@@ -30,6 +24,27 @@ class DiffView(QTextEdit):
         #self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+
+        # First-time init so callbacks don't crash looking for missing attributes
+        self.lineData = []
+        self.lineCursorStartCache = []
+        self.lineHunkIDCache = []
+        self.currentStagingState = None
+        self.currentChange = None
+        self.currentGitRepo = None
+
+    def findLineDataIndexAt(self, cursorPosition: int, firstLineDataIndex: int = 0):
+        if not self.lineData:
+            return -1
+        index = bisect_right(self.lineCursorStartCache, cursorPosition, firstLineDataIndex)
+        return index - 1
+
+    def findHunkIDAt(self, cursorPosition: int):
+        clickLineDataIndex = self.findLineDataIndexAt(cursorPosition)
+        try:
+            return self.lineData[clickLineDataIndex].hunkID
+        except IndexError:
+            return -1
 
     def replaceDocument(self, repo: git.Repo, diff: git.Diff, stagingState: StagingState, dm: DiffModel):
         oldDocument = self.document()
@@ -42,6 +57,8 @@ class DiffView(QTextEdit):
 
         self.setDocument(dm.document)
         self.lineData = dm.lineData
+        self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
+        self.lineHunkIDCache = [ld.hunkID for ld in self.lineData]
 
         # now reset defaults that are lost when changing documents
         self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
@@ -53,6 +70,12 @@ class DiffView(QTextEdit):
         self.setCursorWidth(2)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
+        # Get position of click in document
+        clickedPosition = self.cursorForPosition(event.pos()).position()
+
+        # Find hunk at click position
+        clickedHunkID = self.findHunkIDAt(clickedPosition)
+
         menu: QMenu = self.createStandardContextMenu()
         before = menu.actions()[0]
 
@@ -61,82 +84,110 @@ class DiffView(QTextEdit):
         if self.currentStagingState in [None, StagingState.COMMITTED, StagingState.UNTRACKED]:
             pass
         elif self.currentStagingState == StagingState.UNSTAGED:
-            action1 = QAction("Stage Lines", self)
-            action1.triggered.connect(self.stageLines)
-            action2 = QAction("Discard Lines", self)
-            action2.triggered.connect(self.discardLines)
-            actions = [action1, action2]
+            actions = [
+                ("Stage Lines", self.stageLines),
+                ("Discard Lines", self.discardLines),
+                (None, None),
+                (F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
+                (F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
+            ]
         elif self.currentStagingState == StagingState.STAGED:
-            action1 = QAction("Unstage Lines", self)
-            action1.triggered.connect(self.unstageLines)
-            actions = [action1]
+            actions = [
+                ("Unstage Lines", self.unstageLines),
+                (F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
+            ]
         else:
             QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
 
         if actions:
-            for a in actions:
-                menu.insertAction(before, a)
+            for caption, callback in actions:
+                if not caption:
+                    menu.insertSeparator(before)
+                else:
+                    newAction = QAction(caption, self)
+                    newAction.triggered.connect(callback)
+                    menu.insertAction(before, newAction)
             menu.insertSeparator(before)
 
         menu.exec_(event.globalPos())
 
-    def _applyLines(self, operation: PatchPurpose):
-        cursor = self.textCursor()
-        posStart = cursor.selectionStart()
-        posEnd = cursor.selectionEnd()
-
-        if posEnd - posStart > 0:
-            posEnd -= 1
-
-        biStart = bisect(self.lineData, posStart, key=lambda ld: ld.cursorStart)
-        biEnd = bisect(self.lineData, posEnd, biStart, key=lambda ld: ld.cursorStart)
-
-        if operation == PatchPurpose.DISCARD:
-            reverse = True
-            cached = False
-        elif operation == PatchPurpose.STAGE:
-            reverse = False
-            cached = True
-        elif operation == PatchPurpose.UNSTAGE:
-            reverse = True
-            cached = True
-        else:
-            raise ValueError(F"unsupported operation for _applyLines")
-
-        print(F"{operation} lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
-
-        biStart -= 1
-
-        patchData = patch.makePatchFromLines(
+    def _applyPatch(self, firstLineDataIndex: int, lastLineDataIndex: int, purpose: PatchPurpose):
+        patchData = makePatchFromLines(
             self.currentChange.a_path,
             self.currentChange.b_path,
             self.lineData,
-            biStart,
-            biEnd,
-            plusLinesAreContext=reverse)
+            firstLineDataIndex,
+            lastLineDataIndex,
+            purpose)
 
         if not patchData:
-            QMessageBox.information(self, "Nothing to patch", "Select one or more red or green lines before applying a partial patch.")
+            QMessageBox.information(self, "Nothing to patch",
+                                    "Select one or more red or green lines before applying a partial patch.")
             return
 
-        if operation == PatchPurpose.DISCARD:
+        if purpose == PatchPurpose.DISCARD:
             trash.trashRawPatch(self.currentGitRepo, patchData)
 
         try:
-            patch.applyPatch(self.currentGitRepo, patchData, cached=cached, reverse=reverse)
+            applyPatch(self.currentGitRepo, patchData, purpose)
         except git.GitCommandError as e:
-            excMessageBox(e, F"{operation.title()}: Apply Patch", F"Failed to apply patch for operation “{operation}”.", parent=self)
+            excMessageBox(e, F"{purpose.name}: Apply Patch",
+                          F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
 
         self.patchApplied.emit()
 
+    def _applyPatchFromSelectedLines(self, purpose: PatchPurpose):
+        cursor: QTextCursor = self.textCursor()
+        posStart = cursor.selectionStart()
+        posEnd = cursor.selectionEnd()
+
+        # If line 1 is completely selected and the cursor has landed at the very beginning of line 2,
+        # don't select line 2.
+        if posEnd - posStart > 0:
+            posEnd -= 1
+
+        # Find indices of first and last LineData objects given the current selection
+        biStart = self.findLineDataIndexAt(posStart)
+        biEnd = 1 + self.findLineDataIndexAt(posEnd, biStart)
+
+        print(F"{purpose.name} lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
+
+        self._applyPatch(biStart, biEnd, purpose)
+
     def stageLines(self):
-        self._applyLines(PatchPurpose.STAGE)
+        self._applyPatchFromSelectedLines(PatchPurpose.STAGE)
 
     def unstageLines(self):
-        self._applyLines(PatchPurpose.UNSTAGE)
+        self._applyPatchFromSelectedLines(PatchPurpose.UNSTAGE)
 
     def discardLines(self):
-        self._applyLines(PatchPurpose.DISCARD)
+        rc = QMessageBox.warning(self, "Really discard lines?",
+                                 "Really discard the selected lines?\nThis cannot be undone!",
+                                 QMessageBox.Discard | QMessageBox.Cancel)
+        if rc == QMessageBox.Discard:
+            self._applyPatchFromSelectedLines(PatchPurpose.DISCARD)
+
+    def _applyHunk(self, hunkID: int, purpose: PatchPurpose):
+        # Find indices of first and last LineData objects given the current hunk
+        hunkFirstLineIndex = bisect_left(self.lineHunkIDCache, hunkID, 0)
+        hunkLastLineIndex = bisect_left(self.lineHunkIDCache, hunkID+1, hunkFirstLineIndex)
+
+        print(F"{purpose.name} hunk #{hunkID}:  line data indices {hunkFirstLineIndex}-{hunkLastLineIndex}")
+
+        self._applyPatch(hunkFirstLineIndex, hunkLastLineIndex, purpose)
+
+    def stageHunk(self, hunkID: int):
+        self._applyHunk(hunkID, PatchPurpose.STAGE)
+
+    def unstageHunk(self, hunkID: int):
+        self._applyHunk(hunkID, PatchPurpose.UNSTAGE)
+
+    def discardHunk(self, hunkID: int):
+        rc = QMessageBox.warning(self, "Really discard hunk?",
+                                 "Really discard this hunk?\nThis cannot be undone!",
+                                 QMessageBox.Discard | QMessageBox.Cancel)
+        if rc == QMessageBox.Discard:
+            self._applyHunk(hunkID, PatchPurpose.DISCARD)
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()

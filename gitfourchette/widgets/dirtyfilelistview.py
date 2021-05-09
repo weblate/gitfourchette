@@ -51,9 +51,9 @@ class DirtyFileListView(FileListView):
             QMessageBox.Question,
             "Discard changes",
             F"{question}\nThis cannot be undone!",
-            QMessageBox.Yes | QMessageBox.Cancel,
+            QMessageBox.Discard | QMessageBox.Cancel,
             self)
-        yes = qmb.button(QMessageBox.Yes)
+        yes = qmb.button(QMessageBox.Discard)
         yes.setText("Discard changes")
         qmb.exec_()
         if qmb.clickedButton() != yes:

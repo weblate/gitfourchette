@@ -85,6 +85,7 @@ class DiffModel:
         lineData = []
         lineA = -1
         lineB = -1
+        hunkID = 0
 
         # For each line of the diff, create a LineData object.
         for rawLine in binaryPatchGenerator:
@@ -94,12 +95,13 @@ class DiffModel:
 
             textLine = rawLine.decode('utf-8', errors='replace')
 
-            ld = patch.LineData()
-            ld.cursorStart = cursor.position()
-            ld.lineA = lineA
-            ld.lineB = lineB
-            ld.diffLineIndex = len(lineData)
-            ld.data = rawLine
+            ld = patch.LineData(
+                cursorStart=cursor.position(),
+                lineA=lineA,
+                lineB=lineB,
+                diffLineIndex=len(lineData),
+                data=rawLine,
+                hunkID=hunkID)
             lineData.append(ld)
 
             bf, cf = normalBF, normalCF
@@ -112,6 +114,8 @@ class DiffModel:
                 hunkMatch = hunkRE.match(textLine)
                 lineA = int(hunkMatch.group(1))
                 lineB = int(hunkMatch.group(3))
+                hunkID += 1
+                ld.hunkID = hunkID
             elif rawLine.startswith(b'+'):
                 bf, cf = plusBF, plusCF
                 lineB += 1

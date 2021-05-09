@@ -16,18 +16,6 @@ def sign(x):
         return 0
 
 
-def bisect(a, x, lo=0, hi=None, key=lambda x: x):
-    assert lo >= 0, "low must be non-negative"
-    hi = hi or len(a)
-    while lo < hi:
-        mid = (lo+hi)//2
-        if x < key(a[mid]):
-            hi = mid
-        else:
-            lo = mid+1
-    return lo
-
-
 def hasFlag(value, flag):
     return (value & flag) == flag
 

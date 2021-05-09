@@ -1,11 +1,21 @@
+from dataclasses import dataclass
 from typing import Generator, Iterator
 import copy
 import difflib
+import enum
 import git
 import os
 import tempfile
 
 
+@enum.unique
+class PatchPurpose(enum.IntEnum):
+    STAGE = enum.auto()
+    UNSTAGE = enum.auto()
+    DISCARD = enum.auto()
+
+
+@dataclass
 class LineData:
     cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
     
@@ -22,6 +32,7 @@ class LineData:
     """
     data: bytes
 
+    hunkID: int
 
 
 # Error raised by makePatchFromGitDiff when the diffed file appears to be binary.
@@ -70,19 +81,23 @@ def makePatchFromGitDiff(
 def extraContext(
         lineDataIter: Iterator[LineData],
         contextLines: int,
-        plusLinesAreContext: bool
+        purpose: PatchPurpose
 ) -> Generator[LineData, None, None]:
     """
     Generates a finite amount of 'context' LineDatas from
     the LineData iterator given as input.
     """
 
-    if not plusLinesAreContext:
+    # The exact context lines to pick depends on whether the patch will be used to STAGE, UNSTAGE or DISCARD:
+    # - When STAGING a range of lines, treat any '+' lines outside the range as non-existant.
+    # - When UNSTAGING or DISCARDING a range of lines, treat any '+' lines outside the range as context.
+
+    if purpose == PatchPurpose.STAGE:
         # A is our reference version. We ignore any differences with B.
         # '-' is a line that exists in A (not in B). Treat line as context.
         # '+' is a line that isn't in A (only in B). Ignore line.
         contextPrefix, ignorePrefix = b'-', b'+'
-    else:
+    else:  # UNSTAGE or DISCARD
         # B is our reference version. We ignore any differences with A.
         # '+' is a line that exists in B (not in A). Treat line as context
         # '-' is a line that isn't in B (only in A). Ignore line.
@@ -112,7 +127,7 @@ def makePatchFromLines(
         lineData: list[LineData],
         ldStart: int,
         ldEnd: int,
-        plusLinesAreContext: bool,
+        purpose: PatchPurpose,
         contextLines: int = 3
 ) -> bytes:
     """
@@ -140,12 +155,14 @@ def makePatchFromLines(
     firstDiffLine = hunks[0][0].diffLineIndex
     lastDiffLine = hunks[-1][-1].diffLineIndex
 
+    # We have to add some context lines around the range of patched lines for git to accept the patch.
+
     # Extend first hunk with context upwards
-    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, plusLinesAreContext):
+    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, purpose):
         hunks[0].insert(0, contextLine)
 
     # Extend last hunk with context downwards
-    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, plusLinesAreContext):
+    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, purpose):
         hunks[-1].append(contextLine)
 
     # Assemble patch text
@@ -179,7 +196,19 @@ def makePatchFromLines(
     return patch
 
 
-def applyPatch(repo: git.Repo, patchData: bytes, cached: bool = True, reverse: bool = False) -> str:
+def applyPatch(repo: git.Repo, patchData: bytes, purpose: PatchPurpose) -> str:
+    if purpose == PatchPurpose.DISCARD:
+        reverse = True
+        cached = False
+    elif purpose == PatchPurpose.STAGE:
+        reverse = False
+        cached = True
+    elif purpose == PatchPurpose.UNSTAGE:
+        reverse = True
+        cached = True
+    else:
+        raise ValueError(F"unsupported patch purpose: {purpose}")
+
     prefix = F"gitfourchette-{os.path.basename(repo.working_tree_dir)}-"
     with tempfile.NamedTemporaryFile(mode='wb', suffix=".patch", prefix=prefix, delete=False) as patchFile:
         #print(F"_____________ {patchFile.name} ______________\n{patchData.decode('utf-8', errors='replace')}\n________________")
