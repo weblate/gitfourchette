@@ -1,6 +1,7 @@
 from allqt import *
 from settings import prefs, PROGRAM_NAME, SHORT_DATE_PRESETS
 import datetime
+import enum
 import re
 
 
@@ -28,6 +29,10 @@ def hBoxWidget(*controls):
 def prettifyCamelCase(x):
     x = re.sub(r'([A-Z]+)', r' \1', x)
     return x[0].upper() + x[1:]
+
+
+def prettifySnakeCase(x):
+    return x.replace('_', ' ').title()
 
 
 def prettifySetting(n):
@@ -111,6 +116,8 @@ class PrefsDialog(QDialog):
                 continue  # Don't expose the setting for this
             elif prefKey == 'shortHashChars':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
+            elif issubclass(t, enum.Enum):
+                control = self.enumControl(prefKey, prefValue, t)
             elif t is str:
                 control = self.strControl(prefKey, prefValue)
             elif t is int:
@@ -225,8 +232,17 @@ class PrefsDialog(QDialog):
 
         return vBoxWidget(trueButton, falseButton)
 
+    def enumControl(self, prefKey, prefValue, enumType):
+        control = QComboBox(self)
+        for enumMember in enumType:
+            control.addItem(prettifySnakeCase(enumMember.name), enumMember)
+            if prefValue == enumMember:
+                control.setCurrentIndex(control.count() - 1)
+        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.UserRole)))
+        return control
+
     def qtStyleControl(self, prefKey, prefValue):
-        control = QComboBox()
+        control = QComboBox(self)
 
         control.addItem("System default")
         if not prefValue:

@@ -54,8 +54,10 @@ class FileListView(QListView):
     def addEntry(self, entry: FileListEntry):
         self.entries.append(entry)
         item = QStandardItem()
-        if settings.prefs.shortenDirectoryNames:
+        if settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES:
             label = compactRepoPath(entry.path)
+        elif settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.SHOW_FILENAME_ONLY:
+            label = entry.path.rsplit('/', 1)[-1]
         else:
             label = entry.path
         item.setText(label)

@@ -1,3 +1,5 @@
+import enum
+
 from allqt import *
 from dataclasses import dataclass, field
 import json
@@ -53,6 +55,7 @@ class BasePrefs:
         prefsPath = QStandardPaths.locate(QStandardPaths.AppConfigLocation, getattr(self, 'filename'))
         if not prefsPath:  # couldn't be found
             return False
+
         with open(prefsPath, 'r') as f:
             obj = json.load(f)
             for k in obj:
@@ -62,11 +65,25 @@ class BasePrefs:
                 if k not in self.__dict__:
                     print(F"{prefsPath}: skipping unknown key: {k}")
                     continue
-                if type(obj[k]) != type(self.__dict__[k]):
-                    print(F"{prefsPath}: value type mismatch for {k}: expected {type(obj[k])}, got {type(self.__dict__[k])}")
+
+                originalType = type(self.__dict__[k])
+                if issubclass(originalType, enum.IntEnum):
+                    acceptedType = int
+                else:
+                    acceptedType = originalType
+
+                if type(obj[k]) != acceptedType:
+                    print(F"{prefsPath}: value type mismatch for {k}: expected {acceptedType}, got {type(obj[k])}")
                     continue
-                self.__dict__[k] = obj[k]
+                self.__dict__[k] = originalType(obj[k])
+
         return True
+
+import enum
+class PathDisplayStyle(enum.IntEnum):
+    FULL_PATHS = 1,
+    ABBREVIATE_DIRECTORIES = 2,
+    SHOW_FILENAME_ONLY = 3,
 
 
 @dataclass
@@ -78,7 +95,7 @@ class Prefs(BasePrefs):
     splitterHandleWidth         : int           = -1
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
     longTimeFormat              : str           = LONG_DATE_PRESETS[0][1]
-    shortenDirectoryNames       : bool          = True
+    pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
     showStatusBar               : bool          = True
     diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4
