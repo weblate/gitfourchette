@@ -12,14 +12,12 @@ class FileListView(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(object, StagingState)
 
-    selectedRowBeforeClear: int
     entries: list[FileListEntry]
     stagingState: StagingState
 
     def __init__(self, parent: QWidget, stagingState: StagingState):
         super().__init__(parent)
 
-        self.selectedRowBeforeClear = -1
         self.stagingState = stagingState
 
         self.entries = []
@@ -46,11 +44,6 @@ class FileListView(QListView):
         self.setModel(QStandardItemModel(self))
 
     def clear(self):
-        # save selected index before clear so we can restore it after the widget is done being refreshed
-        try:
-            self.selectedRowBeforeClear = list(self.selectedIndexes())[-1].row()
-        except IndexError:
-            self.selectedRowBeforeClear = -1
         self._setBlankModel()
         self.entries.clear()
 
@@ -80,24 +73,12 @@ class FileListView(QListView):
         for path in untracked:
             self.addEntry(FileListEntry.Untracked(path))
 
-    def selectFirstRow(self):
+    def selectRow(self, rowNumber=0):
         if self.model().rowCount() == 0:
             self.nothingClicked.emit()
             self.clearSelection()
         else:
-            self.setCurrentIndex(self.model().index(0, 0))
-
-    def restoreSelectedRowAfterClear(self):
-        rowCount = self.model().rowCount()
-        if rowCount == 0 or self.selectedRowBeforeClear < 0:
-            return
-
-        if self.selectedRowBeforeClear >= rowCount:
-            row = rowCount-1
-        else:
-            row = self.selectedRowBeforeClear
-
-        self.setCurrentIndex(self.model().index(row, 0))
+            self.setCurrentIndex(self.model().index(rowNumber or 0, 0))
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
@@ -140,4 +121,10 @@ class FileListView(QListView):
     @property
     def repo(self):
         return self.repoWidget.state.repo
+
+    def latestSelectedRow(self):
+        try:
+            return list(self.selectedIndexes())[-1].row()
+        except IndexError:
+            return None
 
