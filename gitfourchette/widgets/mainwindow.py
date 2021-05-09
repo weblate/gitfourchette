@@ -115,9 +115,12 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Push Active Branch...", lambda: self.currentRepoWidget().push())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
         repoMenu.addSeparator()
-        repoMenu.addAction("&Find...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
+        repoMenu.addAction("&Find Commit...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
+
+        patchMenu = menubar.addMenu("&Patch")
+        patchMenu.addAction("&Find in Patch...", lambda: self.currentRepoWidget().findInDiffFlow(), QKeySequence(Qt.ALT + Qt.CTRL + Qt.Key_F))
 
         goMenu:QMenu = menubar.addMenu("&Go")
         goMenu.addAction("&Uncommitted Changes", self.selectUncommittedChanges, QKeySequence(Qt.CTRL + Qt.Key_U))

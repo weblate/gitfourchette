@@ -40,7 +40,10 @@ class RepoWidget(QWidget):
     nameChange: Signal = Signal()
 
     state: RepoState
-    pathPending: str
+    pathPending: str  # path of the repository if it isn't loaded yet (state=None)
+
+    previouslySearchedTerm: str
+    previouslySearchedTermInDiff: str
 
     displayedCommitHexsha: str
     displayedFilePath: str
@@ -114,6 +117,7 @@ class RepoWidget(QWidget):
         self.stageLabel = QLabel("Files Staged For Commit")
 
         self.previouslySearchedTerm = None
+        self.previouslySearchedTermInDiff = None
 
         dirtyContainer = QWidget()
         dirtyContainer.setLayout(QVBoxLayout())
@@ -652,7 +656,7 @@ class RepoWidget(QWidget):
         message = self.previouslySearchedTerm
         message = sanitizeSearchTerm(message)
         if not message:
-            QMessageBox.warning(self, "Find", "Invalid search term.")
+            QMessageBox.warning(self, "Find Commit", "Invalid search term.")
             return
 
         likelyHash = False
@@ -674,30 +678,21 @@ class RepoWidget(QWidget):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
-        QMessageBox.information(self, "Find", F"No more occurrences of “{message}”.")
+        QMessageBox.information(self, "Find Commit", F"No more occurrences of “{message}”.")
 
     def findFlow(self):
-        dlg = QInputDialog(self)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setWindowTitle("Find Commit")
-        dlg.setLabelText("Search for partial commit hash or message:")
-        if self.previouslySearchedTerm:
-            dlg.setTextValue(self.previouslySearchedTerm)
-        dlg.setOkButtonText("Find")
-        rc = dlg.exec_()
-        verbatimTerm: str = dlg.textValue()
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
-        if rc != QDialog.DialogCode.Accepted:
+        verbatimTerm, ok = textInputDialog(self, "Find Commit", "Search for partial commit hash or message:", self.previouslySearchedTerm)
+        if not ok:
             return
         self.previouslySearchedTerm = verbatimTerm
         self._search(range(0, self.graphView.model().rowCount()))
 
     def _findNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTerm):
-            QMessageBox.warning(self, "Find", "Please use “Find” to specify a search term before using “Find Next” or “Find Previous”.")
+            QMessageBox.warning(self, "Find Commit", "Please use “Find” to specify a search term before using “Find Next” or “Find Previous”.")
             return
         if len(self.graphView.selectedIndexes()) == 0:
-            QMessageBox.warning(self, "Find", "Please select a commit from whence to resume the search.")
+            QMessageBox.warning(self, "Find Commit", "Please select a commit from whence to resume the search.")
             return
         start = self.graphView.currentIndex().row()
         if findNext:
@@ -709,6 +704,46 @@ class RepoWidget(QWidget):
         self._findNextOrPrevious(True)
 
     def findPrevious(self):
+        self._findNextOrPrevious(False)
+
+    # -------------------------------------------------------------------------
+    # Find in diff, find next in diff
+
+    def _searchDiff(self, forward=True):
+        message = self.previouslySearchedTermInDiff
+        message = sanitizeSearchTerm(message)
+        if not message:
+            QMessageBox.warning(self, "Find in Patch", "Invalid search term.")
+            return
+
+        doc: QTextDocument = self.diffView.document()
+        newCursor = doc.find(message, self.diffView.textCursor())
+        if newCursor:
+            self.diffView.setTextCursor(newCursor)
+            return
+
+        QMessageBox.information(self, "Find in Patch", F"No more occurrences of “{message}”.")
+
+    def findInDiffFlow(self):
+        verbatimTerm, ok = textInputDialog(self, "Find in Patch", "Search for text in current patch:", self.previouslySearchedTermInDiff)
+        if not ok:
+            return
+        self.previouslySearchedTermInDiff = verbatimTerm
+        self._searchDiff()
+
+    def _findInDiffNextOrPrevious(self, findNext):
+        if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):
+            QMessageBox.warning(self, "Find in Patch", "Please use “Find in Patch” to specify a search term before using “Find Next” or “Find Previous”.")
+            return
+        #if len(self.graphView.selectedIndexes()) == 0:
+        #    QMessageBox.warning(self, "Find in Patch", "Please select a commit from whence to resume the search.")
+        #    return
+        self._searchInDiff(findNext)
+
+    def findInDiffNext(self):
+        self._findNextOrPrevious(True)
+
+    def findInDiffPrevious(self):
         self._findNextOrPrevious(False)
 
     # -------------------------------------------------------------------------
