@@ -11,11 +11,12 @@ class StagedFileListView(FileListView):
         super().__init__(parent, StagingState.STAGED)
 
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
-        action = QAction("Unstage", self)
-        action.triggered.connect(self.unstage)
-        self.addAction(action)
+    def createContextMenuActions(self):
+        return [
+            ("&Unstage", self.unstage),
+            (None, None)
+        ] + super().createContextMenuActions()
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()

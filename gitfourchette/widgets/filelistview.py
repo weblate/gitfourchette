@@ -2,7 +2,7 @@ from allqt import *
 from filelistentry import FileListEntry
 from stagingstate import StagingState
 from typing import Generator
-from util import compactRepoPath, showInFolder, hasFlag, QSignalBlockerContext
+from util import compactRepoPath, showInFolder, hasFlag, quickMenu, QSignalBlockerContext
 import git
 import os
 import settings
@@ -28,10 +28,14 @@ class FileListView(QListView):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers) # prevent editing text after double-clicking
         self.clear()
 
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
-        showInFolderAction = QAction("Open Containing Folder", self)
-        showInFolderAction.triggered.connect(self.showInFolder)
-        self.addAction(showInFolderAction)
+    def contextMenuEvent(self, event: QContextMenuEvent):
+        if len(self.selectedIndexes()) == 0:
+            return
+        menu = quickMenu(self, self.createContextMenuActions())
+        menu.exec_(event.globalPos())
+
+    def createContextMenuActions(self):
+        return [("&Open Containing Folder", self.showInFolder)]
 
     def showInFolder(self):
         for entry in self.selectedEntries():

@@ -2,6 +2,7 @@ from allqt import *
 import os
 import re
 import traceback
+import typing
 
 
 HOME = os.path.abspath(os.path.expanduser('~'))
@@ -147,6 +148,31 @@ def textInputDialog(
     text = dlg.textValue()
     dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
     return text, rc == QDialog.DialogCode.Accepted
+
+
+def quickMenu(
+        parent: QWidget,
+        actionDefs: list[tuple[str, typing.Callable]],
+        menu: QMenu = None
+) -> QMenu:
+    actions = []
+    for caption, callback in actionDefs:
+        if not caption:
+            newAction = QAction(parent)
+            newAction.setSeparator(True)
+        else:
+            newAction = QAction(caption, parent)
+            newAction.triggered.connect(callback)
+        actions.append(newAction)
+
+    if menu:
+        menu.insertSeparator(menu.actions()[0])
+        menu.insertActions(menu.actions()[0], actions)
+    else:
+        menu = QMenu(parent)
+        menu.addActions(actions)
+
+    return menu
 
 
 class QSignalBlockerContext:

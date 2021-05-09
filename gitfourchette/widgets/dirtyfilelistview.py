@@ -13,15 +13,13 @@ class DirtyFileListView(FileListView):
         super().__init__(parent, StagingState.UNSTAGED)
 
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
 
-        stageAction = QAction("Stage", self)
-        stageAction.triggered.connect(self.stage)
-        self.addAction(stageAction)
-
-        discardAction = QAction("Discard changes", self)
-        discardAction.triggered.connect(self.discard)
-        self.addAction(discardAction)
+    def createContextMenuActions(self):
+        return [
+            ("&Stage", self.stage),
+            ("&Discard Changes", self.discard),
+            (None, None)
+        ] + super().createContextMenuActions()
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()

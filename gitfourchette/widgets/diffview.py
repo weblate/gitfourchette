@@ -3,7 +3,7 @@ from bisect import bisect_left, bisect_right
 from diffmodel import DiffModel
 from stagingstate import StagingState
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
-from util import excMessageBox
+from util import excMessageBox, quickMenu
 import git
 import settings
 import trash
@@ -100,14 +100,7 @@ class DiffView(QTextEdit):
             QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
 
         if actions:
-            for caption, callback in actions:
-                if not caption:
-                    menu.insertSeparator(before)
-                else:
-                    newAction = QAction(caption, self)
-                    newAction.triggered.connect(callback)
-                    menu.insertAction(before, newAction)
-            menu.insertSeparator(before)
+            menu = quickMenu(self, actions, menu)
 
         menu.exec_(event.globalPos())
 
