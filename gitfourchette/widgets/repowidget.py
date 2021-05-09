@@ -99,6 +99,7 @@ class RepoWidget(QWidget):
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
 
+        self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.tagClicked.connect(self.selectTag)
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)

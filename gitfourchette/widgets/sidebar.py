@@ -1,30 +1,9 @@
 from allqt import *
-from dataclasses import dataclass
 from dialogs.trackedbranchdialog import TrackedBranchDialog
+from widgets.sidebardelegate import SidebarDelegate
+from widgets.sidebarentry import SidebarEntry
 from util import labelQuote, textInputDialog
 import git
-
-
-@dataclass
-class SidebarEntry:
-    type: str
-    name: str
-    trackingBranch: str = None
-
-    def isRef(self):
-        return self.type in ['localref', 'remoteref']
-
-    def isLocalRef(self):
-        return self.type == 'localref'
-
-    def isRemoteRef(self):
-        return self.type == 'remoteref'
-
-    def isTag(self):
-        return self.type == 'tag'
-
-    def isRemote(self):
-        return self.type == 'remote'
 
 
 # TODO: we should just use a custom model
@@ -33,10 +12,20 @@ def SidebarItem(name: str, data=None) -> QStandardItem:
     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
     if data:
         item.setData(data, Qt.UserRole)
+    item.setSizeHint(QSize(-1, 16))
     return item
 
 
+def SidebarSeparator() -> QStandardItem:
+    sep = SidebarItem(None)
+    sep.setSelectable(False)
+    sep.setEnabled(False)
+    sep.setSizeHint(QSize(-1, 8))
+    return sep
+
+
 class Sidebar(QTreeView):
+    uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
     tagClicked = Signal(str)
     switchToBranch = Signal(str)
@@ -54,16 +43,23 @@ class Sidebar(QTreeView):
     def __init__(self, parent):
         super().__init__(parent)
 
+        self.setMinimumWidth(128)
+
         self.currentGitRepo = None
 
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setUniformRowHeights(True)
+        #self.setUniformRowHeights(True)
         self.setHeaderHidden(True)
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         self.setObjectName("sidebar")  # for styling
+
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setRootIsDecorated(False)
+        self.setIndentation(0)
+        self.setItemDelegate(SidebarDelegate(self))
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.mapToGlobal(localPoint)
@@ -73,8 +69,8 @@ class Sidebar(QTreeView):
         if not data:
             return
 
-        if data.isLocalRef():
-            menu = QMenu()
+        if data.type == SidebarEntry.Type.LOCAL_REF:
+            menu = QMenu(self)
 
             if data.name != self.activeBranchName:
                 menu.addAction(
@@ -111,13 +107,13 @@ class Sidebar(QTreeView):
 
             menu.exec_(globalPoint)
 
-        if data.isRemoteRef():
-            menu = QMenu()
+        if data.type == SidebarEntry.Type.REMOTE_REF:
+            menu = QMenu(self)
             menu.addAction(F"New local branch tracking {labelQuote(data.name)}...", lambda: self._newTrackingBranchFlow(data.name))
             menu.exec_(globalPoint)
 
-        if data.isRemote():
-            menu = QMenu()
+        if data.type == SidebarEntry.Type.REMOTE:
+            menu = QMenu(self)
             menu.addAction(F"Edit URL...", lambda: self._editRemoteURLFlow(data.name))
             menu.exec_(globalPoint)
 
@@ -164,36 +160,50 @@ class Sidebar(QTreeView):
 
         self.activeBranchName = repo.active_branch.name
 
+        uncommittedChangesEntry = SidebarEntry(SidebarEntry.Type.UNCOMMITTED_CHANGES, None)
+        uncommittedChanges = SidebarItem("Changes", uncommittedChangesEntry)
+        model.appendRow(uncommittedChanges)
+
+        model.appendRow(SidebarSeparator())
+
         branchesParent = SidebarItem("Local Branches")
+        branchesParent.setSelectable(False)
         for branch in repo.branches:
             caption = branch.name
             if repo.active_branch == branch:
-                caption = F">{caption}<"
-            data = SidebarEntry('localref', branch.name)
+                caption = F"★ {caption}"
+            branchEntry = SidebarEntry(SidebarEntry.Type.LOCAL_REF, branch.name)
             if branch.tracking_branch():
-                data.trackingBranch = branch.tracking_branch().name
-            item = SidebarItem(caption, data)
+                branchEntry.trackingBranch = branch.tracking_branch().name
+            item = SidebarItem(caption, branchEntry)
             branchesParent.appendRow(item)
         model.appendRow(branchesParent)
 
+        model.appendRow(SidebarSeparator())
+
         remote: git.Remote
         for remote in repo.remotes:
-            remoteData = SidebarEntry('remote', remote.name)
-            remoteParent = SidebarItem(F"Remote “{remote.name}”", remoteData)
+            remoteEntry = SidebarEntry(SidebarEntry.Type.REMOTE, remote.name)
+            remoteParent = SidebarItem(F"Remote “{remote.name}”", remoteEntry)
+            remoteParent.setSelectable(False)
             remotePrefix = remote.name + '/'
-            for ref in remote.refs:
-                refShortName = ref.name
-                if refShortName.startswith(remotePrefix):
-                    refShortName = refShortName[len(remotePrefix):]
-                item = SidebarItem(refShortName, SidebarEntry('remoteref', ref.name))
-                remoteParent.appendRow(item)
+            for remoteRef in remote.refs:
+                remoteRefShortName = remoteRef.name
+                if remoteRefShortName.startswith(remotePrefix):
+                    remoteRefShortName = remoteRefShortName[len(remotePrefix):]
+                remoteRefEntry = SidebarEntry(SidebarEntry.Type.REMOTE_REF, remoteRef.name)
+                remoteRefItem = SidebarItem(remoteRefShortName, remoteRefEntry)
+                remoteParent.appendRow(remoteRefItem)
             model.appendRow(remoteParent)
+            model.appendRow(SidebarSeparator())
 
         tagsParent = QStandardItem("Tags")
+        tagsParent.setSelectable(False)
         tag: git.Tag
         for tag in repo.tags:
-            item = SidebarItem(tag.name, SidebarEntry('tag', tag.name))
-            tagsParent.appendRow(item)
+            tagEntry = SidebarEntry(SidebarEntry.Type.TAG, tag.name)
+            tagItem = SidebarItem(tag.name, tagEntry)
+            tagsParent.appendRow(tagItem)
         model.appendRow(tagsParent)
 
         self.currentGitRepo = repo
@@ -211,12 +221,21 @@ class Sidebar(QTreeView):
         super().currentChanged(current, previous)
         if not current.isValid():
             return
-        data = current.data(Qt.UserRole)
+        data: SidebarEntry = current.data(Qt.UserRole)
         if not data:
             return
-        if data.isRef():
+        if data.type == SidebarEntry.Type.UNCOMMITTED_CHANGES:
+            self.uncommittedChangesClicked.emit()
+        elif data.type in [SidebarEntry.Type.LOCAL_REF, SidebarEntry.Type.REMOTE_REF]:
             self.refClicked.emit(data.name)
-        elif data.isTag():
+        elif data.type == SidebarEntry.Type.TAG:
             self.tagClicked.emit(data.name)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        index: QModelIndex = self.indexAt(event.pos())
+        lastState = self.isExpanded(index)
+        super().mousePressEvent(event)
+        if event.button() == Qt.LeftButton and index.isValid() and lastState == self.isExpanded(index):
+            self.setExpanded(index, not lastState)
 
 
