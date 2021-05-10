@@ -22,6 +22,8 @@ class CommitMetadata:
     # -------------------------------------------------------------------------
     # Attributes that may change as the repository evolves
 
+    childHashes: list[str] = None
+
     mainRefName: str = None
 
     laneFrame: LaneFrame = None

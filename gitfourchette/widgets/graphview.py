@@ -96,6 +96,10 @@ class GraphView(QListView):
         parentLabelMarkup = html.escape(fplural('# Parent^s', len(parentHashes)))
         parentValueMarkup = html.escape(', '.join(parentHashes))
 
+        childHashes = [c[:settings.prefs.shortHashChars] for c in data.childHashes]
+        childLabelMarkup = html.escape(fplural('# Child^ren', len(childHashes)))
+        childValueMarkup = html.escape(', '.join(childHashes))
+
         authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" \
             F"<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}"
 
@@ -112,6 +116,7 @@ class GraphView(QListView):
             <table>
             <tr><td><b>Full Hash </b></td><td>{commit.hexsha}</td></tr>
             <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
+            <tr><td><b>{childLabelMarkup} </b></td><td>{childValueMarkup}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
             <tr><td><b>Debug</b></td><td>

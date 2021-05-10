@@ -103,6 +103,7 @@ class RepoState:
             # Create a metadata object for it now so we can start referring to the object.
             # The details about the commit will be filled in later.
             v = CommitMetadata(hexsha)
+            v.childHashes = []  # MUST initialize this
             self.commitLookup[hexsha] = v
             return v
 
@@ -114,32 +115,6 @@ class RepoState:
 
     def getStagedChanges(self) -> git.DiffIndex:
         return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
-
-    def getOrCreateMetadataFromGitLogOutput(self, commitData):
-        hexsha, parentHashesRaw, author, authorEmail, authorDate, refName, body = commitData.split('\n', 6)
-
-        parentHashes = parentHashesRaw.split()
-
-        wasKnown = hexsha in self.commitLookup
-
-        meta = self.getOrCreateMetadata(hexsha)
-
-        assert meta.parentHashes is None, "commit metadata already filled out, but this is supposed to be " \
-                                          "the first time we encounter this commit's details!"
-
-        # Fill in commit details.
-        meta.author = author
-        meta.authorEmail = authorEmail
-        meta.authorTimestamp = int(authorDate)
-        meta.body = body
-        #meta.body = body[:120]
-        #if len(body) > 120:
-        #        meta.body += "<snip>"
-        meta.parentHashes = parentHashes
-        #meta.parentIHashes = [int(h[:7], 16) for h in parentHashes]
-        meta.mainRefName = refName
-
-        return meta, wasKnown
 
     def getCommitSequentialIndex(self, hexsha: str):
         meta = self.commitLookup[hexsha]
@@ -254,6 +229,11 @@ class RepoState:
 
             meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
 
+            # Fill parent hashes
+            for p in meta.parentHashes:
+                parentMeta = self.getOrCreateMetadata(p)
+                parentMeta.childHashes.insert(0, meta.hexsha)
+
             self.traceOneCommitAvailability(nextLocal, meta)
 
         globalstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
@@ -331,6 +311,7 @@ class RepoState:
         globalstatus.setProgressValue(1)
 
         metas = []
+        refreshedHashes = set()
         refs = {}
         lastTainted = None
         nUnknownCommits = 0
@@ -351,6 +332,7 @@ class RepoState:
             except StopIteration:
                 break
             metas.append(meta)
+            refreshedHashes.add(meta.hexsha)
 
             if meta.mainRefName and meta.mainRefName not in refs:
                 refs[meta.mainRefName] = meta.hexsha
@@ -383,6 +365,11 @@ class RepoState:
                         # TODO: Maybe we should kill git here?
                         break
 
+            # Fill parent hashes
+            for p in meta.parentHashes:
+                parentMeta = self.getOrCreateMetadata(p)
+                parentMeta.childHashes.insert(0, meta.hexsha)
+
         globalstatus.setProgressValue(3)
 
         print(F"last tainted hash: {lastTainted}")
@@ -390,14 +377,28 @@ class RepoState:
         nAddedAtTop = len(metas)
         nRemovedAtTop = 1
 
-        for v in self.commitSequence:
-            if v.hexsha == lastTainted:
+        # Nuke references to tainted commits,
+        # and find out how many tainted commits to trim at the front of the sequence.
+        for oldCommit in self.commitSequence:
+            if oldCommit.hexsha == lastTainted:
+                # Last tainted commit -- all following commits are clean, stop here
                 break
-            else:
-                nRemovedAtTop += 1
 
+            nRemovedAtTop += 1
+
+            # Remove tainted commit from parents' children
+            for parentHash in oldCommit.parentHashes:
+               if parentHash in self.commitLookup:
+                   self.commitLookup[parentHash].childHashes.remove(oldCommit.hexsha)
+
+            # If the commit hash is now unreachable, nuke it from lookup dict to avoid a leak
+            if oldCommit.hexsha not in refreshedHashes:
+                del self.commitLookup[oldCommit.hexsha]
+
+        # Piece correct commit sequence back together
         self.commitSequence = metas + self.commitSequence[nRemovedAtTop:]
 
+        # Compute new batch offset
         assert self.currentBatchID == len(self.batchOffsets)
         self.batchOffsets = [previousOffset + nAddedAtTop - nRemovedAtTop for previousOffset in self.batchOffsets]
         self.batchOffsets.append(0)
