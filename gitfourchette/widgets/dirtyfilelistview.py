@@ -1,4 +1,5 @@
 from allqt import *
+from filelistentry import FileListEntry
 from widgets.filelistview import FileListView
 from stagingstate import StagingState
 import os
@@ -29,6 +30,10 @@ class DirtyFileListView(FileListView):
             self.discard()
         else:
             super().keyPressEvent(event)
+
+    def addUntrackedFileEntries(self, untracked: list[str]):
+        for path in untracked:
+            self.addEntry(FileListEntry.Untracked(path))
 
     # Context menu action
     def stage(self):

@@ -84,13 +84,9 @@ class FileListView(QListView):
             item.setToolTip(entry.tooltip)
         self.model().appendRow(item)
 
-    def fillDiff(self, diffIndex: git.DiffIndex):
+    def addFileEntriesFromDiffIndex(self, diffIndex: git.DiffIndex):
         for diff in diffIndex:
             self.addEntry(FileListEntry.Tracked(diff))
-
-    def fillUntracked(self, untracked: list[str]):
-        for path in untracked:
-            self.addEntry(FileListEntry.Untracked(path))
 
     def selectRow(self, rowNumber=0):
         if self.model().rowCount() == 0:

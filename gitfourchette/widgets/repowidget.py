@@ -373,11 +373,11 @@ class RepoWidget(QWidget):
             # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
             with QSignalBlockerContext(self.dirtyView):
                 self.dirtyView.clear()
-                self.dirtyView.fillDiff(dirtyChanges)
-                self.dirtyView.fillUntracked(untrackedFiles)
+                self.dirtyView.addFileEntriesFromDiffIndex(dirtyChanges)
+                self.dirtyView.addUntrackedFileEntries(untrackedFiles)
             with QSignalBlockerContext(self.stageView):
                 self.stageView.clear()
-                self.stageView.fillDiff(stagedChanges)
+                self.stageView.addFileEntriesFromDiffIndex(stagedChanges)
 
             nDirty = self.dirtyView.model().rowCount()
             nStaged = self.stageView.model().rowCount()
@@ -420,7 +420,7 @@ class RepoWidget(QWidget):
             with QSignalBlockerContext(self.changedFilesView):
                 self.changedFilesView.clear()
                 for diff in parentDiffs:
-                    self.changedFilesView.fillDiff(diff)
+                    self.changedFilesView.addFileEntriesFromDiffIndex(diff)
 
             self.displayedCommitHexsha = hexsha
             self.displayedStagingState = StagingState.COMMITTED
