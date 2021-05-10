@@ -1,4 +1,5 @@
 from allqt import *
+from dialogs.aboutdialog import showAboutDialog
 from dialogs.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
@@ -135,8 +136,7 @@ class MainWindow(QMainWindow):
             debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
 
         helpMenu = menubar.addMenu("&Help")
-        helpMenu.addAction(F"About {settings.PROGRAM_NAME}", self.about)
-        helpMenu.addAction("About Qt", lambda: QMessageBox.aboutQt(self))
+        helpMenu.addAction(F"&About {settings.PROGRAM_NAME}", lambda: showAboutDialog(self))
 
         self.fillRecentMenu()
 
@@ -173,22 +173,6 @@ class MainWindow(QMainWindow):
             "Apply Settings",
             F"Some changes may require restarting {settings.PROGRAM_NAME} to take effect.")
 
-    def about(self):
-        import sys
-        about_text = F"""\
-        <h2>{settings.PROGRAM_NAME} {settings.VERSION}</h2>
-        <p>
-        The no-frills git GUI for Linux
-        </p>
-        <p><small>
-        {git.Git().version()}<br>
-        Python {sys.version}<br>
-        GitPython {git.__version__}<br>
-        Qt {qtVersion}<br>
-        PySide {qtBindingVersion}
-        </small></p>
-        """
-        QMessageBox.about(self, F"About {settings.PROGRAM_NAME}", about_text)
 
     def fillRecentMenu(self):
         self.recentMenu.clear()
