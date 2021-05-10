@@ -341,7 +341,7 @@ class RepoWidget(QWidget):
                 onComplete(o)
 
         def errorCallback(exc: BaseException):
-            excMessageBox(exc, title=caption, message=F"Operation failed: {caption}")
+            excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self)
 
         w = Worker(work)
         w.signals.result.connect(callback)

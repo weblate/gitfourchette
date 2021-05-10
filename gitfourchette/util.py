@@ -1,5 +1,6 @@
 from allqt import *
 from dataclasses import dataclass
+import git.exc
 import os
 import re
 import traceback
@@ -98,13 +99,20 @@ def messageSummary(body: str):
 def excMessageBox(exc, title="Unhandled Exception", message="An exception was thrown.", parent=None):
     traceback.print_exc()
 
-    summary = traceback.format_exception_only(exc.__class__, exc)
-    summary = ''.join(summary).strip()
+    if isinstance(exc, git.exc.GitCommandError):
+        summary = exc.stderr.strip() \
+            .removeprefix("stderr: '").strip() \
+            .removeprefix("error: ").strip() \
+            .removesuffix("'").strip() \
+            .removesuffix("Aborting").strip()
+    else:
+        summary = traceback.format_exception_only(exc.__class__, exc)
+        summary = ''.join(summary).strip()
 
     details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
     details = ''.join(details).strip()
 
-    qmb = QMessageBox(QMessageBox.Critical, title, F"{message}\n{summary}", parent=parent)
+    qmb = QMessageBox(QMessageBox.Critical, title, F"{message}\n\n{summary}", parent=parent)
     qmb.setDetailedText(details)
 
     horizontalSpacer = QSpacerItem(500, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
