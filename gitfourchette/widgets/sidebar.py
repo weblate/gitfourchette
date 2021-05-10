@@ -238,4 +238,12 @@ class Sidebar(QTreeView):
         if event.button() == Qt.LeftButton and index.isValid() and lastState == self.isExpanded(index):
             self.setExpanded(index, not lastState)
 
+    def mouseDoubleClickEvent(self, event):
+        index: QModelIndex = self.indexAt(event.pos())
+        if event.button() == Qt.LeftButton and index.isValid():
+            data: SidebarEntry = index.data(Qt.UserRole)
+            if data.type == SidebarEntry.Type.LOCAL_REF:
+                self.switchToBranch.emit(data.name)
+                return
+        super().mouseDoubleClickEvent(event)
 
