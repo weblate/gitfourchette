@@ -41,6 +41,19 @@ class FileListView(QListView):
         for entry in self.selectedEntries():
             showInFolder(os.path.join(self.repo.working_tree_dir, entry.path))
 
+    def keyPressEvent(self, event: QKeyEvent):
+        # The default keyPressEvent copies the displayed label of the selected items.
+        # We want to copy the full path of the selected items instead.
+        if event.matches(QKeySequence.Copy):
+            self.copyPaths()
+        else:
+            super().keyPressEvent(event)
+
+    def copyPaths(self):
+        text = '\n'.join([e.path for e in self.selectedEntries()])
+        if text:
+            QApplication.clipboard().setText(text)
+
     def _setBlankModel(self):
         if self.model():
             self.model().deleteLater()  # avoid memory leak
