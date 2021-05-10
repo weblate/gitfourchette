@@ -29,7 +29,6 @@ class GlobalStatusSignalContainer(QObject):
     def clearIndeterminateProgressCaption(self):
         self.progressDisable.emit()
         self.statusText.emit(None)
-        print("[status] ———")
 
 
 globalstatus = GlobalStatusSignalContainer()

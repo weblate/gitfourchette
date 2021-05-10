@@ -60,8 +60,10 @@ class DiffView(QTextEdit):
         self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
         self.lineHunkIDCache = [ld.hunkID for ld in self.lineData]
 
+        tabWidth = settings.prefs.diff_tabSpaces
+
         # now reset defaults that are lost when changing documents
-        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * settings.prefs.diff_tabSpaces))
+        self.setTabStopDistance(settings.monoFontMetrics.horizontalAdvance(' ' * tabWidth))
         if dm.forceWrap or settings.prefs.diff_wordWrap:
             self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
         else:

@@ -10,7 +10,6 @@ import sys
 #   we might not even need to keep 'self.lanes' around.
 
 
-
 @dataclass  # gives us an equality operator as required by partial repo refresh
 class LaneFrame:
     myLane: int

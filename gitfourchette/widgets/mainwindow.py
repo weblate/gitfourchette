@@ -241,7 +241,7 @@ class MainWindow(QMainWindow):
         progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
         progress.setWindowModality(Qt.WindowModal)
         progress.setWindowTitle(shortname)
-        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+        progress.setWindowFlags(Qt.Dialog)
         progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
         QCoreApplication.processEvents()
         progress.show()
@@ -293,6 +293,8 @@ class MainWindow(QMainWindow):
             return False
 
         progress.close()
+
+        rw.graphView.selectUncommittedChanges()
         return True
 
     def openRepo(self, repoPath, foreground=True):

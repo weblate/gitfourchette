@@ -13,7 +13,7 @@ def newTrashFileName(repo: git.Repo, suffix: str) -> str:
     os.makedirs(trashDir, exist_ok=True)
     now = datetime.datetime.now().strftime(TRASH_TIME_FORMAT)
     path = os.path.join(trashDir, F'{now}{suffix}')
-    print(F'Trash: {os.path.relpath(path, repo.git_dir)}')
+    print(F'[trash] {os.path.relpath(path, repo.git_dir)}')
     return path
 
 
