@@ -1,5 +1,6 @@
 from allqt import *
 from stagingstate import StagingState
+from util import ActionDef
 from widgets.filelistview import FileListView
 import settings
 
@@ -14,8 +15,9 @@ class StagedFileListView(FileListView):
 
     def createContextMenuActions(self):
         return [
-            ("&Unstage", self.unstage),
-            (None, None)
+            ActionDef("&Unstage", self.unstage, QStyle.SP_ArrowUp),
+            None,
+            ActionDef("&Open File in External Editor", self.openFile),
         ] + super().createContextMenuActions()
 
     def keyPressEvent(self, event: QKeyEvent):

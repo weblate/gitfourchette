@@ -2,7 +2,7 @@ from allqt import *
 from filelistentry import FileListEntry
 from stagingstate import StagingState
 from typing import Generator
-from util import compactRepoPath, showInFolder, hasFlag, quickMenu, QSignalBlockerContext
+from util import compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext
 import git
 import os
 import settings
@@ -35,9 +35,27 @@ class FileListView(QListView):
         menu.exec_(event.globalPos())
 
     def createContextMenuActions(self):
-        return [("&Open Containing Folder", self.showInFolder)]
+        return [ActionDef("Open Containing &Folder", self.showInFolder)]
+
+    def openFile(self):
+        entries = list(self.selectedEntries())
+
+        if len(entries) > 3 and QMessageBox.YesToAll != QMessageBox.question(
+                self, "Open Many Files", F"Really open <b>{len(entries)}</b> files?",
+                QMessageBox.YesToAll | QMessageBox.Cancel):
+            return
+
+        for entry in entries:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.repo.working_tree_dir, entry.path)))
 
     def showInFolder(self):
+        entries = list(self.selectedEntries())
+
+        if len(entries) > 3 and QMessageBox.YesToAll != QMessageBox.question(
+                self, "Open Many Folders", F"Really open <b>{len(entries)}</b> folders?",
+                QMessageBox.YesToAll | QMessageBox.Cancel):
+            return
+
         for entry in self.selectedEntries():
             showInFolder(os.path.join(self.repo.working_tree_dir, entry.path))
 

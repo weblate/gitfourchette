@@ -1,4 +1,5 @@
 from allqt import *
+from dataclasses import dataclass
 import os
 import re
 import traceback
@@ -150,19 +151,31 @@ def textInputDialog(
     return text, rc == QDialog.DialogCode.Accepted
 
 
+@dataclass
+class ActionDef:
+    caption: str = None
+    callback: typing.Callable = None
+    icon: QStyle.StandardPixmap = None
+
+
 def quickMenu(
         parent: QWidget,
-        actionDefs: list[tuple[str, typing.Callable]],
+        actionDefs: list[ActionDef],
         menu: QMenu = None
 ) -> QMenu:
     actions = []
-    for caption, callback in actionDefs:
-        if not caption:
+
+    for actionDef in actionDefs:
+        if not actionDef:
             newAction = QAction(parent)
             newAction.setSeparator(True)
         else:
-            newAction = QAction(caption, parent)
-            newAction.triggered.connect(callback)
+            newAction = QAction(actionDef.caption, parent)
+            newAction.triggered.connect(actionDef.callback)
+            if actionDef.icon:
+                icon = parent.style().standardIcon(actionDef.icon)
+                newAction.setIcon(icon)
+
         actions.append(newAction)
 
     if menu:

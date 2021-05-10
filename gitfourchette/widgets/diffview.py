@@ -3,7 +3,7 @@ from bisect import bisect_left, bisect_right
 from diffmodel import DiffModel
 from stagingstate import StagingState
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
-from util import excMessageBox, quickMenu
+from util import excMessageBox, ActionDef, quickMenu
 import git
 import settings
 import trash
@@ -85,16 +85,16 @@ class DiffView(QTextEdit):
             pass
         elif self.currentStagingState == StagingState.UNSTAGED:
             actions = [
-                ("Stage Lines", self.stageLines),
-                ("Discard Lines", self.discardLines),
-                (None, None),
-                (F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
-                (F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
+                ActionDef("Stage Lines", self.stageLines),
+                ActionDef("Discard Lines", self.discardLines, QStyle.SP_TrashIcon),
+                None,
+                ActionDef(F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
+                ActionDef(F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
             ]
         elif self.currentStagingState == StagingState.STAGED:
             actions = [
-                ("Unstage Lines", self.unstageLines),
-                (F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
+                ActionDef("Unstage Lines", self.unstageLines),
+                ActionDef(F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
             ]
         else:
             QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")

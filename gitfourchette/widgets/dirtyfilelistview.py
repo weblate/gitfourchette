@@ -2,6 +2,7 @@ from allqt import *
 from filelistentry import FileListEntry
 from widgets.filelistview import FileListView
 from stagingstate import StagingState
+from util import ActionDef
 import os
 import settings
 import trash
@@ -17,9 +18,10 @@ class DirtyFileListView(FileListView):
 
     def createContextMenuActions(self):
         return [
-            ("&Stage", self.stage),
-            ("&Discard Changes", self.discard),
-            (None, None)
+            ActionDef("&Stage", self.stage, QStyle.SP_ArrowDown),
+            ActionDef("&Discard Changes", self.discard, QStyle.SP_TrashIcon),
+            None,
+            ActionDef("&Open File in External Editor", self.openFile),
         ] + super().createContextMenuActions()
 
     def keyPressEvent(self, event: QKeyEvent):
