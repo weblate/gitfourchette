@@ -28,6 +28,7 @@ class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
     tagClicked = Signal(str)
+    newBranch = Signal(str)
     switchToBranch = Signal(str)
     renameBranch = Signal(str, str)
     editTrackingBranch = Signal(str, str)
@@ -69,9 +70,12 @@ class Sidebar(QTreeView):
         if not data:
             return
 
-        if data.type == SidebarEntry.Type.LOCAL_REF:
-            menu = QMenu(self)
+        menu = QMenu(self)
 
+        if data.type == SidebarEntry.Type.LOCAL_BRANCHES_HEADER:
+            menu.addAction(F"&New Branch...", self._newBranchFlow)
+
+        elif data.type == SidebarEntry.Type.LOCAL_REF:
             if data.name != self.activeBranchName:
                 menu.addAction(
                     F"&Switch to {labelQuote(data.name)}",
@@ -97,7 +101,7 @@ class Sidebar(QTreeView):
             menu.addSeparator()
 
             menu.addAction("Re&name...", lambda: self._renameBranchFlow(data.name))
-            menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data.name))
+            menu.addAction("&Delete...", lambda: self._deleteBranchFlow(data.name))
 
             menu.addSeparator()
 
@@ -105,17 +109,18 @@ class Sidebar(QTreeView):
             a.setCheckable(True)
             a.setChecked(True)
 
-            menu.exec_(globalPoint)
-
-        if data.type == SidebarEntry.Type.REMOTE_REF:
-            menu = QMenu(self)
+        elif data.type == SidebarEntry.Type.REMOTE_REF:
             menu.addAction(F"New local branch tracking {labelQuote(data.name)}...", lambda: self._newTrackingBranchFlow(data.name))
-            menu.exec_(globalPoint)
 
-        if data.type == SidebarEntry.Type.REMOTE:
-            menu = QMenu(self)
+        elif data.type == SidebarEntry.Type.REMOTE:
             menu.addAction(F"Edit URL...", lambda: self._editRemoteURLFlow(data.name))
-            menu.exec_(globalPoint)
+
+        menu.exec_(globalPoint)
+
+    def _newBranchFlow(self):
+        newBranchName, ok = textInputDialog(self, "New Branch", "Enter name for new branch:", None)
+        if ok:
+            self.newBranch.emit(newBranchName)
 
     def _editTrackingBranchFlow(self, localBranchName):
         dlg = TrackedBranchDialog(self.currentGitRepo, localBranchName, self)
@@ -135,6 +140,14 @@ class Sidebar(QTreeView):
             okButtonText="Rename")
         if ok:
             self.renameBranch.emit(oldName, newName)
+
+    def _deleteBranchFlow(self, localBranchName):
+        rc = QMessageBox.warning(self, "Delete Branch",
+                                 F"Really delete local branch <b>{labelQuote(localBranchName)}</b>?"
+                                 F"<br>This cannot be undone!",
+                                 QMessageBox.Discard | QMessageBox.Cancel)
+        if rc == QMessageBox.Discard:
+            self.deleteBranch.emit(localBranchName)
 
     def _newTrackingBranchFlow(self, remoteBranchName):
         localBranchName, ok = textInputDialog(
@@ -166,7 +179,8 @@ class Sidebar(QTreeView):
 
         model.appendRow(SidebarSeparator())
 
-        branchesParent = SidebarItem("Local Branches")
+        branchesParentEntry = SidebarEntry(SidebarEntry.Type.LOCAL_BRANCHES_HEADER, None)
+        branchesParent = SidebarItem("Local Branches", branchesParentEntry)
         branchesParent.setSelectable(False)
         for branch in repo.branches:
             caption = branch.name

@@ -102,12 +102,13 @@ class RepoWidget(QWidget):
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.tagClicked.connect(self.selectTag)
+        self.sidebar.newBranch.connect(self.newBranchAsync)
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.renameBranch.connect(self.renameBranchAsync)
         self.sidebar.editTrackingBranch.connect(self.editTrackingBranchAsync)
         self.sidebar.mergeBranchIntoActive.connect(lambda name: unimplementedDialog("Merge Other Branch Into Active Branch"))
         self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
-        self.sidebar.deleteBranch.connect(lambda name: unimplementedDialog("Delete Branch"))
+        self.sidebar.deleteBranch.connect(self.deleteBranchAsync)
         self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
         self.sidebar.editRemoteURL.connect(self.editRemoteURLAsync)
         self.sidebar.pushBranch.connect(lambda name: self.push(name))
@@ -493,6 +494,32 @@ class RepoWidget(QWidget):
             self.sidebar.fill(repo)
 
         self._startAsyncWorker(2000, work, onComplete, F"Renaming branch “{oldName}” to “{newName}”")
+
+    def deleteBranchAsync(self, localBranchName: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                repo.git.branch(localBranchName, d=True)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Deleting branch “{localBranchName}”")
+
+    def newBranchAsync(self, localBranchName: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                repo.git.branch(localBranchName)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Creating branch “{localBranchName}”")
 
     def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         repo = self.state.repo
