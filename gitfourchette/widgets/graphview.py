@@ -117,7 +117,7 @@ class GraphView(QListView):
             <tr><td><b>Debug</b></td><td>
                 batch {data.batchID},
                 offset {self.repoWidget.state.batchOffsets[data.batchID]+data.offsetInBatch}
-                ({self.repoWidget.state.batchOffsets[data.batchID]}+{data.offsetInBatch})
+                ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
                 </td></tr>
             </table>"""
 

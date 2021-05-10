@@ -141,6 +141,10 @@ class RepoState:
 
         return meta, wasKnown
 
+    def getCommitSequentialIndex(self, hexsha: str):
+        meta = self.commitLookup[hexsha]
+        return self.batchOffsets[meta.batchID] + meta.offsetInBatch
+
     @staticmethod
     def getGitProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
         # Todo: Interesting flags: -z; --log-size
