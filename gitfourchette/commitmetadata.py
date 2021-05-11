@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from graphgenerator import LaneFrame
+from graphgenerator import GraphFrame
 
 
 @dataclass
@@ -26,7 +26,7 @@ class CommitMetadata:
 
     mainRefName: str = None
 
-    laneFrame: LaneFrame = None
+    graphFrame: GraphFrame = None
 
     bold: bool = False
 

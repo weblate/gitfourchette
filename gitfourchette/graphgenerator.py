@@ -11,17 +11,30 @@ import sys
 
 
 @dataclass  # gives us an equality operator as required by partial repo refresh
-class LaneFrame:
-    myLane: int
+class GraphFrame:
+    commitLane: int
     lanesAbove: list[str]
     lanesBelow: list[str]
 
 
-class LaneGenerator:
+class GraphGenerator:
+    # Each lane contains a target commit hash, or None if the lane is vacant.
+    # When a lane's target commit hash is found, the lane is closed.
+    lanes: list[str]
+
+    # Lanes indices for unresolved target commits grouped by target commit hash
+    laneLookup: collections.defaultdict[str, list[int]]
+
+    # Indices of vacant lanes
+    freeLanes: list[int]
+
+    # Snapshot of `lanes` from the previous iteration.
+    # Necessary to produce a GraphFrame.
+    aboveNext: list[str]
+
     def __init__(self):
         self.lanes = []
         self.laneLookup = collections.defaultdict(list)
-        self.check = 0
         self.freeLanes = []
         self.aboveNext = []
         self.nBytes = 0
@@ -31,7 +44,7 @@ class LaneGenerator:
         self.MAX_LANES = settings.prefs.graph_maxLanes
         self.FORCE_NEW_LANES_RIGHTMOST = settings.prefs.graph_newLanesAlwaysRightmost
 
-    def step(self, commit, parents) -> LaneFrame:
+    def step(self, commit, parents) -> GraphFrame:
         lanes = self.lanes
         freeLanes = self.freeLanes
 
@@ -116,7 +129,7 @@ class LaneGenerator:
         self.nLanesPeak = max(len(lanes), self.nLanesPeak)
         self.nLanesTotal += len(lanes)
         self.nLanesVacant += len(self.freeLanes)
-        self.nBytes += sys.getsizeof(lanes)
+        self.nBytes += sys.getsizeof(belowCopy)
 
-        frame = LaneFrame(myLane, aboveCopy, belowCopy)
+        frame = GraphFrame(myLane, aboveCopy, belowCopy)
         return frame

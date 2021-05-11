@@ -3,7 +3,7 @@ from benchmark import Benchmark
 from commitmetadata import CommitMetadata
 from collections import defaultdict
 from globalstatus import globalstatus
-from graphgenerator import LaneGenerator
+from graphgenerator import GraphGenerator
 import git
 import io
 import os
@@ -186,7 +186,7 @@ class RepoState:
 
         metas = []
         refs = {}
-        laneGen = LaneGenerator()
+        graphGen = GraphGenerator()
         nextLocal = set()
 
         i = 0
@@ -227,7 +227,7 @@ class RepoState:
             if meta.mainRefName and meta.mainRefName not in refs:
                 refs[meta.mainRefName] = meta.hexsha
 
-            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
+            meta.graphFrame = graphGen.step(meta.hexsha, meta.parentHashes)
 
             # Fill parent hashes
             for p in meta.parentHashes:
@@ -238,7 +238,11 @@ class RepoState:
 
         globalstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
 
-        print(F"Lane: {laneGen.nBytes:,} Bytes - Peak {laneGen.nLanesPeak:,} - Total {laneGen.nLanesTotal:,} - Avg {laneGen.nLanesTotal//len(metas):,} - Vacant {100*laneGen.nLanesVacant/laneGen.nLanesTotal:.2f}%")
+        print(F"Graph Frames: {graphGen.nBytes//1024:,} KB - "
+              F"Peak Lanes: {graphGen.nLanesPeak:,} - "
+              F"Total Lanes: {graphGen.nLanesTotal:,} - "
+              F"Avg Lanes: {graphGen.nLanesTotal//len(metas):,} - "
+              F"Lane Vacancy: {100*graphGen.nLanesVacant/graphGen.nLanesTotal:.2f}%")
 
         self.commitSequence = metas
         self.batchOffsets = [0]
@@ -315,7 +319,7 @@ class RepoState:
         refs = {}
         lastTainted = None
         nUnknownCommits = 0
-        laneGen = LaneGenerator()
+        graphGen = GraphGenerator()
 
         globalstatus.setProgressValue(2)
 
@@ -339,8 +343,8 @@ class RepoState:
 
             lastTainted = meta.hexsha
 
-            pLaneFrame = meta.laneFrame
-            meta.laneFrame = laneGen.step(meta.hexsha, meta.parentHashes)
+            prevGraphFrame = meta.graphFrame
+            meta.graphFrame = graphGen.step(meta.hexsha, meta.parentHashes)
 
             meta.offsetInBatch = offsetFromTop
             meta.batchID = self.currentBatchID
@@ -356,7 +360,7 @@ class RepoState:
                 wantToSee.remove(meta.hexsha)
                 if len(wantToSee) == 0:
                     #assert wasKnown #<-- assertion incorrect if the entire repository changes
-                    if pLaneFrame != meta.laneFrame:
+                    if prevGraphFrame != meta.graphFrame:
                         # known commit, but lane data mismatch
                         meta.debugPrefix = "L"  # Lane Mismatch
                         wantToSee.update(meta.parentHashes)

@@ -11,8 +11,60 @@ LANE_THICKNESS = 2
 DOT_RADIUS = 3
 
 
-def getColor(i):
-    return colors.rainbowBright[i % len(colors.rainbowBright)]
+def getColor(laneID):
+    return colors.rainbowBright[laneID % len(colors.rainbowBright)]
+
+
+def flattenLanes(
+        lanesAbove: list[str],
+        lanesBelow: list[str],
+        numLanesTotal: int
+) -> tuple[list[tuple[int, int]], int]:
+    # Compute columns (horizontal positions) for each lane above and below this row.
+    lanePositionsAB = []
+    if settings.prefs.graph_flattenLanes:
+        # Flatten the lanes so there are no horizontal gaps in-between the lanes.
+        ai, bi = -1, -1
+        for i in range(numLanesTotal):
+            if i < len(lanesAbove) and lanesAbove[i]: ai += 1
+            if i < len(lanesBelow) and lanesBelow[i]: bi += 1
+            lanePositionsAB.append( (ai, bi) )
+        flatTotal = max(ai, bi)
+    else:
+        # Straightforward lane positions (lane column == lane ID)
+        for i in range(numLanesTotal):
+            lanePositionsAB.append( (i, i) )
+        flatTotal = numLanesTotal
+
+    return lanePositionsAB, flatTotal
+
+
+def getCommitBulletColumn(
+        commitLane: int,
+        flatTotal: int,
+        lanePositionsAB: list[tuple[int, int]]
+) -> tuple[int, int]:
+    # Find out at which position to draw the commit's bullet point.
+    myLanePosition = -1
+
+    if commitLane < len(lanePositionsAB):
+        posA, posB = lanePositionsAB[commitLane]
+
+        # First, attempt to put bullet point in parent lane's position (below).
+        if myLanePosition < 0:
+            myLanePosition = posB
+
+        # If that didn't work (commit has no parents), put bullet point in child lane's position (above).
+        if myLanePosition < 0:
+            myLanePosition = posA
+
+    # If that still didn't work, we have a lone commit without parents or children; just toss the bullet to the right.
+    if myLanePosition < 0:
+        flatTotal += 1
+        myLanePosition = flatTotal
+        #assert myLanePosition == commitLane, "expecting GraphGenerator to put lone commits on the rightmost column"
+
+    return myLanePosition, flatTotal
 
 
 # Draw lane lines.
@@ -29,49 +81,25 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
     MAX_LANES = settings.prefs.graph_maxLanes
 
     # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
-    lanesAbove = meta.laneFrame.lanesAbove[:MAX_LANES]
-    lanesBelow = meta.laneFrame.lanesBelow[:MAX_LANES]
-    MY_LANE = meta.laneFrame.myLane
-    TOTAL = max(len(lanesAbove), len(lanesBelow))
+    lanesAbove = meta.graphFrame.lanesAbove[:MAX_LANES]
+    lanesBelow = meta.graphFrame.lanesBelow[:MAX_LANES]
+    commitLane = meta.graphFrame.commitLane
+    numLanesTotal = max(len(lanesAbove), len(lanesBelow))
 
-    # Compute horizontal positions for each lane above and below this row.
-    lanePositionsAbove = []
-    lanePositionsBelow = []
-    if settings.prefs.graph_flattenLanes:
-        # Flatten the lanes so there are no horizontal gaps in-between the lanes.
-        ai, bi = -1, -1
-        for i in range(TOTAL):
-            if i < len(lanesAbove) and lanesAbove[i]: ai += 1
-            if i < len(lanesBelow) and lanesBelow[i]: bi += 1
-            lanePositionsAbove.append(ai)
-            lanePositionsBelow.append(bi)
-        FLAT_TOTAL = max(ai, bi)
-    else:
-        # Straightforward lane positions (lane position == lane ID)
-        straightforwardMapping = list(range(TOTAL))
-        lanePositionsAbove = straightforwardMapping
-        lanePositionsBelow = straightforwardMapping
-        FLAT_TOTAL = TOTAL
+    # Flatten the lanes so there are no horizontal gaps in-between the lanes (optional).
+    # laneColumnsAB is a table of lanes to columns (horizontal positions).
+    laneColumnsAB, numFlattenedColumns =\
+        flattenLanes(lanesAbove, lanesBelow, numLanesTotal)
 
-    # Find out at which position to draw the commit's bullet point.
-    myLanePosition = -1
-    # First, attempt to put bullet point in parent lane's position (below).
-    if myLanePosition < 0 and MY_LANE < len(lanePositionsBelow):
-        myLanePosition = lanePositionsBelow[MY_LANE]
-    # If that didn't work (commit has no parents), put bullet point in child lane's position (above).
-    if myLanePosition < 0 and MY_LANE < len(lanePositionsAbove):
-        myLanePosition = lanePositionsAbove[MY_LANE]
-    # If that still didn't work, we have a lone commit without parents or children; just toss the bullet to the right.
-    if myLanePosition < 0:
-        FLAT_TOTAL += 1
-        myLanePosition = FLAT_TOTAL
-        assert myLanePosition == MY_LANE, "expecting LaneGenerator to put lone commits on the rightmost column"
+    # Get column (horizontal position) of commit bullet point.
+    myLanePosition, numFlattenedColumns =\
+        getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
 
-    rect.setRight(x + FLAT_TOTAL * LANE_WIDTH)
-    mx = x + myLanePosition * LANE_WIDTH
+    rect.setRight(x + numFlattenedColumns * LANE_WIDTH)
+    mx = x + myLanePosition * LANE_WIDTH  # the screen X of this commit's bullet point
 
     # draw bullet point _outline_ for this commit, beneath everything else, if it's within the lanes that are shown
-    if MY_LANE < MAX_LANES:
+    if commitLane < MAX_LANES:
         painter.setPen(QPen(outlineColor, 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
@@ -83,17 +111,17 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
     path = QPainterPath()
 
     # draw lines
-    # TODO: range(TOTAL-1,-1,-1) makes junctions more readable,
-    # TODO: but we should draw "straight" lines (unaffected by the
-    # TODO: commit) underneath junction lines
-    for i in range(TOTAL):
+    # TODO: range(numLanesTotal-1,-1,-1) makes junctions more readable, but we should draw "straight" lines
+    #  (unaffected by the commit) underneath junction lines
+    for i in range(numLanesTotal):
         commitAbove = lanesAbove[i] if i < len(lanesAbove) else None
         commitBelow = lanesBelow[i] if i < len(lanesBelow) else None
-        ax = x + lanePositionsAbove[i] * LANE_WIDTH
-        bx = x + lanePositionsBelow[i] * LANE_WIDTH
+        columnAbove, columnBelow = laneColumnsAB[i]
+        ax = x + columnAbove * LANE_WIDTH
+        bx = x + columnBelow * LANE_WIDTH
 
         # position of lane `i` relative to MY_LANE: can be -1 (left), 0 (same), or +1 (right)
-        direction = sign(i - MY_LANE)
+        direction = sign(i - commitLane)
 
         # Straight
         if commitAbove and commitAbove == commitBelow:
@@ -107,7 +135,7 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
             path.quadTo(ax,middle, ax,top)
 
         # Fork Down
-        if commitBelow in parentsRemaining and (commitBelow != parent0 or i == MY_LANE):
+        if commitBelow in parentsRemaining and (commitBelow != parent0 or i == commitLane):
             path.moveTo(mx, middle)
             path.lineTo(bx-direction*LANE_WIDTH, middle)
             path.quadTo(bx,middle, bx,bottom)
@@ -123,13 +151,13 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
             path.clear()
 
     # show warning if we have too many lanes
-    if len(meta.laneFrame.lanesBelow) > MAX_LANES:
-        extraText = F"+{len(meta.laneFrame.lanesBelow) - MAX_LANES} lanes >>>  "
+    if len(meta.graphFrame.lanesBelow) > MAX_LANES:
+        extraText = F"+{len(meta.graphFrame.lanesBelow) - MAX_LANES} lanes >>>  "
         painter.drawText(rect, Qt.AlignRight, extraText)
 
     # draw bullet point for this commit if it's within the lanes that are shown
-    if MY_LANE < MAX_LANES:
-        c = getColor(MY_LANE)
+    if commitLane < MAX_LANES:
+        c = getColor(commitLane)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(c)
         painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
@@ -165,7 +193,6 @@ class GraphDelegate(QStyledItemDelegate):
 
         outlineColor = option.palette.color(QPalette.ColorRole.Base)
 
-        # print("Render Index Row: " +  str(index.row()))
         super().paint(painter, option, index)
 
         XMargin = 4
@@ -193,7 +220,7 @@ class GraphDelegate(QStyledItemDelegate):
             self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
 
         if index.row() > 0:
-            meta = index.data()
+            meta: CommitMetadata = index.data()
             summaryText, contd = messageSummary(meta.body)
             hashText = meta.hexsha[:settings.prefs.shortHashChars]
             authorText = meta.authorEmail.split('@')[0]
@@ -201,7 +228,7 @@ class GraphDelegate(QStyledItemDelegate):
             if meta.bold:
                 painter.setFont(settings.boldFont)
         else:
-            meta = None
+            meta: CommitMetadata = None
             summaryText = "Uncommitted Changes"
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
@@ -224,7 +251,7 @@ class GraphDelegate(QStyledItemDelegate):
 
         # ------ Graph
         rect.setLeft(rect.right())
-        if meta is not None and meta.laneFrame:
+        if meta is not None and meta.graphFrame:
             drawLanes(meta, painter, rect, outlineColor)
 
         # ------ Refs
