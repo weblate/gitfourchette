@@ -100,6 +100,7 @@ class RepoWidget(QWidget):
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
+        self.graphView.resetHead.connect(self.resetHeadAsync)
         self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
@@ -581,6 +582,28 @@ class RepoWidget(QWidget):
             self.sidebar.fill(repo)
 
         self._startAsyncWorker(2000, work, onComplete, F"Edit remote “{remoteName}” URL")
+
+    def resetHeadAsync(self, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
+        repo = self.state.repo
+
+        args = ['--' + resetMode]
+        if recurseSubmodules:
+            args += ['--recurse-submodules']
+        else:
+            args += ['--no-recurse-submodules']
+        args += [ontoHexsha]
+
+        def work():
+            with self.state.mutexLocker():
+                print(*args)
+                repo.git.reset(*args)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+            self.graphView.selectCommit(ontoHexsha)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
 
     # -------------------------------------------------------------------------
     # Push

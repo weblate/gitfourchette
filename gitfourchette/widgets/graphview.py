@@ -1,4 +1,5 @@
 from allqt import *
+from dialogs.resetheaddialog import ResetHeadDialog
 from graphdelegate import GraphDelegate
 from repostate import CommitMetadata
 from util import messageSummary, fplural, shortHash, textInputDialog
@@ -11,6 +12,7 @@ class GraphView(QListView):
     uncommittedChangesClicked = Signal()
     emptyClicked = Signal()
     commitClicked = Signal(str)
+    resetHead = Signal(str, str, bool)
     newBranchFromCommit = Signal(str, str)
 
     def __init__(self, parent):
@@ -33,6 +35,9 @@ class GraphView(QListView):
         branchAction = QAction("Start Branch from Here...", self)
         branchAction.triggered.connect(self.branchFromCurrentCommit)
         self.addAction(branchAction)
+        resetAction = QAction(F"Reset HEAD to Here...", self)
+        resetAction.triggered.connect(self.resetHeadFlow)
+        self.addAction(resetAction)
 
     def _replaceModel(self, model):
         if self.model():
@@ -178,6 +183,19 @@ class GraphView(QListView):
             None)
         if ok:
             self.newBranchFromCommit.emit(newBranchName, hexsha)
+
+    def resetHeadFlow(self):
+        commitHash = self.currentCommitHash
+        if not commitHash:
+            return
+        dlg = ResetHeadDialog(commitHash, parent=self)
+        rc = dlg.exec_()
+        resetMode = dlg.activeMode
+        recurse = dlg.recurseSubmodules
+        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve info)
+        if rc != QDialog.DialogCode.Accepted:
+            return
+        self.resetHead.emit(commitHash, resetMode, recurse)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
