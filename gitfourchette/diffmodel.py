@@ -32,7 +32,7 @@ class DiffModel:
             if details.startswith("Traceback"):
                 cursor.insertText('\n')
             cursor.insertText(details)
-        return DiffModel(document=document, lineData=None, forceWrap=True)
+        return DiffModel(document=document, lineData=[], forceWrap=True)
 
     @staticmethod
     def fromUntrackedFile(repo: git.Repo, path: str):
@@ -61,7 +61,7 @@ class DiffModel:
         cursor.setBlockCharFormat(plusCF)
         cursor.insertText(contents)
 
-        return DiffModel(document=document, lineData=None, forceWrap=False)
+        return DiffModel(document=document, lineData=[], forceWrap=False)
 
     @staticmethod
     def fromGitDiff(repo: git.Repo, change: git.Diff, allowRawFileAccess: bool = False):
