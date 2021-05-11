@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         self.recentMenu = fileMenu.addMenu("Open &Recent")
         fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
         fileMenu.addSeparator()
-        fileMenu.addAction("&Settings...", self.openSettings, QKeySequence.Preferences)
+        fileMenu.addAction("&Preferences...", self.openSettings, QKeySequence.Preferences)
         fileMenu.addSeparator()
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
@@ -120,6 +120,8 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("&Find Commit...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
+        repoMenu.addSeparator()
+        repoMenu.addAction("Resc&ue Discarded Changes...", lambda: self.currentRepoWidget().openRescueFolder())
 
         patchMenu = menubar.addMenu("&Patch")
         patchMenu.addAction("&Find in Patch...", lambda: self.currentRepoWidget().findInDiffFlow(), QKeySequence(Qt.ALT + Qt.CTRL + Qt.Key_F))

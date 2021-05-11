@@ -5,14 +5,18 @@ import patch
 import zipfile
 
 TRASH_DIR_NAME = "GitFourchetteTrash"
-TRASH_TIME_FORMAT = '%Y%m%d_%H%M%S_%f'
+TRASH_TIME_FORMAT = '%Y-%m-%d_at_%H.%M.%S_%f'
+
+
+def getTrashPath(repo: git.Repo) -> str:
+    return os.path.join(repo.git_dir, TRASH_DIR_NAME)
 
 
 def newTrashFileName(repo: git.Repo, suffix: str) -> str:
-    trashDir = os.path.join(repo.git_dir, TRASH_DIR_NAME)
+    trashDir = getTrashPath(repo)
     os.makedirs(trashDir, exist_ok=True)
     now = datetime.datetime.now().strftime(TRASH_TIME_FORMAT)
-    path = os.path.join(trashDir, F'{now}{suffix}')
+    path = os.path.join(trashDir, F'discarded_on_{now}{suffix}')
     print(F'[trash] {os.path.relpath(path, repo.git_dir)}')
     return path
 

@@ -1,3 +1,4 @@
+import trash
 from allqt import *
 from dialogs.commitdialog import CommitDialog
 from dialogs.remoteprogressdialog import RemoteProgressDialog
@@ -16,6 +17,7 @@ from widgets.sidebar import Sidebar
 from widgets.stagedfilelistview import StagedFileListView
 from worker import Worker
 import git
+import os
 import settings
 import typing
 
@@ -831,3 +833,16 @@ class RepoWidget(QWidget):
         tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
         self.graphView.selectCommit(tag.commit.hexsha)
 
+    # -------------------------------------------------------------------------
+
+    def openRescueFolder(self):
+        trashPath = trash.getTrashPath(self.state.repo)
+        if os.path.exists(trashPath):
+            QDesktopServices.openUrl(QUrl(trashPath))
+        else:
+            QMessageBox.information(
+                self,
+                "Open Rescue Folder",
+                "There’s no rescue folder for this repository. It might be that you’ve never "
+                F"discarded a change using {settings.PROGRAM_NAME} yet."
+            )

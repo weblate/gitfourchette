@@ -64,6 +64,7 @@ class DirtyFileListView(FileListView):
         if qmb.clickedButton() != yes:
             return
 
+        # TODO: Trash multiple files at once
         for entry in entries:
             if entry.diff is not None:  # tracked file
                 trash.trashGitDiff(self.repo, entry.diff)
