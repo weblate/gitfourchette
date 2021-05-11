@@ -1,8 +1,8 @@
 from allqt import *
 from dialogs.resetheaddialog import ResetHeadDialog
-from graphdelegate import GraphDelegate
 from repostate import CommitMetadata
 from util import messageSummary, fplural, shortHash, textInputDialog
+from widgets.graphdelegate import GraphDelegate
 import git
 import html
 import settings
