@@ -162,6 +162,7 @@ class GraphView(QListView):
 
         def onComplete(_):
             self.repoWidget.quickRefresh()
+            self.selectCommit(commitHash)
 
         self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(commitHash)}”")
 
@@ -197,3 +198,7 @@ class GraphView(QListView):
 
     def selectUncommittedChanges(self):
         self.setCurrentIndex(self.model().index(0, 0))
+
+    def selectCommit(self, hexsha):
+        index = self.repoWidget.state.getCommitSequentialIndex(hexsha)
+        self.setCurrentIndex(self.model().index(1 + index, 0))

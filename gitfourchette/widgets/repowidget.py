@@ -821,25 +821,13 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def selectCommit(self, commitHash: str):
-        model = self.graphView.model()
-        for i in range(model.rowCount()):
-            modelIndex = model.index(i, 0)
-            meta = model.data(modelIndex)
-            if meta is None:
-                continue
-            if commitHash == meta.hexsha:
-                self.graphView.setCurrentIndex(modelIndex)
-                return
-        QApplication.beep()
-
     def selectRef(self, refName: str):
         repo = self.state.repo
         ref: git.Reference = next(filter(lambda ref: ref.name == refName, repo.refs))
-        self.selectCommit(ref.commit.hexsha)
+        self.graphView.selectCommit(ref.commit.hexsha)
 
     def selectTag(self, tagName: str):
         repo = self.state.repo
         tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
-        self.selectCommit(tag.commit.hexsha)
+        self.graphView.selectCommit(tag.commit.hexsha)
 
