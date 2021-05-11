@@ -2,7 +2,7 @@ from allqt import *
 from dialogs.trackedbranchdialog import TrackedBranchDialog
 from widgets.sidebardelegate import SidebarDelegate
 from widgets.sidebarentry import SidebarEntry
-from util import labelQuote, textInputDialog
+from util import labelQuote, textInputDialog, shortHash
 import git
 
 
@@ -80,13 +80,14 @@ class Sidebar(QTreeView):
                 menu.addAction(
                     F"&Switch to {labelQuote(data.name)}",
                     lambda: self.switchToBranch.emit(data.name))
-                menu.addSeparator()
-                menu.addAction(
-                    F"&Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",
-                    lambda: self.mergeBranchIntoActive.emit(data.name))
-                menu.addAction(
-                    F"&Rebase {labelQuote(self.activeBranchName)} onto {labelQuote(data.name)}...",
-                    lambda: self.rebaseActiveOntoBranch.emit(data.name))
+                if self.activeBranchName:
+                    menu.addSeparator()
+                    menu.addAction(
+                        F"&Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",
+                        lambda: self.mergeBranchIntoActive.emit(data.name))
+                    menu.addAction(
+                        F"&Rebase {labelQuote(self.activeBranchName)} onto {labelQuote(data.name)}...",
+                        lambda: self.rebaseActiveOntoBranch.emit(data.name))
 
             menu.addSeparator()
 
@@ -171,7 +172,10 @@ class Sidebar(QTreeView):
     def fill(self, repo: git.Repo):
         model = QStandardItemModel()
 
-        self.activeBranchName = repo.active_branch.name
+        if repo.head.is_detached:
+            self.activeBranchName = None
+        else:
+            self.activeBranchName = repo.active_branch.name
 
         uncommittedChangesEntry = SidebarEntry(SidebarEntry.Type.UNCOMMITTED_CHANGES, None)
         uncommittedChanges = SidebarItem("Changes", uncommittedChangesEntry)
@@ -182,14 +186,26 @@ class Sidebar(QTreeView):
         branchesParentEntry = SidebarEntry(SidebarEntry.Type.LOCAL_BRANCHES_HEADER, None)
         branchesParent = SidebarItem("Local Branches", branchesParentEntry)
         branchesParent.setSelectable(False)
+
+        if repo.head.is_detached:
+            caption = F"★ detached HEAD @ {shortHash(repo.head.commit.hexsha)}"
+            branchEntry = SidebarEntry(SidebarEntry.Type.DETACHED_HEAD, None)
+            item = SidebarItem(caption, branchEntry)
+            item.setToolTip(F"detached HEAD @{shortHash(repo.head.commit.hexsha)}")
+            branchesParent.appendRow(item)
+
         for branch in repo.branches:
             caption = branch.name
-            if repo.active_branch == branch:
+            tooltip = branch.name
+            if not repo.head.is_detached and repo.active_branch == branch:
                 caption = F"★ {caption}"
+                tooltip += " (★ active branch)"
             branchEntry = SidebarEntry(SidebarEntry.Type.LOCAL_REF, branch.name)
             if branch.tracking_branch():
                 branchEntry.trackingBranch = branch.tracking_branch().name
+                tooltip += F"\ntracking {branchEntry.trackingBranch}"
             item = SidebarItem(caption, branchEntry)
+            item.setToolTip(tooltip)
             branchesParent.appendRow(item)
         model.appendRow(branchesParent)
 

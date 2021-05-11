@@ -148,8 +148,9 @@ class GraphView(QListView):
 
         def onComplete(_):
             self.repoWidget.quickRefresh()
+            self.repoWidget.sidebar.fill(self.repo)
 
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{commitHash[:settings.prefs.shortHashChars]}”")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{shortHash(commitHash)}”")
 
     def cherrypickCurrentCommit(self):
         commitHash = self.currentCommitHash
