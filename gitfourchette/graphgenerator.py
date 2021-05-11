@@ -13,7 +13,6 @@ import sys
 @dataclass  # gives us an equality operator as required by partial repo refresh
 class GraphFrame:
     commitLane: int
-    lanesAbove: list[str]
     lanesBelow: list[str]
 
 
@@ -28,15 +27,10 @@ class GraphGenerator:
     # Indices of vacant lanes
     freeLanes: list[int]
 
-    # Snapshot of `lanes` from the previous iteration.
-    # Necessary to produce a GraphFrame.
-    aboveNext: list[str]
-
     def __init__(self):
         self.lanes = []
         self.laneLookup = collections.defaultdict(list)
         self.freeLanes = []
-        self.aboveNext = []
         self.nBytes = 0
         self.nLanesPeak = 0
         self.nLanesTotal = 0
@@ -121,9 +115,7 @@ class GraphGenerator:
         # -------------------------------------------------------------------------
         # Prepare final lane frame data
 
-        aboveCopy = self.aboveNext
         belowCopy = lanes[:self.MAX_LANES].copy()
-        self.aboveNext = belowCopy
 
         # Some stats
         self.nLanesPeak = max(len(lanes), self.nLanesPeak)
@@ -131,5 +123,5 @@ class GraphGenerator:
         self.nLanesVacant += len(self.freeLanes)
         self.nBytes += sys.getsizeof(belowCopy)
 
-        frame = GraphFrame(myLane, aboveCopy, belowCopy)
+        frame = GraphFrame(myLane, belowCopy)
         return frame

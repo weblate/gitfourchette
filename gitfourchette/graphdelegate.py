@@ -1,5 +1,6 @@
 from allqt import *
 from datetime import datetime
+from itertools import zip_longest
 from repostate import CommitMetadata, RepoState
 from util import sign, messageSummary
 import colors
@@ -16,27 +17,25 @@ def getColor(laneID):
 
 
 def flattenLanes(
-        lanesAbove: list[str],
-        lanesBelow: list[str],
-        numLanesTotal: int
+        lanesAB: list[tuple[str, str]],
 ) -> tuple[list[tuple[int, int]], int]:
     # Compute columns (horizontal positions) for each lane above and below this row.
-    lanePositionsAB = []
+    laneColumnsAB = []
     if settings.prefs.graph_flattenLanes:
         # Flatten the lanes so there are no horizontal gaps in-between the lanes.
         ai, bi = -1, -1
-        for i in range(numLanesTotal):
-            if i < len(lanesAbove) and lanesAbove[i]: ai += 1
-            if i < len(lanesBelow) and lanesBelow[i]: bi += 1
-            lanePositionsAB.append( (ai, bi) )
+        for above, below in lanesAB:
+            if above: ai += 1
+            if below: bi += 1
+            laneColumnsAB.append( (ai, bi) )
         flatTotal = max(ai, bi)
     else:
         # Straightforward lane positions (lane column == lane ID)
-        for i in range(numLanesTotal):
-            lanePositionsAB.append( (i, i) )
-        flatTotal = numLanesTotal
+        for i in range(len(lanesAB)):
+            laneColumnsAB.append( (i, i) )
+        flatTotal = len(lanesAB)
 
-    return lanePositionsAB, flatTotal
+    return laneColumnsAB, flatTotal
 
 
 def getCommitBulletColumn(
@@ -68,7 +67,7 @@ def getCommitBulletColumn(
 
 
 # Draw lane lines.
-def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor: QColor):
+def drawLanes(state: RepoState, meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor: QColor):
     painter.save()
     painter.setRenderHints(QPainter.Antialiasing, True)
 
@@ -80,20 +79,27 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
 
     MAX_LANES = settings.prefs.graph_maxLanes
 
+    myRow = state.getCommitSequentialIndex(meta.hexsha)
+
+    # Get lanes from neighbor above
+    if myRow == 0:
+        lanesA = []
+    else:
+        lanesA = state.commitSequence[myRow-1].graphFrame.lanesBelow
+
     # If there are too many lanes, cut off to MAX_LANES so the view stays somewhat readable.
-    lanesAbove = meta.graphFrame.lanesAbove[:MAX_LANES]
-    lanesBelow = meta.graphFrame.lanesBelow[:MAX_LANES]
+    lanesA = lanesA[:MAX_LANES]
+    lanesB = meta.graphFrame.lanesBelow[:MAX_LANES]
+
+    lanesAB = list(zip_longest(lanesA, lanesB))
     commitLane = meta.graphFrame.commitLane
-    numLanesTotal = max(len(lanesAbove), len(lanesBelow))
 
     # Flatten the lanes so there are no horizontal gaps in-between the lanes (optional).
     # laneColumnsAB is a table of lanes to columns (horizontal positions).
-    laneColumnsAB, numFlattenedColumns =\
-        flattenLanes(lanesAbove, lanesBelow, numLanesTotal)
+    laneColumnsAB, numFlattenedColumns = flattenLanes(lanesAB)
 
     # Get column (horizontal position) of commit bullet point.
-    myLanePosition, numFlattenedColumns =\
-        getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
+    myLanePosition, numFlattenedColumns = getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
 
     rect.setRight(x + numFlattenedColumns * LANE_WIDTH)
     mx = x + myLanePosition * LANE_WIDTH  # the screen X of this commit's bullet point
@@ -113,9 +119,8 @@ def drawLanes(meta: CommitMetadata, painter: QPainter, rect: QRect, outlineColor
     # draw lines
     # TODO: range(numLanesTotal-1,-1,-1) makes junctions more readable, but we should draw "straight" lines
     #  (unaffected by the commit) underneath junction lines
-    for i in range(numLanesTotal):
-        commitAbove = lanesAbove[i] if i < len(lanesAbove) else None
-        commitBelow = lanesBelow[i] if i < len(lanesBelow) else None
+    for i in range(len(lanesAB)):
+        commitAbove, commitBelow = lanesAB[i]
         columnAbove, columnBelow = laneColumnsAB[i]
         ax = x + columnAbove * LANE_WIDTH
         bx = x + columnBelow * LANE_WIDTH
@@ -252,7 +257,7 @@ class GraphDelegate(QStyledItemDelegate):
         # ------ Graph
         rect.setLeft(rect.right())
         if meta is not None and meta.graphFrame:
-            drawLanes(meta, painter, rect, outlineColor)
+            drawLanes(self.state, meta, painter, rect, outlineColor)
 
         # ------ Refs
         if meta is not None and meta.hexsha in self.state.refsByCommit:
