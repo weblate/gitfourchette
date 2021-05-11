@@ -1,7 +1,7 @@
 from allqt import *
 from graphdelegate import GraphDelegate
 from repostate import CommitMetadata
-from util import messageSummary, fplural, shortHash
+from util import messageSummary, fplural, shortHash, textInputDialog
 import git
 import html
 import settings
@@ -11,6 +11,7 @@ class GraphView(QListView):
     uncommittedChangesClicked = Signal()
     emptyClicked = Signal()
     commitClicked = Signal(str)
+    newBranchFromCommit = Signal(str, str)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -29,6 +30,9 @@ class GraphView(QListView):
         cherrypickAction = QAction("Cherry Pick...", self)
         cherrypickAction.triggered.connect(self.cherrypickCurrentCommit)
         self.addAction(cherrypickAction)
+        branchAction = QAction("Start Branch from Here...", self)
+        branchAction.triggered.connect(self.branchFromCurrentCommit)
+        self.addAction(branchAction)
 
     def _replaceModel(self, model):
         if self.model():
@@ -159,6 +163,19 @@ class GraphView(QListView):
             self.repoWidget.quickRefresh()
 
         self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(commitHash)}”")
+
+    def branchFromCurrentCommit(self):
+        hexsha = self.currentCommitHash
+        if not hexsha:
+            return
+
+        newBranchName, ok = textInputDialog(
+            self,
+            F"New Branch From {shortHash(hexsha)}",
+            F"Enter name for new branch starting from {shortHash(hexsha)}:",
+            None)
+        if ok:
+            self.newBranchFromCommit.emit(newBranchName, hexsha)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.

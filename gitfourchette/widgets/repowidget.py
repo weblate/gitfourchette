@@ -98,6 +98,7 @@ class RepoWidget(QWidget):
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
+        self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.refClicked.connect(self.selectRef)
@@ -533,6 +534,20 @@ class RepoWidget(QWidget):
             self.sidebar.fill(repo)
 
         self._startAsyncWorker(2000, work, onComplete, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
+
+    def newBranchFromCommitAsync(self, localBranchName: str, commitHexsha: str):
+        repo = self.state.repo
+
+        def work():
+            with self.state.mutexLocker():
+                repo.git.branch(localBranchName, commitHexsha)
+                repo.git.switch('--no-guess', localBranchName)
+
+        def onComplete(_):
+            self.quickRefresh()
+            self.sidebar.fill(repo)
+
+        self._startAsyncWorker(2000, work, onComplete, F"Creating branch “{localBranchName}” from commit “{shortHash(commitHexsha)}”")
 
     def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         repo = self.state.repo
