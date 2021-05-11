@@ -807,6 +807,18 @@ class RepoWidget(QWidget):
             self.fillStageViewAsync()
         globalstatus.clearProgress()
 
+        self.refreshWindowTitle()
+
+    def refreshWindowTitle(self):
+        shortname = self.state.shortName
+        repo = self.state.repo
+        inBrackets = ""
+        if repo.head.is_detached:
+            inBrackets = F"detached HEAD @ {shortHash(repo.head.commit.hexsha)}"
+        else:
+            inBrackets = str(repo.active_branch)
+        self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
+
     # -------------------------------------------------------------------------
 
     def selectCommit(self, commitHash: str):

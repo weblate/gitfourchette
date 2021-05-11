@@ -213,14 +213,7 @@ class MainWindow(QMainWindow):
                 if not success:
                     return
 
-        shortname = w.state.shortName
-        repo = w.state.repo
-        inBrackets = ""
-        if repo.head.is_detached:
-            inBrackets = F"detached HEAD @ {repo.head.commit.hexsha[:settings.prefs.shortHashChars]}"
-        else:
-            inBrackets = str(repo.active_branch)
-        self.setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
+        w.refreshWindowTitle()
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
         if i < 0:  # Right mouse button released outside tabs
