@@ -152,6 +152,13 @@ class History(BasePrefs):
 
     def removeRepo(self, path):
         self.history.remove(path)
+        if path in self.nicknames:
+            del self.nicknames[path]
+        self.write()
+
+    def clear(self):
+        self.history.clear()
+        self.nicknames.clear()
         self.write()
 
 

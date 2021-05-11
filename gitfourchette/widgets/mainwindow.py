@@ -31,6 +31,7 @@ class Session:
 
 class MainWindow(QMainWindow):
     tabs: CustomTabWidget
+    recentMenu: QMenu
 
     def __init__(self):
         super().__init__()
@@ -175,11 +176,17 @@ class MainWindow(QMainWindow):
 
 
     def fillRecentMenu(self):
+        def onClearRecents():
+            settings.history.clear()
+            self.fillRecentMenu()
+
         self.recentMenu.clear()
         for historic in reversed(settings.history.history):
             self.recentMenu.addAction(
                 F"{settings.history.getRepoNickname(historic)} [{compactSystemPath(historic)}]",
                 lambda h=historic: self.openRepo(h))
+        self.recentMenu.addSeparator()
+        self.recentMenu.addAction("Clear", onClearRecents)
 
     def currentRepoWidget(self) -> RepoWidget:
         return self.tabs.currentWidget()
