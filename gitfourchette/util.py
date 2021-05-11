@@ -50,6 +50,11 @@ def compactRepoPath(path: str) -> str:
     return '/'.join(splitLong)
 
 
+def shortHash(hexsha: str) -> str:
+    from settings import prefs
+    return hexsha[:prefs.shortHashChars]
+
+
 # Ampersands from user strings must be sanitized for QLabel.
 def labelQuote(text: str) -> str:
     return F"“{text.replace('&', '&&')}”"

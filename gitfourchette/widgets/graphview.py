@@ -1,7 +1,7 @@
 from allqt import *
 from graphdelegate import GraphDelegate
 from repostate import CommitMetadata
-from util import messageSummary, fplural
+from util import messageSummary, fplural, shortHash
 import git
 import html
 import settings
@@ -92,11 +92,11 @@ class GraphView(QListView):
             postSummary = F"<br>\u25bc <i>click &ldquo;Show Details&rdquo; to reveal full message " \
                   F"({nLines} lines)</i>"
 
-        parentHashes = [p.hexsha[:settings.prefs.shortHashChars] for p in commit.parents]
+        parentHashes = [shortHash(p.hexsha) for p in commit.parents]
         parentLabelMarkup = html.escape(fplural('# Parent^s', len(parentHashes)))
         parentValueMarkup = html.escape(', '.join(parentHashes))
 
-        childHashes = [c[:settings.prefs.shortHashChars] for c in data.childHashes]
+        childHashes = [shortHash(c) for c in data.childHashes]
         childLabelMarkup = html.escape(fplural('# Child^ren', len(childHashes)))
         childValueMarkup = html.escape(', '.join(childHashes))
 
@@ -126,7 +126,7 @@ class GraphView(QListView):
                 </td></tr>
             </table>"""
 
-        title = F"Commit info {commit.hexsha[:settings.prefs.shortHashChars]}"
+        title = F"Commit info {shortHash(commit.hexsha)}"
 
         details = commit.message if contd else None
 
@@ -158,7 +158,7 @@ class GraphView(QListView):
         def onComplete(_):
             self.repoWidget.quickRefresh()
 
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{commitHash[:settings.prefs.shortHashChars]}”")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(commitHash)}”")
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.

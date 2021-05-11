@@ -7,7 +7,7 @@ from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
-from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog, QSignalBlockerContext
+from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog, QSignalBlockerContext, shortHash
 from widgets.diffview import DiffView
 from widgets.dirtyfilelistview import DirtyFileListView
 from widgets.filelistview import FileListView
@@ -436,7 +436,7 @@ class RepoWidget(QWidget):
             self.restoreSelectedFile()
 
         self.saveFilePositions()
-        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{hexsha[:settings.prefs.shortHashChars]}”")
+        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{shortHash(hexsha)}”")
 
     def loadDiffAsync(self, entry: FileListEntry, stagingState: StagingState):
         """Load a file diff into the Diff View"""
