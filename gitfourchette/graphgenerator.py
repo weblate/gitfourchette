@@ -115,7 +115,7 @@ class GraphGenerator:
         # -------------------------------------------------------------------------
         # Prepare final lane frame data
 
-        belowCopy = lanes[:self.MAX_LANES].copy()
+        belowCopy = lanes.copy()
 
         # Some stats
         self.nLanesPeak = max(len(lanes), self.nLanesPeak)
