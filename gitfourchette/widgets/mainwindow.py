@@ -137,6 +137,8 @@ class MainWindow(QMainWindow):
             debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
             debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
             debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
+            debugMenu.addAction("Dump graph (text)...", self.debug_saveGraphDumpText)
+            debugMenu.addAction("Dump graph (compact text)...", self.debug_saveGraphDumpCompactText)
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.addAction(F"&About {settings.PROGRAM_NAME}", lambda: showAboutDialog(self))
@@ -496,4 +498,89 @@ class MainWindow(QMainWindow):
             f.write(compressed)
 
         progress.setValue(4)
+        progress.close()
+
+    def debug_saveGraphDumpText(self):
+        rw = self.currentRepoWidget()
+        path, _ = QFileDialog.getSaveFileName(self, "Save graph dump text", rw.state.shortName + ".txt")
+        if not path:
+            return
+        print(path)
+
+        progress = QProgressDialog("Save graph dump", "Abort", 0, 0, self)
+        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowTitle(rw.state.shortName)
+        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+        QCoreApplication.processEvents()
+        progress.setMaximum(4)
+        progress.show()
+        QCoreApplication.processEvents()
+
+        progress.setValue(0)
+
+        with open(path, 'w') as f:
+            for c in rw.state.commitSequence:
+                f.write(c.hexsha)
+                for p in c.parentHashes:
+                    f.write(',' + p)
+                f.write('\n')
+            progress.setValue(2)
+
+        progress.setValue(3)
+        progress.close()
+
+    def debug_saveGraphDumpCompactText(self):
+        rw = self.currentRepoWidget()
+        path, _ = QFileDialog.getSaveFileName(self, "Save graph dump compact text", rw.state.shortName + ".txt")
+        if not path:
+            return
+        print(path)
+
+        progress = QProgressDialog("Save graph dump", "Abort", 0, 0, self)
+        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setWindowTitle(rw.state.shortName)
+        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
+        QCoreApplication.processEvents()
+        progress.setMaximum(4)
+        progress.show()
+        QCoreApplication.processEvents()
+
+        progress.setValue(0)
+
+        commitHashMap = {}
+        numCommits = 0
+        for c in rw.state.commitSequence:
+            commitHashMap[c.hexsha] = numCommits
+            numCommits += 1
+
+        pLine = ""
+        pLineMul = 0
+        with open(path, 'w') as f:
+            for c in rw.state.commitSequence:
+                if not c.parentHashes:
+                    line = "-"
+                else:
+                    #line = ",".join( [ str(commitHashMap[p]-commitHashMap[c.hexsha]) for p in c.parentHashes ] )
+                    line = ",".join( [ str(commitHashMap[p]) for p in c.parentHashes ] )
+
+                if line == pLine:
+                    pLineMul += 1
+                else:
+                    if pLineMul == 1:
+                        f.write('\n')
+                    elif pLineMul > 1:
+                        f.write(F'*{pLineMul}\n')
+                    f.write(line)
+                    pLine = line
+                    pLineMul = 1
+            if pLineMul == 1:
+                f.write('\n')
+            elif pLineMul > 1:
+                f.write(F'*{pLineMul}\n')
+
+            progress.setValue(2)
+
+        progress.setValue(3)
         progress.close()
