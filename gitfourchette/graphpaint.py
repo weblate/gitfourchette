@@ -1,5 +1,6 @@
 from allqt import *
 from itertools import zip_longest
+from graph import Frame, Graph
 from repostate import CommitMetadata, RepoState
 from util import sign
 import colors
@@ -16,76 +17,7 @@ def getColor(laneID):
     return colors.rainbowBright[laneID % len(colors.rainbowBright)]
 
 
-def getLaneContinuity(state: RepoState, row: int, above: str, below: str):
-    """
-    Compute lane continuity.
-
-    Returns a symbol representing the continuity/abridgment of the lane:
-
-    ▄  Start of lane
-    █
-    █  Unbroken lane
-    █
-    ▼  Start of abridgment
-    ▽  Abridged; column reserved above
-    ~
-    ~  Abridged; don't reserve a column
-    ~
-    △  Abridged; column reserved below
-    ▲  End of abridgment
-    █
-    █
-    █
-    ▀  End of lane
-       (space character) no lane occupancy
-    """
-
-    if not above and not below:
-        return " "  # free lane
-    elif not above and below:
-        return "▄"  # lane begins below
-    elif above and not below:
-        return "▀"  # lane ends above
-
-    targetHash = below
-    targetMeta = state.commitLookup[targetHash]
-    junctionHashes = [targetHash] + targetMeta.childHashes
-
-    infinityish = len(state.commitSequence)
-    jRowA = -1              # sequential index of nearest junction above
-    jRowB = infinityish     # sequential index of nearest junction below
-
-    # find nearest junctions above and below this row
-    for jHash in junctionHashes:
-        jRow = state.getCommitSequentialIndex(jHash)
-        if jRow < row:  # above
-            jRowA = max(jRow, jRowA)
-        elif jRow > row:  # below
-            jRowB = min(jRow, jRowB)
-        elif jRow == row:
-            return "█"  # edge case
-
-    assert jRowA >= 0
-    assert jRowB < infinityish
-    assert jRowB > jRowA
-
-    segmentLength = jRowB - jRowA
-
-    if segmentLength <= ABRIDGMENT_THRESHOLD:
-        return "█"  # unbroken lane
-    elif row == jRowA+1:
-        return "▼"  # start abridgment
-    elif row == jRowA+2:
-        return "▽"  # reserve column above
-    elif row == jRowB-2:
-        return "△"  # reserve column below
-    elif row == jRowB-1:
-        return "▲"  # end abridgment
-    else:
-        return "~"  # lane abridged
-
-
-def flattenLanes(laneContinuity: list[str]) -> tuple[list[tuple[int, int]], int]:
+def flattenLanes(frame: Frame) -> tuple[list[tuple[int, int]], int]:
     """
     Compute columns (horizontal positions) for each lane above and below this row.
     """
@@ -96,27 +28,22 @@ def flattenLanes(laneContinuity: list[str]) -> tuple[list[tuple[int, int]], int]
         # Flatten the lanes so there are no horizontal gaps in-between the lanes.
         ai, bi = -1, -1
 
-        for c in laneContinuity:
-            if c in " ~":
-                pass
-            elif c in "█▲▼":
-                ai += 1
+        for cl, ol in zip_longest(frame.staleArcs, frame.openArcs):
+            if ol:
                 bi += 1
-            elif c in "▄△":
-                bi += 1
-            elif c in "▀▽":
+                if ol.openedAt < frame.row:
+                    ai += 1
+            if cl:
                 ai += 1
-            else:
-                assert False, F"unknown lane continuity type: {c}"
             laneColumnsAB.append( (ai, bi) )
 
         flatTotal = max(ai, bi)
 
     else:
         # Straightforward lane positions (lane column == lane ID)
-        for i in range(len(laneContinuity)):
+        for i, (cl, ol) in enumerate(zip_longest(frame.staleArcs, frame.openArcs)):
             laneColumnsAB.append( (i, i) )
-        flatTotal = len(laneContinuity)
+        flatTotal = len(laneColumnsAB)#len(laneContinuity)
 
     return laneColumnsAB, flatTotal
 
@@ -156,7 +83,7 @@ def paintGraphFrame(
         rect: QRect,
         outlineColor: QColor
 ):
-    if not meta or not meta.graphFrame:
+    if not meta or not state.graph:#meta.graphFrame:
         return
 
     painter.save()
@@ -171,29 +98,15 @@ def paintGraphFrame(
     # Get this commit's sequential index in the graph
     myRow = state.getCommitSequentialIndex(meta.hexsha)
 
-    # Get lanes from neighbor above
-    lanesA = []
-    if myRow > 0:
-        neighborA = state.commitSequence[myRow-1]
-        lanesA = neighborA.graphFrame.lanesBelow
-
-    # Zip target commits above and below for each lane
-    lanesAB = list(zip_longest(lanesA, meta.graphFrame.lanesBelow))
+    # Get graph frame for this row
+    frame = state.graph.startPlayback(myRow).copyCleanFrame()
 
     # Get the commit's lane ID
-    commitLane = meta.graphFrame.commitLane
-
-    # Compute lane continuity/abridgment info
-    laneContinuity = []
-    for i in range(len(lanesAB)):
-        above, below = lanesAB[i]
-        continuity = getLaneContinuity(state, myRow, above, below)
-        laneContinuity.append(continuity)
-    assert len(laneContinuity) == len(lanesAB)
+    commitLane = frame.getHomeLaneForCommit()
 
     # Flatten the lanes so there are no horizontal gaps in-between the lanes (optional).
     # laneColumnsAB is a table of lanes to columns (horizontal positions).
-    laneColumnsAB, numFlattenedColumns = flattenLanes(laneContinuity)
+    laneColumnsAB, numFlattenedColumns = flattenLanes(frame)#laneContinuity)
 
     # Get column (horizontal position) of commit bullet point.
     myColumn, numFlattenedColumns = getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
@@ -206,73 +119,55 @@ def paintGraphFrame(
     painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
 
-    # parent info for Fork Down
-    parentsRemaining = set(meta.parentHashes)
-    parent0 = meta.parentHashes[0] if len(meta.parentHashes) > 0 else None
-
     path = QPainterPath()
 
-    # draw lines
-    # TODO: range(numLanesTotal-1,-1,-1) makes junctions more readable, but we should draw "straight" lines
-    #  (unaffected by the commit) underneath junction lines
-    for i in range(len(lanesAB)):
-        continuity = laneContinuity[i]
-
-        if continuity in " ~△▽":  # skip free/fully-abridged lanes
-            continue
-
-        above, below = lanesAB[i]  # target commit above, target commit below
-        columnA, columnB = laneColumnsAB[i]  # column above, column below
-        dirA = sign(columnA - myColumn)  # position of columnA relative to myColumn (-1=left, 0=same, +1=right)
-        dirB = sign(columnB - myColumn)  # position of columnB relative to myColumn (-1=left, 0=same, +1=right)
-        ax = x + columnA * LANE_WIDTH
-        bx = x + columnB * LANE_WIDTH
-
-        pattern = Qt.SolidLine
-
-        # Dotted line for abridged lane continued down
-        if continuity == "▼":
-            pattern = Qt.DotLine
-            path.moveTo(ax, top)
-            path.lineTo(ax, bottom)
-
-        # Dotted line for abridged lane continued up
-        elif continuity == "▲":
-            pattern = Qt.DotLine
-            path.moveTo(bx, bottom)
-            path.lineTo(bx, top)
-
-        else:
-            assert continuity in "▄█▀"
-
-            # Top to Bottom
-            if above and above == below:
-                path.moveTo(ax, top)
-                path.cubicTo(ax, middle, bx, middle, bx, bottom)
-
-            # Fork Up from Commit Bullet Point
-            if above == meta.hexsha:
-                # TODO: draw neater spline if i==commit lane
-                path.moveTo(mx, middle)
-                path.lineTo(ax-dirA*LANE_WIDTH, middle)
-                path.quadTo(ax, middle, ax, top)
-
-            # Fork Down from Commit Bullet Point
-            if below in parentsRemaining and (below != parent0 or i == commitLane):
-                path.moveTo(mx, middle)
-                path.lineTo(bx-dirB*LANE_WIDTH, middle)
-                path.quadTo(bx, middle, bx, bottom)
-                parentsRemaining.remove(below)
-
+    def submitPath(path: QPainterPath, column):
         if not path.isEmpty():
             # white outline
             painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
             painter.drawPath(path)
             # actual color
-            painter.setPen(QPen(getColor(i), LANE_THICKNESS, pattern, Qt.FlatCap, Qt.BevelJoin))
+            painter.setPen(QPen(getColor(column), LANE_THICKNESS, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
             painter.drawPath(path)
             # clear path for next iteration
             path.clear()
+
+    for link in frame.getArcsPassingByCommit():
+        columnA, columnB = laneColumnsAB[link.lane]  # column above, column below
+        ax = x + columnA * LANE_WIDTH
+        bx = x + columnB * LANE_WIDTH
+        path.moveTo(ax, top)
+        path.cubicTo(ax, middle, bx, middle, bx, bottom)
+        submitPath(path, link.lane)
+
+    for link in reversed(list(frame.getArcsClosedByCommit())):
+        columnA, _ = laneColumnsAB[link.lane]  # column above, column below
+        ax = x + columnA * LANE_WIDTH
+        # Fork Up from Commit Bullet Point
+        path.moveTo(mx, middle)
+        path.quadTo(ax, middle, ax, top)
+        submitPath(path, link.lane)
+
+    for link in reversed(list(frame.getArcsOpenedByCommit())):
+        _, columnB = laneColumnsAB[link.lane]  # column above, column below
+        bx = x + columnB * LANE_WIDTH
+        # Fork Down from Commit Bullet Point
+        path.moveTo(mx, middle)
+        #path.lineTo(bx-dirB*LANE_WIDTH, middle)
+        path.quadTo(bx, middle, bx, bottom)
+        submitPath(path, link.lane)
+
+    for link in frame.getArcsPassingByCommit():
+        for j in link.junctions:
+            if j.joinedAt != frame.row:
+                continue
+            assert j.joinedBy == frame.commit
+            columnA, columnB = laneColumnsAB[link.lane]
+            ax = x + columnA * LANE_WIDTH
+            bx = x + columnB * LANE_WIDTH
+            path.moveTo(mx, middle)
+            path.quadTo(bx, middle, bx, bottom)
+            submitPath(path, link.lane)
 
     # draw bullet point for this commit
     painter.setPen(Qt.PenStyle.NoPen)

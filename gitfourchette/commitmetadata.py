@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from graphgenerator import GraphFrame
 
 
 @dataclass
@@ -25,8 +24,6 @@ class CommitMetadata:
     childHashes: list[str] = None
 
     mainRefName: str = None
-
-    graphFrame: GraphFrame = None
 
     bold: bool = False
 

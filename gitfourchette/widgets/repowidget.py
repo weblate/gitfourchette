@@ -1,5 +1,6 @@
 import trash
 from allqt import *
+from benchmark import Benchmark
 from dialogs.commitdialog import CommitDialog
 from dialogs.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
@@ -817,13 +818,18 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def quickRefresh(self):
-        nRowsRemovedAtTop, newRowsAtTop = self.state.loadTaintedCommitsOnly()
-        if not newRowsAtTop:
-            assert nRowsRemovedAtTop == 0
-        else:
-            self.graphView.patchFill(nRowsRemovedAtTop, newRowsAtTop)
+        self.setUpdatesEnabled(False)
 
-        self.state.refreshRefsByCommitCache()
+        with Benchmark("Load tainted commits only"):
+            nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
+
+        with Benchmark("Refresh top of graphview"):
+            self.graphView.refreshTop(nRemovedRows, nAddedRows, self.state.commitSequence)
+
+        with Benchmark("Refresh refs by commit cache"):
+            self.state.refreshRefsByCommitCache()
+
+        self.setUpdatesEnabled(True)
 
         # force redraw visible portion of the graph view to reflect any changed tags/refs
         self.graphView.setDirtyRegion(QRegion(0, 0, self.graphView.width(), self.graphView.height()))

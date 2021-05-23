@@ -53,12 +53,12 @@ class GraphView(QListView):
         self._replaceModel(model)
         self.onSetCurrent()
 
-    def patchFill(self, trimStartRows, orderedCommitMetadata):
+    def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[CommitMetadata]):
         model = self.model()
-        model.removeRows(1, trimStartRows)
-        model.insertRows(1, len(orderedCommitMetadata))
-        for i, meta in enumerate(orderedCommitMetadata):
-            model.setData(model.index(1 + i, 0), meta, Qt.DisplayRole)
+        model.removeRows(1, nRemovedRows)
+        model.insertRows(1, nAddedRows)
+        for i in range(nAddedRows):
+            model.setData(model.index(1 + i, 0), commitSequence[i], Qt.DisplayRole)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         self.getInfoOnCurrentCommit()

@@ -3,7 +3,7 @@ from benchmark import Benchmark
 from commitmetadata import CommitMetadata
 from collections import defaultdict
 from globalstatus import globalstatus
-from graphgenerator import GraphGenerator
+from graph import Graph, GraphSplicer, KF_INTERVAL
 import git
 import io
 import os
@@ -32,8 +32,10 @@ class RepoState:
     # (values are shared with commitSequence)
     commitLookup: dict[str, CommitMetadata]
 
-    # ref name --> commit hexsha at tip of ref
-    currentRefs: dict[str, str]
+    graph: Graph
+
+    # Set of head commits for every ref (required to refresh the commit graph)
+    currentRefs: set[str]
 
     # path of superproject if this is a submodule
     superproject: str
@@ -62,7 +64,9 @@ class RepoState:
         self.settings.setValue("GitFourchette", settings.VERSION)
         self.currentBatchID = 0
 
+        self.commitSequence = []
         self.commitLookup = {}
+        self.graph = None
 
         self.refsByCommit = defaultdict(list)
         self.refreshRefsByCommitCache()
@@ -71,7 +75,7 @@ class RepoState:
 
         self.activeCommitHexsha = None
 
-        self.currentRefs = {}
+        self.currentRefs = set()
 
         self.mutex = QMutex()
 
@@ -118,10 +122,12 @@ class RepoState:
 
     def getCommitSequentialIndex(self, hexsha: str):
         meta = self.commitLookup[hexsha]
+        if meta.batchID >= len(self.batchOffsets):
+            print("this should never happen!")
         return self.batchOffsets[meta.batchID] + meta.offsetInBatch
 
     @staticmethod
-    def getGitProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
+    def startGitLogProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
         # Todo: Interesting flags: -z; --log-size
 
         assert repo.git.GIT_PYTHON_GIT_EXECUTABLE, "GIT_PYTHON_EXECUTABLE wasn't set properly"
@@ -177,22 +183,42 @@ class RepoState:
         self.activeCommitHexsha = hexsha
         self.getOrCreateMetadata(hexsha).bold = True
 
-    def loadCommitList(self, progress: QProgressDialog):
-        procWrapper, stdoutWrapper = self.getGitProcess(self.repo)
+    @staticmethod
+    def waitForGitProcessToFinish(procWrapper):
+        proc: subprocess.Popen = procWrapper.proc
+        # Check git log's return code.
+        # On Windows, the process seems to take a while to shut down after we catch StopIteration.
+        status = proc.poll()
+        if status is None:
+            print("Giving some more time for Git to quit...")
+            # This will raise a TimeoutExpired if git is really stuck.
+            status = proc.wait(3)
+        assert status is not None, F"git process stopped without a return code?"
+        if status != 0:
+            stderrWrapper = io.TextIOWrapper(proc.stderr, errors='backslashreplace')
+            stderr = stderrWrapper.readline().strip()
+            raise git.GitCommandError(procWrapper.args, status, stderr)
 
+    def loadCommitList(self, progress: QProgressDialog):
+        procWrapper, stdoutWrapper = self.startGitLogProcess(self.repo)
+
+        self.currentRefs = set(ref.commit.hexsha for ref in self.repo.refs)
         self.setBoldCommit(self.repo.head.commit.hexsha)
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
-        metas = []
-        refs = {}
-        graphGen = GraphGenerator()
+        commitSequence = []
+        # refs = {}
+        graph = Graph()
         nextLocal = set()
 
         i = 0
         while True:
             if i % PROGRESS_INTERVAL == 0:
-                progress.setLabelText(F"{i:,} commits processed.")
+                if i == 0:
+                    progress.setLabelText(F"Waiting for git...")
+                else:
+                    progress.setLabelText(F"{i:,} commits processed.")
                 QCoreApplication.processEvents()
                 if progress.wasCanceled():
                     QMessageBox.warning(progress.parent(),
@@ -205,29 +231,15 @@ class RepoState:
             try:
                 meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
             except StopIteration:
-                proc: subprocess.Popen = procWrapper.proc
-                # Check git log's return code.
-                # On Windows, the process seems to take a while to shut down after we catch StopIteration.
-                status = proc.poll()
-                if status is None:
-                    print("Giving some more time for Git to quit...")
-                    # This will raise a TimeoutExpired if git is really stuck.
-                    status = proc.wait(3)
-                assert status is not None, F"git process stopped without a return code?"
-                if status != 0:
-                    stderrWrapper = io.TextIOWrapper(proc.stderr, errors='backslashreplace')
-                    stderr = stderrWrapper.readline().strip()
-                    raise git.GitCommandError(procWrapper.args, status, stderr)
+                self.waitForGitProcessToFinish(procWrapper)
                 break
 
             meta.offsetInBatch = offsetFromTop
 
-            metas.append(meta)
+            commitSequence.append(meta)
 
-            if meta.mainRefName and meta.mainRefName not in refs:
-                refs[meta.mainRefName] = meta.hexsha
-
-            meta.graphFrame = graphGen.step(meta.hexsha, meta.parentHashes)
+            # if meta.mainRefName and meta.mainRefName not in refs:
+            #     refs[meta.mainRefName] = meta.hexsha
 
             # Fill parent hashes
             for p in meta.parentHashes:
@@ -236,22 +248,26 @@ class RepoState:
 
             self.traceOneCommitAvailability(nextLocal, meta)
 
-        globalstatus.setText(F"{self.shortName}: loaded {len(metas):,} commits")
+        globalstatus.setText(F"{self.shortName}: loaded {len(commitSequence):,} commits")
 
-        print(F"Graph Frames: {graphGen.nBytes//1024:,} KB - "
-              F"Peak Lanes: {graphGen.nLanesPeak:,} - "
-              F"Total Lanes: {graphGen.nLanesTotal:,} - "
-              F"Avg Lanes: {graphGen.nLanesTotal//len(metas):,} - "
-              F"Lane Vacancy: {100*graphGen.nLanesVacant/graphGen.nLanesTotal:.2f}%")
+        progress.setLabelText("Preparing graph...")
+        progress.setMaximum(len(commitSequence))
+        graphGenerator = graph.startGenerator()
+        for meta in commitSequence:
+            graphGenerator.createArcsForNewCommit(meta.hexsha, meta.parentHashes)
+            if graphGenerator.row % KF_INTERVAL == 0:
+                progress.setValue(graphGenerator.row)
+                QCoreApplication.processEvents()
+                graph.saveKeyframe(graphGenerator)
 
-        self.commitSequence = metas
+        self.commitSequence = commitSequence
+        self.graph = graph
         self.batchOffsets = [0]
-        self.currentRefs = refs
         self.currentBatchID = 0
 
         bench.__exit__(None, None, None)
 
-        return metas
+        return commitSequence
 
     @staticmethod
     def traceOneCommitAvailability(nextLocal: set, meta: CommitMetadata):
@@ -266,65 +282,28 @@ class RepoState:
             for p in meta.parentHashes:
                 nextLocal.add(p)
 
-    def getTaintedCommits(self) -> set[str]:
-        repo = self.repo
-
-        tainted = set()
-        clean = set()
-
-        #TODO: some commits are pointed to by several refs... but the %S flag in git log only gives us one commit at a time! maybe we should use %d instead?
-        for k in self.currentRefs:
-            #print(F"current state: ref {k} --> {self.currentRefs[k]}")
-            pass
-        for ref in repo.refs:
-            try:
-                previous = self.currentRefs[ref.path]
-            except KeyError:
-                #print("skipped......:", ref.path)
-                continue
-                previous = None
-            hash = ref.commit.hexsha
-            if previous != hash:
-                #print("tainted......:", ref.path, "\t", previous, "---->", hash)
-                tainted.add(hash)
-            else:
-                #print("clean........:", ref.path, "\t", previous)
-                clean.add(hash)
-
-        tainted -= clean
-
-        print("tainted:", tainted)
-        return tainted
-
     def loadTaintedCommitsOnly(self):
         globalstatus.setText(F"{self.shortName}: checking for new commits...")
 
-        procWrapper, stdoutWrapper = self.getGitProcess(self.repo)
-
-        wantToSee: set = self.getTaintedCommits()
-
-        self.setBoldCommit(self.repo.head.commit.hexsha)
-
-        if len(wantToSee) == 0:
-            globalstatus.setText(F"{self.shortName}: no new commits to draw")
-            return 0, []
+        procWrapper, stdoutWrapper = self.startGitLogProcess(self.repo)
 
         self.currentBatchID += 1
 
         globalstatus.setProgressMaximum(5)
         globalstatus.setProgressValue(1)
 
-        metas = []
-        refreshedHashes = set()
-        refs = {}
-        lastTainted = None
-        nUnknownCommits = 0
-        graphGen = GraphGenerator()
+        newCommitSequence = []
+
+        oldHeads = self.currentRefs
+        with Benchmark("Get new heads"):
+            newHeads = set(ref.commit.hexsha for ref in self.repo.refs)
+
+        graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
 
         globalstatus.setProgressValue(2)
 
         i = 0
-        while True:
+        while graphSplicer.keepGoing:
             if i % PROGRESS_INTERVAL == 0:
                 print("Commits processed:", i)
                 QCoreApplication.processEvents()
@@ -334,90 +313,49 @@ class RepoState:
             try:
                 meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
             except StopIteration:
+                self.waitForGitProcessToFinish(procWrapper)
                 break
-            metas.append(meta)
-            refreshedHashes.add(meta.hexsha)
+            newCommitSequence.append(meta)
 
-            if meta.mainRefName and meta.mainRefName not in refs:
-                refs[meta.mainRefName] = meta.hexsha
-
-            lastTainted = meta.hexsha
-
-            prevGraphFrame = meta.graphFrame
-            meta.graphFrame = graphGen.step(meta.hexsha, meta.parentHashes)
+            graphSplicer.spliceNewCommit(meta.hexsha, meta.parentHashes, wasKnown)
 
             meta.offsetInBatch = offsetFromTop
             meta.batchID = self.currentBatchID
-            meta.debugPrefix = "R"  # Redrawn
-            meta.red = True
 
-            if not wasKnown:
-                nUnknownCommits += 1
-                meta.debugPrefix = "N"  # New
-                wantToSee.update(meta.parentHashes)
-
-            if meta.hexsha in wantToSee:
-                wantToSee.remove(meta.hexsha)
-                if len(wantToSee) == 0:
-                    #assert wasKnown #<-- assertion incorrect if the entire repository changes
-                    if prevGraphFrame != meta.graphFrame:
-                        # known commit, but lane data mismatch
-                        meta.debugPrefix = "L"  # Lane Mismatch
-                        wantToSee.update(meta.parentHashes)
-                    else:
-                        # stop iterating because there's no more hashes we want to see
-                        # TODO: Maybe we should kill git here?
-                        break
+            meta.debugPrefix = "R" if wasKnown else "N"  # Redrawn or New
 
             # Fill parent hashes
             for p in meta.parentHashes:
                 parentMeta = self.getOrCreateMetadata(p)
                 parentMeta.childHashes.insert(0, meta.hexsha)
 
+        graphSplicer.finish()
+
         globalstatus.setProgressValue(3)
 
-        print(F"last tainted hash: {lastTainted}")
-
-        nAddedAtTop = len(metas)
-        nRemovedAtTop = 1
-
-        # Nuke references to tainted commits,
-        # and find out how many tainted commits to trim at the front of the sequence.
-        for oldCommit in self.commitSequence:
-            if oldCommit.hexsha == lastTainted:
-                # Last tainted commit -- all following commits are clean, stop here
-                break
-
-            nRemovedAtTop += 1
-
-            # Remove tainted commit from parents' children
-            for parentHash in oldCommit.parentHashes:
-               if parentHash in self.commitLookup:
-                   self.commitLookup[parentHash].childHashes.remove(oldCommit.hexsha)
-
-            # If the commit hash is now unreachable, nuke it from lookup dict to avoid a leak
-            if oldCommit.hexsha not in refreshedHashes:
-                del self.commitLookup[oldCommit.hexsha]
+        with Benchmark("Nuke unreachable commits from cache"):
+            for trashedCommit in (graphSplicer.oldCommitsSeen - graphSplicer.newCommitsSeen):
+                del self.commitLookup[trashedCommit]
 
         # Piece correct commit sequence back together
-        self.commitSequence = metas + self.commitSequence[nRemovedAtTop:]
+        self.commitSequence = newCommitSequence[:graphSplicer.equilibriumNewRow] + self.commitSequence[graphSplicer.equilibriumOldRow:]
+        self.currentRefs = newHeads
 
         # Compute new batch offset
         assert self.currentBatchID == len(self.batchOffsets)
-        self.batchOffsets = [previousOffset + nAddedAtTop - nRemovedAtTop for previousOffset in self.batchOffsets]
+        self.batchOffsets = [previousOffset + graphSplicer.oldGraphRowOffset for previousOffset in self.batchOffsets]
         self.batchOffsets.append(0)
-
-        globalstatus.setText(F"{self.shortName}: loaded {nUnknownCommits:,} new commits; redrew {len(metas):,} rows; last tainted hash {lastTainted[:7]}")
 
         # todo: this will do a pass on all commits. Can we look at fewer commits?
         self.traceCommitAvailability(self.commitSequence)
 
-        self.currentRefs = refs
-
         globalstatus.setProgressValue(4)
 
-        return nRemovedAtTop, metas
+        self.setBoldCommit(self.repo.head.commit.hexsha)
 
+        return graphSplicer.equilibriumOldRow, graphSplicer.equilibriumNewRow
+
+    """
     # For debugging
     def loadCommitDump(self, dump: Dump):
         self.commitLookup = dump.data
@@ -432,6 +370,7 @@ class RepoState:
         dump.order = [c.hexsha for c in self.commitSequence]
         dump.currentRefs = self.currentRefs
         return dump
+    """
 
     @staticmethod
     def traceCommitAvailability(metas, progressTick=None):
