@@ -154,8 +154,13 @@ class RepoState:
 
     def getOrCreateMetadataFromGitStdout(self, stdout: io.TextIOWrapper):
         hash = next(stdout)[:-1]
-        wasKnown = hash in self.commitLookup
         meta = self.getOrCreateMetadata(hash)
+        wasKnown = meta.isInitialized
+
+        meta.isInitialized = True
+
+        # TODO: when we've migrated to pygit2 -- we don't need to read in this commit's details if it's already initialized
+
         #meta.inthash = int(hash[:7], 16)
         meta.parentHashes = next(stdout)[:-1].split()
         #meta.parentIHashes = [int(h[:7], 16) for h in meta.parentHashes]
@@ -315,13 +320,12 @@ class RepoState:
             except StopIteration:
                 self.waitForGitProcessToFinish(procWrapper)
                 break
-            newCommitSequence.append(meta)
 
+            newCommitSequence.append(meta)
             graphSplicer.spliceNewCommit(meta.hexsha, meta.parentHashes, wasKnown)
 
             meta.offsetInBatch = offsetFromTop
             meta.batchID = self.currentBatchID
-
             meta.debugPrefix = "R" if wasKnown else "N"  # Redrawn or New
 
             # Fill parent hashes

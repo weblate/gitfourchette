@@ -8,6 +8,8 @@ class CommitMetadata:
 
     hexsha: str
 
+    isInitialized: bool = False
+
     author: str = ""
 
     authorEmail: str = ""
