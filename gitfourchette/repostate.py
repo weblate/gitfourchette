@@ -186,7 +186,8 @@ class RepoState:
             self.commitLookup[self.activeCommitHexsha].bold = False
             self.activeCommitHexsha = None
         self.activeCommitHexsha = hexsha
-        self.getOrCreateMetadata(hexsha).bold = True
+        if hexsha:
+            self.getOrCreateMetadata(hexsha).bold = True
 
     @staticmethod
     def waitForGitProcessToFinish(procWrapper):
@@ -208,7 +209,12 @@ class RepoState:
         procWrapper, stdoutWrapper = self.startGitLogProcess(self.repo)
 
         self.currentRefs = set(ref.commit.hexsha for ref in self.repo.refs)
-        self.setBoldCommit(self.repo.head.commit.hexsha)
+
+        if self.repo.head.is_valid():
+            self.setBoldCommit(self.repo.head.commit.hexsha)
+        else:
+            # Handle commitless branches gracefully
+            self.setBoldCommit(None)
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
@@ -355,7 +361,11 @@ class RepoState:
 
         globalstatus.setProgressValue(4)
 
-        self.setBoldCommit(self.repo.head.commit.hexsha)
+        if self.repo.head.is_valid():
+            self.setBoldCommit(self.repo.head.commit.hexsha)
+        else:
+            # Handle commitless branches gracefully
+            self.setBoldCommit(None)
 
         return graphSplicer.equilibriumOldRow, graphSplicer.equilibriumNewRow
 
