@@ -273,7 +273,7 @@ class RepoWidget(QWidget):
     @property
     def workingTreeDir(self):
         if self.state:
-            return self.state.repo.working_tree_dir
+            return os.path.normpath(self.state.repo.workdir)
         else:
             return self.pathPending
 
@@ -293,9 +293,12 @@ class RepoWidget(QWidget):
             self.graphView._replaceModel(None)
             self.diffView.clear()
             # Save path if we want to reload the repo later
-            self.pathPending = str(self.state.repo.working_tree_dir)
+            self.pathPending = os.path.normpath(self.state.repo.workdir)
             self.state.repo.close()
             self.state = None
+
+    def setPendingPath(self, path):
+        self.pathPending = os.path.normpath(path)
 
     def renameRepo(self):
         text, ok = textInputDialog(

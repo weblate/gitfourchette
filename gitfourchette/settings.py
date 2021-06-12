@@ -126,6 +126,7 @@ class History(BasePrefs):
     nicknames                   : dict          = field(default_factory=dict)
 
     def addRepo(self, path):
+        path = os.path.normpath(path)
         try:
             self.history.remove(path)
         except ValueError:
@@ -134,12 +135,14 @@ class History(BasePrefs):
         self.write()
 
     def getRepoNickname(self, path):
+        path = os.path.normpath(path)
         if path in self.nicknames:
             return self.nicknames[path]
         else:
             return os.path.basename(path)
 
     def setRepoNickname(self, path: str, nickname: str):
+        path = os.path.normpath(path)
         nickname = nickname.strip()
         if not nickname:
             if path not in self.nicknames:
@@ -151,6 +154,7 @@ class History(BasePrefs):
         self.write()
 
     def removeRepo(self, path):
+        path = os.path.normpath(path)
         self.history.remove(path)
         if path in self.nicknames:
             del self.nicknames[path]
