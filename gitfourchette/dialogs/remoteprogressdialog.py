@@ -1,7 +1,10 @@
 from allqt import *
-import git
 
+class RemoteProgressDialog:
+    # TODO: Rewrite me!
+    pass
 
+"""
 def progressOpcodeToString(op_code):
     m = op_code & git.RemoteProgress.OP_MASK
     if m == git.RemoteProgress.COUNTING:
@@ -48,3 +51,4 @@ class RemoteProgressDialog(git.RemoteProgress):
 
     def close(self):
         self.dlg.close()
+"""

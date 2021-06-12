@@ -1,9 +1,9 @@
+from allgit import *
 from allqt import *
+from datetime import datetime
 from dialogs.resetheaddialog import ResetHeadDialog
-from repostate import CommitMetadata
 from util import messageSummary, fplural, shortHash, textInputDialog
 from widgets.graphdelegate import GraphDelegate
-import git
 import html
 import settings
 
@@ -11,7 +11,7 @@ import settings
 class GraphView(QListView):
     uncommittedChangesClicked = Signal()
     emptyClicked = Signal()
-    commitClicked = Signal(str)
+    commitClicked = Signal(Oid)
     resetHead = Signal(str, str, bool)
     newBranchFromCommit = Signal(str, str)
 
@@ -44,16 +44,16 @@ class GraphView(QListView):
             self.model().deleteLater()  # avoid memory leak
         self.setModel(model)
 
-    def fill(self, orderedCommitMetadata):
+    def fill(self, commitSequence: list[Commit]):
         model = QStandardItemModel(self)  # creating a model from scratch seems faster than clearing an existing one
         model.appendRow(QStandardItem())
-        model.insertRows(1, len(orderedCommitMetadata))
-        for i, meta in enumerate(orderedCommitMetadata):
+        model.insertRows(1, len(commitSequence))
+        for i, meta in enumerate(commitSequence):
             model.setData(model.index(1 + i, 0), meta, Qt.DisplayRole)
         self._replaceModel(model)
         self.onSetCurrent()
 
-    def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[CommitMetadata]):
+    def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[Commit]):
         model = self.model()
         model.removeRows(1, nRemovedRows)
         model.insertRows(1, nAddedRows)
@@ -71,17 +71,17 @@ class GraphView(QListView):
             super().keyPressEvent(event)
 
     @property
-    def repo(self) -> git.Repo:
+    def repo(self) -> Repository:
         return self.repoWidget.state.repo
 
     @property
-    def currentCommitHash(self):
+    def currentCommitHash(self) -> Oid:
         if not self.currentIndex().isValid():
             return
-        data : CommitMetadata = self.currentIndex().data()
+        data: Commit = self.currentIndex().data()
         if not data:  # Uncommitted Changes has no bound data
             return
-        return data.hexsha
+        return data.oid
 
     def getInfoOnCurrentCommit(self):
         commitHash = self.currentCommitHash
@@ -90,8 +90,7 @@ class GraphView(QListView):
 
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
 
-        commit: git.Commit = self.repo.commit(commitHash)
-        data: CommitMetadata = self.currentIndex().data()
+        commit: Commit = self.currentIndex().data()
 
         summary, contd = messageSummary(commit.message)
 
@@ -101,41 +100,43 @@ class GraphView(QListView):
             postSummary = F"<br>\u25bc <i>click &ldquo;Show Details&rdquo; to reveal full message " \
                   F"({nLines} lines)</i>"
 
-        parentHashes = [shortHash(p.hexsha) for p in commit.parents]
+        parentHashes = [shortHash(p) for p in commit.parent_ids]
         parentLabelMarkup = html.escape(fplural('# Parent^s', len(parentHashes)))
         parentValueMarkup = html.escape(', '.join(parentHashes))
 
-        childHashes = [shortHash(c) for c in data.childHashes]
-        childLabelMarkup = html.escape(fplural('# Child^ren', len(childHashes)))
-        childValueMarkup = html.escape(', '.join(childHashes))
+        #childHashes = [shortHash(c) for c in commit.children]
+        #childLabelMarkup = html.escape(fplural('# Child^ren', len(childHashes)))
+        #childValueMarkup = html.escape(', '.join(childHashes))
+
+        authorTime = datetime.fromtimestamp(commit.author.time)
+        committerTime = datetime.fromtimestamp(commit.committer.time)
 
         authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" \
-            F"<br>{html.escape(commit.authored_datetime.strftime(settings.prefs.longTimeFormat))}"
+            F"<br>{html.escape(authorTime.strftime(settings.prefs.longTimeFormat))}"
 
         if (commit.author.email == commit.committer.email
                 and commit.author.name == commit.committer.name
-                and commit.authored_datetime == commit.committed_datetime):
+                and commit.author.time == commit.committer.time):
             committerMarkup = F"<i>(same as author)</i>"
         else:
             committerMarkup = F"{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;" \
-                F"<br>{html.escape(commit.committed_datetime.strftime(settings.prefs.longTimeFormat))}"
+                F"<br>{html.escape(committerTime.strftime(settings.prefs.longTimeFormat))}"
 
         markup = F"""<span style='font-size: large'>{summary}</span>{postSummary}
             <br>
             <table>
-            <tr><td><b>Full Hash </b></td><td>{commit.hexsha}</td></tr>
+            <tr><td><b>Full Hash </b></td><td>{commit.oid.hex}</td></tr>
             <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
-            <tr><td><b>{childLabelMarkup} </b></td><td>{childValueMarkup}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
-            <tr><td><b>Debug</b></td><td>
-                batch {data.batchID},
-                offset {self.repoWidget.state.batchOffsets[data.batchID]+data.offsetInBatch}
-                ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
-                </td></tr>
             </table>"""
+            # <tr><td><b>Debug</b></td><td>
+            #     batch {data.batchID},
+            #     offset {self.repoWidget.state.batchOffsets[data.batchID]+data.offsetInBatch}
+            #     ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
+            #     </td></tr>
 
-        title = F"Commit info {shortHash(commit.hexsha)}"
+        title = F"Commit info {shortHash(commit.oid)}"
 
         details = commit.message if contd else None
 
@@ -212,7 +213,7 @@ class GraphView(QListView):
         elif current.row() == 0:  # uncommitted changes
             self.uncommittedChangesClicked.emit()
         else:
-            self.commitClicked.emit(current.data().hexsha)
+            self.commitClicked.emit(current.data().oid)
 
     def selectUncommittedChanges(self):
         self.setCurrentIndex(self.model().index(0, 0))

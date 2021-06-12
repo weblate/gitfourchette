@@ -1,10 +1,10 @@
+from allgit import *
 from allqt import *
 from bisect import bisect_left, bisect_right
 from diffmodel import DiffModel
-from stagingstate import StagingState
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
+from stagingstate import StagingState
 from util import excMessageBox, ActionDef, quickMenu
-import git
 import settings
 import trash
 
@@ -16,8 +16,8 @@ class DiffView(QTextEdit):
     lineCursorStartCache: list[int]
     lineHunkIDCache: list[int]
     currentStagingState: StagingState
-    currentChange: git.Diff
-    currentGitRepo: git.Repo
+    currentPatch: Patch
+    currentGitRepo: Repository
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -30,7 +30,7 @@ class DiffView(QTextEdit):
         self.lineCursorStartCache = []
         self.lineHunkIDCache = []
         self.currentStagingState = None
-        self.currentChange = None
+        self.currentPatch = None
         self.currentGitRepo = None
 
     def findLineDataIndexAt(self, cursorPosition: int, firstLineDataIndex: int = 0):
@@ -46,14 +46,14 @@ class DiffView(QTextEdit):
         except IndexError:
             return -1
 
-    def replaceDocument(self, repo: git.Repo, diff: git.Diff, stagingState: StagingState, dm: DiffModel):
+    def replaceDocument(self, repo: Repository, patch: Patch, stagingState: StagingState, dm: DiffModel):
         oldDocument = self.document()
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
 
         self.currentStagingState = stagingState
         self.currentGitRepo = repo
-        self.currentChange = diff
+        self.currentPatch = patch
 
         self.setDocument(dm.document)
         self.lineData = dm.lineData

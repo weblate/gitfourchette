@@ -1,6 +1,6 @@
 from allqt import *
 from settings import PROGRAM_NAME, VERSION
-import git
+import pygit2
 import sys
 
 
@@ -16,11 +16,12 @@ The no-frills git GUI for Linux.
 </p>
 <pre><small
 >{PROGRAM_NAME} {VERSION}
-git           {'.'.join(str(i) for i in git.Git().version_info)}
-Python        {'.'.join(str(i) for i in sys.version_info)}
-GitPython     {git.__version__}
+libgit2       {pygit2.LIBGIT2_VERSION}
+pygit2        {pygit2.__version__}
 Qt            {qtVersion}
-PySide        {qtBindingVersion}</small></pre>
+PySide        {qtBindingVersion}
+Python        {'.'.join(str(i) for i in sys.version_info)}</small></pre>
+
 Have fun!"""
 
     QMessageBox.about(parent, F"About {PROGRAM_NAME}", aboutText)

@@ -1,9 +1,9 @@
 from allqt import *
+from allgit import *
 from filelistentry import FileListEntry
 from stagingstate import StagingState
 from typing import Generator
 from util import compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext
-import git
 import os
 import settings
 
@@ -46,7 +46,7 @@ class FileListView(QListView):
             return
 
         for entry in entries:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.repo.working_tree_dir, entry.path)))
+            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.repo.workdir, entry.path)))
 
     def showInFolder(self):
         entries = list(self.selectedEntries())
@@ -57,7 +57,7 @@ class FileListView(QListView):
             return
 
         for entry in self.selectedEntries():
-            showInFolder(os.path.join(self.repo.working_tree_dir, entry.path))
+            showInFolder(os.path.join(self.repo.workdir, entry.path))
 
     def keyPressEvent(self, event: QKeyEvent):
         # The default keyPressEvent copies the displayed label of the selected items.
@@ -97,14 +97,19 @@ class FileListView(QListView):
             label = entry.path
         item.setText(label)
         item.setSizeHint(QSize(-1, self.fontMetrics().height()))  # Compact height
-        item.setIcon(settings.statusIcons[entry.icon])
+        if entry.icon == '?':
+            item.setIcon(settings.statusIcons['A'])
+        else:
+            item.setIcon(settings.statusIcons[entry.icon])
         if entry.tooltip:
             item.setToolTip(entry.tooltip)
         self.model().appendRow(item)
 
-    def addFileEntriesFromDiffIndex(self, diffIndex: git.DiffIndex):
-        for diff in diffIndex:
-            self.addEntry(FileListEntry.Tracked(diff))
+    def addFileEntriesFromDiff(self, diff: Diff):
+        delta: DiffDelta
+        patch: Patch
+        for delta, patch in zip(diff.deltas, diff):
+            self.addEntry(FileListEntry.fromDelta(delta, patch))
 
     def selectRow(self, rowNumber=0):
         if self.model().rowCount() == 0:

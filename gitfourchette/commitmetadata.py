@@ -1,4 +1,6 @@
+"""
 from dataclasses import dataclass
+from pygit2 import Oid
 
 
 @dataclass
@@ -18,12 +20,12 @@ class CommitMetadata:
 
     body: str = ""
 
-    parentHashes: list[str] = None
+    parentIds: list[Oid] = None
 
     # -------------------------------------------------------------------------
     # Attributes that may change as the repository evolves
 
-    childHashes: list[str] = None
+    childIds: list[Oid] = None
 
     mainRefName: str = None
 
@@ -36,4 +38,5 @@ class CommitMetadata:
     batchID: int = 0
 
     offsetInBatch: int = 0
+"""
 

@@ -1,7 +1,8 @@
+from allgit import *
 from allqt import *
 from datetime import datetime
 from graphpaint import paintGraphFrame
-from repostate import CommitMetadata, RepoState
+from repostate import RepoState
 from util import messageSummary
 import colors
 import settings
@@ -59,15 +60,17 @@ class GraphDelegate(QStyledItemDelegate):
             self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
 
         if index.row() > 0:
-            meta: CommitMetadata = index.data()
-            summaryText, contd = messageSummary(meta.body)
-            hashText = meta.hexsha[:settings.prefs.shortHashChars]
-            authorText = meta.authorEmail.split('@')[0]
-            dateText = datetime.fromtimestamp(meta.authorTimestamp).strftime(settings.prefs.shortTimeFormat)
+            commit: Commit = index.data()
+            summaryText, contd = messageSummary(commit.message)
+            hashText = commit.oid.hex[:settings.prefs.shortHashChars]
+            authorText = commit.author.email.split('@')[0]
+            dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
+            ''' TODO: pygit2 migration
             if meta.bold:
                 painter.setFont(settings.boldFont)
+            '''
         else:
-            meta: CommitMetadata = None
+            commit: Commit = None
             summaryText = "Uncommitted Changes"
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
@@ -90,12 +93,13 @@ class GraphDelegate(QStyledItemDelegate):
 
         # ------ Graph
         rect.setLeft(rect.right())
-        if meta is not None:
-            paintGraphFrame(self.state, meta, painter, rect, outlineColor)
+        if commit is not None:
+            paintGraphFrame(self.state, commit, painter, rect, outlineColor)
 
         # ------ Refs
-        if meta is not None and meta.hexsha in self.state.refsByCommit:
-            for refName, isTag in self.state.refsByCommit[meta.hexsha]:
+        """ TODO: pygit2 migration
+        if commit is not None and commit.oid in self.state.refsByCommit:
+            for refName, isTag in self.state.refsByCommit[commit.oid]:
                 refColor = Qt.darkYellow if isTag else Qt.darkMagenta
                 painter.save()
                 painter.setFont(settings.smallFont)
@@ -105,13 +109,16 @@ class GraphDelegate(QStyledItemDelegate):
                 rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
                 painter.drawText(rect, Qt.AlignVCenter, label)
                 painter.restore()
+        """
 
         def elide(text):
             return metrics.elidedText(text, Qt.ElideRight, rect.width())
 
         # ------ message
-        if meta and not meta.hasLocal:
-            painter.setPen(QColor(Qt.gray))
+        ''' TODO: pygit2 migration
+        if commit and not meta.hasLocal:
+             painter.setPen(QColor(Qt.gray))
+        '''
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
         painter.drawText(rect, Qt.AlignVCenter, elide(summaryText))
@@ -127,12 +134,14 @@ class GraphDelegate(QStyledItemDelegate):
         painter.drawText(rect, Qt.AlignVCenter, elide(dateText))
 
         # ------ Debug (show redrawn rows from last refresh)
-        if settings.prefs.debug_showDirtyCommitsAfterRefresh and meta and meta.debugPrefix:
+        ''' TODO: pygit2 migration
+        if settings.prefs.debug_showDirtyCommitsAfterRefresh and commit and meta.debugPrefix:
             rect = QRect(option.rect)
             rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * self.hashCharWidth)
             rect.setRight(rect.left() + 3*self.hashCharWidth)
             painter.fillRect(rect, colors.rainbow[meta.batchID % len(colors.rainbow)])
             painter.drawText(rect, Qt.AlignVCenter, "-"+meta.debugPrefix)
+        '''
 
         # ----------------
         painter.restore()

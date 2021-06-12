@@ -1,6 +1,5 @@
 from allqt import *
 from dataclasses import dataclass
-import git.exc
 import os
 import re
 import traceback
@@ -50,9 +49,9 @@ def compactRepoPath(path: str) -> str:
     return '/'.join(splitLong)
 
 
-def shortHash(hexsha: str) -> str:
+def shortHash(oid) -> str:
     from settings import prefs
-    return hexsha[:prefs.shortHashChars]
+    return oid.hex[:prefs.shortHashChars]
 
 
 # Ampersands from user strings must be sanitized for QLabel.
@@ -104,15 +103,8 @@ def messageSummary(body: str):
 def excMessageBox(exc, title="Unhandled Exception", message="An exception was thrown.", parent=None):
     traceback.print_exc()
 
-    if isinstance(exc, git.exc.GitCommandError):
-        summary = exc.stderr.strip() \
-            .removeprefix("stderr: '").strip() \
-            .removeprefix("error: ").strip() \
-            .removesuffix("'").strip() \
-            .removesuffix("Aborting").strip()
-    else:
-        summary = traceback.format_exception_only(exc.__class__, exc)
-        summary = ''.join(summary).strip()
+    summary = traceback.format_exception_only(exc.__class__, exc)
+    summary = ''.join(summary).strip()
 
     details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
     details = ''.join(details).strip()

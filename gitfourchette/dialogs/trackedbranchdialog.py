@@ -1,12 +1,12 @@
 from allqt import *
+from allgit import *
 from util import labelQuote
-import git
 
 
 class TrackedBranchDialog(QDialog):
     newTrackingBranchName: str
 
-    def __init__(self, repo: git.Repo, localBranchName: str, parent):
+    def __init__(self, repo: Repository, localBranchName: str, parent):
         super().__init__(parent)
 
         self.setWindowTitle(F"Edit Tracked Branch")

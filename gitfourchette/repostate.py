@@ -1,14 +1,12 @@
+from allgit import *
 from allqt import *
 from benchmark import Benchmark
-from commitmetadata import CommitMetadata
 from collections import defaultdict
+from dataclasses import dataclass
 from globalstatus import globalstatus
 from graph import Graph, GraphSplicer, KF_INTERVAL
-import git
-import io
 import os
 import settings
-import subprocess
 
 
 PROGRESS_INTERVAL = 5000
@@ -19,18 +17,26 @@ class Dump:
     pass
 
 
+@dataclass
+class BatchedOffset:
+    batch: int
+    offsetInBatch: int
+
+
 class RepoState:
     dir: str
-    repo: git.Repo
-    index: git.IndexFile
+    repo: Repository
+    index: Index
     settings: QSettings
 
     # ordered list of commits
-    commitSequence: list[CommitMetadata]
+    commitSequence: list[Commit]
 
     # commit hexsha --> cached commit metadata
     # (values are shared with commitSequence)
-    commitLookup: dict[str, CommitMetadata]
+    commitLookup: dict[Oid, Commit]
+
+    commitPositions: dict[Oid, BatchedOffset]
 
     graph: Graph
 
@@ -53,25 +59,28 @@ class RepoState:
 
     mutex: QMutex
 
-    # commit hexsha --> list of (refName, isTag flag)
-    refsByCommit: defaultdict[str, list[tuple[str, bool]]]
+    # commit oid --> list of reference names
+    refsByCommit: defaultdict[Oid, list[str]]
 
     def __init__(self, dir):
         self.dir = os.path.abspath(dir)
-        self.repo = git.Repo(dir)
+        self.repo = Repository(dir)
         self.index = self.repo.index
-        self.settings = QSettings(self.repo.common_dir + "/fourchette.ini", QSettings.Format.IniFormat)
+        self.settings = QSettings(self.repo.path + "/fourchette.ini", QSettings.Format.IniFormat)
         self.settings.setValue("GitFourchette", settings.VERSION)
         self.currentBatchID = 0
 
         self.commitSequence = []
         self.commitLookup = {}
+        self.commitPositions = {}
         self.graph = None
 
         self.refsByCommit = defaultdict(list)
         self.refreshRefsByCommitCache()
 
-        self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
+        print("TODO: parse superproject")
+        self.superproject = None
+        #self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
 
         self.activeCommitHexsha = None
 
@@ -81,10 +90,16 @@ class RepoState:
 
     def refreshRefsByCommitCache(self):
         self.refsByCommit.clear()
-        ref: git.Reference
-        for ref in self.repo.refs:
-            isTag = hasattr(ref, 'tag')
-            self.refsByCommit[ref.object.hexsha].append( (ref.name, isTag) )
+        refKey: str
+        for refKey in self.repo.references:
+            ref: Reference = self.repo.references[refKey]
+            if type(ref.target) != Oid:
+                print(F"Skipping symbolic reference {refKey} --> {ref.target}")
+                continue
+            assert refKey.startswith('refs/')
+            #isTag = refKey.startswith('refs/tags/') #hasattr(ref, 'tag')
+            #self.refsByCommit[ref.hexsha].append( (ref.name, isTag) )
+            self.refsByCommit[ref.target].append(refKey)  # (ref.name, isTag) )
 
     @property
     def shortName(self) -> str:
@@ -93,11 +108,12 @@ class RepoState:
             superprojectNickname = settings.history.getRepoNickname(self.superproject)
             prefix = superprojectNickname + ": "
 
-        return prefix + settings.history.getRepoNickname(self.repo.working_tree_dir)
+        return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
     def mutexLocker(self) -> QMutexLocker:
         return QMutexLocker(self.mutex)
 
+    """
     def getOrCreateMetadata(self, hexsha) -> CommitMetadata:
         assert len(hexsha) == 40, 'metadata key should be 40-byte hexsha'
         if hexsha in self.commitLookup:
@@ -111,23 +127,24 @@ class RepoState:
             self.commitLookup[hexsha] = v
             return v
 
-    def getDirtyChanges(self) -> git.DiffIndex:
-        return self.index.diff(None)
+    def getDirtyChanges(self) -> Index:
+        return self.repo.index.diff_to_workdir()
 
     def getUntrackedFiles(self) -> list[str]:
-        return self.repo.untracked_files
+        return [path for path, status in self.repo.status().items() if status == GIT_STATUS_WT_NEW]
 
     def getStagedChanges(self) -> git.DiffIndex:
         return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
+    """
 
-    def getCommitSequentialIndex(self, hexsha: str):
-        meta = self.commitLookup[hexsha]
-        if meta.batchID >= len(self.batchOffsets):
-            print("this should never happen!")
-        return self.batchOffsets[meta.batchID] + meta.offsetInBatch
+    def getCommitSequentialIndex(self, oid: Oid):
+        position = self.commitPositions[oid]
+        assert position.batch < len(self.batchOffsets)
+        return self.batchOffsets[position.batch] + position.offsetInBatch
 
+    """
     @staticmethod
-    def startGitLogProcess(repo: git.Repo) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
+    def startGitLogProcess(repo: Repository) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
         # Todo: Interesting flags: -z; --log-size
 
         assert repo.git.GIT_PYTHON_GIT_EXECUTABLE, "GIT_PYTHON_EXECUTABLE wasn't set properly"
@@ -152,9 +169,8 @@ class RepoState:
 
         return procWrapper, stdoutWrapper
 
-    def getOrCreateMetadataFromGitStdout(self, stdout: io.TextIOWrapper):
-        hash = next(stdout)[:-1]
-        meta = self.getOrCreateMetadata(hash)
+    def getOrCreateMetadataFromGitStdout(self, commit: Commit):
+        meta = self.getOrCreateMetadata(commit.oid)
         wasKnown = meta.isInitialized
 
         meta.isInitialized = True
@@ -162,12 +178,12 @@ class RepoState:
         # TODO: when we've migrated to pygit2 -- we don't need to read in this commit's details if it's already initialized
 
         #meta.inthash = int(hash[:7], 16)
-        meta.parentHashes = next(stdout)[:-1].split()
+        meta.parentIds = commit.parent_ids #next(stdout)[:-1].split()
         #meta.parentIHashes = [int(h[:7], 16) for h in meta.parentHashes]
-        meta.author = next(stdout)[:-1]
-        meta.authorEmail = next(stdout)[:-1]
-        meta.authorTimestamp = int(next(stdout)[:-1])
-        meta.mainRefName = next(stdout)[:-1]
+        meta.author = commit.author.name #next(stdout)[:-1]
+        meta.authorEmail = commit.author.email#next(stdout)[:-1]
+        meta.authorTimestamp = commit.author.time#int(next(stdout)[:-1])
+        #TODO: meta.mainRefName = next(stdout)[:-1]
 
         # Read body, which can be an unlimited number of lines until the \x00 character.
         meta.body = ''
@@ -180,6 +196,7 @@ class RepoState:
         assert '\x00' not in meta.body
 
         return meta, wasKnown
+    """
 
     def setBoldCommit(self, hexsha: str):
         if self.activeCommitHexsha and (self.activeCommitHexsha in self.commitLookup):
@@ -189,6 +206,7 @@ class RepoState:
         if hexsha:
             self.getOrCreateMetadata(hexsha).bold = True
 
+    """
     @staticmethod
     def waitForGitProcessToFinish(procWrapper):
         proc: subprocess.Popen = procWrapper.proc
@@ -204,32 +222,45 @@ class RepoState:
             stderrWrapper = io.TextIOWrapper(proc.stderr, errors='backslashreplace')
             stderr = stderrWrapper.readline().strip()
             raise git.GitCommandError(procWrapper.args, status, stderr)
+    """
 
     def loadCommitList(self, progress: QProgressDialog):
-        procWrapper, stdoutWrapper = self.startGitLogProcess(self.repo)
+        progress.setLabelText(F"Preparing refs...")
+        QCoreApplication.processEvents()
 
-        self.currentRefs = set(ref.commit.hexsha for ref in self.repo.refs)
+        walker: Walker = self.repo.walk(None, GIT_SORT_TOPOLOGICAL | GIT_SORT_TIME)
 
-        if self.repo.head.is_valid():
-            self.setBoldCommit(self.repo.head.commit.hexsha)
-        else:
-            # Handle commitless branches gracefully
-            self.setBoldCommit(None)
+        self.currentRefs = set(ref.target for ref in self.repo.listall_reference_objects() if type(ref.target) == Oid)
+
+        for cr in self.currentRefs:
+            print("Pushing:", cr)
+            try:
+                walker.push(cr)
+            except ValueError:  # (linux) some refs are not committish
+                pass
+
+        #if self.repo.head.is_valid():
+        #    self.setBoldCommit(self.repo.head.commit.hexsha)
+        #else:
+        #    # Handle commitless branches gracefully
+        #    self.setBoldCommit(None)
+        #self.setBoldCommit(self.repo.head.target)
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
-        commitSequence = []
+        commitSequence: list[Commit] = []
+        #commit
         # refs = {}
         graph = Graph()
         nextLocal = set()
 
+        progress.setLabelText(F"Preparing walk...")
+        QCoreApplication.processEvents()
+
         i = 0
-        while True:
+        for commit in walker:
             if i % PROGRESS_INTERVAL == 0:
-                if i == 0:
-                    progress.setLabelText(F"Waiting for git...")
-                else:
-                    progress.setLabelText(F"{i:,} commits processed.")
+                progress.setLabelText(F"{i:,} commits processed.")
                 QCoreApplication.processEvents()
                 if progress.wasCanceled():
                     QMessageBox.warning(progress.parent(),
@@ -239,33 +270,25 @@ class RepoState:
             offsetFromTop = i
             i += 1
 
-            try:
-                meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
-            except StopIteration:
-                self.waitForGitProcessToFinish(procWrapper)
-                break
+            commitSequence.append(commit)
+            self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
 
-            meta.offsetInBatch = offsetFromTop
-
-            commitSequence.append(meta)
-
-            # if meta.mainRefName and meta.mainRefName not in refs:
-            #     refs[meta.mainRefName] = meta.hexsha
+            #meta.offsetInBatch = offsetFromTop
 
             # Fill parent hashes
-            for p in meta.parentHashes:
-                parentMeta = self.getOrCreateMetadata(p)
-                parentMeta.childHashes.insert(0, meta.hexsha)
+            # for p in meta.parentHashes:
+            #     parentMeta = self.getOrCreateMetadata(p)
+            #     parentMeta.childHashes.insert(0, meta.hexsha)
 
-            self.traceOneCommitAvailability(nextLocal, meta)
+            #TODO self.traceOneCommitAvailability(nextLocal, meta)
 
         globalstatus.setText(F"{self.shortName}: loaded {len(commitSequence):,} commits")
 
         progress.setLabelText("Preparing graph...")
         progress.setMaximum(len(commitSequence))
         graphGenerator = graph.startGenerator()
-        for meta in commitSequence:
-            graphGenerator.createArcsForNewCommit(meta.hexsha, meta.parentHashes)
+        for commit in commitSequence:
+            graphGenerator.createArcsForNewCommit(commit.oid, commit.parent_ids)
             if graphGenerator.row % KF_INTERVAL == 0:
                 progress.setValue(graphGenerator.row)
                 QCoreApplication.processEvents()
@@ -281,7 +304,7 @@ class RepoState:
         return commitSequence
 
     @staticmethod
-    def traceOneCommitAvailability(nextLocal: set, meta: CommitMetadata):
+    def traceOneCommitAvailability(nextLocal: set, meta: Commit):
         if meta.hexsha in nextLocal:
             meta.hasLocal = True
             nextLocal.remove(meta.hexsha)

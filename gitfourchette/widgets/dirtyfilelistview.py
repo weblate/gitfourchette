@@ -71,7 +71,7 @@ class DirtyFileListView(FileListView):
                 self.git.restore(entry.path)  # self.diff.a_path)
             else:  # untracked file
                 trash.trashUntracked(self.repo, entry.path)
-                os.remove(os.path.join(self.repo.working_tree_dir, entry.path))
+                os.remove(os.path.join(self.repo.workdir, entry.path))
         self.patchApplied.emit()
 
 

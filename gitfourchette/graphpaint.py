@@ -1,7 +1,8 @@
 from allqt import *
 from itertools import zip_longest
 from graph import Frame, Graph
-from repostate import CommitMetadata, RepoState
+from pygit2 import Commit
+from repostate import RepoState
 from util import sign
 import colors
 import settings
@@ -78,12 +79,12 @@ def getCommitBulletColumn(
 
 def paintGraphFrame(
         state: RepoState,
-        meta: CommitMetadata,
+        commit: Commit,
         painter: QPainter,
         rect: QRect,
         outlineColor: QColor
 ):
-    if not meta or not state.graph:#meta.graphFrame:
+    if not commit or not state.graph:
         return
 
     painter.save()
@@ -96,7 +97,7 @@ def paintGraphFrame(
     middle = (top + bottom) // 2
 
     # Get this commit's sequential index in the graph
-    myRow = state.getCommitSequentialIndex(meta.hexsha)
+    myRow = state.getCommitSequentialIndex(commit.oid)
 
     # Get graph frame for this row
     frame = state.graph.startPlayback(myRow).copyCleanFrame()

@@ -7,7 +7,6 @@ from util import compactSystemPath, showInFolder, excMessageBox, DisableWidgetCo
 from widgets.customtabwidget import CustomTabWidget
 from widgets.repowidget import RepoWidget
 import gc
-import git
 import os
 import pickle
 import settings

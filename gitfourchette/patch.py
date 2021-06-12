@@ -1,9 +1,8 @@
+from allgit import *
 from dataclasses import dataclass
 from typing import Generator, Iterator
 import copy
-import difflib
 import enum
-import git
 import os
 import tempfile
 
@@ -17,65 +16,20 @@ class PatchPurpose(enum.IntEnum):
 
 @dataclass
 class LineData:
+    text: str
+
+    diffLine: DiffLine
+
     cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
-    
-    lineA: int  # line number in file 'A'
-
-    lineB: int  # line number in file 'B'
-
-    diffLineIndex: int  # index of the diff line in the unified diff itself
-
-    """
-    Raw line diff data.
-    The first byte shall be one of ' ', '-', or '+'.
-    The remaining of the byte string is the raw line bytes, including line terminator.
-    """
-    data: bytes
 
     hunkID: int
+
+    lineDataIndex: int = -1  # index of the diff line in the unified diff itself
 
 
 # Error raised by makePatchFromGitDiff when the diffed file appears to be binary.
 class LooksLikeBinaryError(Exception):
     pass
-
-
-def makePatchFromGitDiff(
-        repo: git.Repo,
-        change: git.Diff,
-        allowRawFileAccess: bool = False,
-        allowBinaryPatch: bool = False,
-) -> Iterator[bytes]:
-    # added files (that didn't exist before) don't have an a_blob
-    if change.a_blob:
-        a = change.a_blob.data_stream.read()
-    else:
-        a = b""
-
-    # Deleted file: no b_blob
-    if change.change_type == "D":
-        assert not change.b_blob
-        b = b""
-    elif change.b_blob:
-        b = change.b_blob.data_stream.read()
-    elif allowRawFileAccess:
-        # If there is no b-blob and it's not a D-change,
-        # then it's probably an M-change that isn't committed yet.
-        with open(os.path.join(repo.working_tree_dir, change.b_path), 'rb') as f:
-            b = f.read()
-    else:
-        b = b""
-
-    if (not allowBinaryPatch) and ((b'\x00' in a) or (b'\x00' in b)):
-        raise LooksLikeBinaryError()
-
-    return difflib.diff_bytes(
-        difflib.unified_diff,
-        a.splitlines(keepends=True),
-        b.splitlines(keepends=True),
-        fromfile=change.a_rawpath,
-        tofile=change.b_rawpath
-    )
 
 
 def extraContext(
@@ -196,7 +150,7 @@ def makePatchFromLines(
     return patch
 
 
-def applyPatch(repo: git.Repo, patchData: bytes, purpose: PatchPurpose) -> str:
+def applyPatch(repo: Repository, patchData: bytes, purpose: PatchPurpose) -> str:
     if purpose == PatchPurpose.DISCARD:
         reverse = True
         cached = False
@@ -209,7 +163,7 @@ def applyPatch(repo: git.Repo, patchData: bytes, purpose: PatchPurpose) -> str:
     else:
         raise ValueError(F"unsupported patch purpose: {purpose}")
 
-    prefix = F"gitfourchette-{os.path.basename(repo.working_tree_dir)}-"
+    prefix = F"gitfourchette-{os.path.basename(repo.workdir)}-"
     with tempfile.NamedTemporaryFile(mode='wb', suffix=".patch", prefix=prefix, delete=False) as patchFile:
         #print(F"_____________ {patchFile.name} ______________\n{patchData.decode('utf-8', errors='replace')}\n________________")
         patchFile.write(patchData)

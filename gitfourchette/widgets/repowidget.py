@@ -1,5 +1,6 @@
 import trash
 from allqt import *
+from allgit import *
 from benchmark import Benchmark
 from dialogs.commitdialog import CommitDialog
 from dialogs.remoteprogressdialog import RemoteProgressDialog
@@ -17,16 +18,14 @@ from widgets.graphview import GraphView
 from widgets.sidebar import Sidebar
 from widgets.stagedfilelistview import StagedFileListView
 from worker import Worker
-import git
 import os
+import pygit2
 import settings
 import typing
 
 
 FILESSTACK_READONLY_CARD = 0
 FILESSTACK_STAGE_CARD = 1
-
-PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
 
 
 def sanitizeSearchTerm(x):
@@ -48,7 +47,7 @@ class RepoWidget(QWidget):
     previouslySearchedTerm: str
     previouslySearchedTermInDiff: str
 
-    displayedCommitHexsha: str
+    displayedCommitOid: Oid
     displayedFilePath: str
     displayedStagingState: StagingState
     # TODO: refactor this
@@ -67,7 +66,7 @@ class RepoWidget(QWidget):
         self.state = None
         self.pathPending = None
 
-        self.displayedCommitHexsha = None
+        self.displayedCommitOid = None
         self.displayedFilePath = None
         self.displayedStagingState = None
         self.fileListSelectedRowCache = {}
@@ -213,7 +212,7 @@ class RepoWidget(QWidget):
 
         elif self.displayedStagingState == StagingState.COMMITTED:
             fileListWidget = self.changedFilesView
-            cacheKey = self.displayedCommitHexsha
+            cacheKey = self.displayedCommitOid
 
         elif self.displayedStagingState.isDirty():
             fileListWidget = self.dirtyView
@@ -367,26 +366,26 @@ class RepoWidget(QWidget):
     def fillStageViewAsync(self):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
-        def work() -> tuple[git.DiffIndex, list[str], git.DiffIndex]:
+        repo = self.state.repo
+
+        def work() -> tuple[Diff, Diff]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
-                dirtyChanges = self.state.getDirtyChanges()
-                untrackedFiles = self.state.getUntrackedFiles()
-                stagedChanges = self.state.getStagedChanges()
-            return dirtyChanges, untrackedFiles, stagedChanges
+                dirtyDiff = repo.diff(None, None, flags=pygit2.GIT_DIFF_INCLUDE_UNTRACKED)
+                stageDiff = repo.diff('HEAD', None, cached=True)
+            return dirtyDiff, stageDiff
 
-        def onComplete(result):
+        def onComplete(result: tuple[Diff, Diff]):
             assert QThread.currentThread() is QApplication.instance().thread()
-            dirtyChanges, untrackedFiles, stagedChanges = result
+
+            dirtyDiff, stageDiff = result
 
             # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
-            with QSignalBlockerContext(self.dirtyView):
+            with QSignalBlockerContext(self.dirtyView), QSignalBlockerContext(self.stageView):
                 self.dirtyView.clear()
-                self.dirtyView.addFileEntriesFromDiffIndex(dirtyChanges)
-                self.dirtyView.addUntrackedFileEntries(untrackedFiles)
-            with QSignalBlockerContext(self.stageView):
                 self.stageView.clear()
-                self.stageView.addFileEntriesFromDiffIndex(stagedChanges)
+                self.dirtyView.addFileEntriesFromDiff(dirtyDiff)
+                self.stageView.addFileEntriesFromDiff(stageDiff)
 
             nDirty = self.dirtyView.model().rowCount()
             nStaged = self.stageView.model().rowCount()
@@ -411,17 +410,19 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self._startAsyncWorker(1000, work, onComplete, "Refreshing index")
 
-    def loadCommitAsync(self, hexsha: str):
+    def loadCommitAsync(self, oid: Oid):
         """Load commit details into Changed Files view"""
 
-        def work() -> list[git.DiffIndex]:
+        repo = self.state.repo
+
+        def work() -> list[Diff]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
-                commit = self.state.repo.commit(hexsha)
+                commit: Commit = repo.get(oid)
                 #import time; time.sleep(1) #to debug out-of-order events
-                return [p.diff(commit) for p in commit.parents]
+                return [repo.diff(parent, commit) for parent in commit.parents]
 
-        def onComplete(parentDiffs):
+        def onComplete(parentDiffs: list[Diff]):
             assert QThread.currentThread() is QApplication.instance().thread()
             #import time; time.sleep(1) #to debug out-of-order events
 
@@ -429,9 +430,9 @@ class RepoWidget(QWidget):
             with QSignalBlockerContext(self.changedFilesView):
                 self.changedFilesView.clear()
                 for diff in parentDiffs:
-                    self.changedFilesView.addFileEntriesFromDiffIndex(diff)
+                    self.changedFilesView.addFileEntriesFromDiff(diff)
 
-            self.displayedCommitHexsha = hexsha
+            self.displayedCommitOid = oid
             self.displayedStagingState = StagingState.COMMITTED
 
             # Click on the first file in the commit.
@@ -444,7 +445,7 @@ class RepoWidget(QWidget):
             self.restoreSelectedFile()
 
         self.saveFilePositions()
-        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{shortHash(hexsha)}”")
+        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{shortHash(oid)}”")
 
     def loadDiffAsync(self, entry: FileListEntry, stagingState: StagingState):
         """Load a file diff into the Diff View"""
@@ -455,9 +456,9 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 try:
-                    if entry.diff is not None:
+                    if entry.patch is not None:
                         allowRawFileAccess = stagingState.allowsRawFileAccess()
-                        dm = DiffModel.fromGitDiff(repo, entry.diff, allowRawFileAccess)
+                        dm = DiffModel.fromPatch(repo, entry.patch, allowRawFileAccess)
                     else:
                         dm = DiffModel.fromUntrackedFile(repo, entry.path)
                 except BaseException as exc:
@@ -470,7 +471,7 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is QApplication.instance().thread()
             self.displayedFilePath = entry.path
             self.displayedStagingState = stagingState
-            self.diffView.replaceDocument(repo, entry.diff, stagingState, dm)
+            self.diffView.replaceDocument(repo, entry.patch, stagingState, dm)
             self.restoreDiffViewPosition()  # restore position after we've replaced the document
 
         self.saveFilePositions()
@@ -650,6 +651,8 @@ class RepoWidget(QWidget):
 
         progress = RemoteProgressDialog(self, "Push in progress")
         pushInfos: list[git.PushInfo]
+
+        PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
 
         try:
             pushInfos = remote.push(refspec=branchName, progress=progress)
@@ -847,10 +850,10 @@ class RepoWidget(QWidget):
         shortname = self.state.shortName
         repo = self.state.repo
         inBrackets = ""
-        if repo.head.is_detached:
+        if repo.head_is_detached:
             inBrackets = F"detached HEAD @ {shortHash(repo.head.commit.hexsha)}"
         else:
-            inBrackets = str(repo.active_branch)
+            inBrackets = "TODO: Get Active Branch With pygit2!"#str(repo.active_branch)
         self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
 
     # -------------------------------------------------------------------------
