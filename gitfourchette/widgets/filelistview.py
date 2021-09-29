@@ -152,12 +152,9 @@ class FileListView(QListView):
             yield self.entries[si.row()]
 
     # TODO: don't stage/unstage ourselves; expose stage/unstage events via signals
-    @property
-    def git(self):
-        return self.repoWidget.state.repo.git
 
     @property
-    def repo(self):
+    def repo(self) -> Repository:
         return self.repoWidget.state.repo
 
     def latestSelectedRow(self):

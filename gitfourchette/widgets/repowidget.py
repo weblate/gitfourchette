@@ -371,8 +371,10 @@ class RepoWidget(QWidget):
         def work() -> tuple[Diff, Diff]:
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
-                dirtyDiff = repo.diff(None, None, flags=pygit2.GIT_DIFF_INCLUDE_UNTRACKED)
-                stageDiff = repo.diff('HEAD', None, cached=True)
+                dirtyDiff : pygit2.Diff = repo.diff(None, None, flags=pygit2.GIT_DIFF_INCLUDE_UNTRACKED)
+                stageDiff : pygit2.Diff = repo.diff('HEAD', None, cached=True)
+                #dirtyDiff.find_similar()
+                stageDiff.find_similar()
             return dirtyDiff, stageDiff
 
         def onComplete(result: tuple[Diff, Diff]):

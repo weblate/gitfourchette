@@ -4,6 +4,7 @@ from widgets.filelistview import FileListView
 from stagingstate import StagingState
 from util import ActionDef
 import os
+import pygit2
 import settings
 import trash
 
@@ -39,8 +40,13 @@ class DirtyFileListView(FileListView):
 
     # Context menu action
     def stage(self):
+        index = self.repo.index
         for entry in self.selectedEntries():
-            self.git.add(entry.path)
+            if entry.patch.delta.status == pygit2.GIT_DELTA_DELETED:
+                index.remove(entry.path)
+            else:
+                index.add(entry.path)
+        index.write()
         self.patchApplied.emit()
 
     # Context menu action
