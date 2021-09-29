@@ -31,9 +31,8 @@ class StagedFileListView(FileListView):
     def unstage(self):
         index = self.repo.index
         head = self.repo.revparse_single('HEAD')
-        for entry in self.selectedEntries():
-            assert entry.patch, "a FileListEntry representing a staged file is supposed to contain a valid patch"
-            delta : pygit2.DiffDelta = entry.patch.delta
+        for patch in self.selectedEntries():
+            delta : pygit2.DiffDelta = patch.delta
             old_path = delta.old_file.path
             new_path = delta.new_file.path
             if delta.status == pygit2.GIT_DELTA_ADDED:

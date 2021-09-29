@@ -1,5 +1,4 @@
 from allqt import *
-from filelistentry import FileListEntry
 from widgets.filelistview import FileListView
 from stagingstate import StagingState
 from util import ActionDef
@@ -34,18 +33,14 @@ class DirtyFileListView(FileListView):
         else:
             super().keyPressEvent(event)
 
-    def addUntrackedFileEntries(self, untracked: list[str]):
-        for path in untracked:
-            self.addEntry(FileListEntry.Untracked(path))
-
     # Context menu action
     def stage(self):
         index = self.repo.index
-        for entry in self.selectedEntries():
-            if entry.patch.delta.status == pygit2.GIT_DELTA_DELETED:
-                index.remove(entry.path)
+        for patch in self.selectedEntries():
+            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+                index.remove(patch.delta.new_file.path)
             else:
-                index.add(entry.path)
+                index.add(patch.delta.new_file.path)
         index.write()
         self.patchApplied.emit()
 
@@ -54,7 +49,7 @@ class DirtyFileListView(FileListView):
         entries = list(self.selectedEntries())
 
         if len(entries) == 1:
-            question = F"Really discard changes to {entries[0].path}?"
+            question = F"Really discard changes to {entries[0].delta.new_file.path}?"
         else:
             question = F"Really discard changes to {len(entries)} files?"
 

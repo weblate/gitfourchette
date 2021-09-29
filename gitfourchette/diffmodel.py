@@ -67,6 +67,9 @@ class DiffModel:
         if patch.delta.is_binary:
             return DiffModel.fromFailureMessage("File appears to be binary.")
 
+        if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
+            return DiffModel.fromUntrackedFile(repo, patch.delta.new_file.path)
+
         document = QTextDocument()  # recreating a document is faster than clearing the existing one
         cursor: QTextCursor = QTextCursor(document)
 

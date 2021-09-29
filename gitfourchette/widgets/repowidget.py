@@ -5,7 +5,6 @@ from benchmark import Benchmark
 from dialogs.commitdialog import CommitDialog
 from dialogs.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
-from filelistentry import FileListEntry
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
@@ -95,7 +94,7 @@ class RepoWidget(QWidget):
 
         for v in [self.dirtyView, self.stageView, self.changedFilesView]:
             v.nothingClicked.connect(self.diffView.clear)
-            v.entryClicked.connect(self.loadDiffAsync)
+            v.entryClicked.connect(self.loadPatchAsync)
 
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
@@ -449,7 +448,7 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{shortHash(oid)}”")
 
-    def loadDiffAsync(self, entry: FileListEntry, stagingState: StagingState):
+    def loadPatchAsync(self, patch: Patch, stagingState: StagingState):
         """Load a file diff into the Diff View"""
 
         repo = self.state.repo
@@ -458,11 +457,9 @@ class RepoWidget(QWidget):
             assert QThread.currentThread() is not QApplication.instance().thread()
             with self.state.mutexLocker():
                 try:
-                    if entry.patch is not None:
+                    if patch is not None:
                         allowRawFileAccess = stagingState.allowsRawFileAccess()
-                        dm = DiffModel.fromPatch(repo, entry.patch, allowRawFileAccess)
-                    else:
-                        dm = DiffModel.fromUntrackedFile(repo, entry.path)
+                        dm = DiffModel.fromPatch(repo, patch, allowRawFileAccess)
                 except BaseException as exc:
                     summary, details = excStrings(exc)
                     dm = DiffModel.fromFailureMessage(summary, details)
@@ -471,13 +468,13 @@ class RepoWidget(QWidget):
 
         def onComplete(dm: DiffModel):
             assert QThread.currentThread() is QApplication.instance().thread()
-            self.displayedFilePath = entry.path
+            self.displayedFilePath = patch.delta.new_file.path
             self.displayedStagingState = stagingState
-            self.diffView.replaceDocument(repo, entry.patch, stagingState, dm)
+            self.diffView.replaceDocument(repo, patch, stagingState, dm)
             self.restoreDiffViewPosition()  # restore position after we've replaced the document
 
         self.saveFilePositions()
-        self._startAsyncWorker(0, work, onComplete, F"Loading diff “{entry.path}”")
+        self._startAsyncWorker(0, work, onComplete, F"Loading diff “{patch.delta.new_file.path}”")
 
     def switchToBranchAsync(self, newBranch: str):
         repo = self.state.repo

@@ -1,9 +1,9 @@
 from allqt import *
-from allgit import *
-from filelistentry import FileListEntry
 from stagingstate import StagingState
 from typing import Generator
 from util import compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext
+import html
+import pygit2
 import os
 import settings
 
@@ -12,7 +12,7 @@ class FileListView(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(object, StagingState)
 
-    entries: list[FileListEntry]
+    entries: list[pygit2.Patch]
     stagingState: StagingState
 
     def __init__(self, parent: QWidget, stagingState: StagingState):
@@ -46,7 +46,7 @@ class FileListView(QListView):
             return
 
         for entry in entries:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.repo.workdir, entry.path)))
+            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.repo.workdir, entry.delta.new_file.path)))
 
     def showInFolder(self):
         entries = list(self.selectedEntries())
@@ -57,7 +57,7 @@ class FileListView(QListView):
             return
 
         for entry in self.selectedEntries():
-            showInFolder(os.path.join(self.repo.workdir, entry.path))
+            showInFolder(os.path.join(self.repo.workdir, entry.delta.new_file.path))
 
     def keyPressEvent(self, event: QKeyEvent):
         # The default keyPressEvent copies the displayed label of the selected items.
@@ -68,7 +68,7 @@ class FileListView(QListView):
             super().keyPressEvent(event)
 
     def copyPaths(self):
-        text = '\n'.join([e.path for e in self.selectedEntries()])
+        text = '\n'.join([entry.delta.new_file.path for entry in self.selectedEntries()])
         if text:
             QApplication.clipboard().setText(text)
 
@@ -86,30 +86,44 @@ class FileListView(QListView):
         with QSignalBlockerContext(self):
             self.clearSelection()
 
-    def addEntry(self, entry: FileListEntry):
-        self.entries.append(entry)
+    def addEntry(self, patch: pygit2.Patch):
+        self.entries.append(patch)
         item = QStandardItem()
+
+        delta: pygit2.DiffDelta = patch.delta
+        path = patch.delta.new_file.path
+
         if settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES:
-            label = compactRepoPath(entry.path)
+            label = compactRepoPath(path)
         elif settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.SHOW_FILENAME_ONLY:
-            label = entry.path.rsplit('/', 1)[-1]
+            label = path.rsplit('/', 1)[-1]
         else:
-            label = entry.path
+            label = path
         item.setText(label)
+
         item.setSizeHint(QSize(-1, self.fontMetrics().height()))  # Compact height
-        if entry.icon == '?':
-            item.setIcon(settings.statusIcons['A'])
+
+        if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
+            icon = settings.statusIcons.get('A', None)
         else:
-            item.setIcon(settings.statusIcons[entry.icon])
-        if entry.tooltip:
-            item.setToolTip(entry.tooltip)
+            icon = settings.statusIcons.get(patch.delta.status_char(), None)
+        if icon:
+            item.setIcon(icon)
+
+        tooltip = F"""
+                        <b>from:</b> {html.escape(delta.old_file.path)} ({delta.old_file.mode:o})
+                        <br><b>to:</b> {html.escape(delta.new_file.path)} ({delta.new_file.mode:o})
+                        <br><b>operation:</b> {delta.status_char()}
+                        <br><b>similarity:</b> {delta.similarity} (valid for R only)
+                        """
+        item.setToolTip(tooltip)
+
         self.model().appendRow(item)
 
-    def addFileEntriesFromDiff(self, diff: Diff):
-        delta: DiffDelta
-        patch: Patch
-        for delta, patch in zip(diff.deltas, diff):
-            self.addEntry(FileListEntry.fromDelta(delta, patch))
+    def addFileEntriesFromDiff(self, diff: pygit2.Diff):
+        patch: pygit2.Patch
+        for patch in diff:
+            self.addEntry(patch)
 
     def selectRow(self, rowNumber=0):
         if self.model().rowCount() == 0:
@@ -147,14 +161,14 @@ class FileListView(QListView):
         else:
             super().mouseMoveEvent(event)
 
-    def selectedEntries(self) -> Generator[FileListEntry, None, None]:
+    def selectedEntries(self) -> Generator[pygit2.Patch, None, None]:
         for si in self.selectedIndexes():
             yield self.entries[si.row()]
 
     # TODO: don't stage/unstage ourselves; expose stage/unstage events via signals
 
     @property
-    def repo(self) -> Repository:
+    def repo(self) -> pygit2.Repository:
         return self.repoWidget.state.repo
 
     def latestSelectedRow(self):
