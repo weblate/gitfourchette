@@ -63,12 +63,9 @@ class DiffModel:
         # if change.a_blob and change.a_blob.size > settings.prefs.diff_largeFileThreshold:
         #     return DiffModel.fromFailureMessage(F"Large file warning: {change.a_blob.size:,} bytes")
 
-        # Create binary diff.
-        # try:
-        #     binaryPatchGenerator = patch.makePatchFromGitDiff(repo, change, allowRawFileAccess)
-        # except patch.LooksLikeBinaryError:
-        #     # Don't show contents if file appears to be binary.
-        #     return DiffModel.fromFailureMessage("File appears to be binary.")
+        # Don't show contents if file appears to be binary.
+        if patch.delta.is_binary:
+            return DiffModel.fromFailureMessage("File appears to be binary.")
 
         document = QTextDocument()  # recreating a document is faster than clearing the existing one
         cursor: QTextCursor = QTextCursor(document)
@@ -78,8 +75,7 @@ class DiffModel:
         lineData = []
         hunkID = 0
 
-        def insertLineData(ld: patchutils.LineData, trimFront=0, trimBack=None):
-            ld.lineDataIndex = len(lineData)
+        def insertLineData(ld: patchutils.LineData):
             lineData.append(ld)
 
             trailer = None
@@ -87,11 +83,16 @@ class DiffModel:
             if ld.text.endswith('\r\n'):
                 trimBack = -2
                 if settings.prefs.diff_showStrayCRs:
+                    trailer = "<CRLF>"
+            elif ld.text.endswith('\r'):
+                trimBack = -1
+                if settings.prefs.diff_showStrayCRs:
                     trailer = "<CR>"
             elif ld.text.endswith('\n'):
                 trimBack = -1
             else:
                 trailer = "<no newline at end of file>"
+                trimBack = None
 
             if not document.isEmpty():
                 cursor.insertBlock()
@@ -99,7 +100,7 @@ class DiffModel:
 
             cursor.setBlockFormat(bf)
             cursor.setCharFormat(cf)
-            cursor.insertText(ld.text[trimFront:trimBack])
+            cursor.insertText(ld.text[:trimBack])
 
             if trailer:
                 cursor.setCharFormat(warningFormat1)
@@ -118,24 +119,25 @@ class DiffModel:
                 diffLine=None,
                 hunkID=hunkID)
             bf, cf = arobaseBF, arobaseCF
-            insertLineData(hunkHeaderLD, trimFront=0)
+            insertLineData(hunkHeaderLD)
 
             for diffLine in hunk.lines:
+                if diffLine.origin in "=><":  # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+                    continue
+
                 ld = patchutils.LineData(
-                    text=diffLine.raw_content.decode('utf-8', errors='replace'),
+                    text=diffLine.content,
                     cursorStart=cursor.position(),
                     diffLine=diffLine,
                     hunkID=hunkID)
 
                 bf, cf = normalBF, normalCF
 
+                assert diffLine.origin in " -+", F"diffline origin: '{diffLine.origin}'"
                 if diffLine.origin == '+':
                     bf, cf = plusBF, plusCF
                 elif diffLine.origin == '-':
                     bf, cf = minusBF, minusCF
-                else:
-                    # context line
-                    assert diffLine.origin == ' '
 
                 insertLineData(ld)
 

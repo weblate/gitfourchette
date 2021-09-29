@@ -16,6 +16,7 @@ class PatchPurpose(enum.IntEnum):
 
 @dataclass
 class LineData:
+    # For visual representation
     text: str
 
     diffLine: DiffLine
@@ -23,8 +24,6 @@ class LineData:
     cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
 
     hunkID: int
-
-    lineDataIndex: int = -1  # index of the diff line in the unified diff itself
 
 
 # Error raised by makePatchFromGitDiff when the diffed file appears to be binary.
@@ -36,10 +35,10 @@ def extraContext(
         lineDataIter: Iterator[LineData],
         contextLines: int,
         purpose: PatchPurpose
-) -> Generator[LineData, None, None]:
+) -> Generator[DiffLine, None, None]:
     """
-    Generates a finite amount of 'context' LineDatas from
-    the LineData iterator given as input.
+    Generates a finite amount of DiffLine objects to use as context
+    from the LineData iterator given as input.
     """
 
     # The exact context lines to pick depends on whether the patch will be used to STAGE, UNSTAGE or DISCARD:
@@ -50,22 +49,20 @@ def extraContext(
         # A is our reference version. We ignore any differences with B.
         # '-' is a line that exists in A (not in B). Treat line as context.
         # '+' is a line that isn't in A (only in B). Ignore line.
-        contextPrefix, ignorePrefix = b'-', b'+'
+        contextPrefix, ignorePrefix = '-', '+'
     else:  # UNSTAGE or DISCARD
         # B is our reference version. We ignore any differences with A.
         # '+' is a line that exists in B (not in A). Treat line as context
         # '-' is a line that isn't in B (only in A). Ignore line.
-        contextPrefix, ignorePrefix = b'+', b'-'
+        contextPrefix, ignorePrefix = '+', '-'
 
-    for ld in lineDataIter:
-        diffChar = ld.data[0:1]
-        if diffChar == b'@':
+    for lineData in lineDataIter:
+        if not lineData.diffLine:
             # Hunk separator. It's useless to keep looking for context in this direction.
             break
-        elif diffChar == contextPrefix or diffChar == b' ':  # Context
-            contextLD = copy.copy(ld)
-            contextLD.data = b' ' + ld.data[1:]  # doctor the line to be context
-            yield contextLD
+        diffChar = lineData.diffLine.origin
+        if diffChar == contextPrefix or diffChar == ' ':  # Context
+            yield lineData.diffLine
             contextLines -= 1
             if contextLines <= 0:  # stop if we have enough context
                 return
@@ -76,11 +73,11 @@ def extraContext(
 
 
 def makePatchFromLines(
-        a_path: str,
-        b_path: str,
+        oldPath: str,
+        newPath: str,
         lineData: list[LineData],
-        ldStart: int,
-        ldEnd: int,
+        selectionStartIndex: int,  # index of first selected line in LineData list
+        selectionEndIndex: int,  # index of last selected line in LineData list
         purpose: PatchPurpose,
         contextLines: int = 3
 ) -> bytes:
@@ -88,53 +85,68 @@ def makePatchFromLines(
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
 
+    @dataclass
+    class HunkLine:
+        diffLine: DiffLine
+        originOverride: str
+
     # Get the LineData objects within the range,
     # create barebones hunks (lists of contiguous LineData)
-    hunks = []
-    hunkLines = None
-    for i in range(ldStart, ldEnd):
+    hunks: list[list[HunkLine]] = []
+    firstIndex = -1
+    lastIndex = -1
+
+    for i in range(selectionStartIndex, selectionEndIndex):
         ld = lineData[i]
-        if ld.data[0:1] == b'@':
-            hunkLines = None
+        if not ld.diffLine:  # hunk separator
+            hunks.append([])  # begin new hunk
         else:
-            if not hunkLines:
-                hunkLines = []
-                hunks.append(hunkLines)
-            hunkLines.append(ld)
+            if len(hunks) == 0:
+                hunks.append([])
+            hunks[-1].append(HunkLine(ld.diffLine, ld.diffLine.origin))
+            if firstIndex < 0:
+                firstIndex = i
+            lastIndex = i
 
-    if len(hunks) == 0:
-        print("patch is empty")
-        return None
-
-    firstDiffLine = hunks[0][0].diffLineIndex
-    lastDiffLine = hunks[-1][-1].diffLineIndex
+    if firstIndex < 0:  # patch is empty
+        return b""  # don't bother
 
     # We have to add some context lines around the range of patched lines for git to accept the patch.
 
     # Extend first hunk with context upwards
-    for contextLine in extraContext(reversed(lineData[:firstDiffLine]), contextLines, purpose):
-        hunks[0].insert(0, contextLine)
+    for contextLine in extraContext(reversed(lineData[:firstIndex]), contextLines, purpose):
+        hunks[0].insert(0, HunkLine(contextLine, ' '))
 
     # Extend last hunk with context downwards
-    for contextLine in extraContext(lineData[lastDiffLine + 1:], contextLines, purpose):
-        hunks[-1].append(contextLine)
+    for contextLine in extraContext(lineData[lastIndex + 1:], contextLines, purpose):
+        hunks[-1].append(HunkLine(contextLine, ' '))
 
     # Assemble patch text
     allLinesWereContext = True
-    patch = F"--- a/{a_path}\n+++ b/{b_path}\n".encode()
+    patch = F"""\
+diff --git a/{oldPath} b/{newPath}
+--- a/{oldPath}
++++ b/{newPath}
+""".encode()
+    #patch = F"--- a/{oldPath}\n+++ b/{newPath}\n".encode()
     for hunkLines in hunks:
+        if not hunkLines:
+            continue
         hunkPatch = b""
-        hunkStartA = hunkLines[0].lineA
-        hunkStartB = hunkLines[0].lineB
+        hunkStartA = hunkLines[0].diffLine.old_lineno
+        hunkStartB = hunkLines[0].diffLine.new_lineno
+        assert hunkStartA >= 0, "no valid line number for hunkStartA"
+        assert hunkStartB >= 0, "no valid line number for hunkStartB"
         hunkLenA = 0
         hunkLenB = 0
-        for line in hunkLines:
-            initial = line.data[0:1]
-            assert initial in b' +-', "unrecognized initial character in patch line"
-            hunkPatch += line.data
-            hunkLenA += 0 if initial == b'+' else 1
-            hunkLenB += 0 if initial == b'-' else 1
-            if initial != b' ':
+        for hunkLine in hunkLines:
+            diffChar = hunkLine.originOverride
+            assert diffChar in ' +-', "unrecognized initial character in patch line"
+            hunkPatch += diffChar.encode()
+            hunkPatch += hunkLine.diffLine.raw_content
+            hunkLenA += 0 if diffChar == '+' else 1
+            hunkLenB += 0 if diffChar == '-' else 1
+            if diffChar != ' ':
                 allLinesWereContext = False
         patch += F"@@ -{hunkStartA},{hunkLenA} +{hunkStartB},{hunkLenB} @@\n".encode()
         patch += hunkPatch
@@ -144,8 +156,7 @@ def makePatchFromLines(
         patch += b"\n\\ No newline at end of file"
 
     if allLinesWereContext:
-        print("all lines were context!")
-        return None
+        return b""  # don't bother
 
     return patch
 
