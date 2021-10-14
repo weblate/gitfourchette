@@ -76,7 +76,6 @@ class DiffModel:
         assert document.isEmpty()
 
         lineData = []
-        hunkID = 0
 
         def insertLineData(ld: patchutils.LineData):
             lineData.append(ld)
@@ -113,18 +112,19 @@ class DiffModel:
         # For each line of the diff, create a LineData object.
         hunk: DiffHunk
         diffLine: DiffLine
-        for hunk in patch.hunks:
-            hunkID += 1
+        for hunkID, hunk in enumerate(patch.hunks):
+            oldLine = hunk.old_start
+            newLine = hunk.new_start
 
             hunkHeaderLD = patchutils.LineData(
                 text=hunk.header,
                 cursorStart=cursor.position(),
                 diffLine=None,
-                hunkID=hunkID)
+                hunkPos=patchutils.DiffLinePos(hunkID, -1))
             bf, cf = arobaseBF, arobaseCF
             insertLineData(hunkHeaderLD)
 
-            for diffLine in hunk.lines:
+            for hunkLineNum, diffLine in enumerate(hunk.lines):
                 if diffLine.origin in "=><":  # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
                     continue
 
@@ -132,15 +132,26 @@ class DiffModel:
                     text=diffLine.content,
                     cursorStart=cursor.position(),
                     diffLine=diffLine,
-                    hunkID=hunkID)
+                    hunkPos=patchutils.DiffLinePos(hunkID, hunkLineNum))
 
                 bf, cf = normalBF, normalCF
 
                 assert diffLine.origin in " -+", F"diffline origin: '{diffLine.origin}'"
                 if diffLine.origin == '+':
                     bf, cf = plusBF, plusCF
+                    assert diffLine.new_lineno == newLine
+                    assert diffLine.old_lineno == -1
+                    newLine += 1
                 elif diffLine.origin == '-':
                     bf, cf = minusBF, minusCF
+                    assert diffLine.new_lineno == -1
+                    assert diffLine.old_lineno == oldLine
+                    oldLine += 1
+                else:
+                    assert diffLine.new_lineno == newLine
+                    assert diffLine.old_lineno == oldLine
+                    newLine += 1
+                    oldLine += 1
 
                 insertLineData(ld)
 

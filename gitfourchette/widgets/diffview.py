@@ -1,8 +1,8 @@
-from allgit import *
 from allqt import *
 from bisect import bisect_left, bisect_right
 from diffmodel import DiffModel
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
+from pygit2 import GitError, Patch, Repository
 from stagingstate import StagingState
 from util import excMessageBox, ActionDef, quickMenu
 import settings
@@ -42,7 +42,7 @@ class DiffView(QTextEdit):
     def findHunkIDAt(self, cursorPosition: int):
         clickLineDataIndex = self.findLineDataIndexAt(cursorPosition)
         try:
-            return self.lineData[clickLineDataIndex].hunkID
+            return self.lineData[clickLineDataIndex].hunkPos.hunkID
         except IndexError:
             return -1
 
@@ -58,7 +58,7 @@ class DiffView(QTextEdit):
         self.setDocument(dm.document)
         self.lineData = dm.lineData
         self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
-        self.lineHunkIDCache = [ld.hunkID for ld in self.lineData]
+        self.lineHunkIDCache = [ld.hunkPos.hunkID for ld in self.lineData]
 
         tabWidth = settings.prefs.diff_tabSpaces
 
@@ -107,13 +107,15 @@ class DiffView(QTextEdit):
         menu.exec_(event.globalPos())
 
     def _applyPatch(self, firstLineDataIndex: int, lastLineDataIndex: int, purpose: PatchPurpose):
+        reverse = purpose != PatchPurpose.STAGE
+
         patchData = makePatchFromLines(
-            self.currentChange.a_path,
-            self.currentChange.b_path,
-            self.lineData,
-            firstLineDataIndex,
-            lastLineDataIndex,
-            purpose)
+            self.currentPatch.delta.old_file.path,
+            self.currentPatch.delta.new_file.path,
+            self.currentPatch,
+            self.lineData[firstLineDataIndex].hunkPos,
+            self.lineData[lastLineDataIndex].hunkPos,
+            reverse)
 
         if not patchData:
             QMessageBox.information(self, "Nothing to patch",
@@ -125,7 +127,7 @@ class DiffView(QTextEdit):
 
         try:
             applyPatch(self.currentGitRepo, patchData, purpose)
-        except git.GitCommandError as e:
+        except GitError as e:
             excMessageBox(e, F"{purpose.name}: Apply Patch",
                           F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
 
@@ -143,7 +145,7 @@ class DiffView(QTextEdit):
 
         # Find indices of first and last LineData objects given the current selection
         biStart = self.findLineDataIndexAt(posStart)
-        biEnd = 1 + self.findLineDataIndexAt(posEnd, biStart)
+        biEnd = self.findLineDataIndexAt(posEnd, biStart)
 
         print(F"{purpose.name} lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
 
@@ -165,7 +167,7 @@ class DiffView(QTextEdit):
     def _applyHunk(self, hunkID: int, purpose: PatchPurpose):
         # Find indices of first and last LineData objects given the current hunk
         hunkFirstLineIndex = bisect_left(self.lineHunkIDCache, hunkID, 0)
-        hunkLastLineIndex = bisect_left(self.lineHunkIDCache, hunkID+1, hunkFirstLineIndex)
+        hunkLastLineIndex = bisect_left(self.lineHunkIDCache, hunkID+1, hunkFirstLineIndex) - 1
 
         print(F"{purpose.name} hunk #{hunkID}:  line data indices {hunkFirstLineIndex}-{hunkLastLineIndex}")
 
