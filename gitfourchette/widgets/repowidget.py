@@ -18,6 +18,7 @@ from widgets.sidebar import Sidebar
 from widgets.stagedfilelistview import StagedFileListView
 from worker import Worker
 import os
+import porcelain
 import pygit2
 import settings
 import typing
@@ -54,6 +55,10 @@ class RepoWidget(QWidget):
     fileListSelectedRowCache: dict[typing.Union[str, StagingState], int]
     diffViewScrollPositionCache: dict[tuple[typing.Union[str, StagingState], str], int]
     diffViewCursorPositionCache: dict[tuple[typing.Union[str, StagingState], str], int]
+
+    @property
+    def repo(self) -> Repository:
+        return self.state.repo
 
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
@@ -316,10 +321,10 @@ class RepoWidget(QWidget):
 
     def _startAsyncWorker(
             self,
-            priority: int,
             work: Callable[[], object],
-            onComplete: Callable[[object], None],
-            caption: str):
+            then: Callable[[object], None] = None,
+            caption: str = "Unnamed task",
+            priority: int = 0):
         """
         Starts a worker thread in the background, especially to perform
         long operations on the repository.
@@ -327,31 +332,37 @@ class RepoWidget(QWidget):
         Only one worker may be running at once; and only one worker may be
         queued at a time.
 
-        :param priority: Integer value passed on to `QThreadPool.start()`.
-
         :param work: Function to run asynchronously. Returns an object.
 
-        :param onComplete: Completion callback to run on the GUI thread when
+        :param then: Completion callback to run on the GUI thread when
         ``work`` is complete. Takes the object returned by ``work`` as its
         input parameter.
 
         :param caption: Shown in status.
+
+        :param priority: Integer value passed on to `QThreadPool.start()`.
         """
 
+        def workWrapper():
+            assert QThread.currentThread() is not QApplication.instance().thread()
+            with self.state.mutexLocker():
+                return work()
+
         # This callback gets executed when the worker's async function has completed successfully.
-        def callback(o):
+        def thenWrapper(o):
+            assert QThread.currentThread() is QApplication.instance().thread()
             # Clear status caption _before_ running onComplete,
             # because onComplete may start another worker that sets status.
             globalstatus.clearIndeterminateProgressCaption()
             # Finally run completion
-            if onComplete is not None:
-                onComplete(o)
+            if then is not None:
+                then(o)
 
         def errorCallback(exc: BaseException):
             excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self)
 
-        w = Worker(work)
-        w.signals.result.connect(callback)
+        w = Worker(workWrapper)
+        w.signals.result.connect(thenWrapper)
         w.signals.error.connect(errorCallback)
         globalstatus.setIndeterminateProgressCaption(caption + "...")
 
@@ -368,17 +379,11 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work() -> tuple[Diff, Diff]:
-            assert QThread.currentThread() is not QApplication.instance().thread()
-            with self.state.mutexLocker():
-                dirtyDiff : pygit2.Diff = repo.diff(None, None, flags=pygit2.GIT_DIFF_INCLUDE_UNTRACKED)
-                stageDiff : pygit2.Diff = repo.diff('HEAD', None, cached=True)
-                #dirtyDiff.find_similar()
-                stageDiff.find_similar()
+            dirtyDiff = porcelain.loadDirtyDiff(repo)
+            stageDiff = porcelain.loadStagedDiff(repo)
             return dirtyDiff, stageDiff
 
-        def onComplete(result: tuple[Diff, Diff]):
-            assert QThread.currentThread() is QApplication.instance().thread()
-
+        def then(result: tuple[Diff, Diff]):
             dirtyDiff, stageDiff = result
 
             # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
@@ -409,22 +414,14 @@ class RepoWidget(QWidget):
                 self.diffView.clear()
 
         self.saveFilePositions()
-        self._startAsyncWorker(1000, work, onComplete, "Refreshing index")
+        self._startAsyncWorker(work, then, "Refreshing index", -1000)
 
     def loadCommitAsync(self, oid: Oid):
         """Load commit details into Changed Files view"""
 
-        repo = self.state.repo
+        work = lambda: porcelain.loadCommitDiffs(self.repo, oid)
 
-        def work() -> list[Diff]:
-            assert QThread.currentThread() is not QApplication.instance().thread()
-            with self.state.mutexLocker():
-                commit: Commit = repo.get(oid)
-                #import time; time.sleep(1) #to debug out-of-order events
-                return [repo.diff(parent, commit) for parent in commit.parents]
-
-        def onComplete(parentDiffs: list[Diff]):
-            assert QThread.currentThread() is QApplication.instance().thread()
+        def then(parentDiffs: list[Diff]):
             #import time; time.sleep(1) #to debug out-of-order events
 
             # Reset changed files view. Block its signals as we refill it to prevent updating the diff view.
@@ -446,7 +443,7 @@ class RepoWidget(QWidget):
             self.restoreSelectedFile()
 
         self.saveFilePositions()
-        self._startAsyncWorker(1000, work, onComplete, F"Loading commit “{shortHash(oid)}”")
+        self._startAsyncWorker(work, then, F"Loading commit “{shortHash(oid)}”", -1000)
 
     def loadPatchAsync(self, patch: Patch, stagingState: StagingState):
         """Load a file diff into the Diff View"""
@@ -454,160 +451,71 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work():
-            assert QThread.currentThread() is not QApplication.instance().thread()
-            with self.state.mutexLocker():
-                try:
-                    if patch is not None:
-                        allowRawFileAccess = stagingState.allowsRawFileAccess()
-                        dm = DiffModel.fromPatch(repo, patch, allowRawFileAccess)
-                except BaseException as exc:
-                    summary, details = excStrings(exc)
-                    dm = DiffModel.fromFailureMessage(summary, details)
-                dm.document.moveToThread(QApplication.instance().thread())
-                return dm
+            try:
+                if patch is not None:
+                    allowRawFileAccess = stagingState.allowsRawFileAccess()
+                    dm = DiffModel.fromPatch(repo, patch, allowRawFileAccess)
+            except BaseException as exc:
+                summary, details = excStrings(exc)
+                dm = DiffModel.fromFailureMessage(summary, details)
+            dm.document.moveToThread(QApplication.instance().thread())
+            return dm
 
-        def onComplete(dm: DiffModel):
-            assert QThread.currentThread() is QApplication.instance().thread()
+        def then(dm: DiffModel):
             self.displayedFilePath = patch.delta.new_file.path
             self.displayedStagingState = stagingState
             self.diffView.replaceDocument(repo, patch, stagingState, dm)
             self.restoreDiffViewPosition()  # restore position after we've replaced the document
 
         self.saveFilePositions()
-        self._startAsyncWorker(0, work, onComplete, F"Loading diff “{patch.delta.new_file.path}”")
+        self._startAsyncWorker(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
 
     def switchToBranchAsync(self, newBranch: str):
-        repo = self.state.repo
+        work = lambda: porcelain.switchToBranch(self.repo, newBranch)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Switching to branch “{newBranch}”")
 
-        def work():
-            with self.state.mutexLocker():
-                repo.git.switch("--no-guess", newBranch)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Switching to branch “{newBranch}”")
-
-    def renameBranchAsync(self, oldName:str, newName:str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
-                repo.git.branch(oldName, newName, m=True)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Renaming branch “{oldName}” to “{newName}”")
+    def renameBranchAsync(self, oldName: str, newName: str):
+        work = lambda: porcelain.renameBranch(self.repo, oldName, newName)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Renaming branch “{oldName}” to “{newName}”")
 
     def deleteBranchAsync(self, localBranchName: str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                repo.git.branch(localBranchName, d=True)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Deleting branch “{localBranchName}”")
+        work = lambda: porcelain.deleteBranch(self.repo, localBranchName)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Deleting branch “{localBranchName}”")
 
     def newBranchAsync(self, localBranchName: str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                repo.git.branch(localBranchName)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Creating branch “{localBranchName}”")
+        work = lambda: porcelain.newBranch(self.repo, localBranchName)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Creating branch “{localBranchName}”")
 
     def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                repo.git.branch('--track', localBranchName, remoteBranchName)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
+        work = lambda: porcelain.newTrackingBranch(self.repo, localBranchName, remoteBranchName)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
 
     def newBranchFromCommitAsync(self, localBranchName: str, commitHexsha: str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                repo.git.branch(localBranchName, commitHexsha)
-                repo.git.switch('--no-guess', localBranchName)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Creating branch “{localBranchName}” from commit “{shortHash(commitHexsha)}”")
+        work = lambda: porcelain.newBranchFromCommit(self.repo, localBranchName, commitHexsha)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitHexsha)}”")
 
     def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                localBranch: git.Head = repo.heads[localBranchName]
-                remoteBranch: git.Reference = None
-                if remoteBranchName:
-                    remoteBranch = repo.refs[remoteBranchName]
-                localBranch.set_tracking_branch(remoteBranch)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
+        work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
 
     def editRemoteURLAsync(self, remoteName: str, newURL: str):
-        repo = self.state.repo
-
-        def work():
-            with self.state.mutexLocker():
-                remote = repo.remote(remoteName)
-                remote.set_url(newURL)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Edit remote “{remoteName}” URL")
+        work = lambda: porcelain.editRemoteURL(self.repo, remoteName, newURL)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self._startAsyncWorker(work, then, F"Edit remote “{remoteName}” URL")
 
     def resetHeadAsync(self, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
-        repo = self.state.repo
-
-        args = ['--' + resetMode]
-        if recurseSubmodules:
-            args += ['--recurse-submodules']
-        else:
-            args += ['--no-recurse-submodules']
-        args += [ontoHexsha]
-
-        def work():
-            with self.state.mutexLocker():
-                print(*args)
-                repo.git.reset(*args)
-
-        def onComplete(_):
-            self.quickRefresh()
-            self.sidebar.fill(repo)
+        work = lambda: porcelain.resetHead(self.repo, ontoHexsha, resetMode, recurseSubmodules)
+        def then(_):
+            self.quickRefreshWithSidebar()
             self.graphView.selectCommit(ontoHexsha)
-
-        self._startAsyncWorker(2000, work, onComplete, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
+        self._startAsyncWorker(work, then, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
 
     # -------------------------------------------------------------------------
     # Push
@@ -709,18 +617,18 @@ class RepoWidget(QWidget):
         cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
             self.state.settings.remove(kDRAFT)
-            self.state.repo.git.commit(message=cd.getFullMessage())
+            porcelain.commit(self.repo, cd.getFullMessage())
             self.quickRefresh()
         else:
             self.state.settings.setValue(kDRAFT, cd.getFullMessage())
 
     def amendFlow(self):
-        initialText = self.state.repo.head.commit.message
+        initialText = porcelain.getHeadCommitMessage(self.repo)
         cd = CommitDialog(initialText, True, self)
         rc = cd.exec_()
         cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
-            self.state.repo.git.commit(message=cd.getFullMessage(), amend=True)
+            porcelain.amend(self.repo, cd.getFullMessage())
             self.quickRefresh()
 
     # -------------------------------------------------------------------------
@@ -845,27 +753,30 @@ class RepoWidget(QWidget):
 
         self.refreshWindowTitle()
 
+    def quickRefreshWithSidebar(self):
+        self.quickRefresh()
+        self.sidebar.fill(self.repo)
+
     def refreshWindowTitle(self):
         shortname = self.state.shortName
-        repo = self.state.repo
+        repo = self.repo
         inBrackets = ""
         if repo.head_is_detached:
-            inBrackets = F"detached HEAD @ {shortHash(repo.head.commit.hexsha)}"
+            oid = porcelain.getHeadCommitOid(repo)
+            inBrackets = F"detached HEAD @ {shortHash(oid)}"
         else:
-            inBrackets = "TODO: Get Active Branch With pygit2!"#str(repo.active_branch)
+            inBrackets = porcelain.getActiveBranchName(repo)
         self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
 
     # -------------------------------------------------------------------------
 
     def selectRef(self, refName: str):
-        repo = self.state.repo
-        ref: git.Reference = next(filter(lambda ref: ref.name == refName, repo.refs))
-        self.graphView.selectCommit(ref.commit.hexsha)
+        oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
+        self.graphView.selectCommit(oid)
 
     def selectTag(self, tagName: str):
-        repo = self.state.repo
-        tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
-        self.graphView.selectCommit(tag.commit.hexsha)
+        oid = porcelain.getCommitOidFromTagName(self.repo, tagName)
+        self.graphView.selectCommit(oid)
 
     # -------------------------------------------------------------------------
 

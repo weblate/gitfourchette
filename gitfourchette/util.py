@@ -1,5 +1,6 @@
 from allqt import *
 from dataclasses import dataclass
+from pygit2 import Oid
 import os
 import re
 import traceback
@@ -49,7 +50,7 @@ def compactRepoPath(path: str) -> str:
     return '/'.join(splitLong)
 
 
-def shortHash(oid) -> str:
+def shortHash(oid: Oid) -> str:
     from settings import prefs
     return oid.hex[:prefs.shortHashChars]
 

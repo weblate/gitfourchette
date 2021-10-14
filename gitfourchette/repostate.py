@@ -317,6 +317,7 @@ class RepoState:
                 nextLocal.add(p)
 
     def loadTaintedCommitsOnly(self):
+        raise NotImplementedError("REWRITE THIS FOR PYGIT2")
         globalstatus.setText(F"{self.shortName}: checking for new commits...")
 
         procWrapper, stdoutWrapper = self.startGitLogProcess(self.repo)
