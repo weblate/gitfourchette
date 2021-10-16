@@ -16,7 +16,7 @@ from widgets.filelistview import FileListView
 from widgets.graphview import GraphView
 from widgets.sidebar import Sidebar
 from widgets.stagedfilelistview import StagedFileListView
-from worker import Worker
+from workqueue import WorkQueue
 import os
 import porcelain
 import pygit2
@@ -63,9 +63,9 @@ class RepoWidget(QWidget):
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
 
-        # Thread pool for accessing the repo
-        self.threadpool = QThreadPool(self)
-        self.threadpool.setMaxThreadCount(1)
+        # Use workQueue to schedule operations on the repository
+        # to run on a thread separate from the UI thread.
+        self.workQueue = WorkQueue(self, maxThreadCount=1)
 
         self.state = None
         self.pathPending = None
@@ -319,60 +319,6 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
         self.changedFilesView.clear()
 
-    def _startAsyncWorker(
-            self,
-            work: Callable[[], object],
-            then: Callable[[object], None] = None,
-            caption: str = "Unnamed task",
-            priority: int = 0):
-        """
-        Starts a worker thread in the background, especially to perform
-        long operations on the repository.
-
-        Only one worker may be running at once; and only one worker may be
-        queued at a time.
-
-        :param work: Function to run asynchronously. Returns an object.
-
-        :param then: Completion callback to run on the GUI thread when
-        ``work`` is complete. Takes the object returned by ``work`` as its
-        input parameter.
-
-        :param caption: Shown in status.
-
-        :param priority: Integer value passed on to `QThreadPool.start()`.
-        """
-
-        def workWrapper():
-            assert QThread.currentThread() is not QApplication.instance().thread()
-            with self.state.mutexLocker():
-                return work()
-
-        # This callback gets executed when the worker's async function has completed successfully.
-        def thenWrapper(o):
-            assert QThread.currentThread() is QApplication.instance().thread()
-            # Clear status caption _before_ running onComplete,
-            # because onComplete may start another worker that sets status.
-            globalstatus.clearIndeterminateProgressCaption()
-            # Finally run completion
-            if then is not None:
-                then(o)
-
-        def errorCallback(exc: BaseException):
-            excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self)
-
-        w = Worker(workWrapper)
-        w.signals.result.connect(thenWrapper)
-        w.signals.error.connect(errorCallback)
-        globalstatus.setIndeterminateProgressCaption(caption + "...")
-
-        # Remove any pending worker from the queue.
-        # TODO: we should prevent the currently-running worker's completion callback from running as well.
-        self.threadpool.clear()
-
-        # Queue our worker.
-        self.threadpool.start(w, priority)
-
     def fillStageViewAsync(self):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
@@ -414,7 +360,7 @@ class RepoWidget(QWidget):
                 self.diffView.clear()
 
         self.saveFilePositions()
-        self._startAsyncWorker(work, then, "Refreshing index", -1000)
+        self.workQueue.put(work, then, "Refreshing index", -1000)
 
     def loadCommitAsync(self, oid: Oid):
         """Load commit details into Changed Files view"""
@@ -443,7 +389,7 @@ class RepoWidget(QWidget):
             self.restoreSelectedFile()
 
         self.saveFilePositions()
-        self._startAsyncWorker(work, then, F"Loading commit “{shortHash(oid)}”", -1000)
+        self.workQueue.put(work, then, F"Loading commit “{shortHash(oid)}”", -1000)
 
     def loadPatchAsync(self, patch: Patch, stagingState: StagingState):
         """Load a file diff into the Diff View"""
@@ -468,54 +414,54 @@ class RepoWidget(QWidget):
             self.restoreDiffViewPosition()  # restore position after we've replaced the document
 
         self.saveFilePositions()
-        self._startAsyncWorker(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
+        self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
 
     def switchToBranchAsync(self, newBranch: str):
         work = lambda: porcelain.switchToBranch(self.repo, newBranch)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Switching to branch “{newBranch}”")
+        self.workQueue.put(work, then, F"Switching to branch “{newBranch}”")
 
     def renameBranchAsync(self, oldName: str, newName: str):
         work = lambda: porcelain.renameBranch(self.repo, oldName, newName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Renaming branch “{oldName}” to “{newName}”")
+        self.workQueue.put(work, then, F"Renaming branch “{oldName}” to “{newName}”")
 
     def deleteBranchAsync(self, localBranchName: str):
         work = lambda: porcelain.deleteBranch(self.repo, localBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Deleting branch “{localBranchName}”")
+        self.workQueue.put(work, then, F"Deleting branch “{localBranchName}”")
 
     def newBranchAsync(self, localBranchName: str):
         work = lambda: porcelain.newBranch(self.repo, localBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Creating branch “{localBranchName}”")
+        self.workQueue.put(work, then, F"Creating branch “{localBranchName}”")
 
     def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         work = lambda: porcelain.newTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
+        self.workQueue.put(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
 
     def newBranchFromCommitAsync(self, localBranchName: str, commitHexsha: str):
         work = lambda: porcelain.newBranchFromCommit(self.repo, localBranchName, commitHexsha)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitHexsha)}”")
+        self.workQueue.put(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitHexsha)}”")
 
     def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
+        self.workQueue.put(work, then, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
 
     def editRemoteURLAsync(self, remoteName: str, newURL: str):
         work = lambda: porcelain.editRemoteURL(self.repo, remoteName, newURL)
         then = lambda _: self.quickRefreshWithSidebar()
-        self._startAsyncWorker(work, then, F"Edit remote “{remoteName}” URL")
+        self.workQueue.put(work, then, F"Edit remote “{remoteName}” URL")
 
     def resetHeadAsync(self, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, ontoHexsha, resetMode, recurseSubmodules)
         def then(_):
             self.quickRefreshWithSidebar()
             self.graphView.selectCommit(ontoHexsha)
-        self._startAsyncWorker(work, then, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
+        self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
 
     # -------------------------------------------------------------------------
     # Push
@@ -562,7 +508,7 @@ class RepoWidget(QWidget):
         PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
 
         try:
-            pushInfos = remote.push(refspec=branchName, progress=progress)
+            pushInfos = remote.put(refspec=branchName, progress=progress)
         except BaseException as e:
             progress.close()
             excMessageBox(e, "Push", "An error occurred while pushing.", parent=self)

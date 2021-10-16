@@ -86,8 +86,6 @@ class RepoState:
 
         self.currentRefs = set()
 
-        self.mutex = QMutex()
-
     def refreshRefsByCommitCache(self):
         self.refsByCommit.clear()
         refKey: str
@@ -109,9 +107,6 @@ class RepoState:
             prefix = superprojectNickname + ": "
 
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
-
-    def mutexLocker(self) -> QMutexLocker:
-        return QMutexLocker(self.mutex)
 
     """
     def getOrCreateMetadata(self, hexsha) -> CommitMetadata:
