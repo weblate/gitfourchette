@@ -95,12 +95,14 @@ def getHeadCommitMessage(repo: Repository) -> str:
     return "TODO: getHeadCommitMessage"
 
 def getHeadCommitOid(repo: Repository) -> Oid:
-    raise NotImplementedError("repo.head.commit.hexsha")
-    return None
+    commit : Commit = repo.head.peel(Commit)
+    return commit.oid
 
-def getActiveBranchName(repo: Repository) -> str:
-    return "TODO: Get Active Branch With pygit2!"
-    raise NotImplementedError("repo.active_branch")
+def getActiveBranchFullName(repo: Repository) -> str:
+    return repo.head.name
+
+def getActiveBranchShorthand(repo: Repository) -> str:
+    return repo.head.shorthand
 
 def getCommitOidFromReferenceName(repo: Repository, refName: str) -> Oid:
     raise NotImplementedError("getCommitOidFromReferenceName")

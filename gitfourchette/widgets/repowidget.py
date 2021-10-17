@@ -716,11 +716,13 @@ class RepoWidget(QWidget):
         shortname = self.state.shortName
         repo = self.repo
         inBrackets = ""
-        if repo.head_is_detached:
+        if repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
+            inBrackets = "repo is empty"
+        elif repo.head_is_detached:
             oid = porcelain.getHeadCommitOid(repo)
             inBrackets = F"detached HEAD @ {shortHash(oid)}"
         else:
-            inBrackets = porcelain.getActiveBranchName(repo)
+            inBrackets = porcelain.getActiveBranchShorthand(repo)
         self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
 
     # -------------------------------------------------------------------------
