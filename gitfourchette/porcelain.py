@@ -112,3 +112,5 @@ def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
     tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
     return tag.commit.hexsha
 
+def getOidsForAllReferences(repo: Repository) -> list[Oid]:
+    return [ref.target for ref in repo.listall_reference_objects() if type(ref.target) == Oid]

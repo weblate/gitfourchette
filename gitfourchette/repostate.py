@@ -11,11 +11,6 @@ import settings
 
 
 PROGRESS_INTERVAL = 5000
-
-
-# For debugging
-class Dump:
-    pass
 SETTING_KEY_DRAFT_MESSAGE = "DraftMessage"
 
 
@@ -31,12 +26,13 @@ class RepoState:
     index: Index
     settings: QSettings
 
+    # May be None; call initializeWalker before use.
+    # Keep it around to speed up refreshing.
+    walker: Walker
+
     # ordered list of commits
     commitSequence: list[Commit]
-
-    # commit hexsha --> cached commit metadata
-    # (values are shared with commitSequence)
-    commitLookup: dict[Oid, Commit]
+    # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
 
     commitPositions: dict[Oid, BatchedOffset]
 
@@ -48,8 +44,8 @@ class RepoState:
     # path of superproject if this is a submodule
     superproject: str
 
-    # hash of the active commit (to make it bold)
-    activeCommitHexsha: str
+    # oid of the active commit (to make it bold)
+    activeCommitOid: Oid
 
     # Everytime we refresh, new rows may be inserted at the top of the graph.
     # This may push existing rows down, away from the top of the graph.
@@ -68,12 +64,13 @@ class RepoState:
         self.dir = os.path.abspath(dir)
         self.repo = Repository(dir)
         self.index = self.repo.index
-        self.settings = QSettings(self.repo.path + "/fourchette.ini", QSettings.Format.IniFormat)
+        self.walker = None
+        self.settings = QSettings(self.repo.path + "/gitfourchette.ini", QSettings.Format.IniFormat)
         self.settings.setValue("GitFourchette", settings.VERSION)
         self.currentBatchID = 0
 
         self.commitSequence = []
-        self.commitLookup = {}
+        #self.commitLookup = {}
         self.commitPositions = {}
         self.graph = None
 
@@ -84,7 +81,7 @@ class RepoState:
         self.superproject = None
         #self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
 
-        self.activeCommitHexsha = None
+        self.activeCommitOid = None
 
         self.currentRefs = set()
 
@@ -119,138 +116,46 @@ class RepoState:
 
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
-    """
-    def getOrCreateMetadata(self, hexsha) -> CommitMetadata:
-        assert len(hexsha) == 40, 'metadata key should be 40-byte hexsha'
-        if hexsha in self.commitLookup:
-            return self.commitLookup[hexsha]
-        else:
-            # We don't know anything about this commit yet except for its hash.
-            # Create a metadata object for it now so we can start referring to the object.
-            # The details about the commit will be filled in later.
-            v = CommitMetadata(hexsha)
-            v.childHashes = []  # MUST initialize this
-            self.commitLookup[hexsha] = v
-            return v
-
-    def getDirtyChanges(self) -> Index:
-        return self.repo.index.diff_to_workdir()
-
-    def getUntrackedFiles(self) -> list[str]:
-        return [path for path, status in self.repo.status().items() if status == GIT_STATUS_WT_NEW]
-
-    def getStagedChanges(self) -> git.DiffIndex:
-        return self.index.diff(self.repo.head.commit, R=True)  # R: prevent reversal
-    """
-
     def getCommitSequentialIndex(self, oid: Oid):
         position = self.commitPositions[oid]
         assert position.batch < len(self.batchOffsets)
         return self.batchOffsets[position.batch] + position.offsetInBatch
 
-    """
-    @staticmethod
-    def startGitLogProcess(repo: Repository) -> (git.Git.AutoInterrupt, io.TextIOWrapper):
-        # Todo: Interesting flags: -z; --log-size
-
-        assert repo.git.GIT_PYTHON_GIT_EXECUTABLE, "GIT_PYTHON_EXECUTABLE wasn't set properly"
-
-        cmd = [
-            repo.git.GIT_PYTHON_GIT_EXECUTABLE,
-            'log',
-            '--all',
-            '--pretty=tformat:%H%n%P%n%an%n%ae%n%at%n%S%n%B%n%x00'  # format vs tformat?
-        ]
-
+    def initializeWalker(self, tipOids) -> Walker:
+        sorting = GIT_SORT_TIME
         if settings.prefs.graph_topoOrder:
-            cmd.append('--topo-order')
+            sorting |= GIT_SORT_TOPOLOGICAL
 
-        procWrapper: git.Git.AutoInterrupt = repo.git.execute(cmd, as_process=True)
+        if self.walker is None:
+            self.walker = self.repo.walk(None, sorting)
+        else:
+            #self.walker.reset()
+            self.walker.sort(sorting)
 
-        proc: subprocess.Popen = procWrapper.proc
+        for tip in sorted(tipOids):
+            try:
+                self.walker.push(tip)
+            except ValueError:  # (linux) some refs are not committish
+                print("Ref isn't committish: ", tip)
+                pass
 
-        # It's important to NOT fail on encoding errors, because we don't want
-        # to stop loading the commit history because of one faulty commit.
-        stdoutWrapper = io.TextIOWrapper(proc.stdout, encoding='utf-8', errors='backslashreplace')
+        return self.walker
 
-        return procWrapper, stdoutWrapper
-
-    def getOrCreateMetadataFromGitStdout(self, commit: Commit):
-        meta = self.getOrCreateMetadata(commit.oid)
-        wasKnown = meta.isInitialized
-
-        meta.isInitialized = True
-
-        # TODO: when we've migrated to pygit2 -- we don't need to read in this commit's details if it's already initialized
-
-        #meta.inthash = int(hash[:7], 16)
-        meta.parentIds = commit.parent_ids #next(stdout)[:-1].split()
-        #meta.parentIHashes = [int(h[:7], 16) for h in meta.parentHashes]
-        meta.author = commit.author.name #next(stdout)[:-1]
-        meta.authorEmail = commit.author.email#next(stdout)[:-1]
-        meta.authorTimestamp = commit.author.time#int(next(stdout)[:-1])
-        #TODO: meta.mainRefName = next(stdout)[:-1]
-
-        # Read body, which can be an unlimited number of lines until the \x00 character.
-        meta.body = ''
-        while True:
-            line = next(stdout)
-            if line.startswith('\x00'):
-                break
-            else:
-                meta.body += line
-        assert '\x00' not in meta.body
-
-        return meta, wasKnown
-    """
-
-    def setBoldCommit(self, hexsha: str):
-        if self.activeCommitHexsha and (self.activeCommitHexsha in self.commitLookup):
-            self.commitLookup[self.activeCommitHexsha].bold = False
-            self.activeCommitHexsha = None
-        self.activeCommitHexsha = hexsha
-        if hexsha:
-            self.getOrCreateMetadata(hexsha).bold = True
-
-    """
-    @staticmethod
-    def waitForGitProcessToFinish(procWrapper):
-        proc: subprocess.Popen = procWrapper.proc
-        # Check git log's return code.
-        # On Windows, the process seems to take a while to shut down after we catch StopIteration.
-        status = proc.poll()
-        if status is None:
-            print("Giving some more time for Git to quit...")
-            # This will raise a TimeoutExpired if git is really stuck.
-            status = proc.wait(3)
-        assert status is not None, F"git process stopped without a return code?"
-        if status != 0:
-            stderrWrapper = io.TextIOWrapper(proc.stderr, errors='backslashreplace')
-            stderr = stderrWrapper.readline().strip()
-            raise git.GitCommandError(procWrapper.args, status, stderr)
-    """
+    def updateActiveCommitOid(self):
+        try:
+            self.activeCommitOid = self.repo.head.target
+        except pygit2.GitError:
+            self.activeCommitOid = None
 
     def loadCommitList(self, progress: QProgressDialog):
         progress.setLabelText(F"Preparing refs...")
         QCoreApplication.processEvents()
 
-        walker: Walker = self.repo.walk(None, GIT_SORT_TOPOLOGICAL | GIT_SORT_TIME)
+        self.currentRefs = set(porcelain.getOidsForAllReferences(self.repo))
 
-        self.currentRefs = set(ref.target for ref in self.repo.listall_reference_objects() if type(ref.target) == Oid)
+        walker = self.initializeWalker(self.currentRefs)
 
-        for cr in self.currentRefs:
-            print("Pushing:", cr)
-            try:
-                walker.push(cr)
-            except ValueError:  # (linux) some refs are not committish
-                pass
-
-        #if self.repo.head.is_valid():
-        #    self.setBoldCommit(self.repo.head.commit.hexsha)
-        #else:
-        #    # Handle commitless branches gracefully
-        #    self.setBoldCommit(None)
-        #self.setBoldCommit(self.repo.head.target)
+        self.updateActiveCommitOid()
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
@@ -278,13 +183,6 @@ class RepoState:
 
             commitSequence.append(commit)
             self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
-
-            #meta.offsetInBatch = offsetFromTop
-
-            # Fill parent hashes
-            # for p in meta.parentHashes:
-            #     parentMeta = self.getOrCreateMetadata(p)
-            #     parentMeta.childHashes.insert(0, meta.hexsha)
 
             #TODO self.traceOneCommitAvailability(nextLocal, meta)
 
@@ -323,10 +221,7 @@ class RepoState:
                 nextLocal.add(p)
 
     def loadTaintedCommitsOnly(self):
-        raise NotImplementedError("REWRITE THIS FOR PYGIT2")
         globalstatus.setText(F"{self.shortName}: checking for new commits...")
-
-        procWrapper, stdoutWrapper = self.startGitLogProcess(self.repo)
 
         self.currentBatchID += 1
 
@@ -337,7 +232,10 @@ class RepoState:
 
         oldHeads = self.currentRefs
         with Benchmark("Get new heads"):
-            newHeads = set(ref.commit.hexsha for ref in self.repo.refs)
+            newHeads = set(porcelain.getOidsForAllReferences(self.repo))
+
+        with Benchmark("Init walker"):
+            walker = self.initializeWalker(newHeads)
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
 
@@ -352,22 +250,15 @@ class RepoState:
             i += 1
 
             try:
-                meta, wasKnown = self.getOrCreateMetadataFromGitStdout(stdoutWrapper)
+                commit: Commit = next(walker)
             except StopIteration:
-                self.waitForGitProcessToFinish(procWrapper)
                 break
 
-            newCommitSequence.append(meta)
-            graphSplicer.spliceNewCommit(meta.hexsha, meta.parentHashes, wasKnown)
+            wasKnown = commit.oid in self.commitPositions
+            self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
 
-            meta.offsetInBatch = offsetFromTop
-            meta.batchID = self.currentBatchID
-            meta.debugPrefix = "R" if wasKnown else "N"  # Redrawn or New
-
-            # Fill parent hashes
-            for p in meta.parentHashes:
-                parentMeta = self.getOrCreateMetadata(p)
-                parentMeta.childHashes.insert(0, meta.hexsha)
+            newCommitSequence.append(commit)
+            graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids, wasKnown)
 
         graphSplicer.finish()
 
@@ -375,7 +266,8 @@ class RepoState:
 
         with Benchmark("Nuke unreachable commits from cache"):
             for trashedCommit in (graphSplicer.oldCommitsSeen - graphSplicer.newCommitsSeen):
-                del self.commitLookup[trashedCommit]
+                #del self.commitLookup[trashedCommit]
+                del self.commitPositions[trashedCommit]
 
         # Piece correct commit sequence back together
         self.commitSequence = newCommitSequence[:graphSplicer.equilibriumNewRow] + self.commitSequence[graphSplicer.equilibriumOldRow:]
@@ -391,37 +283,19 @@ class RepoState:
 
         globalstatus.setProgressValue(4)
 
-        if self.repo.head.is_valid():
-            self.setBoldCommit(self.repo.head.commit.hexsha)
-        else:
-            # Handle commitless branches gracefully
-            self.setBoldCommit(None)
+        self.updateActiveCommitOid()
 
         return graphSplicer.equilibriumOldRow, graphSplicer.equilibriumNewRow
 
-    """
-    # For debugging
-    def loadCommitDump(self, dump: Dump):
-        self.commitLookup = dump.data
-        self.commitSequence = [self.commitLookup[k] for k in dump.order]
-        self.currentRefs = dump.currentRefs
-        return self.commitSequence
-
-    # For debugging
-    def makeCommitDump(self) -> Dump:
-        dump = Dump()
-        dump.data = self.commitLookup
-        dump.order = [c.hexsha for c in self.commitSequence]
-        dump.currentRefs = self.currentRefs
-        return dump
-    """
-
     @staticmethod
     def traceCommitAvailability(metas, progressTick=None):
+        """ TODO
         nextLocal = set()
         for i, meta in enumerate(metas):
             if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
                 progressTick(i)
             RepoState.traceOneCommitAvailability(nextLocal, meta)
         assert len(nextLocal) == 0, "there are unreachable commits at the bottom of the graph"
+        """
+        pass
 

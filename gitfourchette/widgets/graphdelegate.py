@@ -65,10 +65,8 @@ class GraphDelegate(QStyledItemDelegate):
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
             authorText = commit.author.email.split('@')[0]
             dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
-            ''' TODO: pygit2 migration
-            if meta.bold:
+            if self.state.activeCommitOid == commit.oid:
                 painter.setFont(settings.boldFont)
-            '''
         else:
             commit: Commit = None
             summaryText = "Uncommitted Changes"
