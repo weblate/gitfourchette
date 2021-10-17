@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from globalstatus import globalstatus
 from graph import Graph, GraphSplicer, KF_INTERVAL
 import os
+import porcelain
 import settings
 
 
@@ -15,6 +16,7 @@ PROGRESS_INTERVAL = 5000
 # For debugging
 class Dump:
     pass
+SETTING_KEY_DRAFT_MESSAGE = "DraftMessage"
 
 
 @dataclass
@@ -85,6 +87,15 @@ class RepoState:
         self.activeCommitHexsha = None
 
         self.currentRefs = set()
+
+    def getDraftCommitMessage(self) -> str:
+        return self.settings.value(SETTING_KEY_DRAFT_MESSAGE, "")
+
+    def setDraftCommitMessage(self, newMessage : str):
+        if newMessage is None:
+            self.settings.remove(SETTING_KEY_DRAFT_MESSAGE)
+        else:
+            self.settings.setValue(SETTING_KEY_DRAFT_MESSAGE, newMessage)
 
     def refreshRefsByCommitCache(self):
         self.refsByCommit.clear()

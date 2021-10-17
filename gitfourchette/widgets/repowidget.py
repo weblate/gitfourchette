@@ -552,21 +552,30 @@ class RepoWidget(QWidget):
     # Commit, amend
 
     def commitFlow(self):
-        if 0 == len(self.state.getStagedChanges()):
-            QMessageBox.warning(self, "Commit", "No changes staged for commit.")
-            return
+        if not porcelain.hasAnyStagedChanges(self.repo):
+            qmb = QMessageBox(self)
+            qmb.setIcon(QMessageBox.Question)
+            qmb.setWindowTitle("Empty Commit")
+            qmb.setText("No files are staged for commit.\nDo you want to create an empty commit anyway?")
+            ok = qmb.addButton("Go back", QMessageBox.AcceptRole)
+            emptyCommit = qmb.addButton("Create empty commit", QMessageBox.ActionRole)
+            qmb.setDefaultButton(ok)
+            qmb.setEscapeButton(ok)
+            qmb.exec_()
+            if qmb.clickedButton() != emptyCommit:
+                return
 
-        kDRAFT = "DraftMessage"
-        initialText = self.state.settings.value(kDRAFT, "")
+        initialText = self.state.getDraftCommitMessage()
         cd = CommitDialog(initialText, False, self)
         rc = cd.exec_()
         cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
-            self.state.settings.remove(kDRAFT)
             porcelain.commit(self.repo, cd.getFullMessage())
+            self.state.setDraftCommitMessage(None)  # Clear draft message
             self.quickRefresh()
         else:
-            self.state.settings.setValue(kDRAFT, cd.getFullMessage())
+            # Save draft message for next time
+            self.state.setDraftCommitMessage(cd.getFullMessage())
 
     def amendFlow(self):
         initialText = porcelain.getHeadCommitMessage(self.repo)

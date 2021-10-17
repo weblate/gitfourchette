@@ -7,9 +7,20 @@ def loadDirtyDiff(repo: Repository) -> Diff:
     return dirtyDiff
 
 def loadStagedDiff(repo: Repository) -> Diff:
-    stageDiff : Diff = repo.diff('HEAD', None, cached=True)
+    # TODO: need special case for empty repo (can't compare against HEAD)
+    stageDiff : Diff = repo.diff('HEAD', None, cached=True)  # compare HEAD to index
     stageDiff.find_similar()
     return stageDiff
+
+def hasAnyStagedChanges(repo: Repository) -> bool:
+    status : dict[str, int] = repo.status()
+    mask \
+        = pygit2.GIT_STATUS_INDEX_NEW \
+        | pygit2.GIT_STATUS_INDEX_MODIFIED \
+        | pygit2.GIT_STATUS_INDEX_DELETED \
+        | pygit2.GIT_STATUS_INDEX_RENAMED \
+        | pygit2.GIT_STATUS_INDEX_TYPECHANGE
+    return any(0 != (flag & mask) for flag in status.values())
 
 def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
     commit: Commit = repo.get(oid)
@@ -61,8 +72,20 @@ def resetHead(repo: Repository, ontoHexsha: str, resetMode: str, recurseSubmodul
     print(*args)
     repo.git.reset(*args)
 
-def commit(repo: Repository, message: str):
-    raise NotImplementedError("repo.git.commit(message=message)")
+def commit(repo: Repository, message: str) -> Oid:
+    head = repo.head
+    headCommit : Commit = head.peel(Commit)
+    indexTreeOid : Oid = repo.index.write_tree()
+    parents = [ headCommit.oid ]
+    newCommitOid : Oid = repo.create_commit(
+        head.name,
+        repo.default_signature, #Author
+        repo.default_signature, #Committer
+        message,
+        indexTreeOid,
+        parents
+    )
+    return newCommitOid
 
 def amend(repo: Repository, message: str):
     raise NotImplementedError("repo.git.commit(message=message, amend=True)")
