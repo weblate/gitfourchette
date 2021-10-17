@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from pygit2 import Oid
 import bisect
 import collections
 import itertools
@@ -47,7 +48,7 @@ class Benchmark:
 @dataclass
 class ArcJunction:
     joinedAt: int
-    joinedBy: str
+    joinedBy: Oid
 
     def __lt__(self, other):
         """
@@ -64,8 +65,8 @@ class Arc:
     openedAt: int
     closedAt: int
     lane: int
-    openedBy: str
-    closedBy: str
+    openedBy: Oid
+    closedBy: Oid
     junctions: list[ArcJunction]
     nextArc: Arc = None
 
@@ -103,7 +104,7 @@ class Arc:
 @dataclass
 class Frame:
     row: int
-    commit: str
+    commit: Oid
     staleArcs: list[Arc]
     openArcs: list[Arc]
     lastArc: Arc
@@ -195,14 +196,14 @@ class Frame:
 
 class GeneratorState(Frame):
     freeLanes: list[int]
-    parentLookup: collections.defaultdict[str, list[Arc]]  # all lanes
+    parentLookup: collections.defaultdict[Oid, list[Arc]]  # all lanes
 
     def __init__(self, startArcSentinel: Arc):
         super().__init__(-1, "", [], [], lastArc=startArcSentinel)
         self.freeLanes = []
         self.parentLookup = collections.defaultdict(list)
 
-    def createArcsForNewCommit(self, me: str, myParents: list[str]):
+    def createArcsForNewCommit(self, me: Oid, myParents: list[Oid]):
         self.row += 1
         self.commit = me
 
@@ -333,7 +334,7 @@ class PlaybackState(Frame):
         self.row = goalRow
         self.commit = goalCommit
 
-    def advanceToCommit(self, commit: str):
+    def advanceToCommit(self, commit: Oid):
         """
         Advances playback until a specific commit hash is found.
         Raises StopIteration if the commit wasn't found.
@@ -377,7 +378,7 @@ class Graph:
     def isEmpty(self):
         return self.startArc.nextArc is None
 
-    def generateFullSequence(self, sequence: list[str], parentsOf: dict[str, list[str]]):
+    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]]):
         cacher = GeneratorState(self.startArc)
 
         for me in sequence:
@@ -442,7 +443,7 @@ class Graph:
 
         return player
 
-    def startSplicing(self, oldHeads: set[str], newHeads: set[str]) -> GraphSplicer:
+    def startSplicing(self, oldHeads: set[Oid], newHeads: set[Oid]) -> GraphSplicer:
         return GraphSplicer(self, oldHeads, newHeads)
 
     def getKF0(self):
@@ -561,7 +562,7 @@ class Graph:
 
 
 class GraphSplicer:
-    def __init__(self, oldGraph: Graph, oldHeads: set[str], newHeads: set[str]):
+    def __init__(self, oldGraph: Graph, oldHeads: set[Oid], newHeads: set[Oid]):
         self.keepGoing = True
         self.foundEquilibrium = False
 
@@ -587,7 +588,7 @@ class GraphSplicer:
         """
         self.finish()
 
-    def spliceNewCommit(self, newCommit: str, parentsOfNewCommit: list[str], newCommitWasKnown: bool):
+    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], newCommitWasKnown: bool):
         self.newCommitsSeen.add(newCommit)
 
         # Generate arcs for new frame.
