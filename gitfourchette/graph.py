@@ -562,7 +562,7 @@ class Graph:
 
 
 class GraphSplicer:
-    def __init__(self, oldGraph: Graph, oldHeads: set[Oid], newHeads: set[Oid]):
+    def __init__(self, oldGraph: Graph, oldHeads: list[Oid], newHeads: list[Oid]):
         self.keepGoing = True
         self.foundEquilibrium = False
 
@@ -573,6 +573,8 @@ class GraphSplicer:
         self.oldPlayer = oldGraph.startPlayback()
 
         # Commits that we must see before finding the equilibrium.
+        newHeads = set(newHeads)
+        oldHeads = set(oldHeads)
         self.requiredNewCommits = (newHeads - oldHeads)  # heads that appeared
         self.requiredOldCommits = (oldHeads - newHeads)  # heads that disappeared
 

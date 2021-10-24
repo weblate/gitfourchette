@@ -39,7 +39,7 @@ class RepoState:
     graph: Graph
 
     # Set of head commits for every ref (required to refresh the commit graph)
-    currentRefs: set[str]
+    currentRefs: list[Oid]
 
     # path of superproject if this is a submodule
     superproject: str
@@ -83,7 +83,7 @@ class RepoState:
 
         self.activeCommitOid = None
 
-        self.currentRefs = set()
+        self.currentRefs = []
 
     def getDraftCommitMessage(self) -> str:
         return self.settings.value(SETTING_KEY_DRAFT_MESSAGE, "")
@@ -121,23 +121,19 @@ class RepoState:
         assert position.batch < len(self.batchOffsets)
         return self.batchOffsets[position.batch] + position.offsetInBatch
 
-    def initializeWalker(self, tipOids) -> Walker:
-        sorting = GIT_SORT_TIME
+    def initializeWalker(self, tipOids: list[Oid]) -> Walker:
         if settings.prefs.graph_topoOrder:
-            sorting |= GIT_SORT_TOPOLOGICAL
+            sorting = GIT_SORT_TOPOLOGICAL
+        else:
+            sorting = GIT_SORT_TIME
 
         if self.walker is None:
             self.walker = self.repo.walk(None, sorting)
         else:
-            #self.walker.reset()
-            self.walker.sort(sorting)
+            self.walker.sort(sorting)  # this resets the walker
 
-        for tip in sorted(tipOids):
-            try:
-                self.walker.push(tip)
-            except ValueError:  # (linux) some refs are not committish
-                print("Ref isn't committish: ", tip)
-                pass
+        for tip in tipOids:
+            self.walker.push(tip)
 
         return self.walker
 
@@ -151,7 +147,7 @@ class RepoState:
         progress.setLabelText(F"Preparing refs...")
         QCoreApplication.processEvents()
 
-        self.currentRefs = set(porcelain.getOidsForAllReferences(self.repo))
+        self.currentRefs = porcelain.getOidsForAllReferences(self.repo)
 
         walker = self.initializeWalker(self.currentRefs)
 
@@ -232,7 +228,7 @@ class RepoState:
 
         oldHeads = self.currentRefs
         with Benchmark("Get new heads"):
-            newHeads = set(porcelain.getOidsForAllReferences(self.repo))
+            newHeads = porcelain.getOidsForAllReferences(self.repo)
 
         with Benchmark("Init walker"):
             walker = self.initializeWalker(newHeads)
