@@ -9,6 +9,7 @@ from widgets.repowidget import RepoWidget
 import gc
 import os
 import pickle
+import pygit2
 import settings
 import zlib
 
@@ -265,21 +266,11 @@ class MainWindow(QMainWindow):
             rw.sidebar.fill(newState.repo)
 
             self.refreshTabText(rw)
-        except BaseException as e:
+        except pygit2.GitError as gitError:
             progress.close()
+            message = F"Couldn't open \"{path}\":\n{gitError}"
 
             known = path in settings.history.history
-
-            message = F"Couldn't open \"{path}\""
-
-            if isinstance(e, git.exc.InvalidGitRepositoryError):
-                message += " because it is not a git repository."
-            elif isinstance(e, git.exc.NoSuchPathError):
-                message += " because this path does not exist."
-            else:
-                message += " because an exception was thrown."
-                excMessageBox(e, message=message)
-                return False
 
             qmb = QMessageBox(self)
             qmb.setIcon(QMessageBox.Critical)
@@ -293,6 +284,10 @@ class MainWindow(QMainWindow):
             qmb.exec_()
             if qmb.clickedButton() == nukeButton:
                 settings.history.removeRepo(path)
+            return False
+        except BaseException as exc:
+            progress.close()
+            excMessageBox(exc, message="An exception was thrown while opening \"{path}\"", parent=self)
             return False
 
         progress.close()
