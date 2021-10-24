@@ -114,11 +114,13 @@ def createCommit(repo: Repository, message: str) -> Oid:
 
 
 def amendCommit(repo: Repository, message: str) -> Oid:
+    indexTreeOid = repo.index.write_tree(repo)
     newCommitOid = repo.amend_commit(
         getHeadCommit(repo),
         'HEAD',
         message=message,
-        committer=repo.default_signature
+        committer=repo.default_signature,
+        tree=indexTreeOid
     )
     return newCommitOid
 
@@ -144,4 +146,24 @@ def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
 
 
 def getOidsForAllReferences(repo: Repository) -> list[Oid]:
-    return [ref.target for ref in repo.listall_reference_objects() if type(ref.target) == Oid]
+    """
+    Return commit oids at the tip of all branches, tags, etc. in the repository.
+
+    To ensure a consistent outcome across multiple walks of the same commit graph,
+    the oids are sorted by descending commit time.
+    """
+    tips = []
+    for ref in repo.listall_reference_objects():
+        ref: pygit2.Reference
+        if type(ref.target) != Oid:
+            # Skip symbolic reference
+            continue
+        try:
+            commit: Commit = ref.peel(Commit)
+            tips.append(commit)
+        except pygit2.InvalidSpecError as e:
+            # Some refs might not be committish, e.g. in linux's source repo
+            print(F"Cannot get commit for ref {ref.name}: {e}")
+            pass
+    tips = sorted(tips, key=lambda commit: commit.commit_time, reverse=True)
+    return [commit.oid for commit in tips]
