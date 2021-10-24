@@ -570,7 +570,7 @@ class RepoWidget(QWidget):
         rc = cd.exec_()
         cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
-            porcelain.commit(self.repo, cd.getFullMessage())
+            porcelain.createCommit(self.repo, cd.getFullMessage())
             self.state.setDraftCommitMessage(None)  # Clear draft message
             self.quickRefresh()
         else:
@@ -583,7 +583,7 @@ class RepoWidget(QWidget):
         rc = cd.exec_()
         cd.deleteLater()
         if rc == QDialog.DialogCode.Accepted:
-            porcelain.amend(self.repo, cd.getFullMessage())
+            porcelain.amendCommit(self.repo, cd.getFullMessage())
             self.quickRefresh()
 
     # -------------------------------------------------------------------------
