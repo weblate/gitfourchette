@@ -111,9 +111,9 @@ def getActiveBranchShorthand(repo: Repository) -> str:
     return repo.head.shorthand
 
 def getCommitOidFromReferenceName(repo: Repository, refName: str) -> Oid:
-    raise NotImplementedError("getCommitOidFromReferenceName")
-    ref: git.Reference = next(filter(lambda ref: ref.name == refName, repo.refs))
-    return ref.commit.hexsha
+    reference = repo.references[refName]
+    commit: Commit = reference.peel(Commit)
+    return commit.oid
 
 def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
     raise NotImplementedError("getCommitOidFromTagName")
