@@ -72,11 +72,19 @@ def resetHead(repo: Repository, ontoHexsha: str, resetMode: str, recurseSubmodul
     print(*args)
     repo.git.reset(*args)
 
+def getHeadCommit(repo: Repository) -> Commit:
+    return repo.head.peel(Commit)
+
+def getHeadCommitOid(repo: Repository) -> Oid:
+    return getHeadCommit(repo).oid
+
+def getHeadCommitMessage(repo: Repository) -> str:
+    return getHeadCommit(repo).message
+
 def commit(repo: Repository, message: str) -> Oid:
     head = repo.head
-    headCommit : Commit = head.peel(Commit)
-    indexTreeOid : Oid = repo.index.write_tree()
-    parents = [ headCommit.oid ]
+    indexTreeOid: Oid = repo.index.write_tree()
+    parents = [getHeadCommitOid(repo)]
     newCommitOid : Oid = repo.create_commit(
         head.name,
         repo.default_signature, #Author
@@ -87,16 +95,14 @@ def commit(repo: Repository, message: str) -> Oid:
     )
     return newCommitOid
 
-def amend(repo: Repository, message: str):
-    raise NotImplementedError("repo.git.commit(message=message, amend=True)")
-
-def getHeadCommitMessage(repo: Repository) -> str:
-    raise NotImplementedError("repo.head.commit.message")
-    return "TODO: getHeadCommitMessage"
-
-def getHeadCommitOid(repo: Repository) -> Oid:
-    commit : Commit = repo.head.peel(Commit)
-    return commit.oid
+def amend(repo: Repository, message: str) -> Oid:
+    newCommitOid = repo.amend_commit(
+        getHeadCommit(repo),
+        'HEAD',
+        message=message,
+        committer=repo.default_signature
+    )
+    return newCommitOid
 
 def getActiveBranchFullName(repo: Repository) -> str:
     return repo.head.name
