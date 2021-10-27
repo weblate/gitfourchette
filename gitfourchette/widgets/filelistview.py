@@ -165,8 +165,6 @@ class FileListView(QListView):
         for si in self.selectedIndexes():
             yield self.entries[si.row()]
 
-    # TODO: don't stage/unstage ourselves; expose stage/unstage events via signals
-
     @property
     def repo(self) -> pygit2.Repository:
         return self.repoWidget.state.repo

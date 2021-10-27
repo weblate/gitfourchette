@@ -163,7 +163,49 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
             tips.append(commit)
         except pygit2.InvalidSpecError as e:
             # Some refs might not be committish, e.g. in linux's source repo
-            print(F"Cannot get commit for ref {ref.name}: {e}")
+            print(F"{e} - Skipping ref '{ref.name}'")
             pass
     tips = sorted(tips, key=lambda commit: commit.commit_time, reverse=True)
     return [commit.oid for commit in tips]
+
+
+def stageFiles(repo: Repository, patches: list[pygit2.Patch]):
+    index = repo.index
+    for patch in patches:
+        if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+            index.remove(patch.delta.new_file.path)
+        else:
+            index.add(patch.delta.new_file.path)
+    index.write()
+
+
+def discardFiles(repo: Repository, paths: list[str]):
+    strategy = pygit2.GIT_CHECKOUT_FORCE \
+             | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED \
+             | pygit2.GIT_CHECKOUT_DONT_UPDATE_INDEX \
+             | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH
+
+    repo.index.read()  # refresh index before getting indexTree
+    indexTree = repo[repo.index.write_tree()]
+    repo.checkout_tree(indexTree, paths=paths, strategy=strategy)
+
+
+def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
+    index = repo.index
+    headTree = repo.head.peel(pygit2.Tree)
+    for patch in patches:
+        delta: pygit2.DiffDelta = patch.delta
+        old_path = delta.old_file.path
+        new_path = delta.new_file.path
+        if delta.status == pygit2.GIT_DELTA_ADDED:
+            assert old_path not in headTree
+            index.remove(old_path)
+        elif delta.status == pygit2.GIT_DELTA_RENAMED:
+            # TODO: Two-step removal to completely unstage a rename -- is this what we want?
+            assert new_path in index
+            index.remove(new_path)
+        else:
+            assert old_path in headTree
+            obj = headTree[old_path]
+            index.add(pygit2.IndexEntry(old_path, obj.oid, obj.filemode))
+    index.write()

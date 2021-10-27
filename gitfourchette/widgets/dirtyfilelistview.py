@@ -2,14 +2,13 @@ from allqt import *
 from widgets.filelistview import FileListView
 from stagingstate import StagingState
 from util import ActionDef
-import os
 import pygit2
 import settings
-import trash
 
 
 class DirtyFileListView(FileListView):
-    patchApplied: Signal = Signal()
+    stageFiles = Signal(list)
+    discardFiles = Signal(list)
 
     def __init__(self, parent):
         super().__init__(parent, StagingState.UNSTAGED)
@@ -34,18 +33,9 @@ class DirtyFileListView(FileListView):
         else:
             super().keyPressEvent(event)
 
-    # Context menu action
     def stage(self):
-        index = self.repo.index
-        for patch in self.selectedEntries():
-            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
-                index.remove(patch.delta.new_file.path)
-            else:
-                index.add(patch.delta.new_file.path)
-        index.write()
-        self.patchApplied.emit()
+        self.stageFiles.emit(list(self.selectedEntries()))
 
-    # Context menu action
     def discard(self):
         entries = list(self.selectedEntries())
 
@@ -59,21 +49,11 @@ class DirtyFileListView(FileListView):
             "Discard changes",
             F"{question}\nThis cannot be undone!",
             QMessageBox.Discard | QMessageBox.Cancel,
-            self)
-        yes = qmb.button(QMessageBox.Discard)
+            parent=self)
+
+        yes: QAbstractButton = qmb.button(QMessageBox.Discard)
         yes.setText("Discard changes")
-        qmb.exec_()
-        if qmb.clickedButton() != yes:
-            return
+        yes.clicked.connect(lambda: self.discardFiles.emit(entries))
+        qmb.setDefaultButton(yes)
 
-        # TODO: Trash multiple files at once
-        for entry in entries:
-            if entry.diff is not None:  # tracked file
-                trash.trashGitDiff(self.repo, entry.diff)
-                self.git.restore(entry.path)  # self.diff.a_path)
-            else:  # untracked file
-                trash.trashUntracked(self.repo, entry.path)
-                os.remove(os.path.join(self.repo.workdir, entry.path))
-        self.patchApplied.emit()
-
-
+        qmb.show()

@@ -92,10 +92,12 @@ class RepoWidget(QWidget):
 
         # Refresh file list views after applying a patch...
         self.diffView.patchApplied.connect(self.fillStageViewAsync)  # ...from the diff view (partial line patch);
-        self.stageView.patchApplied.connect(self.fillStageViewAsync)  # ...from the staged file view (unstage entire file);
-        self.dirtyView.patchApplied.connect(self.fillStageViewAsync)  # ...and from the dirty file view (stage entire file).
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
+
+        self.dirtyView.stageFiles.connect(self.stageFilesAsync)
+        self.dirtyView.discardFiles.connect(self.discardFilesAsync)
+        self.stageView.unstageFiles.connect(self.unstageFilesAsync)
 
         for v in [self.dirtyView, self.stageView, self.changedFilesView]:
             v.nothingClicked.connect(self.diffView.clear)
@@ -462,6 +464,24 @@ class RepoWidget(QWidget):
             self.quickRefreshWithSidebar()
             self.graphView.selectCommit(ontoHexsha)
         self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
+
+    def stageFilesAsync(self, patches: list[Patch]):
+        work = lambda: porcelain.stageFiles(self.repo, patches)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, fplural("Staging # file^s", len(patches)))
+
+    def discardFilesAsync(self, patches: list[Patch]):
+        def work():
+            paths = [patch.delta.new_file.path for patch in patches]
+            trash.backupPatches(self.repo, patches)
+            porcelain.discardFiles(self.repo, paths)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, fplural("Discarding # file^s", len(patches)))
+
+    def unstageFilesAsync(self, patches: list[Patch]):
+        work = lambda: porcelain.unstageFiles(self.repo, patches)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, fplural("Unstaging # file^s", len(patches)))
 
     # -------------------------------------------------------------------------
     # Push

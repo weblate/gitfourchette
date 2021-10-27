@@ -1,7 +1,6 @@
 from allgit import *
 import datetime
 import os
-import patch
 import zipfile
 
 TRASH_DIR_NAME = "GitFourchetteTrash"
@@ -26,17 +25,17 @@ def trashRawPatch(repo: Repository, patch: bytes):
         f.write(patch)
 
 
-def trashGitDiff(repo: Repository, diff):#TODO: git.Diff):
-    if diff.change_type == 'D':
-        # It doesn't make sense to back up a file deletion
-        return
-    lines = patch.makePatchFromGitDiff(repo, diff, allowRawFileAccess=True, allowBinaryPatch=True)
-    with open(newTrashFileName(repo, '.patch'), mode='wb') as f:
-        for line in lines:
-            f.write(line)
-
-
-def trashUntracked(repo: Repository, path: str):
+def backupPatches(repo: Repository, patches: list[Patch]):
     with zipfile.ZipFile(newTrashFileName(repo, '.zip'), mode='w', compression=zipfile.ZIP_STORED) as z:
-        z.write(os.path.join(repo.workdir, path), arcname=path)
-        z.comment = F'Head: {repo.head.commit.hexsha}\nBranch: {repo.active_branch.name}'.encode('utf-8')
+        z.comment = F'Head: {repo.head.target}\nBranch: {repo.head.shorthand}'.encode('utf-8')
+        for patch in patches:
+            path = patch.delta.new_file.path
+            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+                # It doesn't make sense to back up a file deletion
+                pass
+            elif patch.delta.status == pygit2.GIT_DELTA_UNTRACKED or patch.delta.is_binary:
+                # Copy new file to zip
+                z.write(os.path.join(repo.workdir, path), arcname=path)
+            else:
+                # Copy text patch
+                z.writestr(path + ".patch", patch.data)
