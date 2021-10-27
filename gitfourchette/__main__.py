@@ -32,7 +32,8 @@ if __name__ == "__main__":
         QApplication.setFont(sysFont)
 
     import settings
-
+    settings.prefs.load()
+    settings.history.load()
     if settings.prefs.qtStyle:
         app.setStyle(settings.prefs.qtStyle)
 

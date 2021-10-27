@@ -1,6 +1,5 @@
 # Based on https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
-
-
+import settings
 from allqt import *
 from globalstatus import globalstatus
 from typing import Callable
@@ -106,6 +105,17 @@ class WorkQueue:
         :param priority: Integer value passed on to `QThreadPool.start()`.
         """
 
+        if settings.TEST_MODE:
+            self.putSerial(work, then)
+        else:
+            self.putAsync(work, then, caption, priority)
+
+    def putSerial(self, work, then):
+        result = work()
+        if then is not None:
+            then(result)
+
+    def putAsync(self, work, then, caption, priority):
         def workWrapper():
             assert QThread.currentThread() is not QApplication.instance().thread()
             with QMutexLocker(self.mutex):

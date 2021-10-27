@@ -1,13 +1,14 @@
-import enum
-
 from allqt import *
 from dataclasses import dataclass, field
+import enum
 import json
 import os
 
 VERSION = "0.1-preview"
 
 PROGRAM_NAME = "GitFourchette"
+
+TEST_MODE = False
 
 QCoreApplication.setApplicationVersion(VERSION)
 QCoreApplication.setApplicationName("GitFourchette")  # used by QStandardPaths
@@ -45,6 +46,9 @@ def decodeBinary(encoded: str) -> QByteArray:
 
 class BasePrefs:
     def write(self):
+        if TEST_MODE:
+            print("Disabling write prefs")
+            return None
         os.makedirs(prefsDir, exist_ok=True)
         prefsPath = os.path.join(prefsDir, getattr(self, 'filename'))
         with open(prefsPath, 'w', encoding='utf-8') as f:
@@ -79,7 +83,7 @@ class BasePrefs:
 
         return True
 
-import enum
+
 class PathDisplayStyle(enum.IntEnum):
     FULL_PATHS = 1,
     ABBREVIATE_DIRECTORIES = 2,
@@ -176,11 +180,10 @@ class Session(BasePrefs):
     splitterStates              : dict          = field(default_factory=dict)
 
 
+# Initialize default prefs and history.
+# The app should load the user's prefs with prefs.load() and history.load().
 prefs = Prefs()
-prefs.load()
-
 history = History()
-history.load()
 
 monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
 monoFont.setPointSize(9)

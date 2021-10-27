@@ -287,7 +287,7 @@ class MainWindow(QMainWindow):
         rw.graphView.selectUncommittedChanges()
         return True
 
-    def openRepo(self, repoPath, foreground=True):
+    def openRepo(self, repoPath, foreground=True, addToHistory=True):
         newRW = RepoWidget(self, self.sharedSplitterStates)
 
         if foreground:
@@ -304,8 +304,11 @@ class MainWindow(QMainWindow):
 
         newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
 
-        settings.history.addRepo(repoPath)
-        self.fillRecentMenu()
+        if addToHistory:
+            settings.history.addRepo(repoPath)
+            self.fillRecentMenu()
+
+        return newRW
 
     def quickRefresh(self):
         rw = self.currentRepoWidget()
