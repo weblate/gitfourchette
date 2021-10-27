@@ -142,7 +142,7 @@ class GraphView(QListView):
 
         messageBox = QMessageBox(QMessageBox.Information, title, markup, parent=self)
         messageBox.setDetailedText(details)
-        messageBox.exec_()
+        messageBox.show()
 
     def checkoutCurrentCommit(self):
         commitHash = self.currentCommitHash
@@ -190,13 +190,14 @@ class GraphView(QListView):
         if not commitHash:
             return
         dlg = ResetHeadDialog(commitHash, parent=self)
-        rc = dlg.exec_()
-        resetMode = dlg.activeMode
-        recurse = dlg.recurseSubmodules
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve info)
-        if rc != QDialog.DialogCode.Accepted:
-            return
-        self.resetHead.emit(commitHash, resetMode, recurse)
+
+        def onAccept():
+            resetMode = dlg.activeMode
+            recurse = dlg.recurseSubmodules
+            self.resetHead.emit(commitHash, resetMode, recurse)
+
+        dlg.accepted.connect(onAccept)
+        dlg.show()
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.

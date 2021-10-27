@@ -125,12 +125,13 @@ class Sidebar(QTreeView):
 
     def _editTrackingBranchFlow(self, localBranchName):
         dlg = TrackedBranchDialog(self.currentGitRepo, localBranchName, self)
-        rc = dlg.exec_()
-        newTrackingBranchName = dlg.newTrackingBranchName
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
-        if rc != QDialog.DialogCode.Accepted:
-            return
-        self.editTrackingBranch.emit(localBranchName, newTrackingBranchName)
+
+        def onAccept():
+            newTrackingBranchName = dlg.newTrackingBranchName
+            self.editTrackingBranch.emit(localBranchName, newTrackingBranchName)
+
+        dlg.accepted.connect(onAccept)
+        dlg.show()
 
     def _renameBranchFlow(self, oldName):
         newName, ok = textInputDialog(

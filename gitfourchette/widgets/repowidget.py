@@ -587,24 +587,30 @@ class RepoWidget(QWidget):
 
         initialText = self.state.getDraftCommitMessage()
         cd = CommitDialog(initialText, False, self)
-        rc = cd.exec_()
-        cd.deleteLater()
-        if rc == QDialog.DialogCode.Accepted:
+
+        def onAccept():
             porcelain.createCommit(self.repo, cd.getFullMessage())
             self.state.setDraftCommitMessage(None)  # Clear draft message
             self.quickRefresh()
-        else:
+
+        def onReject():
             # Save draft message for next time
             self.state.setDraftCommitMessage(cd.getFullMessage())
+
+        cd.accepted.connect(onAccept)
+        cd.rejected.connect(onReject)
+        cd.show()
 
     def amendFlow(self):
         initialText = porcelain.getHeadCommitMessage(self.repo)
         cd = CommitDialog(initialText, True, self)
-        rc = cd.exec_()
-        cd.deleteLater()
-        if rc == QDialog.DialogCode.Accepted:
+
+        def onAccept():
             porcelain.amendCommit(self.repo, cd.getFullMessage())
             self.quickRefresh()
+
+        cd.accepted.connect(onAccept)
+        cd.show()
 
     # -------------------------------------------------------------------------
     # Find, find next

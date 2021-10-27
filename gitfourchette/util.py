@@ -117,7 +117,7 @@ def excMessageBox(exc, title="Unhandled Exception", message="An exception was th
     layout = qmb.layout()
     layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
 
-    qmb.exec_()
+    qmb.show()
 
 
 def excStrings(exc):

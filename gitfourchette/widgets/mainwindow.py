@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Commit...", lambda: self.currentRepoWidget().commitFlow(), QKeySequence(Qt.CTRL + Qt.Key_K))
         repoMenu.addAction("Amend Last Commit...", lambda: self.currentRepoWidget().amendFlow(), QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_K))
         repoMenu.addSeparator()
-        repoMenu.addAction("Push Active Branch...", lambda: self.currentRepoWidget().push())
+        repoMenu.addAction("Push Active Branch...", lambda: self.currentRepoWidget().pushFlow())
         repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
         repoMenu.addSeparator()
         repoMenu.addAction("&Find Commit...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
@@ -160,12 +160,7 @@ class MainWindow(QMainWindow):
             self.setMenuWidget(menuContainer)
             menubar.adjustSize()
 
-    def openSettings(self):
-        dlg = PrefsDialog(self)
-        rc = dlg.exec_()
-        dlg.deleteLater()  # avoid leaking dialog (can't use WA_DeleteOnClose because we needed to retrieve the message)
-        if rc != PrefsDialog.Accepted:
-            return
+    def onAcceptPrefsDialog(self, dlg: PrefsDialog):
         if not dlg.prefDiff:  # No changes were made to the prefs
             return
         # Apply changes from prefDiff to the actual prefs
@@ -178,6 +173,10 @@ class MainWindow(QMainWindow):
             "Apply Settings",
             F"Some changes may require restarting {settings.PROGRAM_NAME} to take effect.")
 
+    def openSettings(self):
+        dlg = PrefsDialog(self)
+        dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg))
+        dlg.show()
 
     def fillRecentMenu(self):
         def onClearRecents():
@@ -267,30 +266,23 @@ class MainWindow(QMainWindow):
 
             self.refreshTabText(rw)
         except pygit2.GitError as gitError:
-            progress.close()
-            message = F"Couldn't open \"{path}\":\n{gitError}"
-
             known = path in settings.history.history
-
             qmb = QMessageBox(self)
             qmb.setIcon(QMessageBox.Critical)
+            qmb.setText(F"Couldn't open \"{path}\":\n{gitError}")
             qmb.setWindowTitle("Reopen repository" if known else "Open repository")
             ok = qmb.addButton("OK", QMessageBox.RejectRole)
-            nukeButton = None
             if known:
-                nukeButton = qmb.addButton("Remove from recents", QMessageBox.DestructiveRole)
+                nukeButton: QAbstractButton = qmb.addButton("Remove from recents", QMessageBox.DestructiveRole)
+                nukeButton.clicked.connect(lambda: settings.history.removeRepo(path))
             qmb.setDefaultButton(ok)
-            qmb.setText(message)
-            qmb.exec_()
-            if qmb.clickedButton() == nukeButton:
-                settings.history.removeRepo(path)
+            qmb.show()
             return False
         except BaseException as exc:
-            progress.close()
             excMessageBox(exc, message="An exception was thrown while opening \"{path}\"", parent=self)
             return False
-
-        progress.close()
+        finally:
+            progress.close()
 
         rw.graphView.selectUncommittedChanges()
         return True
