@@ -3,7 +3,9 @@ import pygit2
 
 
 def loadDirtyDiff(repo: Repository) -> Diff:
-    dirtyDiff : Diff = repo.diff(None, None, flags=pygit2.GIT_DIFF_INCLUDE_UNTRACKED)
+    flags = pygit2.GIT_DIFF_INCLUDE_UNTRACKED \
+          | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
+    dirtyDiff: Diff = repo.diff(None, None, flags=flags)
     dirtyDiff.find_similar()
     return dirtyDiff
 
