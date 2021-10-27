@@ -7,7 +7,11 @@ setup(
     python_requires='>=3',
     install_requires=[
         'PySide2>=5',
-        'GitPython>=3',
-        'psutil'
+        'pygit2>=1.7.0',
+        'psutil',
+    ],
+    tests_require=[
+        'pytest',
+        'pytest-qt',
     ],
 )
