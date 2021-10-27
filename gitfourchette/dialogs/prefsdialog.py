@@ -140,6 +140,8 @@ class PrefsDialog(QDialog):
         layout.addWidget(buttonBox)
         self.setLayout(layout)
 
+        self.setModal(True)
+
     def assign(self, k, v):
         if prefs.__dict__[k] == v:
             print("Reverting to original value:", k, v, prefs.__dict__[k])

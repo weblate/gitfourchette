@@ -165,3 +165,5 @@ class ResetHeadDialog(QDialog):
 
         self.resize(500, 400)
         self.setLayout(mainVBL)
+
+        self.setModal(True)

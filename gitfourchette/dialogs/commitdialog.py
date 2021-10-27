@@ -70,6 +70,8 @@ class CommitDialog(QDialog):
 
         self.setLayout(layout)
 
+        self.setModal(True)
+
     def hasNonBlankSummary(self):
         return bool(self.summaryEditor.text().strip())
 

@@ -54,5 +54,7 @@ class TrackedBranchDialog(QDialog):
 
         self.setLayout(layout)
 
+        self.setModal(True)
+
     def onChangeNewRemoteBranchName(self, remoteBranchName):
         self.newTrackingBranchName = remoteBranchName
