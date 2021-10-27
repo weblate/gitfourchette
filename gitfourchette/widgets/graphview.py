@@ -2,7 +2,7 @@ from allgit import *
 from allqt import *
 from datetime import datetime
 from dialogs.resetheaddialog import ResetHeadDialog
-from util import messageSummary, fplural, shortHash, textInputDialog
+from util import messageSummary, fplural, shortHash, showTextInputDialog
 from widgets.graphdelegate import GraphDelegate
 import html
 import settings
@@ -177,18 +177,21 @@ class GraphView(QListView):
         if not hexsha:
             return
 
-        newBranchName, ok = textInputDialog(
+        def onAccept(newBranchName):
+            self.newBranchFromCommit.emit(newBranchName, hexsha)
+
+        showTextInputDialog(
             self,
             F"New Branch From {shortHash(hexsha)}",
             F"Enter name for new branch starting from {shortHash(hexsha)}:",
-            None)
-        if ok:
-            self.newBranchFromCommit.emit(newBranchName, hexsha)
+            None,
+            onAccept)
 
     def resetHeadFlow(self):
         commitHash = self.currentCommitHash
         if not commitHash:
             return
+
         dlg = ResetHeadDialog(commitHash, parent=self)
 
         def onAccept():

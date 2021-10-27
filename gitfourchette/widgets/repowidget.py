@@ -9,7 +9,7 @@ from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
-from util import fplural, excMessageBox, excStrings, labelQuote, textInputDialog, QSignalBlockerContext, shortHash
+from util import fplural, excMessageBox, excStrings, labelQuote, showTextInputDialog, QSignalBlockerContext, shortHash
 from widgets.diffview import DiffView
 from widgets.dirtyfilelistview import DirtyFileListView
 from widgets.filelistview import FileListView
@@ -121,7 +121,7 @@ class RepoWidget(QWidget):
         self.sidebar.deleteBranch.connect(self.deleteBranchAsync)
         self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
         self.sidebar.editRemoteURL.connect(self.editRemoteURLAsync)
-        self.sidebar.pushBranch.connect(lambda name: self.push(name))
+        self.sidebar.pushBranch.connect(lambda name: self.pushFlow(name))
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -306,15 +306,16 @@ class RepoWidget(QWidget):
         self.pathPending = os.path.normpath(path)
 
     def renameRepo(self):
-        text, ok = textInputDialog(
+        def onAccept(newName):
+            settings.history.setRepoNickname(self.workingTreeDir, newName)
+            self.nameChange.emit()
+        showTextInputDialog(
             self,
             "Edit Repo Nickname",
             "Enter new nickname for repo, or enter blank line to reset:",
             settings.history.getRepoNickname(self.workingTreeDir),
+            onAccept,
             okButtonText="Rename")
-        if ok:
-            settings.history.setRepoNickname(self.workingTreeDir, text)
-            self.nameChange.emit()
 
     def setNoCommitSelected(self):
         self.saveFilePositions()
@@ -487,7 +488,7 @@ class RepoWidget(QWidget):
     # Push
     # TODO: make async!
 
-    def push(self, branchName: str = None):
+    def pushFlow(self, branchName: str = None):
         repo = self.state.repo
 
         if not branchName:
@@ -519,9 +520,10 @@ class RepoWidget(QWidget):
             <br>Will be pushed to remote: <b>{'; '.join(urls)}</b>""")
         qmb.addButton("Push", QMessageBox.AcceptRole)
         qmb.addButton("Cancel", QMessageBox.RejectRole)
-        if qmb.exec_() != QMessageBox.AcceptRole:
-            return
+        qmb.accepted.connect(lambda: self.doPush(branchName))
+        qmb.show()
 
+    def doPush(self, branchName: str):
         progress = RemoteProgressDialog(self, "Push in progress")
         pushInfos: list[git.PushInfo]
 
@@ -571,19 +573,23 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
     # Commit, amend
 
-    def commitFlow(self):
-        if not porcelain.hasAnyStagedChanges(self.repo):
-            qmb = QMessageBox(self)
-            qmb.setIcon(QMessageBox.Question)
-            qmb.setWindowTitle("Empty Commit")
-            qmb.setText("No files are staged for commit.\nDo you want to create an empty commit anyway?")
-            ok = qmb.addButton("Go back", QMessageBox.AcceptRole)
-            emptyCommit = qmb.addButton("Create empty commit", QMessageBox.ActionRole)
-            qmb.setDefaultButton(ok)
-            qmb.setEscapeButton(ok)
-            qmb.exec_()
-            if qmb.clickedButton() != emptyCommit:
-                return
+    def emptyCommitFlow(self):
+        qmb = QMessageBox(
+            QMessageBox.Question,
+            "Empty Commit",
+            "No files are staged for commit.\nDo you want to create an empty commit anyway?",
+            parent=self)
+        ok = qmb.addButton("Go back", QMessageBox.AcceptRole)
+        emptyCommit = qmb.addButton("Create empty commit", QMessageBox.ActionRole)
+        qmb.setDefaultButton(ok)
+        qmb.setEscapeButton(ok)
+        emptyCommit.clicked.connect(lambda: self.commitFlow(bypassEmptyCommitCheck=True))
+        qmb.show()
+
+    def commitFlow(self, bypassEmptyCommitCheck=False):
+        if not bypassEmptyCommitCheck and not porcelain.hasAnyStagedChanges(self.repo):
+            self.emptyCommitFlow()
+            return
 
         initialText = self.state.getDraftCommitMessage()
         cd = CommitDialog(initialText, False, self)
@@ -644,11 +650,15 @@ class RepoWidget(QWidget):
         QMessageBox.information(self, "Find Commit", F"No more occurrences of “{message}”.")
 
     def findFlow(self):
-        verbatimTerm, ok = textInputDialog(self, "Find Commit", "Search for partial commit hash or message:", self.previouslySearchedTerm)
-        if not ok:
-            return
-        self.previouslySearchedTerm = verbatimTerm
-        self._search(range(0, self.graphView.model().rowCount()))
+        def onAccept(verbatimTerm):
+            self.previouslySearchedTerm = verbatimTerm
+            self._search(range(0, self.graphView.model().rowCount()))
+        showTextInputDialog(
+            self,
+            "Find Commit",
+            "Search for partial commit hash or message:",
+            self.previouslySearchedTerm,
+            onAccept)
 
     def _findNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTerm):
@@ -688,11 +698,15 @@ class RepoWidget(QWidget):
         QMessageBox.information(self, "Find in Patch", F"No more occurrences of “{message}”.")
 
     def findInDiffFlow(self):
-        verbatimTerm, ok = textInputDialog(self, "Find in Patch", "Search for text in current patch:", self.previouslySearchedTermInDiff)
-        if not ok:
-            return
-        self.previouslySearchedTermInDiff = verbatimTerm
-        self._searchDiff()
+        def onAccept(verbatimTerm):
+            self.previouslySearchedTermInDiff = verbatimTerm
+            self._searchDiff()
+        showTextInputDialog(
+            self,
+            "Find in Patch",
+            "Search for text in current patch:",
+            self.previouslySearchedTermInDiff,
+            onAccept)
 
     def _findInDiffNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):

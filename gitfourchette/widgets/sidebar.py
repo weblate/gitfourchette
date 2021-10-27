@@ -1,7 +1,7 @@
 from allgit import *
 from allqt import *
 from dialogs.trackedbranchdialog import TrackedBranchDialog
-from util import labelQuote, textInputDialog, shortHash
+from util import labelQuote, showTextInputDialog, shortHash
 from widgets.sidebardelegate import SidebarDelegate
 from widgets.sidebarentry import SidebarEntry
 
@@ -119,9 +119,14 @@ class Sidebar(QTreeView):
         menu.exec_(globalPoint)
 
     def _newBranchFlow(self):
-        newBranchName, ok = textInputDialog(self, "New Branch", "Enter name for new branch:", None)
-        if ok:
+        def onAccept(newBranchName):
             self.newBranch.emit(newBranchName)
+        showTextInputDialog(
+            self,
+            "New Branch",
+            "Enter name for new branch:",
+            None,
+            onAccept)
 
     def _editTrackingBranchFlow(self, localBranchName):
         dlg = TrackedBranchDialog(self.currentGitRepo, localBranchName, self)
@@ -134,14 +139,15 @@ class Sidebar(QTreeView):
         dlg.show()
 
     def _renameBranchFlow(self, oldName):
-        newName, ok = textInputDialog(
+        def onAccept(newName):
+            self.renameBranch.emit(oldName, newName)
+        showTextInputDialog(
             self,
             "Rename Branch",
             F"Enter new name for branch <b>{labelQuote(oldName)}</b>:",
             oldName,
+            onAccept,
             okButtonText="Rename")
-        if ok:
-            self.renameBranch.emit(oldName, newName)
 
     def _deleteBranchFlow(self, localBranchName):
         rc = QMessageBox.warning(self, "Delete Branch",
@@ -152,23 +158,25 @@ class Sidebar(QTreeView):
             self.deleteBranch.emit(localBranchName)
 
     def _newTrackingBranchFlow(self, remoteBranchName):
-        localBranchName, ok = textInputDialog(
+        def onAccept(localBranchName):
+            self.newTrackingBranch.emit(localBranchName, remoteBranchName)
+        showTextInputDialog(
             self,
             "New Tracking Branch",
             F"Enter name for a new local branch that will track remote branch {labelQuote(remoteBranchName)}:",
             remoteBranchName[remoteBranchName.find('/') + 1:],
+            onAccept,
             okButtonText="Create")
-        if ok:
-            self.newTrackingBranch.emit(localBranchName, remoteBranchName)
 
     def _editRemoteURLFlow(self, remoteName):
-        newURL, ok = textInputDialog(
+        def onAccept(newURL):
+            self.editRemoteURL.emit(remoteName, newURL)
+        showTextInputDialog(
             self,
             "Edit Remote URL",
             F"Enter new URL for remote <b>{labelQuote(remoteName)}</b>:",
-            self.currentGitRepo.remote(remoteName).url)
-        if ok:
-            self.editRemoteURL.emit(remoteName, newURL)
+            self.currentGitRepo.remote(remoteName).url,
+            onAccept)
 
     def fill(self, repo: Repository):
         model = QStandardItemModel()
