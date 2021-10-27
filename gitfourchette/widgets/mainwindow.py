@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
         super().paintEvent(event)
 
     def makeMenu(self):
-        menubar = QMenuBar()
+        menubar = QMenuBar(self)
 
         fileMenu = menubar.addMenu("&File")
         fileMenu.addAction("&Open", self.openDialog, QKeySequence.Open)
@@ -149,7 +149,7 @@ class MainWindow(QMainWindow):
         if not settings.prefs.tabs_mergeWithMenubar:  # traditional menu bar
             self.setMenuBar(menubar)
         else:  # extended menu bar
-            menuContainer = QWidget()
+            menuContainer = QWidget(self)
             menuContainer.setLayout(QHBoxLayout())
             menuContainer.layout().setSpacing(0)
             menuContainer.layout().setContentsMargins(0, 0, 0, 0)
