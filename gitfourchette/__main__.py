@@ -5,9 +5,8 @@ import sys
 
 
 def excepthook(exctype, value, tb):
-    sys._excepthook(exctype, value, tb)
-    # todo: this is not thread safe!
-    excMessageBox(value)
+    sys.__excepthook__(exctype, value, tb)  # run default excepthook
+    excMessageBox(value, printExc=False)
 
 
 if __name__ == "__main__":
@@ -15,7 +14,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     # inject our own exception hook to show an error dialog in case of unhandled exceptions
-    sys._excepthook = sys.excepthook
     sys.excepthook = excepthook
 
     # initialize Qt before importing app modules so fonts are loaded correctly

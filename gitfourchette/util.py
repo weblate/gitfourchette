@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from pygit2 import Oid
 import os
 import re
+import sys
 import traceback
 import typing
 
@@ -101,8 +102,21 @@ def messageSummary(body: str):
     return message, messageContinued
 
 
-def excMessageBox(exc, title="Unhandled Exception", message="An exception was thrown.", parent=None):
-    traceback.print_exc()
+def excMessageBox(
+        exc,
+        title="Unhandled Exception",
+        message="An exception was thrown.",
+        parent=None,
+        printExc=True
+):
+    if printExc:
+        traceback.print_exception(exc.__class__, exc, exc.__traceback__)
+
+    # bail out if we're not running on Qt's application thread
+    appInstance = QApplication.instance()
+    if not appInstance or appInstance.thread() is not QThread.currentThread():
+        sys.stderr.write("excMessageBox: not on application thread; bailing out\n")
+        return
 
     summary = traceback.format_exception_only(exc.__class__, exc)
     summary = ''.join(summary).strip()
@@ -117,7 +131,10 @@ def excMessageBox(exc, title="Unhandled Exception", message="An exception was th
     layout = qmb.layout()
     layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
 
-    qmb.show()
+    if parent is not None:
+        qmb.show()
+    else:  # without a parent, .show() won't work
+        qmb.exec_()
 
 
 def excStrings(exc):
