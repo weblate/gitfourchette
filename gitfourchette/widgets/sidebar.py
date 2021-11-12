@@ -71,6 +71,7 @@ class Sidebar(QTreeView):
             return
 
         menu = QMenu(self)
+        menu.setObjectName("SidebarContextMenu")
 
         if data.type == SidebarEntry.Type.LOCAL_BRANCHES_HEADER:
             menu.addAction(F"&New Branch...", self._newBranchFlow)

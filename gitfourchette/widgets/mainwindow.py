@@ -97,10 +97,13 @@ class MainWindow(QMainWindow):
 
     def makeMenu(self):
         menubar = QMenuBar(self)
+        menubar.setObjectName("MWMenuBar")
 
         fileMenu = menubar.addMenu("&File")
+        fileMenu.setObjectName("MWFileMenu")
         fileMenu.addAction("&Open", self.openDialog, QKeySequence.Open)
         self.recentMenu = fileMenu.addMenu("Open &Recent")
+        self.recentMenu.setObjectName("RecentMenu")
         fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
         fileMenu.addSeparator()
         fileMenu.addAction("&Preferences...", self.openSettings, QKeySequence.Preferences)
@@ -108,6 +111,7 @@ class MainWindow(QMainWindow):
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
         repoMenu = menubar.addMenu("&Repo")
+        repoMenu.setObjectName("MWRepoMenu")
         repoMenu.addAction("&Refresh", self.quickRefresh, QKeySequence.Refresh)
         repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
         repoMenu.addSeparator()
@@ -124,16 +128,19 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Resc&ue Discarded Changes...", lambda: self.currentRepoWidget().openRescueFolder())
 
         patchMenu = menubar.addMenu("&Patch")
+        patchMenu.setObjectName("MWPatchMenu")
         patchMenu.addAction("&Find in Patch...", lambda: self.currentRepoWidget().findInDiffFlow(), QKeySequence(Qt.ALT + Qt.CTRL + Qt.Key_F))
 
-        goMenu:QMenu = menubar.addMenu("&Go")
+        goMenu: QMenu = menubar.addMenu("&Go")
+        goMenu.setObjectName("MWGoMenu")
         goMenu.addAction("&Uncommitted Changes", self.selectUncommittedChanges, QKeySequence(Qt.CTRL + Qt.Key_U))
         goMenu.addSeparator()
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence(Qt.CTRL + Qt.Key_Tab))
         goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_Tab))
 
         if settings.prefs.debug_showDebugMenu:
-            debugMenu = menubar.addMenu("&Debug")
+            debugMenu: QMenu = menubar.addMenu("&Debug")
+            debugMenu.setObjectName("MWDebugMenu")
             debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence(Qt.CTRL + Qt.Key_F5))
             debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
             debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
@@ -141,6 +148,7 @@ class MainWindow(QMainWindow):
             debugMenu.addAction("Dump graph (compact text)...", self.debug_saveGraphDumpCompactText)
 
         helpMenu = menubar.addMenu("&Help")
+        helpMenu.setObjectName("MWHelpMenu")
         helpMenu.addAction(F"&About {settings.PROGRAM_NAME}", lambda: showAboutDialog(self))
 
         self.fillRecentMenu()
@@ -223,7 +231,8 @@ class MainWindow(QMainWindow):
         if i < 0:  # Right mouse button released outside tabs
             return
         rw: RepoWidget = self.tabs.stacked.widget(i)
-        menu = QMenu()
+        menu = QMenu(self)
+        menu.setObjectName("MWRepoTabContextMenu")
         menu.addAction("Close Tab", lambda: self.closeTab(i))
         menu.addAction("Close Other Tabs", lambda: self.closeOtherTabs(i))
         menu.addSeparator()
