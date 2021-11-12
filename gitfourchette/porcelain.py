@@ -11,7 +11,8 @@ def loadDirtyDiff(repo: Repository) -> Diff:
 
 
 def loadStagedDiff(repo: Repository) -> Diff:
-    # TODO: need special case for empty repo (can't compare against HEAD)
+    if repo.is_empty:  # special case for empty repo (can't compare against HEAD)
+        return None
     stageDiff: Diff = repo.diff('HEAD', None, cached=True)  # compare HEAD to index
     stageDiff.find_similar()
     return stageDiff
