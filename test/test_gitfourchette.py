@@ -1,5 +1,6 @@
 from PySide2.QtTest import QTest
 from gitfourchette.allqt import *
+from gitfourchette.dialogs.commitdialog import CommitDialog
 from gitfourchette.widgets.mainwindow import MainWindow
 from gitfourchette.widgets.repowidget import RepoWidget
 import pygit2
@@ -179,3 +180,28 @@ def testStageEmptyUntrackedFileFromDiffView(qtbot, workDir, rw):
 @withPrep(None)
 def testEmptyRepo(qtbot, workDir, rw):
     assert rw
+
+
+@withRepo("TestGitRepository")
+@withPrep(reposcenario.fileWithUnstagedChange)
+def testCommit(qtbot, workDir, rw):
+    testutil.qlvClickNthRow(rw.dirtyView, 0)
+    QTest.keyPress(rw.dirtyView, Qt.Key_Return)
+    assert testutil.qlvGetTextRows(rw.dirtyView) == []
+    assert testutil.qlvGetTextRows(rw.stageView) == ["a/a1.txt"]
+    QTest.mouseClick(rw.commitButton, Qt.LeftButton)
+
+    commitDialog: CommitDialog = rw.findChild(QDialog)
+    assert "COMMIT" in commitDialog.windowTitle().upper()
+
+    QTest.keyClicks(commitDialog.summaryEditor, "Some New Commit")
+    QTest.keyPress(commitDialog, Qt.Key_Return)
+
+    repo = pygit2.Repository(workDir)
+    headCommit: pygit2.Commit = repo.head.peel(pygit2.Commit)
+    assert headCommit.message == "Some New Commit"
+    assert len(headCommit.parents) == 1
+    diff: pygit2.Diff = repo.diff(headCommit.parents[0], headCommit)
+    patches: list[pygit2.Patch] = list(diff)
+    assert len(patches) == 1
+    assert patches[0].delta.new_file.path == "a/a1.txt"
