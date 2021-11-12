@@ -136,6 +136,7 @@ class Sidebar(QTreeView):
             self.editTrackingBranch.emit(localBranchName, newTrackingBranchName)
 
         dlg.accepted.connect(onAccept)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
 
     def _renameBranchFlow(self, oldName):

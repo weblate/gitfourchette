@@ -521,6 +521,7 @@ class RepoWidget(QWidget):
         qmb.addButton("Push", QMessageBox.AcceptRole)
         qmb.addButton("Cancel", QMessageBox.RejectRole)
         qmb.accepted.connect(lambda: self.doPush(branchName))
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
 
     def doPush(self, branchName: str):
@@ -584,6 +585,7 @@ class RepoWidget(QWidget):
         qmb.setDefaultButton(ok)
         qmb.setEscapeButton(ok)
         emptyCommit.clicked.connect(lambda: self.commitFlow(bypassEmptyCommitCheck=True))
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
 
     def commitFlow(self, bypassEmptyCommitCheck=False):
@@ -605,6 +607,7 @@ class RepoWidget(QWidget):
 
         cd.accepted.connect(onAccept)
         cd.rejected.connect(onReject)
+        cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         cd.show()
 
     def amendFlow(self):
@@ -616,6 +619,7 @@ class RepoWidget(QWidget):
             self.quickRefresh()
 
         cd.accepted.connect(onAccept)
+        cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         cd.show()
 
     # -------------------------------------------------------------------------

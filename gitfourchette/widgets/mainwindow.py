@@ -176,6 +176,7 @@ class MainWindow(QMainWindow):
     def openSettings(self):
         dlg = PrefsDialog(self)
         dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg))
+        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
 
     def fillRecentMenu(self):
@@ -241,12 +242,12 @@ class MainWindow(QMainWindow):
 
         shortname = settings.history.getRepoNickname(path)
         progress = QProgressDialog("Opening repository.", "Abort", 0, 0, self)
-        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
         progress.setWindowModality(Qt.WindowModal)
         progress.setWindowTitle(shortname)
         progress.setWindowFlags(Qt.Dialog)
         progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
         QCoreApplication.processEvents()
+        progress.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         progress.show()
         QCoreApplication.processEvents()
         #import time; time.sleep(3)
@@ -276,6 +277,7 @@ class MainWindow(QMainWindow):
                 nukeButton: QAbstractButton = qmb.addButton("Remove from recents", QMessageBox.DestructiveRole)
                 nukeButton.clicked.connect(lambda: settings.history.removeRepo(path))
             qmb.setDefaultButton(ok)
+            qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
             qmb.show()
             return False
         except BaseException as exc:

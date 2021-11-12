@@ -131,6 +131,8 @@ def excMessageBox(
     layout = qmb.layout()
     layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
 
+    qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+
     if parent is not None:
         qmb.show()
     else:  # without a parent, .show() won't work
@@ -172,6 +174,7 @@ def showTextInputDialog(
     if onAccept:
         dlg.accepted.connect(lambda: onAccept(dlg.textValue()))
 
+    dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
     dlg.show()
     return dlg
 

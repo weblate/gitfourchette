@@ -56,4 +56,5 @@ class DirtyFileListView(FileListView):
         yes.clicked.connect(lambda: self.discardFiles.emit(entries))
         qmb.setDefaultButton(yes)
 
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()

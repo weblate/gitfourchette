@@ -142,6 +142,7 @@ class GraphView(QListView):
 
         messageBox = QMessageBox(QMessageBox.Information, title, markup, parent=self)
         messageBox.setDetailedText(details)
+        messageBox.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         messageBox.show()
 
     def checkoutCurrentCommit(self):
@@ -200,6 +201,7 @@ class GraphView(QListView):
             self.resetHead.emit(commitHash, resetMode, recurse)
 
         dlg.accepted.connect(onAccept)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
