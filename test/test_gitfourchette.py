@@ -194,12 +194,24 @@ def testCommit(qtbot, workDir, rw):
     commitDialog: CommitDialog = rw.findChild(QDialog)
     assert "COMMIT" in commitDialog.windowTitle().upper()
 
-    QTest.keyClicks(commitDialog.summaryEditor, "Some New Commit")
+    QTest.keyClicks(commitDialog.ui.summaryEditor, "Some New Commit")
+
+    commitDialog.ui.revealAuthor.click()
+    commitDialog.ui.authorSignature.ui.nameEdit.setText("Custom Author")
+    commitDialog.ui.authorSignature.ui.emailEdit.setText("custom.author@example.com")
+    enteredDate = QDateTime.fromString("1999-12-31 23:59:00", "yyyy-MM-dd HH:mm:ss")
+    commitDialog.ui.authorSignature.ui.timeEdit.setDateTime(enteredDate)
+
     QTest.keyPress(commitDialog, Qt.Key_Return)
 
     repo = pygit2.Repository(workDir)
     headCommit: pygit2.Commit = repo.head.peel(pygit2.Commit)
+
     assert headCommit.message == "Some New Commit"
+    assert headCommit.author.name == "Custom Author"
+    assert headCommit.author.email == "custom.author@example.com"
+    assert headCommit.author.time == QDateTime.toTime_t(enteredDate)
+
     assert len(headCommit.parents) == 1
     diff: pygit2.Diff = repo.diff(headCommit.parents[0], headCommit)
     patches: list[pygit2.Patch] = list(diff)

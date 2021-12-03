@@ -593,11 +593,22 @@ class RepoWidget(QWidget):
             self.emptyCommitFlow()
             return
 
+        sig = self.repo.default_signature
+
         initialText = self.state.getDraftCommitMessage()
-        cd = CommitDialog(initialText, False, self)
+        cd = CommitDialog(
+            initialText=initialText,
+            authorSignature=sig,
+            committerSignature=sig,
+            isAmend=False,
+            parent=self)
 
         def onAccept():
-            porcelain.createCommit(self.repo, cd.getFullMessage())
+            porcelain.createCommit(
+                repo=self.repo,
+                message=cd.getFullMessage(),
+                overrideAuthor=cd.getOverriddenAuthorSignature(),
+                overrideCommitter=cd.getOverriddenCommitterSignature())
             self.state.setDraftCommitMessage(None)  # Clear draft message
             self.quickRefresh()
 
@@ -611,11 +622,21 @@ class RepoWidget(QWidget):
         cd.show()
 
     def amendFlow(self):
-        initialText = porcelain.getHeadCommitMessage(self.repo)
-        cd = CommitDialog(initialText, True, self)
+        headCommit = porcelain.getHeadCommit(self.repo)
+
+        cd = CommitDialog(
+            initialText=headCommit.message,
+            authorSignature=headCommit.author,
+            committerSignature=self.repo.default_signature,
+            isAmend=True,
+            parent=self)
 
         def onAccept():
-            porcelain.amendCommit(self.repo, cd.getFullMessage())
+            porcelain.amendCommit(
+                repo=self.repo,
+                message=cd.getFullMessage(),
+                overrideAuthor=cd.getOverriddenAuthorSignature(),
+                overrideCommitter=cd.getOverriddenCommitterSignature())
             self.quickRefresh()
 
         cd.accepted.connect(onAccept)

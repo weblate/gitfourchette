@@ -1,4 +1,4 @@
-from pygit2 import Commit, Diff, Oid, Repository
+from pygit2 import Commit, Diff, Oid, Repository, Signature
 import pygit2
 
 
@@ -101,14 +101,20 @@ def getHeadCommitMessage(repo: Repository) -> str:
     return getHeadCommit(repo).message
 
 
-def createCommit(repo: Repository, message: str) -> Oid:
+def createCommit(
+        repo: Repository,
+        message: str,
+        overrideAuthor: Signature = None,
+        overrideCommitter: Signature = None
+) -> Oid:
     head = repo.head
     indexTreeOid: Oid = repo.index.write_tree()
     parents = [getHeadCommitOid(repo)]
+    fallbackSignature = repo.default_signature
     newCommitOid: Oid = repo.create_commit(
         head.name,
-        repo.default_signature, #Author
-        repo.default_signature, #Committer
+        overrideAuthor or fallbackSignature,
+        overrideCommitter or fallbackSignature,
         message,
         indexTreeOid,
         parents
@@ -116,13 +122,19 @@ def createCommit(repo: Repository, message: str) -> Oid:
     return newCommitOid
 
 
-def amendCommit(repo: Repository, message: str) -> Oid:
+def amendCommit(
+        repo: Repository,
+        message: str,
+        overrideAuthor: Signature = None,
+        overrideCommitter: Signature = None
+) -> Oid:
     indexTreeOid = repo.index.write_tree(repo)
     newCommitOid = repo.amend_commit(
         getHeadCommit(repo),
         'HEAD',
         message=message,
-        committer=repo.default_signature,
+        author=overrideAuthor,
+        committer=overrideCommitter or repo.default_signature,
         tree=indexTreeOid
     )
     return newCommitOid

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>200</height>
+    <width>326</width>
+    <height>270</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,62 +16,97 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="summaryRowLayout">
      <item>
-      <layout class="QHBoxLayout" name="summaryRowLayout">
-       <item>
-        <widget class="QLineEdit" name="summaryEditor">
-         <property name="font">
-          <font>
-           <pointsize>12</pointsize>
-          </font>
-         </property>
-         <property name="placeholderText">
-          <string>Enter commit summary</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="counterLabel">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string>000</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QPlainTextEdit" name="descriptionEditor">
-       <property name="tabChangesFocus">
-        <bool>true</bool>
+      <widget class="QLineEdit" name="summaryEditor">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+        </font>
        </property>
        <property name="placeholderText">
-        <string>Long-form description (optional)</string>
+        <string>Enter commit summary</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QDialogButtonBox" name="buttonBox">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="standardButtons">
-        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-       </property>
-       <property name="centerButtons">
+      <widget class="QLabel" name="counterLabel">
+       <property name="enabled">
         <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>000</string>
        </property>
       </widget>
      </item>
     </layout>
    </item>
+   <item>
+    <widget class="QPlainTextEdit" name="descriptionEditor">
+     <property name="tabChangesFocus">
+      <bool>true</bool>
+     </property>
+     <property name="placeholderText">
+      <string>Long-form description (optional)</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="revealAuthor">
+     <property name="text">
+      <string>&amp;Edit author</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string/>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
+     </property>
+     <property name="checkable">
+      <bool>false</bool>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="SignatureForm" name="authorSignature" native="true"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SignatureForm</class>
+   <extends>QWidget</extends>
+   <header>widgets.signatureform</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>summaryEditor</tabstop>
   <tabstop>descriptionEditor</tabstop>
@@ -85,12 +120,12 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>219</x>
-     <y>191</y>
+     <x>189</x>
+     <y>263</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
-     <y>274</y>
+     <y>269</y>
     </hint>
    </hints>
   </connection>
@@ -101,12 +136,28 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>287</x>
-     <y>197</y>
+     <x>189</x>
+     <y>263</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
-     <y>274</y>
+     <y>269</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>revealAuthor</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>groupBox</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>97</x>
+     <y>142</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>98</x>
+     <y>174</y>
     </hint>
    </hints>
   </connection>

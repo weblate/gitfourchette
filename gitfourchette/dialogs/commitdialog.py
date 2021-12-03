@@ -1,9 +1,16 @@
 from allqt import *
 from ui.ui_commitdialog import Ui_CommitDialog
+from pygit2 import Signature
 
 
 class CommitDialog(QDialog):
-    def __init__(self, initialText: str, isAmend: bool, parent):
+    def __init__(
+            self,
+            initialText: str,
+            authorSignature: Signature,
+            committerSignature: Signature,
+            isAmend: bool,
+            parent):
         super().__init__(parent)
 
         self.ui = Ui_CommitDialog()
@@ -22,6 +29,8 @@ class CommitDialog(QDialog):
             prompt = "Enter commit summary"
             buttonCaption = "&Commit"
             self.setWindowTitle("Commit")
+
+        self.ui.authorSignature.setSignature(authorSignature)
 
         acceptButton.setText(buttonCaption)
         summaryEditor.setPlaceholderText(prompt)
@@ -45,6 +54,8 @@ class CommitDialog(QDialog):
 
         onSummaryChanged()
 
+        self.ui.revealAuthor.setChecked(False)
+
     def hasNonBlankSummary(self):
         return bool(self.ui.summaryEditor.text().strip())
 
@@ -58,3 +69,13 @@ class CommitDialog(QDialog):
             return summary
 
         return F"{summary}\n\n{details}"
+
+    def getOverriddenAuthorSignature(self):
+        if self.ui.revealAuthor.isChecked():
+            return self.ui.authorSignature.getSignature()
+        else:
+            return None
+
+    def getOverriddenCommitterSignature(self):
+        return self.getOverriddenAuthorSignature()
+
