@@ -8,6 +8,13 @@ import colors
 import settings
 
 
+REF_PREFIXES = {
+    "refs/remotes/": Qt.darkCyan,
+    "refs/tags/": Qt.darkYellow,
+    "refs/heads/": Qt.darkMagenta,
+}
+
+
 class GraphDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
@@ -95,19 +102,23 @@ class GraphDelegate(QStyledItemDelegate):
             paintGraphFrame(self.state, commit, painter, rect, outlineColor)
 
         # ------ Refs
-        """ TODO: pygit2 migration
         if commit is not None and commit.oid in self.state.refsByCommit:
-            for refName, isTag in self.state.refsByCommit[commit.oid]:
-                refColor = Qt.darkYellow if isTag else Qt.darkMagenta
+            for refName in self.state.refsByCommit[commit.oid]:
+                shortRefName = refName
+                refColor = Qt.darkMagenta
+                for prefix in REF_PREFIXES:
+                    if refName.startswith(prefix):
+                        shortRefName = refName[len(prefix):]
+                        refColor = REF_PREFIXES[prefix]
+                        break
                 painter.save()
                 painter.setFont(settings.smallFont)
                 painter.setPen(refColor)
                 rect.setLeft(rect.right())
-                label = F"[{refName}] "
+                label = F"[{shortRefName}] "
                 rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
                 painter.drawText(rect, Qt.AlignVCenter, label)
                 painter.restore()
-        """
 
         def elide(text):
             return metrics.elidedText(text, Qt.ElideRight, rect.width())
