@@ -88,6 +88,11 @@ class GraphView(QListView):
         if not commitHash:
             return
 
+        def formatSignature(sig: Signature):
+            qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
+            return F"{html.escape(sig.name)} &lt;{html.escape(commit.author.email)}&gt;<br>" \
+                   + html.escape(QLocale.system().toString(qdt, QLocale.LongFormat))
+
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
 
         commit: Commit = self.currentIndex().data()
@@ -108,19 +113,12 @@ class GraphView(QListView):
         #childLabelMarkup = html.escape(fplural('# Child^ren', len(childHashes)))
         #childValueMarkup = html.escape(', '.join(childHashes))
 
-        authorTime = datetime.fromtimestamp(commit.author.time)
-        committerTime = datetime.fromtimestamp(commit.committer.time)
+        authorMarkup = formatSignature(commit.author)
 
-        authorMarkup = F"{html.escape(commit.author.name)} &lt;{html.escape(commit.author.email)}&gt;" \
-            F"<br>{html.escape(authorTime.strftime(settings.prefs.longTimeFormat))}"
-
-        if (commit.author.email == commit.committer.email
-                and commit.author.name == commit.committer.name
-                and commit.author.time == commit.committer.time):
+        if commit.author == commit.committer:
             committerMarkup = F"<i>(same as author)</i>"
         else:
-            committerMarkup = F"{html.escape(commit.committer.name)} &lt;{html.escape(commit.committer.email)}&gt;" \
-                F"<br>{html.escape(committerTime.strftime(settings.prefs.longTimeFormat))}"
+            committerMarkup = formatSignature(commit.committer)
 
         markup = F"""<span style='font-size: large'>{summary}</span>{postSummary}
             <br>

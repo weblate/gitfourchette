@@ -112,8 +112,6 @@ class PrefsDialog(QDialog):
                 control = self.boolRadioControl(prefKey, prefValue, falseName="Chronological", trueName="Topological")
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
-            elif prefKey == 'longTimeFormat':
-                continue  # Don't expose the setting for this
             elif prefKey == 'shortHashChars':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
             elif issubclass(t, enum.Enum):

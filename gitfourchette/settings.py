@@ -29,12 +29,6 @@ SHORT_DATE_PRESETS = [
     ('American', '%m/%d/%Y %I:%M %p'),
 ]
 
-# Don't use %Z (capital Z) for the named timezones, we can't get them from git.
-# However, timezone offsets (%z) work fine.
-LONG_DATE_PRESETS = [
-    ("Full", "%c %z")
-]
-
 
 def encodeBinary(b: QByteArray) -> str:
     return b.toBase64().data().decode('utf-8')
@@ -98,7 +92,6 @@ class Prefs(BasePrefs):
     shortHashChars              : int           = 7
     splitterHandleWidth         : int           = -1
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
-    longTimeFormat              : str           = LONG_DATE_PRESETS[0][1]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
     showStatusBar               : bool          = True
     diff_font                   : str           = ""
