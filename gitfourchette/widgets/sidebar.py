@@ -227,32 +227,35 @@ class Sidebar(QTreeView):
 
         model.appendRow(SidebarSeparator())
 
-        """ TODO: pygit2 migration
-        remote: git.Remote
+        allRefs = repo.listall_references()
+
+        remote: pygit2.Remote
         for remote in repo.remotes:
             remoteEntry = SidebarEntry(SidebarEntry.Type.REMOTE, remote.name)
             remoteParent = SidebarItem(F"Remote “{remote.name}”", remoteEntry)
             remoteParent.setSelectable(False)
-            remotePrefix = remote.name + '/'
-            for remoteRef in remote.refs:
-                remoteRefShortName = remoteRef.name
-                if remoteRefShortName.startswith(remotePrefix):
-                    remoteRefShortName = remoteRefShortName[len(remotePrefix):]
-                remoteRefEntry = SidebarEntry(SidebarEntry.Type.REMOTE_REF, remoteRef.name)
+
+            remotePrefix = F"refs/remotes/{remote.name}/"
+            remoteRefNames = (refName for refName in allRefs if refName.startswith(remotePrefix))
+
+            for remoteRefLongName in remoteRefNames:
+                print(remoteRefLongName)
+                remoteRefShortName = remoteRefLongName[len(remotePrefix):]
+                remoteRefEntry = SidebarEntry(SidebarEntry.Type.REMOTE_REF, remoteRefLongName)
                 remoteRefItem = SidebarItem(remoteRefShortName, remoteRefEntry)
                 remoteParent.appendRow(remoteRefItem)
+
             model.appendRow(remoteParent)
             model.appendRow(SidebarSeparator())
 
         tagsParent = QStandardItem("Tags")
         tagsParent.setSelectable(False)
-        tag: git.Tag
-        for tag in repo.tags:
-            tagEntry = SidebarEntry(SidebarEntry.Type.TAG, tag.name)
-            tagItem = SidebarItem(tag.name, tagEntry)
+        for tagLongName in (refName for refName in allRefs if refName.startswith("refs/tags/")):
+            tagShortName = tagLongName[len("refs/tags/"):]
+            tagEntry = SidebarEntry(SidebarEntry.Type.TAG, tagShortName)
+            tagItem = SidebarItem(tagShortName, tagEntry)
             tagsParent.appendRow(tagItem)
         model.appendRow(tagsParent)
-        """
 
         self.currentGitRepo = repo
         self._replaceModel(model)
