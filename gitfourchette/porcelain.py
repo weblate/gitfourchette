@@ -1,4 +1,4 @@
-from pygit2 import Commit, Diff, Oid, Repository, Signature
+from pygit2 import Commit, Diff, Oid, Repository, Signature, Branch
 import pygit2
 
 
@@ -35,8 +35,8 @@ def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
     return [repo.diff(parent, commit) for parent in commit.parents]
 
 
-def switchToBranch(repo: Repository, newBranch: str):
-    raise NotImplementedError("repo.git.switch('--no-guess', newBranch)")
+def checkoutRef(repo: Repository, refName: str):
+    repo.checkout(refName)
 
 
 def renameBranch(repo: Repository, oldName: str, newName: str):
@@ -57,8 +57,9 @@ def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: 
 
 
 def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid):
-    raise NotImplementedError("repo.git.branch(localBranchName, commitHexsha)")
-    switchToBranch(repo, localBranchName)
+    commit: Commit = repo[commitOid].peel(Commit)
+    branch: Branch = repo.create_branch(localBranchName, commit)
+    checkoutRef(repo, branch.name)  # branch.name is inherited from Reference
 
 
 def editTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str):

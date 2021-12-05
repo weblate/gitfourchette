@@ -13,7 +13,7 @@ class GraphView(QListView):
     emptyClicked = Signal()
     commitClicked = Signal(Oid)
     resetHead = Signal(str, str, bool)
-    newBranchFromCommit = Signal(str, str)
+    newBranchFromCommit = Signal(str, Oid)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -75,7 +75,7 @@ class GraphView(QListView):
         return self.repoWidget.state.repo
 
     @property
-    def currentCommitHash(self) -> Oid:
+    def currentCommitOid(self) -> Oid:
         if not self.currentIndex().isValid():
             return
         data: Commit = self.currentIndex().data()
@@ -84,8 +84,8 @@ class GraphView(QListView):
         return data.oid
 
     def getInfoOnCurrentCommit(self):
-        commitHash = self.currentCommitHash
-        if not commitHash:
+        oid = self.currentCommitOid
+        if not oid:
             return
 
         def formatSignature(sig: Signature):
@@ -144,59 +144,59 @@ class GraphView(QListView):
         messageBox.show()
 
     def checkoutCurrentCommit(self):
-        commitHash = self.currentCommitHash
-        if not commitHash:
+        oid = self.currentCommitOid
+        if not oid:
             return
 
         def work():
-            self.repo.git.checkout(commitHash)
+            self.repo.git.checkout(oid)
 
         def onComplete(_):
             self.repoWidget.quickRefresh()
             self.repoWidget.sidebar.fill(self.repo)
 
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{shortHash(commitHash)}”")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{shortHash(oid)}”")
 
     def cherrypickCurrentCommit(self):
-        commitHash = self.currentCommitHash
-        if not commitHash:
+        oid = self.currentCommitOid
+        if not oid:
             return
 
         def work():
-            self.repo.git.cherry_pick(commitHash)
+            self.repo.git.cherry_pick(oid)
 
         def onComplete(_):
             self.repoWidget.quickRefresh()
-            self.selectCommit(commitHash)
+            self.selectCommit(oid)
 
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(commitHash)}”")
+        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(oid)}”")
 
     def branchFromCurrentCommit(self):
-        hexsha = self.currentCommitHash
-        if not hexsha:
+        oid = self.currentCommitOid
+        if not oid:
             return
 
         def onAccept(newBranchName):
-            self.newBranchFromCommit.emit(newBranchName, hexsha)
+            self.newBranchFromCommit.emit(newBranchName, oid)
 
         showTextInputDialog(
             self,
-            F"New Branch From {shortHash(hexsha)}",
-            F"Enter name for new branch starting from {shortHash(hexsha)}:",
+            F"New Branch From {shortHash(oid)}",
+            F"Enter name for new branch starting from {shortHash(oid)}:",
             None,
             onAccept)
 
     def resetHeadFlow(self):
-        commitHash = self.currentCommitHash
-        if not commitHash:
+        oid = self.currentCommitOid
+        if not oid:
             return
 
-        dlg = ResetHeadDialog(commitHash, parent=self)
+        dlg = ResetHeadDialog(oid, parent=self)
 
         def onAccept():
             resetMode = dlg.activeMode
             recurse = dlg.recurseSubmodules
-            self.resetHead.emit(commitHash, resetMode, recurse)
+            self.resetHead.emit(oid, resetMode, recurse)
 
         dlg.accepted.connect(onAccept)
         dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog

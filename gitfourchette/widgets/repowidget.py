@@ -420,7 +420,8 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
 
     def switchToBranchAsync(self, newBranch: str):
-        work = lambda: porcelain.switchToBranch(self.repo, newBranch)
+        assert newBranch.startswith("refs/")
+        work = lambda: porcelain.checkoutRef(self.repo, newBranch)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Switching to branch “{newBranch}”")
 
@@ -444,10 +445,10 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
 
-    def newBranchFromCommitAsync(self, localBranchName: str, commitHexsha: str):
-        work = lambda: porcelain.newBranchFromCommit(self.repo, localBranchName, commitHexsha)
+    def newBranchFromCommitAsync(self, localBranchName: str, commitOid: Oid):
+        work = lambda: porcelain.newBranchFromCommit(self.repo, localBranchName, commitOid)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitHexsha)}”")
+        self.workQueue.put(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitOid)}”")
 
     def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
