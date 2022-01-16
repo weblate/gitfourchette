@@ -236,3 +236,20 @@ def testSaveOldRevision(qtbot, workDir, tempDir, rw):
     with open(os.path.join(tempDir.name, "c2@6462e7d.txt"), "rb") as f:
         contents = f.read()
         assert contents == b"c2\n"
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testSaveOldRevisionOfDeletedFile(qtbot, workDir, tempDir, rw):
+    commitOid = pygit2.Oid(binascii.unhexlify("c9ed7bf12c73de26422b7c5a44d74cfce5a8993b"))
+
+    rw.graphView.selectCommit(commitOid)
+    assert testutil.qlvGetTextRows(rw.changedFilesView) == ["c/c2-2.txt"]
+    rw.changedFilesView.selectRow(0)
+    rw.changedFilesView.saveRevisionAs(saveInto=tempDir.name)
+
+    # c2-2.txt was deleted by the commit.
+    # Expect GF to save the state of the file before its deletion.
+    with open(os.path.join(tempDir.name, "c2-2@c9ed7bf.txt"), "rb") as f:
+        contents = f.read()
+        assert contents == b"c2\nc2\n"

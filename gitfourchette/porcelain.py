@@ -233,8 +233,3 @@ def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
             obj = headTree[old_path]
             index.add(pygit2.IndexEntry(old_path, obj.oid, obj.filemode))
     index.write()
-
-
-def getFileRevision(repo: Repository, commitOid: Oid, path: str) -> pygit2.Object:
-    tree: pygit2.Tree = repo[commitOid].peel(pygit2.Tree)
-    return tree[path]

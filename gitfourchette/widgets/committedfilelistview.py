@@ -32,11 +32,16 @@ class CommittedFileListView(FileListView):
         self.commitOid = oid
 
     def openRevision(self):
-        for entry in self.confirmSelectedEntries("open # files"):
-            entryPath = entry.delta.new_file.path
-            blob = porcelain.getFileRevision(self.repo, self.commitOid, entryPath)
+        for diff in self.confirmSelectedEntries("open # files"):
+            diffFile: pygit2.DiffFile
+            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+                diffFile = diff.delta.old_file
+            else:
+                diffFile = diff.delta.new_file
 
-            name, ext = os.path.splitext(blob.name)
+            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+
+            name, ext = os.path.splitext(os.path.basename(diffFile.path))
             name = F"{name}@{shortHash(self.commitOid)}{ext}"
 
             tempPath = os.path.join(getSessionTemporaryDirectory(), name)
@@ -47,11 +52,16 @@ class CommittedFileListView(FileListView):
             QDesktopServices.openUrl(tempPath)
 
     def saveRevisionAs(self, saveInto=None):
-        for entry in self.confirmSelectedEntries("save # files"):
-            entryPath = entry.delta.new_file.path
-            blob = porcelain.getFileRevision(self.repo, self.commitOid, entryPath)
+        for diff in self.confirmSelectedEntries("save # files"):
+            diffFile: pygit2.DiffFile
+            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+                diffFile = diff.delta.old_file
+            else:
+                diffFile = diff.delta.new_file
 
-            name, ext = os.path.splitext(blob.name)
+            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+
+            name, ext = os.path.splitext(os.path.basename(diffFile.path))
             name = F"{name}@{shortHash(self.commitOid)}{ext}"
 
             if saveInto:
@@ -65,4 +75,4 @@ class CommittedFileListView(FileListView):
             with open(savePath, "wb") as f:
                 f.write(blob.data)
 
-            os.chmod(savePath, blob.filemode)
+            os.chmod(savePath, diffFile.mode)
