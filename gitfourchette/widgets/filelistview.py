@@ -114,11 +114,14 @@ class FileListView(QListView):
         if icon:
             item.setIcon(icon)
 
+        operationTooltip = delta.status_char()
+        if delta.status_char() == 'R':
+            operationTooltip += F", {delta.similarity}% similarity"
+
         tooltip = F"""
                         <b>from:</b> {html.escape(delta.old_file.path)} ({delta.old_file.mode:o})
                         <br><b>to:</b> {html.escape(delta.new_file.path)} ({delta.new_file.mode:o})
-                        <br><b>operation:</b> {delta.status_char()}
-                        <br><b>similarity:</b> {delta.similarity} (valid for R only)
+                        <br><b>operation:</b> {operationTooltip}
                         """
         item.setToolTip(tooltip)
 

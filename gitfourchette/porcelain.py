@@ -32,7 +32,15 @@ def hasAnyStagedChanges(repo: Repository) -> bool:
 def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
     commit: Commit = repo.get(oid)
     #import time; time.sleep(1) #to debug out-of-order events
-    return [repo.diff(parent, commit) for parent in commit.parents]
+
+    allDiffs = []
+
+    for parent in commit.parents:
+        diff = repo.diff(parent, commit)
+        diff.find_similar()
+        allDiffs.append(diff)
+
+    return allDiffs
 
 
 def checkoutRef(repo: Repository, refName: str):
