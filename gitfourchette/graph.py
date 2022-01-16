@@ -71,7 +71,7 @@ class Arc:
     nextArc: Arc = None
 
     def __repr__(self):
-        s = F"{self.openedBy[:5]}->{self.closedBy[:5]}"
+        s = F"{str(self.openedBy)[:5]}->{str(self.closedBy)[:5]}"
         if self.closedAt < 0:
             s += "?"
         else:
@@ -192,6 +192,27 @@ class Frame:
                 del theList[-1]
 
         return theList
+
+    def flattenLanes(self) -> tuple[list[tuple[int, int]], int]:
+        """Flatten the lanes so there are no unused columns in-between the lanes."""
+
+        columnAbove, columnBelow = -1, -1
+        laneRemap = []
+
+        for staleArc, openArc in itertools.zip_longest(self.staleArcs, self.openArcs):
+            if openArc:
+                columnBelow += 1
+                if openArc.openedAt < self.row:
+                    columnAbove += 1
+            if staleArc:
+                columnAbove += 1
+                if staleArc.isParentlessCommit():
+                    columnBelow += 1
+            laneRemap.append( (columnAbove, columnBelow) )
+
+        numFlattenedLanes = max(columnAbove, columnBelow)
+
+        return laneRemap, numFlattenedLanes
 
 
 class GeneratorState(Frame):

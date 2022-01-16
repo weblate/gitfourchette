@@ -23,30 +23,16 @@ def flattenLanes(frame: Frame) -> tuple[list[tuple[int, int]], int]:
     Compute columns (horizontal positions) for each lane above and below this row.
     """
 
-    laneColumnsAB = []
-
     if settings.prefs.graph_flattenLanes:
-        # Flatten the lanes so there are no horizontal gaps in-between the lanes.
-        ai, bi = -1, -1
-
-        for cl, ol in zip_longest(frame.staleArcs, frame.openArcs):
-            if ol:
-                bi += 1
-                if ol.openedAt < frame.row:
-                    ai += 1
-            if cl:
-                ai += 1
-            laneColumnsAB.append( (ai, bi) )
-
-        flatTotal = max(ai, bi)
-
+        laneRemap, flatTotal = frame.flattenLanes()
     else:
         # Straightforward lane positions (lane column == lane ID)
+        laneRemap = []
         for i, (cl, ol) in enumerate(zip_longest(frame.staleArcs, frame.openArcs)):
-            laneColumnsAB.append( (i, i) )
-        flatTotal = len(laneColumnsAB)#len(laneContinuity)
+            laneRemap.append( (i, i) )
+        flatTotal = len(laneRemap)
 
-    return laneColumnsAB, flatTotal
+    return laneRemap, flatTotal
 
 
 def getCommitBulletColumn(
