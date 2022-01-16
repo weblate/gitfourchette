@@ -35,28 +35,32 @@ class FileListView(QListView):
         menu.exec_(event.globalPos())
 
     def createContextMenuActions(self):
-        return [ActionDef("Open Containing &Folder", self.showInFolder)]
+        return []
+
+    def confirmSelectedEntries(self, text: str, threshold: int =3) -> list[pygit2.Patch]:
+        entries = list(self.selectedEntries())
+
+        if len(entries) <= threshold:
+            return entries
+
+        title = text.replace("#", "many").title()
+
+        prompt = text.replace("#", F"<b>{len(entries)}</b>")
+        prompt = F"Really {prompt}?"
+
+        result = QMessageBox.question(self, title, prompt, QMessageBox.YesToAll | QMessageBox.Cancel)
+        if result == QMessageBox.YesToAll:
+            return entries
+        else:
+            return []
 
     def openFile(self):
-        entries = list(self.selectedEntries())
-
-        if len(entries) > 3 and QMessageBox.YesToAll != QMessageBox.question(
-                self, "Open Many Files", F"Really open <b>{len(entries)}</b> files?",
-                QMessageBox.YesToAll | QMessageBox.Cancel):
-            return
-
-        for entry in entries:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.repo.workdir, entry.delta.new_file.path)))
+        for entry in self.confirmSelectedEntries("open # files"):
+            entryPath = os.path.join(self.repo.workdir, entry.delta.new_file.path)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(entryPath))
 
     def showInFolder(self):
-        entries = list(self.selectedEntries())
-
-        if len(entries) > 3 and QMessageBox.YesToAll != QMessageBox.question(
-                self, "Open Many Folders", F"Really open <b>{len(entries)}</b> folders?",
-                QMessageBox.YesToAll | QMessageBox.Cancel):
-            return
-
-        for entry in self.selectedEntries():
+        for entry in self.confirmSelectedEntries("open # folders"):
             showInFolder(os.path.join(self.repo.workdir, entry.delta.new_file.path))
 
     def keyPressEvent(self, event: QKeyEvent):

@@ -3,12 +3,14 @@ from gitfourchette.allqt import *
 from gitfourchette.dialogs.commitdialog import CommitDialog
 from gitfourchette.widgets.mainwindow import MainWindow
 from gitfourchette.widgets.repowidget import RepoWidget
+import binascii
+import os
 import pygit2
 import pytest
+import reposcenario
 import tarfile
 import tempfile
 import testutil
-import reposcenario
 
 
 def withRepo(name):
@@ -28,10 +30,12 @@ def tempDir() -> tempfile.TemporaryDirectory:
 
 @pytest.fixture
 def workDir(tempDir, testRepoName, prep) -> str:
-    td = tempDir
-    with tarfile.open(F"test/data/{testRepoName}.tar") as tar:
-        tar.extractall(td.name)
-    path = F"{td.name}/{testRepoName}/"
+    testPath = os.path.realpath(__file__)
+    testPath = os.path.dirname(testPath)
+
+    with tarfile.open(F"{testPath}/data/{testRepoName}.tar") as tar:
+        tar.extractall(tempDir.name)
+    path = F"{tempDir.name}/{testRepoName}/"
     if prep:
         prep(path)
     return path
@@ -217,3 +221,18 @@ def testCommit(qtbot, workDir, rw):
     patches: list[pygit2.Patch] = list(diff)
     assert len(patches) == 1
     assert patches[0].delta.new_file.path == "a/a1.txt"
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testSaveOldRevision(qtbot, workDir, tempDir, rw):
+    commitOid = pygit2.Oid(binascii.unhexlify("6462e7d8024396b14d7651e2ec11e2bbf07a05c4"))
+
+    rw.graphView.selectCommit(commitOid)
+    assert testutil.qlvGetTextRows(rw.changedFilesView) == ["c/c2.txt"]
+    rw.changedFilesView.selectRow(0)
+    rw.changedFilesView.saveRevisionAs(saveInto=tempDir.name)
+
+    with open(os.path.join(tempDir.name, "c2@6462e7d.txt"), "rb") as f:
+        contents = f.read()
+        assert contents == b"c2\n"

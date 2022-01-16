@@ -11,6 +11,7 @@ from repostate import RepoState
 from typing import Callable
 from util import fplural, excMessageBox, excStrings, labelQuote, showTextInputDialog, QSignalBlockerContext, shortHash
 from widgets.diffview import DiffView
+from widgets.committedfilelistview import CommittedFileListView
 from widgets.dirtyfilelistview import DirtyFileListView
 from widgets.filelistview import FileListView
 from widgets.graphview import GraphView
@@ -81,7 +82,7 @@ class RepoWidget(QWidget):
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
         self.diffView = DiffView(self)
-        self.changedFilesView = FileListView(self, StagingState.COMMITTED)
+        self.changedFilesView = CommittedFileListView(self)
         self.dirtyView = DirtyFileListView(self)
         self.stageView = StagedFileListView(self)
         self.sidebar = Sidebar(self)
@@ -376,6 +377,7 @@ class RepoWidget(QWidget):
             # Reset changed files view. Block its signals as we refill it to prevent updating the diff view.
             with QSignalBlockerContext(self.changedFilesView):
                 self.changedFilesView.clear()
+                self.changedFilesView.setCommit(oid)
                 for diff in parentDiffs:
                     self.changedFilesView.addFileEntriesFromDiff(diff)
 

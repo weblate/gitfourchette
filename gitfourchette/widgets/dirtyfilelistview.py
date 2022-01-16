@@ -22,7 +22,8 @@ class DirtyFileListView(FileListView):
             None,
             ActionDef("&Copy Path", self.copyPaths),
             ActionDef("&Open File in External Editor", self.openFile),
-        ] + super().createContextMenuActions()
+            ActionDef("Open Containing &Folder", self.showInFolder),
+        ]
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
