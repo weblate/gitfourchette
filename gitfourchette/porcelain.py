@@ -30,17 +30,21 @@ def hasAnyStagedChanges(repo: Repository) -> bool:
 
 
 def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
-    commit: Commit = repo.get(oid)
+    commit: pygit2.Commit = repo.get(oid)
     #import time; time.sleep(1) #to debug out-of-order events
 
-    allDiffs = []
+    if commit.parents:
+        allDiffs = []
+        for parent in commit.parents:
+            diff = repo.diff(parent, commit)
+            diff.find_similar()
+            allDiffs.append(diff)
+        return allDiffs
 
-    for parent in commit.parents:
-        diff = repo.diff(parent, commit)
-        diff.find_similar()
-        allDiffs.append(diff)
-
-    return allDiffs
+    else:  # parentless commit
+        tree: pygit2.Tree = commit.peel(pygit2.Tree)
+        diff = tree.diff_to_tree(swap=True)
+        return [diff]
 
 
 def checkoutRef(repo: Repository, refName: str):

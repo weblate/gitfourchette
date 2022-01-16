@@ -1,5 +1,7 @@
 from gitfourchette.allqt import *
 from PySide2.QtTest import QTest
+import pygit2
+import binascii
 
 
 def writeFile(path, text):
@@ -22,3 +24,9 @@ def qlvClickNthRow(view: QListView, n: int):
     rect = view.visualRect(index)
     QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=rect.center())
     #self.breathe()
+
+
+def hexToOid(hexstr: str):
+    assert len(hexstr) == 40
+    return pygit2.Oid(binascii.unhexlify(hexstr))
+

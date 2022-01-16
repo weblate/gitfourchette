@@ -3,7 +3,6 @@ from gitfourchette.allqt import *
 from gitfourchette.dialogs.commitdialog import CommitDialog
 from gitfourchette.widgets.mainwindow import MainWindow
 from gitfourchette.widgets.repowidget import RepoWidget
-import binascii
 import os
 import pygit2
 import pytest
@@ -187,6 +186,16 @@ def testEmptyRepo(qtbot, workDir, rw):
 
 
 @withRepo("TestGitRepository")
+@withPrep(None)
+def testParentlessCommitFileList(qtbot, workDir, rw):
+    commitOid = testutil.hexToOid("42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+
+    rw.graphView.selectCommit(commitOid)
+
+    assert testutil.qlvGetTextRows(rw.changedFilesView) == ["c/c1.txt"]
+
+
+@withRepo("TestGitRepository")
 @withPrep(reposcenario.fileWithUnstagedChange)
 def testCommit(qtbot, workDir, rw):
     testutil.qlvClickNthRow(rw.dirtyView, 0)
@@ -226,7 +235,7 @@ def testCommit(qtbot, workDir, rw):
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testSaveOldRevision(qtbot, workDir, tempDir, rw):
-    commitOid = pygit2.Oid(binascii.unhexlify("6462e7d8024396b14d7651e2ec11e2bbf07a05c4"))
+    commitOid = testutil.hexToOid("6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
 
     rw.graphView.selectCommit(commitOid)
     assert testutil.qlvGetTextRows(rw.changedFilesView) == ["c/c2.txt"]
@@ -241,7 +250,7 @@ def testSaveOldRevision(qtbot, workDir, tempDir, rw):
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testSaveOldRevisionOfDeletedFile(qtbot, workDir, tempDir, rw):
-    commitOid = pygit2.Oid(binascii.unhexlify("c9ed7bf12c73de26422b7c5a44d74cfce5a8993b"))
+    commitOid = testutil.hexToOid("c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     rw.graphView.selectCommit(commitOid)
     assert testutil.qlvGetTextRows(rw.changedFilesView) == ["c/c2-2.txt"]
