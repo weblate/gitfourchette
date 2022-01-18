@@ -100,7 +100,8 @@ class MainWindow(QMainWindow):
 
         fileMenu = menubar.addMenu("&File")
         fileMenu.setObjectName("MWFileMenu")
-        fileMenu.addAction("&Open", self.openDialog, QKeySequence.Open)
+        fileMenu.addAction("&New Repository...", self.newRepo, QKeySequence.New)
+        fileMenu.addAction("&Open Repository...", self.openDialog, QKeySequence.Open)
         self.recentMenu = fileMenu.addMenu("Open &Recent")
         self.recentMenu.setObjectName("RecentMenu")
         fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
@@ -332,6 +333,12 @@ class MainWindow(QMainWindow):
         if not rw:
             rw = self.currentRepoWidget()
         showInFolder(rw.workingTreeDir)
+
+    def newRepo(self):
+        path, _ = QFileDialog.getSaveFileName(self, "New repository")
+        if path:
+            pygit2.init_repository(path)
+            self.openRepo(path)
 
     def openDialog(self):
         path = settings.history.openFileDialogLastPath
