@@ -11,11 +11,14 @@ def loadDirtyDiff(repo: Repository) -> Diff:
 
 
 def loadStagedDiff(repo: Repository) -> Diff:
-    if repo.is_empty:  # special case for empty repo (can't compare against HEAD)
-        return None
-    stageDiff: Diff = repo.diff('HEAD', None, cached=True)  # compare HEAD to index
-    stageDiff.find_similar()
-    return stageDiff
+    if repo.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
+        indexTreeOid = repo.index.write_tree()
+        tree: pygit2.Tree = repo[indexTreeOid].peel(pygit2.Tree)
+        return tree.diff_to_tree(swap=True)
+    else:
+        stageDiff: Diff = repo.diff('HEAD', None, cached=True)  # compare HEAD to index
+        stageDiff.find_similar()
+        return stageDiff
 
 
 def hasAnyStagedChanges(repo: Repository) -> bool:
@@ -120,18 +123,30 @@ def createCommit(
         overrideAuthor: Signature = None,
         overrideCommitter: Signature = None
 ) -> Oid:
-    head = repo.head
+    # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
+    # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
+    # so we should always have a ref name, even though it might not point to anything.
+    refName = repo.lookup_reference("HEAD").target
+
+    if repo.head_is_unborn:
+        parents = []
+    else:
+        parents = [getHeadCommitOid(repo)]
+
     indexTreeOid: Oid = repo.index.write_tree()
-    parents = [getHeadCommitOid(repo)]
     fallbackSignature = repo.default_signature
+
     newCommitOid: Oid = repo.create_commit(
-        head.name,
+        refName,
         overrideAuthor or fallbackSignature,
         overrideCommitter or fallbackSignature,
         message,
         indexTreeOid,
         parents
     )
+
+    assert not repo.head_is_unborn, "HEAD is still unborn after we have committed!"
+
     return newCommitOid
 
 
@@ -220,19 +235,25 @@ def discardFiles(repo: Repository, paths: list[str]):
 
 def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
     index = repo.index
-    headTree = repo.head.peel(pygit2.Tree)
+
+    if repo.head_is_unborn:
+        headTree = None
+    else:
+        headTree = repo.head.peel(pygit2.Tree)
+
     for patch in patches:
         delta: pygit2.DiffDelta = patch.delta
         old_path = delta.old_file.path
         new_path = delta.new_file.path
         if delta.status == pygit2.GIT_DELTA_ADDED:
-            assert old_path not in headTree
+            assert (not headTree) or (old_path not in headTree)
             index.remove(old_path)
         elif delta.status == pygit2.GIT_DELTA_RENAMED:
             # TODO: Two-step removal to completely unstage a rename -- is this what we want?
             assert new_path in index
             index.remove(new_path)
         else:
+            assert headTree
             assert old_path in headTree
             obj = headTree[old_path]
             index.add(pygit2.IndexEntry(old_path, obj.oid, obj.filemode))

@@ -27,7 +27,11 @@ def trashRawPatch(repo: Repository, patch: bytes):
 
 def backupPatches(repo: Repository, patches: list[Patch]):
     with zipfile.ZipFile(newTrashFileName(repo, '.zip'), mode='w', compression=zipfile.ZIP_STORED) as z:
-        z.comment = F'Head: {repo.head.target}\nBranch: {repo.head.shorthand}'.encode('utf-8')
+        if repo.head_is_unborn:
+            z.comment = F"Unborn HEAD".encode('utf-8')
+        else:
+            z.comment = F"Head: {repo.head.target}\nBranch: {repo.head.shorthand}".encode('utf-8')
+
         for patch in patches:
             path = patch.delta.new_file.path
             if patch.delta.status == pygit2.GIT_DELTA_DELETED:

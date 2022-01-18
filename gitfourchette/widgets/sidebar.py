@@ -201,6 +201,15 @@ class Sidebar(QTreeView):
         branchesParent = SidebarItem("Local Branches", branchesParentEntry)
         branchesParent.setSelectable(False)
 
+        if repo.head_is_unborn:
+            target: str = repo.lookup_reference("HEAD").target
+            target = target.removeprefix("refs/heads/")
+            caption = F"★ {target} (unborn)"
+            branchEntry = SidebarEntry(SidebarEntry.Type.UNBORN_HEAD, None)
+            item = SidebarItem(caption, branchEntry)
+            item.setToolTip(F"Unborn HEAD (does not point to a commit yet)")
+            branchesParent.appendRow(item)
+
         if repo.head_is_detached:
             caption = F"★ detached HEAD @ {shortHash(repo.head.commit.hexsha)}"
             branchEntry = SidebarEntry(SidebarEntry.Type.DETACHED_HEAD, None)

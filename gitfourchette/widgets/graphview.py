@@ -54,7 +54,7 @@ class GraphView(QListView):
         self.onSetCurrent()
 
     def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[Commit]):
-        model = self.model()
+        model: QAbstractListModel = self.model()
         model.removeRows(1, nRemovedRows)
         model.insertRows(1, nAddedRows)
         for i in range(nAddedRows):

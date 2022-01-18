@@ -759,10 +759,13 @@ class RepoWidget(QWidget):
         with Benchmark("Load tainted commits only"):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
 
-        with Benchmark("Refresh top of graphview"):
-            self.graphView.refreshTop(nRemovedRows, nAddedRows, self.state.commitSequence)
+        with Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
+            if nRemovedRows >= 0:
+                self.graphView.refreshTop(nRemovedRows, nAddedRows, self.state.commitSequence)
+            else:
+                self.graphView.fill(self.state.commitSequence)
 
-        with Benchmark("Refresh refs by commit cache"):
+        with Benchmark("Refresh refs-by-commit cache"):
             self.state.refreshRefsByCommitCache()
 
         self.setUpdatesEnabled(True)
@@ -784,7 +787,9 @@ class RepoWidget(QWidget):
         shortname = self.state.shortName
         repo = self.repo
         inBrackets = ""
-        if repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
+        if repo.head_is_unborn:
+            inBrackets = F"unborn HEAD"
+        elif repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
             inBrackets = "repo is empty"
         elif repo.head_is_detached:
             oid = porcelain.getHeadCommitOid(repo)

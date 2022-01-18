@@ -128,8 +128,6 @@ class FileListView(QListView):
         self.model().appendRow(item)
 
     def addFileEntriesFromDiff(self, diff: pygit2.Diff):
-        if diff is None:  # empty repo: we may get a None diff
-            return
         patch: pygit2.Patch
         for patch in diff:
             self.addEntry(patch)

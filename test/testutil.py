@@ -2,14 +2,16 @@ from gitfourchette.allqt import *
 from PySide2.QtTest import QTest
 import pygit2
 import binascii
+import os
 
 
 def writeFile(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         f.write(text.encode("utf-8"))
 
 
-def qlvGetTextRows(view: QListView):
+def qlvGetRowData(view: QListView):
     model = view.model()
     text = []
     for row in range(model.rowCount()):

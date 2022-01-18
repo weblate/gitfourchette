@@ -9,6 +9,7 @@ class SidebarEntry:
         LOCAL_BRANCHES_HEADER = enum.auto()
         LOCAL_REF = enum.auto()
         DETACHED_HEAD = enum.auto()
+        UNBORN_HEAD = enum.auto()
         REMOTE_REF = enum.auto()
         REMOTE = enum.auto()
         TAG = enum.auto()

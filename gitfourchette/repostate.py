@@ -21,9 +21,7 @@ class BatchedOffset:
 
 
 class RepoState:
-    dir: str
     repo: Repository
-    index: Index
     settings: QSettings
 
     # May be None; call initializeWalker before use.
@@ -61,16 +59,13 @@ class RepoState:
     refsByCommit: defaultdict[Oid, list[str]]
 
     def __init__(self, dir):
-        self.dir = os.path.abspath(dir)
         self.repo = Repository(dir)
-        self.index = self.repo.index
         self.walker = None
         self.settings = QSettings(self.repo.path + "/gitfourchette.ini", QSettings.Format.IniFormat)
         self.settings.setValue("GitFourchette", settings.VERSION)
         self.currentBatchID = 0
 
         self.commitSequence = []
-        #self.commitLookup = {}
         self.commitPositions = {}
         self.graph = None
 
@@ -258,15 +253,24 @@ class RepoState:
 
         graphSplicer.finish()
 
+        if graphSplicer.foundEquilibrium:
+            nRemoved = graphSplicer.equilibriumOldRow
+            nAdded = graphSplicer.equilibriumNewRow
+        else:
+            nRemoved = -1  # We could use len(self.commitSequence), but -1 will force quickRefresh to replace the model wholesale
+            nAdded = len(newCommitSequence)
+
         globalstatus.setProgressValue(3)
 
         with Benchmark("Nuke unreachable commits from cache"):
             for trashedCommit in (graphSplicer.oldCommitsSeen - graphSplicer.newCommitsSeen):
-                #del self.commitLookup[trashedCommit]
                 del self.commitPositions[trashedCommit]
 
         # Piece correct commit sequence back together
-        self.commitSequence = newCommitSequence[:graphSplicer.equilibriumNewRow] + self.commitSequence[graphSplicer.equilibriumOldRow:]
+        if graphSplicer.foundEquilibrium:
+            self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
+        else:
+            self.commitSequence = newCommitSequence
         self.currentRefs = newHeads
 
         # Compute new batch offset
@@ -281,7 +285,7 @@ class RepoState:
 
         self.updateActiveCommitOid()
 
-        return graphSplicer.equilibriumOldRow, graphSplicer.equilibriumNewRow
+        return nRemoved, nAdded
 
     @staticmethod
     def traceCommitAvailability(metas, progressTick=None):

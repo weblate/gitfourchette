@@ -28,3 +28,10 @@ def fileWithStagedAndUnstagedChanges(path):
     assert repo.status() == {"a/a1.txt": pygit2.GIT_STATUS_INDEX_MODIFIED | pygit2.GIT_STATUS_WT_MODIFIED}
 
 
+def stagedNewEmptyFile(path):
+    repo = pygit2.Repository(path)
+    os.mknod(F"{path}/SomeNewFile.txt")
+    repo.index.read()
+    repo.index.add("SomeNewFile.txt")
+    repo.index.write()
+    assert repo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_INDEX_NEW}
