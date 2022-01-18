@@ -257,7 +257,8 @@ class MainWindow(QMainWindow):
         progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
         QCoreApplication.processEvents()
         progress.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        progress.show()
+        if not settings.TEST_MODE:
+            progress.show()
         QCoreApplication.processEvents()
         #import time; time.sleep(3)
 
