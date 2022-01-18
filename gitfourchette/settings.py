@@ -95,7 +95,6 @@ class Prefs(BasePrefs):
     tabs_autoHide               : bool          = False
     tabs_mergeWithMenubar       : bool          = False
     graph_topoOrder             : bool          = True
-    graph_rowHeightPercent      : int           = 100
     graph_maxLanes              : int           = 32
     graph_flattenLanes          : bool          = True
     graph_newLanesAlwaysRightmost:bool          = False
