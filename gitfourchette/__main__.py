@@ -24,7 +24,7 @@ if __name__ == "__main__":
     app.setApplicationName("GitFourchette")  # used by QStandardPaths
     # Don't use app.setOrganizationName because it changes QStandardPaths.
     app.setApplicationVersion("1.0.0")
-    app.setWindowIcon(QIcon(":/gf.png"))
+    app.setWindowIcon(QIcon(":/gitfourchette.png"))
 
     styleSheetFile = QFile(":/style.qss")
     if styleSheetFile.open(QFile.ReadOnly):

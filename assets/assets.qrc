@@ -2,7 +2,7 @@
 <RCC version="1.0">
 <qresource>
     <file>style.qss</file>
-    <file>gf.png</file>
+    <file>gitfourchette.png</file>
     <file>status_a.svg</file>
     <file>status_c.svg</file>
     <file>status_d.svg</file>
