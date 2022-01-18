@@ -1,8 +1,10 @@
 from __future__ import annotations
+
+from collections import defaultdict
 from dataclasses import dataclass
 from pygit2 import Oid
+from typing import Iterable
 import bisect
-import collections
 import itertools
 import os
 import timeit
@@ -68,7 +70,7 @@ class Arc:
     openedBy: Oid
     closedBy: Oid
     junctions: list[ArcJunction]
-    nextArc: Arc = None
+    nextArc: Arc | None = None
 
     def __repr__(self):
         s = F"{str(self.openedBy)[:5]}->{str(self.closedBy)[:5]}"
@@ -105,8 +107,8 @@ class Arc:
 class Frame:
     row: int
     commit: Oid
-    staleArcs: list[Arc]
-    openArcs: list[Arc]
+    staleArcs: list[Arc | None]
+    openArcs: list[Arc | None]
     lastArc: Arc
 
     def getArcsClosedByCommit(self):
@@ -180,7 +182,7 @@ class Frame:
             theList.append(None)
 
     @staticmethod
-    def cleanUpArcList(theList: list[Arc], olderThanRow, alsoTrimBack=True):
+    def cleanUpArcList(theList: list[Arc|None], olderThanRow, alsoTrimBack=True):
         # Remove references to arcs that were closed earlier than `olderThanRow`
         for j, arc in enumerate(theList):
             if arc and 0 <= arc.closedAt < olderThanRow:
@@ -217,12 +219,12 @@ class Frame:
 
 class GeneratorState(Frame):
     freeLanes: list[int]
-    parentLookup: collections.defaultdict[Oid, list[Arc]]  # all lanes
+    parentLookup: defaultdict[Oid, list[Arc]]  # all lanes
 
     def __init__(self, startArcSentinel: Arc):
         super().__init__(-1, "", [], [], lastArc=startArcSentinel)
         self.freeLanes = []
-        self.parentLookup = collections.defaultdict(list)
+        self.parentLookup = defaultdict(list)
 
     def createArcsForNewCommit(self, me: Oid, myParents: list[Oid]):
         self.row += 1
@@ -380,7 +382,7 @@ class PlaybackState(Frame):
 
 class Graph:
     keyframes: list[Frame]
-    keyframeRows: list[int]
+    keyframeRows: list[int] | None
     startArc: Arc  # linked list start sentinel; guaranteed to never be None
 
     def __init__(self):
@@ -583,7 +585,7 @@ class Graph:
 
 
 class GraphSplicer:
-    def __init__(self, oldGraph: Graph, oldHeads: list[Oid], newHeads: list[Oid]):
+    def __init__(self, oldGraph: Graph, oldHeads: Iterable[Oid], newHeads: Iterable[Oid]):
         self.keepGoing = True
         self.foundEquilibrium = False
 

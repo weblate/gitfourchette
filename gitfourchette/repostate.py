@@ -26,7 +26,7 @@ class RepoState:
 
     # May be None; call initializeWalker before use.
     # Keep it around to speed up refreshing.
-    walker: Walker
+    walker: Walker | None
 
     # ordered list of commits
     commitSequence: list[Commit]
@@ -34,16 +34,16 @@ class RepoState:
 
     commitPositions: dict[Oid, BatchedOffset]
 
-    graph: Graph
+    graph: Graph | None
 
     # Set of head commits for every ref (required to refresh the commit graph)
     currentRefs: list[Oid]
 
     # path of superproject if this is a submodule
-    superproject: str
+    superproject: str | None
 
     # oid of the active commit (to make it bold)
-    activeCommitOid: Oid
+    activeCommitOid: Oid | None
 
     # Everytime we refresh, new rows may be inserted at the top of the graph.
     # This may push existing rows down, away from the top of the graph.
