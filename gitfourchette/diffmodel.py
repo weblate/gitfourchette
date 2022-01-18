@@ -1,8 +1,10 @@
-from allgit import *
+from allqt import *
 from dataclasses import dataclass
-from diffformats import *
+from diffstyle import DiffStyle
 import os
 import patch as patchutils
+import pygit2
+import settings
 
 
 @dataclass
@@ -10,23 +12,25 @@ class DiffModel:
     document: QTextDocument
     lineData: list[patchutils.LineData]
     forceWrap: bool
+    style: DiffStyle
 
     @staticmethod
     def fromFailureMessage(message, details=""):
+        style = DiffStyle()
         document = QTextDocument()
         cursor = QTextCursor(document)
-        cursor.setCharFormat(warningFormat1)
+        cursor.setCharFormat(style.warningCF1)
         cursor.insertText(message)
         if details:
             cursor.insertBlock()
-            cursor.setCharFormat(warningFormat2)
+            cursor.setCharFormat(style.warningCF2)
             if details.startswith("Traceback"):
                 cursor.insertText('\n')
             cursor.insertText(details)
-        return DiffModel(document=document, lineData=[], forceWrap=True)
+        return DiffModel(document=document, lineData=[], forceWrap=True, style=style)
 
     @staticmethod
-    def fromUntrackedFile(repo: Repository, path: str):
+    def fromUntrackedFile(repo: pygit2.Repository, path: str):
         fullPath = os.path.join(repo.workdir, path)
 
         # Don't load large files.
@@ -46,16 +50,17 @@ class DiffModel:
         contents = binaryContents.decode('utf-8', errors='replace')
 
         # Create document with proper styling.
+        style = DiffStyle()
         document = QTextDocument()  # recreating a document is faster than clearing the existing one
         cursor = QTextCursor(document)
-        cursor.setBlockFormat(plusBF)  # Use style for "+" lines for the entire file.
-        cursor.setBlockCharFormat(plusCF)
+        cursor.setBlockFormat(style.plusBF)  # Use style for "+" lines for the entire file.
+        cursor.setBlockCharFormat(style.plusCF)
         cursor.insertText(contents)
 
-        return DiffModel(document=document, lineData=[], forceWrap=False)
+        return DiffModel(document=document, lineData=[], forceWrap=False, style=style)
 
     @staticmethod
-    def fromPatch(repo: Repository, patch: Patch, allowRawFileAccess: bool = False):
+    def fromPatch(repo: pygit2.Repository, patch: pygit2.Patch, allowRawFileAccess: bool = False):
         #TODO: check large files
         # Don't load large files.
         # if change.b_blob and change.b_blob.size > settings.prefs.diff_largeFileThreshold:
@@ -70,6 +75,7 @@ class DiffModel:
         if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
             return DiffModel.fromUntrackedFile(repo, patch.delta.new_file.path)
 
+        style = DiffStyle()
         document = QTextDocument()  # recreating a document is faster than clearing the existing one
         cursor: QTextCursor = QTextCursor(document)
 
@@ -105,13 +111,13 @@ class DiffModel:
             cursor.insertText(ld.text[:trimBack])
 
             if trailer:
-                cursor.setCharFormat(warningFormat1)
+                cursor.setCharFormat(style.warningCF1)
                 cursor.insertText(trailer)
                 cursor.setCharFormat(cf)
 
         # For each line of the diff, create a LineData object.
-        hunk: DiffHunk
-        diffLine: DiffLine
+        hunk: pygit2.DiffHunk
+        diffLine: pygit2.DiffLine
         for hunkID, hunk in enumerate(patch.hunks):
             oldLine = hunk.old_start
             newLine = hunk.new_start
@@ -121,7 +127,7 @@ class DiffModel:
                 cursorStart=cursor.position(),
                 diffLine=None,
                 hunkPos=patchutils.DiffLinePos(hunkID, -1))
-            bf, cf = arobaseBF, arobaseCF
+            bf, cf = style.arobaseBF, style.arobaseCF
             insertLineData(hunkHeaderLD)
 
             for hunkLineNum, diffLine in enumerate(hunk.lines):
@@ -134,16 +140,16 @@ class DiffModel:
                     diffLine=diffLine,
                     hunkPos=patchutils.DiffLinePos(hunkID, hunkLineNum))
 
-                bf, cf = normalBF, normalCF
+                bf, cf = style.normalBF, style.normalCF
 
                 assert diffLine.origin in " -+", F"diffline origin: '{diffLine.origin}'"
                 if diffLine.origin == '+':
-                    bf, cf = plusBF, plusCF
+                    bf, cf = style.plusBF, style.plusCF
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == -1
                     newLine += 1
                 elif diffLine.origin == '-':
-                    bf, cf = minusBF, minusCF
+                    bf, cf = style.minusBF, style.minusCF
                     assert diffLine.new_lineno == -1
                     assert diffLine.old_lineno == oldLine
                     oldLine += 1
@@ -155,4 +161,4 @@ class DiffModel:
 
                 insertLineData(ld)
 
-        return DiffModel(document=document, lineData=lineData, forceWrap=False)
+        return DiffModel(document=document, lineData=lineData, forceWrap=False, style=style)

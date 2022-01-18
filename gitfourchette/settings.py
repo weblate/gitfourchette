@@ -4,18 +4,8 @@ import enum
 import json
 import os
 
-VERSION = "0.1-preview"
-
-PROGRAM_NAME = "GitFourchette"
 
 TEST_MODE = False
-
-QCoreApplication.setApplicationVersion(VERSION)
-QCoreApplication.setApplicationName("GitFourchette")  # used by QStandardPaths
-#QCoreApplication.setOrganizationName("GitFourchette")
-
-
-prefsDir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
 
 
 KEYS_ACCEPT = [Qt.Key_Enter, Qt.Key_Return]  # Enter = on keypad; Return = main keys
@@ -43,6 +33,7 @@ class BasePrefs:
         if TEST_MODE:
             print("Disabling write prefs")
             return None
+        prefsDir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
         os.makedirs(prefsDir, exist_ok=True)
         prefsPath = os.path.join(prefsDir, getattr(self, 'filename'))
         with open(prefsPath, 'w', encoding='utf-8') as f:
@@ -178,25 +169,3 @@ class Session(BasePrefs):
 prefs = Prefs()
 history = History()
 
-monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-monoFont.setPointSize(9)
-if prefs.diff_font:
-    monoFont.fromString(prefs.diff_font)
-monoFontMetrics = QFontMetricsF(monoFont)
-
-alternateFont = QFont()
-alternateFont.setItalic(True)
-
-boldFont = QFont()
-boldFont.setBold(True)
-
-smallFont = QFont()
-smallFont.setWeight(QFont.Light)
-#smallFont.setPointSize(9)
-smallFontMetrics = QFontMetrics(smallFont)
-
-statusIcons = {}
-for status in "ACDMRTUX":
-    statusIcons[status] = QIcon(F"icons/status_{status.lower()}.svg")
-
-# Note: if icons don't show up, you may need to install the 'qt6-svg' package

@@ -1,0 +1,16 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource>
+    <file>style.qss</file>
+    <file>gf.png</file>
+    <file>status_a.svg</file>
+    <file>status_c.svg</file>
+    <file>status_d.svg</file>
+    <file>status_m.svg</file>
+    <file>status_r.svg</file>
+    <file>status_t.svg</file>
+    <file>status_u.svg</file>
+    <file>status_x.svg</file>
+</qresource>
+</RCC>
+

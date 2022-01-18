@@ -16,7 +16,8 @@ class SidebarDelegate(QStyledItemDelegate):
         opt.rect.setLeft(20)
 
         if not index.parent().isValid():
-            opt.font = settings.boldFont
+            opt.font = QFont()
+            opt.font.setBold(True)
 
         super().paint(painter, opt, index)
 

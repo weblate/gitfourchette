@@ -8,6 +8,12 @@ import os
 import settings
 
 
+# If SVG icons don't show up, you may need to install the 'qt6-svg' package.
+statusIcons = {}
+for status in "ACDMRTUX":
+    statusIcons[status] = QIcon(F":/status_{status.lower()}.svg")
+
+
 class FileListView(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(object, StagingState)
@@ -108,9 +114,9 @@ class FileListView(QListView):
         item.setSizeHint(QSize(-1, self.fontMetrics().height()))  # Compact height
 
         if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
-            icon = settings.statusIcons.get('A', None)
+            icon = statusIcons.get('A', None)
         else:
-            icon = settings.statusIcons.get(patch.delta.status_char(), None)
+            icon = statusIcons.get(patch.delta.status_char(), None)
         if icon:
             item.setIcon(icon)
 

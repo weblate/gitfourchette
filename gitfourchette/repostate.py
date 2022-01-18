@@ -62,7 +62,7 @@ class RepoState:
         self.repo = Repository(dir)
         self.walker = None
         self.settings = QSettings(self.repo.path + "/gitfourchette.ini", QSettings.Format.IniFormat)
-        self.settings.setValue("GitFourchette", settings.VERSION)
+        self.settings.setValue("version", QCoreApplication.applicationVersion())
         self.currentBatchID = 0
 
         self.commitSequence = []

@@ -1,27 +1,33 @@
 from allqt import *
-from settings import PROGRAM_NAME, VERSION
 import pygit2
 import sys
 
 
 def showAboutDialog(parent: QWidget):
+    appName = QApplication.applicationDisplayName()
+    appVersion = QApplication.applicationVersion()
+
     aboutText = F"""\
-<span style="font-size: xx-large">{PROGRAM_NAME}</span>
-<p>
-The no-frills git GUI for Linux.
-<br><a href="https://github.com/jorio/gitfourchette">https://github.com/jorio/gitfourchette</a>
-</p>
-<p>
-&copy; 2020-2021 Iliyas Jorio
-</p>
-<pre><small
->{PROGRAM_NAME} {VERSION}
-libgit2       {pygit2.LIBGIT2_VERSION}
-pygit2        {pygit2.__version__}
-Qt            {qtVersion}
-PySide        {qtBindingVersion}
-Python        {'.'.join(str(i) for i in sys.version_info)}</small></pre>
+        <span style="font-size: xx-large">
+            {appName}
+            <b>{appVersion}</b>
+        </span>
+        <p>
+            The comfortable git GUI.
+            <br><a href="https://github.com/jorio/gitfourchette">https://github.com/jorio/gitfourchette</a>
+        </p>
+        <p>
+            &copy; 2020-2022 Iliyas Jorio
+        </p>
+        <p><small>
+            libgit2         <b>{pygit2.LIBGIT2_VERSION}</b><br>
+            pygit2          <b>{pygit2.__version__}</b><br>
+            Qt              <b>{qtVersion}</b><br>
+            {qtBindingName} <b>{qtBindingVersion}</b><br>
+            Python          <b>{'.'.join(str(i) for i in sys.version_info)}</b>
+        </small></p>
+        <p>
+            Have fun!
+        </p>"""
 
-Have fun!"""
-
-    QMessageBox.about(parent, F"About {PROGRAM_NAME}", aboutText)
+    QMessageBox.about(parent, F"About {appName} {appVersion}", aboutText)

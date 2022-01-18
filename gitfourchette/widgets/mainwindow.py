@@ -38,8 +38,7 @@ class MainWindow(QMainWindow):
 
         self.sharedSplitterStates = {}
 
-        self.setWindowTitle(settings.PROGRAM_NAME)
-        self.setWindowIcon(QIcon("icons/gf.png"))
+        self.setWindowTitle(QApplication.applicationDisplayName())
         self.resize(QSize(800, 600))
         self.move(QPoint(50, 50))
 
@@ -149,7 +148,7 @@ class MainWindow(QMainWindow):
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.setObjectName("MWHelpMenu")
-        helpMenu.addAction(F"&About {settings.PROGRAM_NAME}", lambda: showAboutDialog(self))
+        helpMenu.addAction(F"&About {QApplication.applicationDisplayName()}", lambda: showAboutDialog(self))
 
         self.fillRecentMenu()
 
@@ -179,7 +178,7 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(
             self,
             "Apply Settings",
-            F"Some changes may require restarting {settings.PROGRAM_NAME} to take effect.")
+            F"Some changes may require restarting {QApplication.applicationDisplayName()} to take effect.")
 
     def openSettings(self):
         dlg = PrefsDialog(self)
@@ -208,7 +207,7 @@ class MainWindow(QMainWindow):
         #    pw = self.tabs.widget(previous...) # also save splitter state after close
         #    self.splitterStates = self
         if i < 0:
-            self.setWindowTitle(settings.PROGRAM_NAME)
+            self.setWindowTitle(QApplication.applicationDisplayName())
             return
 
         w = self.currentRepoWidget()

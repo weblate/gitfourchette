@@ -8,7 +8,7 @@ QMenuBar {
 }
 
 QTreeView#sidebar {
-    background: palette(window);
+    background: transparent;
 }
 
 QTreeView::branch:selected:!active,

@@ -796,7 +796,7 @@ class RepoWidget(QWidget):
             inBrackets = F"detached HEAD @ {shortHash(oid)}"
         else:
             inBrackets = porcelain.getActiveBranchShorthand(repo)
-        self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {settings.PROGRAM_NAME}")
+        self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {QApplication.applicationDisplayName()}")
 
     # -------------------------------------------------------------------------
 
@@ -819,5 +819,5 @@ class RepoWidget(QWidget):
                 self,
                 "Open Rescue Folder",
                 "There’s no rescue folder for this repository. It might be that you’ve never "
-                F"discarded a change using {settings.PROGRAM_NAME} yet."
+                F"discarded a change using {QApplication.applicationDisplayName()} yet."
             )

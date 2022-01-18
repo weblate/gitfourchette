@@ -21,6 +21,16 @@ class GraphDelegate(QStyledItemDelegate):
         self.repoWidget = repoWidget
         self.hashCharWidth = 0
 
+        self.activeCommitFont = QFont()
+        self.activeCommitFont.setBold(True)
+
+        self.uncommittedFont = QFont()
+        self.uncommittedFont.setItalic(True)
+
+        self.smallFont = QFont()
+        self.smallFont.setWeight(QFont.Light)
+        self.smallFontMetrics = QFontMetrics(self.smallFont)
+
     @property
     def state(self) -> RepoState:
         return self.repoWidget.state
@@ -73,14 +83,14 @@ class GraphDelegate(QStyledItemDelegate):
             authorText = commit.author.email.split('@')[0]
             dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
-                painter.setFont(settings.boldFont)
+                painter.setFont(self.activeCommitFont)
         else:
             commit: Commit = None
             summaryText = "Uncommitted Changes"
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
             dateText = ""
-            painter.setFont(settings.alternateFont)
+            painter.setFont(self.uncommittedFont)
 
         # Get metrics now so the message gets elided according to the custom font style
         # that may have been just set for this commit.
@@ -112,11 +122,11 @@ class GraphDelegate(QStyledItemDelegate):
                         refColor = REF_PREFIXES[prefix]
                         break
                 painter.save()
-                painter.setFont(settings.smallFont)
+                painter.setFont(self.smallFont)
                 painter.setPen(refColor)
                 rect.setLeft(rect.right())
                 label = F"[{shortRefName}] "
-                rect.setWidth(settings.smallFontMetrics.horizontalAdvance(label) + 1)
+                rect.setWidth(self.smallFontMetrics.horizontalAdvance(label) + 1)
                 painter.drawText(rect, Qt.AlignVCenter, label)
                 painter.restore()
 

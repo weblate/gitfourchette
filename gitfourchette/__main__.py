@@ -18,8 +18,19 @@ if __name__ == "__main__":
 
     # initialize Qt before importing app modules so fonts are loaded correctly
     app = QApplication(sys.argv)
-    with open("icons/style.qss", "r") as f:
-        app.setStyleSheet(f.read())
+
+    import assets
+
+    app.setApplicationName("GitFourchette")  # used by QStandardPaths
+    # Don't use app.setOrganizationName because it changes QStandardPaths.
+    app.setApplicationVersion("1.0.0")
+    app.setWindowIcon(QIcon(":/gf.png"))
+
+    styleSheetFile = QFile(":/style.qss")
+    if styleSheetFile.open(QFile.ReadOnly):
+        styleSheet = styleSheetFile.readAll().data().decode("utf-8")
+        app.setStyleSheet(styleSheet)
+        styleSheetFile.close()
 
     # Hack so we don't get out-of-place Tahoma on Windows.
     # TODO: Check whether Qt 6 has made this unnecessary (when it comes out).

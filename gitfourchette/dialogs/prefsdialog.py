@@ -1,5 +1,5 @@
 from allqt import *
-from settings import prefs, PROGRAM_NAME, SHORT_DATE_PRESETS
+from settings import prefs, SHORT_DATE_PRESETS
 import datetime
 import enum
 import re
@@ -74,7 +74,7 @@ class PrefsDialog(QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.setWindowTitle(F"{PROGRAM_NAME} Preferences")
+        self.setWindowTitle(F"{QApplication.applicationDisplayName()} Preferences")
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.accept)
