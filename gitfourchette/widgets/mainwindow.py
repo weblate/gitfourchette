@@ -347,6 +347,7 @@ class MainWindow(QMainWindow):
             settings.history.openFileDialogLastPath = path
             settings.history.write()
             self.openRepo(path)
+            self.saveSession()
 
     def closeCurrentTab(self):
         self.closeTab(self.tabs.currentIndex())
