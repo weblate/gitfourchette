@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+from allqt import *
+
 
 ################################################################################
 ## Form generated from reading UI file 'commitdialog.ui'
@@ -8,9 +9,6 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
 
 from widgets.signatureform import SignatureForm
 
@@ -95,4 +93,3 @@ class Ui_CommitDialog(object):
         self.revealAuthor.setText(QCoreApplication.translate("CommitDialog", u"&Edit author", None))
         self.groupBox.setTitle("")
     # retranslateUi
-

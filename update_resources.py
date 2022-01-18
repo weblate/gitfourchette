@@ -10,7 +10,7 @@ for path in uisrcDir, assetsDir:
         print(F"Directory {path} not found; please run this script from the root of the repo")
         sys.exit(1)
 
-def call(cmd, **kwargs):
+def call(cmd, **kwargs) -> subprocess.CompletedProcess:
     cmdstr = ""
     for token in cmd:
         cmdstr += " "
@@ -21,7 +21,7 @@ def call(cmd, **kwargs):
 
     print(F">{cmdstr}")
     try:
-        return subprocess.run(cmd, check=True, **kwargs)
+        return subprocess.run(cmd, capture_output=True, encoding='utf-8', check=True, **kwargs)
     except subprocess.CalledProcessError as e:
         print(F"Aborting setup because: {e}")
         sys.exit(1)
@@ -55,11 +55,21 @@ writeStatusIcon('#90a0b0', 'U')  # unmerged
 writeStatusIcon('#ff00ff', 'X')  # unknown
 
 # Generate .py files from .ui files
-for filename in (fn for fn in os.listdir(uisrcDir) if fn.endswith(".ui")):
+for filename in os.listdir(uisrcDir):
+    if not filename.endswith(".ui"):
+        continue
+
     basename = os.path.splitext(filename)[0]
     fullpath = os.path.join(uisrcDir, filename)
-    genpath = F"gitfourchette/ui/ui_{basename}.py"
-    call(["uic-qt5", "--generator", "python", fullpath, "--output", genpath])
+
+    result = call(["uic-qt5", "--generator", "python", fullpath])
+
+    codeLines = ["from allqt import *", ""] + \
+                [line for line in result.stdout.splitlines()
+                 if not line.startswith("from PySide2.")
+                 and not line.startswith("# -*- coding:")]
+
+    writeIfDifferent(F"gitfourchette/ui/ui_{basename}.py", "\n".join(codeLines))
 
 # Generate assets.py from assets.qrc
 call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc", "--output", "gitfourchette/assets.py"])

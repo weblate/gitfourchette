@@ -1,5 +1,4 @@
-from gitfourchette.allqt import *
-from PySide2.QtTest import QTest
+from qttest_imports import *
 import pygit2
 import binascii
 import os

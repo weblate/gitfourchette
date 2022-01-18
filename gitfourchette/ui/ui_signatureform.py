@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*-
+from allqt import *
+
 
 ################################################################################
 ## Form generated from reading UI file 'signatureform.ui'
@@ -8,9 +9,6 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
 
 
 class Ui_SignatureForm(object):
@@ -67,4 +65,3 @@ class Ui_SignatureForm(object):
         self.emailLabel.setText(QCoreApplication.translate("SignatureForm", u"Email", None))
         self.timeLabel.setText(QCoreApplication.translate("SignatureForm", u"Time", None))
     # retranslateUi
-
