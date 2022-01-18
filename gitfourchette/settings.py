@@ -81,7 +81,6 @@ class Prefs(BasePrefs):
 
     qtStyle                     : str           = ""
     shortHashChars              : int           = 7
-    splitterHandleWidth         : int           = -1
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
     showStatusBar               : bool          = True

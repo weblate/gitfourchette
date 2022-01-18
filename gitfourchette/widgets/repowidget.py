@@ -153,7 +153,6 @@ class RepoWidget(QWidget):
         amendButton.clicked.connect(self.amendFlow)
         commitButtonsContainer.layout().addWidget(amendButton)
         stageSplitter = QSplitter(Qt.Vertical)
-        stageSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         stageSplitter.addWidget(dirtyContainer)
         stageSplitter.addWidget(stageContainer)
 
@@ -164,19 +163,16 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentIndex(FILESSTACK_READONLY_CARD)
 
         bottomSplitter = QSplitter(Qt.Horizontal)
-        bottomSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         bottomSplitter.addWidget(self.filesStack)
         bottomSplitter.addWidget(self.diffView)
         bottomSplitter.setSizes([100, 300])
 
         mainSplitter = QSplitter(Qt.Vertical)
-        mainSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         mainSplitter.addWidget(self.graphView)
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
 
         sideSplitter = QSplitter(Qt.Horizontal)
-        sideSplitter.setHandleWidth(settings.prefs.splitterHandleWidth)
         sideSplitter.addWidget(self.sidebar)
         sideSplitter.addWidget(mainSplitter)
         sideSplitter.setSizes([100, 500])
@@ -197,8 +193,9 @@ class RepoWidget(QWidget):
             splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
 
         # remove frames for a cleaner look
-        for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView, self.sidebar:
-            w.setFrameStyle(QFrame.NoFrame)
+        #for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView, self.sidebar:
+        #    w.setFrameStyle(QFrame.NoFrame)
+        self.sidebar.setFrameStyle(QFrame.NoFrame)
 
     def saveSplitterState(self, splitter: QSplitter):
         self.splitterStates[splitter.objectName()] = splitter.saveState()
@@ -207,7 +204,6 @@ class RepoWidget(QWidget):
         for splitter in self.splittersToSave:
             try:
                 splitter.restoreState(self.splitterStates[splitter.objectName()])
-                splitter.setHandleWidth(settings.prefs.splitterHandleWidth)
             except KeyError:
                 pass
 
