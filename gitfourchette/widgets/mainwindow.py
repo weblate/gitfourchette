@@ -114,6 +114,7 @@ class MainWindow(QMainWindow):
         repoMenu.setObjectName("MWRepoMenu")
         repoMenu.addAction("&Refresh", self.quickRefresh, QKeySequence.Refresh)
         repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
+        repoMenu.addAction("Copy Repo Path", self.copyRepoPath)
         repoMenu.addSeparator()
         repoMenu.addAction("Commit...", lambda: self.currentRepoWidget().commitFlow(), QKeySequence(Qt.CTRL + Qt.Key_K))
         repoMenu.addAction("Amend Last Commit...", lambda: self.currentRepoWidget().amendFlow(), QKeySequence(Qt.CTRL + Qt.SHIFT + Qt.Key_K))
@@ -237,6 +238,7 @@ class MainWindow(QMainWindow):
         menu.addAction("Close Other Tabs", lambda: self.closeOtherTabs(i))
         menu.addSeparator()
         menu.addAction("Open Repo Folder", lambda: self.openRepoFolder(rw))
+        menu.addAction("Copy Repo Path", lambda: self.copyRepoPath(rw))
         menu.addAction("Rename", rw.renameRepo)
         menu.addSeparator()
         if rw.state:
@@ -334,6 +336,11 @@ class MainWindow(QMainWindow):
         if not rw:
             rw = self.currentRepoWidget()
         showInFolder(rw.workingTreeDir)
+
+    def copyRepoPath(self, rw: RepoWidget = None):
+        if not rw:
+            rw = self.currentRepoWidget()
+        QApplication.clipboard().setText(rw.workingTreeDir)
 
     def newRepo(self):
         path, _ = QFileDialog.getSaveFileName(self, "New repository")
