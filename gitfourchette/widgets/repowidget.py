@@ -296,7 +296,7 @@ class RepoWidget(QWidget):
             self.diffView.clear()
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
-            self.state.repo.close()
+            self.state.repo.free()
             self.state = None
 
     def setPendingPath(self, path):
