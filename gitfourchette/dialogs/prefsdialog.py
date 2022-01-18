@@ -1,6 +1,7 @@
 from allqt import *
 from settings import prefs, SHORT_DATE_PRESETS
 import datetime
+import diffstyle
 import enum
 import re
 
@@ -106,7 +107,7 @@ class PrefsDialog(QDialog):
             if prefKey == 'qtStyle':
                 control = self.qtStyleControl(prefKey, prefValue)
             elif prefKey == 'diff_font':
-                control = self.fontControl(prefKey, prefValue)
+                control = self.fontControl(prefKey, diffstyle.DiffStyle().monoFont)
             elif prefKey == 'graph_topoOrder':
                 caption = "Commit Order"
                 control = self.boolRadioControl(prefKey, prefValue, falseName="Chronological", trueName="Topological")
@@ -151,47 +152,43 @@ class PrefsDialog(QDialog):
             print(k, prefs.__dict__[k], v)
             self.prefDiff[k] = v
 
-    def fontControl(self, prefKey, prefValue):
-        def onSizeChanged(strValue):
-            points = int(strValue) if strValue else 11
-            font = control.currentFont()
-            font.setPointSize(points)
-            self.assign(prefKey, font.toString())
-            control.setCurrentFont(font)
-
-        font = QFont()
-        font.fromString(prefValue)
-
-        control = QFontComboBox()
-        control.setCurrentFont(font)  # TODO : use prefValue
-        control.currentFontChanged.connect(lambda v, k=prefKey: [
-            self.assign(k, v.toString()) ])
-
-        sizeControl = QLineEdit(str(font.pointSize()), self)
-        sizeControl.setValidator(QIntValidator())
-        sizeControl.textEdited.connect(onSizeChanged)
-        sizeControl.setMaximumWidth(sizeControl.fontMetrics().horizontalAdvance("000000"))
-
-        # TODO: after unchecking the filter checkbox, the QFontComboBox isn't fully repopulated because its item count seems to be fixed
-        '''
-        fixedWidthFilter = QCheckBox("Show fixed-width only")
-        fixedWidthFilter.stateChanged.connect(lambda v:
-                control.setFontFilters(QFontComboBox.AllFonts if v == Qt.CheckState.Unchecked else QFontComboBox.MonospacedFonts))
-        if QFontDatabase().isFixedPitch(font.family()):
-            fixedWidthFilter.setCheckState(Qt.CheckState.Checked)
+    def getMostRecentValue(self, k):
+        if k in self.prefDiff:
+            return self.prefDiff[k]
+        elif k in prefs.__dict__:
+            return prefs.__dict__[k]
         else:
-            fixedWidthFilter.setCheckState(Qt.CheckState.Unchecked)
-        '''
+            return None
 
-        return vBoxWidget(
-            control,
-            #fixedWidthFilter,
-            hBoxWidget(
-                QLabel("Size:  "),
-                sizeControl,
-                "stretch"
-            )
-        )
+    def fontControl(self, prefKey: str, fallback: QFont):
+        def currentFont():
+            fontString = self.getMostRecentValue(prefKey)
+            if fontString:
+                font = QFont()
+                font.fromString(fontString)
+            else:
+                font = fallback
+            return font
+
+        def pickFont():
+            newFont, ok = QFontDialog.getFont(currentFont(), parent=self)
+            if ok:
+                self.assign(prefKey, newFont.toString())
+                refreshFontButton()
+
+        fontButton = QPushButton("Font")
+        fontButton.clicked.connect(lambda e: pickFont())
+        fontButton.setMaximumWidth(256)
+        fontButton.setMaximumHeight(128)
+
+        def refreshFontButton():
+            font = currentFont()
+            fontButton.setText(F"{font.family()} {font.pointSize()}")
+            fontButton.setFont(font)
+
+        refreshFontButton()
+
+        return fontButton
 
     def strControl(self, prefKey, prefValue):
         control = QLineEdit(prefValue, self)
