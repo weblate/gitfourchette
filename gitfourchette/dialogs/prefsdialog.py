@@ -114,6 +114,8 @@ class PrefsDialog(QDialog):
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
             elif prefKey == 'shortHashChars':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
+            elif prefKey == 'maxRecentRepos':
+                control = self.boundedIntControl(prefKey, prefValue, 0, 50)
             elif issubclass(t, enum.Enum):
                 control = self.enumControl(prefKey, prefValue, t)
             elif t is str:
@@ -203,17 +205,12 @@ class PrefsDialog(QDialog):
         return control
 
     def boundedIntControl(self, prefKey, prefValue, minValue, maxValue):
-        label = QLabel(str(prefValue), self)
-        label.setMinimumWidth(label.fontMetrics().horizontalAdvance("000"))
-
-        control = QSlider(Qt.Horizontal, self)
-        control.setMinimumWidth(40*3)
+        control = QSpinBox(self)
         control.setMinimum(minValue)
         control.setMaximum(maxValue)
         control.setValue(prefValue)
         control.valueChanged.connect(lambda v, k=prefKey: self.assign(k, v))
-        control.valueChanged.connect(lambda v: label.setText(str(v)))
-        return hBoxWidget(label, control)
+        return control
 
     def floatControl(self, prefKey, prefValue):
         control = QLineEdit(str(prefValue), self)

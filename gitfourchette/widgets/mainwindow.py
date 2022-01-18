@@ -194,7 +194,7 @@ class MainWindow(QMainWindow):
             self.fillRecentMenu()
 
         self.recentMenu.clear()
-        for historic in reversed(settings.history.history):
+        for historic in list(reversed(settings.history.history))[:settings.prefs.maxRecentRepos]:
             self.recentMenu.addAction(
                 F"{settings.history.getRepoNickname(historic)} [{compactSystemPath(historic)}]",
                 lambda h=historic: self.openRepo(h))

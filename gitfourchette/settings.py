@@ -83,6 +83,7 @@ class Prefs(BasePrefs):
     shortHashChars              : int           = 7
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
+    maxRecentRepos              : int           = 20
     showStatusBar               : bool          = True
     diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4
@@ -118,6 +119,7 @@ class History(BasePrefs):
         except ValueError:
             pass
         self.history.append(path)
+        self.trim()
         self.write()
 
     def getRepoNickname(self, path):
@@ -150,6 +152,13 @@ class History(BasePrefs):
         self.history.clear()
         self.nicknames.clear()
         self.write()
+
+    def trim(self):
+        n = prefs.maxRecentRepos
+        if len(self.history) > n:
+            for path in self.history[:-n]:
+                self.nicknames.pop(path, None)
+            self.history = self.history[-n:]
 
 
 @dataclass
