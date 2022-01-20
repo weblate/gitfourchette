@@ -45,6 +45,3 @@ class DiffStyle:
         self.warningCF1 = QTextCharFormat()
         self.warningCF1.setForeground(QColor(200, 30, 0))
         self.warningCF1.setFont(self.warningFont1)
-
-        self.warningCF2 = QTextCharFormat()
-        self.warningCF2.setForeground(QColor(200, 30, 0))

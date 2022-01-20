@@ -87,7 +87,7 @@ class Prefs(BasePrefs):
     showStatusBar               : bool          = True
     diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4
-    diff_largeFileThreshold     : int           = 300000
+    diff_largeFileThresholdKB   : int           = 512
     diff_wordWrap               : bool          = False
     diff_showStrayCRs           : bool          = True
     diff_colorblindFriendlyColors : bool        = False

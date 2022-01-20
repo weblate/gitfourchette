@@ -15,18 +15,23 @@ class DiffModel:
     style: DiffStyle
 
     @staticmethod
-    def fromFailureMessage(message, details=""):
+    def fromMessage(message, details="", icon=QStyle.SP_MessageBoxInformation):
         style = DiffStyle()
         document = QTextDocument()
-        cursor = QTextCursor(document)
-        cursor.setCharFormat(style.warningCF1)
-        cursor.insertText(message)
-        if details:
-            cursor.insertBlock()
-            cursor.setCharFormat(style.warningCF2)
-            if details.startswith("Traceback"):
-                cursor.insertText('\n')
-            cursor.insertText(details)
+
+        document.addResource(
+            QTextDocument.ImageResource, "icon",
+            QApplication.style().standardIcon(icon).pixmap(48, 48))
+
+        document.setHtml(
+            "<table width='100%'>"
+            "<tr>"
+            "<td><img src='icon'/></td>"
+            "<td width=8></td>"
+            F"<td width='100%'><big>{message}</big><br/>{details}</td>"
+            "</tr>"
+            "</table>")
+
         return DiffModel(document=document, lineData=[], forceWrap=True, style=style)
 
     @staticmethod
@@ -35,8 +40,11 @@ class DiffModel:
 
         # Don't load large files.
         fileSize = os.path.getsize(fullPath)
-        if fileSize > settings.prefs.diff_largeFileThreshold:
-            return DiffModel.fromFailureMessage(F"Large file warning: {fileSize:,} bytes")
+        if fileSize > settings.prefs.diff_largeFileThresholdKB * 1024:
+            return DiffModel.fromMessage(
+                F"This file is too large to be previewed ({fileSize//1024:,} KB).",
+                "You can change the size threshold in the Preferences.",
+                icon=QStyle.SP_MessageBoxWarning)
 
         # Load entire file contents.
         with open(fullPath, 'rb') as f:
@@ -44,7 +52,7 @@ class DiffModel:
 
         # Don't show contents if file appears to be binary.
         if b'\x00' in binaryContents:
-            return DiffModel.fromFailureMessage("File appears to be binary.")
+            return DiffModel.fromMessage("File appears to be binary.")
 
         # Decode file contents.
         contents = binaryContents.decode('utf-8', errors='replace')
@@ -61,19 +69,22 @@ class DiffModel:
 
     @staticmethod
     def fromPatch(repo: pygit2.Repository, patch: pygit2.Patch, allowRawFileAccess: bool = False):
-        #TODO: check large files
-        # Don't load large files.
-        # if change.b_blob and change.b_blob.size > settings.prefs.diff_largeFileThreshold:
-        #     return DiffModel.fromFailureMessage(F"Large file warning: {change.b_blob.size:,} bytes")
-        # if change.a_blob and change.a_blob.size > settings.prefs.diff_largeFileThreshold:
-        #     return DiffModel.fromFailureMessage(F"Large file warning: {change.a_blob.size:,} bytes")
-
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
-            return DiffModel.fromFailureMessage("File appears to be binary.")
+            return DiffModel.fromMessage("File appears to be binary.")
 
         if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
             return DiffModel.fromUntrackedFile(repo, patch.delta.new_file.path)
+
+        # Don't load large diffs.
+        if len(patch.data) > settings.prefs.diff_largeFileThresholdKB * 1024:
+            return DiffModel.fromMessage(
+                F"This patch is too large to be previewed ({len(patch.data)//1024:,} KB).",
+                "You can change the size threshold in the Preferences.",
+                QStyle.SP_MessageBoxWarning)
+
+        if len(patch.hunks) == 0:
+            return DiffModel.fromMessage(F"File contents did not change.")
 
         style = DiffStyle()
         document = QTextDocument()  # recreating a document is faster than clearing the existing one

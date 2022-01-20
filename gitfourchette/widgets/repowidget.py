@@ -404,7 +404,7 @@ class RepoWidget(QWidget):
                     dm = DiffModel.fromPatch(repo, patch, allowRawFileAccess)
             except BaseException as exc:
                 summary, details = excStrings(exc)
-                dm = DiffModel.fromFailureMessage(summary, details)
+                dm = DiffModel.fromMessage(summary, details, icon=QStyle.SP_MessageBoxCritical)
             dm.document.moveToThread(QApplication.instance().thread())
             return dm
 
