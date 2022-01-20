@@ -86,11 +86,15 @@ class GraphDelegate(QStyledItemDelegate):
                 painter.setFont(self.activeCommitFont)
         else:
             commit: Commit = None
-            summaryText = "Uncommitted Changes"
+            summaryText = "[Uncommitted Changes]"
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
             dateText = ""
             painter.setFont(self.uncommittedFont)
+
+            draftCommitMessage = self.state.getDraftCommitMessage()
+            if draftCommitMessage:
+                summaryText += F" {messageSummary(draftCommitMessage)[0]}"
 
         # Get metrics now so the message gets elided according to the custom font style
         # that may have been just set for this commit.
