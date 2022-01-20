@@ -8,10 +8,8 @@ from widgets.customtabwidget import CustomTabWidget
 from widgets.repowidget import RepoWidget
 import gc
 import os
-import pickle
 import pygit2
 import settings
-import zlib
 
 
 try:
@@ -113,6 +111,7 @@ class MainWindow(QMainWindow):
         repoMenu = menubar.addMenu("&Repo")
         repoMenu.setObjectName("MWRepoMenu")
         repoMenu.addAction("&Refresh", self.quickRefresh, QKeySequence.Refresh)
+        repoMenu.addAction("Hard &Refresh", self.refresh, QKeySequence("Ctrl+F5"))
         repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
         repoMenu.addAction("Copy Repo Path", self.copyRepoPath)
         repoMenu.addSeparator()
@@ -138,15 +137,6 @@ class MainWindow(QMainWindow):
         goMenu.addSeparator()
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence("Ctrl+Tab"))
         goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence("Ctrl+Shift+Tab"))
-
-        if settings.prefs.debug_showDebugMenu:
-            debugMenu: QMenu = menubar.addMenu("&Debug")
-            debugMenu.setObjectName("MWDebugMenu")
-            debugMenu.addAction("Hard &Refresh", self.refresh, QKeySequence("Ctrl+F5"))
-            debugMenu.addAction("Dump Graph...", self.debug_saveGraphDump)
-            debugMenu.addAction("Load Graph...", self.debug_loadGraphDump)
-            debugMenu.addAction("Dump graph (text)...", self.debug_saveGraphDumpText)
-            debugMenu.addAction("Dump graph (compact text)...", self.debug_saveGraphDumpCompactText)
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.setObjectName("MWHelpMenu")
@@ -454,148 +444,3 @@ class MainWindow(QMainWindow):
     def closeEvent(self, e):
         self.saveSession()
         e.accept()
-
-    def debug_loadGraphDump(self):
-        rw = self.currentRepoWidget()
-        path, _ = QFileDialog.getOpenFileName(self, "Load graph dump")
-        if not path:
-            return
-
-        progress = QProgressDialog("Load graph dump", "Abort", 0, 0, self)
-        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setWindowTitle(rw.state.shortName)
-        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
-        QCoreApplication.processEvents()
-        progress.setMaximum(5)
-        progress.show()
-        QCoreApplication.processEvents()
-
-        progress.setValue(0)
-        with open(path, 'rb') as f:
-            raw = f.read()
-        progress.setValue(1)
-        unpacked = zlib.decompress(raw)
-        progress.setValue(2)
-        dump = pickle.loads(unpacked)
-        progress.setValue(3)
-        orderedMetadata = rw.state.loadCommitDump(dump)
-        progress.setValue(4)
-        rw.graphView.fill(orderedMetadata)
-
-        progress.close()
-
-    def debug_saveGraphDump(self):
-        rw = self.currentRepoWidget()
-        path, _ = QFileDialog.getSaveFileName(self, "Save graph dump", rw.state.shortName + ".gfgraphdump")
-        if not path:
-            return
-        print(path)
-
-        progress = QProgressDialog("Save graph dump", "Abort", 0, 0, self)
-        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setWindowTitle(rw.state.shortName)
-        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
-        QCoreApplication.processEvents()
-        progress.setMaximum(4)
-        progress.show()
-        QCoreApplication.processEvents()
-
-        progress.setValue(0)
-        dump = rw.state.makeCommitDump()
-        progress.setValue(1)
-        raw = pickle.dumps(dump)
-        progress.setValue(2)
-        compressed = zlib.compress(raw)
-        progress.setValue(3)
-        with open(path, 'wb') as f:
-            f.write(compressed)
-
-        progress.setValue(4)
-        progress.close()
-
-    def debug_saveGraphDumpText(self):
-        rw = self.currentRepoWidget()
-        path, _ = QFileDialog.getSaveFileName(self, "Save graph dump text", rw.state.shortName + ".txt")
-        if not path:
-            return
-        print(path)
-
-        progress = QProgressDialog("Save graph dump", "Abort", 0, 0, self)
-        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setWindowTitle(rw.state.shortName)
-        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
-        QCoreApplication.processEvents()
-        progress.setMaximum(4)
-        progress.show()
-        QCoreApplication.processEvents()
-
-        progress.setValue(0)
-
-        with open(path, 'w') as f:
-            for c in rw.state.commitSequence:
-                f.write(c.hexsha)
-                for p in c.parentHashes:
-                    f.write(',' + p)
-                f.write('\n')
-            progress.setValue(2)
-
-        progress.setValue(3)
-        progress.close()
-
-    def debug_saveGraphDumpCompactText(self):
-        rw = self.currentRepoWidget()
-        path, _ = QFileDialog.getSaveFileName(self, "Save graph dump compact text", rw.state.shortName + ".txt")
-        if not path:
-            return
-        print(path)
-
-        progress = QProgressDialog("Save graph dump", "Abort", 0, 0, self)
-        progress.setAttribute(Qt.WA_DeleteOnClose)  # avoid leaking the dialog
-        progress.setWindowModality(Qt.WindowModal)
-        progress.setWindowTitle(rw.state.shortName)
-        progress.setWindowFlags(Qt.Dialog | Qt.Popup)
-        QCoreApplication.processEvents()
-        progress.setMaximum(4)
-        progress.show()
-        QCoreApplication.processEvents()
-
-        progress.setValue(0)
-
-        commitHashMap = {}
-        numCommits = 0
-        for c in rw.state.commitSequence:
-            commitHashMap[c.hexsha] = numCommits
-            numCommits += 1
-
-        pLine = ""
-        pLineMul = 0
-        with open(path, 'w') as f:
-            for c in rw.state.commitSequence:
-                if not c.parentHashes:
-                    line = "-"
-                else:
-                    #line = ",".join( [ str(commitHashMap[p]-commitHashMap[c.hexsha]) for p in c.parentHashes ] )
-                    line = ",".join( [ str(commitHashMap[p]) for p in c.parentHashes ] )
-
-                if line == pLine:
-                    pLineMul += 1
-                else:
-                    if pLineMul == 1:
-                        f.write('\n')
-                    elif pLineMul > 1:
-                        f.write(F'*{pLineMul}\n')
-                    f.write(line)
-                    pLine = line
-                    pLineMul = 1
-            if pLineMul == 1:
-                f.write('\n')
-            elif pLineMul > 1:
-                f.write(F'*{pLineMul}\n')
-
-            progress.setValue(2)
-
-        progress.setValue(3)
-        progress.close()

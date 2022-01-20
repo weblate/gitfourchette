@@ -99,7 +99,6 @@ class Prefs(BasePrefs):
     graph_maxLanes              : int           = 32
     graph_flattenLanes          : bool          = True
     graph_newLanesAlwaysRightmost:bool          = False
-    debug_showDebugMenu         : bool          = True
     debug_showMemoryIndicator   : bool          = True
     debug_showDirtyCommitsAfterRefresh : bool   = True
 
