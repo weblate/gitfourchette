@@ -5,6 +5,7 @@ from widgets.resetheaddialog import ResetHeadDialog
 from widgets.graphdelegate import GraphDelegate
 from util import messageSummary, fplural, shortHash
 import html
+import porcelain
 import settings
 
 
@@ -120,13 +121,21 @@ class GraphView(QListView):
         else:
             committerMarkup = formatSignature(commit.committer)
 
-        markup = F"""<span style='font-size: large'>{summary}</span>{postSummary}
+        diffs = porcelain.loadCommitDiffs(self.repo, oid)
+        statsMarkup = (
+                fplural("<b>#</b> changed file^s", sum(diff.stats.files_changed for diff in diffs)) +
+                fplural("<br/><b>#</b> insertion^s", sum(diff.stats.insertions for diff in diffs)) +
+                fplural("<br/><b>#</b> deletion^s", sum(diff.stats.deletions for diff in diffs))
+        )
+
+        markup = F"""<big>{summary}</big>{postSummary}
             <br>
             <table>
             <tr><td><b>Full Hash </b></td><td>{commit.oid.hex}</td></tr>
             <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
+            <tr><td><b>Statistics </b></td><td>{statsMarkup}</td></tr>
             </table>"""
             # <tr><td><b>Debug</b></td><td>
             #     batch {data.batchID},
