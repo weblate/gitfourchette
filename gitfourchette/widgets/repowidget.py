@@ -9,7 +9,8 @@ from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
-from util import fplural, excMessageBox, excStrings, labelQuote, showTextInputDialog, QSignalBlockerContext, shortHash
+from util import fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash
+from widgets.brandeddialog import showTextInputDialog
 from widgets.diffview import DiffView
 from widgets.committedfilelistview import CommittedFileListView
 from widgets.dirtyfilelistview import DirtyFileListView
@@ -309,7 +310,7 @@ class RepoWidget(QWidget):
             self.nameChange.emit()
         showTextInputDialog(
             self,
-            "Edit Repo Nickname",
+            "Edit repo nickname",
             "Enter new nickname for repo, or enter blank line to reset:",
             settings.history.getRepoNickname(self.workingTreeDir),
             onAccept,
@@ -680,7 +681,7 @@ class RepoWidget(QWidget):
             self._search(range(0, self.graphView.model().rowCount()))
         showTextInputDialog(
             self,
-            "Find Commit",
+            "Find commit",
             "Search for partial commit hash or message:",
             self.previouslySearchedTerm,
             onAccept)
@@ -728,7 +729,7 @@ class RepoWidget(QWidget):
             self._searchDiff()
         showTextInputDialog(
             self,
-            "Find in Patch",
+            "Find in patch",
             "Search for text in current patch:",
             self.previouslySearchedTermInDiff,
             onAccept)

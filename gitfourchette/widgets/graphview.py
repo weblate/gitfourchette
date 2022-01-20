@@ -1,9 +1,9 @@
 from allgit import *
 from allqt import *
-from datetime import datetime
+from widgets.brandeddialog import showTextInputDialog
 from widgets.resetheaddialog import ResetHeadDialog
-from util import messageSummary, fplural, shortHash, showTextInputDialog
 from widgets.graphdelegate import GraphDelegate
+from util import messageSummary, fplural, shortHash
 import html
 import settings
 
@@ -181,7 +181,7 @@ class GraphView(QListView):
 
         showTextInputDialog(
             self,
-            F"New Branch From {shortHash(oid)}",
+            F"New branch from {shortHash(oid)}",
             F"Enter name for new branch starting from {shortHash(oid)}:",
             None,
             onAccept)

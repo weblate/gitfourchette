@@ -1,6 +1,7 @@
 from allqt import *
+from util import labelQuote, shortHash
+from widgets.brandeddialog import showTextInputDialog
 from widgets.trackedbranchdialog import TrackedBranchDialog
-from util import labelQuote, showTextInputDialog, shortHash
 from widgets.sidebardelegate import SidebarDelegate
 from widgets.sidebarentry import SidebarEntry
 import pygit2
@@ -113,7 +114,9 @@ class Sidebar(QTreeView):
             a.setChecked(True)
 
         elif data.type == SidebarEntry.Type.REMOTE_REF:
-            menu.addAction(F"New local branch tracking {labelQuote(data.name)}...", lambda: self._newTrackingBranchFlow(data.name))
+            shortRef = data.name.removeprefix("refs/remotes/")
+            menu.addAction(F"New local branch tracking {labelQuote(shortRef)}...",
+                           lambda: self._newTrackingBranchFlow(data.name))
 
         elif data.type == SidebarEntry.Type.REMOTE:
             menu.addAction(F"Edit URL...", lambda: self._editRemoteURLFlow(data.name))
@@ -125,7 +128,7 @@ class Sidebar(QTreeView):
             self.newBranch.emit(newBranchName)
         showTextInputDialog(
             self,
-            "New Branch",
+            "New branch",
             "Enter name for new branch:",
             None,
             onAccept)
@@ -144,11 +147,14 @@ class Sidebar(QTreeView):
     def _renameBranchFlow(self, oldName):
         def onAccept(newName):
             self.renameBranch.emit(oldName, newName)
+
+        strippedName = oldName.removeprefix('refs/heads/')
+
         showTextInputDialog(
             self,
-            "Rename Branch",
-            F"Enter new name for branch <b>{labelQuote(oldName)}</b>:",
-            oldName,
+            F"Rename branch {labelQuote(strippedName)}",
+            "Enter new name:",
+            strippedName,
             onAccept,
             okButtonText="Rename")
 
@@ -160,14 +166,17 @@ class Sidebar(QTreeView):
         if rc == QMessageBox.Discard:
             self.deleteBranch.emit(localBranchName)
 
-    def _newTrackingBranchFlow(self, remoteBranchName):
+    def _newTrackingBranchFlow(self, name):
         def onAccept(localBranchName):
-            self.newTrackingBranch.emit(localBranchName, remoteBranchName)
+            self.newTrackingBranch.emit(localBranchName, name)
+
+        strippedName = name.removeprefix("refs/remotes/")
+
         showTextInputDialog(
             self,
-            "New Tracking Branch",
-            F"Enter name for a new local branch that will track remote branch {labelQuote(remoteBranchName)}:",
-            remoteBranchName[remoteBranchName.find('/') + 1:],
+            f"New branch tracking {labelQuote(strippedName)}",
+            F"Enter name for a new local branch that will\ntrack remote branch {labelQuote(strippedName)}:",
+            name[name.rfind('/') + 1:],
             onAccept,
             okButtonText="Create")
 

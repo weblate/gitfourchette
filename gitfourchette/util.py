@@ -149,36 +149,6 @@ def excStrings(exc):
     return summary, details
 
 
-def showTextInputDialog(
-        parent: QWidget,
-        title: str,
-        label: str,
-        text: str,
-        onAccept: typing.Callable[[str], None],
-        okButtonText: str = None
-) -> QInputDialog:
-    dlg = QInputDialog(parent)
-
-    dlg.setInputMode(QInputDialog.TextInput)
-    dlg.setWindowTitle(title)
-    if label:
-        dlg.setLabelText(label)
-    if text:
-        dlg.setTextValue(text)
-    if okButtonText:
-        dlg.setOkButtonText(okButtonText)
-
-    # This size isn't guaranteed. But it'll expand the dialog horizontally if the label is shorter.
-    dlg.resize(400, 128)
-
-    if onAccept:
-        dlg.accepted.connect(lambda: onAccept(dlg.textValue()))
-
-    dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-    dlg.show()
-    return dlg
-
-
 @dataclass
 class ActionDef:
     caption: str = None
