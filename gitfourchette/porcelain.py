@@ -86,10 +86,10 @@ def editTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName:
     localBranch.set_tracking_branch(remoteBranch)
 
 
-def editRemoteURL(repo: Repository, remoteName: str, newURL: str):
-    raise NotImplementedError("edit remote URL")
-    remote = repo.remote(remoteName)
-    remote.set_url(newURL)
+def editRemote(repo: Repository, remoteName: str, newName: str, newURL: str):
+    repo.remotes.set_url(remoteName, newURL)
+    if remoteName != newName:
+        repo.remotes.rename(remoteName, newName)  # rename AFTER setting everything else!
 
 
 def resetHead(repo: Repository, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):

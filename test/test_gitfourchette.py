@@ -289,3 +289,24 @@ def testSaveOldRevisionOfDeletedFile(qtbot, workDir, tempDir, rw):
     with open(os.path.join(tempDir.name, "c2-2@c9ed7bf.txt"), "rb") as f:
         contents = f.read()
         assert contents == b"c2\nc2\n"
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testEditRemote(qtbot, workDir, tempDir, rw):
+    repo = pygit2.Repository(workDir)
+
+    # Ensure we're starting with the expected settings
+    assert len(repo.remotes) == 1
+    assert repo.remotes[0].name == "origin"
+
+    dlg = rw.sidebar._editRemoteFlow("origin")
+    dlg.ui.nameEdit.setText("mainremote")
+    dlg.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
+    dlg.accept()
+
+    assert len(repo.remotes) == 1
+    assert repo.remotes[0].name == "mainremote"
+    assert repo.remotes[0].url == "https://127.0.0.1/example-repo.git"
+
+

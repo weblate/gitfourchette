@@ -123,7 +123,7 @@ class RepoWidget(QWidget):
         self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
         self.sidebar.deleteBranch.connect(self.deleteBranchAsync)
         self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
-        self.sidebar.editRemoteURL.connect(self.editRemoteURLAsync)
+        self.sidebar.editRemote.connect(self.editRemoteAsync)
         self.sidebar.pushBranch.connect(lambda name: self.pushFlow(name))
 
         self.splitterStates = sharedSplitterStates or {}
@@ -455,10 +455,10 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
 
-    def editRemoteURLAsync(self, remoteName: str, newURL: str):
-        work = lambda: porcelain.editRemoteURL(self.repo, remoteName, newURL)
+    def editRemoteAsync(self, remoteName: str, newName: str, newURL: str):
+        work = lambda: porcelain.editRemote(self.repo, remoteName, newName, newURL)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Edit remote “{remoteName}” URL")
+        self.workQueue.put(work, then, F"Edit remote “{remoteName}”")
 
     def resetHeadAsync(self, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, ontoHexsha, resetMode, recurseSubmodules)

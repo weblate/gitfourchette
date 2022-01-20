@@ -2,6 +2,7 @@ import porcelain
 from allqt import *
 from util import labelQuote, shortHash
 from widgets.brandeddialog import showTextInputDialog
+from widgets.remotedialog import RemoteDialog
 from widgets.trackedbranchdialog import TrackedBranchDialog
 from widgets.sidebardelegate import SidebarDelegate
 from widgets.sidebarentry import SidebarEntry
@@ -40,7 +41,7 @@ class Sidebar(QTreeView):
     deleteBranch = Signal(str)
     pushBranch = Signal(str)
     newTrackingBranch = Signal(str, str)
-    editRemoteURL = Signal(str, str)
+    editRemote = Signal(str, str, str)
 
     repo: pygit2.Repository
 
@@ -90,6 +91,8 @@ class Sidebar(QTreeView):
             mergeAction: QAction = menu.addAction(F"&Merge {labelQuote(strippedName)} into {labelQuote(activeBranchName)}...")
             rebaseAction: QAction = menu.addAction(F"&Rebase {labelQuote(activeBranchName)} onto {labelQuote(strippedName)}...")
 
+            switchAction.setIcon(QIcon.fromTheme("document-swap"))
+
             for action in switchAction, mergeAction, rebaseAction:
                 action.setEnabled(False)
 
@@ -107,23 +110,27 @@ class Sidebar(QTreeView):
             menu.addSeparator()
 
             if data.trackingBranch:
-                menu.addAction(F"&Push to {labelQuote(data.trackingBranch)}...", lambda: self.pushBranch.emit(data.name))
+                a = menu.addAction(F"&Push to {labelQuote(data.trackingBranch)}...", lambda: self.pushBranch.emit(data.name))
+                a.setIcon(QIcon.fromTheme("vcs-push"))
             else:
                 a = menu.addAction("&Push: no tracked branch")
                 a.setEnabled(False)
+                a.setIcon(QIcon.fromTheme("vcs-push"))
 
             menu.addAction("Set &Tracked Branch...", lambda: self._editTrackingBranchFlow(data.name))
 
             menu.addSeparator()
 
             menu.addAction("Re&name...", lambda: self._renameBranchFlow(data.name))
-            menu.addAction("&Delete...", lambda: self._deleteBranchFlow(data.name))
+            a = menu.addAction("&Delete...", lambda: self._deleteBranchFlow(data.name))
+            a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
 
+            """
             menu.addSeparator()
-
             a = menu.addAction(F"Show In Graph")
             a.setCheckable(True)
             a.setChecked(True)
+            """
 
         elif data.type == SidebarEntry.Type.REMOTE_REF:
             shortRef = data.name.removeprefix("refs/remotes/")
@@ -131,7 +138,8 @@ class Sidebar(QTreeView):
                            lambda: self._newTrackingBranchFlow(data.name))
 
         elif data.type == SidebarEntry.Type.REMOTE:
-            menu.addAction(F"Edit URL...", lambda: self._editRemoteURLFlow(data.name))
+            a: QAction = menu.addAction(F"Edit remote...", lambda: self._editRemoteFlow(data.name))
+            a.setIcon(QIcon.fromTheme("document-edit"))
 
         menu.exec_(globalPoint)
 
@@ -192,15 +200,15 @@ class Sidebar(QTreeView):
             onAccept,
             okButtonText="Create")
 
-    def _editRemoteURLFlow(self, remoteName):
-        def onAccept(newURL):
-            self.editRemoteURL.emit(remoteName, newURL)
-        showTextInputDialog(
-            self,
-            "Edit Remote URL",
-            F"Enter new URL for remote <b>{labelQuote(remoteName)}</b>:",
-            self.repo.remote(remoteName).url,
-            onAccept)
+    def _editRemoteFlow(self, remoteName) -> RemoteDialog:
+        def onAccept(newName, newURL):
+            self.editRemote.emit(remoteName, newName, newURL)
+
+        dlg = RemoteDialog(remoteName, self.repo.remotes[remoteName].url, self)
+        dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
+        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        dlg.show()
+        return dlg
 
     def fill(self, repo: pygit2.Repository):
         model = QStandardItemModel()
