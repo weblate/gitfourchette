@@ -1,9 +1,9 @@
-from allgit import *
 from allqt import *
 from widgets.trackedbranchdialog import TrackedBranchDialog
 from util import labelQuote, showTextInputDialog, shortHash
 from widgets.sidebardelegate import SidebarDelegate
 from widgets.sidebarentry import SidebarEntry
+import pygit2
 
 
 # TODO: we should just use a custom model
@@ -28,6 +28,7 @@ class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
     tagClicked = Signal(str)
+    commitClicked = Signal(pygit2.Oid)
     newBranch = Signal(str)
     switchToBranch = Signal(str)
     renameBranch = Signal(str, str)
@@ -39,14 +40,14 @@ class Sidebar(QTreeView):
     newTrackingBranch = Signal(str, str)
     editRemoteURL = Signal(str, str)
 
-    currentGitRepo: Repository
+    repo: pygit2.Repository
 
     def __init__(self, parent):
         super().__init__(parent)
 
         self.setMinimumWidth(128)
 
-        self.currentGitRepo = None
+        self.repo = None
 
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         #self.setUniformRowHeights(True)
@@ -130,7 +131,7 @@ class Sidebar(QTreeView):
             onAccept)
 
     def _editTrackingBranchFlow(self, localBranchName):
-        dlg = TrackedBranchDialog(self.currentGitRepo, localBranchName, self)
+        dlg = TrackedBranchDialog(self.repo, localBranchName, self)
 
         def onAccept():
             newTrackingBranchName = dlg.newTrackingBranchName
@@ -177,10 +178,10 @@ class Sidebar(QTreeView):
             self,
             "Edit Remote URL",
             F"Enter new URL for remote <b>{labelQuote(remoteName)}</b>:",
-            self.currentGitRepo.remote(remoteName).url,
+            self.repo.remote(remoteName).url,
             onAccept)
 
-    def fill(self, repo: Repository):
+    def fill(self, repo: pygit2.Repository):
         model = QStandardItemModel()
 
         if repo.head_is_detached:
@@ -191,13 +192,13 @@ class Sidebar(QTreeView):
             self.activeBranchName = None
             #self.activeBranchName = repo.active_branch.name
 
-        uncommittedChangesEntry = SidebarEntry(SidebarEntry.Type.UNCOMMITTED_CHANGES, None)
+        uncommittedChangesEntry = SidebarEntry(SidebarEntry.Type.UNCOMMITTED_CHANGES)
         uncommittedChanges = SidebarItem("Changes", uncommittedChangesEntry)
         model.appendRow(uncommittedChanges)
 
         model.appendRow(SidebarSeparator())
 
-        branchesParentEntry = SidebarEntry(SidebarEntry.Type.LOCAL_BRANCHES_HEADER, None)
+        branchesParentEntry = SidebarEntry(SidebarEntry.Type.LOCAL_BRANCHES_HEADER)
         branchesParent = SidebarItem("Local Branches", branchesParentEntry)
         branchesParent.setSelectable(False)
 
@@ -205,20 +206,20 @@ class Sidebar(QTreeView):
             target: str = repo.lookup_reference("HEAD").target
             target = target.removeprefix("refs/heads/")
             caption = F"★ {target} (unborn)"
-            branchEntry = SidebarEntry(SidebarEntry.Type.UNBORN_HEAD, None)
+            branchEntry = SidebarEntry(SidebarEntry.Type.UNBORN_HEAD)
             item = SidebarItem(caption, branchEntry)
             item.setToolTip(F"Unborn HEAD (does not point to a commit yet)")
             branchesParent.appendRow(item)
 
-        if repo.head_is_detached:
-            caption = F"★ detached HEAD @ {shortHash(repo.head.commit.hexsha)}"
-            branchEntry = SidebarEntry(SidebarEntry.Type.DETACHED_HEAD, None)
+        elif repo.head_is_detached:
+            caption = F"★ detached HEAD @ {shortHash(repo.head.target)}"
+            branchEntry = SidebarEntry(SidebarEntry.Type.DETACHED_HEAD, oid=repo.head.target)
             item = SidebarItem(caption, branchEntry)
-            item.setToolTip(F"detached HEAD @{shortHash(repo.head.commit.hexsha)}")
+            item.setToolTip(F"detached HEAD @{shortHash(repo.head.target)}")
             branchesParent.appendRow(item)
 
-        for localBranchRawName in repo.raw_listall_branches(GIT_BRANCH_LOCAL):
-            branch: Branch = repo.lookup_branch(localBranchRawName)
+        for localBranchRawName in repo.raw_listall_branches(pygit2.GIT_BRANCH_LOCAL):
+            branch: pygit2.Branch = repo.lookup_branch(localBranchRawName)
             caption = branch.branch_name
             tooltip = branch.branch_name
             if not repo.head_is_detached and branch.is_checked_out():
@@ -266,7 +267,7 @@ class Sidebar(QTreeView):
             tagsParent.appendRow(tagItem)
         model.appendRow(tagsParent)
 
-        self.currentGitRepo = repo
+        self.repo = repo
         self._replaceModel(model)
 
         # expand branch container
@@ -286,6 +287,8 @@ class Sidebar(QTreeView):
             return
         if data.type == SidebarEntry.Type.UNCOMMITTED_CHANGES:
             self.uncommittedChangesClicked.emit()
+        elif data.type == SidebarEntry.Type.DETACHED_HEAD:
+            self.commitClicked.emit(data.oid)
         elif data.type in [SidebarEntry.Type.LOCAL_REF, SidebarEntry.Type.REMOTE_REF]:
             self.refClicked.emit(data.name)
         elif data.type == SidebarEntry.Type.TAG:

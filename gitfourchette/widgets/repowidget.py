@@ -111,6 +111,7 @@ class RepoWidget(QWidget):
         self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
+        self.sidebar.commitClicked.connect(self.selectCommit)
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.tagClicked.connect(self.selectTag)
         self.sidebar.newBranch.connect(self.newBranchAsync)
@@ -796,13 +797,16 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
+    def selectCommit(self, oid: Oid):
+        self.graphView.selectCommit(oid)
+
     def selectRef(self, refName: str):
         oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
-        self.graphView.selectCommit(oid)
+        self.selectCommit(oid)
 
     def selectTag(self, tagName: str):
         oid = porcelain.getCommitOidFromTagName(self.repo, tagName)
-        self.graphView.selectCommit(oid)
+        self.selectCommit(oid)
 
     # -------------------------------------------------------------------------
 

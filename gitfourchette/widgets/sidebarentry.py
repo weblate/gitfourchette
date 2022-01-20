@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import enum
+import pygit2
 
 
 @dataclass
@@ -15,6 +16,7 @@ class SidebarEntry:
         TAG = enum.auto()
 
     type: Type
-    name: str
-    trackingBranch: str = None
+    name: str | None = None
+    oid: pygit2.Oid | None = None
+    trackingBranch: str | None = None
 
