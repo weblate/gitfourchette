@@ -1,5 +1,5 @@
 from allqt import *
-from ui.ui_signatureform import Ui_SignatureForm
+from widgets.ui_signatureform import Ui_SignatureForm
 from pygit2 import Signature
 
 

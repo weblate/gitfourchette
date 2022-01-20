@@ -1,6 +1,6 @@
 from allqt import *
-from dialogs.aboutdialog import showAboutDialog
-from dialogs.prefsdialog import PrefsDialog
+from widgets.aboutdialog import showAboutDialog
+from widgets.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
 from util import compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext

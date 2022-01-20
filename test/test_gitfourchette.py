@@ -1,5 +1,5 @@
 from qttest_imports import *
-from gitfourchette.dialogs.commitdialog import CommitDialog
+from widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.mainwindow import MainWindow
 from gitfourchette.widgets.repowidget import RepoWidget
 import os

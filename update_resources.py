@@ -1,11 +1,11 @@
 #! /usr/bin/env python3
 
-import os, sys, subprocess
+import os, re, subprocess, sys
 
-uisrcDir = "ui"
+srcDir = "gitfourchette"
 assetsDir = "assets"
 
-for path in uisrcDir, assetsDir:
+for path in srcDir, assetsDir:
     if not os.path.isdir(path):
         print(F"Directory {path} not found; please run this script from the root of the repo")
         sys.exit(1)
@@ -55,21 +55,26 @@ writeStatusIcon('#90a0b0', 'U')  # unmerged
 writeStatusIcon('#ff00ff', 'X')  # unknown
 
 # Generate .py files from .ui files
-for filename in os.listdir(uisrcDir):
-    if not filename.endswith(".ui"):
-        continue
+for root, dirs, files in os.walk(srcDir):
+    for file in files:
+        basename = os.path.splitext(file)[0]
+        fullpath = os.path.join(root, file)
 
-    basename = os.path.splitext(filename)[0]
-    fullpath = os.path.join(uisrcDir, filename)
+        if re.match(r"^ui_.+\.py$", file) and \
+                not os.path.isfile(F"{root}/{basename.removeprefix('ui_')}.ui"):
+            print("[!] Removing generated UI source file because there's no matching designer file:", fullpath)
+            os.unlink(fullpath)
+            continue
 
-    result = call(["uic-qt5", "--generator", "python", fullpath])
+        if file.endswith(".ui"):
+            result = call(["uic-qt5", "--generator", "python", fullpath])
 
-    codeLines = ["from allqt import *", ""] + \
-                [line for line in result.stdout.splitlines()
-                 if not line.startswith("from PySide2.")
-                 and not line.startswith("# -*- coding:")]
+            codeLines = ["from allqt import *", ""] + \
+                        [line for line in result.stdout.splitlines()
+                         if not line.startswith("from PySide2.")
+                         and not line.startswith("# -*- coding:")]
 
-    writeIfDifferent(F"gitfourchette/ui/ui_{basename}.py", "\n".join(codeLines))
+            writeIfDifferent(F"{root}/ui_{basename}.py", "\n".join(codeLines))
 
-# Generate assets.py from assets.qrc
-call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc", "--output", "gitfourchette/assets.py"])
+# Generate assets_rc.py from assets.qrc
+call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc", "--output", "gitfourchette/assets_rc.py"])

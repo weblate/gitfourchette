@@ -2,8 +2,8 @@ import trash
 from allqt import *
 from allgit import *
 from benchmark import Benchmark
-from dialogs.commitdialog import CommitDialog
-from dialogs.remoteprogressdialog import RemoteProgressDialog
+from widgets.commitdialog import CommitDialog
+from widgets.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
 from stagingstate import StagingState
 from globalstatus import globalstatus

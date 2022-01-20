@@ -1,6 +1,6 @@
 from allgit import *
 from allqt import *
-from dialogs.trackedbranchdialog import TrackedBranchDialog
+from widgets.trackedbranchdialog import TrackedBranchDialog
 from util import labelQuote, showTextInputDialog, shortHash
 from widgets.sidebardelegate import SidebarDelegate
 from widgets.sidebarentry import SidebarEntry

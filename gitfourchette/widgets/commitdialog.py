@@ -1,5 +1,5 @@
 from allqt import *
-from ui.ui_commitdialog import Ui_CommitDialog
+from widgets.ui_commitdialog import Ui_CommitDialog
 from pygit2 import Signature
 
 

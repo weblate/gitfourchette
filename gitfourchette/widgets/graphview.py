@@ -1,7 +1,7 @@
 from allgit import *
 from allqt import *
 from datetime import datetime
-from dialogs.resetheaddialog import ResetHeadDialog
+from widgets.resetheaddialog import ResetHeadDialog
 from util import messageSummary, fplural, shortHash, showTextInputDialog
 from widgets.graphdelegate import GraphDelegate
 import html

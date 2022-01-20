@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # initialize Qt before importing app modules so fonts are loaded correctly
     app = QApplication(sys.argv)
 
-    import assets
+    import assets_rc
 
     app.setApplicationName("GitFourchette")  # used by QStandardPaths
     # Don't use app.setOrganizationName because it changes QStandardPaths.
