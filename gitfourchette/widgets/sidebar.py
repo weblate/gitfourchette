@@ -1,3 +1,4 @@
+import porcelain
 from allqt import *
 from util import labelQuote, shortHash
 from widgets.brandeddialog import showTextInputDialog
@@ -79,18 +80,29 @@ class Sidebar(QTreeView):
             menu.addAction(F"&New Branch...", self._newBranchFlow)
 
         elif data.type == SidebarEntry.Type.LOCAL_REF:
-            if data.name != self.activeBranchName:
-                menu.addAction(
-                    F"&Switch to {labelQuote(data.name)}",
-                    lambda: self.switchToBranch.emit(data.name))
-                if self.activeBranchName:
-                    menu.addSeparator()
-                    menu.addAction(
-                        F"&Merge {labelQuote(data.name)} into {labelQuote(self.activeBranchName)}...",
-                        lambda: self.mergeBranchIntoActive.emit(data.name))
-                    menu.addAction(
-                        F"&Rebase {labelQuote(self.activeBranchName)} onto {labelQuote(data.name)}...",
-                        lambda: self.rebaseActiveOntoBranch.emit(data.name))
+            strippedName = data.name.removeprefix("refs/heads/")
+            branch: pygit2.Branch = self.repo.lookup_branch(strippedName)
+
+            activeBranchName = porcelain.getActiveBranchShorthand(self.repo)
+
+            switchAction: QAction = menu.addAction(F"&Switch to {labelQuote(strippedName)}")
+            menu.addSeparator()
+            mergeAction: QAction = menu.addAction(F"&Merge {labelQuote(strippedName)} into {labelQuote(activeBranchName)}...")
+            rebaseAction: QAction = menu.addAction(F"&Rebase {labelQuote(activeBranchName)} onto {labelQuote(strippedName)}...")
+
+            for action in switchAction, mergeAction, rebaseAction:
+                action.setEnabled(False)
+
+            if branch and not branch.is_checked_out():
+                switchAction.triggered.connect(lambda: self.switchToBranch.emit(data.name))
+                switchAction.setEnabled(True)
+
+                if activeBranchName:
+                    mergeAction.triggered.connect(lambda: self.mergeBranchIntoActive.emit(data.name))
+                    rebaseAction.triggered.connect(lambda: self.rebaseActiveOntoBranch.emit(data.name))
+
+                    mergeAction.setEnabled(True)
+                    rebaseAction.setEnabled(True)
 
             menu.addSeparator()
 
@@ -192,14 +204,6 @@ class Sidebar(QTreeView):
 
     def fill(self, repo: pygit2.Repository):
         model = QStandardItemModel()
-
-        if repo.head_is_detached:
-            self.activeBranchName = None
-        else:
-            # TODO get active branch
-            print("TODO: Get Active Branch")
-            self.activeBranchName = None
-            #self.activeBranchName = repo.active_branch.name
 
         uncommittedChangesEntry = SidebarEntry(SidebarEntry.Type.UNCOMMITTED_CHANGES)
         uncommittedChanges = SidebarItem("Changes", uncommittedChangesEntry)
