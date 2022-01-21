@@ -402,14 +402,14 @@ class MainWindow(QMainWindow):
     def selectUncommittedChanges(self):
         self.currentRepoWidget().graphView.selectUncommittedChanges()
 
-    def tryLoadSession(self):
-        session = settings.Session()
-        if not session.load():
-            return
-
+    def restoreSession(self, session: settings.Session):
         self.sharedSplitterStates = {k: settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
         self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
         self.show()
+
+        # Stop here if there are no tabs to load
+        if not session.tabs:
+            return
 
         # Normally, changing the current tab will load the corresponding repo in the background.
         # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
