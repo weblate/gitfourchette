@@ -19,9 +19,9 @@ class DiffModel:
         style = DiffStyle()
         document = QTextDocument()
 
-        document.addResource(
-            QTextDocument.ImageResource, "icon",
-            QApplication.style().standardIcon(icon).pixmap(48, 48))
+        pixmap = QApplication.style().standardIcon(icon).pixmap(48, 48)
+
+        document.addResource(QTextDocument.ImageResource, QUrl("icon"), pixmap)
 
         document.setHtml(
             "<table width='100%'>"

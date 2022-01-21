@@ -1,4 +1,3 @@
-import porcelain
 from allqt import *
 from widgets.filelistview import FileListView
 from stagingstate import StagingState
@@ -49,7 +48,7 @@ class CommittedFileListView(FileListView):
             with open(tempPath, "wb") as f:
                 f.write(blob.data)
 
-            QDesktopServices.openUrl(tempPath)
+            QDesktopServices.openUrl(QUrl(tempPath))
 
     def saveRevisionAs(self, saveInto=None):
         for diff in self.confirmSelectedEntries("save # files"):
