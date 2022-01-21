@@ -139,6 +139,10 @@ def excMessageBox(
         qmb.exec_()
 
 
+def unimplementedDialog(featureName="UNIMPLEMENTED"):
+    QMessageBox.warning(None, featureName, F"This feature isn't implemented yet\n({featureName})")
+
+
 def excStrings(exc):
     summary = traceback.format_exception_only(exc.__class__, exc)
     summary = ''.join(summary).strip()

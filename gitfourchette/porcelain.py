@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from pygit2 import Commit, Diff, Oid, Repository, Signature, Branch
 import pygit2
 
@@ -50,6 +52,11 @@ def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
         return [diff]
 
 
+def checkoutLocalBranch(repo: Repository, localBranchName: str):
+    branch: Branch = repo.branches.local[localBranchName]
+    repo.checkout(branch.raw_name)
+
+
 def checkoutRef(repo: Repository, refName: str):
     repo.checkout(refName)
 
@@ -77,13 +84,35 @@ def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid):
     checkoutRef(repo, branch.name)  # branch.name is inherited from Reference
 
 
+def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
+    nameDict = defaultdict(list)
+
+    remoteBranch: Branch
+    for name in repo.branches.remote:
+        remoteBranch: pygit2.Branch = repo.branches.remote[name]
+        remoteName = remoteBranch.remote_name
+        strippedBranchName = name.removeprefix(remoteName + "/")
+        nameDict[remoteBranch.remote_name].append(strippedBranchName)
+
+    return nameDict
+
+
+def getTagNames(repo: Repository) -> list[str]:
+    return [
+        name.removeprefix("refs/tags/")
+        for name in repo.listall_references()
+        if name.startswith("refs/tags/")
+    ]
+
+
 def editTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str):
-    raise NotImplementedError("edit tracking branch")
-    localBranch: git.Head = repo.heads[localBranchName]
-    remoteBranch: git.Reference = None
+    localBranch: pygit2.Branch = repo.branches.local[localBranchName]
     if remoteBranchName:
-        remoteBranch = repo.refs[remoteBranchName]
-    localBranch.set_tracking_branch(remoteBranch)
+        remoteBranch: pygit2.Branch = repo.branches.remote[remoteBranchName]
+        localBranch.upstream = remoteBranch
+    else:
+        if localBranch.upstream is not None:
+            localBranch.upstream = None
 
 
 def editRemote(repo: Repository, remoteName: str, newName: str, newURL: str):
@@ -120,8 +149,8 @@ def getHeadCommitMessage(repo: Repository) -> str:
 def createCommit(
         repo: Repository,
         message: str,
-        overrideAuthor: Signature = None,
-        overrideCommitter: Signature = None
+        overrideAuthor: Signature | None = None,
+        overrideCommitter: Signature | None = None
 ) -> Oid:
     # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
     # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
@@ -153,8 +182,8 @@ def createCommit(
 def amendCommit(
         repo: Repository,
         message: str,
-        overrideAuthor: Signature = None,
-        overrideCommitter: Signature = None
+        overrideAuthor: Signature | None = None,
+        overrideCommitter: Signature | None = None
 ) -> Oid:
     indexTreeOid = repo.index.write_tree(repo)
     newCommitOid = repo.amend_commit(

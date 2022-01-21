@@ -1,9 +1,14 @@
+from typing import Callable
+
+import porcelain
+from actionflows import ActionFlows
 from allqt import *
 from widgets.aboutdialog import showAboutDialog
 from widgets.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
-from util import compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext
+from util import (compactSystemPath, showInFolder, excMessageBox,
+                  DisableWidgetContext, QSignalBlockerContext, unimplementedDialog)
 from widgets.customtabwidget import CustomTabWidget
 from widgets.repowidget import RepoWidget
 import gc
@@ -16,9 +21,7 @@ try:
     import psutil
 except ImportError:
     print("psutil isn't available. The memory indicator will not work.")
-    psutilAvailable = False
-else:
-    psutilAvailable = True
+    psutil = None
 
 
 class Session:
@@ -30,6 +33,7 @@ class Session:
 class MainWindow(QMainWindow):
     tabs: CustomTabWidget
     recentMenu: QMenu
+    repoMenu: QMenu
 
     def __init__(self):
         super().__init__()
@@ -64,7 +68,7 @@ class MainWindow(QMainWindow):
             self.memoryIndicator = QPushButton("Mem")
             self.memoryIndicator.setMaximumHeight(16)
             self.memoryIndicator.setMinimumWidth(128)
-            self.memoryIndicator.clicked.connect(lambda e: [gc.collect(), print("GC!"), self.updateMemoryIndicator()])
+            self.memoryIndicator.clicked.connect(lambda e: self.onMemoryIndicatorClicked())
             self.memoryIndicator.setToolTip("Force GC")
             self.statusBar.addPermanentWidget(self.memoryIndicator)
         else:
@@ -74,9 +78,22 @@ class MainWindow(QMainWindow):
 
         self.initialChildren = list(self.findChildren(QObject))
 
+    def onMemoryIndicatorClicked(self):
+        gc.collect()
+
+        print("Top-Level Windows:")
+        for tlw in QApplication.topLevelWindows():
+            print("*", tlw)
+        print("Top-Level Widgets:")
+        for tlw in QApplication.topLevelWidgets():
+            print("*", tlw, tlw.objectName())
+        print()
+
+        self.updateMemoryIndicator()
+
     def updateMemoryIndicator(self):
         nChildren = len(self.findChildren(QObject))
-        if psutilAvailable:
+        if psutil:
             rss = psutil.Process(os.getpid()).memory_info().rss
             self.memoryIndicator.setText(F"{rss // 1024:,}K {nChildren}Q")
         else:
@@ -108,24 +125,28 @@ class MainWindow(QMainWindow):
         fileMenu.addSeparator()
         fileMenu.addAction("&Quit", self.close, QKeySequence.Quit)
 
-        repoMenu = menubar.addMenu("&Repo")
+        repoMenu: QMenu = menubar.addMenu("&Repo")
         repoMenu.setObjectName("MWRepoMenu")
         repoMenu.addAction("&Refresh", self.quickRefresh, QKeySequence.Refresh)
         repoMenu.addAction("Hard &Refresh", self.refresh, QKeySequence("Ctrl+F5"))
+        repoMenu.addSeparator()
         repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
         repoMenu.addAction("Copy Repo Path", self.copyRepoPath)
+        repoMenu.addAction("Rename Repo...", self.renameRepo)
         repoMenu.addSeparator()
-        repoMenu.addAction("Commit...", lambda: self.currentRepoWidget().commitFlow(), QKeySequence("Ctrl+K"))
-        repoMenu.addAction("Amend Last Commit...", lambda: self.currentRepoWidget().amendFlow(), QKeySequence("Ctrl+Shift+K"))
+        repoMenu.addAction("Commit...", self.commit, QKeySequence("Ctrl+K"))
+        repoMenu.addAction("Amend Last Commit...", self.amend, QKeySequence("Ctrl+Shift+K"))
         repoMenu.addSeparator()
-        repoMenu.addAction("Push Active Branch...", lambda: self.currentRepoWidget().pushFlow())
-        repoMenu.addAction("Rename...", lambda: self.currentRepoWidget().renameRepo())
+        repoMenu.addAction("New Branch...", self.newBranch, QKeySequence("Ctrl+B"))
+        repoMenu.addAction("Push Active Branch...", self.push, QKeySequence("Ctrl+P"))
         repoMenu.addSeparator()
         repoMenu.addAction("&Find Commit...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
         repoMenu.addSeparator()
-        repoMenu.addAction("Resc&ue Discarded Changes...", lambda: self.currentRepoWidget().openRescueFolder())
+        repoMenu.addAction("Resc&ue Discarded Changes...", lambda: self.openRescueFolder)
+        repoMenu.setEnabled(False)
+        self.repoMenu = repoMenu
 
         patchMenu = menubar.addMenu("&Patch")
         patchMenu.setObjectName("MWPatchMenu")
@@ -137,6 +158,10 @@ class MainWindow(QMainWindow):
         goMenu.addSeparator()
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence("Ctrl+Tab"))
         goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence("Ctrl+Shift+Tab"))
+        #asyncDelay = QAction("Fake &Async Delay", debugMenu)
+        #asyncDelay.setCheckable(True)
+        #asyncDelay.connect(...)
+        #debugMenu.addAction(asyncDelay)
 
         helpMenu = menubar.addMenu("&Help")
         helpMenu.setObjectName("MWHelpMenu")
@@ -195,13 +220,11 @@ class MainWindow(QMainWindow):
         return self.tabs.currentWidget()
 
     def onTabChange(self, i):
-        #if self.previousTabIndex >= 0:
-        #    pw = self.tabs.widget(previous...) # also save splitter state after close
-        #    self.splitterStates = self
         if i < 0:
             self.setWindowTitle(QApplication.applicationDisplayName())
             return
 
+        self.repoMenu.setEnabled(False)
         w = self.currentRepoWidget()
         w.restoreSplitterStates()
 
@@ -216,6 +239,7 @@ class MainWindow(QMainWindow):
                 if not success:
                     return
 
+        self.repoMenu.setEnabled(True)
         w.refreshWindowTitle()
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
@@ -229,7 +253,7 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction("Open Repo Folder", lambda: self.openRepoFolder(rw))
         menu.addAction("Copy Repo Path", lambda: self.copyRepoPath(rw))
-        menu.addAction("Rename", rw.renameRepo)
+        menu.addAction("Rename", lambda: self.renameRepo(rw))
         menu.addSeparator()
         if rw.state:
             menu.addAction("Unload", lambda: self.unloadTab(i))
@@ -259,6 +283,7 @@ class MainWindow(QMainWindow):
             orderedMetadata = newState.loadCommitList(progress)
 
             rw.state = newState
+            rw.actionFlows.repo = newState.repo
 
             progress.setLabelText(F"Filling model.")
             progress.setMaximum(0)
@@ -314,23 +339,62 @@ class MainWindow(QMainWindow):
 
         return newRW
 
-    def quickRefresh(self):
-        rw = self.currentRepoWidget()
+    # -------------------------------------------------------------------------
+    # Repo menu callbacks
+
+    @staticmethod
+    def needRepoWidget(callback):
+        def wrapper(self, rw=None):
+            if rw is None:
+                rw = self.currentRepoWidget()
+            if rw:
+                callback(self, rw)
+            else:
+                QApplication.beep()
+        return wrapper
+
+    @needRepoWidget
+    def quickRefresh(self, rw: RepoWidget):
         rw.quickRefresh()
 
-    def refresh(self):
-        rw = self.currentRepoWidget()
+    @needRepoWidget
+    def refresh(self, rw: RepoWidget):
         self._loadRepo(rw, rw.workingTreeDir)
 
-    def openRepoFolder(self, rw: RepoWidget = None):
-        if not rw:
-            rw = self.currentRepoWidget()
+    @needRepoWidget
+    def openRepoFolder(self, rw: RepoWidget):
         showInFolder(rw.workingTreeDir)
 
-    def copyRepoPath(self, rw: RepoWidget = None):
-        if not rw:
-            rw = self.currentRepoWidget()
+    @needRepoWidget
+    def copyRepoPath(self, rw: RepoWidget):
         QApplication.clipboard().setText(rw.workingTreeDir)
+
+    @needRepoWidget
+    def commit(self, rw: RepoWidget):
+        rw.startCommitFlow()
+
+    @needRepoWidget
+    def amend(self, rw: RepoWidget):
+        rw.actionFlows.amendFlow()
+
+    @needRepoWidget
+    def newBranch(self, rw: RepoWidget):
+        rw.actionFlows.newBranchFlow()
+
+    @needRepoWidget
+    def renameRepo(self, rw: RepoWidget):
+        rw.renameRepo()
+
+    @needRepoWidget
+    def push(self, rw: RepoWidget):
+        rw.actionFlows.pushFlow()
+
+    @needRepoWidget
+    def openRescueFolder(self, rw: RepoWidget):
+        rw.openRescueFolder()
+
+    # -------------------------------------------------------------------------
+    # File menu callbacks
 
     def newRepo(self):
         path, _ = QFileDialog.getSaveFileName(self, "New repository")
@@ -346,6 +410,9 @@ class MainWindow(QMainWindow):
             settings.history.write()
             self.openRepo(path)
             self.saveSession()
+
+    # -------------------------------------------------------------------------
+    # Tab management
 
     def closeCurrentTab(self):
         self.closeTab(self.tabs.currentIndex())
@@ -399,8 +466,14 @@ class MainWindow(QMainWindow):
         index %= self.tabs.count()
         self.tabs.tabs.setCurrentIndex(index)
 
+    # -------------------------------------------------------------------------
+    # Go menu
+
     def selectUncommittedChanges(self):
         self.currentRepoWidget().graphView.selectUncommittedChanges()
+
+    # -------------------------------------------------------------------------
+    # Session management
 
     def restoreSession(self, session: settings.Session):
         self.sharedSplitterStates = {k: settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}

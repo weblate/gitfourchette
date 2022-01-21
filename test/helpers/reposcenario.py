@@ -1,6 +1,6 @@
 import os
 import pygit2
-import testutil
+from helpers import testutil
 
 
 def untrackedEmptyFile(path):

@@ -1,15 +1,15 @@
 import trash
+from actionflows import ActionFlows
 from allqt import *
 from allgit import *
 from benchmark import Benchmark
-from widgets.commitdialog import CommitDialog
-from widgets.remoteprogressdialog import RemoteProgressDialog
 from diffmodel import DiffModel
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
 from typing import Callable
-from util import fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash
+from util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext,
+                  shortHash, unimplementedDialog)
 from widgets.brandeddialog import showTextInputDialog
 from widgets.diffview import DiffView
 from widgets.committedfilelistview import CommittedFileListView
@@ -36,14 +36,11 @@ def sanitizeSearchTerm(x):
     return x.strip().lower()
 
 
-def unimplementedDialog(featureName="UNIMPLEMENTED"):
-    QMessageBox.warning(None, featureName, F"This feature isn't implemented yet\n({featureName})")
-
-
 class RepoWidget(QWidget):
     nameChange: Signal = Signal()
 
     state: RepoState
+    actionFlows: ActionFlows
     pathPending: str  # path of the repository if it isn't loaded yet (state=None)
 
     previouslySearchedTerm: str
@@ -70,6 +67,8 @@ class RepoWidget(QWidget):
         self.workQueue = WorkQueue(self, maxThreadCount=1)
 
         self.state = None
+        self.actionFlows = ActionFlows(None, self)
+
         self.pathPending = None
 
         self.displayedCommitOid = None
@@ -97,9 +96,9 @@ class RepoWidget(QWidget):
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
-        self.dirtyView.stageFiles.connect(self.stageFilesAsync)
-        self.dirtyView.discardFiles.connect(self.discardFilesAsync)
         self.stageView.unstageFiles.connect(self.unstageFilesAsync)
+        self.dirtyView.stageFiles.connect(self.stageFilesAsync)
+        self.dirtyView.discardFiles.connect(self.actionFlows.discardFilesFlow)  # we need to confirm deletions
 
         for v in [self.dirtyView, self.stageView, self.changedFilesView]:
             v.nothingClicked.connect(self.diffView.clear)
@@ -112,19 +111,35 @@ class RepoWidget(QWidget):
         self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
-        self.sidebar.commitClicked.connect(self.selectCommit)
         self.sidebar.refClicked.connect(self.selectRef)
-        self.sidebar.tagClicked.connect(self.selectTag)
-        self.sidebar.newBranch.connect(self.newBranchAsync)
+
+        self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
+        self.sidebar.renameBranch.connect(self.actionFlows.renameBranchFlow)
+        self.sidebar.deleteBranch.connect(self.actionFlows.deleteBranchFlow)
+        self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
+        self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
-        self.sidebar.renameBranch.connect(self.renameBranchAsync)
-        self.sidebar.editTrackingBranch.connect(self.editTrackingBranchAsync)
-        self.sidebar.mergeBranchIntoActive.connect(lambda name: unimplementedDialog("Merge Other Branch Into Active Branch"))
-        self.sidebar.rebaseActiveOntoBranch.connect(lambda name: unimplementedDialog("Rebase Active Branch Into Other Branch"))
-        self.sidebar.deleteBranch.connect(self.deleteBranchAsync)
-        self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
-        self.sidebar.editRemote.connect(self.editRemoteAsync)
-        self.sidebar.pushBranch.connect(lambda name: self.pushFlow(name))
+
+        self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
+
+        # ----------------------------------
+
+        flows = self.actionFlows
+
+        flows.amendCommit.connect(self.amendCommitAsync)
+        flows.createCommit.connect(self.createCommitAsync)
+        flows.deleteBranch.connect(self.deleteBranchAsync)
+        flows.deleteRemote.connect(lambda name: unimplementedDialog("Delete Remote"))
+        flows.discardFiles.connect(self.discardFilesAsync)
+        flows.editRemote.connect(self.editRemoteAsync)
+        flows.editTrackingBranch.connect(self.editTrackingBranchAsync)
+        flows.newBranch.connect(self.newBranchAsync)
+        flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
+        flows.pushBranch.connect(lambda name: unimplementedDialog("Push Branch"))
+        flows.renameBranch.connect(self.renameBranchAsync)
+        flows.updateCommitDraftMessage.connect(lambda message: self.state.setDraftCommitMessage(message))
+
+        # ----------------------------------
 
         self.splitterStates = sharedSplitterStates or {}
 
@@ -149,11 +164,11 @@ class RepoWidget(QWidget):
         commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(commitButtonsContainer)
         self.commitButton = QPushButton("&Commit")
-        self.commitButton.clicked.connect(self.commitFlow)
+        self.commitButton.clicked.connect(self.startCommitFlow)
+        self.amendButton = QPushButton("&Amend")
+        self.amendButton.clicked.connect(self.actionFlows.amendFlow)
         commitButtonsContainer.layout().addWidget(self.commitButton)
-        amendButton = QPushButton("&Amend")
-        amendButton.clicked.connect(self.amendFlow)
-        commitButtonsContainer.layout().addWidget(amendButton)
+        commitButtonsContainer.layout().addWidget(self.amendButton)
         stageSplitter = QSplitter(Qt.Vertical)
         stageSplitter.addWidget(dirtyContainer)
         stageSplitter.addWidget(stageContainer)
@@ -304,6 +319,10 @@ class RepoWidget(QWidget):
     def setPendingPath(self, path):
         self.pathPending = os.path.normpath(path)
 
+    def startCommitFlow(self):
+        initialMessage = self.state.getDraftCommitMessage()
+        self.actionFlows.commitFlow(initialMessage)
+
     def renameRepo(self):
         def onAccept(newName):
             settings.history.setRepoNickname(self.workingTreeDir, newName)
@@ -419,28 +438,53 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
 
+    def createCommitAsync(self, message: str, author: Signature | None, committer: Signature | None):
+        def work():
+            porcelain.createCommit(self.repo, message, author, committer)
+
+        def then(_):
+            self.state.setDraftCommitMessage(None)  # Clear draft message
+            self.quickRefreshWithSidebar()
+
+        # Save commit message as draft now, so we don't lose it if the commit fails.
+        self.state.setDraftCommitMessage(message)
+        self.workQueue.put(work, then, F"Committing")
+
+    def amendCommitAsync(self, message: str, author: Signature | None, committer: Signature | None):
+        def work():
+            porcelain.amendCommit(self.repo, message, author, committer)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
+        self.workQueue.put(work, then, F"Amending")
+
     def switchToBranchAsync(self, newBranch: str):
-        assert newBranch.startswith("refs/")
-        work = lambda: porcelain.checkoutRef(self.repo, newBranch)
+        assert not newBranch.startswith("refs/heads/")
+        work = lambda: porcelain.checkoutLocalBranch(self.repo, newBranch)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Switching to branch “{newBranch}”")
 
     def renameBranchAsync(self, oldName: str, newName: str):
+        assert not oldName.startswith("refs/heads/")
         work = lambda: porcelain.renameBranch(self.repo, oldName, newName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Renaming branch “{oldName}” to “{newName}”")
 
     def deleteBranchAsync(self, localBranchName: str):
+        assert not localBranchName.startswith("refs/heads/")
         work = lambda: porcelain.deleteBranch(self.repo, localBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Deleting branch “{localBranchName}”")
 
     def newBranchAsync(self, localBranchName: str):
+        assert not localBranchName.startswith("refs/heads/")
         work = lambda: porcelain.newBranch(self.repo, localBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Creating branch “{localBranchName}”")
 
     def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
+        assert not localBranchName.startswith("refs/heads/")
         work = lambda: porcelain.newTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
@@ -486,82 +530,6 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, fplural("Unstaging # file^s", len(patches)))
 
     # -------------------------------------------------------------------------
-    # Push
-    # TODO: make async!
-
-    def pushFlow(self, branchName: str = None):
-        repo = self.state.repo
-
-        if not branchName:
-            branchName = repo.active_branch.name
-
-        branch = repo.heads[branchName]
-        tracking = branch.tracking_branch()
-
-        if not tracking:
-            QMessageBox.warning(
-                self,
-                "Cannot Push a Non-Remote-Tracking Branch",
-                F"""Can’t push local branch <b>{labelQuote(branch.name)}</b>
-                because it isn’t tracking any remote branch.
-                <br><br>To set a remote branch to track, right-click on
-                local branch {labelQuote(branch.name)} in the sidebar,
-                and pick “Tracking”.""")
-            return
-
-        remote = repo.remote(tracking.remote_name)
-        urls = list(remote.urls)
-
-        qmb = QMessageBox(self)
-        qmb.setWindowTitle(F"Push “{branchName}”")
-        qmb.setIcon(QMessageBox.Question)
-        qmb.setText(F"""Confirm Push?<br>
-            <br>Branch: <b>“{branch.name}”</b>
-            <br>Tracking: <b>“{tracking.name}”</b>
-            <br>Will be pushed to remote: <b>{'; '.join(urls)}</b>""")
-        qmb.addButton("Push", QMessageBox.AcceptRole)
-        qmb.addButton("Cancel", QMessageBox.RejectRole)
-        qmb.accepted.connect(lambda: self.doPush(branchName))
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
-
-    def doPush(self, branchName: str):
-        progress = RemoteProgressDialog(self, "Push in progress")
-        pushInfos: list[git.PushInfo]
-
-        PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
-
-        try:
-            pushInfos = remote.put(refspec=branchName, progress=progress)
-        except BaseException as e:
-            progress.close()
-            excMessageBox(e, "Push", "An error occurred while pushing.", parent=self)
-            return
-
-        progress.close()
-
-        if len(pushInfos) == 0:
-            QMessageBox.critical(self, "Push", "The push operation failed without a result.")
-            return
-
-        failed = False
-        report = ""
-        for info in pushInfos:
-            if 0 != (info.flags & PUSHINFO_FAILFLAGS):
-                failed = True
-            report += F"{info.remote_ref_string}: {info.summary.strip()}\n"
-            print(F"push info: {info}, summary: {info.summary.strip()}, local ref: {info.local_ref}; remote ref: {info.remote_ref_string}")
-
-        report = report.rstrip()
-        if failed:
-            report = "Push failed.\n\n" + report
-            QMessageBox.warning(self, "Push failed", report)
-        else:
-            self.quickRefresh()
-            report = "Push successful!\n\n" + report
-            QMessageBox.information(self, "Push successful", report)
-
-    # -------------------------------------------------------------------------
     # Pull
     # (WIP)
 
@@ -571,78 +539,6 @@ class RepoWidget(QWidget):
         tracking = repo.active_branch.tracking_branch()
         remote = repo.remote(tracking.remote_name)
         remote.fetch()
-
-    # -------------------------------------------------------------------------
-    # Commit, amend
-
-    def emptyCommitFlow(self):
-        qmb = QMessageBox(
-            QMessageBox.Question,
-            "Empty Commit",
-            "No files are staged for commit.\nDo you want to create an empty commit anyway?",
-            parent=self)
-        ok = qmb.addButton("Go back", QMessageBox.AcceptRole)
-        emptyCommit = qmb.addButton("Create empty commit", QMessageBox.ActionRole)
-        qmb.setDefaultButton(ok)
-        qmb.setEscapeButton(ok)
-        emptyCommit.clicked.connect(lambda: self.commitFlow(bypassEmptyCommitCheck=True))
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
-
-    def commitFlow(self, bypassEmptyCommitCheck=False):
-        if not bypassEmptyCommitCheck and not porcelain.hasAnyStagedChanges(self.repo):
-            self.emptyCommitFlow()
-            return
-
-        sig = self.repo.default_signature
-
-        initialText = self.state.getDraftCommitMessage()
-        cd = CommitDialog(
-            initialText=initialText,
-            authorSignature=sig,
-            committerSignature=sig,
-            isAmend=False,
-            parent=self)
-
-        def onAccept():
-            porcelain.createCommit(
-                repo=self.repo,
-                message=cd.getFullMessage(),
-                overrideAuthor=cd.getOverriddenAuthorSignature(),
-                overrideCommitter=cd.getOverriddenCommitterSignature())
-            self.state.setDraftCommitMessage(None)  # Clear draft message
-            self.quickRefresh()
-
-        def onReject():
-            # Save draft message for next time
-            self.state.setDraftCommitMessage(cd.getFullMessage())
-
-        cd.accepted.connect(onAccept)
-        cd.rejected.connect(onReject)
-        cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        cd.show()
-
-    def amendFlow(self):
-        headCommit = porcelain.getHeadCommit(self.repo)
-
-        cd = CommitDialog(
-            initialText=headCommit.message,
-            authorSignature=headCommit.author,
-            committerSignature=self.repo.default_signature,
-            isAmend=True,
-            parent=self)
-
-        def onAccept():
-            porcelain.amendCommit(
-                repo=self.repo,
-                message=cd.getFullMessage(),
-                overrideAuthor=cd.getOverriddenAuthorSignature(),
-                overrideCommitter=cd.getOverriddenCommitterSignature())
-            self.quickRefresh()
-
-        cd.accepted.connect(onAccept)
-        cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        cd.show()
 
     # -------------------------------------------------------------------------
     # Find, find next
@@ -805,9 +701,11 @@ class RepoWidget(QWidget):
         oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
         self.selectCommit(oid)
 
+    """
     def selectTag(self, tagName: str):
         oid = porcelain.getCommitOidFromTagName(self.repo, tagName)
         self.selectCommit(oid)
+    """
 
     # -------------------------------------------------------------------------
 

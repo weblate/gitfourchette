@@ -1,12 +1,15 @@
+import porcelain
 from allqt import *
-from allgit import *
 from util import labelQuote
+import pygit2
+
+from widgets import brandeddialog
 
 
 class TrackedBranchDialog(QDialog):
     newTrackingBranchName: str
 
-    def __init__(self, repo: Repository, localBranchName: str, parent):
+    def __init__(self, repo: pygit2.Repository, localBranchName: str, parent):
         super().__init__(parent)
 
         self.setWindowTitle(F"Edit Tracked Branch")
@@ -15,9 +18,8 @@ class TrackedBranchDialog(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-        localBranch: git.Head = repo.heads[localBranchName]
-
-        trackingBranch: git.RemoteReference = localBranch.tracking_branch()
+        localBranch: pygit2.Branch = repo.branches.local[localBranchName]
+        trackedBranch: pygit2.Branch = localBranch.upstream
 
         comboBox = QComboBox(self)
         self.comboBox = comboBox
@@ -29,32 +31,49 @@ class TrackedBranchDialog(QDialog):
             if isCurrent:
                 comboBox.setCurrentIndex(comboBox.count() - 1)
 
-        self.newTrackingBranchName = None
-        if trackingBranch:
-            self.newTrackingBranchName = trackingBranch.name
+        self.newTrackedBranchName = None
+        if trackedBranch:
+            self.newTrackedBranchName = trackedBranch.shorthand
 
-        addComboBoxItem("<don’t track any remote branch>", userData=None, isCurrent=not trackingBranch)
+        addComboBoxItem("[don’t track any remote branch]", userData=None, isCurrent=not trackedBranch)
 
-        for remote in repo.remotes:
+        for remoteName, remoteBranches in porcelain.getRemoteBranchNames(repo).items():
+            if not remoteBranches:
+                continue
             comboBox.insertSeparator(comboBox.count())
-            for ref in remote.refs:
-                addComboBoxItem(ref.name, userData=ref.name, isCurrent=trackingBranch and trackingBranch.name == ref.name)
+            #remotePrefix = F"refs/remotes/{remote.name}/"
+            #remoteRefNames = (n for n in repo.listall_references() if n.startswith(remotePrefix))
+            for remoteBranch in remoteBranches:
+                addComboBoxItem(F"{remoteName}/{remoteBranch}",
+                    userData=F"{remoteName}/{remoteBranch}",
+                    isCurrent=trackedBranch and trackedBranch.name == F"refs/remotes/{remoteName}/{remoteBranch}")
 
-        comboBox.activated.connect(lambda x: self.onChangeNewRemoteBranchName(comboBox.itemData(x, role=Qt.UserRole)))#print(comboBox.itemData(x, role=Qt.UserRole)))
+        comboBox.currentIndexChanged.connect(
+            lambda index: self.onChangeNewRemoteBranchName(comboBox.itemData(index, role=Qt.UserRole)))
+
+        explainer = F"<p>Local branch <b>{labelQuote(localBranch.shorthand)}</b> currently "
+        if trackedBranch:
+            explainer += F"tracks remote branch <b>{labelQuote(trackedBranch.shorthand)}</b>."
+        else:
+            explainer += "does <b>not</b> track a remote branch."
+        explainer += "</p><p>Pick a new remote branch to track:</p>"
+        explainerLabel = QLabel(explainer)
+        explainerLabel.setWordWrap(True)
+
+        explainerLabel.setMinimumHeight(explainerLabel.fontMetrics().height()*4)
 
         layout = QVBoxLayout()
-        if trackingBranch:
-            layout.addWidget(QLabel(F"Local branch <b>{labelQuote(localBranchName)}</b> currently tracks remote branch <b>{labelQuote(trackingBranch.name)}</b>."))
-        else:
-            layout.addWidget(QLabel(F"Local branch <b>{labelQuote(localBranchName)}</b> currently doesn’t track any remote branch."))
-
-        layout.addWidget(QLabel(F"Pick a new remote branch to track:"))
+        layout.addWidget(explainerLabel)
         layout.addWidget(comboBox)
+        layout.addWidget(QLabel("<small>If you can’t find the remote branch you want, "
+                                "try fetching the remote first.</small>"))
         layout.addWidget(buttonBox)
 
-        self.setLayout(layout)
+        brandeddialog.makeBrandedDialog(self, layout, F"Set branch tracked by “{localBranch.shorthand}”")
 
         self.setModal(True)
+        self.resize(512, 128)
+        self.setMaximumHeight(self.height())
 
     def onChangeNewRemoteBranchName(self, remoteBranchName):
-        self.newTrackingBranchName = remoteBranchName
+        self.newTrackedBranchName = remoteBranchName

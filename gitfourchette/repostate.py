@@ -1,3 +1,4 @@
+from actionflows import ActionFlows
 from allgit import *
 from allqt import *
 from benchmark import Benchmark
@@ -83,7 +84,7 @@ class RepoState:
     def getDraftCommitMessage(self) -> str:
         return self.settings.value(SETTING_KEY_DRAFT_MESSAGE, "")
 
-    def setDraftCommitMessage(self, newMessage : str):
+    def setDraftCommitMessage(self, newMessage: str | None):
         if newMessage is None:
             self.settings.remove(SETTING_KEY_DRAFT_MESSAGE)
         else:

@@ -2,7 +2,6 @@ from allqt import *
 from widgets.filelistview import FileListView
 from stagingstate import StagingState
 from util import ActionDef
-import pygit2
 import settings
 
 
@@ -38,24 +37,4 @@ class DirtyFileListView(FileListView):
         self.stageFiles.emit(list(self.selectedEntries()))
 
     def discard(self):
-        entries = list(self.selectedEntries())
-
-        if len(entries) == 1:
-            question = F"Really discard changes to {entries[0].delta.new_file.path}?"
-        else:
-            question = F"Really discard changes to {len(entries)} files?"
-
-        qmb = QMessageBox(
-            QMessageBox.Question,
-            "Discard changes",
-            F"{question}\nThis cannot be undone!",
-            QMessageBox.Discard | QMessageBox.Cancel,
-            parent=self)
-
-        yes: QAbstractButton = qmb.button(QMessageBox.Discard)
-        yes.setText("Discard changes")
-        yes.clicked.connect(lambda: self.discardFiles.emit(entries))
-        qmb.setDefaultButton(yes)
-
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
+        self.discardFiles.emit(list(self.selectedEntries()))
