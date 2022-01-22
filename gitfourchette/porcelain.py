@@ -63,19 +63,23 @@ def checkoutRef(repo: Repository, refName: str):
 
 def renameBranch(repo: Repository, oldName: str, newName: str):
     # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
-    raise NotImplementedError("repo.git.branch(oldName, newName, m=True)")
+    branch: pygit2.Branch = repo.branches.local[oldName]
+    branch.rename(newName)
 
 
 def deleteBranch(repo: Repository, localBranchName: str):
-    raise NotImplementedError("repo.git.branch(localBranchName, d=True)")
+    # TODO: if remote-tracking, let user delete upstream too?
+    repo.branches.local.delete(localBranchName)
 
 
-def newBranch(repo: Repository, localBranchName: str):
-    raise NotImplementedError("repo.git.branch(localBranchName)")
+def newBranch(repo: Repository, localBranchName: str) -> pygit2.Branch:
+    return repo.create_branch(localBranchName, getHeadCommit(repo))
 
 
-def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str):
-    raise NotImplementedError("repo.git.branch('--track', localBranchName, remoteBranchName)")
+def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str) -> pygit2.Branch:
+    branch = newBranch(repo, localBranchName)
+    editTrackingBranch(repo, localBranchName, remoteBranchName)
+    return branch
 
 
 def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid):
@@ -119,6 +123,10 @@ def editRemote(repo: Repository, remoteName: str, newName: str, newURL: str):
     repo.remotes.set_url(remoteName, newURL)
     if remoteName != newName:
         repo.remotes.rename(remoteName, newName)  # rename AFTER setting everything else!
+
+
+def deleteRemote(repo: Repository, remoteName: str):
+    repo.remotes.delete(remoteName)
 
 
 def resetHead(repo: Repository, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):

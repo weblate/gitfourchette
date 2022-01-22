@@ -27,6 +27,32 @@ class ActionFlows(QObject):
         self.repo = repo
         self.parentWidget = parent
 
+    def confirmAction(
+            self,
+            title: str,
+            text: str,
+            acceptButtonIcon: QStyle.StandardPixmap = None
+    ) -> QMessageBox:
+
+        qmb = QMessageBox(
+            QMessageBox.Question,
+            title,
+            text,
+            QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self.parentWidget)
+
+        # Using QMessageBox.Ok instead of QMessageBox.Discard so it connects to the "accepted" signal.
+        yes: QAbstractButton = qmb.button(QMessageBox.Ok)
+        if acceptButtonIcon:
+            yes.setIcon(self.parentWidget.style().standardIcon(acceptButtonIcon))
+        yes.setText(title)
+
+        qmb.setDefaultButton(yes)
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.show()
+
+        return qmb
+
     # -------------------------------------------------------------------------
     # Staging area
 
@@ -36,23 +62,12 @@ class ActionFlows(QObject):
         else:
             question = F"Really discard changes to {len(entries)} files?"
 
-        qmb = QMessageBox(
-            QMessageBox.Question,
+        qmb = self.confirmAction(
             "Discard changes",
             F"{question}\nThis cannot be undone!",
-            QMessageBox.Ok | QMessageBox.Cancel,
-            parent=self.parentWidget)
-
-        # Using QMessageBox.Ok instead of QMessageBox.Discard so it connects to the "accepted" signal.
-        yes: QAbstractButton = qmb.button(QMessageBox.Ok)
-        yes.setIcon(self.parentWidget.style().standardIcon(QStyle.SP_DialogDiscardButton))
-        yes.setText("Discard changes")
-
+            QStyle.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.discardFiles.emit(entries))
-        qmb.setDefaultButton(yes)
-
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
+        return qmb
 
     # -------------------------------------------------------------------------
     # Branch
@@ -105,16 +120,11 @@ class ActionFlows(QObject):
             okButtonText="Rename")
 
     def deleteBranchFlow(self, localBranchName: str):
-        qmb = QMessageBox(
-            QMessageBox.Warning,
-            "Delete Branch",
+        qmb = self.confirmAction(
+            "Delete branch",
             F"Really delete local branch <b>{labelQuote(localBranchName)}</b>?<br/>This cannot be undone!",
-            QMessageBox.Discard | QMessageBox.Cancel,
-            parent=self.parentWidget)
-        qmb.button(QMessageBox.Discard).setText("Delete")
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+            QStyle.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteBranch.emit(localBranchName))
-        qmb.show()
         return qmb
 
     # -------------------------------------------------------------------------
@@ -130,30 +140,22 @@ class ActionFlows(QObject):
         dlg.show()
         return dlg
 
-    def deleteRemoteFlow(self, remoteName: str, parent: QWidget):
-        rc = QMessageBox.warning(parent, "Delete Remote",
-                                 F"Really delete remote <b>{labelQuote(remoteName)}</b>?"
-                                 F"<br>This cannot be undone!",
-                                 QMessageBox.Discard | QMessageBox.Cancel)
-        if rc == QMessageBox.Discard:
-            self.deleteRemote.emit(remoteName)
+    def deleteRemoteFlow(self, remoteName: str):
+        qmb = self.confirmAction(
+            "Delete remote",
+            F"Really delete remote <b>{labelQuote(remoteName)}</b>?<br/>This cannot be undone!",
+            QStyle.SP_DialogDiscardButton)
+        qmb.accepted.connect(lambda: self.deleteRemote.emit(remoteName))
+        return qmb
 
     # -------------------------------------------------------------------------
     # Commit, amend
 
     def emptyCommitFlow(self, initialText: str):
-        qmb = QMessageBox(
-            QMessageBox.Question,
-            "Empty Commit",
-            "No files are staged for commit.\nDo you want to create an empty commit anyway?",
-            parent=self.parentWidget)
-        ok = qmb.addButton("Go back", QMessageBox.AcceptRole)
-        emptyCommit = qmb.addButton("Create empty commit", QMessageBox.ActionRole)
-        qmb.setDefaultButton(ok)
-        qmb.setEscapeButton(ok)
-        emptyCommit.clicked.connect(lambda: self.commitFlow(initialText, bypassEmptyCommitCheck=True))
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
+        qmb = self.confirmAction(
+            "Create empty commit",
+            "No files are staged for commit.\nDo you want to create an empty commit anyway?")
+        qmb.accepted.connect(lambda: self.commitFlow(initialText, bypassEmptyCommitCheck=True))
         return qmb
 
     def commitFlow(self, initialMessage: str, bypassEmptyCommitCheck=False):
@@ -214,10 +216,12 @@ class ActionFlows(QObject):
     # TODO: REWRITE FOR PYGIT2!!!
 
     def pushFlow(self, branchName: str = None):
-        repo = self.state.repo
-
         if not branchName:
-            branchName = repo.active_branch.name
+            branchName = self.repo.active_branch.name
+
+        branch: pygit2.Branch
+        remote: pygit2.Remote
+        remote.push_refspecs
 
         branch = repo.heads[branchName]
         tracking = branch.tracking_branch()

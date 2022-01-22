@@ -110,17 +110,16 @@ class RepoWidget(QWidget):
         self.graphView.resetHead.connect(self.resetHeadAsync)
         self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
-        self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
-        self.sidebar.refClicked.connect(self.selectRef)
-
-        self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
-        self.sidebar.renameBranch.connect(self.actionFlows.renameBranchFlow)
         self.sidebar.deleteBranch.connect(self.actionFlows.deleteBranchFlow)
-        self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
-        self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
-        self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
-
+        self.sidebar.deleteRemote.connect(self.actionFlows.deleteRemoteFlow)
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
+        self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
+        self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
+        self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
+        self.sidebar.refClicked.connect(self.selectRef)
+        self.sidebar.renameBranch.connect(self.actionFlows.renameBranchFlow)
+        self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
+        self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
 
         # ----------------------------------
 
@@ -129,7 +128,7 @@ class RepoWidget(QWidget):
         flows.amendCommit.connect(self.amendCommitAsync)
         flows.createCommit.connect(self.createCommitAsync)
         flows.deleteBranch.connect(self.deleteBranchAsync)
-        flows.deleteRemote.connect(lambda name: unimplementedDialog("Delete Remote"))
+        flows.deleteRemote.connect(self.deleteRemoteAsync)
         flows.discardFiles.connect(self.discardFilesAsync)
         flows.editRemote.connect(self.editRemoteAsync)
         flows.editTrackingBranch.connect(self.editTrackingBranchAsync)
@@ -503,6 +502,11 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.editRemote(self.repo, remoteName, newName, newURL)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Edit remote “{remoteName}”")
+
+    def deleteRemoteAsync(self, remoteName: str):
+        work = lambda: porcelain.deleteRemote(self.repo, remoteName)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, F"Deleting remote “{remoteName}”")
 
     def resetHeadAsync(self, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, ontoHexsha, resetMode, recurseSubmodules)

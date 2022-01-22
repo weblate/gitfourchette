@@ -21,7 +21,8 @@ def testNewBranch(qtbot, workDirRepo, rw):
     q.findChild(QLineEdit).setText("hellobranch")
     q.accept()
 
-    assert workDirRepo.branches.local['hellobranch'] is not None
+    newBranch: pygit2.Branch = workDirRepo.branches.local['hellobranch']
+    assert newBranch is not None
 
 
 @withRepo("TestGitRepository")
@@ -138,8 +139,12 @@ def testEditRemote(qtbot, workDirRepo, rw):
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testDeleteRemote(qtbot, workDirRepo, rw):
+    assert workDirRepo.remotes["origin"] is not None
+
     menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.REMOTE, "origin")
 
     testutil.findMenuAction(menu, "delete remote").trigger()
     testutil.acceptQMessageBox(rw, "delete remote")
-    assert False, "TODO finish test!"
+
+    assert len(list(workDirRepo.remotes)) == 0
+
