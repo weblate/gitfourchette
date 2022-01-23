@@ -2,8 +2,6 @@ from allgit import *
 from dataclasses import dataclass
 import enum
 import io
-import os
-import tempfile
 
 
 @enum.unique
@@ -24,16 +22,11 @@ class LineData:
     # For visual representation
     text: str
 
-    diffLine: DiffLine
+    diffLine: DiffLine | None
 
     cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
 
     hunkPos: DiffLinePos
-
-
-# Error raised by makePatchFromGitDiff when the diffed file appears to be binary.
-class LooksLikeBinaryError(Exception):
-    pass
 
 
 def makePatchFromLines(

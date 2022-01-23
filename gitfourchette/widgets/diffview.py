@@ -1,15 +1,15 @@
 from allqt import *
 from bisect import bisect_left, bisect_right
-from diffmodel import DiffModel
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
 from pygit2 import GitError, Patch, Repository
 from stagingstate import StagingState
 from util import excMessageBox, ActionDef, quickMenu
+from widgets.diffmodel import DiffModel
 import settings
 import trash
 
 
-class DiffView(QTextEdit):
+class DiffView(QPlainTextEdit):
     patchApplied: Signal = Signal()
 
     lineData: list[LineData]
@@ -21,7 +21,6 @@ class DiffView(QTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        #self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
@@ -55,7 +54,9 @@ class DiffView(QTextEdit):
         self.currentGitRepo = repo
         self.currentPatch = patch
 
+        self.setFont(dm.document.defaultFont())
         self.setDocument(dm.document)
+
         self.lineData = dm.lineData
         self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
         self.lineHunkIDCache = [ld.hunkPos.hunkID for ld in self.lineData]
@@ -63,12 +64,12 @@ class DiffView(QTextEdit):
         tabWidth = settings.prefs.diff_tabSpaces
 
         # now reset defaults that are lost when changing documents
-        self.setTabStopDistance(dm.style.monoFontMetrics.horizontalAdvance(' ' * tabWidth))
-        self.refreshWordWrap(dm.forceWrap)
+        self.setTabStopDistance(QFontMetrics(dm.document.defaultFont()).horizontalAdvance(' ' * tabWidth))
+        self.refreshWordWrap()
         self.setCursorWidth(2)
 
-    def refreshWordWrap(self, forceWrap=False):
-        if forceWrap or settings.prefs.diff_wordWrap:
+    def refreshWordWrap(self):
+        if settings.prefs.diff_wordWrap:
             self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
         else:
             self.setWordWrapMode(QTextOption.NoWrap)

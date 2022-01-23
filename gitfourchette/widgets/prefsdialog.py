@@ -1,7 +1,6 @@
 from allqt import *
 from settings import prefs, SHORT_DATE_PRESETS
 import datetime
-import diffstyle
 import enum
 import re
 
@@ -107,7 +106,7 @@ class PrefsDialog(QDialog):
             if prefKey == 'qtStyle':
                 control = self.qtStyleControl(prefKey, prefValue)
             elif prefKey == 'diff_font':
-                control = self.fontControl(prefKey, diffstyle.DiffStyle().monoFont)
+                control = self.fontControl(prefKey)
             elif prefKey == 'graph_topoOrder':
                 caption = "Commit Order"
                 control = self.boolRadioControl(prefKey, prefValue, falseName="Chronological", trueName="Topological")
@@ -160,15 +159,19 @@ class PrefsDialog(QDialog):
         else:
             return None
 
-    def fontControl(self, prefKey: str, fallback: QFont):
+    def fontControl(self, prefKey: str):
         def currentFont():
             fontString = self.getMostRecentValue(prefKey)
             if fontString:
                 font = QFont()
                 font.fromString(fontString)
             else:
-                font = fallback
+                font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
             return font
+
+        def resetFont():
+            self.assign(prefKey, "")
+            refreshFontButton()
 
         def pickFont():
             newFont, ok = QFontDialog.getFont(currentFont(), parent=self)
@@ -178,17 +181,27 @@ class PrefsDialog(QDialog):
 
         fontButton = QPushButton("Font")
         fontButton.clicked.connect(lambda e: pickFont())
+        fontButton.setMinimumWidth(256)
         fontButton.setMaximumWidth(256)
         fontButton.setMaximumHeight(128)
 
+        resetButton = QToolButton(self)
+        resetButton.setText("Reset")
+        resetButton.clicked.connect(lambda: resetFont())
+
         def refreshFontButton():
             font = currentFont()
-            fontButton.setText(F"{font.family()} {font.pointSize()}")
+            if not self.getMostRecentValue(prefKey):
+                resetButton.setVisible(False)
+                fontButton.setText(F"Default ({font.family()} {font.pointSize()})")
+            else:
+                resetButton.setVisible(True)
+                fontButton.setText(F"{font.family()} {font.pointSize()}")
             fontButton.setFont(font)
 
         refreshFontButton()
 
-        return fontButton
+        return hBoxWidget(fontButton, resetButton)
 
     def strControl(self, prefKey, prefValue):
         control = QLineEdit(prefValue, self)

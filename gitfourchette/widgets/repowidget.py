@@ -3,7 +3,6 @@ from actionflows import ActionFlows
 from allqt import *
 from allgit import *
 from benchmark import Benchmark
-from diffmodel import DiffModel
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
@@ -11,9 +10,11 @@ from typing import Callable
 from util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext,
                   shortHash, unimplementedDialog)
 from widgets.brandeddialog import showTextInputDialog
+from widgets.diffmodel import DiffModel, DiffModelError
 from widgets.diffview import DiffView
 from widgets.filelist import DirtyFiles, StagedFiles, CommittedFiles
 from widgets.graphview import GraphView
+from widgets.richdiffview import RichDiffView
 from widgets.sidebar import Sidebar
 from workqueue import WorkQueue
 import os
@@ -76,13 +77,15 @@ class RepoWidget(QWidget):
         self.diffViewCursorPositionCache = {}
         self.latestStagedOrUnstaged = None
 
+        self.sidebar = Sidebar(self)
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
-        self.diffView = DiffView(self)
+        self.diffStack = QStackedWidget()
         self.changedFilesView = CommittedFiles(self)
         self.dirtyView = DirtyFiles(self)
         self.stageView = StagedFiles(self)
-        self.sidebar = Sidebar(self)
+        self.diffView = DiffView(self)
+        self.richDiffView = RichDiffView(self)
 
         # The staged files and unstaged files view are mutually exclusive.
         self.stageView.entryClicked.connect(self.dirtyView.clearSelectionSilently)
@@ -169,15 +172,19 @@ class RepoWidget(QWidget):
         stageSplitter.addWidget(dirtyContainer)
         stageSplitter.addWidget(stageContainer)
 
-        assert FILESSTACK_READONLY_CARD == self.filesStack.count()
         self.filesStack.addWidget(self.changedFilesView)
-        assert FILESSTACK_STAGE_CARD == self.filesStack.count()
         self.filesStack.addWidget(stageSplitter)
         self.filesStack.setCurrentIndex(FILESSTACK_READONLY_CARD)
+        assert self.filesStack.widget(FILESSTACK_READONLY_CARD) == self.changedFilesView
+        assert self.filesStack.widget(FILESSTACK_STAGE_CARD) == stageSplitter
+
+        self.diffStack.addWidget(self.diffView)
+        self.diffStack.addWidget(self.richDiffView)
+        self.diffStack.setCurrentWidget(self.diffView)
 
         bottomSplitter = QSplitter(Qt.Horizontal)
         bottomSplitter.addWidget(self.filesStack)
-        bottomSplitter.addWidget(self.diffView)
+        bottomSplitter.addWidget(self.diffStack)
         bottomSplitter.setSizes([100, 300])
 
         mainSplitter = QSplitter(Qt.Vertical)
@@ -414,21 +421,33 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work():
+            dm = None
+            error = None
             try:
-                if patch is not None:
-                    allowRawFileAccess = stagingState.allowsRawFileAccess()
-                    dm = DiffModel.fromPatch(repo, patch, allowRawFileAccess)
+                dm = DiffModel.fromPatch(repo, patch)
+                dm.document.moveToThread(QApplication.instance().thread())
+            except DiffModelError as dme:
+                error = dme
             except BaseException as exc:
                 summary, details = excStrings(exc)
-                dm = DiffModel.fromMessage(summary, details, icon=QStyle.SP_MessageBoxCritical)
-            dm.document.moveToThread(QApplication.instance().thread())
-            return dm
+                error = DiffModelError(summary, icon=QStyle.SP_MessageBoxCritical, preformatted=details)
+            return dm, error
 
-        def then(dm: DiffModel):
+        def then(returned: tuple):
+            dm: DiffModel
+            error: DiffModelError
+            dm, error = returned
+
             self.displayedFilePath = patch.delta.new_file.path
             self.displayedStagingState = stagingState
-            self.diffView.replaceDocument(repo, patch, stagingState, dm)
-            self.restoreDiffViewPosition()  # restore position after we've replaced the document
+
+            if error:
+                self.diffStack.setCurrentWidget(self.richDiffView)
+                self.richDiffView.displayDiffModelError(error)
+            else:
+                self.diffStack.setCurrentWidget(self.diffView)
+                self.diffView.replaceDocument(repo, patch, stagingState, dm)
+                self.restoreDiffViewPosition()  # restore position after we've replaced the document
 
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
