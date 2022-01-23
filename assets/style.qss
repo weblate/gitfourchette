@@ -1,7 +1,3 @@
-QMenuBar {
-    border: 0;
-}
-
 QTreeView#sidebar {
     background: transparent;
 }
