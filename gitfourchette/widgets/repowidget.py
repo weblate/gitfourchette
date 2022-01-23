@@ -302,9 +302,9 @@ class RepoWidget(QWidget):
 
     def cleanup(self):
         if self.state and self.state.repo:
-            self.changedFilesView._setBlankModel()
-            self.dirtyView._setBlankModel()
-            self.stageView._setBlankModel()
+            self.changedFilesView.clear()
+            self.dirtyView.clear()
+            self.stageView.clear()
             self.graphView._replaceModel(None)
             self.diffView.clear()
             # Save path if we want to reload the repo later
@@ -353,8 +353,8 @@ class RepoWidget(QWidget):
             with QSignalBlockerContext(self.dirtyView), QSignalBlockerContext(self.stageView):
                 self.dirtyView.clear()
                 self.stageView.clear()
-                self.dirtyView.addFileEntriesFromDiff(dirtyDiff)
-                self.stageView.addFileEntriesFromDiff(stageDiff)
+                self.dirtyView.setContents([dirtyDiff])
+                self.stageView.setContents([stageDiff])
 
             nDirty = self.dirtyView.model().rowCount()
             nStaged = self.stageView.model().rowCount()
@@ -391,8 +391,7 @@ class RepoWidget(QWidget):
             with QSignalBlockerContext(self.changedFilesView):
                 self.changedFilesView.clear()
                 self.changedFilesView.setCommit(oid)
-                for diff in parentDiffs:
-                    self.changedFilesView.addFileEntriesFromDiff(diff)
+                self.changedFilesView.setContents(parentDiffs)
 
             self.displayedCommitOid = oid
             self.displayedStagingState = StagingState.COMMITTED
