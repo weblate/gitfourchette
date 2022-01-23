@@ -1,3 +1,5 @@
+import pygit2
+
 from allqt import *
 from bisect import bisect_left, bisect_right
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
@@ -7,6 +9,18 @@ from util import excMessageBox, ActionDef, quickMenu
 from widgets.diffmodel import DiffModel
 import settings
 import trash
+
+
+class DiffGutter(QWidget):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.diffView = parent
+
+    def sizeHint(self) -> QSize:
+        return QSize(self.diffView.gutterWidth(), 0)
+
+    def paintEvent(self, event: QPaintEvent):
+        self.diffView.gutterPaintEvent(event)
 
 
 class DiffView(QPlainTextEdit):
@@ -21,6 +35,7 @@ class DiffView(QPlainTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
         self.setReadOnly(True)
         self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
 
@@ -31,6 +46,14 @@ class DiffView(QPlainTextEdit):
         self.currentStagingState = None
         self.currentPatch = None
         self.currentGitRepo = None
+
+        self.gutterMaxDigits = 0
+
+        self.gutter = DiffGutter(self)
+        self.updateRequest.connect(self.updateGutter)
+        self.blockCountChanged.connect(self.updateGutterWidth)
+        # self.cursorPositionChanged.connect(self.highlightCurrentLine)
+        self.updateGutterWidth(0)
 
     def findLineDataIndexAt(self, cursorPosition: int, firstLineDataIndex: int = 0):
         if not self.lineData:
@@ -67,6 +90,15 @@ class DiffView(QPlainTextEdit):
         self.setTabStopDistance(QFontMetrics(dm.document.defaultFont()).horizontalAdvance(' ' * tabWidth))
         self.refreshWordWrap()
         self.setCursorWidth(2)
+
+        if self.currentPatch and len(self.currentPatch.hunks) > 0:
+            lastHunk: pygit2.DiffHunk = self.currentPatch.hunks[-1]
+            maxNewLine = lastHunk.new_start + lastHunk.new_lines
+            maxOldLine = lastHunk.old_start + lastHunk.old_lines
+            self.gutterMaxDigits = len(str(max(maxNewLine, maxOldLine)))
+        else:
+            self.gutterMaxDigits = 0
+        self.updateGutterWidth(0)
 
     def refreshWordWrap(self):
         if settings.prefs.diff_wordWrap:
@@ -217,3 +249,72 @@ class DiffView(QPlainTextEdit):
                 QApplication.beep()
         else:
             super().keyPressEvent(event)
+
+    # ---------------------------------------------
+    # Gutter (inspired by https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html)
+
+    def gutterWidth(self) -> int:
+        paddingString = '0' * (2*self.gutterMaxDigits + 2)
+        return self.fontMetrics().horizontalAdvance(paddingString)
+
+    def resizeEvent(self, event: QResizeEvent):
+        super().resizeEvent(event)
+
+        cr: QRect = self.contentsRect()
+        self.gutter.setGeometry(QRect(cr.left(), cr.top(), self.gutterWidth(), cr.height()))
+
+    def updateGutterWidth(self, newBlockCount: int):
+        self.setViewportMargins(self.gutterWidth(), 0, 0, 0)
+
+    def gutterPaintEvent(self, event: QPaintEvent):
+        palette: QPalette = self.palette()
+
+        painter = QPainter(self.gutter)
+        painter.setFont(self.font())
+
+        GW = self.gutter.width()
+        FH = self.fontMetrics().height()
+        er = event.rect()
+
+        # Background
+        painter.fillRect(er, palette.color(QPalette.ColorRole.Base))
+
+        # Draw separator
+        gutterSepColor = palette.color(QPalette.PlaceholderText)
+        gutterSepColor.setAlpha(80)
+        painter.fillRect(er.x() + er.width() - 1, er.y(), 1, er.height(), gutterSepColor)
+
+        block: QTextBlock = self.firstVisibleBlock()
+        blockNumber = block.blockNumber()
+        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
+        bottom = top + round(self.blockBoundingRect(block).height())
+
+        painter.setPen(palette.color(QPalette.PlaceholderText))
+        while block.isValid() and top <= er.bottom():
+            if blockNumber >= len(self.lineData):
+                break
+
+            ld = self.lineData[blockNumber]
+            if ld.diffLine and block.isVisible() and bottom >= er.top():
+                old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else "·"
+                new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
+
+                colW = (GW-4)//2
+                painter.drawText(0, top, colW, FH, Qt.AlignRight, old)
+                painter.drawText(colW, top, colW, FH, Qt.AlignRight, new)
+
+            block = block.next()
+            top = bottom
+            bottom = top + round(self.blockBoundingRect(block).height())
+            blockNumber += 1
+
+        painter.end()
+
+    def updateGutter(self, rect: QRect, dy: int):
+        if dy != 0:
+            self.gutter.scroll(0, dy)
+        else:
+            self.gutter.update(0, rect.y(), self.gutter.width(), rect.height())
+
+        if rect.contains(self.viewport().rect()):
+            self.updateGutterWidth(0)
