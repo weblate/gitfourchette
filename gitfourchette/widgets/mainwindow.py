@@ -1,14 +1,11 @@
-from typing import Callable
-
-import porcelain
-from actionflows import ActionFlows
 from allqt import *
+from widgets.autohidemenubar import AutoHideMenuBar
 from widgets.aboutdialog import showAboutDialog
 from widgets.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
 from util import (compactSystemPath, showInFolder, excMessageBox,
-                  DisableWidgetContext, QSignalBlockerContext, unimplementedDialog)
+                  DisableWidgetContext, QSignalBlockerContext)
 from widgets.customtabwidget import CustomTabWidget
 from widgets.repowidget import RepoWidget
 import gc
@@ -50,7 +47,9 @@ class MainWindow(QMainWindow):
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
         self.setCentralWidget(self.tabs)
 
-        self.makeMenu()
+        menuBar = self.makeMenu()
+        self.setMenuBar(menuBar)
+        self.autoHideMenuBar = AutoHideMenuBar(menuBar)
 
         self.statusProgress = QProgressBar()
         self.statusProgress.setMaximumHeight(16)
@@ -75,8 +74,6 @@ class MainWindow(QMainWindow):
             self.memoryIndicator = None
         if settings.prefs.showStatusBar:
             self.setStatusBar(self.statusBar)
-
-        self.initialChildren = list(self.findChildren(QObject))
 
     def onMemoryIndicatorClicked(self):
         gc.collect()
@@ -109,7 +106,11 @@ class MainWindow(QMainWindow):
             self.updateMemoryIndicator()
         super().paintEvent(event)
 
-    def makeMenu(self):
+    def keyReleaseEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key_Alt:
+            self.autoHideMenuBar.toggle()
+
+    def makeMenu(self) -> QMenuBar:
         menubar = QMenuBar(self)
         menubar.setObjectName("MWMenuBar")
 
@@ -169,29 +170,23 @@ class MainWindow(QMainWindow):
 
         self.fillRecentMenu()
 
-        # couldn't get menubar.cornerWidget to work, otherwise we could've used that
-        if not settings.prefs.tabs_mergeWithMenubar:  # traditional menu bar
-            self.setMenuBar(menubar)
-        else:  # extended menu bar
-            menuContainer = QWidget(self)
-            menuContainer.setLayout(QHBoxLayout())
-            menuContainer.layout().setSpacing(0)
-            menuContainer.layout().setContentsMargins(0, 0, 0, 0)
-            menuContainer.layout().addWidget(menubar)
-            menuContainer.layout().addSpacing(8)
-            menuContainer.layout().addWidget(self.tabs.tabs, 1)
-            self.tabs.tabs.setMaximumHeight(menubar.height())
-            self.setMenuWidget(menuContainer)
-            menubar.adjustSize()
+        return menubar
 
     def onAcceptPrefsDialog(self, dlg: PrefsDialog):
         if not dlg.prefDiff:  # No changes were made to the prefs
             return
+
         # Apply changes from prefDiff to the actual prefs
         for k in dlg.prefDiff:
             settings.prefs.__dict__[k] = dlg.prefDiff[k]
+
         # Write prefs to disk
         settings.prefs.write()
+
+        # Notify widgets
+        self.tabs.refreshPrefs()
+        self.autoHideMenuBar.refreshPrefs()
+
         QMessageBox.warning(
             self,
             "Apply Settings",

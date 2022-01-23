@@ -84,7 +84,8 @@ class Prefs(BasePrefs):
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
     maxRecentRepos              : int           = 20
-    showStatusBar               : bool          = True
+    showStatusBar               : bool          = False
+    autoHideMenuBar             : bool          = False
     diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4
     diff_largeFileThresholdKB   : int           = 512
@@ -94,7 +95,6 @@ class Prefs(BasePrefs):
     tabs_closeButton            : bool          = True
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False
-    tabs_mergeWithMenubar       : bool          = False
     graph_topoOrder             : bool          = True
     graph_maxLanes              : int           = 32
     graph_flattenLanes          : bool          = True

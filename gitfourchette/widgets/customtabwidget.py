@@ -7,12 +7,6 @@ class CustomTabBar(QTabBar):
         super().__init__(parent)
         self.middleClickedIndex = -1
 
-    """
-    def contextMenuEvent(self, event):
-        self.contextIndex = self.tabAt(event.pos())
-        print(self.contextIndex)
-    """
-
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MiddleButton:
             self.middleClickedIndex = self.tabAt(event.pos())
@@ -42,12 +36,8 @@ class CustomTabWidget(QWidget):
         self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
         self.tabs.setMovable(True)
-        self.tabs.setExpanding(settings.prefs.tabs_expanding)
-        self.tabs.setAutoHide(settings.prefs.tabs_autoHide)
-        self.tabs.setTabsClosable(settings.prefs.tabs_closeButton)
 
         self.previousMiddleIndex = -1
-        #self.tabs.installEventFilter(self)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -59,24 +49,17 @@ class CustomTabWidget(QWidget):
         self.tabs.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tabs.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
+        self.refreshPrefs()
+
+    def refreshPrefs(self):
+        self.tabs.setExpanding(settings.prefs.tabs_expanding)
+        self.tabs.setAutoHide(settings.prefs.tabs_autoHide)
+        self.tabs.setTabsClosable(settings.prefs.tabs_closeButton)
+
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.tabs.mapToGlobal(localPoint)
         index = self.tabs.tabAt(localPoint)
         self.tabContextMenuRequested.emit(globalPoint, index)
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if (watched == self.tabs and
-                event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease] and event.button() == Qt.MidButton):
-            tabIndex = self.tabs.tabAt(event.pos())
-            if event.type() == QEvent.MouseButtonPress:
-                self.previousMiddleIndex = tabIndex
-            else:
-                if tabIndex != -1 and tabIndex == self.previousMiddleIndex:
-                    self.tabs.tabCloseRequested.emit(tabIndex)
-                self.previousMiddleIndex = -1
-            return True
-        else:
-            return False
 
     def onTabMoved(self, fromIndex: int, toIndex: int):
         w = self.stacked.widget(fromIndex)
