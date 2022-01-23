@@ -1,50 +1,16 @@
 from __future__ import annotations
 
+from benchmark import Benchmark
 from collections import defaultdict
 from dataclasses import dataclass
 from pygit2 import Oid
 from typing import Iterable
 import bisect
 import itertools
-import os
-import timeit
-
-
-try:
-    import psutil
-    hasPsutil = True
-except ModuleNotFoundError:
-    print("psutil isn't available.")
-    hasPsutil = False
-
-
-def getRSS():
-    if hasPsutil:
-        return psutil.Process(os.getpid()).memory_info().rss
-    else:
-        return 0
 
 
 KF_INTERVAL = 5000
 ABRIDGMENT_THRESHOLD = 25
-
-
-class Benchmark:
-    def __init__(self, name):
-        self.name = name
-
-    def __enter__(self):
-        #gc.collect()
-        self.rssAtStart = getRSS()
-        self.start = timeit.default_timer()
-        print(F"[benchmark] {self.name}...")
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        tt = timeit.default_timer() - self.start
-        #gc.collect()
-        rss = getRSS()
-        print(F"[benchmark] {self.name}: {int(tt*1000):,} ms - Δrss: {(rss - self.rssAtStart) // 1024:,} KB")
 
 
 @dataclass
