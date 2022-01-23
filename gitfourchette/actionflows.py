@@ -1,6 +1,6 @@
 import porcelain
 from allqt import *
-from util import labelQuote, excMessageBox
+from util import excMessageBox, labelQuote, shortHash
 from widgets.brandeddialog import showTextInputDialog
 from widgets.commitdialog import CommitDialog
 from widgets.remotedialog import RemoteDialog
@@ -78,7 +78,7 @@ class ActionFlows(QObject):
 
         return showTextInputDialog(
             self.parentWidget,
-            "New branch",
+            F"New branch at {shortHash(porcelain.getHeadCommit(self.repo).oid)}",
             "Enter name for new branch:",
             None,
             onAccept)
