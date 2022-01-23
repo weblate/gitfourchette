@@ -64,12 +64,14 @@ class DiffView(QTextEdit):
 
         # now reset defaults that are lost when changing documents
         self.setTabStopDistance(dm.style.monoFontMetrics.horizontalAdvance(' ' * tabWidth))
-        if dm.forceWrap or settings.prefs.diff_wordWrap:
+        self.refreshWordWrap(dm.forceWrap)
+        self.setCursorWidth(2)
+
+    def refreshWordWrap(self, forceWrap=False):
+        if forceWrap or settings.prefs.diff_wordWrap:
             self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
         else:
             self.setWordWrapMode(QTextOption.NoWrap)
-
-        self.setCursorWidth(2)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         # Get position of click in document
@@ -79,12 +81,15 @@ class DiffView(QTextEdit):
         clickedHunkID = self.findHunkIDAt(clickedPosition)
 
         menu: QMenu = self.createStandardContextMenu()
-        before = menu.actions()[0]
 
         actions = []
 
+        actionWordWrap = ActionDef(F"&Word wrap", self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1)
+
         if self.currentStagingState in [None, StagingState.COMMITTED, StagingState.UNTRACKED]:
-            pass
+            actions = [
+                actionWordWrap
+            ]
         elif self.currentStagingState == StagingState.UNSTAGED:
             actions = [
                 ActionDef("Stage Lines", self.stageLines),
@@ -92,11 +97,15 @@ class DiffView(QTextEdit):
                 None,
                 ActionDef(F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
                 ActionDef(F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
+                None,
+                actionWordWrap
             ]
         elif self.currentStagingState == StagingState.STAGED:
             actions = [
                 ActionDef("Unstage Lines", self.unstageLines),
                 ActionDef(F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
+                None,
+                actionWordWrap
             ]
         else:
             QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
@@ -105,6 +114,11 @@ class DiffView(QTextEdit):
             menu = quickMenu(self, actions, menu)
 
         menu.exec_(event.globalPos())
+
+    def toggleWordWrap(self):
+        settings.prefs.diff_wordWrap = not settings.prefs.diff_wordWrap
+        settings.prefs.write()
+        self.refreshWordWrap()
 
     def _applyPatch(self, firstLineDataIndex: int, lastLineDataIndex: int, purpose: PatchPurpose):
         reverse = purpose != PatchPurpose.STAGE

@@ -155,9 +155,10 @@ def excStrings(exc):
 
 @dataclass
 class ActionDef:
-    caption: str = None
+    caption: str = ""
     callback: typing.Callable = None
     icon: QStyle.StandardPixmap = None
+    checkState: int = 0
 
 
 def quickMenu(
@@ -177,6 +178,9 @@ def quickMenu(
             if actionDef.icon:
                 icon = parent.style().standardIcon(actionDef.icon)
                 newAction.setIcon(icon)
+            if actionDef.checkState != 0:
+                newAction.setCheckable(True)
+                newAction.setChecked(actionDef.checkState == 1)
 
         actions.append(newAction)
 
