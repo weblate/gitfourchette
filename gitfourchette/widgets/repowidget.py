@@ -569,7 +569,7 @@ class RepoWidget(QWidget):
             meta = model.data(modelIndex)
             if meta is None:
                 continue
-            if (message in meta.body.lower()) or (likelyHash and message in meta.hexsha):
+            if (message in meta.message.lower()) or (likelyHash and message in meta.oid.hex):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
