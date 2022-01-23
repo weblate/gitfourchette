@@ -25,6 +25,7 @@ class GraphView(QListView):
 
         self.setContextMenuPolicy(Qt.ActionsContextMenu)
         getInfoAction = QAction("Get Info...", self)
+        getInfoAction.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxInformation))
         getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
         self.addAction(getInfoAction)
         checkoutAction = QAction("Check Out...", self)

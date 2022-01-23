@@ -16,11 +16,11 @@ class CommittedFileListView(FileListView):
 
     def createContextMenuActions(self):
         return [
-                ActionDef("&Copy Path", self.copyPaths),
-                ActionDef("Open Containing &Folder", self.showInFolder),
+                ActionDef("Open Revision in External Editor", self.openRevision, QStyle.SP_FileIcon),
+                ActionDef("Save Revision As...", self.saveRevisionAs, QStyle.SP_DialogSaveButton),
                 None,
-                ActionDef("Open Revision in External Editor", self.openRevision),
-                ActionDef("Save Revision As...", self.saveRevisionAs),
+                ActionDef("Open Containing &Folder", self.showInFolder, QStyle.SP_DirIcon),
+                ActionDef("&Copy Path", self.copyPaths),
                 ]
 
     def clear(self):

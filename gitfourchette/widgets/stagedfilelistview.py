@@ -18,9 +18,10 @@ class StagedFileListView(FileListView):
         return [
             ActionDef("&Unstage", self.unstage, QStyle.SP_ArrowUp),
             None,
+            ActionDef("&Open File in External Editor", self.openFile, QStyle.SP_FileIcon),
+            None,
+            ActionDef("Open Containing &Folder", self.showInFolder, QStyle.SP_DirIcon),
             ActionDef("&Copy Path", self.copyPaths),
-            ActionDef("&Open File in External Editor", self.openFile),
-            ActionDef("Open Containing &Folder", self.showInFolder),
         ] + super().createContextMenuActions()
 
     def keyPressEvent(self, event: QKeyEvent):

@@ -19,9 +19,10 @@ class DirtyFileListView(FileListView):
             ActionDef("&Stage", self.stage, QStyle.SP_ArrowDown),
             ActionDef("&Discard Changes", self.discard, QStyle.SP_TrashIcon),
             None,
+            ActionDef("&Open File in External Editor", self.openFile, icon=QStyle.SP_FileIcon),
+            None,
+            ActionDef("Open Containing &Folder", self.showInFolder, icon=QStyle.SP_DirIcon),
             ActionDef("&Copy Path", self.copyPaths),
-            ActionDef("&Open File in External Editor", self.openFile),
-            ActionDef("Open Containing &Folder", self.showInFolder),
         ]
 
     def keyPressEvent(self, event: QKeyEvent):
