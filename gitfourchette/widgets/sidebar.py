@@ -1,45 +1,317 @@
 import porcelain
 from allqt import *
 from util import labelQuote, shortHash
-from dataclasses import dataclass
 from typing import Any
 import pygit2
 import enum
 
 
-class SidebarEntryType(enum.Enum):
-    UNCOMMITTED_CHANGES = enum.auto()
-    LOCAL_BRANCHES_HEADER = enum.auto()
-    LOCAL_BRANCH = enum.auto()
-    DETACHED_HEAD = enum.auto()
-    UNBORN_HEAD = enum.auto()
-    REMOTE_BRANCH = enum.auto()
-    REMOTE = enum.auto()
-    TAG = enum.auto()
+ACTIVE_BULLET = "★ "
 
 
-@dataclass
-class SidebarEntry:
-    type: SidebarEntryType
-    data: str = None
+class EItem(enum.Enum):
+    UncommittedChanges = enum.auto()
+    LocalBranchesHeader = enum.auto()
+    RemotesHeader = enum.auto()
+    TagsHeader = enum.auto()
+    LocalBranch = enum.auto()
+    DetachedHead = enum.auto()
+    UnbornHead = enum.auto()
+    Remote = enum.auto()
+    RemoteBranch = enum.auto()
+    Tag = enum.auto()
+    Spacer = enum.auto()
 
 
-# TODO: we should just use a custom model
-def SidebarItem(name: str, data=None) -> QStandardItem:
-    item = QStandardItem(name)
-    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-    if data:
-        item.setData(data, Qt.UserRole)
-    item.setSizeHint(QSize(-1, 16))
-    return item
+ITEM_NAMES = {
+    EItem.UncommittedChanges: "Changes",
+    EItem.LocalBranchesHeader: "Branches",
+    EItem.RemotesHeader: "Remotes",
+    EItem.TagsHeader: "Tags",
+    EItem.LocalBranch: "Local branch",
+    EItem.DetachedHead: "Detached HEAD",
+    EItem.UnbornHead: "Unborn HEAD",
+    EItem.RemoteBranch: "Remote branch",
+    EItem.Remote: "Remote",
+    EItem.Tag: "Tag",
+    EItem.Spacer: "---",
+}
+
+HEADER_ITEMS = [
+    EItem.UncommittedChanges,
+    EItem.Spacer,
+    EItem.LocalBranchesHeader,
+    EItem.Spacer,
+    EItem.RemotesHeader,
+    EItem.Spacer,
+    EItem.TagsHeader,
+]
+
+LEAF_ITEMS = [
+    EItem.Spacer,
+    EItem.LocalBranch,
+    EItem.RemoteBranch,
+    EItem.Tag,
+    EItem.UnbornHead,
+    EItem.DetachedHead,
+    EItem.UncommittedChanges,
+]
+
+UNINDENT_ITEMS = [
+    EItem.LocalBranch,
+    EItem.Tag,
+]
 
 
-def SidebarSeparator() -> QStandardItem:
-    sep = SidebarItem(None)
-    sep.setSelectable(False)
-    sep.setEnabled(False)
-    sep.setSizeHint(QSize(-1, 8))
-    return sep
+class SidebarModel(QAbstractItemModel):
+    _localBranches: list[str]
+    _tracking: list[str]
+    _unbornHead: str
+    _detachedHead: str
+    _checkedOut: str
+    _remotes: list[str]
+    _remoteBranchesDict: dict[str, list[str]]
+    _tags: list[str]
+
+    @staticmethod
+    def packId(eid: EItem, offset: int = 0) -> int:
+        return eid.value | (offset << 8)
+
+    @staticmethod
+    def unpackItem(index: QModelIndex) -> EItem:
+        return EItem(index.internalId() & 0xFF)
+
+    @staticmethod
+    def unpackOffset(index: QModelIndex) -> int:
+        return index.internalId() >> 8
+
+    @staticmethod
+    def unpackItemAndData(index: QModelIndex):
+        return SidebarModel.unpackItem(index), index.data(Qt.UserRole)
+
+    @property
+    def _parentWidget(self) -> QWidget:
+        return QObject.parent(self)
+
+    def __init__(self, repo: pygit2.Repository, parent=None):
+        super().__init__(parent)
+        self.repo = repo
+        self.refreshCache()
+
+    def refreshCache(self):
+        repo = self.repo
+
+        self._localBranches = [b for b in repo.branches.local]
+
+        self._tracking = []
+        for branchName in self._localBranches:
+            upstream: pygit2.Branch = self.repo.branches.local[branchName].upstream
+            if not upstream:
+                self._tracking.append("")
+            else:
+                self._tracking.append(upstream.shorthand)
+
+        self._unbornHead = ""
+        self._detachedHead = ""
+        self._checkedOut = ""
+        if repo.head_is_unborn:
+            target: str = repo.lookup_reference("HEAD").target
+            target = target.removeprefix("refs/heads/")
+            self._unbornHead = target
+        elif repo.head_is_detached:
+            self._detachedHead = repo.head.target.hex
+        else:
+            self._checkedOut = repo.head.shorthand
+
+        self._remotes = [r.name for r in repo.remotes]
+        self._remoteBranchesDict = {name: [] for name in self._remotes}
+        for remoteBranchName in repo.branches.remote:
+            remoteBranch: pygit2.Branch = repo.branches.remote[remoteBranchName]
+            remoteName = remoteBranch.remote_name
+            strippedBranchName = remoteBranchName.removeprefix(remoteName + "/")
+            self._remoteBranchesDict[remoteName].append(strippedBranchName)
+
+        self._tags = porcelain.getTagNames(repo)
+
+    def columnCount(self, parent: QModelIndex) -> int:
+        return 1
+
+    def index(self, row, column, parent: QModelIndex) -> QModelIndex:
+        if column != 0 or row < 0:
+            return QModelIndex()
+
+        if not parent.isValid():  # root
+            return self.createIndex(row, 0, HEADER_ITEMS[row].value)
+
+        item = self.unpackItem(parent)
+
+        if item == EItem.LocalBranchesHeader:
+            y = 0
+
+            if self._unbornHead:
+                if y == row:
+                    return self.createIndex(row, 0, self.packId(EItem.UnbornHead))
+                y += 1
+
+            if self._detachedHead:
+                if y == row:
+                    return self.createIndex(row, 0, self.packId(EItem.DetachedHead))
+                y += 1
+
+            return self.createIndex(row, 0, self.packId(EItem.LocalBranch, row - y))
+
+        elif item == EItem.RemotesHeader:
+            return self.createIndex(row, 0, self.packId(EItem.Remote))
+
+        elif item == EItem.Remote:
+            return self.createIndex(row, 0, self.packId(EItem.RemoteBranch, parent.row()))
+
+        elif item == EItem.TagsHeader:
+            return self.createIndex(row, 0, self.packId(EItem.Tag))
+
+        return QModelIndex()
+
+    def parent(self, index: QModelIndex = QModelIndex()) -> QModelIndex:
+        if not index.isValid():
+            return QModelIndex()
+
+        item = self.unpackItem(index)
+
+        def makeParentIndex(parentHeader: EItem):
+            return self.createIndex(HEADER_ITEMS.index(parentHeader), 0, self.packId(parentHeader))
+
+        if item in HEADER_ITEMS:
+            # it's a root node -- return invalid index because no parent
+            return QModelIndex()
+
+        elif item in [EItem.LocalBranch, EItem.DetachedHead, EItem.UnbornHead]:
+            return makeParentIndex(EItem.LocalBranchesHeader)
+
+        elif item == EItem.Remote:
+            return makeParentIndex(EItem.RemotesHeader)
+
+        elif item == EItem.RemoteBranch:
+            remoteNo = self.unpackOffset(index)
+            return self.createIndex(remoteNo, 0, self.packId(EItem.Remote))
+
+        elif item == EItem.Tag:
+            return makeParentIndex(EItem.TagsHeader)
+
+        else:
+            return QModelIndex()
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if not parent.isValid():
+            return len(HEADER_ITEMS)
+
+        item = self.unpackItem(parent)
+
+        if item == EItem.LocalBranchesHeader:
+            return len(self._localBranches)
+
+        elif item == EItem.RemotesHeader:
+            return len(self._remotes)
+
+        elif item == EItem.Remote:
+            remoteName = self._remotes[parent.row()]
+            return len(self._remoteBranchesDict[remoteName])
+
+        elif item == EItem.TagsHeader:
+            return len(self._tags)
+
+        else:
+            return 0
+
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
+        row = index.row()
+        item = self.unpackItem(index)
+
+        display = role == Qt.DisplayRole
+        user = role == Qt.UserRole
+        tooltip = role == Qt.ToolTipRole
+        sizeHint = role == Qt.SizeHintRole
+
+        if item == EItem.Spacer:
+            if sizeHint:
+                parentWidget: QWidget = QObject.parent(self)
+                return QSize(-1, int(0.5 * parentWidget.fontMetrics().height()))
+            else:
+                return None
+
+        elif item == EItem.LocalBranch:
+            branchNo = self.unpackOffset(index)
+            branchName = self._localBranches[branchNo]
+            if display:
+                if branchName == self._checkedOut:
+                    return F"{ACTIVE_BULLET}{branchName}"
+                else:
+                    return branchName
+            elif user:
+                return branchName
+            elif tooltip:
+                text = F"Local branch “{branchName}”"
+                if branchName == self._checkedOut:
+                    text += F"\n{ACTIVE_BULLET}Active branch"
+                if self._tracking[branchNo]:
+                    text += F"\nTracking remote “{self._tracking[branchNo]}”"
+                return text
+
+        elif item == EItem.UnbornHead:
+            if display:
+                return F"{ACTIVE_BULLET}{self._unbornHead} [unborn]"
+            elif user:
+                return self._unbornHead
+            elif tooltip:
+                return "Unborn HEAD: does not point to a commit yet."
+
+        elif item == EItem.DetachedHead:
+            if display:
+                return F"{ACTIVE_BULLET}[detached head]"
+            elif user:
+                return self._detachedHead
+            elif tooltip:
+                return F"Detached HEAD @ {self._detachedHead}"
+
+        elif item == EItem.Remote:
+            if display or user:
+                return self._remotes[row]
+
+        elif item == EItem.RemoteBranch:
+            remoteNo = self.unpackOffset(index)
+            remoteName = self._remotes[remoteNo]
+            branchName = self._remoteBranchesDict[remoteName][row]
+            if display:
+                return branchName
+            elif user:
+                return F"{remoteName}/{branchName}"
+            elif tooltip:
+                return F"{remoteName}/{branchName}"
+
+        elif item == EItem.Tag:
+            if display or user:
+                return self._tags[row]
+
+        else:
+            if display:
+                return ITEM_NAMES[item]
+            elif role == Qt.FontRole:
+                font = self._parentWidget.font()
+                font.setBold(True)
+                return font
+
+        # fallback
+        if sizeHint:
+            return QSize(-1, self._parentWidget.fontMetrics().height())
+
+        return None
+
+    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+        item = self.unpackItem(index)
+
+        if item == EItem.Spacer:
+            return Qt.NoItemFlags
+
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
 
 class SidebarDelegate(QStyledItemDelegate):
@@ -47,26 +319,30 @@ class SidebarDelegate(QStyledItemDelegate):
         super().__init__(parent)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        view: QTreeView = self.parent()
-        model: QStandardItemModel = index.model()
+        view: QTreeView = option.widget
+        item = SidebarModel.unpackItem(index)
 
         opt = QStyleOptionViewItem(option)
-        opt.rect.setLeft(20)
 
-        if not index.parent().isValid():
-            opt.font = QFont()
-            opt.font.setBold(True)
+        if item in UNINDENT_ITEMS:
+            opt.rect.adjust(-view.indentation(), 0, 0, 0)
 
-        super().paint(painter, opt, index)
+        # Draw custom branch indicator. The standard one is too cluttered in some themes, e.g. Breeze.
+        if item not in LEAF_ITEMS:
+            opt2 = QStyleOptionViewItem(option)
 
-        if model.rowCount(index) > 0:
-            opt = QStyleOptionViewItem(option)
-            opt.rect.setLeft(0)
-            opt.rect.setRight(20)
+            r: QRect = opt2.rect
+            r.adjust(-view.indentation(), 0, 0, 0)
+            r.setWidth(view.indentation())
+
+            # See QTreeView::drawBranches() in qtreeview.cpp for other interesting states
+            opt2.state &= ~QStyle.State_MouseOver
 
             style: QStyle = view.style()
             arrowPrimitive = QStyle.PE_IndicatorArrowDown if view.isExpanded(index) else QStyle.PE_IndicatorArrowRight
-            style.drawPrimitive(arrowPrimitive, opt, painter, view)
+            style.drawPrimitive(arrowPrimitive, opt2, painter, view)
+
+        super().paint(painter, opt, index)
 
 
 class Sidebar(QTreeView):
@@ -86,41 +362,34 @@ class Sidebar(QTreeView):
     editRemote = Signal(str)
     deleteRemote = Signal(str)
 
-    repo: pygit2.Repository
-
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.setMinimumWidth(128)
-
-        self.repo = None
-
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        #self.setUniformRowHeights(True)
-        self.setHeaderHidden(True)
-
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
-
         self.setObjectName("sidebar")  # for styling
-
+        self.setMinimumWidth(128)
+        self.setIndentation(16)
+        self.setHeaderHidden(True)
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setRootIsDecorated(False)
-        self.setIndentation(0)
+
+        self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+
         self.setItemDelegate(SidebarDelegate(self))
 
-    def generateMenuForEntry(self, entryType: SidebarEntryType, data: str = "", menu: QMenu = None):
+    def generateMenuForEntry(self, item: EItem, data: str = "", menu: QMenu = None):
         if menu is None:
             menu = QMenu(self)
             menu.setObjectName("SidebarContextMenu")
 
-        if entryType == SidebarEntryType.LOCAL_BRANCHES_HEADER:
+        if item == EItem.LocalBranchesHeader:
             menu.addAction(F"&New Branch...", lambda: self.newBranch.emit())
 
-        elif entryType == SidebarEntryType.LOCAL_BRANCH:
-            branch: pygit2.Branch = self.repo.branches.local[data]
-
-            activeBranchName = porcelain.getActiveBranchShorthand(self.repo)
+        elif item == EItem.LocalBranch:
+            model: SidebarModel = self.model()
+            repo = model.repo
+            branch: pygit2.Branch = repo.branches.local[data]
+            activeBranchName = porcelain.getActiveBranchShorthand(repo)
 
             switchAction: QAction = menu.addAction(F"&Switch to {labelQuote(data)}")
             menu.addSeparator()
@@ -162,11 +431,11 @@ class Sidebar(QTreeView):
             a = menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data))
             a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
 
-        elif entryType == SidebarEntryType.REMOTE_BRANCH:
+        elif item == EItem.RemoteBranch:
             menu.addAction(F"New local branch tracking {labelQuote(data)}...",
                            lambda: self.newTrackingBranch.emit(data))
 
-        elif entryType == SidebarEntryType.REMOTE:
+        elif item == EItem.Remote:
             a = menu.addAction(F"Edit Remote...", lambda: self.editRemote.emit(data))
             a.setIcon(QIcon.fromTheme("document-edit"))
 
@@ -179,133 +448,49 @@ class Sidebar(QTreeView):
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.mapToGlobal(localPoint)
-        index = self.indexAt(localPoint)
-        entry: SidebarEntry = index.data(Qt.UserRole)
-
-        if entry:
-            menu = self.generateMenuForEntry(entry.type, entry.data)
+        index: QModelIndex = self.indexAt(localPoint)
+        if index.isValid():
+            menu = self.generateMenuForEntry(*SidebarModel.unpackItemAndData(index))
             menu.exec_(globalPoint)
 
     def fill(self, repo: pygit2.Repository):
-        model = QStandardItemModel()
-
-        uncommittedChangesEntry = SidebarEntry(SidebarEntryType.UNCOMMITTED_CHANGES)
-        uncommittedChanges = SidebarItem("Changes", uncommittedChangesEntry)
-        model.appendRow(uncommittedChanges)
-
-        model.appendRow(SidebarSeparator())
-
-        branchesParentEntry = SidebarEntry(SidebarEntryType.LOCAL_BRANCHES_HEADER)
-        branchesParent = SidebarItem("Local Branches", branchesParentEntry)
-        branchesParent.setSelectable(False)
-
-        if repo.head_is_unborn:
-            target: str = repo.lookup_reference("HEAD").target
-            target = target.removeprefix("refs/heads/")
-            caption = F"★ {target} (unborn)"
-            branchEntry = SidebarEntry(SidebarEntryType.UNBORN_HEAD)
-            item = SidebarItem(caption, branchEntry)
-            item.setToolTip(F"Unborn HEAD (does not point to a commit yet)")
-            branchesParent.appendRow(item)
-        elif repo.head_is_detached:
-            caption = F"★ detached HEAD @ {shortHash(repo.head.target)}"
-            branchEntry = SidebarEntry(SidebarEntryType.DETACHED_HEAD, str(repo.head.target))#repo.head.target)
-            item = SidebarItem(caption, branchEntry)
-            item.setToolTip(F"detached HEAD @{shortHash(repo.head.target)}")
-            branchesParent.appendRow(item)
-
-        for localBranch in repo.branches.local:
-            branch = repo.branches[localBranch]
-            caption = branch.branch_name
-            tooltip = branch.branch_name
-            if not repo.head_is_detached and branch.is_checked_out():
-                caption = F"★ {caption}"
-                tooltip += " (★ active branch)"
-            branchEntry = SidebarEntry(SidebarEntryType.LOCAL_BRANCH, branch.branch_name)
-            if branch.upstream:
-                branchEntry.trackingBranch = branch.upstream.branch_name
-                tooltip += F"\ntracking remote {branchEntry.trackingBranch}"
-            item = SidebarItem(caption, branchEntry)
-            item.setToolTip(tooltip)
-            branchesParent.appendRow(item)
-
-        model.appendRow(branchesParent)
-
-        model.appendRow(SidebarSeparator())
-
-        for remoteName, remoteBranches in porcelain.getRemoteBranchNames(repo).items():
-            remoteEntry = SidebarEntry(SidebarEntryType.REMOTE, remoteName)
-            remoteParent = SidebarItem(F"Remote “{remoteName}”", remoteEntry)
-            remoteParent.setSelectable(False)
-
-            for remoteBranch in sorted(remoteBranches):
-                remoteRefEntry = SidebarEntry(SidebarEntryType.REMOTE_BRANCH, F"{remoteName}/{remoteBranch}")
-                remoteRefItem = SidebarItem(remoteBranch, remoteRefEntry)
-                remoteParent.appendRow(remoteRefItem)
-
-            model.appendRow(remoteParent)
-            model.appendRow(SidebarSeparator())
-
-        tagsParent = QStandardItem("Tags")
-        tagsParent.setSelectable(False)
-        for name in porcelain.getTagNames(repo):
-            tagEntry = SidebarEntry(SidebarEntryType.TAG, name)
-            tagItem = SidebarItem(name, tagEntry)
-            tagsParent.appendRow(tagItem)
-        model.appendRow(tagsParent)
-
-        self.repo = repo
-        self._replaceModel(model)
-
-        # expand branch container
-        self.setExpanded(model.indexFromItem(branchesParent), True)
+        self._replaceModel(SidebarModel(repo, parent=self))
+        self.expandAll()
 
     def _replaceModel(self, model):
         if self.model():
             self.model().deleteLater()  # avoid memory leak
         self.setModel(model)
 
-    def onEntryClicked(self, entryType: SidebarEntryType, data: str):
-        if entryType == SidebarEntryType.UNCOMMITTED_CHANGES:
+    def onEntryClicked(self, item: EItem, data: str):
+        if item == EItem.UncommittedChanges:
             self.uncommittedChangesClicked.emit()
-        elif entryType == SidebarEntryType.UNBORN_HEAD:
+        elif item == EItem.UnbornHead:
             pass
-        elif entryType == SidebarEntryType.DETACHED_HEAD:
+        elif item == EItem.DetachedHead:
             self.refClicked.emit("HEAD")
-        elif entryType == SidebarEntryType.LOCAL_BRANCH:
+        elif item == EItem.LocalBranch:
             self.refClicked.emit(F"refs/heads/{data}")
-        elif entryType == SidebarEntryType.REMOTE_BRANCH:
+        elif item == EItem.RemoteBranch:
             self.refClicked.emit(F"refs/remotes/{data}")
-        elif entryType == SidebarEntryType.TAG:
+        elif item == EItem.Tag:
             self.refClicked.emit(F"refs/tags/{data}")
         else:
-            print("Unsupported sidebar entry type", entryType)
+            print("Unsupported sidebar entry type", item)
 
-    def onEntryDoubleClicked(self, entryType: SidebarEntryType, data: Any):
-        if entryType == SidebarEntryType.LOCAL_BRANCH:
+    def onEntryDoubleClicked(self, item: EItem, data: Any):
+        if item == EItem.LocalBranch:
             self.switchToBranch.emit(data)
-        elif entryType == SidebarEntryType.REMOTE:
-            self.editRemoteFlow.emit(data)
+        elif item == EItem.Remote:
+            self.editRemote.emit(data)
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
-        if not current.isValid():
-            return
-        entry: SidebarEntry = current.data(Qt.UserRole)
-        if entry:
-            self.onEntryClicked(entry.type, entry.data)
+        if current.isValid():
+            self.onEntryClicked(*SidebarModel.unpackItemAndData(current))
 
     def mouseDoubleClickEvent(self, event):
+        # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.
         index: QModelIndex = self.indexAt(event.pos())
         if event.button() == Qt.LeftButton and index.isValid():
-            entry: SidebarEntry = index.data(Qt.UserRole)
-            if entry:
-                self.onEntryDoubleClicked(entry.type, entry.data)
-        super().mouseDoubleClickEvent(event)
-
-    def mousePressEvent(self, event: QMouseEvent):
-        index: QModelIndex = self.indexAt(event.pos())
-        lastState = self.isExpanded(index)
-        super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton and index.isValid() and lastState == self.isExpanded(index):
-            self.setExpanded(index, not lastState)
+            self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))

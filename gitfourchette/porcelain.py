@@ -96,7 +96,7 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
         remoteBranch: pygit2.Branch = repo.branches.remote[name]
         remoteName = remoteBranch.remote_name
         strippedBranchName = name.removeprefix(remoteName + "/")
-        nameDict[remoteBranch.remote_name].append(strippedBranchName)
+        nameDict[remoteName].append(strippedBranchName)
 
     return nameDict
 

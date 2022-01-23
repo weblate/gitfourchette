@@ -5,7 +5,7 @@ from helpers import testutil
 from helpers.fixtures import *
 from widgets.remotedialog import RemoteDialog
 
-from widgets.sidebar import SidebarEntryType
+from widgets.sidebar import EItem
 
 
 # TODO: Write test for switching
@@ -14,7 +14,7 @@ from widgets.sidebar import SidebarEntryType
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testNewBranch(qtbot, workDirRepo, rw):
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.LOCAL_BRANCHES_HEADER)
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranchesHeader)
     testutil.findMenuAction(menu, "new branch").trigger()
 
     q = testutil.findQDialog(rw, "new branch")
@@ -28,7 +28,7 @@ def testNewBranch(qtbot, workDirRepo, rw):
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, workDirRepo, rw):
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.LOCAL_BRANCH, "master")
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
     assert not testutil.findMenuAction(menu, "switch to").isEnabled()
     assert not testutil.findMenuAction(menu, "merge").isEnabled()
@@ -40,7 +40,7 @@ def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, workDirRepo, rw):
 def testSetTrackedBranch(qtbot, workDirRepo, rw):
     assert workDirRepo.branches.local['master'].upstream_name == "refs/remotes/origin/master"
 
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.LOCAL_BRANCH, "master")
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
     testutil.findMenuAction(menu, "tracked branch").trigger()
 
@@ -74,7 +74,7 @@ def testRenameBranch(qtbot, workDirRepo, rw):
     assert 'master' in workDirRepo.branches.local
     assert 'mainbranch' not in workDirRepo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.LOCAL_BRANCH, "master")
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
     testutil.findMenuAction(menu, "rename").trigger()
 
@@ -93,7 +93,7 @@ def testDeleteBranch(qtbot, workDirRepo, rw):
     workDirRepo.branches.create("somebranch", commit)
     assert "somebranch" in workDirRepo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.LOCAL_BRANCH, "somebranch")
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "somebranch")
     testutil.findMenuAction(menu, "delete").trigger()
     testutil.acceptQMessageBox(rw, "delete branch")
     assert "somebranch" not in workDirRepo.branches.local
@@ -104,7 +104,7 @@ def testDeleteBranch(qtbot, workDirRepo, rw):
 def testNewRemoteTrackingBranch(qtbot, workDirRepo, rw):
     assert "newmaster" not in workDirRepo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.REMOTE_BRANCH, "origin/master")
+    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/master")
 
     testutil.findMenuAction(menu, "new local branch tracking").trigger()
 
@@ -122,7 +122,7 @@ def testEditRemote(qtbot, workDirRepo, rw):
     assert len(workDirRepo.remotes) == 1
     assert workDirRepo.remotes[0].name == "origin"
 
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.REMOTE, "origin")
+    menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
     testutil.findMenuAction(menu, "edit remote").trigger()
 
@@ -141,7 +141,7 @@ def testEditRemote(qtbot, workDirRepo, rw):
 def testDeleteRemote(qtbot, workDirRepo, rw):
     assert workDirRepo.remotes["origin"] is not None
 
-    menu = rw.sidebar.generateMenuForEntry(SidebarEntryType.REMOTE, "origin")
+    menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
     testutil.findMenuAction(menu, "delete remote").trigger()
     testutil.acceptQMessageBox(rw, "delete remote")

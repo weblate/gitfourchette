@@ -1,9 +1,14 @@
-QTreeView#sidebar {
-    background: transparent;
-}
-
 QTreeView::branch:selected:!active,
 QTreeView::item:selected:!active,
 QListView::item:selected:!active {
     background-color: palette(mid);
+}
+
+QTreeView#sidebar {
+    background: transparent;
+}
+
+QTreeView#sidebar::branch {
+    image: none;
+    border-image: none;
 }
