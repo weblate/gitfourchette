@@ -12,12 +12,9 @@ from util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlocker
                   shortHash, unimplementedDialog)
 from widgets.brandeddialog import showTextInputDialog
 from widgets.diffview import DiffView
-from widgets.committedfilelistview import CommittedFileListView
-from widgets.dirtyfilelistview import DirtyFileListView
-from widgets.filelistview import FileListView
+from widgets.filelist import DirtyFiles, StagedFiles, CommittedFiles
 from widgets.graphview import GraphView
 from widgets.sidebar import Sidebar
-from widgets.stagedfilelistview import StagedFileListView
 from workqueue import WorkQueue
 import os
 import porcelain
@@ -82,9 +79,9 @@ class RepoWidget(QWidget):
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
         self.diffView = DiffView(self)
-        self.changedFilesView = CommittedFileListView(self)
-        self.dirtyView = DirtyFileListView(self)
-        self.stageView = StagedFileListView(self)
+        self.changedFilesView = CommittedFiles(self)
+        self.dirtyView = DirtyFiles(self)
+        self.stageView = StagedFiles(self)
         self.sidebar = Sidebar(self)
 
         # The staged files and unstaged files view are mutually exclusive.

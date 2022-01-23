@@ -1,7 +1,8 @@
 from allqt import *
 from stagingstate import StagingState
+from tempdir import getSessionTemporaryDirectory
 from typing import Generator
-from util import compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext
+from util import compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash
 import html
 import pygit2
 import os
@@ -14,7 +15,7 @@ for status in "ACDMRTUX":
     statusIcons[status] = QIcon(F":/status_{status.lower()}.svg")
 
 
-class FileListView(QListView):
+class FileList(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(object, StagingState)
 
@@ -189,3 +190,137 @@ class FileListView(QListView):
         except IndexError:
             return None
 
+
+class DirtyFiles(FileList):
+    stageFiles = Signal(list)
+    discardFiles = Signal(list)
+
+    def __init__(self, parent):
+        super().__init__(parent, StagingState.UNSTAGED)
+
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+    def createContextMenuActions(self):
+        return [
+            ActionDef("&Stage", self.stage, QStyle.SP_ArrowDown),
+            ActionDef("&Discard Changes", self.discard, QStyle.SP_TrashIcon),
+            None,
+            ActionDef("&Open File in External Editor", self.openFile, icon=QStyle.SP_FileIcon),
+            None,
+            ActionDef("Open Containing &Folder", self.showInFolder, icon=QStyle.SP_DirIcon),
+            ActionDef("&Copy Path", self.copyPaths),
+        ]
+
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+        if k in settings.KEYS_ACCEPT:
+            self.stage()
+        elif k in settings.KEYS_REJECT:
+            self.discard()
+        else:
+            super().keyPressEvent(event)
+
+    def stage(self):
+        self.stageFiles.emit(list(self.selectedEntries()))
+
+    def discard(self):
+        self.discardFiles.emit(list(self.selectedEntries()))
+
+
+class StagedFiles(FileList):
+    unstageFiles: Signal = Signal(list)
+
+    def __init__(self, parent):
+        super().__init__(parent, StagingState.STAGED)
+
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+    def createContextMenuActions(self):
+        return [
+            ActionDef("&Unstage", self.unstage, QStyle.SP_ArrowUp),
+            None,
+            ActionDef("&Open File in External Editor", self.openFile, QStyle.SP_FileIcon),
+            None,
+            ActionDef("Open Containing &Folder", self.showInFolder, QStyle.SP_DirIcon),
+            ActionDef("&Copy Path", self.copyPaths),
+        ] + super().createContextMenuActions()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+        if k in settings.KEYS_ACCEPT + settings.KEYS_REJECT:
+            self.unstage()
+        else:
+            super().keyPressEvent(event)
+
+    def unstage(self):
+        self.unstageFiles.emit(list(self.selectedEntries()))
+
+
+class CommittedFiles(FileList):
+    commitOid: pygit2.Oid | None
+
+    def __init__(self, parent: QWidget):
+        super().__init__(parent, StagingState.COMMITTED)
+        self.commitOid = None
+
+    def createContextMenuActions(self):
+        return [
+                ActionDef("Open Revision in External Editor", self.openRevision, QStyle.SP_FileIcon),
+                ActionDef("Save Revision As...", self.saveRevisionAs, QStyle.SP_DialogSaveButton),
+                None,
+                ActionDef("Open Containing &Folder", self.showInFolder, QStyle.SP_DirIcon),
+                ActionDef("&Copy Path", self.copyPaths),
+                ]
+
+    def clear(self):
+        super().clear()
+        self.commitOid = None
+
+    def setCommit(self, oid: pygit2.Oid):
+        self.commitOid = oid
+
+    def openRevision(self):
+        for diff in self.confirmSelectedEntries("open # files"):
+            diffFile: pygit2.DiffFile
+            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+                diffFile = diff.delta.old_file
+            else:
+                diffFile = diff.delta.new_file
+
+            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+
+            name, ext = os.path.splitext(os.path.basename(diffFile.path))
+            name = F"{name}@{shortHash(self.commitOid)}{ext}"
+
+            tempPath = os.path.join(getSessionTemporaryDirectory(), name)
+
+            with open(tempPath, "wb") as f:
+                f.write(blob.data)
+
+            QDesktopServices.openUrl(QUrl(tempPath))
+
+    def saveRevisionAs(self, saveInto=None):
+        for diff in self.confirmSelectedEntries("save # files"):
+            diffFile: pygit2.DiffFile
+            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+                diffFile = diff.delta.old_file
+            else:
+                diffFile = diff.delta.new_file
+
+            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+
+            name, ext = os.path.splitext(os.path.basename(diffFile.path))
+            name = F"{name}@{shortHash(self.commitOid)}{ext}"
+
+            if saveInto:
+                savePath = os.path.join(saveInto, name)
+            else:
+                savePath, _ = QFileDialog.getSaveFileName(self, "Save file revision", name)
+
+            if not savePath:
+                continue
+
+            with open(savePath, "wb") as f:
+                f.write(blob.data)
+
+            os.chmod(savePath, diffFile.mode)
