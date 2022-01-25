@@ -1,5 +1,6 @@
 from allgit import *
 from allqt import *
+from dataclasses import dataclass
 from datetime import datetime
 from graphpaint import paintGraphFrame
 from repostate import RepoState
@@ -8,10 +9,17 @@ import colors
 import settings
 
 
-REF_PREFIXES = {
-    "refs/remotes/": Qt.darkCyan,
-    "refs/tags/": Qt.darkYellow,
-    "refs/heads/": Qt.darkMagenta,
+@dataclass
+class RefCallout:
+    color: QColor = Qt.magenta
+    keepPrefix: bool = False
+
+
+CALLOUTS = {
+    "refs/remotes/": RefCallout(Qt.darkCyan),
+    "refs/tags/": RefCallout(Qt.darkYellow),
+    "refs/heads/": RefCallout(Qt.darkMagenta),
+    "stash@{": RefCallout(Qt.darkGreen, keepPrefix=True),
 }
 
 
@@ -115,22 +123,26 @@ class GraphDelegate(QStyledItemDelegate):
         if commit is not None:
             paintGraphFrame(self.state, commit, painter, rect, outlineColor)
 
-        # ------ Refs
+        # ------ Callouts
         if commit is not None and commit.oid in self.state.refsByCommit:
             for refName in self.state.refsByCommit[commit.oid]:
-                shortRefName = refName
-                refColor = Qt.darkMagenta
-                for prefix in REF_PREFIXES:
+                calloutText = refName
+                calloutColor = Qt.darkMagenta
+
+                for prefix in CALLOUTS:
                     if refName.startswith(prefix):
-                        shortRefName = refName[len(prefix):]
-                        refColor = REF_PREFIXES[prefix]
+                        calloutDef = CALLOUTS[prefix]
+                        if not calloutDef.keepPrefix:
+                            calloutText = refName.removeprefix(prefix)
+                        calloutColor = calloutDef.color
                         break
+
                 painter.save()
                 painter.setFont(self.smallFont)
-                painter.setPen(refColor)
+                painter.setPen(calloutColor)
                 rect.setLeft(rect.right())
-                label = F"[{shortRefName}] "
-                rect.setWidth(self.smallFontMetrics.horizontalAdvance(label) + 1)
+                label = F"[{calloutText}] "
+                rect.setWidth(self.smallFontMetrics.horizontalAdvance(label))
                 painter.drawText(rect, Qt.AlignVCenter, label)
                 painter.restore()
 

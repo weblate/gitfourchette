@@ -7,7 +7,7 @@ setup(
     python_requires='>=3',
     install_requires=[
         'PySide2>=5',
-        'pygit2>=1.7.0',
+        'pygit2>=1.7.2',
         'psutil',
     ],
     tests_require=[

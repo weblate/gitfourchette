@@ -232,6 +232,11 @@ class GraphView(QListView):
     def selectUncommittedChanges(self):
         self.setCurrentIndex(self.model().index(0, 0))
 
-    def selectCommit(self, hexsha):
-        index = self.repoWidget.state.getCommitSequentialIndex(hexsha)
+    def selectCommit(self, oid: pygit2.Oid):
+        try:
+            index = self.repoWidget.state.getCommitSequentialIndex(oid)
+        except KeyError:
+            QMessageBox.warning(self, "Commit not found",
+                                F"Commit not found or not loaded:\n{oid.hex}")
+            return
         self.setCurrentIndex(self.model().index(1 + index, 0))

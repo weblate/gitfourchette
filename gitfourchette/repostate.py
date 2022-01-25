@@ -99,9 +99,12 @@ class RepoState:
                 print(F"Skipping symbolic reference {refKey} --> {ref.target}")
                 continue
             assert refKey.startswith('refs/')
-            #isTag = refKey.startswith('refs/tags/') #hasattr(ref, 'tag')
-            #self.refsByCommit[ref.hexsha].append( (ref.name, isTag) )
-            self.refsByCommit[ref.target].append(refKey)  # (ref.name, isTag) )
+            if refKey == "refs/stash":
+                continue
+            self.refsByCommit[ref.target].append(refKey)
+
+        for stashIndex, stash in enumerate(self.repo.listall_stashes()):
+            self.refsByCommit[stash.commit_id].append(F"stash@{{{stashIndex}}}")
 
     @property
     def shortName(self) -> str:

@@ -110,6 +110,7 @@ class RepoWidget(QWidget):
         self.graphView.resetHead.connect(self.resetHeadAsync)
         self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
+        self.sidebar.commitClicked.connect(self.selectCommit)
         self.sidebar.deleteBranch.connect(self.actionFlows.deleteBranchFlow)
         self.sidebar.deleteRemote.connect(self.actionFlows.deleteRemoteFlow)
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)

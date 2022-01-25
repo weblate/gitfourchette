@@ -238,6 +238,8 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
         if type(ref.target) != Oid:
             # Skip symbolic reference
             continue
+        if ref.name == "refs/stash":
+            continue
         try:
             commit: Commit = ref.peel(Commit)
             tips.append(commit)
@@ -245,6 +247,16 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
             # Some refs might not be committish, e.g. in linux's source repo
             print(F"{e} - Skipping ref '{ref.name}'")
             pass
+
+    for stash in repo.listall_stashes():
+        stash: pygit2.Stash
+        try:
+            commit: Commit = repo[stash.commit_id].peel(pygit2.Commit)
+            tips.append(commit)
+        except pygit2.InvalidSpecError as e:
+            print(F"{e} - Skipping stash '{stash.message}'")
+            pass
+
     tips = sorted(tips, key=lambda commit: commit.commit_time, reverse=True)
     return [commit.oid for commit in tips]
 

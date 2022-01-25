@@ -1,3 +1,5 @@
+import html
+
 import porcelain
 from allqt import *
 from util import labelQuote, shortHash
@@ -12,11 +14,13 @@ ACTIVE_BULLET = "★ "
 class EItem(enum.Enum):
     UncommittedChanges = enum.auto()
     LocalBranchesHeader = enum.auto()
+    StashesHeader = enum.auto()
     RemotesHeader = enum.auto()
     TagsHeader = enum.auto()
     LocalBranch = enum.auto()
     DetachedHead = enum.auto()
     UnbornHead = enum.auto()
+    Stash = enum.auto()
     Remote = enum.auto()
     RemoteBranch = enum.auto()
     Tag = enum.auto()
@@ -26,12 +30,14 @@ class EItem(enum.Enum):
 ITEM_NAMES = {
     EItem.UncommittedChanges: "Changes",
     EItem.LocalBranchesHeader: "Branches",
+    EItem.StashesHeader: "Stashes",
     EItem.RemotesHeader: "Remotes",
     EItem.TagsHeader: "Tags",
     EItem.LocalBranch: "Local branch",
     EItem.DetachedHead: "Detached HEAD",
     EItem.UnbornHead: "Unborn HEAD",
     EItem.RemoteBranch: "Remote branch",
+    EItem.Stash: "Stash",
     EItem.Remote: "Remote",
     EItem.Tag: "Tag",
     EItem.Spacer: "---",
@@ -39,6 +45,8 @@ ITEM_NAMES = {
 
 HEADER_ITEMS = [
     EItem.UncommittedChanges,
+    EItem.Spacer,
+    EItem.StashesHeader,
     EItem.Spacer,
     EItem.LocalBranchesHeader,
     EItem.Spacer,
@@ -50,6 +58,7 @@ HEADER_ITEMS = [
 LEAF_ITEMS = [
     EItem.Spacer,
     EItem.LocalBranch,
+    EItem.Stash,
     EItem.RemoteBranch,
     EItem.Tag,
     EItem.UnbornHead,
@@ -59,6 +68,7 @@ LEAF_ITEMS = [
 
 UNINDENT_ITEMS = [
     EItem.LocalBranch,
+    EItem.Stash,
     EItem.Tag,
 ]
 
@@ -69,6 +79,7 @@ class SidebarModel(QAbstractItemModel):
     _unbornHead: str
     _detachedHead: str
     _checkedOut: str
+    _stashes: list[pygit2.Stash]
     _remotes: list[str]
     _remoteBranchesDict: dict[str, list[str]]
     _tags: list[str]
@@ -123,6 +134,8 @@ class SidebarModel(QAbstractItemModel):
         else:
             self._checkedOut = repo.head.shorthand
 
+        self._stashes = repo.listall_stashes()
+
         self._remotes = [r.name for r in repo.remotes]
         self._remoteBranchesDict = {name: [] for name in self._remotes}
         for remoteBranchName in repo.branches.remote:
@@ -169,6 +182,9 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.TagsHeader:
             return self.createIndex(row, 0, self.packId(EItem.Tag))
 
+        elif item == EItem.StashesHeader:
+            return self.createIndex(row, 0, self.packId(EItem.Stash))
+
         return QModelIndex()
 
     def parent(self, index: QModelIndex = QModelIndex()) -> QModelIndex:
@@ -197,6 +213,9 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.Tag:
             return makeParentIndex(EItem.TagsHeader)
 
+        elif item == EItem.Stash:
+            return makeParentIndex(EItem.StashesHeader)
+
         else:
             return QModelIndex()
 
@@ -218,6 +237,9 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.TagsHeader:
             return len(self._tags)
+
+        elif item == EItem.StashesHeader:
+            return len(self._stashes)
 
         else:
             return 0
@@ -291,6 +313,15 @@ class SidebarModel(QAbstractItemModel):
             if display or user:
                 return self._tags[row]
 
+        elif item == EItem.Stash:
+            stash = pygit2.Stash = self._stashes[row]
+            if display:
+                return stash.message
+            elif tooltip:
+                return F"<b>stash@{{{row}}}</b>:<br/>{html.escape(stash.message)}"
+            elif user:
+                return stash.commit_id.hex
+
         else:
             if display:
                 return ITEM_NAMES[item]
@@ -348,6 +379,7 @@ class SidebarDelegate(QStyledItemDelegate):
 class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
+    commitClicked = Signal(pygit2.Oid)
 
     newBranch = Signal()
     renameBranch = Signal(str)
@@ -475,6 +507,8 @@ class Sidebar(QTreeView):
             self.refClicked.emit(F"refs/remotes/{data}")
         elif item == EItem.Tag:
             self.refClicked.emit(F"refs/tags/{data}")
+        elif item == EItem.Stash:
+            self.commitClicked.emit(pygit2.Oid(hex=data))
         else:
             print("Unsupported sidebar entry type", item)
 
