@@ -81,6 +81,7 @@ class SidebarModel(QAbstractItemModel):
     _checkedOut: str
     _stashes: list[pygit2.Stash]
     _remotes: list[str]
+    _remoteURLs: list[str]
     _remoteBranchesDict: dict[str, list[str]]
     _tags: list[str]
 
@@ -137,6 +138,7 @@ class SidebarModel(QAbstractItemModel):
         self._stashes = repo.listall_stashes()
 
         self._remotes = [r.name for r in repo.remotes]
+        self._remoteURLs = [repo.remotes[r].url for r in self._remotes]
         self._remoteBranchesDict = {name: [] for name in self._remotes}
         for remoteBranchName in repo.branches.remote:
             remoteBranch: pygit2.Branch = repo.branches.remote[remoteBranchName]
@@ -297,6 +299,8 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.Remote:
             if display or user:
                 return self._remotes[row]
+            elif tooltip:
+                return self._remoteURLs[row]
 
         elif item == EItem.RemoteBranch:
             remoteNo = self.unpackOffset(index)
