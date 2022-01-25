@@ -59,6 +59,10 @@ class FileListModel(QAbstractListModel):
             return self.getPatchAt(index)
 
         elif role == Qt.DisplayRole:
+            delta = self.getDeltaAt(index)
+            if not delta:
+                return "<NO DELTA>"
+
             path: str = self.getDeltaAt(index).new_file.path
             if settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES:
                 return compactRepoPath(path)
@@ -69,13 +73,18 @@ class FileListModel(QAbstractListModel):
 
         elif role == Qt.DecorationRole:
             delta = self.getDeltaAt(index)
-            if delta.status == pygit2.GIT_DELTA_UNTRACKED:
+            if not delta:
+                return STATUS_ICONS.get('X', None)
+            elif delta.status == pygit2.GIT_DELTA_UNTRACKED:
                 return STATUS_ICONS.get('A', None)
             else:
                 return STATUS_ICONS.get(delta.status_char(), None)
 
         elif role == Qt.ToolTipRole:
             delta = self.getDeltaAt(index)
+
+            if not delta:
+                return None
 
             if delta.status == pygit2.GIT_DELTA_UNTRACKED:
                 return (
