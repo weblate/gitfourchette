@@ -391,6 +391,7 @@ class Sidebar(QTreeView):
     newTrackingBranch = Signal(str)
     editTrackingBranch = Signal(str)
 
+    newRemote = Signal()
     editRemote = Signal(str)
     deleteRemote = Signal(str)
 
@@ -476,6 +477,9 @@ class Sidebar(QTreeView):
             a = menu.addAction(F"Delete Remote", lambda: self.deleteRemote.emit(data))
             a.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
 
+        elif item == EItem.RemotesHeader:
+            menu.addAction("New Remote...", lambda: self.newRemote.emit())
+
         return menu
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
@@ -510,13 +514,15 @@ class Sidebar(QTreeView):
         elif item == EItem.Stash:
             self.commitClicked.emit(pygit2.Oid(hex=data))
         else:
-            print("Unsupported sidebar entry type", item)
+            pass
 
     def onEntryDoubleClicked(self, item: EItem, data: Any):
         if item == EItem.LocalBranch:
             self.switchToBranch.emit(data)
         elif item == EItem.Remote:
             self.editRemote.emit(data)
+        elif item == EItem.RemotesHeader:
+            self.newRemote.emit()
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)

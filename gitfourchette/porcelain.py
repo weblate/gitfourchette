@@ -119,6 +119,10 @@ def editTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName:
             localBranch.upstream = None
 
 
+def newRemote(repo: Repository, name: str, url: str):
+    repo.remotes.create(name, url)
+
+
 def editRemote(repo: Repository, remoteName: str, newName: str, newURL: str):
     repo.remotes.set_url(remoteName, newURL)
     if remoteName != newName:

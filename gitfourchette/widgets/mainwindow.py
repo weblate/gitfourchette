@@ -141,6 +141,8 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("New Branch...", self.newBranch, QKeySequence("Ctrl+B"))
         repoMenu.addAction("Push Active Branch...", self.push, QKeySequence("Ctrl+P"))
         repoMenu.addSeparator()
+        repoMenu.addAction("New Remote...", self.newRemote)
+        repoMenu.addSeparator()
         repoMenu.addAction("&Find Commit...", lambda: self.currentRepoWidget().findFlow(), QKeySequence.Find)
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
@@ -375,6 +377,10 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def newBranch(self, rw: RepoWidget):
         rw.actionFlows.newBranchFlow()
+
+    @needRepoWidget
+    def newRemote(self, rw: RepoWidget):
+        rw.actionFlows.newRemoteFlow()
 
     @needRepoWidget
     def renameRepo(self, rw: RepoWidget):

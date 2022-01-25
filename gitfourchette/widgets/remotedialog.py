@@ -7,6 +7,7 @@ from util import labelQuote
 class RemoteDialog(QDialog):
     def __init__(
             self,
+            edit: bool,
             remoteName: str,
             remoteURL: str,
             parent):
@@ -19,6 +20,12 @@ class RemoteDialog(QDialog):
         self.ui.nameEdit.setText(remoteName)
         self.ui.urlEdit.setText(remoteURL)
 
-        convertToBrandedDialog(self, F"Edit remote {labelQuote(remoteName)}")
+        if edit:
+            title = F"Edit remote {labelQuote(remoteName)}"
+            self.setWindowTitle("Edit remote")
+        else:
+            title = F"New remote"
+            self.setWindowTitle("New remote")
+        convertToBrandedDialog(self, title)
 
         self.setMaximumHeight(self.height())

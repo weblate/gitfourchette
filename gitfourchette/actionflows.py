@@ -17,6 +17,7 @@ class ActionFlows(QObject):
     editRemote = Signal(str, str, str)  # oldName, newName, newURL
     editTrackingBranch = Signal(str, str)
     newBranch = Signal(str)
+    newRemote = Signal(str, str)  # name, url
     newTrackingBranch = Signal(str, str)
     pushBranch = Signal(str)
     renameBranch = Signal(str, str)
@@ -130,11 +131,21 @@ class ActionFlows(QObject):
     # -------------------------------------------------------------------------
     # Remote
 
+    def newRemoteFlow(self) -> RemoteDialog:
+        def onAccept(newName, newURL):
+            self.newRemote.emit(newName, newURL)
+
+        dlg = RemoteDialog(False, "", "", self.parentWidget)
+        dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
+        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        dlg.show()
+        return dlg
+
     def editRemoteFlow(self, remoteName: str) -> RemoteDialog:
         def onAccept(newName, newURL):
             self.editRemote.emit(remoteName, newName, newURL)
 
-        dlg = RemoteDialog(remoteName, self.repo.remotes[remoteName].url, self.parentWidget)
+        dlg = RemoteDialog(True, remoteName, self.repo.remotes[remoteName].url, self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
         dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()

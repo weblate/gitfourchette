@@ -116,6 +116,7 @@ class RepoWidget(QWidget):
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
         self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
+        self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
         self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.renameBranch.connect(self.actionFlows.renameBranchFlow)
@@ -134,6 +135,7 @@ class RepoWidget(QWidget):
         flows.editRemote.connect(self.editRemoteAsync)
         flows.editTrackingBranch.connect(self.editTrackingBranchAsync)
         flows.newBranch.connect(self.newBranchAsync)
+        flows.newRemote.connect(self.newRemoteAsync)
         flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
         flows.pushBranch.connect(lambda name: unimplementedDialog("Push Branch"))
         flows.renameBranch.connect(self.renameBranchAsync)
@@ -513,6 +515,11 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
+
+    def newRemoteAsync(self, name: str, url: str):
+        work = lambda: porcelain.newRemote(self.repo, name, url)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, F"New remote “{name}”")
 
     def editRemoteAsync(self, remoteName: str, newName: str, newURL: str):
         work = lambda: porcelain.editRemote(self.repo, remoteName, newName, newURL)

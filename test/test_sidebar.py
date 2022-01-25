@@ -117,6 +117,27 @@ def testNewRemoteTrackingBranch(qtbot, workDirRepo, rw):
 
 @withRepo("TestGitRepository")
 @withPrep(None)
+def testNewRemote(qtbot, workDirRepo, rw):
+    # Ensure we're starting with the expected settings
+    assert len(workDirRepo.remotes) == 1
+    assert workDirRepo.remotes[0].name == "origin"
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.RemotesHeader)
+
+    testutil.findMenuAction(menu, "new remote").trigger()
+
+    q: RemoteDialog = testutil.findQDialog(rw, "new remote")
+    q.ui.nameEdit.setText("otherremote")
+    q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
+    q.accept()
+
+    assert len(workDirRepo.remotes) == 2
+    assert workDirRepo.remotes[1].name == "otherremote"
+    assert workDirRepo.remotes[1].url == "https://127.0.0.1/example-repo.git"
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
 def testEditRemote(qtbot, workDirRepo, rw):
     # Ensure we're starting with the expected settings
     assert len(workDirRepo.remotes) == 1
