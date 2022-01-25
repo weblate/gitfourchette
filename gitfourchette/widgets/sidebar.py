@@ -384,6 +384,7 @@ class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
     commitClicked = Signal(pygit2.Oid)
+    commit = Signal()
 
     newBranch = Signal()
     renameBranch = Signal(str)
@@ -527,6 +528,10 @@ class Sidebar(QTreeView):
             self.editRemote.emit(data)
         elif item == EItem.RemotesHeader:
             self.newRemote.emit()
+        elif item == EItem.LocalBranchesHeader:
+            self.newBranch.emit()
+        elif item == EItem.UncommittedChanges:
+            self.commit.emit()
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
