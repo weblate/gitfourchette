@@ -102,6 +102,11 @@ def messageSummary(body: str):
     return message, messageContinued
 
 
+def onAppThread():
+    appInstance = QApplication.instance()
+    return appInstance and appInstance.thread() is QThread.currentThread()
+
+
 def excMessageBox(
         exc,
         title="Unhandled Exception",
@@ -113,8 +118,7 @@ def excMessageBox(
         traceback.print_exception(exc.__class__, exc, exc.__traceback__)
 
     # bail out if we're not running on Qt's application thread
-    appInstance = QApplication.instance()
-    if not appInstance or appInstance.thread() is not QThread.currentThread():
+    if not onAppThread():
         sys.stderr.write("excMessageBox: not on application thread; bailing out\n")
         return
 

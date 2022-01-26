@@ -397,6 +397,7 @@ class Sidebar(QTreeView):
     editTrackingBranch = Signal(str)
 
     newRemote = Signal()
+    fetchRemote = Signal(str)
     editRemote = Signal(str)
     deleteRemote = Signal(str)
 
@@ -474,16 +475,19 @@ class Sidebar(QTreeView):
                            lambda: self.newTrackingBranch.emit(data))
 
         elif item == EItem.Remote:
-            a = menu.addAction(F"Edit Remote...", lambda: self.editRemote.emit(data))
+            a = menu.addAction("&Fetch Remote...", lambda: self.fetchRemote.emit(data))
+            a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
+
+            a = menu.addAction("&Edit Remote...", lambda: self.editRemote.emit(data))
             a.setIcon(QIcon.fromTheme("document-edit"))
 
             menu.addSeparator()
 
-            a = menu.addAction(F"Delete Remote", lambda: self.deleteRemote.emit(data))
+            a = menu.addAction("&Delete Remote", lambda: self.deleteRemote.emit(data))
             a.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
 
         elif item == EItem.RemotesHeader:
-            menu.addAction("New Remote...", lambda: self.newRemote.emit())
+            menu.addAction("&New Remote...", lambda: self.newRemote.emit())
 
         return menu
 

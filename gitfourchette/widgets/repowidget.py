@@ -3,6 +3,7 @@ from actionflows import ActionFlows
 from allqt import *
 from allgit import *
 from benchmark import Benchmark
+from remotelink import RemoteLink
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
@@ -116,6 +117,7 @@ class RepoWidget(QWidget):
         self.sidebar.deleteRemote.connect(self.actionFlows.deleteRemoteFlow)
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
         self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
+        self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
         self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
         self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
@@ -526,6 +528,40 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.editRemote(self.repo, remoteName, newName, newURL)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Edit remote “{remoteName}”")
+
+    def fetchRemoteAsync(self, remoteName: str):
+        progress = QProgressDialog(F"Connecting to “{remoteName}”...\n", "Abort", 0, 0, self)
+        progress.setWindowTitle(F"Fetching remote “{remoteName}”")
+        progress.setMinimumWidth(8 * progress.fontMetrics().horizontalAdvance("WWWWW"))
+        progress.setWindowFlags(Qt.Dialog)
+        progress.setAttribute(Qt.WA_DeleteOnClose)
+        if not settings.TEST_MODE:
+            progress.show()
+
+        def onRLMessage(m):
+            progress.setLabelText(m)
+
+        def onRLProgress(lo, hi, cur):
+            progress.setMinimum(lo)
+            progress.setMaximum(hi)
+            progress.setValue(cur)
+
+        rl = RemoteLink()
+        rl.signals.message.connect(onRLMessage)
+        rl.signals.progress.connect(onRLProgress)
+
+        def work():
+            return porcelain.fetchRemote(self.repo, remoteName, rl)
+
+        def then(_):
+            progress.close()
+            self.quickRefreshWithSidebar()
+
+        def onError(exc):
+            progress.close()
+            excMessageBox(exc, title="Fetch error", message=F"Couldn't fetch “{remoteName}”.", parent=self)
+
+        self.workQueue.put(work, then, F"Fetch remote “{remoteName}”", errorCallback=onError)
 
     def deleteRemoteAsync(self, remoteName: str):
         work = lambda: porcelain.deleteRemote(self.repo, remoteName)

@@ -3,7 +3,7 @@ import settings
 from allqt import *
 from globalstatus import globalstatus
 from typing import Callable
-from util import excMessageBox
+from util import excMessageBox, onAppThread
 
 
 class WorkerSignals(QObject):
@@ -86,7 +86,8 @@ class WorkQueue:
             work: Callable[[], object],
             then: Callable[[object], None] = None,
             caption: str = "Unnamed task",
-            priority: int = 0):
+            priority: int = 0,
+            errorCallback: Callable[[BaseException], None] = None):
         """
         Starts a worker thread in the background, especially to perform
         long operations on the repository.
@@ -103,27 +104,30 @@ class WorkQueue:
         :param caption: Shown in status.
 
         :param priority: Integer value passed on to `QThreadPool.start()`.
+
+        :param errorCallback: Callback to run on the GUI thread if ``work``
+        aborts due to an error. If None, an exception dialog is shown.
         """
 
         if settings.TEST_MODE:
             self.putSerial(work, then)
         else:
-            self.putAsync(work, then, caption, priority)
+            self.putAsync(work, then, caption, priority, errorCallback)
 
     def putSerial(self, work, then):
         result = work()
         if then is not None:
             then(result)
 
-    def putAsync(self, work, then, caption, priority):
+    def putAsync(self, work, then, caption, priority, errorCallback):
         def workWrapper():
-            assert QThread.currentThread() is not QApplication.instance().thread()
+            assert not onAppThread()
             with QMutexLocker(self.mutex):
                 return work()
 
         # This callback gets executed when the worker's async function has completed successfully.
         def thenWrapper(o):
-            assert QThread.currentThread() is QApplication.instance().thread()
+            assert onAppThread()
             # Clear status caption _before_ running onComplete,
             # because onComplete may start another worker that sets status.
             globalstatus.clearIndeterminateProgressCaption()
@@ -131,11 +135,13 @@ class WorkQueue:
             if then is not None:
                 then(o)
 
-        def errorCallback(exc: BaseException):
-            excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self.parent)
+        if not errorCallback:
+            def errorCallback(exc: BaseException):
+                excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self.parent)
 
         w = Worker(workWrapper)
         w.signals.result.connect(thenWrapper)
+        w.signals.error.connect(lambda: globalstatus.clearIndeterminateProgressCaption())
         w.signals.error.connect(errorCallback)
         globalstatus.setIndeterminateProgressCaption(caption + "...")
 

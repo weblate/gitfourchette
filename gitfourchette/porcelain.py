@@ -133,6 +133,11 @@ def deleteRemote(repo: Repository, remoteName: str):
     repo.remotes.delete(remoteName)
 
 
+def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
+    tp = repo.remotes[remoteName].fetch(callbacks=remoteCallbacks)
+    return tp
+
+
 def resetHead(repo: Repository, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
     raise NotImplementedError("reset HEAD")
     args = ['--' + resetMode]
