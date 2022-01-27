@@ -98,6 +98,7 @@ class Ui_CloneDialog(object):
         self.longInfoLabel.setObjectName(u"longInfoLabel")
         self.longInfoLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
         self.longInfoLabel.setWordWrap(True)
+        self.longInfoLabel.setTextInteractionFlags(Qt.LinksAccessibleByMouse|Qt.TextSelectableByMouse)
 
         self.horizontalLayout_2.addWidget(self.longInfoLabel)
 

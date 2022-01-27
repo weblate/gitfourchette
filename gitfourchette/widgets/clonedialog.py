@@ -1,3 +1,5 @@
+import html
+
 import pygit2
 
 from allqt import *
@@ -33,6 +35,7 @@ class CloneDialog(QDialog):
         super().__init__(parent)
 
         self.cloneInProgress = False
+        self.remoteLink = None
 
         self.ui = Ui_CloneDialog()
         self.ui.setupUi(self)
@@ -62,9 +65,7 @@ class CloneDialog(QDialog):
 
     def reject(self):
         if self.cloneInProgress:
-            # TODO: abort
-            print("TODO: implement abort clone")
-            QApplication.beep()
+            self.remoteLink.raiseAbortFlag()
         else:
             super().reject()
 
@@ -110,6 +111,7 @@ class CloneDialog(QDialog):
         self.cloneInProgress = True
 
         link = RemoteLink()
+        self.remoteLink = link
 
         link.signals.message.connect(self.ui.linkMessage.setText)
         link.signals.progress.connect(self.setProgress)
@@ -128,7 +130,7 @@ class CloneDialog(QDialog):
             self.cloneInProgress = False
             self.enableInputs(True)
             self.ui.stackedWidget.setCurrentWidget(self.ui.stackedWidgetPage2)
-            self.ui.longInfoLabel.setText(str(exc))
+            self.ui.longInfoLabel.setText(F"<b>{type(exc).__name__}:</b> {html.escape(str(exc))}")
 
         wq = WorkQueue(self)
         wq.put(work, then, "Cloning", errorCallback=onError)

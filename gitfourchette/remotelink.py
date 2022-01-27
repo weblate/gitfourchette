@@ -25,7 +25,16 @@ AUTH_NAMES = {
 }
 
 
+def getAuthNamesFromFlags(allowedTypes):
+    allowedTypeNames = []
+    for k, v in AUTH_NAMES.items():
+        if allowedTypes & k:
+            allowedTypeNames.append(v)
+    return ", ".join(allowedTypeNames)
+
+
 class RemoteLinkSignals(QObject):
+    userAbort = Signal()
     message = Signal(str)
     progress = Signal(int, int)
 
@@ -50,6 +59,20 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self.downloadRate = 0
         self.receivedBytesOnTimerStart = 0
 
+        self.signals.userAbort.connect(self._onAbort)
+        self._aborting = False
+
+    def isAborting(self):
+        return self._aborting
+
+    def raiseAbortFlag(self):
+        self.signals.message.emit("Aborting...")
+        self.signals.progress.emit(0, 0)
+        self.signals.userAbort.emit()
+
+    def _onAbort(self):
+        self._aborting = True
+
     def sideband_progress(self, string):
         self.signals.message.emit("Sideband progress: " + string)
 
@@ -58,17 +81,16 @@ class RemoteLink(pygit2.RemoteCallbacks):
     #     return 1
 
     def credentials(self, url, username_from_url, allowed_types):
+        if self._aborting:
+            raise InterruptedError("User interrupted login.")
+
         self.attempts += 1
 
         if self.attempts > 10:
             raise ConnectionRefusedError("Too many credential retries.")
 
         if self.attempts == 1:
-            allowedTypeNames = []
-            for k, v in AUTH_NAMES.items():
-                if allowed_types & k:
-                    allowedTypeNames.append(v)
-            print("[RemoteLink] Auths accepted by server: " + ", ".join(allowedTypeNames))
+            print(F"[RemoteLink] Auths accepted by server: {getAuthNamesFromFlags(allowed_types)}")
 
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
@@ -77,9 +99,15 @@ class RemoteLink(pygit2.RemoteCallbacks):
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
         else:
-            raise NotImplementedError("Unsupported credentials")
+            if self.attempts > 1:
+                raise ConnectionRefusedError(F"Credentials rejected by remote. The remote claims to accept: {getAuthNamesFromFlags(allowed_types)}.")
+            else:
+                raise NotImplementedError(F"Unsupported auth type. The remote claims to accept: {getAuthNamesFromFlags(allowed_types)}.")
 
     def transfer_progress(self, stats: pygit2.remote.TransferProgress):
+        if self._aborting:
+            raise InterruptedError("User interrupted transfer.")
+
         if not self.downloadRateTimer.isValid():
             self.downloadRateTimer.start()
             self.receivedBytesOnTimerStart = stats.received_bytes
@@ -107,7 +135,6 @@ class RemoteLink(pygit2.RemoteCallbacks):
             if self.downloadRate != 0:
                 message += F" - {locale.formattedDataSize(self.downloadRate)}/s"
         self.signals.message.emit(message)
-        # TODO: check that returning non-0 here can be used to cancel (https://libgit2.org/libgit2/#HEAD/group/callback/git_indexer_progress_cb)
 
     def update_tips(self, refname, old, new):
         print(F"[RemoteLink] Update tip {refname}: {old} ---> {new}")
