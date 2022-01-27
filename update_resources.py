@@ -76,5 +76,11 @@ for root, dirs, files in os.walk(srcDir):
 
             writeIfDifferent(F"{root}/ui_{basename}.py", "\n".join(codeLines))
 
+for root, dirs, files in os.walk(assetsDir):
+    for file in files:
+        path = os.path.join(root, file)
+        # Set a fixed mtime to make the contents of assets_rc.py deterministic
+        os.utime(path, times=(0, 0))
+
 # Generate assets_rc.py from assets.qrc
 call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc", "--output", "gitfourchette/assets_rc.py"])
