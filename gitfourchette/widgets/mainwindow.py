@@ -1,6 +1,7 @@
 from allqt import *
 from widgets.autohidemenubar import AutoHideMenuBar
 from widgets.aboutdialog import showAboutDialog
+from widgets.clonedialog import CloneDialog
 from widgets.prefsdialog import PrefsDialog
 from globalstatus import globalstatus
 from repostate import RepoState
@@ -117,6 +118,8 @@ class MainWindow(QMainWindow):
         fileMenu = menubar.addMenu("&File")
         fileMenu.setObjectName("MWFileMenu")
         fileMenu.addAction("&New Repository...", self.newRepo, QKeySequence.New)
+        fileMenu.addAction("Cl&one Repository...", self.cloneDialog, QKeySequence("Ctrl+Shift+N"))
+        fileMenu.addSeparator()
         fileMenu.addAction("&Open Repository...", self.openDialog, QKeySequence.Open)
         self.recentMenu = fileMenu.addMenu("Open &Recent")
         self.recentMenu.setObjectName("RecentMenu")
@@ -202,7 +205,7 @@ class MainWindow(QMainWindow):
 
     def fillRecentMenu(self):
         def onClearRecents():
-            settings.history.clear()
+            settings.history.clearRepoHistory()
             self.fillRecentMenu()
 
         self.recentMenu.clear()
@@ -402,6 +405,17 @@ class MainWindow(QMainWindow):
         if path:
             pygit2.init_repository(path)
             self.openRepo(path)
+
+    def cloneDialog(self):
+        dlg = CloneDialog(self)
+
+        def onSuccess(path: str):
+            self.openRepo(path)
+            self.saveSession()
+        dlg.cloneSuccessful.connect(onSuccess)
+
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.show()
 
     def openDialog(self):
         path = settings.history.openFileDialogLastPath

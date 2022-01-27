@@ -32,7 +32,10 @@ def makeBrandedDialog(dialog, innerLayout, promptText):
     gridLayout.addLayout(innerLayout, 2, 3, 1, 1)
 
 
-def convertToBrandedDialog(dialog, promptText):
+def convertToBrandedDialog(dialog: QDialog, promptText: str = ""):
+    if not promptText:
+        promptText = dialog.windowTitle()
+
     innerContent = QWidget(dialog)
     innerContent.setLayout(dialog.layout())
 

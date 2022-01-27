@@ -541,8 +541,7 @@ class RepoWidget(QWidget):
         def onRLMessage(m):
             progress.setLabelText(m)
 
-        def onRLProgress(lo, hi, cur):
-            progress.setMinimum(lo)
+        def onRLProgress(hi, cur):
             progress.setMaximum(hi)
             progress.setValue(cur)
 

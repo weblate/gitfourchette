@@ -1,8 +1,11 @@
 import os.path
 
 import util
-from allqt import QStandardPaths, QObject, Signal
+from allqt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
 import pygit2
+
+
+DLRATE_REFRESH_INTERVAL = 1000
 
 
 PRIVATE_KEY_FILES = [
@@ -24,7 +27,7 @@ AUTH_NAMES = {
 
 class RemoteLinkSignals(QObject):
     message = Signal(str)
-    progress = Signal(int, int, int)
+    progress = Signal(int, int)
 
 
 class RemoteLink(pygit2.RemoteCallbacks):
@@ -42,7 +45,10 @@ class RemoteLink(pygit2.RemoteCallbacks):
                     print("[RemoteLink] Discovered key pair", privkey)
                     self.keypairFiles.append((pubkey, privkey))
 
-        self.signals.message.connect(lambda m: print("[RemoteLink] " + m))
+        #self.signals.message.connect(lambda m: print("[RemoteLink] " + m))
+        self.downloadRateTimer = QElapsedTimer()
+        self.downloadRate = 0
+        self.receivedBytesOnTimerStart = 0
 
     def sideband_progress(self, string):
         self.signals.message.emit("Sideband progress: " + string)
@@ -57,14 +63,16 @@ class RemoteLink(pygit2.RemoteCallbacks):
         if self.attempts > 10:
             raise ConnectionRefusedError("Too many credential retries.")
 
-        allowedTypeNames = []
-        for k, v in AUTH_NAMES.items():
-            if allowed_types & k:
-                allowedTypeNames.append(v)
-        print("Auths accepted by server: " + ", ".join(allowedTypeNames))
+        if self.attempts == 1:
+            allowedTypeNames = []
+            for k, v in AUTH_NAMES.items():
+                if allowed_types & k:
+                    allowedTypeNames.append(v)
+            print("[RemoteLink] Auths accepted by server: " + ", ".join(allowedTypeNames))
 
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
+            print(F"[RemoteLink] Attempting login with {util.compactSystemPath(pubkey)}")
             self.signals.message.emit(F"Attempting login...\n{util.compactSystemPath(pubkey)}")
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
@@ -72,13 +80,37 @@ class RemoteLink(pygit2.RemoteCallbacks):
             raise NotImplementedError("Unsupported credentials")
 
     def transfer_progress(self, stats: pygit2.remote.TransferProgress):
+        if not self.downloadRateTimer.isValid():
+            self.downloadRateTimer.start()
+            self.receivedBytesOnTimerStart = stats.received_bytes
+        elif self.downloadRateTimer.elapsed() > DLRATE_REFRESH_INTERVAL:
+            self.downloadRate = (stats.received_bytes - self.receivedBytesOnTimerStart) * 1000 // DLRATE_REFRESH_INTERVAL
+            self.downloadRateTimer.restart()
+            self.receivedBytesOnTimerStart = stats.received_bytes
+
         obj = min(stats.indexed_objects, stats.total_objects)
-        self.signals.message.emit(F"{obj} of {stats.total_objects} objects ready\n{stats.received_bytes//1024:,} KB")
-        self.signals.progress.emit(0, stats.total_objects, obj)
+        if obj == stats.total_objects:
+            self.signals.progress.emit(0, 0)
+        else:
+            self.signals.progress.emit(stats.total_objects, obj)
+
+        locale = QLocale.system()
+
+        message = (
+            F"{obj:,} of {stats.total_objects:,} objects ready\n"
+            + locale.formattedDataSize(stats.received_bytes))
+
+        if stats.received_objects == stats.total_objects:
+            message += " total. Indexing..."
+        else:
+            message += " received"
+            if self.downloadRate != 0:
+                message += F" - {locale.formattedDataSize(self.downloadRate)}/s"
+        self.signals.message.emit(message)
         # TODO: check that returning non-0 here can be used to cancel (https://libgit2.org/libgit2/#HEAD/group/callback/git_indexer_progress_cb)
 
     def update_tips(self, refname, old, new):
-        self.signals.message.emit(F"Update tips {refname} {old} {new}")
+        print(F"[RemoteLink] Update tip {refname}: {old} ---> {new}")
 
     def push_update_reference(self, refname, message):
         self.signals.message.emit(F"Push update ref {refname} {message}")

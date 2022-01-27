@@ -110,16 +110,20 @@ class History(BasePrefs):
     openFileDialogLastPath      : str           = ""
     history                     : list[str]     = field(default_factory=list)
     nicknames                   : dict          = field(default_factory=dict)
+    cloneHistory                : list[str]     = field(default_factory=list)
+
+    def _addToList(self, item, list):
+        try:
+            list.remove(item)
+        except ValueError:
+            pass
+        list.append(item)
+        self.trim()
+        self.write()
 
     def addRepo(self, path):
         path = os.path.normpath(path)
-        try:
-            self.history.remove(path)
-        except ValueError:
-            pass
-        self.history.append(path)
-        self.trim()
-        self.write()
+        self._addToList(path, self.history)
 
     def getRepoNickname(self, path):
         path = os.path.normpath(path)
@@ -147,17 +151,28 @@ class History(BasePrefs):
             del self.nicknames[path]
         self.write()
 
-    def clear(self):
+    def clearRepoHistory(self):
         self.history.clear()
         self.nicknames.clear()
         self.write()
 
+    def clearCloneHistory(self):
+        self.cloneHistory.clear()
+        self.write()
+
     def trim(self):
         n = prefs.maxRecentRepos
+
         if len(self.history) > n:
             for path in self.history[:-n]:
                 self.nicknames.pop(path, None)
             self.history = self.history[-n:]
+
+        if len(self.cloneHistory) > n:
+            self.cloneHistory = self.cloneHistory[-n:]
+
+    def addCloneUrl(self, url):
+        self._addToList(url, self.cloneHistory)
 
 
 @dataclass
