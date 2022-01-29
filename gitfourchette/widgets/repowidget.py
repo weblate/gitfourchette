@@ -20,7 +20,6 @@ from widgets.sidebar import Sidebar
 from workqueue import WorkQueue
 import os
 import porcelain
-import pygit2
 import settings
 import typing
 

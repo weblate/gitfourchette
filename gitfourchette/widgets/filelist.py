@@ -352,7 +352,6 @@ class CommittedFiles(FileList):
 
     def saveRevisionAs(self, saveInto=None):
         for diff in self.confirmSelectedEntries("save # files"):
-            diffFile: pygit2.DiffFile
             if diff.delta.status == pygit2.GIT_DELTA_DELETED:
                 diffFile = diff.delta.old_file
             else:

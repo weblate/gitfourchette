@@ -2,6 +2,7 @@ import html
 
 import porcelain
 from allqt import *
+from allqt import *
 from util import labelQuote, shortHash
 from typing import Any
 import pygit2
@@ -117,7 +118,7 @@ class SidebarModel(QAbstractItemModel):
 
         self._tracking = []
         for branchName in self._localBranches:
-            upstream: pygit2.Branch = self.repo.branches.local[branchName].upstream
+            upstream = self.repo.branches.local[branchName].upstream
             if not upstream:
                 self._tracking.append("")
             else:
@@ -141,7 +142,7 @@ class SidebarModel(QAbstractItemModel):
         self._remoteURLs = [repo.remotes[r].url for r in self._remotes]
         self._remoteBranchesDict = {name: [] for name in self._remotes}
         for remoteBranchName in repo.branches.remote:
-            remoteBranch: pygit2.Branch = repo.branches.remote[remoteBranchName]
+            remoteBranch = repo.branches.remote[remoteBranchName]
             remoteName = remoteBranch.remote_name
             strippedBranchName = remoteBranchName.removeprefix(remoteName + "/")
             self._remoteBranchesDict[remoteName].append(strippedBranchName)
@@ -318,7 +319,7 @@ class SidebarModel(QAbstractItemModel):
                 return self._tags[row]
 
         elif item == EItem.Stash:
-            stash = pygit2.Stash = self._stashes[row]
+            stash = self._stashes[row]
             if display:
                 return stash.message
             elif tooltip:
@@ -427,7 +428,7 @@ class Sidebar(QTreeView):
         elif item == EItem.LocalBranch:
             model: SidebarModel = self.model()
             repo = model.repo
-            branch: pygit2.Branch = repo.branches.local[data]
+            branch = repo.branches.local[data]
             activeBranchName = porcelain.getActiveBranchShorthand(repo)
 
             switchAction: QAction = menu.addAction(F"&Switch to {labelQuote(data)}")

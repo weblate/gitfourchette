@@ -1,5 +1,3 @@
-import pygit2
-
 from allqt import *
 from bisect import bisect_left, bisect_right
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
@@ -92,7 +90,7 @@ class DiffView(QPlainTextEdit):
         self.setCursorWidth(2)
 
         if self.currentPatch and len(self.currentPatch.hunks) > 0:
-            lastHunk: pygit2.DiffHunk = self.currentPatch.hunks[-1]
+            lastHunk = self.currentPatch.hunks[-1]
             maxNewLine = lastHunk.new_start + lastHunk.new_lines
             maxOldLine = lastHunk.old_start + lastHunk.old_lines
             self.gutterMaxDigits = len(str(max(maxNewLine, maxOldLine)))

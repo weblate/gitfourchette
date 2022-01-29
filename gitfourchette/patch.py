@@ -1,7 +1,7 @@
-from allgit import *
 from dataclasses import dataclass
 import enum
 import io
+import pygit2
 
 
 @enum.unique
@@ -22,7 +22,7 @@ class LineData:
     # For visual representation
     text: str
 
-    diffLine: DiffLine | None
+    diffLine: pygit2.DiffLine | None
 
     cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
 
@@ -145,7 +145,7 @@ def makePatchFromLines(
         return patch.getvalue()
 
 
-def applyPatch(repo: Repository, patchData: bytes, purpose: PatchPurpose) -> str:
+def applyPatch(repo: pygit2.Repository, patchData: bytes, purpose: PatchPurpose):
     if purpose == PatchPurpose.DISCARD:
         location = pygit2.GIT_APPLY_LOCATION_WORKDIR
     else:
@@ -160,7 +160,7 @@ def applyPatch(repo: Repository, patchData: bytes, purpose: PatchPurpose) -> str
         print("Wrote", prefix)
     '''
 
-    diff = Diff.parse_diff(patchData)
+    diff = pygit2.Diff.parse_diff(patchData)
     print(F"Will apply to {location}? ", repo.applies(diff, location))
     result = repo.apply(diff, location)
     assert not result, "Patch failed to apply"

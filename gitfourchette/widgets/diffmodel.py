@@ -8,7 +8,13 @@ import settings
 
 
 class DiffModelError(BaseException):
-    def __init__(self, message: str, details: str="", icon=QStyle.SP_MessageBoxInformation, preformatted=""):
+    def __init__(
+            self,
+            message: str,
+            details: str = "",
+            icon=QStyle.SP_MessageBoxInformation,
+            preformatted: str = ""
+    ):
         super().__init__(message)
         self.message = message
         self.details = details
@@ -155,8 +161,6 @@ class DiffModel:
                 cursor.insertText(trailer)
 
         # For each line of the diff, create a LineData object.
-        hunk: pygit2.DiffHunk
-        diffLine: pygit2.DiffLine
         for hunkID, hunk in enumerate(patch.hunks):
             oldLine = hunk.old_start
             newLine = hunk.new_start

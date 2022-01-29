@@ -5,9 +5,9 @@ import pygit2
 
 
 def loadDirtyDiff(repo: Repository) -> Diff:
-    flags = pygit2.GIT_DIFF_INCLUDE_UNTRACKED \
-          | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
-    dirtyDiff: Diff = repo.diff(None, None, flags=flags)
+    flags = (pygit2.GIT_DIFF_INCLUDE_UNTRACKED
+             | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS)
+    dirtyDiff = repo.diff(None, None, flags=flags)
     dirtyDiff.find_similar()
     return dirtyDiff
 
@@ -24,13 +24,12 @@ def loadStagedDiff(repo: Repository) -> Diff:
 
 
 def hasAnyStagedChanges(repo: Repository) -> bool:
-    status: dict[str, int] = repo.status()
-    mask \
-        = pygit2.GIT_STATUS_INDEX_NEW \
-        | pygit2.GIT_STATUS_INDEX_MODIFIED \
-        | pygit2.GIT_STATUS_INDEX_DELETED \
-        | pygit2.GIT_STATUS_INDEX_RENAMED \
-        | pygit2.GIT_STATUS_INDEX_TYPECHANGE
+    status = repo.status()
+    mask = (pygit2.GIT_STATUS_INDEX_NEW
+            | pygit2.GIT_STATUS_INDEX_MODIFIED
+            | pygit2.GIT_STATUS_INDEX_DELETED
+            | pygit2.GIT_STATUS_INDEX_RENAMED
+            | pygit2.GIT_STATUS_INDEX_TYPECHANGE)
     return any(0 != (flag & mask) for flag in status.values())
 
 
@@ -53,7 +52,7 @@ def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
 
 
 def checkoutLocalBranch(repo: Repository, localBranchName: str):
-    branch: Branch = repo.branches.local[localBranchName]
+    branch = repo.branches.local[localBranchName]
     repo.checkout(branch.raw_name)
 
 
@@ -63,7 +62,7 @@ def checkoutRef(repo: Repository, refName: str):
 
 def renameBranch(repo: Repository, oldName: str, newName: str):
     # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
-    branch: pygit2.Branch = repo.branches.local[oldName]
+    branch = repo.branches.local[oldName]
     branch.rename(newName)
 
 
@@ -84,16 +83,15 @@ def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: 
 
 def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid):
     commit: Commit = repo[commitOid].peel(Commit)
-    branch: Branch = repo.create_branch(localBranchName, commit)
+    branch = repo.create_branch(localBranchName, commit)
     checkoutRef(repo, branch.name)  # branch.name is inherited from Reference
 
 
 def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     nameDict = defaultdict(list)
 
-    remoteBranch: Branch
     for name in repo.branches.remote:
-        remoteBranch: pygit2.Branch = repo.branches.remote[name]
+        remoteBranch = repo.branches.remote[name]
         remoteName = remoteBranch.remote_name
         strippedBranchName = name.removeprefix(remoteName + "/")
         nameDict[remoteName].append(strippedBranchName)
@@ -110,9 +108,9 @@ def getTagNames(repo: Repository) -> list[str]:
 
 
 def editTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str):
-    localBranch: pygit2.Branch = repo.branches.local[localBranchName]
+    localBranch = repo.branches.local[localBranchName]
     if remoteBranchName:
-        remoteBranch: pygit2.Branch = repo.branches.remote[remoteBranchName]
+        remoteBranch = repo.branches.remote[remoteBranchName]
         localBranch.upstream = remoteBranch
     else:
         if localBranch.upstream is not None:
@@ -179,10 +177,10 @@ def createCommit(
     else:
         parents = [getHeadCommitOid(repo)]
 
-    indexTreeOid: Oid = repo.index.write_tree()
+    indexTreeOid = repo.index.write_tree()
     fallbackSignature = repo.default_signature
 
-    newCommitOid: Oid = repo.create_commit(
+    newCommitOid = repo.create_commit(
         refName,
         overrideAuthor or fallbackSignature,
         overrideCommitter or fallbackSignature,
@@ -243,7 +241,6 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
     """
     tips = []
     for ref in repo.listall_reference_objects():
-        ref: pygit2.Reference
         if type(ref.target) != Oid:
             # Skip symbolic reference
             continue
@@ -258,7 +255,6 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
             pass
 
     for stash in repo.listall_stashes():
-        stash: pygit2.Stash
         try:
             commit: Commit = repo[stash.commit_id].peel(pygit2.Commit)
             tips.append(commit)
@@ -281,10 +277,10 @@ def stageFiles(repo: Repository, patches: list[pygit2.Patch]):
 
 
 def discardFiles(repo: Repository, paths: list[str]):
-    strategy = pygit2.GIT_CHECKOUT_FORCE \
-             | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED \
-             | pygit2.GIT_CHECKOUT_DONT_UPDATE_INDEX \
-             | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH
+    strategy = (pygit2.GIT_CHECKOUT_FORCE
+                | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
+                | pygit2.GIT_CHECKOUT_DONT_UPDATE_INDEX
+                | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 
     repo.index.read()  # refresh index before getting indexTree
     indexTree = repo[repo.index.write_tree()]
@@ -294,13 +290,14 @@ def discardFiles(repo: Repository, paths: list[str]):
 def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
     index = repo.index
 
+    headTree: pygit2.Tree | None
     if repo.head_is_unborn:
         headTree = None
     else:
         headTree = repo.head.peel(pygit2.Tree)
 
     for patch in patches:
-        delta: pygit2.DiffDelta = patch.delta
+        delta = patch.delta
         old_path = delta.old_file.path
         new_path = delta.new_file.path
         if delta.status == pygit2.GIT_DELTA_ADDED:
