@@ -135,7 +135,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         if obj == stats.total_objects:
             self.signals.progress.emit(0, 0)
         else:
-            self.signals.progress.emit(stats.total_objects, obj)
+            self.signals.progress.emit(obj, stats.total_objects)
 
         locale = QLocale.system()
 

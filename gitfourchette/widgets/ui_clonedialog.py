@@ -10,6 +10,8 @@ from allqt import *
 ################################################################################
 
 
+from widgets.statusform import StatusForm
+
 
 class Ui_CloneDialog(object):
     def setupUi(self, CloneDialog):
@@ -67,55 +69,28 @@ class Ui_CloneDialog(object):
 
         self.groupBox = QGroupBox(CloneDialog)
         self.groupBox.setObjectName(u"groupBox")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
+        self.groupBox.setSizePolicy(sizePolicy1)
         self.verticalLayout = QVBoxLayout(self.groupBox)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.stackedWidget = QStackedWidget(self.groupBox)
-        self.stackedWidget.setObjectName(u"stackedWidget")
-        self.stackedWidgetPage1 = QWidget()
-        self.stackedWidgetPage1.setObjectName(u"stackedWidgetPage1")
-        self.verticalLayout_2 = QVBoxLayout(self.stackedWidgetPage1)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.linkMessage = QLabel(self.stackedWidgetPage1)
-        self.linkMessage.setObjectName(u"linkMessage")
-        self.linkMessage.setWordWrap(True)
+        self.statusForm = StatusForm(self.groupBox)
+        self.statusForm.setObjectName(u"statusForm")
 
-        self.verticalLayout_2.addWidget(self.linkMessage)
-
-        self.progressBar = QProgressBar(self.stackedWidgetPage1)
-        self.progressBar.setObjectName(u"progressBar")
-        self.progressBar.setMinimum(0)
-        self.progressBar.setMaximum(0)
-        self.progressBar.setValue(0)
-
-        self.verticalLayout_2.addWidget(self.progressBar)
-
-        self.stackedWidget.addWidget(self.stackedWidgetPage1)
-        self.stackedWidgetPage2 = QWidget()
-        self.stackedWidgetPage2.setObjectName(u"stackedWidgetPage2")
-        self.horizontalLayout_2 = QHBoxLayout(self.stackedWidgetPage2)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.longInfoLabel = QLabel(self.stackedWidgetPage2)
-        self.longInfoLabel.setObjectName(u"longInfoLabel")
-        self.longInfoLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
-        self.longInfoLabel.setWordWrap(True)
-        self.longInfoLabel.setTextInteractionFlags(Qt.LinksAccessibleByMouse|Qt.TextSelectableByMouse)
-
-        self.horizontalLayout_2.addWidget(self.longInfoLabel)
-
-        self.stackedWidget.addWidget(self.stackedWidgetPage2)
-
-        self.verticalLayout.addWidget(self.stackedWidget)
+        self.verticalLayout.addWidget(self.statusForm)
 
 
         self.formLayout.setWidget(3, QFormLayout.FieldRole, self.groupBox)
 
         self.urlEdit = QComboBox(CloneDialog)
         self.urlEdit.setObjectName(u"urlEdit")
-        sizePolicy1 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.urlEdit.sizePolicy().hasHeightForWidth())
-        self.urlEdit.setSizePolicy(sizePolicy1)
+        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.urlEdit.sizePolicy().hasHeightForWidth())
+        self.urlEdit.setSizePolicy(sizePolicy2)
         self.urlEdit.setEditable(True)
         self.urlEdit.setInsertPolicy(QComboBox.NoInsert)
 
@@ -127,9 +102,6 @@ class Ui_CloneDialog(object):
         self.retranslateUi(CloneDialog)
         self.buttonBox.rejected.connect(CloneDialog.reject)
 
-        self.stackedWidget.setCurrentIndex(1)
-
-
         QMetaObject.connectSlotsByName(CloneDialog)
     # setupUi
 
@@ -140,7 +112,4 @@ class Ui_CloneDialog(object):
         self.browseButton.setText(QCoreApplication.translate("CloneDialog", u"&Browse...", None))
         self.label.setText(QCoreApplication.translate("CloneDialog", u"Status", None))
         self.groupBox.setTitle("")
-        self.linkMessage.setText(QCoreApplication.translate("CloneDialog", u"blah\n"
-"blah", None))
-        self.longInfoLabel.setText(QCoreApplication.translate("CloneDialog", u"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.", None))
     # retranslateUi
