@@ -60,7 +60,9 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self.receivedBytesOnTimerStart = 0
 
         self.signals.userAbort.connect(self._onAbort)
+
         self._aborting = False
+        self._sidebandProgressBuffer = ""
 
     def isAborting(self):
         return self._aborting
@@ -74,7 +76,20 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self._aborting = True
 
     def sideband_progress(self, string):
-        self.signals.message.emit("Sideband progress: " + string)
+        # The remote sends a stream of characters intended to be printed
+        # progressively. So, the string we receive may be incomplete.
+        string = self._sidebandProgressBuffer + string
+
+        # \r refreshes the current status line, and \n starts a new one.
+        # Send the last complete line we have.
+        split = string.replace("\r", "\n").rsplit("\n", 2)
+        try:
+            self.signals.message.emit("Remote: " + split[-2])
+        except IndexError:
+            pass
+
+        # Buffer partial message for next time.
+        self._sidebandProgressBuffer = split[-1]
 
     # def certificate_check(self, certificate, valid, host):
     #     print("[RemoteCallbacks] Certificate Check", certificate, valid, host)
