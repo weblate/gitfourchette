@@ -14,7 +14,7 @@ def makeCommandLineParser() -> QCommandLineParser:
     parser = QCommandLineParser()
     parser.addHelpOption()
     parser.addVersionOption()
-    parser.addOption(QCommandLineOption("test-mode", "Prevents loading/saving of user preferences."))
+    parser.addOption(QCommandLineOption(["test-mode"], "Prevents loading/saving of user preferences."))
     parser.addPositionalArgument("repos", "Paths to repositories to open on launch.", "[repos...]")
     return parser
 
