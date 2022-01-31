@@ -6,7 +6,6 @@ from allqt import *
 from remotelink import RemoteLink
 from widgets.brandeddialog import convertToBrandedDialog
 from widgets.ui_clonedialog import Ui_CloneDialog
-from util import labelQuote
 from workqueue import WorkQueue
 import settings
 
@@ -31,7 +30,7 @@ class CloneDialog(QDialog):
             settings.history.clearCloneHistory()
             self.initUrlComboBox()
 
-    def __init__(self, parent):
+    def __init__(self, initialUrl: str, parent: QWidget):
         super().__init__(parent)
 
         self.cloneInProgress = False
@@ -55,6 +54,8 @@ class CloneDialog(QDialog):
         self.cancelButton.setAutoDefault(False)
 
         self.ui.statusForm.setBlurb("Hit “Clone” when ready.")
+
+        self.ui.urlEdit.setCurrentText(initialUrl)
 
         convertToBrandedDialog(self)
 

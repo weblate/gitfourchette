@@ -1,4 +1,5 @@
 from allqt import *
+from typing import Literal
 from widgets.autohidemenubar import AutoHideMenuBar
 from widgets.aboutdialog import showAboutDialog
 from widgets.clonedialog import CloneDialog
@@ -12,6 +13,7 @@ from widgets.repowidget import RepoWidget
 import gc
 import os
 import pygit2
+import re
 import settings
 
 
@@ -75,6 +77,8 @@ class MainWindow(QMainWindow):
             self.memoryIndicator = None
         if settings.prefs.showStatusBar:
             self.setStatusBar(self.statusBar)
+
+        self.setAcceptDrops(True)
 
     def onMemoryIndicatorClicked(self):
         gc.collect()
@@ -406,8 +410,8 @@ class MainWindow(QMainWindow):
             pygit2.init_repository(path)
             self.openRepo(path)
 
-    def cloneDialog(self):
-        dlg = CloneDialog(self)
+    def cloneDialog(self, initialUrl: str = ""):
+        dlg = CloneDialog(initialUrl, self)
 
         def onSuccess(path: str):
             self.openRepo(path)
@@ -532,3 +536,41 @@ class MainWindow(QMainWindow):
     def closeEvent(self, e):
         self.saveSession()
         e.accept()
+
+    # -------------------------------------------------------------------------
+    # Drag and drop
+
+    @staticmethod
+    def getDropOutcomeFromMimeData(mime: QMimeData) -> tuple[Literal["", "open", "clone"], str]:
+        if mime.hasUrls() and len(mime.urls()) > 0:
+            url: QUrl = mime.urls()[0]
+            if url.isLocalFile():
+                return "open", url.path()
+            else:
+                return "clone", url.toString()
+
+        elif mime.hasText():
+            text = mime.text()
+            if os.path.isabs(text) and os.path.exists(text):
+                return "open", text
+            elif text.startswith(("ssh://", "git+ssh://", "https://", "http://")):
+                return "clone", text
+            elif re.match(r"^[a-zA-Z0-9-_.]+@.+:.+", text):
+                return "clone", text
+            else:
+                return "", text
+
+        else:
+            return "", ""
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        action, data = self.getDropOutcomeFromMimeData(event.mimeData())
+        if action:
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent):
+        action, data = self.getDropOutcomeFromMimeData(event.mimeData())
+        if action == "clone":
+            self.cloneDialog(data)
+        elif action == "open":
+            self.openRepo(data)
