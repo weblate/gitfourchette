@@ -32,7 +32,7 @@ class ActionFlows(QObject):
             self,
             title: str,
             text: str,
-            acceptButtonIcon: QStyle.StandardPixmap = None
+            acceptButtonIcon: (QStyle.StandardPixmap | str | None) = None
     ) -> QMessageBox:
 
         qmb = QMessageBox(
@@ -45,7 +45,10 @@ class ActionFlows(QObject):
         # Using QMessageBox.Ok instead of QMessageBox.Discard so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.Ok)
         if acceptButtonIcon:
-            yes.setIcon(self.parentWidget.style().standardIcon(acceptButtonIcon))
+            if type(acceptButtonIcon) is str:
+                yes.setIcon(QIcon.fromTheme(acceptButtonIcon))
+            else:
+                yes.setIcon(self.parentWidget.style().standardIcon(acceptButtonIcon))
         yes.setText(title)
 
         qmb.setDefaultButton(yes)
