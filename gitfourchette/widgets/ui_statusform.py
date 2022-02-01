@@ -25,6 +25,8 @@ class Ui_StatusForm(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.linkMessage = QLabel(self.progressPage)
         self.linkMessage.setObjectName(u"linkMessage")
+        self.linkMessage.setText(u"blah\n"
+"blah")
         self.linkMessage.setWordWrap(True)
 
         self.verticalLayout_2.addWidget(self.linkMessage)
@@ -44,6 +46,7 @@ class Ui_StatusForm(object):
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.blurbLabel = QLabel(self.blurbPage)
         self.blurbLabel.setObjectName(u"blurbLabel")
+        self.blurbLabel.setText(u"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.")
         self.blurbLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
         self.blurbLabel.setWordWrap(True)
         self.blurbLabel.setTextInteractionFlags(Qt.LinksAccessibleByMouse|Qt.TextSelectableByMouse)
@@ -57,13 +60,10 @@ class Ui_StatusForm(object):
 
         self.retranslateUi(StatusForm)
 
-        self.stackedWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(StatusForm)
 
     def retranslateUi(self, StatusForm):
         StatusForm.setWindowTitle(QCoreApplication.translate("StatusForm", u"Form", None))
-        self.linkMessage.setText(QCoreApplication.translate("StatusForm", u"blah\n"
-"blah", None))
-        self.blurbLabel.setText(QCoreApplication.translate("StatusForm", u"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.", None))

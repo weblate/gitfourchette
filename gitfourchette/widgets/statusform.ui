@@ -36,7 +36,7 @@
        <item>
         <widget class="QLabel" name="linkMessage">
          <property name="text">
-          <string>blah
+          <string notr="true">blah
 blah</string>
          </property>
          <property name="wordWrap">
@@ -64,7 +64,7 @@ blah</string>
        <item>
         <widget class="QLabel" name="blurbLabel">
          <property name="text">
-          <string>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</string>
+          <string notr="true">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

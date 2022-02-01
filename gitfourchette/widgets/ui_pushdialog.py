@@ -54,9 +54,7 @@ class Ui_PushDialog(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.trackingLabel.sizePolicy().hasHeightForWidth())
         self.trackingLabel.setSizePolicy(sizePolicy2)
-        self.trackingLabel.setTextFormat(Qt.AutoText)
-        self.trackingLabel.setScaledContents(False)
-        self.trackingLabel.setWordWrap(False)
+        self.trackingLabel.setText(u"tracking very very long remote branch name lalala")
 
         self.horizontalLayout_6.addWidget(self.trackingLabel)
 
@@ -144,21 +142,24 @@ class Ui_PushDialog(object):
 
         self.formLayout.setWidget(3, QFormLayout.FieldRole, self.buttonBox)
 
+#if QT_CONFIG(shortcut)
+        self.localBranchLabel.setBuddy(self.localBranchEdit)
+        self.remoteBranchLabel.setBuddy(self.remoteBranchEdit)
+#endif // QT_CONFIG(shortcut)
 
         self.retranslateUi(PushDialog)
         self.buttonBox.rejected.connect(PushDialog.reject)
 
-        self.remoteBranchOptionsStack.setCurrentIndex(1)
+        self.remoteBranchOptionsStack.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(PushDialog)
 
     def retranslateUi(self, PushDialog):
         PushDialog.setWindowTitle(QCoreApplication.translate("PushDialog", u"Push branch", None))
-        self.localBranchLabel.setText(QCoreApplication.translate("PushDialog", u"Local branch", None))
-        self.trackingLabel.setText(QCoreApplication.translate("PushDialog", u"tracking very very long remote branch name lalala", None))
-        self.remoteBranchLabel.setText(QCoreApplication.translate("PushDialog", u"Push to", None))
-        self.forcePushCheckBox.setText(QCoreApplication.translate("PushDialog", u"Force push", None))
+        self.localBranchLabel.setText(QCoreApplication.translate("PushDialog", u"&Local branch", None))
+        self.remoteBranchLabel.setText(QCoreApplication.translate("PushDialog", u"Push &to", None))
+        self.forcePushCheckBox.setText(QCoreApplication.translate("PushDialog", u"&Force push", None))
         self.customRemoteBranchNameEdit.setPlaceholderText(QCoreApplication.translate("PushDialog", u"Branch name on remote", None))
         self.statusLabel.setText(QCoreApplication.translate("PushDialog", u"Status", None))
         self.groupBox.setTitle("")
