@@ -21,9 +21,10 @@ class ActionFlows(QObject):
     newBranch = Signal(str)
     newRemote = Signal(str, str)  # name, url
     newTrackingBranch = Signal(str, str)
-    pushBranch = Signal(str)
     renameBranch = Signal(str, str)
     updateCommitDraftMessage = Signal(str)
+
+    pushComplete = Signal()
 
     def __init__(self, repo: pygit2.Repository, parent: QWidget):
         super().__init__(parent)
@@ -242,5 +243,6 @@ class ActionFlows(QObject):
 
         dlg = PushDialog(self.repo, branch, self.parentWidget)
         dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.accepted.connect(self.pushComplete)
         dlg.show()
         return dlg

@@ -140,9 +140,10 @@ class RepoWidget(QWidget):
         flows.newBranch.connect(self.newBranchAsync)
         flows.newRemote.connect(self.newRemoteAsync)
         flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
-        flows.pushBranch.connect(lambda name: unimplementedDialog("Push Branch"))
         flows.renameBranch.connect(self.renameBranchAsync)
         flows.updateCommitDraftMessage.connect(lambda message: self.state.setDraftCommitMessage(message))
+
+        flows.pushComplete.connect(self.quickRefreshWithSidebar)
 
         # ----------------------------------
 
