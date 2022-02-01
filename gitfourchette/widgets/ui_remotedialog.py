@@ -1,6 +1,3 @@
-from allqt import *
-
-
 ################################################################################
 ## Form generated from reading UI file 'remotedialog.ui'
 ##
@@ -9,6 +6,7 @@ from allqt import *
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+from allqt import *
 
 class Ui_RemoteDialog(object):
     def setupUi(self, RemoteDialog):
@@ -60,10 +58,8 @@ class Ui_RemoteDialog(object):
         self.buttonBox.rejected.connect(RemoteDialog.reject)
 
         QMetaObject.connectSlotsByName(RemoteDialog)
-    # setupUi
 
     def retranslateUi(self, RemoteDialog):
         RemoteDialog.setWindowTitle(QCoreApplication.translate("RemoteDialog", u"Edit remote", None))
         self.nameLabel.setText(QCoreApplication.translate("RemoteDialog", u"Name", None))
         self.urlLabel.setText(QCoreApplication.translate("RemoteDialog", u"URL", None))
-    # retranslateUi

@@ -68,13 +68,18 @@ for root, dirs, files in os.walk(srcDir):
 
         if file.endswith(".ui"):
             result = call(["uic-qt5", "--generator", "python", fullpath])
+            text = result.stdout
 
-            codeLines = ["from allqt import *", ""] + \
-                        [line for line in result.stdout.splitlines()
-                         if not line.startswith("from PySide2.")
-                         and not line.startswith("# -*- coding:")]
+            text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.MULTILINE)
+            text = re.sub(r"^from PySide2.* import .*$", "from allqt import *", text, count=1, flags=re.MULTILINE)
+            for nukePattern in [
+                    r"^# -\*- coding:.*$",
+                    r"^from PySide2.* import .*$\n",
+                    r"^ {4}# (setupUi|retranslateUi)$\n"]:
+                text = re.sub(nukePattern, "", text, flags=re.MULTILINE)
+            text = text.strip() + "\n"
 
-            writeIfDifferent(F"{root}/ui_{basename}.py", "\n".join(codeLines))
+            writeIfDifferent(F"{root}/ui_{basename}.py", text)
 
 for root, dirs, files in os.walk(assetsDir):
     for file in files:
@@ -83,4 +88,8 @@ for root, dirs, files in os.walk(assetsDir):
         os.utime(path, times=(0, 0))
 
 # Generate assets_rc.py from assets.qrc
-call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc", "--output", "gitfourchette/assets_rc.py"])
+rccResult = call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc"])
+rccText = rccResult.stdout
+rccText = re.sub(r"^(\s*)QtCore\.", r"\1", rccText, flags=re.MULTILINE)
+rccText = re.sub(r"^from PySide2.* import .*$", "from allqt import *", rccText, flags=re.MULTILINE)
+writeIfDifferent(F"{srcDir}/assets_rc.py", rccText)

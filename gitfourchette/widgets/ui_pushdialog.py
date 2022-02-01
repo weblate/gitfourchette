@@ -1,6 +1,3 @@
-from allqt import *
-
-
 ################################################################################
 ## Form generated from reading UI file 'pushdialog.ui'
 ##
@@ -9,6 +6,7 @@ from allqt import *
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+from allqt import *
 
 from widgets.statusform import StatusForm
 
@@ -154,7 +152,6 @@ class Ui_PushDialog(object):
 
 
         QMetaObject.connectSlotsByName(PushDialog)
-    # setupUi
 
     def retranslateUi(self, PushDialog):
         PushDialog.setWindowTitle(QCoreApplication.translate("PushDialog", u"Push branch", None))
@@ -165,4 +162,3 @@ class Ui_PushDialog(object):
         self.customRemoteBranchNameEdit.setPlaceholderText(QCoreApplication.translate("PushDialog", u"Branch name on remote", None))
         self.statusLabel.setText(QCoreApplication.translate("PushDialog", u"Status", None))
         self.groupBox.setTitle("")
-    # retranslateUi

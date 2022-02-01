@@ -1,6 +1,3 @@
-from allqt import *
-
-
 ################################################################################
 ## Form generated from reading UI file 'commitdialog.ui'
 ##
@@ -9,6 +6,7 @@ from allqt import *
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+from allqt import *
 
 from widgets.signatureform import SignatureForm
 
@@ -83,7 +81,6 @@ class Ui_CommitDialog(object):
         self.revealAuthor.toggled.connect(self.groupBox.setVisible)
 
         QMetaObject.connectSlotsByName(CommitDialog)
-    # setupUi
 
     def retranslateUi(self, CommitDialog):
         CommitDialog.setWindowTitle(QCoreApplication.translate("CommitDialog", u"Commit", None))
@@ -92,4 +89,3 @@ class Ui_CommitDialog(object):
         self.descriptionEditor.setPlaceholderText(QCoreApplication.translate("CommitDialog", u"Long-form description (optional)", None))
         self.revealAuthor.setText(QCoreApplication.translate("CommitDialog", u"&Edit author", None))
         self.groupBox.setTitle("")
-    # retranslateUi

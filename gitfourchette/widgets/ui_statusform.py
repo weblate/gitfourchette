@@ -1,6 +1,3 @@
-from allqt import *
-
-
 ################################################################################
 ## Form generated from reading UI file 'statusform.ui'
 ##
@@ -9,6 +6,7 @@ from allqt import *
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+from allqt import *
 
 
 class Ui_StatusForm(object):
@@ -63,11 +61,9 @@ class Ui_StatusForm(object):
 
 
         QMetaObject.connectSlotsByName(StatusForm)
-    # setupUi
 
     def retranslateUi(self, StatusForm):
         StatusForm.setWindowTitle(QCoreApplication.translate("StatusForm", u"Form", None))
         self.linkMessage.setText(QCoreApplication.translate("StatusForm", u"blah\n"
 "blah", None))
         self.blurbLabel.setText(QCoreApplication.translate("StatusForm", u"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.", None))
-    # retranslateUi

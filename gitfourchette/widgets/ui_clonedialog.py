@@ -1,6 +1,3 @@
-from allqt import *
-
-
 ################################################################################
 ## Form generated from reading UI file 'clonedialog.ui'
 ##
@@ -9,6 +6,7 @@ from allqt import *
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+from allqt import *
 
 from widgets.statusform import StatusForm
 
@@ -103,7 +101,6 @@ class Ui_CloneDialog(object):
         self.buttonBox.rejected.connect(CloneDialog.reject)
 
         QMetaObject.connectSlotsByName(CloneDialog)
-    # setupUi
 
     def retranslateUi(self, CloneDialog):
         CloneDialog.setWindowTitle(QCoreApplication.translate("CloneDialog", u"Clone repository", None))
@@ -112,4 +109,3 @@ class Ui_CloneDialog(object):
         self.browseButton.setText(QCoreApplication.translate("CloneDialog", u"&Browse...", None))
         self.label.setText(QCoreApplication.translate("CloneDialog", u"Status", None))
         self.groupBox.setTitle("")
-    # retranslateUi
