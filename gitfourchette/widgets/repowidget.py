@@ -117,6 +117,7 @@ class RepoWidget(QWidget):
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
         self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
+        self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
         self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
         self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)

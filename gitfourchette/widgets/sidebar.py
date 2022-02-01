@@ -1,12 +1,10 @@
-import html
-
-import porcelain
 from allqt import *
-from allqt import *
-from util import labelQuote, shortHash
+from html import escape
 from typing import Any
-import pygit2
+from util import labelQuote, shortHash, stockIcon
 import enum
+import porcelain
+import pygit2
 
 
 ACTIVE_BULLET = "★ "
@@ -323,7 +321,7 @@ class SidebarModel(QAbstractItemModel):
             if display:
                 return stash.message
             elif tooltip:
-                return F"<b>stash@{{{row}}}</b>:<br/>{html.escape(stash.message)}"
+                return F"<b>stash@{{{row}}}</b>:<br/>{escape(stash.message)}"
             elif user:
                 return stash.commit_id.hex
 
@@ -455,13 +453,11 @@ class Sidebar(QTreeView):
             menu.addSeparator()
 
             if branch.upstream:
-                a = menu.addAction(F"&Push to {labelQuote(branch.upstream.shorthand)}...",
-                                   lambda: self.pushBranch.emit(data))
-                a.setIcon(QIcon.fromTheme("vcs-push"))
+                menu.addAction(stockIcon("vcs-push"), F"&Push to {labelQuote(branch.upstream.shorthand)}...",
+                               lambda: self.pushBranch.emit(data))
             else:
-                a = menu.addAction("&Push: no tracked branch")
-                a.setEnabled(False)
-                a.setIcon(QIcon.fromTheme("vcs-push"))
+                menu.addAction(stockIcon("vcs-push"), "&Push...",
+                               lambda: self.pushBranch.emit(data))
 
             menu.addAction("Set &Tracked Branch...", lambda: self.editTrackingBranch.emit(data))
 
