@@ -91,6 +91,15 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     nameDict = defaultdict(list)
 
     for name in repo.branches.remote:
+        if name.endswith("/HEAD"):
+            # Skip refs/remotes/*/HEAD (the remote's default branch).
+            # The ref file (.git/refs/remotes/*/HEAD) is created ONCE when first cloning the repository,
+            # and it's never updated again automatically, even if the default branch has changed on the remote.
+            # It's a symbolic branch, so looking up a stale version of the remote's HEAD may raise KeyError.
+            # It's just not worth the trouble.
+            # See: https://stackoverflow.com/questions/8839958
+            continue
+
         remoteBranch = repo.branches.remote[name]
         remoteName = remoteBranch.remote_name
         strippedBranchName = name.removeprefix(remoteName + "/")
@@ -132,7 +141,7 @@ def deleteRemote(repo: Repository, remoteName: str):
 
 
 def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
-    tp = repo.remotes[remoteName].fetch(callbacks=remoteCallbacks)
+    tp = repo.remotes[remoteName].fetch(callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_PRUNE)
     return tp
 
 

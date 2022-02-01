@@ -138,12 +138,7 @@ class SidebarModel(QAbstractItemModel):
 
         self._remotes = [r.name for r in repo.remotes]
         self._remoteURLs = [repo.remotes[r].url for r in self._remotes]
-        self._remoteBranchesDict = {name: [] for name in self._remotes}
-        for remoteBranchName in repo.branches.remote:
-            remoteBranch = repo.branches.remote[remoteBranchName]
-            remoteName = remoteBranch.remote_name
-            strippedBranchName = remoteBranchName.removeprefix(remoteName + "/")
-            self._remoteBranchesDict[remoteName].append(strippedBranchName)
+        self._remoteBranchesDict = porcelain.getRemoteBranchNames(repo)
 
         self._tags = porcelain.getTagNames(repo)
 
