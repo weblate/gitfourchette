@@ -154,7 +154,7 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
         repoMenu.addSeparator()
-        repoMenu.addAction("Resc&ue Discarded Changes...", lambda: self.openRescueFolder)
+        repoMenu.addAction("Resc&ue Discarded Changes...", self.openRescueFolder)
         repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
 

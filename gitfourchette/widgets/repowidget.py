@@ -781,6 +781,6 @@ class RepoWidget(QWidget):
             QMessageBox.information(
                 self,
                 "Open Rescue Folder",
-                "There’s no rescue folder for this repository. It might be that you’ve never "
-                F"discarded a change using {QApplication.applicationDisplayName()} yet."
+                "There’s no rescue folder for this repository. Perhaps you haven’t "
+                F"discarded a change with {QApplication.applicationDisplayName()} yet."
             )
