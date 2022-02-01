@@ -18,6 +18,7 @@ class Ui_StatusForm(object):
         StatusForm.resize(455, 125)
         self.verticalLayout = QVBoxLayout(StatusForm)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.stackedWidget = QStackedWidget(StatusForm)
         self.stackedWidget.setObjectName(u"stackedWidget")
         self.progressPage = QWidget()

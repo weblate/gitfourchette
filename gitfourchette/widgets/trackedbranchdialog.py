@@ -1,6 +1,6 @@
 import porcelain
 from allqt import *
-from util import labelQuote
+from util import labelQuote, addComboBoxItem
 import pygit2
 
 from widgets import brandeddialog
@@ -24,18 +24,11 @@ class TrackedBranchDialog(QDialog):
         comboBox = QComboBox(self)
         self.comboBox = comboBox
 
-        def addComboBoxItem(caption, userData, isCurrent):
-            if isCurrent:
-                caption = "• " + caption
-            comboBox.addItem(caption, userData=userData)
-            if isCurrent:
-                comboBox.setCurrentIndex(comboBox.count() - 1)
-
         self.newTrackedBranchName = None
         if trackedBranch:
             self.newTrackedBranchName = trackedBranch.shorthand
 
-        addComboBoxItem("[don’t track any remote branch]", userData=None, isCurrent=not trackedBranch)
+        addComboBoxItem(comboBox, "[don’t track any remote branch]", userData=None, isCurrent=not trackedBranch)
 
         for remoteName, remoteBranches in porcelain.getRemoteBranchNames(repo).items():
             if not remoteBranches:
@@ -44,7 +37,9 @@ class TrackedBranchDialog(QDialog):
             #remotePrefix = F"refs/remotes/{remote.name}/"
             #remoteRefNames = (n for n in repo.listall_references() if n.startswith(remotePrefix))
             for remoteBranch in remoteBranches:
-                addComboBoxItem(F"{remoteName}/{remoteBranch}",
+                addComboBoxItem(
+                    comboBox,
+                    F"{remoteName}/{remoteBranch}",
                     userData=F"{remoteName}/{remoteBranch}",
                     isCurrent=trackedBranch and trackedBranch.name == F"refs/remotes/{remoteName}/{remoteBranch}")
 

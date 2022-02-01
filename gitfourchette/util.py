@@ -198,6 +198,23 @@ def quickMenu(
     return menu
 
 
+def addComboBoxItem(comboBox: QComboBox, caption: str, userData=None, isCurrent=False):
+    if isCurrent:
+        caption = "• " + caption
+    index = comboBox.count()
+    comboBox.addItem(caption, userData=userData)
+    if isCurrent:
+        comboBox.setCurrentIndex(index)
+    return index
+
+
+def stockIcon(iconId: QStyle.StandardPixmap | str):
+    if type(iconId) is str:
+        return QIcon.fromTheme(iconId)
+    else:
+        return QApplication.style().standardIcon(iconId)
+
+
 class QSignalBlockerContext:
     """
     Context manager wrapper around QSignalBlocker.

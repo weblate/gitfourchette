@@ -116,6 +116,7 @@ class CloneDialog(QDialog):
 
         def onError(exc: BaseException):
             QApplication.beep()
+            QApplication.alert(self, 500)
             self.cloneInProgress = False
             self.enableInputs(True)
             self.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {html.escape(str(exc))}")

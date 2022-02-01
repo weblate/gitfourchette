@@ -1,8 +1,10 @@
 import porcelain
 from allqt import *
+from html import escape
 from util import excMessageBox, labelQuote, shortHash
 from widgets.brandeddialog import showTextInputDialog
 from widgets.commitdialog import CommitDialog
+from widgets.pushdialog import PushDialog
 from widgets.remotedialog import RemoteDialog
 from widgets.trackedbranchdialog import TrackedBranchDialog
 import pygit2
@@ -195,7 +197,6 @@ class ActionFlows(QObject):
         def onReject():
             # Save draft message for next time
             self.updateCommitDraftMessage.emit(cd.getFullMessage())
-            #self.state.setDraftCommitMessage(cd.getFullMessage())
 
         cd.accepted.connect(onAccept)
         cd.rejected.connect(onReject)
@@ -226,79 +227,20 @@ class ActionFlows(QObject):
 
     # -------------------------------------------------------------------------
     # Push
-    # TODO: make async!
-    # TODO: REWRITE FOR PYGIT2!!!
 
     def pushFlow(self, branchName: str = None):
         if not branchName:
-            branchName = self.repo.active_branch.name
-
-        branch: pygit2.Branch
-        remote: pygit2.Remote
-        remote.push_refspecs
-
-        branch = repo.heads[branchName]
-        tracking = branch.tracking_branch()
-
-        if not tracking:
-            QMessageBox.warning(
-                self.parentWidget,
-                "Cannot Push a Non-Remote-Tracking Branch",
-                F"""Can’t push local branch <b>{labelQuote(branch.name)}</b>
-                because it isn’t tracking any remote branch.
-                <br><br>To set a remote branch to track, right-click on
-                local branch {labelQuote(branch.name)} in the sidebar,
-                and pick “Tracking”.""")
-            return
-
-        remote = repo.remote(tracking.remote_name)
-        urls = list(remote.urls)
-
-        qmb = QMessageBox(self)
-        qmb.setWindowTitle(F"Push “{branchName}”")
-        qmb.setIcon(QMessageBox.Question)
-        qmb.setText(F"""Confirm Push?<br>
-            <br>Branch: <b>“{branch.name}”</b>
-            <br>Tracking: <b>“{tracking.name}”</b>
-            <br>Will be pushed to remote: <b>{'; '.join(urls)}</b>""")
-        qmb.addButton("Push", QMessageBox.AcceptRole)
-        qmb.addButton("Cancel", QMessageBox.RejectRole)
-        qmb.accepted.connect(lambda: self.doPush(branchName))
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
-
-    def doPush(self, branchName: str):
-        progress = RemoteProgressDialog(self.parentWidget, "Push in progress")
-        pushInfos: list[git.PushInfo]
-
-        PUSHINFO_FAILFLAGS = git.PushInfo.REJECTED | git.PushInfo.REMOTE_FAILURE | git.PushInfo.ERROR
+            branchName = porcelain.getActiveBranchShorthand(self.repo)
 
         try:
-            pushInfos = remote.put(refspec=branchName, progress=progress)
-        except BaseException as e:
-            progress.close()
-            excMessageBox(e, "Push", "An error occurred while pushing.", parent=self.parentWidget)
+            branch = self.repo.branches.local[branchName]
+        except KeyError:
+            QMessageBox.warning(
+                self.parentWidget, "No Branch to Push",
+                "No valid local branch to push. Try switching to a local branch first.")
             return
 
-        progress.close()
-
-        if len(pushInfos) == 0:
-            QMessageBox.critical(self.parentWidget, "Push", "The push operation failed without a result.")
-            return
-
-        failed = False
-        report = ""
-        for info in pushInfos:
-            if 0 != (info.flags & PUSHINFO_FAILFLAGS):
-                failed = True
-            report += F"{info.remote_ref_string}: {info.summary.strip()}\n"
-            print(F"push info: {info}, summary: {info.summary.strip()}, local ref: {info.local_ref}; remote ref: {info.remote_ref_string}")
-
-        report = report.rstrip()
-        if failed:
-            report = "Push failed.\n\n" + report
-            QMessageBox.warning(self.parentWidget, "Push failed", report)
-        else:
-            self.quickRefresh()
-            report = "Push successful!\n\n" + report
-            QMessageBox.information(self.parentWidget, "Push successful", report)
+        dlg = PushDialog(self.repo, branch, self.parentWidget)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.show()
+        return dlg
