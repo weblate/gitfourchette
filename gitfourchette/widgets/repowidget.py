@@ -784,3 +784,21 @@ class RepoWidget(QWidget):
                 "There’s no rescue folder for this repository. Perhaps you haven’t "
                 F"discarded a change with {QApplication.applicationDisplayName()} yet."
             )
+
+    def clearRescueFolder(self):
+        trashSize = trash.getTrashSize(self.state.repo)
+
+        if not trashSize:
+            QMessageBox.information(self, "Clear Rescue Folder", "There are no discarded changes to delete.")
+            return
+
+        humanSize = self.locale().formattedDataSize(trashSize)
+        result = QMessageBox.question(
+            self,
+            "Clear Rescue Folder",
+            F"Do you want to permanently delete all the patches that you have discarded?\n"
+            F"This will free up {humanSize} on disk.\n"
+            F"This cannot be undone!")
+
+        if result == QMessageBox.Yes:
+            trash.clearTrash(self.state.repo)

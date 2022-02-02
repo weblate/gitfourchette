@@ -155,6 +155,7 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
         repoMenu.addSeparator()
         repoMenu.addAction("Resc&ue Discarded Changes...", self.openRescueFolder)
+        repoMenu.addAction("Clear Discarded Changes...", self.clearRescueFolder)
         repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
 
@@ -400,6 +401,10 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def openRescueFolder(self, rw: RepoWidget):
         rw.openRescueFolder()
+
+    @needRepoWidget
+    def clearRescueFolder(self, rw: RepoWidget):
+        rw.clearRescueFolder()
 
     # -------------------------------------------------------------------------
     # File menu callbacks

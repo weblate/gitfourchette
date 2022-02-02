@@ -52,3 +52,30 @@ def backupPatches(repo: Repository, patches: list[Patch]):
         else:
             # Write text patch
             backupPatch(repo, patch.data, path)
+
+
+def getTrashSize(repo: Repository):
+    path = getTrashPath(repo)
+
+    size = 0
+
+    if os.path.isdir(path):
+        for f in os.listdir(path):
+            filePath = os.path.join(path, f)
+            if os.path.isfile(filePath):
+                size += os.lstat(filePath).st_size
+
+    return size
+
+
+def clearTrash(repo: Repository):
+    path = getTrashPath(repo)
+
+    if os.path.isdir(path):
+        files = list(os.listdir(path))
+
+        for f in files:
+            filePath = os.path.join(path, f)
+            if os.path.isfile(filePath):
+                os.unlink(filePath)
+
