@@ -8,6 +8,9 @@ import os
 TEST_MODE = False
 
 
+REPO_SETTINGS_DIR = "gitfourchette"
+
+
 KEYS_ACCEPT = [Qt.Key_Enter, Qt.Key_Return]  # Enter = on keypad; Return = main keys
 KEYS_REJECT = [Qt.Key_Delete, Qt.Key_Backspace]
 

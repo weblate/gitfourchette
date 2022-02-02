@@ -168,7 +168,7 @@ class DiffView(QPlainTextEdit):
             return
 
         if purpose == PatchPurpose.DISCARD:
-            trash.trashRawPatch(self.currentGitRepo, patchData)
+            trash.backupPatch(self.currentGitRepo, patchData, self.currentPatch.delta.new_file.path)
 
         try:
             applyPatch(self.currentGitRepo, patchData, purpose)

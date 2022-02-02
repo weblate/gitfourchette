@@ -62,8 +62,6 @@ class RepoState:
     def __init__(self, dir):
         self.repo = Repository(dir)
         self.walker = None
-        self.settings = QSettings(self.repo.path + "/gitfourchette.ini", QSettings.Format.IniFormat)
-        self.settings.setValue("version", QCoreApplication.applicationVersion())
         self.currentBatchID = 0
 
         self.commitSequence = []
@@ -81,11 +79,14 @@ class RepoState:
 
         self.currentRefs = []
 
+        repoConfigPath = os.path.join(self.repo.path, settings.REPO_SETTINGS_DIR, "config.ini")
+        self.settings = QSettings(repoConfigPath, QSettings.IniFormat)
+
     def getDraftCommitMessage(self) -> str:
         return self.settings.value(SETTING_KEY_DRAFT_MESSAGE, "")
 
     def setDraftCommitMessage(self, newMessage: str | None):
-        if newMessage is None:
+        if not newMessage:
             self.settings.remove(SETTING_KEY_DRAFT_MESSAGE)
         else:
             self.settings.setValue(SETTING_KEY_DRAFT_MESSAGE, newMessage)
