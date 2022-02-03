@@ -215,6 +215,14 @@ def testAmendCommit(qtbot, workDirRepo, rw):
 
 @withRepo("TestGitRepository")
 @withPrep(None)
+def testEmptyCommitRaisesWarning(qtbot, workDirRepo, rw):
+    rw.commitButton.click()
+    q = testutil.findQDialog(rw, "empty commit")
+    q.reject()
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
 def testSaveOldRevision(qtbot, workDir, tempDir, rw):
     commitOid = testutil.hexToOid("6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
 
