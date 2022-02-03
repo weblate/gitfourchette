@@ -3,10 +3,10 @@ from bisect import bisect_left, bisect_right
 from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
 from pygit2 import GitError, Patch, Repository
 from stagingstate import StagingState
+from trash import Trash
 from util import excMessageBox, ActionDef, quickMenu
 from widgets.diffmodel import DiffModel
 import settings
-import trash
 
 
 class DiffGutter(QWidget):
@@ -168,7 +168,7 @@ class DiffView(QPlainTextEdit):
             return
 
         if purpose == PatchPurpose.DISCARD:
-            trash.backupPatch(self.currentGitRepo, patchData, self.currentPatch.delta.new_file.path)
+            Trash(self.currentGitRepo).backupPatch(patchData, self.currentPatch.delta.new_file.path)
 
         try:
             applyPatch(self.currentGitRepo, patchData, purpose)

@@ -1,81 +1,98 @@
-from allgit import *
-from settings import REPO_SETTINGS_DIR
 import datetime
 import os
+import pygit2
+import settings
 import shutil
 
-TRASH_DIR_NAME = "trash"
-TRASH_TIME_FORMAT = '%Y%m%dT%H%M%S'
 
+class Trash:
+    DIR_NAME = "trash"
+    TIME_FORMAT = '%Y%m%dT%H%M%S'
 
-def getTrashPath(repo: Repository) -> str:
-    return os.path.join(repo.path, REPO_SETTINGS_DIR, TRASH_DIR_NAME)
+    def __init__(self, repo: pygit2.Repository):
+        self.repo = repo
+        self.trashDir = os.path.join(repo.path, settings.REPO_SETTINGS_DIR, Trash.DIR_NAME)
+        self.trashFiles = []
+        self.refreshFiles()
 
+    def exists(self):
+        return os.path.isdir(self.trashDir)
 
-def newTrashFileName(repo: Repository, ext: str = "", originalPath: str = "") -> str:
-    trashDir = getTrashPath(repo)
-    os.makedirs(trashDir, exist_ok=True)
+    def refreshFiles(self):
+        self.trashFiles = []
+        if os.path.isdir(self.trashDir):
+            files = os.listdir(self.trashDir)
+            self.trashFiles = sorted(files, reverse=True)
 
-    now = datetime.datetime.now().strftime(TRASH_TIME_FORMAT)
-    baseName = os.path.basename(originalPath)
+    def makeRoom(self, maxFiles=-1):
+        if maxFiles < 0:
+            maxFiles = max(0, settings.prefs.trash_maxFiles-1)
 
-    path = os.path.join(trashDir, F'{now}-{baseName}{ext}')
+        while len(self.trashFiles) > maxFiles:
+            f = self.trashFiles.pop()
+            fullPath = os.path.join(self.trashDir, f)
+            if os.path.isfile(fullPath):
+                print("Deleting trash file", fullPath)
+                os.unlink(fullPath)
 
-    # If a file exists at this path, tack a number to the end of the name.
-    for differentiator in range(2, 100):  # If we reach 99, just overwrite the last one.
-        if os.path.exists(path):
-            path = os.path.join(trashDir, F'{now}-{baseName}({differentiator}){ext}')
-        else:
-            break
+    def newFile(self, ext: str = "", originalPath: str = "") -> str:
+        os.makedirs(self.trashDir, exist_ok=True)
 
-    return path
+        now = datetime.datetime.now().strftime(Trash.TIME_FORMAT)
+        baseName = os.path.basename(originalPath)
 
+        path = os.path.join(self.trashDir, F'{now}-{baseName}{ext}')
 
-def backupPatch(repo: Repository, data: bytes, originalPath: str = ""):
-    with open(newTrashFileName(repo, ext=".patch", originalPath=originalPath), 'wb') as f:
-        f.write(data)
+        # If a file exists at this path, tack a number to the end of the name.
+        for differentiator in range(2, 100):  # If we reach 99, just overwrite the last one.
+            if os.path.exists(path):
+                path = os.path.join(self.trashDir, F'{now}-{baseName}({differentiator}){ext}')
+            else:
+                break
 
+        self.makeRoom()
+        self.trashFiles.insert(0, path)
 
-def backupPatches(repo: Repository, patches: list[Patch]):
-    for patch in patches:
-        path = patch.delta.new_file.path
+        return path
 
-        if patch.delta.status == pygit2.GIT_DELTA_DELETED:
-            # It doesn't make sense to back up a file deletion
-            continue
+    def backupPatch(self, data: bytes, originalPath: str = ""):
+        trashFile = self.newFile(ext=".patch", originalPath=originalPath)
+        with open(trashFile, 'wb') as f:
+            f.write(data)
 
-        elif patch.delta.status == pygit2.GIT_DELTA_UNTRACKED or patch.delta.is_binary:
-            # Copy new file
-            trashedPath = newTrashFileName(repo, originalPath=path)
-            shutil.copyfile(os.path.join(repo.workdir, path), trashedPath)
+    def backupPatches(self, patches: list[pygit2.Patch]):
+        for patch in patches:
+            path = patch.delta.new_file.path
 
-        else:
-            # Write text patch
-            backupPatch(repo, patch.data, path)
+            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+                # It doesn't make sense to back up a file deletion
+                continue
 
+            elif patch.delta.status == pygit2.GIT_DELTA_UNTRACKED or patch.delta.is_binary:
+                fullPath = os.path.join(self.repo.workdir, path)
 
-def getTrashSize(repo: Repository):
-    path = getTrashPath(repo)
+                if os.lstat(fullPath).st_size > 1024*settings.prefs.trash_maxFileSizeKB:
+                    continue
 
-    size = 0
+                # Copy new file
+                trashedPath = self.newFile(originalPath=path)
+                shutil.copyfile(fullPath, trashedPath)
 
-    if os.path.isdir(path):
-        for f in os.listdir(path):
-            filePath = os.path.join(path, f)
+            else:
+                # Write text patch
+                self.backupPatch(patch.data, path)
+
+    def getSize(self):
+        size = 0
+        count = 0
+
+        for f in self.trashFiles:
+            filePath = os.path.join(self.trashDir, f)
             if os.path.isfile(filePath):
                 size += os.lstat(filePath).st_size
+                count += 1
 
-    return size
+        return size, count
 
-
-def clearTrash(repo: Repository):
-    path = getTrashPath(repo)
-
-    if os.path.isdir(path):
-        files = list(os.listdir(path))
-
-        for f in files:
-            filePath = os.path.join(path, f)
-            if os.path.isfile(filePath):
-                os.unlink(filePath)
-
+    def clear(self):
+        self.makeRoom(0)

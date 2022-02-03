@@ -1,4 +1,3 @@
-import trash
 from actionflows import ActionFlows
 from allqt import *
 from allgit import *
@@ -7,6 +6,7 @@ from remotelink import RemoteLink
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
+from trash import Trash
 from typing import Callable
 from util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext,
                   shortHash, unimplementedDialog)
@@ -583,7 +583,7 @@ class RepoWidget(QWidget):
     def discardFilesAsync(self, patches: list[Patch]):
         def work():
             paths = [patch.delta.new_file.path for patch in patches]
-            trash.backupPatches(self.repo, patches)
+            Trash(self.repo).backupPatches(patches)
             porcelain.discardFiles(self.repo, paths)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, fplural("Discarding # file^s", len(patches)))
@@ -774,31 +774,31 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def openRescueFolder(self):
-        trashPath = trash.getTrashPath(self.state.repo)
-        if os.path.exists(trashPath):
-            QDesktopServices.openUrl(QUrl(trashPath))
+        trash = Trash(self.state.repo)
+        if trash.exists():
+            QDesktopServices.openUrl(trash.trashDir)
         else:
             QMessageBox.information(
                 self,
                 "Open Rescue Folder",
                 "There’s no rescue folder for this repository. Perhaps you haven’t "
-                F"discarded a change with {QApplication.applicationDisplayName()} yet."
-            )
+                F"discarded a change with {QApplication.applicationDisplayName()} yet.")
 
     def clearRescueFolder(self):
-        trashSize = trash.getTrashSize(self.state.repo)
+        trash = Trash(self.state.repo)
+        sizeOnDisk, patchCount = trash.getSize()
 
-        if not trashSize:
+        if patchCount <= 0:
             QMessageBox.information(self, "Clear Rescue Folder", "There are no discarded changes to delete.")
             return
 
-        humanSize = self.locale().formattedDataSize(trashSize)
+        humanSize = self.locale().formattedDataSize(sizeOnDisk)
         result = QMessageBox.question(
             self,
             "Clear Rescue Folder",
-            F"Do you want to permanently delete all the patches that you have discarded?\n"
+            F"Do you want to permanently delete {fplural('# discarded patch^es', patchCount)}?\n"
             F"This will free up {humanSize} on disk.\n"
             F"This cannot be undone!")
 
         if result == QMessageBox.Yes:
-            trash.clearTrash(self.state.repo)
+            trash.clear()
