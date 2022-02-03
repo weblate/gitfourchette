@@ -35,3 +35,11 @@ def stagedNewEmptyFile(path):
     repo.index.add("SomeNewFile.txt")
     repo.index.write()
     assert repo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_INDEX_NEW}
+
+
+def stashedChange(path):
+    repo = pygit2.Repository(path)
+    testutil.writeFile(F"{path}/a/a1.txt", "a1\nPENDING CHANGE\n")
+    sig = pygit2.Signature("toto", "toto@example.com", 0, 0)
+    repo.stash(sig, "helloworld")
+    assert repo.status() == {}

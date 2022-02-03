@@ -7,6 +7,8 @@ import porcelain
 import pygit2
 
 
+ROLE_USERDATA = Qt.UserRole + 0
+ROLE_EITEM = Qt.UserRole + 1
 ACTIVE_BULLET = "★ "
 
 
@@ -145,11 +147,11 @@ class SidebarModel(QAbstractItemModel):
     def columnCount(self, parent: QModelIndex) -> int:
         return 1
 
-    def index(self, row, column, parent: QModelIndex) -> QModelIndex:
+    def index(self, row, column, parent: QModelIndex = None) -> QModelIndex:
         if column != 0 or row < 0:
             return QModelIndex()
 
-        if not parent.isValid():  # root
+        if not parent or not parent.isValid():  # root
             return self.createIndex(row, 0, HEADER_ITEMS[row].value)
 
         item = self.unpackItem(parent)
@@ -244,8 +246,11 @@ class SidebarModel(QAbstractItemModel):
         row = index.row()
         item = self.unpackItem(index)
 
+        if role == ROLE_EITEM:  # for testing (match by EItem type)
+            return item
+
         display = role == Qt.DisplayRole
-        user = role == Qt.UserRole
+        user = role == ROLE_USERDATA
         tooltip = role == Qt.ToolTipRole
         sizeHint = role == Qt.SizeHintRole
 
@@ -334,7 +339,7 @@ class SidebarModel(QAbstractItemModel):
 
         return None
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlags:
+    def flags(self, index: QModelIndex) -> int:
         item = self.unpackItem(index)
 
         if item == EItem.Spacer:
@@ -394,6 +399,11 @@ class Sidebar(QTreeView):
     fetchRemote = Signal(str)
     editRemote = Signal(str)
     deleteRemote = Signal(str)
+
+    newStash = Signal()
+    popStash = Signal(pygit2.Oid)
+    applyStash = Signal(pygit2.Oid)
+    dropStash = Signal(pygit2.Oid)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -480,6 +490,16 @@ class Sidebar(QTreeView):
 
         elif item == EItem.RemotesHeader:
             menu.addAction("&New Remote...", lambda: self.newRemote.emit())
+
+        elif item == EItem.StashesHeader:
+            menu.addAction("&New stash", lambda: self.newStash.emit())
+
+        elif item == EItem.Stash:
+            oid = pygit2.Oid(hex=data)
+            menu.addAction("&Pop (apply and delete)", lambda: self.popStash.emit(oid))
+            menu.addAction("&Apply", lambda: self.applyStash.emit(oid))
+            menu.addSeparator()
+            menu.addAction(stockIcon(QStyle.SP_TrashIcon), "&Delete", lambda: self.dropStash.emit(oid))
 
         return menu
 

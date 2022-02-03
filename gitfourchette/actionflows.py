@@ -6,6 +6,7 @@ from widgets.brandeddialog import showTextInputDialog
 from widgets.commitdialog import CommitDialog
 from widgets.pushdialog import PushDialog
 from widgets.remotedialog import RemoteDialog
+from widgets.stashdialog import StashDialog
 from widgets.trackedbranchdialog import TrackedBranchDialog
 import pygit2
 
@@ -25,6 +26,8 @@ class ActionFlows(QObject):
     updateCommitDraftMessage = Signal(str)
 
     pushComplete = Signal()
+
+    newStash = Signal(str, str)
 
     def __init__(self, repo: pygit2.Repository, parent: QWidget):
         super().__init__(parent)
@@ -244,5 +247,26 @@ class ActionFlows(QObject):
         dlg = PushDialog(self.repo, branch, self.parentWidget)
         dlg.setAttribute(Qt.WA_DeleteOnClose)
         dlg.accepted.connect(self.pushComplete)
+        dlg.show()
+        return dlg
+
+    # -------------------------------------------------------------------------
+    # Stash
+
+    def newStashFlow(self):
+        def onAccepted():
+            message = dlg.ui.messageEdit.text()
+            flags = ""
+            if dlg.ui.keepIndexCheckBox.isChecked():
+                flags += "k"
+            if dlg.ui.includeUntrackedCheckBox.isChecked():
+                flags += "u"
+            if dlg.ui.includeIgnoredCheckBox.isChecked():
+                flags += "i"
+            self.newStash.emit(message, flags)
+
+        dlg = StashDialog(self.parentWidget)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.accepted.connect(onAccepted)
         dlg.show()
         return dlg

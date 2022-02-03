@@ -1,6 +1,7 @@
 from helpers.qttest_imports import *
 import pygit2
 import os
+import re
 
 
 def writeFile(path, text):
@@ -9,13 +10,13 @@ def writeFile(path, text):
         f.write(text.encode("utf-8"))
 
 
-def qlvGetRowData(view: QListView):
+def qlvGetRowData(view: QListView, role=Qt.DisplayRole):
     model = view.model()
-    text = []
+    data = []
     for row in range(model.rowCount()):
         index = model.index(row, 0)
-        text.append(index.data(Qt.DisplayRole))
-    return text
+        data.append(index.data(role))
+    return data
 
 
 def qlvClickNthRow(view: QListView, n: int):
@@ -25,11 +26,10 @@ def qlvClickNthRow(view: QListView, n: int):
     QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=rect.center())
 
 
-def findMenuAction(menu: QMenu, subtext: str):
-    subtext = subtext.upper()
-
+def findMenuAction(menu: QMenu, pattern: str):
     for action in menu.actions():
-        if subtext in action.text().replace("&", "").upper():
+        actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())
+        if re.search(pattern, actionText, re.IGNORECASE):
             return action
 
 

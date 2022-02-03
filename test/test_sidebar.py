@@ -1,11 +1,10 @@
-import re
-
 from helpers.qttest_imports import *
-from helpers import testutil
+from helpers import testutil, reposcenario
 from helpers.fixtures import *
 from widgets.remotedialog import RemoteDialog
-
 from widgets.sidebar import EItem
+from widgets.stashdialog import StashDialog
+import re
 
 
 # TODO: Write test for switching
@@ -169,3 +168,77 @@ def testDeleteRemote(qtbot, workDirRepo, rw):
 
     assert len(list(workDirRepo.remotes)) == 0
 
+
+def getEItemIndices(rw: RepoWidget, item: EItem):
+    model: QAbstractItemModel = rw.sidebar.model()
+    indexList: list[QModelIndex] = model.match(model.index(0, 0), Qt.UserRole + 1, item, flags=Qt.MatchRecursive)
+    return indexList
+
+
+@withRepo("TestGitRepository")
+@withPrep(reposcenario.fileWithUnstagedChange)
+def testNewStash(qtbot, workDirRepo, rw):
+    assert len(workDirRepo.listall_stashes()) == 0
+
+    assert len(getEItemIndices(rw, EItem.Stash)) == 0
+    assert testutil.qlvGetRowData(rw.dirtyView) == ["a/a1.txt"]
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
+    testutil.findMenuAction(menu, "new stash").trigger()
+
+    dlg: StashDialog = testutil.findQDialog(rw, "new stash")
+    dlg.ui.messageEdit.setText("helloworld")
+    dlg.accept()
+
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(workDirRepo.listall_stashes()) == 1
+    assert len(stashIndices) == 1
+    assert stashIndices[0].data(Qt.DisplayRole).endswith("helloworld")
+    assert testutil.qlvGetRowData(rw.dirtyView) == []
+
+
+@withRepo("TestGitRepository")
+@withPrep(reposcenario.stashedChange)
+def testPopStash(qtbot, workDirRepo, rw):
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(stashIndices) == 1
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
+    testutil.findMenuAction(menu, "^pop").trigger()
+
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(workDirRepo.listall_stashes()) == 0
+    assert len(stashIndices) == 0
+    assert testutil.qlvGetRowData(rw.dirtyView) == ["a/a1.txt"]
+
+
+@withRepo("TestGitRepository")
+@withPrep(reposcenario.stashedChange)
+def testApplyStash(qtbot, workDirRepo, rw):
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(stashIndices) == 1
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
+    testutil.findMenuAction(menu, r"^apply").trigger()
+
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(workDirRepo.listall_stashes()) == 1
+    assert len(stashIndices) == 1
+    assert testutil.qlvGetRowData(rw.dirtyView) == ["a/a1.txt"]
+
+
+@withRepo("TestGitRepository")
+@withPrep(reposcenario.stashedChange)
+def testDropStash(qtbot, workDirRepo, rw):
+    assert testutil.qlvGetRowData(rw.dirtyView) == []
+
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(stashIndices) == 1
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
+    testutil.findMenuAction(menu, "^delete").trigger()
+
+    stashIndices = getEItemIndices(rw, EItem.Stash)
+    assert len(workDirRepo.listall_stashes()) == 0
+    assert len(stashIndices) == 0
+    assert testutil.qlvGetRowData(rw.dirtyView) == []

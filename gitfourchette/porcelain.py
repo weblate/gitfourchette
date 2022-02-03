@@ -322,3 +322,40 @@ def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
             obj = headTree[old_path]
             index.add(pygit2.IndexEntry(old_path, obj.oid, obj.filemode))
     index.write()
+
+
+def newStash(repo: Repository, message: str, flags: str) -> pygit2.Oid:
+    oid = repo.stash(
+        stasher=repo.default_signature,
+        message=message,
+        keep_index='k' in flags,
+        include_untracked='u' in flags,
+        include_ignored='i' in flags)
+    return oid
+
+
+def findStashIndex(repo: Repository, commitOid: pygit2.Oid):
+    """
+    Libgit2 takes an index number to apply/pop/drop stashes. However, it's
+    unsafe to cache such an index for the GUI. Instead, we cache the commit ID
+    of the stash, and we only convert that to an index when we need to perform
+    an operation on the stash. This way, we'll always manipulate the stash
+    intended by the user, even if the indices change outside our control.
+    """
+    return next(i
+                for i, stash in enumerate(repo.listall_stashes())
+                if stash.commit_id == commitOid)
+
+
+def applyStash(repo: Repository, commitId: pygit2.Oid):
+    repo.stash_apply(findStashIndex(repo, commitId))
+
+
+def popStash(repo: Repository, commitId: pygit2.Oid):
+    repo.stash_pop(findStashIndex(repo, commitId))
+
+
+def dropStash(repo: Repository, commitId: pygit2.Oid):
+    repo.stash_drop(findStashIndex(repo, commitId))
+
+

@@ -126,6 +126,11 @@ class RepoWidget(QWidget):
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
 
+        self.sidebar.newStash.connect(self.actionFlows.newStashFlow)
+        self.sidebar.applyStash.connect(self.applyStashAsync)
+        self.sidebar.dropStash.connect(self.dropStashAsync)
+        self.sidebar.popStash.connect(self.popStashAsync)
+
         # ----------------------------------
 
         flows = self.actionFlows
@@ -139,6 +144,7 @@ class RepoWidget(QWidget):
         flows.editTrackingBranch.connect(self.editTrackingBranchAsync)
         flows.newBranch.connect(self.newBranchAsync)
         flows.newRemote.connect(self.newRemoteAsync)
+        flows.newStash.connect(self.newStashAsync)
         flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
         flows.renameBranch.connect(self.renameBranchAsync)
         flows.updateCommitDraftMessage.connect(lambda message: self.state.setDraftCommitMessage(message))
@@ -592,6 +598,26 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.unstageFiles(self.repo, patches)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, fplural("Unstaging # file^s", len(patches)))
+
+    def newStashAsync(self, message: str, flags: str):
+        def work(): return porcelain.newStash(self.repo, message, flags)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, "New stash")
+
+    def applyStashAsync(self, commitId: Oid):
+        def work(): porcelain.applyStash(self.repo, commitId)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, "Apply stash")
+
+    def popStashAsync(self, commitId: Oid):
+        def work(): porcelain.popStash(self.repo, commitId)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, "Pop stash")
+
+    def dropStashAsync(self, commitId: Oid):
+        def work(): porcelain.dropStash(self.repo, commitId)
+        then = lambda _: self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, "Delete stash")
 
     # -------------------------------------------------------------------------
     # Pull
