@@ -1,6 +1,15 @@
-qtBindingName = "PySide2"
+def getPreferredQtBindingName(fallback="pyside2"):
+    import os
+    for variable in ["QT_PREFERRED_BINDING", "PYTEST_QT_API"]:
+        binding = os.environ.get(variable)
+        if binding:
+            return binding.lower()
+    return fallback
 
-if qtBindingName == "PyQt5":
+
+qtBindingName = getPreferredQtBindingName()
+
+if qtBindingName == "pyqt5":
     from PyQt5.QtWidgets import *
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
@@ -8,13 +17,13 @@ if qtBindingName == "PyQt5":
     from PyQt5.QtCore import PYQT_VERSION_STR as qtBindingVersion
     from PyQt5.QtCore import pyqtSignal as Signal
     from PyQt5.QtCore import pyqtSlot as Slot
-elif qtBindingName == "PySide2":
+elif qtBindingName == "pyside2":
     from PySide2.QtWidgets import *
     from PySide2.QtGui import *
     from PySide2.QtCore import *
     from PySide2.QtCore import __version__ as qtVersion
     from PySide2 import __version__ as qtBindingVersion
-elif qtBindingName == "PySide6":
+elif qtBindingName == "pyside6":
     from PySide6.QtWidgets import *
     from PySide6.QtGui import *
     from PySide6.QtCore import *
