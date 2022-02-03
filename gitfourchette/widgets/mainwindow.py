@@ -136,17 +136,13 @@ class MainWindow(QMainWindow):
         repoMenu: QMenu = menubar.addMenu("&Repo")
         repoMenu.setObjectName("MWRepoMenu")
         repoMenu.addAction("&Refresh", self.quickRefresh, QKeySequence.Refresh)
-        repoMenu.addAction("Hard &Refresh", self.refresh, QKeySequence("Ctrl+F5"))
+        repoMenu.addAction("&Hard Refresh", self.refresh, QKeySequence("Ctrl+F5"))
         repoMenu.addSeparator()
-        repoMenu.addAction("Open Repo Folder", self.openRepoFolder)
-        repoMenu.addAction("Copy Repo Path", self.copyRepoPath)
-        repoMenu.addAction("Rename Repo...", self.renameRepo)
+        repoMenu.addAction("&Commit...", self.commit, QKeySequence("Ctrl+K"))
+        repoMenu.addAction("&Amend Last Commit...", self.amend, QKeySequence("Ctrl+Shift+K"))
         repoMenu.addSeparator()
-        repoMenu.addAction("Commit...", self.commit, QKeySequence("Ctrl+K"))
-        repoMenu.addAction("Amend Last Commit...", self.amend, QKeySequence("Ctrl+Shift+K"))
-        repoMenu.addSeparator()
-        repoMenu.addAction("New Branch...", self.newBranch, QKeySequence("Ctrl+B"))
-        repoMenu.addAction("Push Active Branch...", self.push, QKeySequence("Ctrl+P"))
+        repoMenu.addAction("New &Branch...", self.newBranch, QKeySequence("Ctrl+B"))
+        repoMenu.addAction("&Push Branch...", self.push, QKeySequence("Ctrl+P"))
         repoMenu.addSeparator()
         repoMenu.addAction("New Remote...", self.newRemote)
         repoMenu.addSeparator()
@@ -154,10 +150,19 @@ class MainWindow(QMainWindow):
         repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext(), QKeySequence.FindNext)
         repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious(), QKeySequence.FindPrevious)
         repoMenu.addSeparator()
+        configFilesMenu = repoMenu.addMenu("&Local Config Files")
+        repoMenu.addAction("&Open Repo Folder", self.openRepoFolder, QKeySequence("Ctrl+Shift+O"))
+        repoMenu.addAction("Cop&y Repo Path", self.copyRepoPath)
+        repoMenu.addAction("Rename Repo...", self.renameRepo)
+        repoMenu.addSeparator()
         repoMenu.addAction("Resc&ue Discarded Changes...", self.openRescueFolder)
         repoMenu.addAction("Clear Discarded Changes...", self.clearRescueFolder)
         repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
+
+        configFilesMenu.addAction(".gitignore", self.openGitignore)
+        configFilesMenu.addAction("config", self.openLocalConfig)
+        configFilesMenu.addAction("exclude", self.openLocalExclude)
 
         patchMenu = menubar.addMenu("&Patch")
         patchMenu.setObjectName("MWPatchMenu")
@@ -405,6 +410,18 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def clearRescueFolder(self, rw: RepoWidget):
         rw.clearRescueFolder()
+
+    @needRepoWidget
+    def openGitignore(self, rw: RepoWidget):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(rw.repo.workdir + ".gitignore"))
+
+    @needRepoWidget
+    def openLocalConfig(self, rw: RepoWidget):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(rw.repo.path + "/config"))
+
+    @needRepoWidget
+    def openLocalExclude(self, rw: RepoWidget):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(rw.repo.path + "/info/exclude"))
 
     # -------------------------------------------------------------------------
     # File menu callbacks
