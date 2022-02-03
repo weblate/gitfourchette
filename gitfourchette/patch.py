@@ -159,8 +159,6 @@ def applyPatch(repo: pygit2.Repository, patchData: bytes, purpose: PatchPurpose)
         patchFile.write(patchData)
         print("Wrote", prefix)
     '''
-
     diff = pygit2.Diff.parse_diff(patchData)
     print(F"Will apply to {location}? ", repo.applies(diff, location))
-    result = repo.apply(diff, location)
-    assert not result, "Patch failed to apply"
+    repo.apply(diff, location)
