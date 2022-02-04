@@ -105,6 +105,9 @@ class DiffView(QPlainTextEdit):
         # Get position of click in document
         clickedPosition = self.cursorForPosition(event.pos()).position()
 
+        cursor: QTextCursor = self.textCursor()
+        hasSelection = cursor.hasSelection()
+
         # Find hunk at click position
         clickedHunkID = self.findHunkIDAt(clickedPosition)
 
@@ -112,42 +115,52 @@ class DiffView(QPlainTextEdit):
 
         actions = []
 
-        actionWordWrap = ActionDef(F"&Word wrap", self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1)
-
         if self.currentStagingState in [None, StagingState.COMMITTED, StagingState.UNTRACKED]:
-            actions = [
-                ActionDef("Export Lines as Patch...", self.exportSelection),
-                ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
-                None,
-                actionWordWrap,
-            ]
+            if hasSelection:
+                actions = [
+                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                ]
+            else:
+                actions = [
+                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                ]
+
         elif self.currentStagingState == StagingState.UNSTAGED:
-            actions = [
-                ActionDef("Stage Lines", self.stageSelection),
-                ActionDef("Discard Lines", self.discardSelection, QStyle.SP_TrashIcon),
-                ActionDef("Export Lines as Patch...", self.exportSelection),
-                None,
-                ActionDef(F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
-                ActionDef(F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
-                ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
-                None,
-                actionWordWrap
-            ]
+            if hasSelection:
+                actions = [
+                    ActionDef("Stage Lines", self.stageSelection),
+                    ActionDef("Discard Lines", self.discardSelection, QStyle.SP_TrashIcon),
+                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                ]
+            else:
+                actions = [
+                    ActionDef(F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
+                    ActionDef(F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
+                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                ]
+
         elif self.currentStagingState == StagingState.STAGED:
-            actions = [
-                ActionDef("Unstage Lines", self.unstageSelection),
-                ActionDef("Export Lines as Patch...", self.exportSelection),
-                ActionDef(F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
-                ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
-                None,
-                actionWordWrap
-            ]
+            if hasSelection:
+                actions = [
+                    ActionDef("Unstage Lines", self.unstageSelection),
+                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                ]
+            else:
+                actions = [
+                    ActionDef(F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
+                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                ]
+
         else:
             QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
+            return
 
-        if actions:
-            menu = quickMenu(self, actions, menu)
+        actions += [
+            None,
+            ActionDef(F"&Word wrap", self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
+        ]
 
+        menu = quickMenu(self, actions, menu)
         menu.exec_(event.globalPos())
 
     def toggleWordWrap(self):
