@@ -24,10 +24,6 @@ import settings
 import typing
 
 
-FILESSTACK_READONLY_CARD = 0
-FILESSTACK_STAGE_CARD = 1
-
-
 def sanitizeSearchTerm(x):
     if not x:
         return None
@@ -181,15 +177,13 @@ class RepoWidget(QWidget):
         self.amendButton.clicked.connect(self.actionFlows.amendFlow)
         commitButtonsContainer.layout().addWidget(self.commitButton)
         commitButtonsContainer.layout().addWidget(self.amendButton)
-        stageSplitter = QSplitter(Qt.Vertical)
-        stageSplitter.addWidget(dirtyContainer)
-        stageSplitter.addWidget(stageContainer)
+        self.stageSplitter = QSplitter(Qt.Vertical)
+        self.stageSplitter.addWidget(dirtyContainer)
+        self.stageSplitter.addWidget(stageContainer)
 
         self.filesStack.addWidget(self.changedFilesView)
-        self.filesStack.addWidget(stageSplitter)
-        self.filesStack.setCurrentIndex(FILESSTACK_READONLY_CARD)
-        assert self.filesStack.widget(FILESSTACK_READONLY_CARD) == self.changedFilesView
-        assert self.filesStack.widget(FILESSTACK_STAGE_CARD) == stageSplitter
+        self.filesStack.addWidget(self.stageSplitter)
+        self.filesStack.setCurrentWidget(self.changedFilesView)
 
         self.diffStack.addWidget(self.diffView)
         self.diffStack.addWidget(self.richDiffView)
@@ -218,9 +212,9 @@ class RepoWidget(QWidget):
         # object names are required for state saving to work
         mainSplitter.setObjectName("MainSplitter")
         bottomSplitter.setObjectName("BottomSplitter")
-        stageSplitter.setObjectName("StageSplitter")
+        self.stageSplitter.setObjectName("StageSplitter")
         sideSplitter.setObjectName("SideSplitter")
-        self.splittersToSave = [mainSplitter, bottomSplitter, stageSplitter, sideSplitter]
+        self.splittersToSave = [mainSplitter, bottomSplitter, self.stageSplitter, sideSplitter]
         # save splitter state in splitterMoved signal
         for splitter in self.splittersToSave:
             splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
@@ -353,7 +347,7 @@ class RepoWidget(QWidget):
 
     def setNoCommitSelected(self):
         self.saveFilePositions()
-        self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
+        self.filesStack.setCurrentWidget(self.stageSplitter)
         self.changedFilesView.clear()
 
     def fillStageViewAsync(self):
@@ -382,7 +376,7 @@ class RepoWidget(QWidget):
             self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
 
             # Switch to correct card in filesStack to show dirtyView and stageView
-            self.filesStack.setCurrentIndex(FILESSTACK_STAGE_CARD)
+            self.filesStack.setCurrentWidget(self.stageSplitter)
 
             # After patchApplied.emit has caused a refresh of the dirty/staged file views,
             # restore selected row in appropriate file list view so the user can keep hitting
@@ -421,7 +415,7 @@ class RepoWidget(QWidget):
             #self.changedFilesView.selectFirstRow()
 
             # Switch to correct card in filesStack to show changedFilesView
-            self.filesStack.setCurrentIndex(FILESSTACK_READONLY_CARD)
+            self.filesStack.setCurrentWidget(self.changedFilesView)
 
             self.restoreSelectedFile()
 
@@ -757,7 +751,7 @@ class RepoWidget(QWidget):
         # force redraw visible portion of the graph view to reflect any changed tags/refs
         self.graphView.setDirtyRegion(QRegion(0, 0, self.graphView.width(), self.graphView.height()))
 
-        if self.filesStack.currentIndex() == FILESSTACK_STAGE_CARD:
+        if self.filesStack.currentWidget() == self.stageSplitter:
             self.fillStageViewAsync()
         globalstatus.clearProgress()
 
