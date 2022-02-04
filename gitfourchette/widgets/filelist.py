@@ -1,8 +1,10 @@
 from allqt import *
+from pathlib import Path
 from stagingstate import StagingState
 from tempdir import getSessionTemporaryDirectory
 from typing import Generator, Any
-from util import compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash
+from util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash,
+                  fplural as plur)
 import bisect
 import html
 import pygit2
@@ -136,12 +138,13 @@ class FileList(QListView):
         self.flModel.clear()
 
     def contextMenuEvent(self, event: QContextMenuEvent):
-        if len(self.selectedIndexes()) == 0:
+        numIndexes = len(self.selectedIndexes())
+        if numIndexes == 0:
             return
-        menu = quickMenu(self, self.createContextMenuActions())
+        menu = quickMenu(self, self.createContextMenuActions(numIndexes))
         menu.exec_(event.globalPos())
 
-    def createContextMenuActions(self):
+    def createContextMenuActions(self, count):
         return []
 
     def confirmSelectedEntries(self, text: str, threshold: int =3) -> list[pygit2.Patch]:
@@ -241,6 +244,38 @@ class FileList(QListView):
         except IndexError:
             return None
 
+    def savePatchAs(self, saveInto=None):
+        entries = list(self.selectedEntries())
+
+        names = set()
+
+        bigpatch = b""
+        for diff in entries:
+            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+                diffFile = diff.delta.old_file
+            else:
+                diffFile = diff.delta.new_file
+            if diff.data:
+                bigpatch += diff.data
+                names.add(Path(diffFile.path).stem)
+
+        if not bigpatch:
+            QApplication.beep()
+            return
+
+        name = ", ".join(sorted(names)) + ".patch"
+
+        if saveInto:
+            savePath = os.path.join(saveInto, name)
+        else:
+            savePath, _ = QFileDialog.getSaveFileName(self, "Save patch file", name)
+
+        if not savePath:
+            return
+
+        with open(savePath, "wb") as f:
+            f.write(bigpatch)
+
 
 class DirtyFiles(FileList):
     stageFiles = Signal(list)
@@ -251,15 +286,16 @@ class DirtyFiles(FileList):
 
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
-    def createContextMenuActions(self):
+    def createContextMenuActions(self, n):
         return [
-            ActionDef("&Stage", self.stage, QStyle.SP_ArrowDown),
-            ActionDef("&Discard Changes", self.discard, QStyle.SP_TrashIcon),
+            ActionDef(plur("&Stage #~File^s", n), self.stage, QStyle.SP_ArrowDown),
+            ActionDef(plur("&Discard Changes", n), self.discard, QStyle.SP_TrashIcon),
             None,
-            ActionDef("&Open File in External Editor", self.openFile, icon=QStyle.SP_FileIcon),
+            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, icon=QStyle.SP_FileIcon),
+            ActionDef("Save As Patch...", self.savePatchAs),
             None,
-            ActionDef("Open Containing &Folder", self.showInFolder, icon=QStyle.SP_DirIcon),
-            ActionDef("&Copy Path", self.copyPaths),
+            ActionDef(plur("Open Containing Folder^s", n), self.showInFolder, icon=QStyle.SP_DirIcon),
+            ActionDef(plur("&Copy Path^s", n), self.copyPaths),
         ]
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -286,15 +322,16 @@ class StagedFiles(FileList):
 
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
-    def createContextMenuActions(self):
+    def createContextMenuActions(self, n):
         return [
-            ActionDef("&Unstage", self.unstage, QStyle.SP_ArrowUp),
+            ActionDef(plur("&Unstage #~File^s", n), self.unstage, QStyle.SP_ArrowUp),
             None,
-            ActionDef("&Open File in External Editor", self.openFile, QStyle.SP_FileIcon),
+            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, QStyle.SP_FileIcon),
+            ActionDef("Save As Patch...", self.savePatchAs),
             None,
-            ActionDef("Open Containing &Folder", self.showInFolder, QStyle.SP_DirIcon),
-            ActionDef("&Copy Path", self.copyPaths),
-        ] + super().createContextMenuActions()
+            ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.SP_DirIcon),
+            ActionDef(plur("&Copy Path^s", n), self.copyPaths),
+        ] + super().createContextMenuActions(n)
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
@@ -314,13 +351,14 @@ class CommittedFiles(FileList):
         super().__init__(parent, StagingState.COMMITTED)
         self.commitOid = None
 
-    def createContextMenuActions(self):
+    def createContextMenuActions(self, n):
         return [
-                ActionDef("Open Revision in External Editor", self.openRevision, QStyle.SP_FileIcon),
-                ActionDef("Save Revision As...", self.saveRevisionAs, QStyle.SP_DialogSaveButton),
+                ActionDef(plur("Open #~Revision^s in External Editor", n), self.openRevision, QStyle.SP_FileIcon),
+                ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.SP_DialogSaveButton),
+                ActionDef("Save As Patch...", self.savePatchAs),
                 None,
-                ActionDef("Open Containing &Folder", self.showInFolder, QStyle.SP_DirIcon),
-                ActionDef("&Copy Path", self.copyPaths),
+                ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.SP_DirIcon),
+                ActionDef(plur("&Copy Path^s", n), self.copyPaths),
                 ]
 
     def clear(self):

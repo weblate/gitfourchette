@@ -25,7 +25,13 @@ def hasFlag(value, flag):
 
 
 def fplural(fmt: str, n: int) -> str:
+    if n == 1:
+        fmt = fmt.replace("#~", "")
+    else:
+        fmt = fmt.replace("#~", "# ")
+
     out = fmt.replace("#", str(n))
+
     if n == 1:
         out = re.sub(r"\^\w+", "", out)
     else:
