@@ -112,7 +112,9 @@ def excMessageBox(
         title="Unhandled Exception",
         message="An exception was thrown.",
         parent=None,
-        printExc=True
+        printExc=True,
+        showExcSummary=True,
+        icon=QMessageBox.Critical
 ):
     if printExc:
         traceback.print_exception(exc.__class__, exc, exc.__traceback__)
@@ -122,18 +124,29 @@ def excMessageBox(
         sys.stderr.write("excMessageBox: not on application thread; bailing out\n")
         return
 
-    summary = traceback.format_exception_only(exc.__class__, exc)
-    summary = ''.join(summary).strip()
+    if showExcSummary:
+        summary = traceback.format_exception_only(exc.__class__, exc)
+        summary = ''.join(summary).strip()
+        message += "\n\n" + summary
+
+    def shortenTracebackPath(line):
+        return re.sub(r'^\s*File "([^"]+)"',
+                      lambda m: F'File "{os.path.basename(m.group(1))}"',
+                      line, 1)
 
     details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+    details = [shortenTracebackPath(line) for line in details]
     details = ''.join(details).strip()
 
-    qmb = QMessageBox(QMessageBox.Critical, title, F"{message}\n\n{summary}", parent=parent)
+    qmb = QMessageBox(icon, title, message, parent=parent)
     qmb.setDetailedText(details)
 
-    horizontalSpacer = QSpacerItem(500, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
-    layout = qmb.layout()
-    layout.addItem(horizontalSpacer, layout.rowCount(), 0, 1, layout.columnCount())
+    detailsEdit: QTextEdit = qmb.findChild(QTextEdit, options=Qt.FindChildrenRecursively)
+    if detailsEdit:
+        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        font.setPointSize(min(font.pointSize(), 8))
+        detailsEdit.setFont(font)
+        detailsEdit.setMinimumWidth(600)
 
     qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
 
