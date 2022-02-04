@@ -1,14 +1,6 @@
 from dataclasses import dataclass
-import enum
 import io
 import pygit2
-
-
-@enum.unique
-class PatchPurpose(enum.IntEnum):
-    STAGE = enum.auto()
-    UNSTAGE = enum.auto()
-    DISCARD = enum.auto()
 
 
 @dataclass
@@ -17,29 +9,19 @@ class DiffLinePos:
     hunkLineNum: int
 
 
-@dataclass
-class LineData:
-    # For visual representation
-    text: str
-
-    diffLine: pygit2.DiffLine | None
-
-    cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
-
-    hunkPos: DiffLinePos
-
-
-def makePatchFromLines(
+def extractSubpatch(
         oldPath: str,
         newPath: str,
         masterPatch: pygit2.Patch,
-        startPos: DiffLinePos,  # index of first selected line in LineData list
-        endPos: DiffLinePos,  # index of last selected line in LineData list
+        startPos: DiffLinePos,  # index of first selected line in master patch
+        endPos: DiffLinePos,  # index of last selected line in master patch
         reverse: bool
 ) -> bytes:
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
+
+    a = pygit2.GIT_DELTA_ADDED
 
     def originToDelta(origin):
         if origin == '+':
@@ -143,22 +125,3 @@ def makePatchFromLines(
         return b""
     else:
         return patch.getvalue()
-
-
-def applyPatch(repo: pygit2.Repository, patchData: bytes, purpose: PatchPurpose):
-    if purpose == PatchPurpose.DISCARD:
-        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
-    else:
-        assert purpose in [PatchPurpose.STAGE, PatchPurpose.UNSTAGE]
-        location = pygit2.GIT_APPLY_LOCATION_INDEX
-
-    '''
-    print("////////\n" + patchData.decode() + "///////////")
-    prefix = F"gitfourchette-DEBUG-{os.path.basename(repo.workdir)}-"
-    with tempfile.NamedTemporaryFile(mode='wb', suffix=".patch", prefix=prefix, delete=False) as patchFile:
-        patchFile.write(patchData)
-        print("Wrote", prefix)
-    '''
-    diff = pygit2.Diff.parse_diff(patchData)
-    print(F"Will apply to {location}? ", repo.applies(diff, location))
-    repo.apply(diff, location)

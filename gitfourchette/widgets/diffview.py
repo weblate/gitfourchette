@@ -1,12 +1,22 @@
 from allqt import *
 from bisect import bisect_left, bisect_right
-from patch import LineData, PatchPurpose, makePatchFromLines, applyPatch
+from subpatch import extractSubpatch
 from pygit2 import GitError, Patch, Repository
 from stagingstate import StagingState
 from trash import Trash
 from util import excMessageBox, ActionDef, quickMenu
-from widgets.diffmodel import DiffModel
+from widgets.diffmodel import DiffModel, LineData
+import enum
+import os
+import porcelain
 import settings
+
+
+@enum.unique
+class PatchPurpose(enum.IntEnum):
+    STAGE = enum.auto()
+    UNSTAGE = enum.auto()
+    DISCARD = enum.auto()
 
 
 class DiffGutter(QWidget):
@@ -29,7 +39,7 @@ class DiffView(QPlainTextEdit):
     lineHunkIDCache: list[int]
     currentStagingState: StagingState
     currentPatch: Patch
-    currentGitRepo: Repository
+    repo: Repository
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -43,7 +53,7 @@ class DiffView(QPlainTextEdit):
         self.lineHunkIDCache = []
         self.currentStagingState = None
         self.currentPatch = None
-        self.currentGitRepo = None
+        self.repo = None
 
         self.gutterMaxDigits = 0
 
@@ -53,26 +63,13 @@ class DiffView(QPlainTextEdit):
         # self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateGutterWidth(0)
 
-    def findLineDataIndexAt(self, cursorPosition: int, firstLineDataIndex: int = 0):
-        if not self.lineData:
-            return -1
-        index = bisect_right(self.lineCursorStartCache, cursorPosition, firstLineDataIndex)
-        return index - 1
-
-    def findHunkIDAt(self, cursorPosition: int):
-        clickLineDataIndex = self.findLineDataIndexAt(cursorPosition)
-        try:
-            return self.lineData[clickLineDataIndex].hunkPos.hunkID
-        except IndexError:
-            return -1
-
     def replaceDocument(self, repo: Repository, patch: Patch, stagingState: StagingState, dm: DiffModel):
         oldDocument = self.document()
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
 
         self.currentStagingState = stagingState
-        self.currentGitRepo = repo
+        self.repo = repo
         self.currentPatch = patch
 
         self.setFont(dm.document.defaultFont())
@@ -119,22 +116,29 @@ class DiffView(QPlainTextEdit):
 
         if self.currentStagingState in [None, StagingState.COMMITTED, StagingState.UNTRACKED]:
             actions = [
-                actionWordWrap
+                ActionDef("Export Lines as Patch...", self.exportSelection),
+                ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                None,
+                actionWordWrap,
             ]
         elif self.currentStagingState == StagingState.UNSTAGED:
             actions = [
-                ActionDef("Stage Lines", self.stageLines),
-                ActionDef("Discard Lines", self.discardLines, QStyle.SP_TrashIcon),
+                ActionDef("Stage Lines", self.stageSelection),
+                ActionDef("Discard Lines", self.discardSelection, QStyle.SP_TrashIcon),
+                ActionDef("Export Lines as Patch...", self.exportSelection),
                 None,
                 ActionDef(F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
                 ActionDef(F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
+                ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
                 None,
                 actionWordWrap
             ]
         elif self.currentStagingState == StagingState.STAGED:
             actions = [
-                ActionDef("Unstage Lines", self.unstageLines),
+                ActionDef("Unstage Lines", self.unstageSelection),
+                ActionDef("Export Lines as Patch...", self.exportSelection),
                 ActionDef(F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
+                ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
                 None,
                 actionWordWrap
             ]
@@ -151,34 +155,40 @@ class DiffView(QPlainTextEdit):
         settings.prefs.write()
         self.refreshWordWrap()
 
-    def _applyPatch(self, firstLineDataIndex: int, lastLineDataIndex: int, purpose: PatchPurpose):
-        reverse = purpose != PatchPurpose.STAGE
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+        if k in settings.KEYS_ACCEPT:
+            if self.currentStagingState == StagingState.UNSTAGED:
+                self.stageSelection()
+            else:
+                QApplication.beep()
+        elif k in settings.KEYS_REJECT:
+            if self.currentStagingState == StagingState.STAGED:
+                self.unstageSelection()
+            elif self.currentStagingState == StagingState.UNSTAGED:
+                self.discardSelection()
+            else:
+                QApplication.beep()
+        else:
+            super().keyPressEvent(event)
 
-        patchData = makePatchFromLines(
-            self.currentPatch.delta.old_file.path,
-            self.currentPatch.delta.new_file.path,
-            self.currentPatch,
-            self.lineData[firstLineDataIndex].hunkPos,
-            self.lineData[lastLineDataIndex].hunkPos,
-            reverse)
+    # ---------------------------------------------
+    # Patch
 
-        if not patchData:
-            QMessageBox.information(self, "Nothing to patch",
-                                    "Select one or more red or green lines before applying a partial patch.")
-            return
+    def findLineDataIndexAt(self, cursorPosition: int, firstLineDataIndex: int = 0):
+        if not self.lineData:
+            return -1
+        index = bisect_right(self.lineCursorStartCache, cursorPosition, firstLineDataIndex)
+        return index - 1
 
-        if purpose == PatchPurpose.DISCARD:
-            Trash(self.currentGitRepo).backupPatch(patchData, self.currentPatch.delta.new_file.path)
-
+    def findHunkIDAt(self, cursorPosition: int):
+        clickLineDataIndex = self.findLineDataIndexAt(cursorPosition)
         try:
-            applyPatch(self.currentGitRepo, patchData, purpose)
-        except GitError as e:
-            excMessageBox(e, F"{purpose.name}: Apply Patch",
-                          F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
+            return self.lineData[clickLineDataIndex].hunkPos.hunkID
+        except IndexError:
+            return -1
 
-        self.patchApplied.emit()
-
-    def _applyPatchFromSelectedLines(self, purpose: PatchPurpose):
+    def extractSelection(self, reverse=False) -> bytes:
         cursor: QTextCursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -192,61 +202,104 @@ class DiffView(QPlainTextEdit):
         biStart = self.findLineDataIndexAt(posStart)
         biEnd = self.findLineDataIndexAt(posEnd, biStart)
 
-        print(F"{purpose.name} lines:  cursor({posStart}-{posEnd})  bisect({biStart}-{biEnd})")
+        return extractSubpatch(
+            self.currentPatch.delta.old_file.path,
+            self.currentPatch.delta.new_file.path,
+            self.currentPatch,
+            self.lineData[biStart].hunkPos,
+            self.lineData[biEnd].hunkPos,
+            reverse)
 
-        self._applyPatch(biStart, biEnd, purpose)
-
-    def stageLines(self):
-        self._applyPatchFromSelectedLines(PatchPurpose.STAGE)
-
-    def unstageLines(self):
-        self._applyPatchFromSelectedLines(PatchPurpose.UNSTAGE)
-
-    def discardLines(self):
-        rc = QMessageBox.warning(self, "Really discard lines?",
-                                 "Really discard the selected lines?\nThis cannot be undone!",
-                                 QMessageBox.Discard | QMessageBox.Cancel)
-        if rc == QMessageBox.Discard:
-            self._applyPatchFromSelectedLines(PatchPurpose.DISCARD)
-
-    def _applyHunk(self, hunkID: int, purpose: PatchPurpose):
+    def extractHunk(self, hunkID: int, reverse=False) -> bytes:
         # Find indices of first and last LineData objects given the current hunk
         hunkFirstLineIndex = bisect_left(self.lineHunkIDCache, hunkID, 0)
         hunkLastLineIndex = bisect_left(self.lineHunkIDCache, hunkID+1, hunkFirstLineIndex) - 1
 
-        print(F"{purpose.name} hunk #{hunkID}:  line data indices {hunkFirstLineIndex}-{hunkLastLineIndex}")
+        return extractSubpatch(
+            self.currentPatch.delta.old_file.path,
+            self.currentPatch.delta.new_file.path,
+            self.currentPatch,
+            self.lineData[hunkFirstLineIndex].hunkPos,
+            self.lineData[hunkLastLineIndex].hunkPos,
+            reverse)
 
-        self._applyPatch(hunkFirstLineIndex, hunkLastLineIndex, purpose)
+    def applyPatch(self, patchData: bytes, purpose: PatchPurpose):
+        if not patchData:
+            QMessageBox.information(self, "Nothing to patch",
+                                    "Select one or more red/green lines before applying a partial patch.")
+            return
+
+        discard = purpose == PatchPurpose.DISCARD
+        if discard:
+            Trash(self.repo).backupPatch(patchData, self.currentPatch.delta.new_file.path)
+
+        try:
+            porcelain.applyPatch(self.repo, patchData, discard)
+        except GitError as e:
+            excMessageBox(e, F"{purpose.name}: Apply Patch",
+                          F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
+
+        self.patchApplied.emit()
+
+    def exportPatch(self, patchData: bytes, saveInto=""):
+        if not patchData:
+            QApplication.beep()
+            return
+
+        name = os.path.basename(self.currentPatch.delta.new_file.path) + "[partial].patch"
+
+        if saveInto:
+            savePath = os.path.join(saveInto, name)
+        else:
+            savePath, _ = QFileDialog.getSaveFileName(self, "Export selected lines", name)
+
+        if savePath:
+            with open(savePath, "wb") as file:
+                file.write(patchData)
+
+    def applySelection(self, purpose: PatchPurpose):
+        reverse = purpose != PatchPurpose.STAGE
+        patchData = self.extractSelection(reverse)
+        self.applyPatch(patchData, purpose)
+
+    def applyHunk(self, hunkID: int, purpose: PatchPurpose):
+        reverse = purpose != PatchPurpose.STAGE
+        patchData = self.extractHunk(hunkID, reverse)
+        self.applyPatch(patchData, purpose)
+
+    def stageSelection(self):
+        self.applySelection(PatchPurpose.STAGE)
+
+    def unstageSelection(self):
+        self.applySelection(PatchPurpose.UNSTAGE)
+
+    def discardSelection(self):
+        rc = QMessageBox.warning(self, "Really discard lines?",
+                                 "Really discard the selected lines?\nThis cannot be undone!",
+                                 QMessageBox.Discard | QMessageBox.Cancel)
+        if rc == QMessageBox.Discard:
+            self.applySelection(PatchPurpose.DISCARD)
+
+    def exportSelection(self, saveInto=""):
+        patchData = self.extractSelection()
+        self.exportPatch(patchData, saveInto)
 
     def stageHunk(self, hunkID: int):
-        self._applyHunk(hunkID, PatchPurpose.STAGE)
+        self.applyHunk(hunkID, PatchPurpose.STAGE)
 
     def unstageHunk(self, hunkID: int):
-        self._applyHunk(hunkID, PatchPurpose.UNSTAGE)
+        self.applyHunk(hunkID, PatchPurpose.UNSTAGE)
 
     def discardHunk(self, hunkID: int):
         rc = QMessageBox.warning(self, "Really discard hunk?",
                                  "Really discard this hunk?\nThis cannot be undone!",
                                  QMessageBox.Discard | QMessageBox.Cancel)
         if rc == QMessageBox.Discard:
-            self._applyHunk(hunkID, PatchPurpose.DISCARD)
+            self.applyHunk(hunkID, PatchPurpose.DISCARD)
 
-    def keyPressEvent(self, event: QKeyEvent):
-        k = event.key()
-        if k in settings.KEYS_ACCEPT:
-            if self.currentStagingState == StagingState.UNSTAGED:
-                self.stageLines()
-            else:
-                QApplication.beep()
-        elif k in settings.KEYS_REJECT:
-            if self.currentStagingState == StagingState.STAGED:
-                self.unstageLines()
-            elif self.currentStagingState == StagingState.UNSTAGED:
-                self.discardLines()
-            else:
-                QApplication.beep()
-        else:
-            super().keyPressEvent(event)
+    def exportHunk(self, hunkID: int, saveInto=""):
+        patchData = self.extractHunk(hunkID)
+        self.exportPatch(patchData, saveInto)
 
     # ---------------------------------------------
     # Gutter (inspired by https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html)

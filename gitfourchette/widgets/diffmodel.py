@@ -1,10 +1,22 @@
 from allqt import *
 from dataclasses import dataclass
+from subpatch import DiffLinePos
 import colors
 import os
-import patch as patchutils
 import pygit2
 import settings
+
+
+@dataclass
+class LineData:
+    # For visual representation
+    text: str
+
+    diffLine: pygit2.DiffLine | None
+
+    cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
+
+    hunkPos: DiffLinePos
 
 
 class DiffModelError(BaseException):
@@ -64,7 +76,7 @@ def createDocument():
 @dataclass
 class DiffModel:
     document: QTextDocument
-    lineData: list[patchutils.LineData]
+    lineData: list[LineData]
     style: DiffStyle
 
     @staticmethod
@@ -129,7 +141,7 @@ class DiffModel:
 
         lineData = []
 
-        def insertLineData(ld: patchutils.LineData, bf, cf):
+        def insertLineData(ld: LineData, bf, cf):
             lineData.append(ld)
 
             trailer = None
@@ -165,22 +177,22 @@ class DiffModel:
             oldLine = hunk.old_start
             newLine = hunk.new_start
 
-            hunkHeaderLD = patchutils.LineData(
+            hunkHeaderLD = LineData(
                 text=hunk.header,
                 cursorStart=cursor.position(),
                 diffLine=None,
-                hunkPos=patchutils.DiffLinePos(hunkID, -1))
+                hunkPos=DiffLinePos(hunkID, -1))
             insertLineData(hunkHeaderLD, style.arobaseBF, style.arobaseCF)
 
             for hunkLineNum, diffLine in enumerate(hunk.lines):
                 if diffLine.origin in "=><":  # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
                     continue
 
-                ld = patchutils.LineData(
+                ld = LineData(
                     text=diffLine.content,
                     cursorStart=cursor.position(),
                     diffLine=diffLine,
-                    hunkPos=patchutils.DiffLinePos(hunkID, hunkLineNum))
+                    hunkPos=DiffLinePos(hunkID, hunkLineNum))
 
                 bf = defaultBF
 

@@ -1,5 +1,4 @@
 from collections import defaultdict
-
 from pygit2 import Commit, Diff, Oid, Repository, Signature, Branch
 import pygit2
 
@@ -359,3 +358,11 @@ def dropStash(repo: Repository, commitId: pygit2.Oid):
     repo.stash_drop(findStashIndex(repo, commitId))
 
 
+def applyPatch(repo: pygit2.Repository, patchData: bytes, discard: bool):
+    if discard:
+        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
+    else:
+        location = pygit2.GIT_APPLY_LOCATION_INDEX
+
+    diff = pygit2.Diff.parse_diff(patchData)
+    repo.apply(diff, location)
