@@ -115,7 +115,22 @@ class DiffView(QPlainTextEdit):
 
         actions = []
 
-        if self.currentStagingState in [None, StagingState.COMMITTED, StagingState.UNTRACKED]:
+        if self.currentStagingState == None:
+            actions = []
+
+        elif self.currentStagingState == StagingState.COMMITTED:
+            if hasSelection:
+                actions = [
+                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                    ActionDef("Revert Lines...", self.revertSelection),
+                ]
+            else:
+                actions = [
+                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef("Revert Hunk...", lambda: self.revertHunk(clickedHunkID)),
+                ]
+
+        elif self.currentStagingState == StagingState.UNTRACKED:
             if hasSelection:
                 actions = [
                     ActionDef("Export Lines as Patch...", self.exportSelection),
@@ -270,6 +285,15 @@ class DiffView(QPlainTextEdit):
             with open(savePath, "wb") as file:
                 file.write(patchData)
 
+    def revertPatch(self, patchData: bytes):
+        if not patchData:
+            QApplication.beep()
+        elif not porcelain.patchApplies(self.repo, patchData, discard=True):
+            QMessageBox.warning(self, "Revert patch", "Couldn't revert this patch.\nThe code may have diverged too much from this revision.")
+        else:
+            porcelain.applyPatch(self.repo, patchData, discard=True)
+            self.patchApplied.emit()
+
     def applySelection(self, purpose: PatchPurpose):
         reverse = purpose != PatchPurpose.STAGE
         patchData = self.extractSelection(reverse)
@@ -297,6 +321,10 @@ class DiffView(QPlainTextEdit):
         patchData = self.extractSelection()
         self.exportPatch(patchData, saveInto)
 
+    def revertSelection(self):
+        patchData = self.extractSelection(reverse=True)
+        self.revertPatch(patchData)
+
     def stageHunk(self, hunkID: int):
         self.applyHunk(hunkID, PatchPurpose.STAGE)
 
@@ -313,6 +341,10 @@ class DiffView(QPlainTextEdit):
     def exportHunk(self, hunkID: int, saveInto=""):
         patchData = self.extractHunk(hunkID)
         self.exportPatch(patchData, saveInto)
+
+    def revertHunk(self, hunkID: int):
+        patchData = self.extractHunk(hunkID, reverse=True)
+        self.revertPatch(patchData)
 
     # ---------------------------------------------
     # Gutter (inspired by https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html)

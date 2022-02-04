@@ -366,3 +366,13 @@ def applyPatch(repo: pygit2.Repository, patchData: bytes, discard: bool):
 
     diff = pygit2.Diff.parse_diff(patchData)
     repo.apply(diff, location)
+
+
+def patchApplies(repo: pygit2.Repository, patchData: bytes, discard: bool):
+    if discard:
+        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
+    else:
+        location = pygit2.GIT_APPLY_LOCATION_INDEX
+
+    diff = pygit2.Diff.parse_diff(patchData)
+    return repo.applies(diff, location)
