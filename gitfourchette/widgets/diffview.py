@@ -336,17 +336,17 @@ class DiffView(QPlainTextEdit):
         painter = QPainter(self.gutter)
         painter.setFont(self.font())
 
-        GW = self.gutter.width()
         FH = self.fontMetrics().height()
         er = event.rect()
+        gr = self.gutter.rect()
 
         # Background
-        painter.fillRect(er, palette.color(QPalette.ColorRole.Base))
+        painter.fillRect(er, palette.color(QPalette.AlternateBase))
 
         # Draw separator
         gutterSepColor = palette.color(QPalette.PlaceholderText)
         gutterSepColor.setAlpha(80)
-        painter.fillRect(er.x() + er.width() - 1, er.y(), 1, er.height(), gutterSepColor)
+        painter.fillRect(gr.x() + gr.width() - 1, er.y(), 1, er.height(), gutterSepColor)
 
         block: QTextBlock = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
@@ -363,7 +363,7 @@ class DiffView(QPlainTextEdit):
                 old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else "·"
                 new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
 
-                colW = (GW-4)//2
+                colW = (gr.width() - 4) // 2
                 painter.drawText(0, top, colW, FH, Qt.AlignRight, old)
                 painter.drawText(colW, top, colW, FH, Qt.AlignRight, new)
 
