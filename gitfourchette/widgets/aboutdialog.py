@@ -22,7 +22,7 @@ def showAboutDialog(parent: QWidget):
         <p><small>
             libgit2         <b>{pygit2.LIBGIT2_VERSION}</b><br>
             pygit2          <b>{pygit2.__version__}</b><br>
-            Qt              <b>{qtVersion}</b><br>
+            Qt              <b>{qVersion()}</b><br>
             {qtBindingName} <b>{qtBindingVersion}</b><br>
             Python          <b>{'.'.join(str(i) for i in sys.version_info)}</b>
         </small></p>
