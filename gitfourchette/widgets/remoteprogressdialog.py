@@ -1,4 +1,4 @@
-from ..qt import *
+from gitfourchette.qt import *
 
 class RemoteProgressDialog:
     # TODO: Rewrite me!

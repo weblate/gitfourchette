@@ -1,14 +1,14 @@
-from .. import settings
-from ..globalstatus import globalstatus
-from ..qt import *
-from ..repostate import RepoState
-from ..util import (compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
-from .aboutdialog import showAboutDialog
-from .autohidemenubar import AutoHideMenuBar
-from .clonedialog import CloneDialog
-from .customtabwidget import CustomTabWidget
-from .prefsdialog import PrefsDialog
-from .repowidget import RepoWidget
+from gitfourchette import settings
+from gitfourchette.globalstatus import globalstatus
+from gitfourchette.qt import *
+from gitfourchette.repostate import RepoState
+from gitfourchette.util import (compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
+from gitfourchette.widgets.aboutdialog import showAboutDialog
+from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
+from gitfourchette.widgets.clonedialog import CloneDialog
+from gitfourchette.widgets.customtabwidget import CustomTabWidget
+from gitfourchette.widgets.prefsdialog import PrefsDialog
+from gitfourchette.widgets.repowidget import RepoWidget
 from typing import Literal
 import gc
 import os

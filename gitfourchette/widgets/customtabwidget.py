@@ -1,5 +1,5 @@
-from ..qt import *
-from .. import settings
+from gitfourchette.qt import *
+from gitfourchette import settings
 
 
 class CustomTabBar(QTabBar):

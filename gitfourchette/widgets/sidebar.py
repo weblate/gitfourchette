@@ -1,6 +1,6 @@
-from .. import porcelain
-from ..qt import *
-from ..util import labelQuote, shortHash, stockIcon
+from gitfourchette import porcelain
+from gitfourchette.qt import *
+from gitfourchette.util import labelQuote, shortHash, stockIcon
 from html import escape
 from typing import Any
 import enum

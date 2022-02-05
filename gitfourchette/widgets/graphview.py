@@ -1,10 +1,10 @@
-from .. import porcelain
-from .. import settings
-from ..qt import *
-from ..util import messageSummary, fplural, shortHash
-from .brandeddialog import showTextInputDialog
-from .graphdelegate import GraphDelegate
-from .resetheaddialog import ResetHeadDialog
+from gitfourchette import porcelain
+from gitfourchette import settings
+from gitfourchette.qt import *
+from gitfourchette.util import messageSummary, fplural, shortHash
+from gitfourchette.widgets.brandeddialog import showTextInputDialog
+from gitfourchette.widgets.graphdelegate import GraphDelegate
+from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from html import escape
 import pygit2
 

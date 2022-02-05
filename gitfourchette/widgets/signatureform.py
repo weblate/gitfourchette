@@ -1,5 +1,5 @@
-from ..qt import *
-from .ui_signatureform import Ui_SignatureForm
+from gitfourchette.qt import *
+from gitfourchette.widgets.ui_signatureform import Ui_SignatureForm
 from pygit2 import Signature
 
 

@@ -1,4 +1,4 @@
-from ..qt import *
+from gitfourchette.qt import *
 from typing import Callable
 
 

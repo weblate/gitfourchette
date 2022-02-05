@@ -1,5 +1,5 @@
-from ..qt import *
-from ..util import shortHash
+from gitfourchette.qt import *
+from gitfourchette.util import shortHash
 
 
 # TODO: document --merge and --keep, and expose them through the dialog

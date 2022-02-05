@@ -1,5 +1,5 @@
-from ..qt import *
-from .diffmodel import DiffModelError
+from gitfourchette.qt import *
+from gitfourchette.widgets.diffmodel import DiffModelError
 import html
 
 

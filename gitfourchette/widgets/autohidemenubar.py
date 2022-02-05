@@ -1,5 +1,5 @@
-from ..qt import *
-from .. import settings
+from gitfourchette import settings
+from gitfourchette.qt import *
 
 
 class AutoHideMenuBar(QObject):

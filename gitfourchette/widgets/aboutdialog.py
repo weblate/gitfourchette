@@ -1,4 +1,4 @@
-from ..qt import *
+from gitfourchette.qt import *
 import pygit2
 import sys
 

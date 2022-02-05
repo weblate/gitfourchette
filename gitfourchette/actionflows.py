@@ -1,13 +1,13 @@
-from . import porcelain
-from .qt import *
+from gitfourchette import porcelain
+from gitfourchette.qt import *
+from gitfourchette.util import excMessageBox, labelQuote, shortHash
+from gitfourchette.widgets.brandeddialog import showTextInputDialog
+from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.widgets.pushdialog import PushDialog
+from gitfourchette.widgets.remotedialog import RemoteDialog
+from gitfourchette.widgets.stashdialog import StashDialog
+from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
 from html import escape
-from .util import excMessageBox, labelQuote, shortHash
-from .widgets.brandeddialog import showTextInputDialog
-from .widgets.commitdialog import CommitDialog
-from .widgets.pushdialog import PushDialog
-from .widgets.remotedialog import RemoteDialog
-from .widgets.stashdialog import StashDialog
-from .widgets.trackedbranchdialog import TrackedBranchDialog
 import pygit2
 
 

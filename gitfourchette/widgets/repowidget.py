@@ -1,23 +1,23 @@
-from .. import porcelain
-from .. import settings
-from ..actionflows import ActionFlows
-from ..benchmark import Benchmark
-from ..globalstatus import globalstatus
-from ..navhistory import NavHistory, NavPos
-from ..qt import *
-from ..remotelink import RemoteLink
-from ..repostate import RepoState
-from ..stagingstate import StagingState
-from ..trash import Trash
-from ..util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash, unimplementedDialog)
-from ..workqueue import WorkQueue
-from .brandeddialog import showTextInputDialog
-from .diffmodel import DiffModel, DiffModelError
-from .diffview import DiffView
-from .filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
-from .graphview import GraphView
-from .richdiffview import RichDiffView
-from .sidebar import Sidebar
+from gitfourchette import porcelain
+from gitfourchette import settings
+from gitfourchette.actionflows import ActionFlows
+from gitfourchette.benchmark import Benchmark
+from gitfourchette.globalstatus import globalstatus
+from gitfourchette.navhistory import NavHistory, NavPos
+from gitfourchette.qt import *
+from gitfourchette.remotelink import RemoteLink
+from gitfourchette.repostate import RepoState
+from gitfourchette.stagingstate import StagingState
+from gitfourchette.trash import Trash
+from gitfourchette.util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash, unimplementedDialog)
+from gitfourchette.workqueue import WorkQueue
+from gitfourchette.widgets.brandeddialog import showTextInputDialog
+from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError
+from gitfourchette.widgets.diffview import DiffView
+from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
+from gitfourchette.widgets.graphview import GraphView
+from gitfourchette.widgets.richdiffview import RichDiffView
+from gitfourchette.widgets.sidebar import Sidebar
 import os
 import pygit2
 

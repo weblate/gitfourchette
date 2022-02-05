@@ -1,14 +1,14 @@
-from ..qt import *
+from gitfourchette.qt import *
 from html import escape
-from ..remotelink import RemoteLink
-from ..util import addComboBoxItem, stockIcon
-from .brandeddialog import convertToBrandedDialog
-from .ui_pushdialog import Ui_PushDialog
-from ..workqueue import WorkQueue
+from gitfourchette.remotelink import RemoteLink
+from gitfourchette.util import addComboBoxItem, stockIcon
+from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
+from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
+from gitfourchette.workqueue import WorkQueue
 import enum
-from .. import porcelain
+from gitfourchette import porcelain
 import pygit2
-from ..util import QSignalBlockerContext
+from gitfourchette.util import QSignalBlockerContext
 
 
 class ERemoteItem(enum.Enum):

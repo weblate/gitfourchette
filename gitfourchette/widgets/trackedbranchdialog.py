@@ -1,8 +1,8 @@
-from .. import porcelain
-from ..qt import *
-from ..util import labelQuote, addComboBoxItem
+from gitfourchette import porcelain
+from gitfourchette.qt import *
+from gitfourchette.util import labelQuote, addComboBoxItem
+from gitfourchette.widgets.brandeddialog import makeBrandedDialog
 import pygit2
-from . import brandeddialog
 
 
 class TrackedBranchDialog(QDialog):
@@ -63,7 +63,7 @@ class TrackedBranchDialog(QDialog):
                                 "try fetching the remote first.</small>"))
         layout.addWidget(buttonBox)
 
-        brandeddialog.makeBrandedDialog(self, layout, F"Set branch tracked by “{localBranch.shorthand}”")
+        makeBrandedDialog(self, layout, F"Set branch tracked by “{localBranch.shorthand}”")
 
         self.setModal(True)
         self.resize(512, 128)

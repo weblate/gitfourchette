@@ -1,9 +1,9 @@
-from .. import colors
-from .. import settings
-from ..graphpaint import paintGraphFrame
-from ..qt import *
-from ..repostate import RepoState
-from ..util import messageSummary
+from gitfourchette import colors
+from gitfourchette import settings
+from gitfourchette.graphpaint import paintGraphFrame
+from gitfourchette.qt import *
+from gitfourchette.repostate import RepoState
+from gitfourchette.util import messageSummary
 from dataclasses import dataclass
 from datetime import datetime
 

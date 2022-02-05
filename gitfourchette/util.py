@@ -1,5 +1,5 @@
-from .qt import *
 from dataclasses import dataclass
+from gitfourchette.qt import *
 from pygit2 import Oid
 import os
 import re
@@ -58,7 +58,7 @@ def compactRepoPath(path: str) -> str:
 
 
 def shortHash(oid: Oid) -> str:
-    from .settings import prefs
+    from gitfourchette.settings import prefs
     return oid.hex[:prefs.shortHashChars]
 
 

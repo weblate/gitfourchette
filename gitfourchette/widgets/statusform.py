@@ -1,5 +1,5 @@
-from ..qt import *
-from .ui_statusform import Ui_StatusForm
+from gitfourchette.qt import *
+from gitfourchette.widgets.ui_statusform import Ui_StatusForm
 
 
 class StatusForm(QWidget):

@@ -1,9 +1,8 @@
-from . import settings
-from . import colors
-from .graph import Frame, Graph
-from .qt import *
-from .repostate import RepoState
-from .util import sign
+from gitfourchette import colors
+from gitfourchette import settings
+from gitfourchette.graph import Frame, Graph
+from gitfourchette.qt import *
+from gitfourchette.repostate import RepoState
 from itertools import zip_longest
 from pygit2 import Commit
 

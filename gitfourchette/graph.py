@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from .benchmark import Benchmark
 from collections import defaultdict
 from dataclasses import dataclass
+from gitfourchette.benchmark import Benchmark
 from pygit2 import Oid
 from typing import Iterable
 import bisect

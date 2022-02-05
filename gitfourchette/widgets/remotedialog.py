@@ -1,7 +1,7 @@
-from ..qt import *
-from .brandeddialog import convertToBrandedDialog
-from .ui_remotedialog import Ui_RemoteDialog
-from ..util import labelQuote
+from gitfourchette.qt import *
+from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
+from gitfourchette.widgets.ui_remotedialog import Ui_RemoteDialog
+from gitfourchette.util import labelQuote
 
 
 class RemoteDialog(QDialog):

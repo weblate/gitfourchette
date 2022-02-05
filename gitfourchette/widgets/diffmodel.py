@@ -1,7 +1,7 @@
-from .. import colors
-from .. import settings
-from ..subpatch import DiffLinePos
-from ..qt import *
+from gitfourchette import colors
+from gitfourchette import settings
+from gitfourchette.subpatch import DiffLinePos
+from gitfourchette.qt import *
 from dataclasses import dataclass
 import os
 import pygit2

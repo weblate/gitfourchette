@@ -1,12 +1,12 @@
-from .. import porcelain
-from .. import settings
-from ..navhistory import NavPos
-from ..qt import *
-from ..stagingstate import StagingState
-from ..subpatch import extractSubpatch
-from ..trash import Trash
-from ..util import excMessageBox, ActionDef, quickMenu
-from .diffmodel import DiffModel, LineData
+from gitfourchette import porcelain
+from gitfourchette import settings
+from gitfourchette.navhistory import NavPos
+from gitfourchette.qt import *
+from gitfourchette.stagingstate import StagingState
+from gitfourchette.subpatch import extractSubpatch
+from gitfourchette.trash import Trash
+from gitfourchette.util import excMessageBox, ActionDef, quickMenu
+from gitfourchette.widgets.diffmodel import DiffModel, LineData
 from bisect import bisect_left, bisect_right
 from pygit2 import GitError, Patch, Repository, Diff
 import enum

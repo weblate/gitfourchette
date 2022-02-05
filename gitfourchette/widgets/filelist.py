@@ -1,8 +1,8 @@
-from .. import settings
-from ..qt import *
-from ..stagingstate import StagingState
-from ..tempdir import getSessionTemporaryDirectory
-from ..util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
+from gitfourchette import settings
+from gitfourchette.qt import *
+from gitfourchette.stagingstate import StagingState
+from gitfourchette.tempdir import getSessionTemporaryDirectory
+from gitfourchette.util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
 from pathlib import Path
 from typing import Generator, Any
 import bisect

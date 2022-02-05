@@ -1,9 +1,9 @@
-from .. import settings
-from ..qt import *
-from ..remotelink import RemoteLink
-from ..workqueue import WorkQueue
-from .brandeddialog import convertToBrandedDialog
-from .ui_clonedialog import Ui_CloneDialog
+from gitfourchette import settings
+from gitfourchette.qt import *
+from gitfourchette.remotelink import RemoteLink
+from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
+from gitfourchette.widgets.ui_clonedialog import Ui_CloneDialog
+from gitfourchette.workqueue import WorkQueue
 from html import escape
 import pygit2
 

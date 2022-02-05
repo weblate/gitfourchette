@@ -1,5 +1,5 @@
-from .qt import *
 from dataclasses import dataclass, field
+from gitfourchette.qt import *
 import enum
 import json
 import os

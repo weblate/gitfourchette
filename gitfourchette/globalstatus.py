@@ -1,4 +1,4 @@
-from .qt import QObject, Signal
+from gitfourchette.qt import QObject, Signal
 
 
 class GlobalStatusSignalContainer(QObject):

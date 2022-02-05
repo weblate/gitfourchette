@@ -1,6 +1,6 @@
-from ..qt import *
-from .brandeddialog import convertToBrandedDialog
-from .ui_stashdialog import Ui_StashDialog
+from gitfourchette.qt import *
+from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
+from gitfourchette.widgets.ui_stashdialog import Ui_StashDialog
 
 
 class StashDialog(QDialog):

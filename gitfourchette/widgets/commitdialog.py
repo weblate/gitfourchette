@@ -1,5 +1,5 @@
-from ..qt import *
-from .ui_commitdialog import Ui_CommitDialog
+from gitfourchette.qt import *
+from gitfourchette.widgets.ui_commitdialog import Ui_CommitDialog
 from pygit2 import Signature
 
 

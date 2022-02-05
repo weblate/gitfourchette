@@ -1,7 +1,6 @@
+from gitfourchette.qt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
+from gitfourchette.util import compactSystemPath
 import os.path
-
-from .util import compactSystemPath
-from .qt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
 import pygit2
 
 

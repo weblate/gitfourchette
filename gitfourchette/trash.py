@@ -1,7 +1,7 @@
+from gitfourchette import settings
 import datetime
 import os
 import pygit2
-from . import settings
 import shutil
 
 

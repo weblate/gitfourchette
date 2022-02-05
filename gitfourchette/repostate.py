@@ -1,11 +1,11 @@
-from . import porcelain
-from . import settings
-from .benchmark import Benchmark
-from .globalstatus import globalstatus
-from .graph import Graph, GraphSplicer, KF_INTERVAL
-from .qt import *
 from collections import defaultdict
 from dataclasses import dataclass
+from gitfourchette import porcelain
+from gitfourchette import settings
+from gitfourchette.benchmark import Benchmark
+from gitfourchette.globalstatus import globalstatus
+from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
+from gitfourchette.qt import *
 import os
 import pygit2
 
