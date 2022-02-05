@@ -259,6 +259,12 @@ class RepoWidget(QWidget):
 
         self.diffView.verticalScrollBar().setValue(scrollPosition)
 
+    def navigateBack(self):
+        print("Nav Back")
+
+    def navigateForward(self):
+        print("Nav Fwd")
+
     # -------------------------------------------------------------------------
 
     @property

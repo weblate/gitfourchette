@@ -74,6 +74,8 @@ class PrefsDialog(QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.setObjectName("PrefsDialog")
+
         self.setWindowTitle(F"{QApplication.applicationDisplayName()} Preferences")
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)

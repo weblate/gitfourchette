@@ -38,6 +38,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.setObjectName("GFMainWindow")
+
         self.sharedSplitterStates = {}
 
         self.setWindowTitle(QApplication.applicationDisplayName())
@@ -79,6 +81,31 @@ class MainWindow(QMainWindow):
             self.setStatusBar(self.statusBar)
 
         self.setAcceptDrops(True)
+
+        qApp.installEventFilter(self)
+
+    def eventFilter(self, watched, event: QEvent):
+        isPress = event.type() == QEvent.MouseButtonPress
+        isDblClick = event.type() == QEvent.MouseButtonDblClick
+
+        if (isPress or isDblClick) and self.isActiveWindow():
+            mouseEvent: QMouseEvent = event
+
+            isBack = mouseEvent.button() == Qt.BackButton
+            isForward = mouseEvent.button() == Qt.ForwardButton
+
+            if isBack or isForward:
+                if isPress:
+                    rw = self.currentRepoWidget()
+                    if rw and isBack:
+                        rw.navigateBack()
+                    elif rw and isForward:
+                        rw.navigateForward()
+
+                # eat navigation clicks or double-clicks
+                return True
+
+        return False
 
     def onMemoryIndicatorClicked(self):
         gc.collect()
@@ -556,6 +583,7 @@ class MainWindow(QMainWindow):
         session.write()
 
     def closeEvent(self, e):
+        qApp.removeEventFilter(self)
         self.saveSession()
         e.accept()
 
