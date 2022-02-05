@@ -29,5 +29,8 @@ elif qtBindingName == "pyside6":
     from PySide6.QtCore import *
     from PySide6.QtCore import __version__ as qtVersion
     from PySide6 import __version__ as qtBindingVersion
+elif qtBindingName == "pyqt6":
+    # PyQt6 requires fully qualified enums.
+    raise ImportError("PyQt6 isn't supported yet. You can use PySide6 instead.")
 else:
-    raise ImportError(F"Unsupported Qt binding {qtBindingName}")
+    raise ImportError(F"Unknown Qt binding {qtBindingName}.")

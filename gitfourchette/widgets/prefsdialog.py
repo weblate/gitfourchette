@@ -174,7 +174,11 @@ class PrefsDialog(QDialog):
             refreshFontButton()
 
         def pickFont():
-            newFont, ok = QFontDialog.getFont(currentFont(), parent=self)
+            result = QFontDialog.getFont(currentFont(), parent=self)
+            if qtBindingName == "pyqt5":
+                newFont, ok = result
+            else:
+                ok, newFont = result
             if ok:
                 self.assign(prefKey, newFont.toString())
                 refreshFontButton()
