@@ -1,4 +1,4 @@
-from allqt import *
+from ..qt import *
 
 class RemoteProgressDialog:
     # TODO: Rewrite me!

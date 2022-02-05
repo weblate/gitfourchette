@@ -1,17 +1,17 @@
-from allqt import *
+from .. import porcelain
+from .. import settings
+from ..navhistory import NavPos
+from ..qt import *
+from ..stagingstate import StagingState
+from ..subpatch import extractSubpatch
+from ..trash import Trash
+from ..util import excMessageBox, ActionDef, quickMenu
+from .diffmodel import DiffModel, LineData
 from bisect import bisect_left, bisect_right
-from navhistory import NavPos
 from pygit2 import GitError, Patch, Repository, Diff
-from stagingstate import StagingState
-from subpatch import extractSubpatch
-from trash import Trash
-from util import excMessageBox, ActionDef, quickMenu
-from widgets.diffmodel import DiffModel, LineData
 import enum
 import os
-import porcelain
 import pygit2
-import settings
 
 
 def get1FileChangedByDiff(diff: Diff):

@@ -1,13 +1,11 @@
-import html
-
+from .. import settings
+from ..qt import *
+from ..remotelink import RemoteLink
+from ..workqueue import WorkQueue
+from .brandeddialog import convertToBrandedDialog
+from .ui_clonedialog import Ui_CloneDialog
+from html import escape
 import pygit2
-
-from allqt import *
-from remotelink import RemoteLink
-from widgets.brandeddialog import convertToBrandedDialog
-from widgets.ui_clonedialog import Ui_CloneDialog
-from workqueue import WorkQueue
-import settings
 
 
 class CloneDialog(QDialog):
@@ -119,7 +117,7 @@ class CloneDialog(QDialog):
             QApplication.alert(self, 500)
             self.cloneInProgress = False
             self.enableInputs(True)
-            self.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {html.escape(str(exc))}")
+            self.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
 
         wq = WorkQueue(self)
         wq.put(work, then, "Cloning", errorCallback=onError)

@@ -1,4 +1,4 @@
-from allqt import QObject, Signal
+from .qt import QObject, Signal
 
 
 class GlobalStatusSignalContainer(QObject):

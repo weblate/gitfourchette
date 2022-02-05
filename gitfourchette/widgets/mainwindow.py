@@ -1,20 +1,19 @@
-from allqt import *
+from .. import settings
+from ..globalstatus import globalstatus
+from ..qt import *
+from ..repostate import RepoState
+from ..util import (compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
+from .aboutdialog import showAboutDialog
+from .autohidemenubar import AutoHideMenuBar
+from .clonedialog import CloneDialog
+from .customtabwidget import CustomTabWidget
+from .prefsdialog import PrefsDialog
+from .repowidget import RepoWidget
 from typing import Literal
-from widgets.autohidemenubar import AutoHideMenuBar
-from widgets.aboutdialog import showAboutDialog
-from widgets.clonedialog import CloneDialog
-from widgets.prefsdialog import PrefsDialog
-from globalstatus import globalstatus
-from repostate import RepoState
-from util import (compactSystemPath, showInFolder, excMessageBox,
-                  DisableWidgetContext, QSignalBlockerContext)
-from widgets.customtabwidget import CustomTabWidget
-from widgets.repowidget import RepoWidget
 import gc
 import os
 import pygit2
 import re
-import settings
 
 
 try:

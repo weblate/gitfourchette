@@ -6,9 +6,9 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from allqt import *
+from gitfourchette.qt import *
 
-from widgets.signatureform import SignatureForm
+from gitfourchette.widgets.signatureform import SignatureForm
 
 
 class Ui_CommitDialog(object):

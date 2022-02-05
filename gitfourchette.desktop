@@ -1,5 +1,5 @@
 [Desktop Entry]
-Exec=bash -c 'cd "$(dirname "%k")" && python3 gitfourchette'
+Exec=bash -c 'PYTHONPATH="$(dirname "%k")" python3 -m gitfourchette'
 Icon=gitfourchette
 Name=GitFourchette
 StartupNotify=true

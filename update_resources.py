@@ -71,7 +71,7 @@ for root, dirs, files in os.walk(srcDir):
             text = result.stdout
 
             text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.MULTILINE)
-            text = re.sub(r"^from PySide2.* import .*$", "from allqt import *", text, count=1, flags=re.MULTILINE)
+            text = re.sub(r"^from PySide2.* import .*$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
             for nukePattern in [
                     r"^# -\*- coding:.*$",
                     r"^from PySide2.* import .*$\n",
@@ -91,5 +91,5 @@ for root, dirs, files in os.walk(assetsDir):
 rccResult = call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc"])
 rccText = rccResult.stdout
 rccText = re.sub(r"^(\s*)QtCore\.", r"\1", rccText, flags=re.MULTILINE)
-rccText = re.sub(r"^from PySide2.* import .*$", "from allqt import *", rccText, flags=re.MULTILINE)
+rccText = re.sub(r"^from PySide2.* import .*$", "from gitfourchette.qt import *", rccText, flags=re.MULTILINE)
 writeIfDifferent(F"{srcDir}/assets_rc.py", rccText)

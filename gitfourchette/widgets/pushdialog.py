@@ -1,14 +1,14 @@
-from allqt import *
+from ..qt import *
 from html import escape
-from remotelink import RemoteLink
-from util import addComboBoxItem, stockIcon
-from widgets.brandeddialog import convertToBrandedDialog
-from widgets.ui_pushdialog import Ui_PushDialog
-from workqueue import WorkQueue
+from ..remotelink import RemoteLink
+from ..util import addComboBoxItem, stockIcon
+from .brandeddialog import convertToBrandedDialog
+from .ui_pushdialog import Ui_PushDialog
+from ..workqueue import WorkQueue
 import enum
-import porcelain
+from .. import porcelain
 import pygit2
-import util
+from ..util import QSignalBlockerContext
 
 
 class ERemoteItem(enum.Enum):
@@ -109,7 +109,7 @@ class PushDialog(QDialog):
         self.trackedBranchIndex = -1
         comboBox = self.ui.remoteBranchEdit
 
-        with util.QSignalBlockerContext(comboBox):
+        with QSignalBlockerContext(comboBox):
             comboBox.clear()
             firstRemote = True
 

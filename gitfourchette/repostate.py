@@ -1,14 +1,13 @@
-from actionflows import ActionFlows
-from allgit import *
-from allqt import *
-from benchmark import Benchmark
+from . import porcelain
+from . import settings
+from .benchmark import Benchmark
+from .globalstatus import globalstatus
+from .graph import Graph, GraphSplicer, KF_INTERVAL
+from .qt import *
 from collections import defaultdict
 from dataclasses import dataclass
-from globalstatus import globalstatus
-from graph import Graph, GraphSplicer, KF_INTERVAL
 import os
-import porcelain
-import settings
+import pygit2
 
 
 PROGRESS_INTERVAL = 5000
@@ -22,29 +21,29 @@ class BatchedOffset:
 
 
 class RepoState:
-    repo: Repository
+    repo: pygit2.Repository
     settings: QSettings
 
     # May be None; call initializeWalker before use.
     # Keep it around to speed up refreshing.
-    walker: Walker | None
+    walker: pygit2.Walker | None
 
     # ordered list of commits
-    commitSequence: list[Commit]
+    commitSequence: list[pygit2.Commit]
     # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
 
-    commitPositions: dict[Oid, BatchedOffset]
+    commitPositions: dict[pygit2.Oid, BatchedOffset]
 
     graph: Graph | None
 
     # Set of head commits for every ref (required to refresh the commit graph)
-    currentRefs: list[Oid]
+    currentRefs: list[pygit2.Oid]
 
     # path of superproject if this is a submodule
     superproject: str | None
 
     # oid of the active commit (to make it bold)
-    activeCommitOid: Oid | None
+    activeCommitOid: pygit2.Oid | None
 
     # Everytime we refresh, new rows may be inserted at the top of the graph.
     # This may push existing rows down, away from the top of the graph.
@@ -57,10 +56,10 @@ class RepoState:
     mutex: QMutex
 
     # commit oid --> list of reference names
-    refsByCommit: defaultdict[Oid, list[str]]
+    refsByCommit: defaultdict[pygit2.Oid, list[str]]
 
     def __init__(self, dir):
-        self.repo = Repository(dir)
+        self.repo = pygit2.Repository(dir)
         self.walker = None
         self.currentBatchID = 0
 
@@ -96,7 +95,7 @@ class RepoState:
         refKey: str
         for refKey in self.repo.references:
             ref: Reference = self.repo.references[refKey]
-            if type(ref.target) != Oid:
+            if type(ref.target) != pygit2.Oid:
                 print(F"Skipping symbolic reference {refKey} --> {ref.target}")
                 continue
             assert refKey.startswith('refs/')
@@ -116,16 +115,16 @@ class RepoState:
 
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
-    def getCommitSequentialIndex(self, oid: Oid):
+    def getCommitSequentialIndex(self, oid: pygit2.Oid):
         position = self.commitPositions[oid]
         assert position.batch < len(self.batchOffsets)
         return self.batchOffsets[position.batch] + position.offsetInBatch
 
-    def initializeWalker(self, tipOids: list[Oid]) -> Walker:
+    def initializeWalker(self, tipOids: list[pygit2.Oid]) -> pygit2.Walker:
         if settings.prefs.graph_topoOrder:
-            sorting = GIT_SORT_TOPOLOGICAL
+            sorting = pygit2.GIT_SORT_TOPOLOGICAL
         else:
-            sorting = GIT_SORT_TIME
+            sorting = pygit2.GIT_SORT_TIME
 
         if self.walker is None:
             self.walker = self.repo.walk(None, sorting)
@@ -155,7 +154,7 @@ class RepoState:
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
-        commitSequence: list[Commit] = []
+        commitSequence: list[pygit2.Commit] = []
         #commit
         # refs = {}
         graph = Graph()
@@ -204,7 +203,7 @@ class RepoState:
         return commitSequence
 
     @staticmethod
-    def traceOneCommitAvailability(nextLocal: set, meta: Commit):
+    def traceOneCommitAvailability(nextLocal: set, meta: pygit2.Commit):
         if meta.hexsha in nextLocal:
             meta.hasLocal = True
             nextLocal.remove(meta.hexsha)
@@ -246,7 +245,7 @@ class RepoState:
             i += 1
 
             try:
-                commit: Commit = next(walker)
+                commit: pygit2.Commit = next(walker)
             except StopIteration:
                 break
 

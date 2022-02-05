@@ -1,5 +1,5 @@
-from allqt import *
-import settings
+from ..qt import *
+from .. import settings
 
 
 class CustomTabBar(QTabBar):

@@ -1,4 +1,4 @@
-from allqt import *
+from ..qt import *
 import pygit2
 import sys
 

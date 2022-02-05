@@ -1,4 +1,10 @@
-from gitfourchette.allqt import *
+import os
+
+if not os.environ.get("PYTEST_QT_API"):
+    from pytestqt.qt_compat import qt_api
+    os.environ["PYTEST_QT_API"] = qt_api.pytest_qt_api
+
+from gitfourchette.qt import *
 
 if qtBindingName == "pyqt5":
     from PyQt5.QtTest import QTest

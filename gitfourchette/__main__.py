@@ -1,5 +1,5 @@
-from allqt import *
-from util import excMessageBox
+from gitfourchette.qt import *
+from gitfourchette.util import excMessageBox
 import os
 import signal
 import sys
@@ -19,7 +19,7 @@ def makeCommandLineParser() -> QCommandLineParser:
     return parser
 
 
-if __name__ == "__main__":
+def main():
     # allow interrupting with Control-C
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     commandLine.process(app)
 
     # Initialize assets
-    import assets_rc
+    from gitfourchette import assets_rc
     app.setWindowIcon(QIcon(":/gitfourchette.png"))
 
     # Apply application-wide stylesheet
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         QApplication.setFont(sysFont)
 
     # Initialize settings
-    import settings
+    from gitfourchette import settings
     if commandLine.isSet("test-mode"):
         settings.TEST_MODE = True
     else:
@@ -66,8 +66,8 @@ if __name__ == "__main__":
             app.setStyle(settings.prefs.qtStyle)
 
     # Initialize main window
-    from widgets import mainwindow
-    window = mainwindow.MainWindow()
+    from gitfourchette.widgets.mainwindow import MainWindow
+    window = MainWindow()
     window.show()
 
     # Initialize session
@@ -86,3 +86,7 @@ if __name__ == "__main__":
 
     # Keep the app running
     app.exec_()
+
+
+if __name__ == "__main__":
+    main()

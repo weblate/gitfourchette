@@ -6,9 +6,9 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from allqt import *
+from gitfourchette.qt import *
 
-from widgets.statusform import StatusForm
+from gitfourchette.widgets.statusform import StatusForm
 
 
 class Ui_PushDialog(object):

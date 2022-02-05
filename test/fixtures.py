@@ -27,7 +27,7 @@ def workDir(tempDir, testRepoName, prep) -> str:
     testPath = os.path.realpath(__file__)
     testPath = os.path.dirname(testPath)
 
-    with tarfile.open(F"{testPath}/../data/{testRepoName}.tar") as tar:
+    with tarfile.open(F"{testPath}/data/{testRepoName}.tar") as tar:
         tar.extractall(tempDir.name)
     path = F"{tempDir.name}/{testRepoName}/"
     if prep:
@@ -43,7 +43,7 @@ def workDirRepo(workDir) -> pygit2.Repository:
 @pytest.fixture
 def mainWindow() -> MainWindow:
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
-    import settings
+    from gitfourchette import settings
     settings.TEST_MODE = True
 
     mw = MainWindow()

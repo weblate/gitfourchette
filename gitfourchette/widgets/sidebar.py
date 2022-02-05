@@ -1,9 +1,9 @@
-from allqt import *
+from .. import porcelain
+from ..qt import *
+from ..util import labelQuote, shortHash, stockIcon
 from html import escape
 from typing import Any
-from util import labelQuote, shortHash, stockIcon
 import enum
-import porcelain
 import pygit2
 
 

@@ -1,6 +1,6 @@
-from allqt import *
-from widgets.brandeddialog import convertToBrandedDialog
-from widgets.ui_stashdialog import Ui_StashDialog
+from ..qt import *
+from .brandeddialog import convertToBrandedDialog
+from .ui_stashdialog import Ui_StashDialog
 
 
 class StashDialog(QDialog):

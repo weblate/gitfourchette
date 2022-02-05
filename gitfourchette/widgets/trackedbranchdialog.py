@@ -1,9 +1,8 @@
-import porcelain
-from allqt import *
-from util import labelQuote, addComboBoxItem
+from .. import porcelain
+from ..qt import *
+from ..util import labelQuote, addComboBoxItem
 import pygit2
-
-from widgets import brandeddialog
+from . import brandeddialog
 
 
 class TrackedBranchDialog(QDialog):

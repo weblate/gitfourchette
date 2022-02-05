@@ -1,7 +1,7 @@
-from allqt import *
-from widgets.brandeddialog import convertToBrandedDialog
-from widgets.ui_remotedialog import Ui_RemoteDialog
-from util import labelQuote
+from ..qt import *
+from .brandeddialog import convertToBrandedDialog
+from .ui_remotedialog import Ui_RemoteDialog
+from ..util import labelQuote
 
 
 class RemoteDialog(QDialog):

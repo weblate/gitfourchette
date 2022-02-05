@@ -1,12 +1,11 @@
-from allgit import *
-from allqt import *
+from .. import colors
+from .. import settings
+from ..graphpaint import paintGraphFrame
+from ..qt import *
+from ..repostate import RepoState
+from ..util import messageSummary
 from dataclasses import dataclass
 from datetime import datetime
-from graphpaint import paintGraphFrame
-from repostate import RepoState
-from util import messageSummary
-import colors
-import settings
 
 
 @dataclass

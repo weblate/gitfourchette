@@ -1,32 +1,32 @@
-from helpers.qttest_imports import *
-from helpers import testutil, reposcenario
-from helpers.fixtures import *
-from trash import Trash
-from widgets.remotedialog import RemoteDialog
-from widgets.sidebar import EItem
+from . import reposcenario
+from .fixtures import *
+from .util import *
+from gitfourchette.trash import Trash
+from gitfourchette.widgets.remotedialog import RemoteDialog
+from gitfourchette.widgets.sidebar import EItem
 import re
 
 
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testBackupDiscardedPatches(qtbot, workDir, workDirRepo, rw):
-    import settings
+    from gitfourchette import settings
 
     os.unlink(F"{workDir}/a/a2.txt")
-    testutil.writeFile(F"{workDir}/a/a1.txt", "a1\nPENDING CHANGE\n")
-    testutil.writeFile(F"{workDir}/SomeNewFile.txt", "this file is untracked")
-    testutil.writeFile(F"{workDir}/MassiveFile.txt", "." * (1024 * settings.prefs.trash_maxFileSizeKB + 1))
+    writeFile(F"{workDir}/a/a1.txt", "a1\nPENDING CHANGE\n")
+    writeFile(F"{workDir}/SomeNewFile.txt", "this file is untracked")
+    writeFile(F"{workDir}/MassiveFile.txt", "." * (1024 * settings.prefs.trash_maxFileSizeKB + 1))
 
     rw.quickRefresh()  # refresh manually because we added files after repowidget was already created
 
-    assert set(testutil.qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt"}
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
+    assert set(qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt"}
+    assert qlvGetRowData(rw.stagedFiles) == []
 
     trash = Trash(workDirRepo)
     assert len(trash.trashFiles) == 0
 
     QTest.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
-    testutil.acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "discard changes")
 
     trash.refreshFiles()
     assert len(trash.trashFiles) == 2
@@ -39,7 +39,7 @@ def testBackupDiscardedPatches(qtbot, workDir, workDirRepo, rw):
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.fileWithUnstagedChange)
 def testTrashFull(qtbot, workDirRepo, rw):
-    import settings
+    from gitfourchette import settings
 
     # Create N junk files in trash
     N = settings.prefs.trash_maxFiles * 2
@@ -49,9 +49,9 @@ def testTrashFull(qtbot, workDirRepo, rw):
         with open(F"{trash.trashDir}/19991231T235900-test{i}.txt", "w") as junk:
             junk.write(F"test{i}")
 
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
-    testutil.acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "discard changes")
 
     # Trash should have been purged to make room for new patch
     trash = Trash(workDirRepo)

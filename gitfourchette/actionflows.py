@@ -1,13 +1,13 @@
-import porcelain
-from allqt import *
+from . import porcelain
+from .qt import *
 from html import escape
-from util import excMessageBox, labelQuote, shortHash
-from widgets.brandeddialog import showTextInputDialog
-from widgets.commitdialog import CommitDialog
-from widgets.pushdialog import PushDialog
-from widgets.remotedialog import RemoteDialog
-from widgets.stashdialog import StashDialog
-from widgets.trackedbranchdialog import TrackedBranchDialog
+from .util import excMessageBox, labelQuote, shortHash
+from .widgets.brandeddialog import showTextInputDialog
+from .widgets.commitdialog import CommitDialog
+from .widgets.pushdialog import PushDialog
+from .widgets.remotedialog import RemoteDialog
+from .widgets.stashdialog import StashDialog
+from .widgets.trackedbranchdialog import TrackedBranchDialog
 import pygit2
 
 

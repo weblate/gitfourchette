@@ -1,4 +1,4 @@
-from allqt import *
+from .qt import *
 from dataclasses import dataclass, field
 import enum
 import json

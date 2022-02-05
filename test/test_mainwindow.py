@@ -1,7 +1,7 @@
-from helpers.qttest_imports import *
-from helpers import reposcenario, testutil
-from helpers.fixtures import *
-from widgets.clonedialog import CloneDialog
+from . import reposcenario
+from .fixtures import *
+from .util import *
+from gitfourchette.widgets.clonedialog import CloneDialog
 import pygit2
 
 
@@ -39,7 +39,7 @@ def testDropUrlOntoMainWindowBringsUpCloneDialog(qtbot, mainWindow):
     dropEvent.acceptProposedAction()
     mainWindow.dropEvent(dropEvent)
 
-    cloneDialog: CloneDialog = testutil.findQDialog(mainWindow, "clone")
+    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
     assert cloneDialog is not None
     assert cloneDialog.url == wdUrl.toString()
 

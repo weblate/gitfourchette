@@ -1,10 +1,10 @@
-from allqt import *
+from .. import colors
+from .. import settings
+from ..subpatch import DiffLinePos
+from ..qt import *
 from dataclasses import dataclass
-from subpatch import DiffLinePos
-import colors
 import os
 import pygit2
-import settings
 
 
 @dataclass

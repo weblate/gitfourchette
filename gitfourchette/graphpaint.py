@@ -1,11 +1,11 @@
-from allqt import *
+from . import settings
+from . import colors
+from .graph import Frame, Graph
+from .qt import *
+from .repostate import RepoState
+from .util import sign
 from itertools import zip_longest
-from graph import Frame, Graph
 from pygit2 import Commit
-from repostate import RepoState
-from util import sign
-import colors
-import settings
 
 
 LANE_WIDTH = 10

@@ -1,5 +1,5 @@
-from allqt import *
-from util import shortHash
+from ..qt import *
+from ..util import shortHash
 
 
 # TODO: document --merge and --keep, and expose them through the dialog

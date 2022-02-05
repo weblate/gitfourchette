@@ -1,15 +1,14 @@
-from allqt import *
+from .. import settings
+from ..qt import *
+from ..stagingstate import StagingState
+from ..tempdir import getSessionTemporaryDirectory
+from ..util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
 from pathlib import Path
-from stagingstate import StagingState
-from tempdir import getSessionTemporaryDirectory
 from typing import Generator, Any
-from util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash,
-                  fplural as plur)
 import bisect
 import html
-import pygit2
 import os
-import settings
+import pygit2
 
 
 # If SVG icons don't show up, you may need to install the 'qt6-svg' package.

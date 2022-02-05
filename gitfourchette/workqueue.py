@@ -1,9 +1,9 @@
 # Based on https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
-import settings
-from allqt import *
-from globalstatus import globalstatus
+from . import settings
+from .qt import *
+from .globalstatus import globalstatus
 from typing import Callable
-from util import excMessageBox, onAppThread
+from .util import excMessageBox, onAppThread
 
 
 class WorkerSignals(QObject):

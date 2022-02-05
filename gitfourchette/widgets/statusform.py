@@ -1,5 +1,5 @@
-from allqt import *
-from widgets.ui_statusform import Ui_StatusForm
+from ..qt import *
+from .ui_statusform import Ui_StatusForm
 
 
 class StatusForm(QWidget):

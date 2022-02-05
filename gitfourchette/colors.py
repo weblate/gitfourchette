@@ -1,6 +1,6 @@
 # Color scheme based on https://clrs.cc/
 
-from allqt import QColor
+from .qt import QColor
 
 navy    = QColor(0x001F3F)
 blue    = QColor(0x0074D9)

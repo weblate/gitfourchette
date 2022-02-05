@@ -1,5 +1,5 @@
-from allqt import *
-from settings import prefs, SHORT_DATE_PRESETS
+from ..qt import *
+from ..settings import prefs, SHORT_DATE_PRESETS
 import datetime
 import enum
 import re

@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-python3 "$(dirname "$0")/gitfourchette" $@
+PYTHONPATH="$(dirname "$0")" python3 -m gitfourchette $@

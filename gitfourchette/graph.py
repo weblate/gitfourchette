@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from benchmark import Benchmark
+from .benchmark import Benchmark
 from collections import defaultdict
 from dataclasses import dataclass
 from pygit2 import Oid

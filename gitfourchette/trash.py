@@ -1,7 +1,7 @@
 import datetime
 import os
 import pygit2
-import settings
+from . import settings
 import shutil
 
 

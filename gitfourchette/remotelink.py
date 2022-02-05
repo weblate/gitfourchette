@@ -1,7 +1,7 @@
 import os.path
 
-import util
-from allqt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
+from .util import compactSystemPath
+from .qt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
 import pygit2
 
 
@@ -109,8 +109,8 @@ class RemoteLink(pygit2.RemoteCallbacks):
 
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
-            print(F"[RemoteLink] Attempting login with {util.compactSystemPath(pubkey)}")
-            self.signals.message.emit(F"Attempting login...\n{util.compactSystemPath(pubkey)}")
+            print(F"[RemoteLink] Attempting login with {compactSystemPath(pubkey)}")
+            self.signals.message.emit(F"Attempting login...\n{compactSystemPath(pubkey)}")
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
         else:

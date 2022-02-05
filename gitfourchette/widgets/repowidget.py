@@ -1,26 +1,25 @@
-from actionflows import ActionFlows
-from allqt import *
-from allgit import *
-from benchmark import Benchmark
-from navhistory import NavHistory, NavPos
-from remotelink import RemoteLink
-from stagingstate import StagingState
-from globalstatus import globalstatus
-from repostate import RepoState
-from trash import Trash
-from util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext,
-                  shortHash, unimplementedDialog)
-from widgets.brandeddialog import showTextInputDialog
-from widgets.diffmodel import DiffModel, DiffModelError
-from widgets.diffview import DiffView
-from widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
-from widgets.graphview import GraphView
-from widgets.richdiffview import RichDiffView
-from widgets.sidebar import Sidebar
-from workqueue import WorkQueue
+from .. import porcelain
+from .. import settings
+from ..actionflows import ActionFlows
+from ..benchmark import Benchmark
+from ..globalstatus import globalstatus
+from ..navhistory import NavHistory, NavPos
+from ..qt import *
+from ..remotelink import RemoteLink
+from ..repostate import RepoState
+from ..stagingstate import StagingState
+from ..trash import Trash
+from ..util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash, unimplementedDialog)
+from ..workqueue import WorkQueue
+from .brandeddialog import showTextInputDialog
+from .diffmodel import DiffModel, DiffModelError
+from .diffview import DiffView
+from .filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
+from .graphview import GraphView
+from .richdiffview import RichDiffView
+from .sidebar import Sidebar
 import os
-import porcelain
-import settings
+import pygit2
 
 
 def sanitizeSearchTerm(x):
@@ -43,7 +42,7 @@ class RepoWidget(QWidget):
     navHistory: NavHistory
 
     @property
-    def repo(self) -> Repository:
+    def repo(self) -> pygit2.Repository:
         return self.state.repo
 
     def __init__(self, parent, sharedSplitterStates=None):
@@ -325,12 +324,12 @@ class RepoWidget(QWidget):
 
         repo = self.state.repo
 
-        def work() -> tuple[Diff, Diff]:
+        def work() -> tuple[pygit2.Diff, pygit2.Diff]:
             dirtyDiff = porcelain.loadDirtyDiff(repo)
             stageDiff = porcelain.loadStagedDiff(repo)
             return dirtyDiff, stageDiff
 
-        def then(result: tuple[Diff, Diff]):
+        def then(result: tuple[pygit2.Diff, pygit2.Diff]):
             dirtyDiff, stageDiff = result
 
             # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
@@ -370,12 +369,12 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self.workQueue.put(work, then, "Refreshing index", -1000)
 
-    def loadCommitAsync(self, oid: Oid):
+    def loadCommitAsync(self, oid: pygit2.Oid):
         """Load commit details into Changed Files view"""
 
         work = lambda: porcelain.loadCommitDiffs(self.repo, oid)
 
-        def then(parentDiffs: list[Diff]):
+        def then(parentDiffs: list[pygit2.Diff]):
             #import time; time.sleep(1) #to debug out-of-order events
 
             # Reset changed files view. Block its signals as we refill it to prevent updating the diff view.
@@ -396,8 +395,8 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading commit “{shortHash(oid)}”", -1000)
 
-    def loadPatchAsync(self, patch: Patch, stagingState: StagingState):
-        """Load a file diff into the Diff View"""
+    def loadPatchAsync(self, patch: pygit2.Patch, stagingState: StagingState):
+        """Load a file diff into the pygit2.Diff View"""
 
         repo = self.state.repo
 
@@ -440,7 +439,7 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
 
-    def createCommitAsync(self, message: str, author: Signature | None, committer: Signature | None):
+    def createCommitAsync(self, message: str, author: pygit2.Signature | None, committer: pygit2.Signature | None):
         def work():
             porcelain.createCommit(self.repo, message, author, committer)
 
@@ -452,7 +451,7 @@ class RepoWidget(QWidget):
         self.state.setDraftCommitMessage(message)
         self.workQueue.put(work, then, F"Committing")
 
-    def amendCommitAsync(self, message: str, author: Signature | None, committer: Signature | None):
+    def amendCommitAsync(self, message: str, author: pygit2.Signature | None, committer: pygit2.Signature | None):
         def work():
             porcelain.amendCommit(self.repo, message, author, committer)
 
@@ -491,7 +490,7 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
 
-    def newBranchFromCommitAsync(self, localBranchName: str, commitOid: Oid):
+    def newBranchFromCommitAsync(self, localBranchName: str, commitOid: pygit2.Oid):
         work = lambda: porcelain.newBranchFromCommit(self.repo, localBranchName, commitOid)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitOid)}”")
@@ -556,12 +555,12 @@ class RepoWidget(QWidget):
             self.graphView.selectCommit(ontoHexsha)
         self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
 
-    def stageFilesAsync(self, patches: list[Patch]):
+    def stageFilesAsync(self, patches: list[pygit2.Patch]):
         work = lambda: porcelain.stageFiles(self.repo, patches)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, fplural("Staging # file^s", len(patches)))
 
-    def discardFilesAsync(self, patches: list[Patch]):
+    def discardFilesAsync(self, patches: list[pygit2.Patch]):
         def work():
             paths = [patch.delta.new_file.path for patch in patches]
             Trash(self.repo).backupPatches(patches)
@@ -569,7 +568,7 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, fplural("Discarding # file^s", len(patches)))
 
-    def unstageFilesAsync(self, patches: list[Patch]):
+    def unstageFilesAsync(self, patches: list[pygit2.Patch]):
         work = lambda: porcelain.unstageFiles(self.repo, patches)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, fplural("Unstaging # file^s", len(patches)))
@@ -579,17 +578,17 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, "New stash")
 
-    def applyStashAsync(self, commitId: Oid):
+    def applyStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.applyStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, "Apply stash")
 
-    def popStashAsync(self, commitId: Oid):
+    def popStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.popStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, "Pop stash")
 
-    def dropStashAsync(self, commitId: Oid):
+    def dropStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.dropStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, "Delete stash")
@@ -673,7 +672,7 @@ class RepoWidget(QWidget):
         message = self.previouslySearchedTermInDiff
         message = sanitizeSearchTerm(message)
         if not message:
-            QMessageBox.warning(self, "Find in Patch", "Invalid search term.")
+            QMessageBox.warning(self, "Find in pygit2.Patch", "Invalid search term.")
             return
 
         doc: QTextDocument = self.diffView.document()
@@ -682,7 +681,7 @@ class RepoWidget(QWidget):
             self.diffView.setTextCursor(newCursor)
             return
 
-        QMessageBox.information(self, "Find in Patch", F"No more occurrences of “{message}”.")
+        QMessageBox.information(self, "Find in pygit2.Patch", F"No more occurrences of “{message}”.")
 
     def findInDiffFlow(self):
         def onAccept(verbatimTerm):
@@ -697,10 +696,10 @@ class RepoWidget(QWidget):
 
     def _findInDiffNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):
-            QMessageBox.warning(self, "Find in Patch", "Please use “Find in Patch” to specify a search term before using “Find Next” or “Find Previous”.")
+            QMessageBox.warning(self, "Find in pygit2.Patch", "Please use “Find in Patch” to specify a search term before using “Find Next” or “Find Previous”.")
             return
         #if len(self.graphView.selectedIndexes()) == 0:
-        #    QMessageBox.warning(self, "Find in Patch", "Please select a commit from whence to resume the search.")
+        #    QMessageBox.warning(self, "Find in pygit2.Patch", "Please select a commit from whence to resume the search.")
         #    return
         self._searchInDiff(findNext)
 
@@ -759,7 +758,7 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def selectCommit(self, oid: Oid):
+    def selectCommit(self, oid: pygit2.Oid):
         self.graphView.selectCommit(oid)
 
     def selectRef(self, refName: str):

@@ -6,7 +6,7 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from allqt import *
+from gitfourchette.qt import *
 
 
 class Ui_StashDialog(object):

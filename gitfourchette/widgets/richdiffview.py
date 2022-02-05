@@ -1,5 +1,5 @@
-from allqt import *
-from widgets.diffmodel import DiffModelError
+from ..qt import *
+from .diffmodel import DiffModelError
 import html
 
 

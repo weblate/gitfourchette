@@ -1,9 +1,9 @@
-from helpers.qttest_imports import *
-from helpers import testutil, reposcenario
-from helpers.fixtures import *
-from widgets.remotedialog import RemoteDialog
-from widgets.sidebar import EItem
-from widgets.stashdialog import StashDialog
+from . import reposcenario
+from .fixtures import *
+from .util import *
+from gitfourchette.widgets.remotedialog import RemoteDialog
+from gitfourchette.widgets.sidebar import EItem
+from gitfourchette.widgets.stashdialog import StashDialog
 import re
 
 
@@ -14,9 +14,9 @@ import re
 @withPrep(None)
 def testNewBranch(qtbot, workDirRepo, rw):
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranchesHeader)
-    testutil.findMenuAction(menu, "new branch").trigger()
+    findMenuAction(menu, "new branch").trigger()
 
-    q = testutil.findQDialog(rw, "new branch")
+    q = findQDialog(rw, "new branch")
     q.findChild(QLineEdit).setText("hellobranch")
     q.accept()
 
@@ -29,9 +29,9 @@ def testNewBranch(qtbot, workDirRepo, rw):
 def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, workDirRepo, rw):
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
-    assert not testutil.findMenuAction(menu, "switch to").isEnabled()
-    assert not testutil.findMenuAction(menu, "merge").isEnabled()
-    assert not testutil.findMenuAction(menu, "rebase").isEnabled()
+    assert not findMenuAction(menu, "switch to").isEnabled()
+    assert not findMenuAction(menu, "merge").isEnabled()
+    assert not findMenuAction(menu, "rebase").isEnabled()
 
 
 @withRepo("TestGitRepository")
@@ -41,10 +41,10 @@ def testSetTrackedBranch(qtbot, workDirRepo, rw):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
-    testutil.findMenuAction(menu, "tracked branch").trigger()
+    findMenuAction(menu, "tracked branch").trigger()
 
     # Change tracking from origin/master to nothing
-    q = testutil.findQDialog(rw, "tracked branch")
+    q = findQDialog(rw, "tracked branch")
     combobox: QComboBox = q.findChild(QComboBox)
     assert "origin/master" in combobox.currentText()
     assert re.match(r".*don.t track.*", combobox.itemText(0).lower())
@@ -53,8 +53,8 @@ def testSetTrackedBranch(qtbot, workDirRepo, rw):
     assert workDirRepo.branches.local['master'].upstream is None
 
     # Change tracking back to origin/master
-    testutil.findMenuAction(menu, "tracked branch").trigger()
-    q = testutil.findQDialog(rw, "tracked branch")
+    findMenuAction(menu, "tracked branch").trigger()
+    q = findQDialog(rw, "tracked branch")
     combobox: QComboBox = q.findChild(QComboBox)
     assert re.match(r".*don.t track.*", combobox.currentText().lower())
     for i in range(combobox.count()):
@@ -75,9 +75,9 @@ def testRenameBranch(qtbot, workDirRepo, rw):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
-    testutil.findMenuAction(menu, "rename").trigger()
+    findMenuAction(menu, "rename").trigger()
 
-    q = testutil.findQDialog(rw, "rename branch")
+    q = findQDialog(rw, "rename branch")
     q.findChild(QLineEdit).setText("mainbranch")
     q.accept()
 
@@ -93,8 +93,8 @@ def testDeleteBranch(qtbot, workDirRepo, rw):
     assert "somebranch" in workDirRepo.branches.local
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "somebranch")
-    testutil.findMenuAction(menu, "delete").trigger()
-    testutil.acceptQMessageBox(rw, "delete branch")
+    findMenuAction(menu, "delete").trigger()
+    acceptQMessageBox(rw, "delete branch")
     assert "somebranch" not in workDirRepo.branches.local
 
 
@@ -105,9 +105,9 @@ def testNewRemoteTrackingBranch(qtbot, workDirRepo, rw):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/master")
 
-    testutil.findMenuAction(menu, "new local branch tracking").trigger()
+    findMenuAction(menu, "new local branch tracking").trigger()
 
-    q = testutil.findQDialog(rw, "new branch tracking")
+    q = findQDialog(rw, "new branch tracking")
     q.findChild(QLineEdit).setText("newmaster")
     q.accept()
 
@@ -123,9 +123,9 @@ def testNewRemote(qtbot, workDirRepo, rw):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemotesHeader)
 
-    testutil.findMenuAction(menu, "new remote").trigger()
+    findMenuAction(menu, "new remote").trigger()
 
-    q: RemoteDialog = testutil.findQDialog(rw, "new remote")
+    q: RemoteDialog = findQDialog(rw, "new remote")
     q.ui.nameEdit.setText("otherremote")
     q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
     q.accept()
@@ -144,9 +144,9 @@ def testEditRemote(qtbot, workDirRepo, rw):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
-    testutil.findMenuAction(menu, "edit remote").trigger()
+    findMenuAction(menu, "edit remote").trigger()
 
-    q: RemoteDialog = testutil.findQDialog(rw, "edit remote")
+    q: RemoteDialog = findQDialog(rw, "edit remote")
     q.ui.nameEdit.setText("mainremote")
     q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
     q.accept()
@@ -163,8 +163,8 @@ def testDeleteRemote(qtbot, workDirRepo, rw):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
-    testutil.findMenuAction(menu, "delete remote").trigger()
-    testutil.acceptQMessageBox(rw, "delete remote")
+    findMenuAction(menu, "delete remote").trigger()
+    acceptQMessageBox(rw, "delete remote")
 
     assert len(list(workDirRepo.remotes)) == 0
 
@@ -181,12 +181,12 @@ def testNewStash(qtbot, workDirRepo, rw):
     assert len(workDirRepo.listall_stashes()) == 0
 
     assert len(getEItemIndices(rw, EItem.Stash)) == 0
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
-    testutil.findMenuAction(menu, "new stash").trigger()
+    findMenuAction(menu, "new stash").trigger()
 
-    dlg: StashDialog = testutil.findQDialog(rw, "new stash")
+    dlg: StashDialog = findQDialog(rw, "new stash")
     dlg.ui.messageEdit.setText("helloworld")
     dlg.accept()
 
@@ -194,7 +194,7 @@ def testNewStash(qtbot, workDirRepo, rw):
     assert len(workDirRepo.listall_stashes()) == 1
     assert len(stashIndices) == 1
     assert stashIndices[0].data(Qt.DisplayRole).endswith("helloworld")
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == []
 
 
 @withRepo("TestGitRepository")
@@ -204,12 +204,12 @@ def testPopStash(qtbot, workDirRepo, rw):
     assert len(stashIndices) == 1
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
-    testutil.findMenuAction(menu, "^pop").trigger()
+    findMenuAction(menu, "^pop").trigger()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(workDirRepo.listall_stashes()) == 0
     assert len(stashIndices) == 0
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
 @withRepo("TestGitRepository")
@@ -219,26 +219,26 @@ def testApplyStash(qtbot, workDirRepo, rw):
     assert len(stashIndices) == 1
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
-    testutil.findMenuAction(menu, r"^apply").trigger()
+    findMenuAction(menu, r"^apply").trigger()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(workDirRepo.listall_stashes()) == 1
     assert len(stashIndices) == 1
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.stashedChange)
 def testDropStash(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == []
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(stashIndices) == 1
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
-    testutil.findMenuAction(menu, "^delete").trigger()
+    findMenuAction(menu, "^delete").trigger()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(workDirRepo.listall_stashes()) == 0
     assert len(stashIndices) == 0
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == []

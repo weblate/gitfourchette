@@ -1,7 +1,7 @@
-from helpers.qttest_imports import *
-from helpers import reposcenario, testutil
-from helpers.fixtures import *
-from widgets.commitdialog import CommitDialog
+from . import reposcenario
+from .fixtures import *
+from .util import *
+from gitfourchette.widgets.commitdialog import CommitDialog
 import pygit2
 
 
@@ -21,40 +21,40 @@ def testChangedFilesShownAtStart(qtbot, rw):
     assert rw.dirtyFiles.isVisibleTo(rw)
     assert rw.stagedFiles.isVisibleTo(rw)
     assert not rw.committedFiles.isVisibleTo(rw)
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.nestedUntrackedFiles)
 def testDisplayAllNestedUntrackedFiles(qtbot, workDir, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["N/tata.txt", "N/toto.txt", "N/tutu.txt"]
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == ["N/tata.txt", "N/toto.txt", "N/tutu.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.untrackedEmptyFile)
 def testStageEmptyUntrackedFile(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
 
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
 
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
-    assert testutil.qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
     assert workDirRepo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_INDEX_NEW}
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.untrackedEmptyFile)
 def testDiscardUntrackedFile(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
+    qlvClickNthRow(rw.dirtyFiles, 0)
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
 
-    testutil.acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "discard changes")
 
     assert rw.dirtyFiles.model().rowCount() == 0
     assert rw.stagedFiles.model().rowCount() == 0
@@ -64,44 +64,44 @@ def testDiscardUntrackedFile(qtbot, workDirRepo, rw):
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.fileWithUnstagedChange)
 def testDiscardUnstagedFileModification(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
+    qlvClickNthRow(rw.dirtyFiles, 0)
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
 
-    testutil.acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "discard changes")
 
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.stagedFiles) == []
     assert workDirRepo.status() == {}
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.fileWithStagedAndUnstagedChanges)
 def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
-    assert testutil.qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
 
-    testutil.acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "discard changes")
 
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
-    assert testutil.qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     assert workDirRepo.status() == {"a/a1.txt": pygit2.GIT_STATUS_INDEX_MODIFIED}
 
 
 @withRepo("TestEmptyRepository")
 @withPrep(reposcenario.stagedNewEmptyFile)
 def testUnstageChangeInEmptyRepo(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
-    assert testutil.qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
-    testutil.qlvClickNthRow(rw.stagedFiles, 0)
+    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
+    qlvClickNthRow(rw.stagedFiles, 0)
     QTest.keyPress(rw.stagedFiles, Qt.Key_Delete)
 
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
-    assert testutil.qlvGetRowData(rw.stagedFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
 
     assert workDirRepo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_WT_NEW}
 
@@ -109,7 +109,7 @@ def testUnstageChangeInEmptyRepo(qtbot, workDirRepo, rw):
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.untrackedEmptyFile)
 def testStageEmptyUntrackedFileFromDiffView(qtbot, workDir, rw):
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     QTest.keyPress(rw.diffView, Qt.Key_Return)
     repo = pygit2.Repository(workDir)
@@ -119,23 +119,23 @@ def testStageEmptyUntrackedFileFromDiffView(qtbot, workDir, rw):
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testParentlessCommitFileList(qtbot, workDir, rw):
-    commitOid = testutil.hexToOid("42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+    commitOid = hexToOid("42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
 
     rw.graphView.selectCommit(commitOid)
 
-    assert testutil.qlvGetRowData(rw.committedFiles) == ["c/c1.txt"]
+    assert qlvGetRowData(rw.committedFiles) == ["c/c1.txt"]
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.fileWithUnstagedChange)
 def testCommit(qtbot, workDirRepo, rw):
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
-    assert testutil.qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     rw.commitButton.click()
 
-    dialog: CommitDialog = testutil.findQDialog(rw, "commit")
+    dialog: CommitDialog = findQDialog(rw, "commit")
     QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
 
     dialog.ui.revealAuthor.click()
@@ -163,18 +163,18 @@ def testCommit(qtbot, workDirRepo, rw):
 @withRepo("TestEmptyRepository")
 @withPrep(reposcenario.untrackedEmptyFile)
 def testCommitUntrackedFileInEmptyRepo(qtbot, rw):
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
 
-    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
-    assert testutil.qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
 
     rw.commitButton.click()
-    dialog: CommitDialog = testutil.findQDialog(rw, "commit")
+    dialog: CommitDialog = findQDialog(rw, "commit")
     QTest.keyClicks(dialog.ui.summaryEditor, "Initial commit")
     dialog.accept()
 
-    rows = testutil.qlvGetRowData(rw.graphView)
+    rows = qlvGetRowData(rw.graphView)
     commit: pygit2.Commit = rows[-1].peel(pygit2.Commit)
     assert commit.message == "Initial commit"
 
@@ -182,17 +182,17 @@ def testCommitUntrackedFileInEmptyRepo(qtbot, rw):
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.stagedNewEmptyFile)
 def testCommitMessageDraftSavedOnCancel(qtbot, rw):
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
 
     rw.commitButton.click()
-    dialog: CommitDialog = testutil.findQDialog(rw, "commit")
+    dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
     QTest.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
     dialog.reject()
 
     rw.commitButton.click()
-    dialog: CommitDialog = testutil.findQDialog(rw, "commit")
+    dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == "hoping to save this message"
     dialog.reject()
 
@@ -200,11 +200,11 @@ def testCommitMessageDraftSavedOnCancel(qtbot, rw):
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.stagedNewEmptyFile)
 def testAmendCommit(qtbot, workDirRepo, rw):
-    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
 
     rw.amendButton.click()
-    dialog: CommitDialog = testutil.findQDialog(rw, "amend")
+    dialog: CommitDialog = findQDialog(rw, "amend")
     assert dialog.ui.summaryEditor.text() == "Delete c/c2-2.txt"
     dialog.ui.summaryEditor.setText("amended commit message")
     dialog.accept()
@@ -217,17 +217,17 @@ def testAmendCommit(qtbot, workDirRepo, rw):
 @withPrep(None)
 def testEmptyCommitRaisesWarning(qtbot, workDirRepo, rw):
     rw.commitButton.click()
-    q = testutil.findQDialog(rw, "empty commit")
+    q = findQDialog(rw, "empty commit")
     q.reject()
 
 
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testSaveOldRevision(qtbot, workDir, tempDir, rw):
-    commitOid = testutil.hexToOid("6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
+    commitOid = hexToOid("6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
 
     rw.graphView.selectCommit(commitOid)
-    assert testutil.qlvGetRowData(rw.committedFiles) == ["c/c2.txt"]
+    assert qlvGetRowData(rw.committedFiles) == ["c/c2.txt"]
     rw.committedFiles.selectRow(0)
     rw.committedFiles.saveRevisionAs(saveInto=tempDir.name)
 
@@ -239,10 +239,10 @@ def testSaveOldRevision(qtbot, workDir, tempDir, rw):
 @withRepo("TestGitRepository")
 @withPrep(None)
 def testSaveOldRevisionOfDeletedFile(qtbot, workDir, tempDir, rw):
-    commitOid = testutil.hexToOid("c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    commitOid = hexToOid("c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     rw.graphView.selectCommit(commitOid)
-    assert testutil.qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
+    assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
     rw.committedFiles.selectRow(0)
     rw.committedFiles.saveRevisionAs(saveInto=tempDir.name)
 

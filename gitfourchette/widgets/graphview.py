@@ -1,20 +1,20 @@
-from allgit import *
-from allqt import *
-from widgets.brandeddialog import showTextInputDialog
-from widgets.resetheaddialog import ResetHeadDialog
-from widgets.graphdelegate import GraphDelegate
-from util import messageSummary, fplural, shortHash
-import html
-import porcelain
-import settings
+from .. import porcelain
+from .. import settings
+from ..qt import *
+from ..util import messageSummary, fplural, shortHash
+from .brandeddialog import showTextInputDialog
+from .graphdelegate import GraphDelegate
+from .resetheaddialog import ResetHeadDialog
+from html import escape
+import pygit2
 
 
 class GraphView(QListView):
     uncommittedChangesClicked = Signal()
     emptyClicked = Signal()
-    commitClicked = Signal(Oid)
+    commitClicked = Signal(pygit2.Oid)
     resetHead = Signal(str, str, bool)
-    newBranchFromCommit = Signal(str, Oid)
+    newBranchFromCommit = Signal(str, pygit2.Oid)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -46,7 +46,7 @@ class GraphView(QListView):
             self.model().deleteLater()  # avoid memory leak
         self.setModel(model)
 
-    def fill(self, commitSequence: list[Commit]):
+    def fill(self, commitSequence: list[pygit2.Commit]):
         model = QStandardItemModel(self)  # creating a model from scratch seems faster than clearing an existing one
         model.appendRow(QStandardItem())
         model.insertRows(1, len(commitSequence))
@@ -55,7 +55,7 @@ class GraphView(QListView):
         self._replaceModel(model)
         self.onSetCurrent()
 
-    def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[Commit]):
+    def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[pygit2.Commit]):
         model: QAbstractListModel = self.model()
         model.removeRows(1, nRemovedRows)
         model.insertRows(1, nAddedRows)
@@ -73,14 +73,14 @@ class GraphView(QListView):
             super().keyPressEvent(event)
 
     @property
-    def repo(self) -> Repository:
+    def repo(self) -> pygit2.Repository:
         return self.repoWidget.state.repo
 
     @property
-    def currentCommitOid(self) -> Oid:
+    def currentCommitOid(self) -> pygit2.Oid:
         if not self.currentIndex().isValid():
             return
-        data: Commit = self.currentIndex().data()
+        data: pygit2.Commit = self.currentIndex().data()
         if not data:  # Uncommitted Changes has no bound data
             return
         return data.oid
@@ -90,14 +90,14 @@ class GraphView(QListView):
         if not oid:
             return
 
-        def formatSignature(sig: Signature):
+        def formatSignature(sig: pygit2.Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
-            return F"{html.escape(sig.name)} &lt;{html.escape(commit.author.email)}&gt;<br>" \
-                   + html.escape(QLocale.system().toString(qdt, QLocale.LongFormat))
+            return F"{escape(sig.name)} &lt;{escape(commit.author.email)}&gt;<br>" \
+                   + escape(QLocale.system().toString(qdt, QLocale.LongFormat))
 
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
 
-        commit: Commit = self.currentIndex().data()
+        commit: pygit2.Commit = self.currentIndex().data()
 
         summary, contd = messageSummary(commit.message)
 
@@ -108,12 +108,12 @@ class GraphView(QListView):
                   F"({nLines} lines)</i>"
 
         parentHashes = [shortHash(p) for p in commit.parent_ids]
-        parentLabelMarkup = html.escape(fplural('# Parent^s', len(parentHashes)))
-        parentValueMarkup = html.escape(', '.join(parentHashes))
+        parentLabelMarkup = escape(fplural('# Parent^s', len(parentHashes)))
+        parentValueMarkup = escape(', '.join(parentHashes))
 
         #childHashes = [shortHash(c) for c in commit.children]
-        #childLabelMarkup = html.escape(fplural('# Child^ren', len(childHashes)))
-        #childValueMarkup = html.escape(', '.join(childHashes))
+        #childLabelMarkup = escape(fplural('# Child^ren', len(childHashes)))
+        #childValueMarkup = escape(', '.join(childHashes))
 
         authorMarkup = formatSignature(commit.author)
 
@@ -144,7 +144,7 @@ class GraphView(QListView):
             #     ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
             #     </td></tr>
 
-        title = F"Commit info {shortHash(commit.oid)}"
+        title = F"pygit2.Commit info {shortHash(commit.oid)}"
 
         details = commit.message if contd else None
 
@@ -236,7 +236,7 @@ class GraphView(QListView):
         try:
             index = self.repoWidget.state.getCommitSequentialIndex(oid)
         except KeyError:
-            QMessageBox.warning(self, "Commit not found",
-                                F"Commit not found or not loaded:\n{oid.hex}")
+            QMessageBox.warning(self, "pygit2.Commit not found",
+                                F"pygit2.Commit not found or not loaded:\n{oid.hex}")
             return
         self.setCurrentIndex(self.model().index(1 + index, 0))

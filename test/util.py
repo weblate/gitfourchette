@@ -1,4 +1,4 @@
-from helpers.qttest_imports import *
+from . import *
 import pygit2
 import os
 import re
@@ -60,4 +60,3 @@ def acceptQMessageBox(parent: QWidget, subtext: str):
 def hexToOid(hexstr: str):
     assert len(hexstr) == 40
     return pygit2.Oid(hex=hexstr)
-
