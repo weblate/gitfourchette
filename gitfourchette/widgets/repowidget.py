@@ -2,18 +2,18 @@ from actionflows import ActionFlows
 from allqt import *
 from allgit import *
 from benchmark import Benchmark
+from navhistory import NavHistory, NavPos
 from remotelink import RemoteLink
 from stagingstate import StagingState
 from globalstatus import globalstatus
 from repostate import RepoState
 from trash import Trash
-from typing import Callable
 from util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext,
                   shortHash, unimplementedDialog)
 from widgets.brandeddialog import showTextInputDialog
 from widgets.diffmodel import DiffModel, DiffModelError
 from widgets.diffview import DiffView
-from widgets.filelist import DirtyFiles, StagedFiles, CommittedFiles
+from widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from widgets.graphview import GraphView
 from widgets.richdiffview import RichDiffView
 from widgets.sidebar import Sidebar
@@ -21,7 +21,6 @@ from workqueue import WorkQueue
 import os
 import porcelain
 import settings
-import typing
 
 
 def sanitizeSearchTerm(x):
@@ -40,14 +39,8 @@ class RepoWidget(QWidget):
     previouslySearchedTerm: str
     previouslySearchedTermInDiff: str
 
-    displayedCommitOid: Oid
-    displayedFilePath: str
-    displayedStagingState: StagingState
-    # TODO: refactor this
-    latestStagedOrUnstaged: StagingState
-    fileListSelectedRowCache: dict[typing.Union[str, StagingState], int]
-    diffViewScrollPositionCache: dict[tuple[typing.Union[str, StagingState], str], int]
-    diffViewCursorPositionCache: dict[tuple[typing.Union[str, StagingState], str], int]
+    navPos: NavPos
+    navHistory: NavHistory
 
     @property
     def repo(self) -> Repository:
@@ -65,38 +58,33 @@ class RepoWidget(QWidget):
 
         self.pathPending = None
 
-        self.displayedCommitOid = None
-        self.displayedFilePath = None
-        self.displayedStagingState = None
-        self.fileListSelectedRowCache = {}
-        self.diffViewScrollPositionCache = {}
-        self.diffViewCursorPositionCache = {}
-        self.latestStagedOrUnstaged = None
+        self.navPos = NavPos()
+        self.navHistory = NavHistory()
 
         self.sidebar = Sidebar(self)
         self.graphView = GraphView(self)
         self.filesStack = QStackedWidget()
         self.diffStack = QStackedWidget()
-        self.changedFilesView = CommittedFiles(self)
-        self.dirtyView = DirtyFiles(self)
-        self.stageView = StagedFiles(self)
+        self.committedFiles = CommittedFiles(self)
+        self.dirtyFiles = DirtyFiles(self)
+        self.stagedFiles = StagedFiles(self)
         self.diffView = DiffView(self)
         self.richDiffView = RichDiffView(self)
 
         # The staged files and unstaged files view are mutually exclusive.
-        self.stageView.entryClicked.connect(self.dirtyView.clearSelectionSilently)
-        self.dirtyView.entryClicked.connect(self.stageView.clearSelectionSilently)
+        self.stagedFiles.entryClicked.connect(self.dirtyFiles.clearSelectionSilently)
+        self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
 
         # Refresh file list views after applying a patch...
         self.diffView.patchApplied.connect(self.fillStageViewAsync)  # ...from the diff view (partial line patch);
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
-        self.stageView.unstageFiles.connect(self.unstageFilesAsync)
-        self.dirtyView.stageFiles.connect(self.stageFilesAsync)
-        self.dirtyView.discardFiles.connect(self.actionFlows.discardFilesFlow)  # we need to confirm deletions
+        self.stagedFiles.unstageFiles.connect(self.unstageFilesAsync)
+        self.dirtyFiles.stageFiles.connect(self.stageFilesAsync)
+        self.dirtyFiles.discardFiles.connect(self.actionFlows.discardFilesFlow)  # we need to confirm deletions
 
-        for v in [self.dirtyView, self.stageView, self.changedFilesView]:
+        for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
 
@@ -161,12 +149,12 @@ class RepoWidget(QWidget):
         dirtyContainer.setLayout(QVBoxLayout())
         dirtyContainer.layout().setContentsMargins(0, 0, 0, 0)
         dirtyContainer.layout().addWidget(self.dirtyLabel)
-        dirtyContainer.layout().addWidget(self.dirtyView)
+        dirtyContainer.layout().addWidget(self.dirtyFiles)
         stageContainer = QWidget()
         stageContainer.setLayout(QVBoxLayout())
         stageContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(self.stageLabel)
-        stageContainer.layout().addWidget(self.stageView)
+        stageContainer.layout().addWidget(self.stagedFiles)
         commitButtonsContainer = QWidget()
         commitButtonsContainer.setLayout(QHBoxLayout())
         commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
@@ -181,9 +169,9 @@ class RepoWidget(QWidget):
         self.stageSplitter.addWidget(dirtyContainer)
         self.stageSplitter.addWidget(stageContainer)
 
-        self.filesStack.addWidget(self.changedFilesView)
+        self.filesStack.addWidget(self.committedFiles)
         self.filesStack.addWidget(self.stageSplitter)
-        self.filesStack.setCurrentWidget(self.changedFilesView)
+        self.filesStack.setCurrentWidget(self.committedFiles)
 
         self.diffStack.addWidget(self.diffView)
         self.diffStack.addWidget(self.richDiffView)
@@ -236,64 +224,38 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def getFileListAndCacheKey(self):
-        if not self.displayedStagingState:
-            return None, None
-
-        elif self.displayedStagingState == StagingState.COMMITTED:
-            fileListWidget = self.changedFilesView
-            cacheKey = self.displayedCommitOid
-
-        elif self.displayedStagingState.isDirty():
-            fileListWidget = self.dirtyView
-            cacheKey = self.displayedStagingState
-
-        elif self.displayedStagingState == StagingState.STAGED:
-            fileListWidget = self.stageView
-            cacheKey = self.displayedStagingState
-
-        else:
-            return None, None
-
-        return fileListWidget, cacheKey
-
     def saveFilePositions(self):
-        fileListWidget, cacheKey = self.getFileListAndCacheKey()
-        if not fileListWidget:
-            return
-        self.fileListSelectedRowCache[cacheKey] = fileListWidget.latestSelectedRow()
-        self.diffViewScrollPositionCache[(cacheKey, self.displayedFilePath)] = self.diffView.verticalScrollBar().value()
-        self.diffViewCursorPositionCache[(cacheKey, self.displayedFilePath)] = self.diffView.textCursor().position()
-        if self.displayedStagingState != StagingState.COMMITTED:
-            self.latestStagedOrUnstaged = self.displayedStagingState
+        if self.diffStack.currentWidget() == self.diffView:
+            self.navPos.diffScroll = self.diffView.verticalScrollBar().value()
+            self.navPos.diffCursor = self.diffView.textCursor().position()
+        else:
+            self.navPos.diffScroll = 0
+            self.navPos.diffCursor = 0
+        self.navHistory.push(self.navPos)
 
     def restoreSelectedFile(self):
-        fileListWidget, cacheKey = self.getFileListAndCacheKey()
+        pos = self.navPos
 
-        if not fileListWidget:
-            return
+        if not pos or not pos.context:
+            return False
 
-        try:
-            selectedRow = self.fileListSelectedRowCache[cacheKey]
-        except KeyError:
-            selectedRow = 0
+        if pos.context in ["UNSTAGED", "UNTRACKED"]:
+            fl = self.dirtyFiles
+        elif pos.context == "STAGED":
+            fl = self.stagedFiles
+        else:
+            assert len(pos.context) == 40, "expecting an OID here"
+            fl = self.committedFiles
 
-        fileListWidget.selectRow(selectedRow)
+        return fl.selectFile(pos.file)
 
-    def restoreDiffViewPosition(self):
-        fileListWidget, cacheKey = self.getFileListAndCacheKey()
+    def restoreDiffPosition(self):
+        cursorPosition = self.navPos.diffCursor
+        scrollPosition = self.navPos.diffScroll
 
-        try:
-            cursorPosition = self.diffViewCursorPositionCache[(cacheKey, self.displayedFilePath)]
-            scrollPosition = self.diffViewScrollPositionCache[(cacheKey, self.displayedFilePath)]
-        except KeyError:
-            cursorPosition = 0
-            scrollPosition = 0
-
-        if cursorPosition > 0:
-            newTextCursor = QTextCursor(self.diffView.textCursor())
-            newTextCursor.setPosition(cursorPosition)
-            self.diffView.setTextCursor(newTextCursor)
+        newTextCursor = QTextCursor(self.diffView.textCursor())
+        newTextCursor.setPosition(cursorPosition)
+        self.diffView.setTextCursor(newTextCursor)
 
         self.diffView.verticalScrollBar().setValue(scrollPosition)
 
@@ -316,9 +278,9 @@ class RepoWidget(QWidget):
 
     def cleanup(self):
         if self.state and self.state.repo:
-            self.changedFilesView.clear()
-            self.dirtyView.clear()
-            self.stageView.clear()
+            self.committedFiles.clear()
+            self.dirtyFiles.clear()
+            self.stagedFiles.clear()
             self.graphView._replaceModel(None)
             self.diffView.clear()
             # Save path if we want to reload the repo later
@@ -347,10 +309,12 @@ class RepoWidget(QWidget):
 
     def setNoCommitSelected(self):
         self.saveFilePositions()
-        self.filesStack.setCurrentWidget(self.stageSplitter)
-        self.changedFilesView.clear()
+        self.navPos = NavPos()
 
-    def fillStageViewAsync(self):
+        self.filesStack.setCurrentWidget(self.stageSplitter)
+        self.committedFiles.clear()
+
+    def fillStageViewAsync(self, forceSelectFile: NavPos = None):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
         repo = self.state.repo
@@ -364,31 +328,38 @@ class RepoWidget(QWidget):
             dirtyDiff, stageDiff = result
 
             # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
-            with QSignalBlockerContext(self.dirtyView), QSignalBlockerContext(self.stageView):
-                self.dirtyView.clear()
-                self.stageView.clear()
-                self.dirtyView.setContents([dirtyDiff])
-                self.stageView.setContents([stageDiff])
+            with QSignalBlockerContext(self.dirtyFiles), QSignalBlockerContext(self.stagedFiles):
+                self.dirtyFiles.clear()
+                self.stagedFiles.clear()
+                self.dirtyFiles.setContents([dirtyDiff])
+                self.stagedFiles.setContents([stageDiff])
 
-            nDirty = self.dirtyView.model().rowCount()
-            nStaged = self.stageView.model().rowCount()
+            nDirty = self.dirtyFiles.model().rowCount()
+            nStaged = self.stagedFiles.model().rowCount()
             self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
             self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
 
             # Switch to correct card in filesStack to show dirtyView and stageView
             self.filesStack.setCurrentWidget(self.stageSplitter)
 
+            if forceSelectFile:  # for Revert Hunk from DiffView
+                self.navPos = forceSelectFile
+
             # After patchApplied.emit has caused a refresh of the dirty/staged file views,
             # restore selected row in appropriate file list view so the user can keep hitting
             # enter (del) to stage (unstage) a series of files.
-            if self.latestStagedOrUnstaged is not None:
-                self.displayedStagingState = self.latestStagedOrUnstaged
-            self.displayedFilePath = None
-            self.restoreSelectedFile()
+            if not self.restoreSelectedFile():
+                if stagedESR >= 0:
+                    self.stagedFiles.selectRow(min(stagedESR, self.stagedFiles.model().rowCount()-1))
+                elif dirtyESR >= 0:
+                    self.dirtyFiles.selectRow(min(dirtyESR, self.dirtyFiles.model().rowCount()-1))
 
             # If no file is selected in either FileListView, clear the diffView of any residual diff.
-            if 0 == (len(self.dirtyView.selectedIndexes()) + len(self.stageView.selectedIndexes())):
+            if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
                 self.diffView.clear()
+
+        stagedESR = self.stagedFiles.earliestSelectedRow()
+        dirtyESR = self.dirtyFiles.earliestSelectedRow()
 
         self.saveFilePositions()
         self.workQueue.put(work, then, "Refreshing index", -1000)
@@ -402,20 +373,17 @@ class RepoWidget(QWidget):
             #import time; time.sleep(1) #to debug out-of-order events
 
             # Reset changed files view. Block its signals as we refill it to prevent updating the diff view.
-            with QSignalBlockerContext(self.changedFilesView):
-                self.changedFilesView.clear()
-                self.changedFilesView.setCommit(oid)
-                self.changedFilesView.setContents(parentDiffs)
+            with QSignalBlockerContext(self.committedFiles):
+                self.committedFiles.clear()
+                self.committedFiles.setCommit(oid)
+                self.committedFiles.setContents(parentDiffs)
 
-            self.displayedCommitOid = oid
-            self.displayedStagingState = StagingState.COMMITTED
-
-            # Click on the first file in the commit.
-            # This will in turn fill the diff view.
-            #self.changedFilesView.selectFirstRow()
+            self.navPos = self.navHistory.findContext(oid.hex)
+            if not self.navPos:
+                self.navPos = NavPos(context=oid.hex, file=self.committedFiles.getFirstPath())
 
             # Switch to correct card in filesStack to show changedFilesView
-            self.filesStack.setCurrentWidget(self.changedFilesView)
+            self.filesStack.setCurrentWidget(self.committedFiles)
 
             self.restoreSelectedFile()
 
@@ -445,8 +413,15 @@ class RepoWidget(QWidget):
             error: DiffModelError
             dm, error = returned
 
-            self.displayedFilePath = patch.delta.new_file.path
-            self.displayedStagingState = stagingState
+            if stagingState == StagingState.COMMITTED:
+                assert len(self.navPos.context) == 40
+                posContext = self.navPos.context
+            else:
+                posContext = stagingState.name
+            posFile = patch.delta.new_file.path
+            self.navPos = self.navHistory.findFileInContext(posContext, posFile)
+            if not self.navPos:
+                self.navPos = NavPos(posContext, posFile)
 
             if error:
                 self.diffStack.setCurrentWidget(self.richDiffView)
@@ -454,7 +429,7 @@ class RepoWidget(QWidget):
             else:
                 self.diffStack.setCurrentWidget(self.diffView)
                 self.diffView.replaceDocument(repo, patch, stagingState, dm)
-                self.restoreDiffViewPosition()  # restore position after we've replaced the document
+                self.restoreDiffPosition()  # restore position after we've replaced the document
 
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)

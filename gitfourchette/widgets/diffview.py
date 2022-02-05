@@ -1,15 +1,24 @@
 from allqt import *
 from bisect import bisect_left, bisect_right
-from subpatch import extractSubpatch
-from pygit2 import GitError, Patch, Repository
+from navhistory import NavPos
+from pygit2 import GitError, Patch, Repository, Diff
 from stagingstate import StagingState
+from subpatch import extractSubpatch
 from trash import Trash
 from util import excMessageBox, ActionDef, quickMenu
 from widgets.diffmodel import DiffModel, LineData
 import enum
 import os
 import porcelain
+import pygit2
 import settings
+
+
+def get1FileChangedByDiff(diff: Diff):
+    for p in diff:
+        if p.delta.status != pygit2.GIT_DELTA_DELETED:
+            return p.delta.new_file.path
+    return ""
 
 
 @enum.unique
@@ -32,7 +41,7 @@ class DiffGutter(QWidget):
 
 
 class DiffView(QPlainTextEdit):
-    patchApplied: Signal = Signal()
+    patchApplied: Signal = Signal(NavPos)
 
     lineData: list[LineData]
     lineCursorStartCache: list[int]
@@ -262,12 +271,13 @@ class DiffView(QPlainTextEdit):
             Trash(self.repo).backupPatch(patchData, self.currentPatch.delta.new_file.path)
 
         try:
-            porcelain.applyPatch(self.repo, patchData, discard)
+            diff = porcelain.applyPatch(self.repo, patchData, discard)
         except GitError as e:
             excMessageBox(e, F"{purpose.name}: Apply Patch",
                           F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
+            return
 
-        self.patchApplied.emit()
+        self.patchApplied.emit(None)
 
     def exportPatch(self, patchData: bytes, saveInto=""):
         if not patchData:
@@ -291,8 +301,9 @@ class DiffView(QPlainTextEdit):
         elif not porcelain.patchApplies(self.repo, patchData, discard=True):
             QMessageBox.warning(self, "Revert patch", "Couldn't revert this patch.\nThe code may have diverged too much from this revision.")
         else:
-            porcelain.applyPatch(self.repo, patchData, discard=True)
-            self.patchApplied.emit()
+            diff = porcelain.applyPatch(self.repo, patchData, discard=True)
+            changedFile = get1FileChangedByDiff(diff)
+            self.patchApplied.emit(NavPos("UNSTAGED", changedFile))  # send a NavPos to have RepoWidget show the file in the unstaged list
 
     def applySelection(self, purpose: PatchPurpose):
         reverse = purpose != PatchPurpose.STAGE

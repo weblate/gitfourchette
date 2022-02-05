@@ -19,13 +19,13 @@ def testBackupDiscardedPatches(qtbot, workDir, workDirRepo, rw):
 
     rw.quickRefresh()  # refresh manually because we added files after repowidget was already created
 
-    assert set(testutil.qlvGetRowData(rw.dirtyView)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt"}
-    assert testutil.qlvGetRowData(rw.stageView) == []
+    assert set(testutil.qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt"}
+    assert testutil.qlvGetRowData(rw.stagedFiles) == []
 
     trash = Trash(workDirRepo)
     assert len(trash.trashFiles) == 0
 
-    QTest.keySequence(rw.dirtyView, QKeySequence("Ctrl+A,Del"))
+    QTest.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
     testutil.acceptQMessageBox(rw, "discard changes")
 
     trash.refreshFiles()
@@ -49,8 +49,8 @@ def testTrashFull(qtbot, workDirRepo, rw):
         with open(F"{trash.trashDir}/19991231T235900-test{i}.txt", "w") as junk:
             junk.write(F"test{i}")
 
-    testutil.qlvClickNthRow(rw.dirtyView, 0)
-    QTest.keyPress(rw.dirtyView, Qt.Key_Delete)
+    testutil.qlvClickNthRow(rw.dirtyFiles, 0)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
     testutil.acceptQMessageBox(rw, "discard changes")
 
     # Trash should have been purged to make room for new patch

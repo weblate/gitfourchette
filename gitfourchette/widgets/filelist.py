@@ -21,6 +21,7 @@ for status in "ACDMRTUX":
 class FileListModel(QAbstractListModel):
     _diffs: list[pygit2.Diff]
     _diffStartRows: list[int]
+    _fileRows: dict[str, int]
     _rows: int
 
     def __init__(self, parent):
@@ -30,17 +31,19 @@ class FileListModel(QAbstractListModel):
     def clear(self):
         self._diffs = []
         self._diffStartRows = []
+        self._fileRows = {}
         self._rows = 0
         self.modelReset.emit()
 
     def setDiffs(self, diffs: list[pygit2.Diff]):
-        startRow = 0
+        row = 0
         for diff in diffs:
-            self._diffStartRows.append(startRow)
+            self._diffStartRows.append(row)
             self._diffs.append(diff)
             for patch in diff:
-                startRow += 1
-        self._rows = startRow
+                self._fileRows[patch.delta.new_file.path] = row
+                row += 1
+        self._rows = row
         self.modelReset.emit()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
@@ -109,6 +112,9 @@ class FileListModel(QAbstractListModel):
             return QSize(-1, parentWidget.fontMetrics().height())
 
         return None
+
+    def getRowForFile(self, path):
+        return self._fileRows[path]
 
 
 class FileList(QListView):
@@ -238,11 +244,17 @@ class FileList(QListView):
     def repo(self) -> pygit2.Repository:
         return self.repoWidget.state.repo
 
+    def earliestSelectedRow(self):
+        try:
+            return list(self.selectedIndexes())[0].row()
+        except IndexError:
+            return -1
+
     def latestSelectedRow(self):
         try:
             return list(self.selectedIndexes())[-1].row()
         except IndexError:
-            return None
+            return -1
 
     def savePatchAs(self, saveInto=None):
         entries = list(self.selectedEntries())
@@ -275,6 +287,26 @@ class FileList(QListView):
 
         with open(savePath, "wb") as f:
             f.write(bigpatch)
+
+    def getFirstPath(self) -> str:
+        model: FileListModel = self.model()
+        index: QModelIndex = model.index(0)
+        if index.isValid():
+            return model.getPatchAt(index).delta.new_file.path
+        else:
+            return ""
+
+    def selectFile(self, file: str):
+        if not file:
+            row = 0
+        else:
+            try:
+                row = self.model().getRowForFile(file)
+            except KeyError:
+                return False
+
+        self.selectRow(row)
+        return True
 
 
 class DirtyFiles(FileList):

@@ -181,7 +181,7 @@ def testNewStash(qtbot, workDirRepo, rw):
     assert len(workDirRepo.listall_stashes()) == 0
 
     assert len(getEItemIndices(rw, EItem.Stash)) == 0
-    assert testutil.qlvGetRowData(rw.dirtyView) == ["a/a1.txt"]
+    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
     testutil.findMenuAction(menu, "new stash").trigger()
@@ -194,7 +194,7 @@ def testNewStash(qtbot, workDirRepo, rw):
     assert len(workDirRepo.listall_stashes()) == 1
     assert len(stashIndices) == 1
     assert stashIndices[0].data(Qt.DisplayRole).endswith("helloworld")
-    assert testutil.qlvGetRowData(rw.dirtyView) == []
+    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
 
 
 @withRepo("TestGitRepository")
@@ -209,7 +209,7 @@ def testPopStash(qtbot, workDirRepo, rw):
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(workDirRepo.listall_stashes()) == 0
     assert len(stashIndices) == 0
-    assert testutil.qlvGetRowData(rw.dirtyView) == ["a/a1.txt"]
+    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
 @withRepo("TestGitRepository")
@@ -224,13 +224,13 @@ def testApplyStash(qtbot, workDirRepo, rw):
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(workDirRepo.listall_stashes()) == 1
     assert len(stashIndices) == 1
-    assert testutil.qlvGetRowData(rw.dirtyView) == ["a/a1.txt"]
+    assert testutil.qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
 @withRepo("TestGitRepository")
 @withPrep(reposcenario.stashedChange)
 def testDropStash(qtbot, workDirRepo, rw):
-    assert testutil.qlvGetRowData(rw.dirtyView) == []
+    assert testutil.qlvGetRowData(rw.dirtyFiles) == []
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(stashIndices) == 1
@@ -241,4 +241,4 @@ def testDropStash(qtbot, workDirRepo, rw):
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(workDirRepo.listall_stashes()) == 0
     assert len(stashIndices) == 0
-    assert testutil.qlvGetRowData(rw.dirtyView) == []
+    assert testutil.qlvGetRowData(rw.dirtyFiles) == []

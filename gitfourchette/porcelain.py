@@ -366,6 +366,7 @@ def applyPatch(repo: pygit2.Repository, patchData: bytes, discard: bool):
 
     diff = pygit2.Diff.parse_diff(patchData)
     repo.apply(diff, location)
+    return diff
 
 
 def patchApplies(repo: pygit2.Repository, patchData: bytes, discard: bool):
