@@ -238,5 +238,11 @@ class GraphView(QListView):
         except KeyError:
             QMessageBox.warning(self, "pygit2.Commit not found",
                                 F"pygit2.Commit not found or not loaded:\n{oid.hex}")
-            return
-        self.setCurrentIndex(self.model().index(1 + index, 0))
+            return False
+        ci = self.currentIndex()
+        newRow = 1 + index
+        if ci.row() != newRow:
+            self.setCurrentIndex(self.model().index(1 + index, 0))
+            return True
+        else:
+            return False

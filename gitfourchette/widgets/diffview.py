@@ -277,7 +277,7 @@ class DiffView(QPlainTextEdit):
                           F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
             return
 
-        self.patchApplied.emit(None)
+        self.patchApplied.emit(NavPos())
 
     def exportPatch(self, patchData: bytes, saveInto=""):
         if not patchData:

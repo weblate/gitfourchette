@@ -26,6 +26,13 @@ def qlvClickNthRow(view: QListView, n: int):
     QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=rect.center())
 
 
+def qlvGetSelection(view: QListView, role=Qt.DisplayRole):
+    data = []
+    for index in view.selectedIndexes():
+        data.append(index.data(role))
+    return data
+
+
 def findMenuAction(menu: QMenu, pattern: str):
     for action in menu.actions():
         actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())

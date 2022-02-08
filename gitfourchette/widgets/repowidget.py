@@ -258,11 +258,35 @@ class RepoWidget(QWidget):
 
         self.diffView.verticalScrollBar().setValue(scrollPosition)
 
+    def navigateTo(self, pos: NavPos):
+        if not pos or not pos.context:
+            QApplication.beep()
+        else:
+            self.navPos = pos
+
+            self.navHistory.setRecent(pos)
+
+            if self.navPos.context in ["UNSTAGED", "STAGED", "UNTRACKED"]:
+                if self.graphView.currentCommitOid is not None:
+                    self.graphView.selectUncommittedChanges()
+                else:
+                    self.restoreSelectedFile()
+            else:
+                oid = pygit2.Oid(hex=self.navPos.context)
+                if self.graphView.currentCommitOid != oid:
+                    self.selectCommit(pygit2.Oid(hex=self.navPos.context))
+                else:
+                    self.restoreSelectedFile()
+
     def navigateBack(self):
-        print("Nav Back")
+        if self.navHistory.isAtTopOfStack:
+            self.saveFilePositions()
+        pos = self.navHistory.navigateBack()
+        self.navigateTo(pos)
 
     def navigateForward(self):
-        print("Nav Fwd")
+        pos = self.navHistory.navigateForward()
+        self.navigateTo(pos)
 
     # -------------------------------------------------------------------------
 
