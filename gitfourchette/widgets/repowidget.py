@@ -94,7 +94,7 @@ class RepoWidget(QWidget):
         self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
 
         self.sidebar.commit.connect(self.startCommitFlow)
-        self.sidebar.commitClicked.connect(self.selectCommit)
+        self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.deleteBranch.connect(self.actionFlows.deleteBranchFlow)
         self.sidebar.deleteRemote.connect(self.actionFlows.deleteRemoteFlow)
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
@@ -261,32 +261,53 @@ class RepoWidget(QWidget):
     def navigateTo(self, pos: NavPos):
         if not pos or not pos.context:
             QApplication.beep()
-        else:
-            self.navPos = pos
+            return False
 
-            self.navHistory.setRecent(pos)
+        self.navPos = pos
 
-            if self.navPos.context in ["UNSTAGED", "STAGED", "UNTRACKED"]:
-                if self.graphView.currentCommitOid is not None:
-                    self.graphView.selectUncommittedChanges()
-                else:
-                    self.restoreSelectedFile()
+        self.navHistory.setRecent(pos)
+
+        self.navHistory.lock()
+
+        if self.navPos.context in ["UNSTAGED", "STAGED", "UNTRACKED"]:
+            if self.graphView.currentCommitOid is not None:
+                self.graphView.selectUncommittedChanges()
+                success = True
             else:
-                oid = pygit2.Oid(hex=self.navPos.context)
-                if self.graphView.currentCommitOid != oid:
-                    self.selectCommit(pygit2.Oid(hex=self.navPos.context))
-                else:
-                    self.restoreSelectedFile()
+                success = self.restoreSelectedFile()
+                self.navHistory.unlock()
+        else:
+            oid = pygit2.Oid(hex=self.navPos.context)
+            if self.graphView.currentCommitOid != oid:
+                success = self.graphView.selectCommit(oid)
+            else:
+                success = self.restoreSelectedFile()
+                self.navHistory.unlock()
+
+        return success
 
     def navigateBack(self):
         if self.navHistory.isAtTopOfStack:
             self.saveFilePositions()
-        pos = self.navHistory.navigateBack()
-        self.navigateTo(pos)
+
+        startPos = self.navPos.copy()
+
+        while not self.navHistory.isAtBottomOfStack:
+            pos = self.navHistory.navigateBack()
+            success = self.navigateTo(pos)
+
+            if success and pos != startPos:
+                break
 
     def navigateForward(self):
-        pos = self.navHistory.navigateForward()
-        self.navigateTo(pos)
+        startPos = self.navPos.copy()
+
+        while not self.navHistory.isAtTopOfStack:
+            pos = self.navHistory.navigateForward()
+            success = self.navigateTo(pos)
+
+            if success and pos != startPos:
+                break
 
     # -------------------------------------------------------------------------
 
@@ -386,6 +407,8 @@ class RepoWidget(QWidget):
             # If no file is selected in either FileListView, clear the diffView of any residual diff.
             if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
                 self.diffView.clear()
+
+            self.navHistory.unlock()
 
         stagedESR = self.stagedFiles.earliestSelectedRow()
         dirtyESR = self.dirtyFiles.earliestSelectedRow()
@@ -782,12 +805,9 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def selectCommit(self, oid: pygit2.Oid):
-        self.graphView.selectCommit(oid)
-
     def selectRef(self, refName: str):
         oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
-        self.selectCommit(oid)
+        self.graphView.selectCommit(oid)
 
     """
     def selectTag(self, tagName: str):

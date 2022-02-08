@@ -17,6 +17,9 @@ class NavPos:
     def __repr__(self) -> str:
         return F"NavPos({self.context[:10]} {self.file} {self.diffScroll} {self.diffCursor})"
 
+    def copy(self):
+        return copy(self)
+
 
 class NavHistory:
     history: list[NavPos]
@@ -27,25 +30,40 @@ class NavHistory:
         self.history = []
         self.recent = {}
         self.current = 0
+        self.locked = False
+
+    def lock(self):
+        self.locked = True
+
+    def unlock(self):
+        self.locked = False
 
     def push(self, pos: NavPos):
+        if self.locked:
+            return
+
         if not pos:
             print("[nav] ignoring:", pos)
             return
 
         if len(self.history) == 0 or self.history[self.current] != pos:
-            pos = copy(pos)
+            pos = pos.copy()
             self.recent[pos.context] = pos
             self.recent[F"{pos.context}:{pos.file}"] = pos
 
             if self.current < len(self.history) - 1:
-                print(F"[nav] trimming {self.current}")
-                self.history = self.history[: self.current + 1]
+                self.trim()
+
             print(F"[nav] pushing #{len(self.history)}:", pos)
             self.history.append(pos)
             self.current = len(self.history) - 1
         else:
             print("[nav] discarding:", pos)
+
+    def trim(self):
+        print(F"[nav] trimming {self.current}")
+        self.history = self.history[: self.current + 1]
+        assert self.isAtTopOfStack
 
     def setRecent(self, pos):
         print("[nav] setRecent", pos)
@@ -56,6 +74,10 @@ class NavHistory:
     @property
     def isAtTopOfStack(self):
         return self.current == len(self.history) - 1
+
+    @property
+    def isAtBottomOfStack(self):
+        return self.current == 0
 
     def findContext(self, context):
         pos = self.recent.get(context, None)

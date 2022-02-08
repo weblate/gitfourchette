@@ -12,14 +12,14 @@ def testNavigation(qtbot, workDir, mainWindow, rw):
     oid3 = pygit2.Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
     oid4 = pygit2.Oid(hex="58be4659bb571194ed4562d04b359d26216f526e")
 
-    rw.selectCommit(oid1)
+    rw.graphView.selectCommit(oid1)
     qlvClickNthRow(rw.committedFiles, 4)
-    rw.selectCommit(oid2)
+    rw.graphView.selectCommit(oid2)
     qlvClickNthRow(rw.committedFiles, 2)
     rw.graphView.selectUncommittedChanges()
     qlvClickNthRow(rw.stagedFiles, 0)
     qlvClickNthRow(rw.dirtyFiles, 0)
-    rw.selectCommit(oid3)
+    rw.graphView.selectCommit(oid3)
 
     history = [
         (oid1, "a/a1"),
@@ -50,53 +50,130 @@ def testNavigation(qtbot, workDir, mainWindow, rw):
 
     assertHistoryMatches(history[-1])
 
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)  # can't go further
+    rw.navigateForward()  # can't go further
     assertHistoryMatches(history[-1])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
+    rw.navigateBack()
+    rw.navigateForward()
     assertHistoryMatches(history[-1])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-2])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-3])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-4])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-5])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-6])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-7])
 
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
+    rw.navigateForward()
+    rw.navigateForward()
+    rw.navigateForward()
+    rw.navigateForward()
     assertHistoryMatches(history[-3])
 
     # now fork from linear history
-    rw.selectCommit(oid4)
+    rw.graphView.selectCommit(oid4)
     assertHistoryMatches( (oid4, "master.txt") )
 
     # can't go further
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
+    rw.navigateForward()
     assertHistoryMatches( (oid4, "master.txt") )
 
     # go back to -3
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-3])
 
-    QTest.mouseClick(mainWindow, Qt.BackButton)
+    rw.navigateBack()
     assertHistoryMatches(history[-4])
 
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
-    QTest.mouseClick(mainWindow, Qt.ForwardButton)
+    rw.navigateForward()
+    rw.navigateForward()
     assertHistoryMatches( (oid4, "master.txt") )
 
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, workDir, mainWindow, rw):
+    writeFile(F"{workDir}/a/a1", "blah blah a1")
+    writeFile(F"{workDir}/a/a1.txt", "blah blah a1.txt")
+    writeFile(F"{workDir}/b/b1.txt", "blah blah b1")
+    writeFile(F"{workDir}/c/c1.txt", "blah blah c1")
+    writeFile(F"{workDir}/c/c2.txt", "blah blah c2")
+    rw.quickRefresh()
+
+    mainWindow.show()
+    qlvClickNthRow(rw.dirtyFiles, 0)  # a/a1
+    qlvClickNthRow(rw.dirtyFiles, 1)  # a/a1.txt
+    qlvClickNthRow(rw.dirtyFiles, 2)  # b/b1.txt
+    qlvClickNthRow(rw.dirtyFiles, 3)  # c/c1.txt
+    qlvClickNthRow(rw.dirtyFiles, 4)  # c/c2.txt
+
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
+
+    rw.navigateBack()
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
+    rw.navigateBack()
+    assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
+
+    rw.dirtyFiles.discard()  # discard b/b1.txt
+    acceptQMessageBox(rw, "discard")
+
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
+
+    rw.navigateForward()
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
+
+    # can't go further
+    rw.navigateForward()
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
+
+    rw.navigateBack()
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, workDir, mainWindow, rw):
+    writeFile(F"{workDir}/a/a1", "blah blah a1")
+    writeFile(F"{workDir}/a/a1.txt", "blah blah a1.txt")
+    writeFile(F"{workDir}/b/b1.txt", "blah blah b1")
+    writeFile(F"{workDir}/c/c1.txt", "blah blah c1")
+    writeFile(F"{workDir}/c/c2.txt", "blah blah c2")
+    rw.quickRefresh()
+
+    mainWindow.show()
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    qlvClickNthRow(rw.dirtyFiles, 1)
+    qlvClickNthRow(rw.dirtyFiles, 2)
+    qlvClickNthRow(rw.dirtyFiles, 3)
+    qlvClickNthRow(rw.dirtyFiles, 4)
+
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
+    rw.dirtyFiles.discard()
+    acceptQMessageBox(rw, "discard")
+
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
+
+    # Can't go further
+    for i in range(10):
+        rw.navigateForward()
+        assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
+
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    assert qlvGetSelection(rw.dirtyFiles) == ["a/a1"]
+
+    rw.navigateBack()
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
+
+    rw.navigateBack()
+    assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
