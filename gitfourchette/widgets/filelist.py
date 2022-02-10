@@ -52,11 +52,21 @@ class FileListModel(QAbstractListModel):
         row = index.row()
         diffNo = bisect.bisect_right(self._diffStartRows, row) - 1
         fileNo = row - self._diffStartRows[diffNo]
-        patch: pygit2.Patch = self._diffs[diffNo][fileNo]
-        return patch
+        try:
+            patch: pygit2.Patch = self._diffs[diffNo][fileNo]
+            return patch
+        except OSError as e:
+            # We might get here if the UI attempts to update itself while a long async
+            # operation is ongoing. (e.g. a file is being recreated)
+            print("UI attempting to update during async operation?", type(e).__name__, e)
+            return None
 
     def getDeltaAt(self, index: QModelIndex) -> pygit2.DiffDelta:
-        return self.getPatchAt(index).delta
+        patch = self.getPatchAt(index)
+        if patch:
+            return patch.delta
+        else:
+            return None
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
         if role == Qt.UserRole:
