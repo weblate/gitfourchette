@@ -87,7 +87,14 @@ class GraphDelegate(QStyledItemDelegate):
             commit: Commit = index.data()
             summaryText, contd = messageSummary(commit.message)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
-            authorText = commit.author.email.split('@')[0]
+
+            emailParts = commit.author.email.split('@', 1)
+            if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
+                # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
+                authorText = emailParts[0].split('+', 1)[-1]
+            else:
+                authorText = emailParts[0]
+
             dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
