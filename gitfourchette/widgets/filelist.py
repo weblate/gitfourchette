@@ -55,6 +55,9 @@ class FileListModel(QAbstractListModel):
         try:
             patch: pygit2.Patch = self._diffs[diffNo][fileNo]
             return patch
+        except pygit2.GitError as e:
+            print("GitError when attempting to get patch:", type(e).__name__, e)
+            return None
         except OSError as e:
             # We might get here if the UI attempts to update itself while a long async
             # operation is ongoing. (e.g. a file is being recreated)
