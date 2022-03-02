@@ -1,7 +1,7 @@
 from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState
+from gitfourchette.repostate import RepoState, ShallowRepoNotSupportedError
 from gitfourchette.util import (compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
@@ -343,8 +343,12 @@ class MainWindow(QMainWindow):
             qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
             qmb.show()
             return False
+        except ShallowRepoNotSupportedError as exc:
+            excMessageBox(exc, message=F"Sorry, shallow repositories are not supported yet.",
+                          showExcSummary=False, title="Shallow Repository", parent=self)
+            return False
         except BaseException as exc:
-            excMessageBox(exc, message="An exception was thrown while opening \"{path}\"", parent=self)
+            excMessageBox(exc, message=F"An exception was thrown while opening \"{path}\"", parent=self)
             return False
         finally:
             progress.close()

@@ -20,6 +20,10 @@ class BatchedOffset:
     offsetInBatch: int
 
 
+class ShallowRepoNotSupportedError(BaseException):
+    pass
+
+
 class RepoState:
     repo: pygit2.Repository
     settings: QSettings
@@ -60,6 +64,10 @@ class RepoState:
 
     def __init__(self, dir):
         self.repo = pygit2.Repository(dir)
+
+        if self.repo.is_shallow:
+            raise ShallowRepoNotSupportedError()
+
         self.walker = None
         self.currentBatchID = 0
 
