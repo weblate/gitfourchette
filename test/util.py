@@ -4,6 +4,10 @@ import os
 import re
 
 
+def touchFile(path):
+    open(path, 'a').close()
+
+
 def writeFile(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:

@@ -4,14 +4,14 @@ import pygit2
 
 
 def untrackedEmptyFile(path):
-    os.mknod(F"{path}/SomeNewFile.txt")
+    touchFile(F"{path}/SomeNewFile.txt")
 
 
 def nestedUntrackedFiles(path):
     os.mkdir(F"{path}/N")
-    os.mknod(F"{path}/N/tata.txt")
-    os.mknod(F"{path}/N/toto.txt")
-    os.mknod(F"{path}/N/tutu.txt")
+    touchFile(F"{path}/N/tata.txt")
+    touchFile(F"{path}/N/toto.txt")
+    touchFile(F"{path}/N/tutu.txt")
 
 
 def fileWithUnstagedChange(path):
@@ -30,7 +30,7 @@ def fileWithStagedAndUnstagedChanges(path):
 
 def stagedNewEmptyFile(path):
     repo = pygit2.Repository(path)
-    os.mknod(F"{path}/SomeNewFile.txt")
+    touchFile(F"{path}/SomeNewFile.txt")
     repo.index.read()
     repo.index.add("SomeNewFile.txt")
     repo.index.write()
