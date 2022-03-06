@@ -598,7 +598,7 @@ class MainWindow(QMainWindow):
         if mime.hasUrls() and len(mime.urls()) > 0:
             url: QUrl = mime.urls()[0]
             if url.isLocalFile():
-                return "open", url.path()
+                return "open", url.toLocalFile()
             else:
                 return "clone", url.toString()
 
