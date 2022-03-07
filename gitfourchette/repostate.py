@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from gitfourchette import porcelain
+from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.globalstatus import globalstatus
@@ -67,6 +67,18 @@ class RepoState:
 
         if self.repo.is_shallow:
             raise ShallowRepoNotSupportedError()
+
+        # On Windows, core.autocrlf is usually set to true in the system config.
+        # However, libgit2 cannot find the system config if git wasn't installed
+        # with the official installer, e.g. via scoop. If a repo was cloned with
+        # autocrlf=true, GF's staging area would be unusable on Windows without
+        # setting autocrlf=true in the config.
+        if QSysInfo.productType() == "windows" and "core.autocrlf" not in self.repo.config:
+            tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
+            print("Forcing core.autocrlf=true in:", tempConfigPath)
+            tempConfig = pygit2.Config(tempConfigPath)
+            tempConfig["core.autocrlf"] = "true"
+            self.repo.config.add_file(tempConfigPath, level=1)
 
         self.walker = None
         self.currentBatchID = 0
