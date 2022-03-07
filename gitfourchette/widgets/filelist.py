@@ -430,7 +430,7 @@ class CommittedFiles(FileList):
             with open(tempPath, "wb") as f:
                 f.write(blob.data)
 
-            QDesktopServices.openUrl(QUrl(tempPath))
+            QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
 
     def saveRevisionAs(self, saveInto=None):
         for diff in self.confirmSelectedEntries("save # files"):
