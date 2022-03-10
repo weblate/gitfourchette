@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
@@ -5,7 +6,6 @@ from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
 from pathlib import Path
 from typing import Generator, Any
-import bisect
 import html
 import os
 import pygit2
@@ -18,40 +18,43 @@ for status in "ACDMRTUX":
 
 
 class FileListModel(QAbstractListModel):
-    _diffs: list[pygit2.Diff]
-    _diffStartRows: list[int]
-    _fileRows: dict[str, int]
-    _deltas: list[pygit2.DiffDelta]
+    @dataclass
+    class Entry:
+        delta: pygit2.DiffDelta
+        diff: pygit2.Diff
+        patchNo: int
+
+    entries: list[Entry]
+    fileRows: dict[str, int]
 
     def __init__(self, parent):
         super().__init__(parent)
         self.clear()
 
     def clear(self):
-        self._diffs = []
-        self._diffStartRows = []
-        self._deltas = []
-        self._fileRows = {}
+        self.entries = []
+        self.fileRows = {}
         self.modelReset.emit()
 
     def setDiffs(self, diffs: list[pygit2.Diff]):
         for diff in diffs:
-            self._diffStartRows.append(len(self._deltas))
-            self._diffs.append(diff)
-            for delta in diff.deltas:
-                self._fileRows[delta.new_file.path] = len(self._deltas)
-                self._deltas.append(delta)
+            for patchNo, delta in enumerate(diff.deltas):
+                # In merge commits, the same file may appear in several diffs
+                if delta.new_file.path in self.fileRows:
+                    continue
+                self.fileRows[delta.new_file.path] = len(self.entries)
+                self.entries.append(FileListModel.Entry(delta, diff, patchNo))
+
         self.modelReset.emit()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return len(self._deltas)
+        return len(self.entries)
 
     def getPatchAt(self, index: QModelIndex) -> pygit2.Patch:
         row = index.row()
-        diffNo = bisect.bisect_right(self._diffStartRows, row) - 1
-        fileNo = row - self._diffStartRows[diffNo]
+        entry = self.entries[row]
         try:
-            patch: pygit2.Patch = self._diffs[diffNo][fileNo]
+            patch: pygit2.Patch = entry.diff[entry.patchNo]
             return patch
         except pygit2.GitError as e:
             print("GitError when attempting to get patch:", type(e).__name__, e)
@@ -63,7 +66,7 @@ class FileListModel(QAbstractListModel):
             return None
 
     def getDeltaAt(self, index: QModelIndex) -> pygit2.DiffDelta:
-        return self._deltas[index.row()]
+        return self.entries[index.row()].delta
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
         if role == Qt.UserRole:
@@ -120,7 +123,7 @@ class FileListModel(QAbstractListModel):
         return None
 
     def getRowForFile(self, path):
-        return self._fileRows[path]
+        return self.fileRows[path]
 
 
 class FileList(QListView):
