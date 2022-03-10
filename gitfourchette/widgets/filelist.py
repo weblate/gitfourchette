@@ -21,7 +21,7 @@ class FileListModel(QAbstractListModel):
     _diffs: list[pygit2.Diff]
     _diffStartRows: list[int]
     _fileRows: dict[str, int]
-    _rows: int
+    _deltas: list[pygit2.DiffDelta]
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -30,23 +30,21 @@ class FileListModel(QAbstractListModel):
     def clear(self):
         self._diffs = []
         self._diffStartRows = []
+        self._deltas = []
         self._fileRows = {}
-        self._rows = 0
         self.modelReset.emit()
 
     def setDiffs(self, diffs: list[pygit2.Diff]):
-        row = 0
         for diff in diffs:
-            self._diffStartRows.append(row)
+            self._diffStartRows.append(len(self._deltas))
             self._diffs.append(diff)
-            for patch in diff:
-                self._fileRows[patch.delta.new_file.path] = row
-                row += 1
-        self._rows = row
+            for delta in diff.deltas:
+                self._fileRows[delta.new_file.path] = len(self._deltas)
+                self._deltas.append(delta)
         self.modelReset.emit()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        return self._rows
+        return len(self._deltas)
 
     def getPatchAt(self, index: QModelIndex) -> pygit2.Patch:
         row = index.row()
@@ -65,11 +63,7 @@ class FileListModel(QAbstractListModel):
             return None
 
     def getDeltaAt(self, index: QModelIndex) -> pygit2.DiffDelta:
-        patch = self.getPatchAt(index)
-        if patch:
-            return patch.delta
-        else:
-            return None
+        return self._deltas[index.row()]
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
         if role == Qt.UserRole:

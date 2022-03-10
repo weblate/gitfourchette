@@ -79,11 +79,11 @@ class NavHistory:
     def isAtBottomOfStack(self):
         return self.current == 0
 
-    def findContext(self, context):
+    def findContext(self, context: str) -> NavPos:
         pos = self.recent.get(context, None)
         return copy(pos) if pos else None
 
-    def findFileInContext(self, context, file):
+    def findFileInContext(self, context: str, file: str) -> NavPos:
         pos = self.recent.get(F"{context}:{file}", None)
         return copy(pos) if pos else None
 

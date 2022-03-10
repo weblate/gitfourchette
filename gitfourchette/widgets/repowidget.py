@@ -445,6 +445,14 @@ class RepoWidget(QWidget):
     def loadPatchAsync(self, patch: pygit2.Patch, stagingState: StagingState):
         """Load a file diff into the pygit2.Diff View"""
 
+        if not patch:
+            self.diffStack.setCurrentWidget(self.richDiffView)
+            self.richDiffView.displayDiffModelError(DiffModelError(
+                "Patch is invalid.",
+                "The patched file may have changed on disk since we last read it. Try refreshing the window.",
+                icon=QStyle.SP_MessageBoxWarning))
+            return
+
         repo = self.state.repo
 
         def work():
