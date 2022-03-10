@@ -123,11 +123,13 @@ class GraphView(QListView):
             committerMarkup = formatSignature(commit.committer)
 
         diffs = porcelain.loadCommitDiffs(self.repo, oid)
+        '''
         statsMarkup = (
                 fplural("<b>#</b> changed file^s", sum(diff.stats.files_changed for diff in diffs)) +
                 fplural("<br/><b>#</b> insertion^s", sum(diff.stats.insertions for diff in diffs)) +
                 fplural("<br/><b>#</b> deletion^s", sum(diff.stats.deletions for diff in diffs))
         )
+        '''
 
         markup = F"""<big>{summary}</big>{postSummary}
             <br>
@@ -136,7 +138,6 @@ class GraphView(QListView):
             <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
             <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
-            <tr><td><b>Statistics </b></td><td>{statsMarkup}</td></tr>
             </table>"""
             # <tr><td><b>Debug</b></td><td>
             #     batch {data.batchID},
@@ -144,7 +145,7 @@ class GraphView(QListView):
             #     ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
             #     </td></tr>
 
-        title = F"pygit2.Commit info {shortHash(commit.oid)}"
+        title = F"Commit info {shortHash(commit.oid)}"
 
         details = commit.message if contd else None
 
