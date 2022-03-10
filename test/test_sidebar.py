@@ -242,3 +242,16 @@ def testDropStash(qtbot, workDirRepo, rw):
     assert len(workDirRepo.listall_stashes()) == 0
     assert len(stashIndices) == 0
     assert qlvGetRowData(rw.dirtyFiles) == []
+
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testNewTrackingBranch(qtbot, workDirRepo: pygit2.Repository, rw):
+    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/first-merge")
+    findMenuAction(menu, "new .*branch .*tracking").trigger()
+    findQDialog(rw, "new .*branch .*tracking").accept()
+
+    localBranch = workDirRepo.branches.local['first-merge']
+    assert localBranch
+    assert localBranch.upstream_name == "refs/remotes/origin/first-merge"
+    assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"

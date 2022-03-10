@@ -44,17 +44,15 @@ def findMenuAction(menu: QMenu, pattern: str):
             return action
 
 
-def findQDialog(parent: QWidget, subtext: str) -> QDialog:
-    subtext = subtext.upper()
-
+def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     dlg: QDialog
     for dlg in parent.findChildren(QDialog):
         if not dlg.isEnabled() or dlg.isHidden():
             continue
-        if subtext in dlg.windowTitle().upper():
+        if re.search(pattern, dlg.windowTitle(), re.IGNORECASE):
             return dlg
 
-    assert False, F"did not find qdialog \"{subtext}\""
+    assert False, F"did not find qdialog matching \"{pattern}\""
 
 
 def acceptQMessageBox(parent: QWidget, subtext: str):

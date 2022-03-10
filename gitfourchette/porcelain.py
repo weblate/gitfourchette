@@ -75,8 +75,10 @@ def newBranch(repo: Repository, localBranchName: str) -> pygit2.Branch:
 
 
 def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str) -> pygit2.Branch:
-    branch = newBranch(repo, localBranchName)
-    editTrackingBranch(repo, localBranchName, remoteBranchName)
+    remoteBranch = repo.branches.remote[remoteBranchName]
+    commit: pygit2.Commit = remoteBranch.peel(pygit2.Commit)
+    branch = repo.create_branch(localBranchName, commit)
+    branch.upstream = remoteBranch
     return branch
 
 
