@@ -4,9 +4,11 @@ from .util import *
 import pygit2
 
 
-@withRepo("TestGitRepository")
-@withPrep(reposcenario.fileWithStagedAndUnstagedChanges)
-def testNavigation(qtbot, workDir, mainWindow, rw):
+def testNavigation(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.fileWithStagedAndUnstagedChanges(wd)
+    rw = mainWindow.openRepo(wd)
+
     oid1 = pygit2.Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
     oid2 = pygit2.Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
     oid3 = pygit2.Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
@@ -101,17 +103,17 @@ def testNavigation(qtbot, workDir, mainWindow, rw):
     assertHistoryMatches( (oid4, "master.txt") )
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, workDir, mainWindow, rw):
-    writeFile(F"{workDir}/a/a1", "blah blah a1")
-    writeFile(F"{workDir}/a/a1.txt", "blah blah a1.txt")
-    writeFile(F"{workDir}/b/b1.txt", "blah blah b1")
-    writeFile(F"{workDir}/c/c1.txt", "blah blah c1")
-    writeFile(F"{workDir}/c/c2.txt", "blah blah c2")
-    rw.quickRefresh()
+def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
 
-    mainWindow.show()
+    writeFile(F"{wd}/a/a1", "blah blah a1")
+    writeFile(F"{wd}/a/a1.txt", "blah blah a1.txt")
+    writeFile(F"{wd}/b/b1.txt", "blah blah b1")
+    writeFile(F"{wd}/c/c1.txt", "blah blah c1")
+    writeFile(F"{wd}/c/c2.txt", "blah blah c2")
+
+    rw = mainWindow.openRepo(wd)
+
     qlvClickNthRow(rw.dirtyFiles, 0)  # a/a1
     qlvClickNthRow(rw.dirtyFiles, 1)  # a/a1.txt
     qlvClickNthRow(rw.dirtyFiles, 2)  # b/b1.txt
@@ -141,17 +143,15 @@ def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, workDir, mainWin
     assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, workDir, mainWindow, rw):
-    writeFile(F"{workDir}/a/a1", "blah blah a1")
-    writeFile(F"{workDir}/a/a1.txt", "blah blah a1.txt")
-    writeFile(F"{workDir}/b/b1.txt", "blah blah b1")
-    writeFile(F"{workDir}/c/c1.txt", "blah blah c1")
-    writeFile(F"{workDir}/c/c2.txt", "blah blah c2")
-    rw.quickRefresh()
+def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1", "blah blah a1")
+    writeFile(F"{wd}/a/a1.txt", "blah blah a1.txt")
+    writeFile(F"{wd}/b/b1.txt", "blah blah b1")
+    writeFile(F"{wd}/c/c1.txt", "blah blah c1")
+    writeFile(F"{wd}/c/c2.txt", "blah blah c2")
+    rw = mainWindow.openRepo(wd)
 
-    mainWindow.show()
     qlvClickNthRow(rw.dirtyFiles, 0)
     qlvClickNthRow(rw.dirtyFiles, 1)
     qlvClickNthRow(rw.dirtyFiles, 2)

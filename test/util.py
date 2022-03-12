@@ -2,6 +2,17 @@ from . import *
 import pygit2
 import os
 import re
+import tarfile
+
+
+def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
+    testPath = os.path.realpath(__file__)
+    testPath = os.path.dirname(testPath)
+
+    with tarfile.open(F"{testPath}/data/{testRepoName}.tar") as tar:
+        tar.extractall(tempDir.name)
+    path = F"{tempDir.name}/{testRepoName}/"
+    return path
 
 
 def touchFile(path):
@@ -12,6 +23,11 @@ def writeFile(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         f.write(text.encode("utf-8"))
+
+
+def readFile(path):
+    with open(path, "rb") as f:
+        return f.read()
 
 
 def qlvGetRowData(view: QListView, role=Qt.DisplayRole):

@@ -1,6 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
+from gitfourchette.widgets.repowidget import RepoWidget
 from gitfourchette.widgets.remotedialog import RemoteDialog
 from gitfourchette.widgets.sidebar import EItem
 from gitfourchette.widgets.stashdialog import StashDialog
@@ -10,9 +11,11 @@ import re
 # TODO: Write test for switching
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testNewBranch(qtbot, workDirRepo, rw):
+def testNewBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranchesHeader)
     findMenuAction(menu, "new branch").trigger()
 
@@ -20,13 +23,13 @@ def testNewBranch(qtbot, workDirRepo, rw):
     q.findChild(QLineEdit).setText("hellobranch")
     q.accept()
 
-    newBranch: pygit2.Branch = workDirRepo.branches.local['hellobranch']
-    assert newBranch is not None
+    assert repo.branches.local['hellobranch'] is not None
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, workDirRepo, rw):
+def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
     assert not findMenuAction(menu, "switch to").isEnabled()
@@ -34,10 +37,12 @@ def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, workDirRepo, rw):
     assert not findMenuAction(menu, "rebase").isEnabled()
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testSetTrackedBranch(qtbot, workDirRepo, rw):
-    assert workDirRepo.branches.local['master'].upstream_name == "refs/remotes/origin/master"
+def testSetTrackedBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    assert repo.branches.local['master'].upstream_name == "refs/remotes/origin/master"
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
@@ -50,7 +55,7 @@ def testSetTrackedBranch(qtbot, workDirRepo, rw):
     assert re.match(r".*don.t track.*", combobox.itemText(0).lower())
     combobox.setCurrentIndex(0)
     q.accept()
-    assert workDirRepo.branches.local['master'].upstream is None
+    assert repo.branches.local['master'].upstream is None
 
     # Change tracking back to origin/master
     findMenuAction(menu, "tracked branch").trigger()
@@ -63,15 +68,16 @@ def testSetTrackedBranch(qtbot, workDirRepo, rw):
             break
     q.accept()
 
-    assert workDirRepo.branches.local['master'].upstream == \
-           workDirRepo.branches.remote['origin/master']
+    assert repo.branches.local['master'].upstream == repo.branches.remote['origin/master']
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testRenameBranch(qtbot, workDirRepo, rw):
-    assert 'master' in workDirRepo.branches.local
-    assert 'mainbranch' not in workDirRepo.branches.local
+def testRenameBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    assert 'master' in repo.branches.local
+    assert 'mainbranch' not in repo.branches.local
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
@@ -81,27 +87,31 @@ def testRenameBranch(qtbot, workDirRepo, rw):
     q.findChild(QLineEdit).setText("mainbranch")
     q.accept()
 
-    assert 'master' not in workDirRepo.branches.local
-    assert 'mainbranch' in workDirRepo.branches.local
+    assert 'master' not in repo.branches.local
+    assert 'mainbranch' in repo.branches.local
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testDeleteBranch(qtbot, workDirRepo, rw):
-    commit = workDirRepo['6e1475206e57110fcef4b92320436c1e9872a322']
-    workDirRepo.branches.create("somebranch", commit)
-    assert "somebranch" in workDirRepo.branches.local
+def testDeleteBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    commit = repo['6e1475206e57110fcef4b92320436c1e9872a322']
+    repo.branches.create("somebranch", commit)
+    assert "somebranch" in repo.branches.local
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "somebranch")
     findMenuAction(menu, "delete").trigger()
     acceptQMessageBox(rw, "delete branch")
-    assert "somebranch" not in workDirRepo.branches.local
+    assert "somebranch" not in repo.branches.local
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testNewRemoteTrackingBranch(qtbot, workDirRepo, rw):
-    assert "newmaster" not in workDirRepo.branches.local
+def testNewRemoteTrackingBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    assert "newmaster" not in repo.branches.local
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/master")
 
@@ -111,15 +121,17 @@ def testNewRemoteTrackingBranch(qtbot, workDirRepo, rw):
     q.findChild(QLineEdit).setText("newmaster")
     q.accept()
 
-    assert workDirRepo.branches.local["newmaster"].upstream == workDirRepo.branches.remote["origin/master"]
+    assert repo.branches.local["newmaster"].upstream == repo.branches.remote["origin/master"]
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testNewRemote(qtbot, workDirRepo, rw):
+def testNewRemote(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     # Ensure we're starting with the expected settings
-    assert len(workDirRepo.remotes) == 1
-    assert workDirRepo.remotes[0].name == "origin"
+    assert len(repo.remotes) == 1
+    assert repo.remotes[0].name == "origin"
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemotesHeader)
 
@@ -130,17 +142,19 @@ def testNewRemote(qtbot, workDirRepo, rw):
     q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
     q.accept()
 
-    assert len(workDirRepo.remotes) == 2
-    assert workDirRepo.remotes[1].name == "otherremote"
-    assert workDirRepo.remotes[1].url == "https://127.0.0.1/example-repo.git"
+    assert len(repo.remotes) == 2
+    assert repo.remotes[1].name == "otherremote"
+    assert repo.remotes[1].url == "https://127.0.0.1/example-repo.git"
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testEditRemote(qtbot, workDirRepo, rw):
+def testEditRemote(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     # Ensure we're starting with the expected settings
-    assert len(workDirRepo.remotes) == 1
-    assert workDirRepo.remotes[0].name == "origin"
+    assert len(repo.remotes) == 1
+    assert repo.remotes[0].name == "origin"
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
@@ -151,22 +165,24 @@ def testEditRemote(qtbot, workDirRepo, rw):
     q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
     q.accept()
 
-    assert len(workDirRepo.remotes) == 1
-    assert workDirRepo.remotes[0].name == "mainremote"
-    assert workDirRepo.remotes[0].url == "https://127.0.0.1/example-repo.git"
+    assert len(repo.remotes) == 1
+    assert repo.remotes[0].name == "mainremote"
+    assert repo.remotes[0].url == "https://127.0.0.1/example-repo.git"
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testDeleteRemote(qtbot, workDirRepo, rw):
-    assert workDirRepo.remotes["origin"] is not None
+def testDeleteRemote(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    assert repo.remotes["origin"] is not None
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
     findMenuAction(menu, "delete remote").trigger()
     acceptQMessageBox(rw, "delete remote")
 
-    assert len(list(workDirRepo.remotes)) == 0
+    assert len(list(repo.remotes)) == 0
 
 
 def getEItemIndices(rw: RepoWidget, item: EItem):
@@ -175,10 +191,13 @@ def getEItemIndices(rw: RepoWidget, item: EItem):
     return indexList
 
 
-@withRepo("TestGitRepository")
-@withPrep(reposcenario.fileWithUnstagedChange)
-def testNewStash(qtbot, workDirRepo, rw):
-    assert len(workDirRepo.listall_stashes()) == 0
+def testNewStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    assert len(repo.listall_stashes()) == 0
 
     assert len(getEItemIndices(rw, EItem.Stash)) == 0
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
@@ -191,15 +210,18 @@ def testNewStash(qtbot, workDirRepo, rw):
     dlg.accept()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
-    assert len(workDirRepo.listall_stashes()) == 1
+    assert len(repo.listall_stashes()) == 1
     assert len(stashIndices) == 1
     assert stashIndices[0].data(Qt.DisplayRole).endswith("helloworld")
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
-@withRepo("TestGitRepository")
-@withPrep(reposcenario.stashedChange)
-def testPopStash(qtbot, workDirRepo, rw):
+def testPopStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stashedChange(wd)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(stashIndices) == 1
 
@@ -207,14 +229,17 @@ def testPopStash(qtbot, workDirRepo, rw):
     findMenuAction(menu, "^pop").trigger()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
-    assert len(workDirRepo.listall_stashes()) == 0
+    assert len(repo.listall_stashes()) == 0
     assert len(stashIndices) == 0
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
-@withRepo("TestGitRepository")
-@withPrep(reposcenario.stashedChange)
-def testApplyStash(qtbot, workDirRepo, rw):
+def testApplyStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stashedChange(wd)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(stashIndices) == 1
 
@@ -222,14 +247,17 @@ def testApplyStash(qtbot, workDirRepo, rw):
     findMenuAction(menu, r"^apply").trigger()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
-    assert len(workDirRepo.listall_stashes()) == 1
+    assert len(repo.listall_stashes()) == 1
     assert len(stashIndices) == 1
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
-@withRepo("TestGitRepository")
-@withPrep(reposcenario.stashedChange)
-def testDropStash(qtbot, workDirRepo, rw):
+def testDropStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stashedChange(wd)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     assert qlvGetRowData(rw.dirtyFiles) == []
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
@@ -239,19 +267,21 @@ def testDropStash(qtbot, workDirRepo, rw):
     findMenuAction(menu, "^delete").trigger()
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
-    assert len(workDirRepo.listall_stashes()) == 0
+    assert len(repo.listall_stashes()) == 0
     assert len(stashIndices) == 0
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
-@withRepo("TestGitRepository")
-@withPrep(None)
-def testNewTrackingBranch(qtbot, workDirRepo: pygit2.Repository, rw):
+def testNewTrackingBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
     menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/first-merge")
     findMenuAction(menu, "new .*branch .*tracking").trigger()
     findQDialog(rw, "new .*branch .*tracking").accept()
 
-    localBranch = workDirRepo.branches.local['first-merge']
+    localBranch = repo.branches.local['first-merge']
     assert localBranch
     assert localBranch.upstream_name == "refs/remotes/origin/first-merge"
     assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"

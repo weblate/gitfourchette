@@ -3,21 +3,6 @@ import os
 import pygit2
 
 
-def untrackedEmptyFile(path):
-    touchFile(F"{path}/SomeNewFile.txt")
-
-
-def nestedUntrackedFiles(path):
-    os.mkdir(F"{path}/N")
-    touchFile(F"{path}/N/tata.txt")
-    touchFile(F"{path}/N/toto.txt")
-    touchFile(F"{path}/N/tutu.txt")
-
-
-def fileWithUnstagedChange(path):
-    writeFile(F"{path}/a/a1.txt", "a1\nPENDING CHANGE\n")
-
-
 def fileWithStagedAndUnstagedChanges(path):
     repo = pygit2.Repository(path)
     writeFile(F"{path}/a/a1.txt", "a1\nstaged change\n")
