@@ -1,11 +1,19 @@
 from gitfourchette.qt import *
 from gitfourchette.util import shortHash
+import pygit2
 
 
-# TODO: document --merge and --keep, and expose them through the dialog
+DEFAULT_MODE = "mixed"
 
 
-explainers = {
+MODE_LABELS = {
+    "soft": "&Soft",
+    "mixed": "&Mixed",
+    "hard": "&Hard",
+}
+
+
+MODE_TEXT = {
     "soft":
         """
         <ul>
@@ -41,23 +49,6 @@ explainers = {
         # <p>Resets the index and working tree. Any changes to tracked files in the working tree
         # since <b>{commit}</b> are discarded.</p>
 
-    "merge":
-        """
-        """,
-        # <p>Resets the index and updates the files in the working tree that are different between
-        # <b>{commit}</b> and <b>HEAD</b>, but keeps those which are different between the index and working
-        # tree (i.e. which have changes which have not been added). If a file that is different
-        # between <b>{commit}</b> and the index has unstaged changes, reset is aborted.</p>
-        # <!--<p>In other words, <b>Merge</b> does something like a <code>git read-tree -u -m {commit}</code>,
-        # but carries forward unmerged index entries.</p>-->
-
-    "keep":
-        """
-        """,
-        # <p>Resets index entries and updates files in the working tree that are different between
-        # <b>{commit}</b> and <b>HEAD</b>. If a file that is different between <b>{commit}</b>
-        # and <b>HEAD</b> has local changes, reset is aborted.</p>
-
     "recurse":
         """
         <p><b>Recurse Submodules</b> will also recursively reset the working tree of all active
@@ -68,18 +59,19 @@ explainers = {
 
 
 class ResetHeadDialog(QDialog):
+    oid: pygit2.Oid
     activeMode: str
     recurseSubmodules: bool
     helpLabel: QLabel
     recurseCheckbox: QCheckBox
 
     def setHelp(self):
-        title = F"--{self.activeMode}"
-        text = explainers[self.activeMode].format(commit=self.shortsha)
+        title = self.activeMode.title()
+        text = MODE_TEXT[self.activeMode].format(commit=self.shortsha)
 
         if self.recurseCheckbox.isEnabled() and self.recurseCheckbox.isChecked():
             title += " --recurse-submodules"
-            text += explainers['recurse']
+            text += MODE_TEXT['recurse']
 
         self.helpLabel.setText(F"<p><big>{title}</big></p>{text}")
 
@@ -94,20 +86,14 @@ class ResetHeadDialog(QDialog):
         self.recurseCheckbox.setEnabled(mode not in ['soft', 'mixed'])
         self.setHelp()
 
-    def __init__(self, hexsha: str, parent: QWidget):
+    def __init__(self, oid: pygit2.Oid, parent: QWidget):
         super().__init__(parent)
 
         self.activeMode = "???"
         self.recurseSubmodules = False
-        self.shortsha = shortHash(hexsha)
+        self.shortsha = shortHash(oid)
 
-        self.setWindowTitle(F"Reset HEAD to {shortHash(hexsha)}")
-
-        softButton = QRadioButton("&Soft")
-        mixedButton = QRadioButton("Mi&xed")
-        hardButton = QRadioButton("&Hard")
-        mergeButton = QRadioButton("Mer&ge")
-        keepButton = QRadioButton("&Keep")
+        self.setWindowTitle(F"Reset HEAD to {shortHash(oid)}")
 
         self.recurseCheckbox = QCheckBox("&Recurse\nSubmodules")
         self.recurseCheckbox.toggled.connect(self.setRecurse)
@@ -116,15 +102,6 @@ class ResetHeadDialog(QDialog):
         self.helpLabel.setWordWrap(True)
         self.helpLabel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.helpLabel.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-
-        def bindMode(button: QRadioButton, mode: str):
-            button.toggled.connect(lambda checked, mode=mode: self.setActiveMode(mode, checked))
-
-        bindMode(softButton, 'soft')
-        bindMode(mixedButton, 'mixed')
-        bindMode(hardButton, 'hard')
-        bindMode(mergeButton, 'merge')
-        bindMode(keepButton, 'keep')
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -138,13 +115,15 @@ class ResetHeadDialog(QDialog):
         centerHBL = QHBoxLayout()
         buttonVBL = QVBoxLayout()
 
-        buttonVBL.addWidget(softButton)
-        buttonVBL.addWidget(mixedButton)
-        buttonVBL.addWidget(hardButton)
-        #buttonVBL.addWidget(mergeButton)
-        #buttonVBL.addWidget(keepButton)
-        buttonVBL.addSpacing(16)
-        buttonVBL.addWidget(self.recurseCheckbox)
+        self.modeButtons = {}
+        for mode in ['soft', 'mixed', 'hard']:
+            button = QRadioButton(MODE_LABELS[mode])
+            button.toggled.connect(lambda checked, mode=mode: self.setActiveMode(mode, checked))
+            buttonVBL.addWidget(button)
+            self.modeButtons[mode] = button
+
+        #buttonVBL.addSpacing(16)
+        #buttonVBL.addWidget(self.recurseCheckbox)
         buttonVBL.addStretch()
 
         centerHBL.addLayout(buttonVBL)
@@ -160,10 +139,10 @@ class ResetHeadDialog(QDialog):
         mainVBL.addSpacing(16)
         mainVBL.addWidget(buttonBox)
 
-        mixedButton.setChecked(True)
-        mixedButton.setFocus()
-
         self.resize(500, 400)
         self.setLayout(mainVBL)
+
+        self.modeButtons[DEFAULT_MODE].setChecked(True)
+        self.modeButtons[DEFAULT_MODE].setFocus()
 
         self.setModal(True)

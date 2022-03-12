@@ -146,17 +146,15 @@ def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.Remot
     return tp
 
 
-def resetHead(repo: Repository, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
-    raise NotImplementedError("reset HEAD")
-    args = ['--' + resetMode]
+def resetHead(repo: Repository, onto: Oid, resetMode: str, recurseSubmodules: bool=False):
+    modes = {
+        "soft": pygit2.GIT_RESET_SOFT,
+        "mixed": pygit2.GIT_RESET_MIXED,
+        "hard": pygit2.GIT_RESET_HARD,
+    }
+    repo.reset(onto, modes[resetMode])
     if recurseSubmodules:
-        args += ['--recurse-submodules']
-    else:
-        args += ['--no-recurse-submodules']
-    args += [ontoHexsha]
-
-    print(*args)
-    repo.git.reset(*args)
+        raise NotImplementedError("reset HEAD + recurse submodules not implemented yet!")
 
 
 def getHeadCommit(repo: Repository) -> Commit:

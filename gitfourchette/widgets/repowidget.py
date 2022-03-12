@@ -603,12 +603,12 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Deleting remote “{remoteName}”")
 
-    def resetHeadAsync(self, ontoHexsha: str, resetMode: str, recurseSubmodules: bool):
-        work = lambda: porcelain.resetHead(self.repo, ontoHexsha, resetMode, recurseSubmodules)
+    def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
+        work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
         def then(_):
             self.quickRefreshWithSidebar()
-            self.graphView.selectCommit(ontoHexsha)
-        self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(ontoHexsha)}, {resetMode}")
+            self.graphView.selectCommit(onto)
+        self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(onto)}, {resetMode}")
 
     def stageFilesAsync(self, patches: list[pygit2.Patch]):
         work = lambda: porcelain.stageFiles(self.repo, patches)
