@@ -240,8 +240,6 @@ class DiffView(QPlainTextEdit):
         biEnd = self.findLineDataIndexAt(posEnd, biStart)
 
         return extractSubpatch(
-            self.currentPatch.delta.old_file.path,
-            self.currentPatch.delta.new_file.path,
             self.currentPatch,
             self.lineData[biStart].hunkPos,
             self.lineData[biEnd].hunkPos,
@@ -253,8 +251,6 @@ class DiffView(QPlainTextEdit):
         hunkLastLineIndex = bisect_left(self.lineHunkIDCache, hunkID+1, hunkFirstLineIndex) - 1
 
         return extractSubpatch(
-            self.currentPatch.delta.old_file.path,
-            self.currentPatch.delta.new_file.path,
             self.currentPatch,
             self.lineData[hunkFirstLineIndex].hunkPos,
             self.lineData[hunkLastLineIndex].hunkPos,

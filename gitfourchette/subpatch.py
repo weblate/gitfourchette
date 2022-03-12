@@ -9,9 +9,39 @@ class DiffLinePos:
     hunkLineNum: int
 
 
+def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
+    if not reverse:
+        of = delta.old_file
+        nf = delta.new_file
+    else:
+        of = nf = delta.new_file
+
+    preamble = F"diff --git a/{of.path} b/{nf.path}\n"
+
+    ofExists = of.id.raw != b'\x00' * 20
+    nfExists = nf.id.raw != b'\x00' * 20
+
+    if ofExists:
+        if of.mode != nf.mode:
+            preamble += F"old mode {of.mode:06o}\n"
+            preamble += F"new mode {nf.mode:06o}\n"
+    else:
+        preamble += F"new file mode {nf.mode:06o}\n"
+
+    if ofExists:
+        preamble += F"--- a/{of.path}\n"
+    else:
+        preamble += F"--- /dev/null\n"
+
+    if nfExists:
+        preamble += F"+++ b/{nf.path}\n"
+    else:
+        preamble += F"+++ /dev/null\n"
+
+    return preamble
+
+
 def extractSubpatch(
-        oldPath: str,
-        newPath: str,
         masterPatch: pygit2.Patch,
         startPos: DiffLinePos,  # index of first selected line in master patch
         endPos: DiffLinePos,  # index of last selected line in master patch
@@ -20,8 +50,6 @@ def extractSubpatch(
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
-
-    a = pygit2.GIT_DELTA_ADDED
 
     def originToDelta(origin):
         if origin == '+':
@@ -48,7 +76,9 @@ def extractSubpatch(
             subpatch.write(line.raw_content)
 
     patch = io.BytesIO()
-    patch.write(F"diff --git a/{oldPath} b/{newPath}\n--- a/{oldPath}\n+++ b/{newPath}\n".encode())
+
+    preamble = getPatchPreamble(masterPatch.delta, reverse)
+    patch.write(preamble.encode())
 
     newHunkStartOffset = 0
     subpatchIsEmpty = True

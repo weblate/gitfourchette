@@ -107,13 +107,22 @@ def testUnstageChangeInEmptyRepo(qtbot, workDirRepo, rw):
 
 
 @withRepo("TestGitRepository")
-@withPrep(reposcenario.untrackedEmptyFile)
-def testStageEmptyUntrackedFileFromDiffView(qtbot, workDir, rw):
+@withPrep(None)
+def testStageUntrackedFileFromDiffView(qtbot, workDirRepo, rw):
+    writeFile(F"{workDirRepo.workdir}/NewFile.txt", "line A\nline B\nline C\n")
+    rw.quickRefresh()
+
     qlvClickNthRow(rw.dirtyFiles, 0)
+    assert workDirRepo.status() == {"NewFile.txt": pygit2.GIT_STATUS_WT_NEW}
+
     rw.diffView.setFocus()
     QTest.keyPress(rw.diffView, Qt.Key_Return)
-    repo = pygit2.Repository(workDir)
-    assert repo.status() == {}
+
+    assert workDirRepo.status() == {"NewFile.txt": pygit2.GIT_STATUS_INDEX_NEW | pygit2.GIT_STATUS_WT_MODIFIED}
+
+    stagedId = workDirRepo.index["NewFile.txt"].id
+    stagedBlob: pygit2.Blob = workDirRepo[stagedId].peel(pygit2.Blob)
+    assert stagedBlob.data == b"line A\n"
 
 
 @withRepo("TestGitRepository")
