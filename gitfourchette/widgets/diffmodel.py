@@ -80,45 +80,10 @@ class DiffModel:
     style: DiffStyle
 
     @staticmethod
-    def fromUntrackedFile(repo: pygit2.Repository, path: str):
-        fullPath = os.path.join(repo.workdir, path)
-
-        # Don't load large files.
-        fileSize = os.path.getsize(fullPath)
-        if fileSize > settings.prefs.diff_largeFileThresholdKB * 1024:
-            raise DiffModelError(
-                F"This file is too large to be previewed ({fileSize//1024:,} KB).",
-                "You can change the size threshold in the Preferences.",
-                icon=QStyle.SP_MessageBoxWarning)
-
-        # Load entire file contents.
-        with open(fullPath, 'rb') as f:
-            binaryContents = f.read()
-
-        # Don't show contents if file appears to be binary.
-        if b'\x00' in binaryContents:
-            raise DiffModelError("File appears to be binary.")
-
-        # Decode file contents.
-        contents = binaryContents.decode('utf-8', errors='replace')
-
-        # Create document with proper styling.
-        style = DiffStyle()
-        document = createDocument()  # recreating a document is faster than clearing the existing one
-        cursor = QTextCursor(document)
-        cursor.setBlockFormat(style.plusBF)  # Use style for "+" lines for the entire file.
-        cursor.insertText(contents)
-
-        return DiffModel(document=document, lineData=[], style=style)
-
-    @staticmethod
-    def fromPatch(repo: pygit2.Repository, patch: pygit2.Patch):
+    def fromPatch(patch: pygit2.Patch):
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
             raise DiffModelError("File appears to be binary.")
-
-        if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
-            return DiffModel.fromUntrackedFile(repo, patch.delta.new_file.path)
 
         # Don't load large diffs.
         if len(patch.data) > settings.prefs.diff_largeFileThresholdKB * 1024:

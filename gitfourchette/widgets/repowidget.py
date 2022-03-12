@@ -459,7 +459,7 @@ class RepoWidget(QWidget):
             dm = None
             error = None
             try:
-                dm = DiffModel.fromPatch(repo, patch)
+                dm = DiffModel.fromPatch(patch)
                 dm.document.moveToThread(QApplication.instance().thread())
             except DiffModelError as dme:
                 error = dme
