@@ -356,13 +356,20 @@ class MainWindow(QMainWindow):
         rw.graphView.selectUncommittedChanges()
         return True
 
-    def openRepo(self, repoPath, foreground=True, addToHistory=True):
+    def openRepo(self, repoPath: str, foreground=True, addToHistory=True) -> RepoWidget:
+        # First check that we don't have a tab for this repo already
+        for i in range(self.tabs.count()):
+            existingRW: RepoWidget = self.tabs.widget(i)
+            if os.path.samefile(repoPath, existingRW.workingTreeDir):
+                self.tabs.setCurrentIndex(i)
+                return existingRW
+
         newRW = RepoWidget(self, self.sharedSplitterStates)
 
         if foreground:
             if not self._loadRepo(newRW, repoPath):
                 newRW.destroy()
-                return  # don't create the tab if opening the repo failed
+                return None  # don't create the tab if opening the repo failed
         else:
             newRW.setPendingPath(repoPath)
 

@@ -2,6 +2,7 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette.widgets.clonedialog import CloneDialog
+import os
 import pygit2
 
 
@@ -45,3 +46,20 @@ def testDropUrlOntoMainWindowBringsUpCloneDialog(qtbot, mainWindow):
 
     cloneDialog.reject()
 
+
+@withRepo("TestGitRepository")
+@withPrep(None)
+def testOpenSameRepoTwice(qtbot, workDir, mainWindow):
+    print(workDir)
+
+    rw1 = mainWindow.openRepo(workDir)
+    assert mainWindow.tabs.count() == 1
+    assert mainWindow.currentRepoWidget() == rw1
+
+    rw2 = mainWindow.openRepo(workDir)
+    assert mainWindow.tabs.count() == 1  # don't create a new tab
+    assert mainWindow.currentRepoWidget() == rw2
+
+    rw3 = mainWindow.openRepo(workDir + os.path.sep)
+    assert mainWindow.tabs.count() == 1  # don't create a new tab
+    assert mainWindow.currentRepoWidget() == rw3
