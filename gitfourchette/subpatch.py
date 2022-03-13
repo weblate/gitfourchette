@@ -10,6 +10,40 @@ class DiffLinePos:
     hunkLineNum: int
 
 
+def quotePath(path: bytes):
+    surround = False
+
+    safePath = ""
+
+    escapes = {
+        ord(' '): ' ',
+        ord('"'): '\\"',
+        ord('\a'): '\\a',
+        ord('\b'): '\\b',
+        ord('\t'): '\\t',
+        ord('\n'): '\\n',
+        ord('\v'): '\\v',
+        ord('\f'): '\\f',
+        ord('\r'): '\\r',
+        ord('\\'): '\\\\',
+    }
+
+    for c in path:
+        if c in escapes:
+            safePath += escapes[c]
+            surround = True
+        elif c < ord('!') or c > ord('~'):
+            safePath += F"\\{c:03o}"
+            surround = True
+        else:
+            safePath += chr(c)
+
+    if surround:
+        return F'"{safePath}"'
+    else:
+        return safePath
+
+
 def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
     if not reverse:
         of = delta.old_file
@@ -17,7 +51,9 @@ def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
     else:
         of = nf = delta.new_file
 
-    preamble = F"diff --git a/{of.path} b/{nf.path}\n"
+    aQuoted = quotePath(b"a/" + of.raw_path)
+    bQuoted = quotePath(b"b/" + nf.raw_path)
+    preamble = F"diff --git {aQuoted} {bQuoted}\n"
 
     ofExists = not isZeroId(of.id)
     nfExists = not isZeroId(nf.id)

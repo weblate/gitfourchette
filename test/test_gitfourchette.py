@@ -118,24 +118,6 @@ def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_WT_NEW}
 
 
-def testStageUntrackedFileFromDiffView(qtbot, tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-    writeFile(F"{wd}/NewFile.txt", "line A\nline B\nline C\n")
-    rw = mainWindow.openRepo(wd)
-
-    qlvClickNthRow(rw.dirtyFiles, 0)
-    assert rw.repo.status() == {"NewFile.txt": pygit2.GIT_STATUS_WT_NEW}
-
-    rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key_Return)
-
-    assert rw.repo.status() == {"NewFile.txt": pygit2.GIT_STATUS_INDEX_NEW | pygit2.GIT_STATUS_WT_MODIFIED}
-
-    stagedId = rw.repo.index["NewFile.txt"].id
-    stagedBlob: pygit2.Blob = rw.repo[stagedId].peel(pygit2.Blob)
-    assert stagedBlob.data == b"line A\n"
-
-
 def testParentlessCommitFileList(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
