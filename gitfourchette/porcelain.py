@@ -275,6 +275,27 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
     return [commit.oid for commit in tips]
 
 
+def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str]]:
+    commit2refs = defaultdict(list)
+
+    for refKey in repo.references:
+        ref = repo.references[refKey]
+
+        if type(ref.target) != pygit2.Oid:
+            print(F"Skipping symbolic reference {refKey} --> {ref.target}")
+            continue
+
+        assert refKey.startswith("refs/")
+        if refKey == "refs/stash":
+            continue
+        commit2refs[ref.target].append(refKey)
+
+    for stashIndex, stash in enumerate(repo.listall_stashes()):
+        commit2refs[stash.commit_id].append(F"stash@{{{stashIndex}}}")
+
+    return commit2refs
+
+
 def stageFiles(repo: Repository, patches: list[pygit2.Patch]):
     index = repo.index
     for patch in patches:

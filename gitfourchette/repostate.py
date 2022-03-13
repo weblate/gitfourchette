@@ -60,7 +60,7 @@ class RepoState:
     mutex: QMutex
 
     # commit oid --> list of reference names
-    refsByCommit: defaultdict[pygit2.Oid, list[str]]
+    refsByCommit: dict[pygit2.Oid, list[str]]
 
     def __init__(self, dir):
         self.repo = pygit2.Repository(dir)
@@ -111,20 +111,7 @@ class RepoState:
             self.settings.setValue(SETTING_KEY_DRAFT_MESSAGE, newMessage)
 
     def refreshRefsByCommitCache(self):
-        self.refsByCommit.clear()
-        refKey: str
-        for refKey in self.repo.references:
-            ref: Reference = self.repo.references[refKey]
-            if type(ref.target) != pygit2.Oid:
-                print(F"Skipping symbolic reference {refKey} --> {ref.target}")
-                continue
-            assert refKey.startswith('refs/')
-            if refKey == "refs/stash":
-                continue
-            self.refsByCommit[ref.target].append(refKey)
-
-        for stashIndex, stash in enumerate(self.repo.listall_stashes()):
-            self.refsByCommit[stash.commit_id].append(F"stash@{{{stashIndex}}}")
+        self.refsByCommit = porcelain.mapCommitsToReferences(self.repo)
 
     @property
     def shortName(self) -> str:
