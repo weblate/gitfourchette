@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette.qt import QObject, Signal
 
 
@@ -8,7 +9,7 @@ class GlobalStatusSignalContainer(QObject):
     progressDisable = Signal()
 
     def setText(self, arg):
-        print("[status]", arg)
+        log.info("status", arg)
         self.statusText.emit(arg)
 
     def setProgressMaximum(self, v):
@@ -24,7 +25,7 @@ class GlobalStatusSignalContainer(QObject):
         self.progressMaximum.emit(0)
         self.progressValue.emit(0)
         self.statusText.emit(arg)
-        print("[status]", arg)
+        log.info("status", arg)
 
     def clearIndeterminateProgressCaption(self):
         self.progressDisable.emit()

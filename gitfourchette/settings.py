@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from gitfourchette import log
 from gitfourchette.qt import *
 import enum
 import json
@@ -34,7 +35,7 @@ def decodeBinary(encoded: str) -> QByteArray:
 class BasePrefs:
     def write(self):
         if TEST_MODE:
-            print("Disabling write prefs")
+            log.info("prefs", "Disabling write prefs")
             return None
         prefsDir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
         os.makedirs(prefsDir, exist_ok=True)
@@ -52,10 +53,10 @@ class BasePrefs:
             obj = json.load(f)
             for k in obj:
                 if k.startswith('_'):
-                    print(F"{prefsPath}: skipping illegal key: {k}")
+                    log.warning("prefs", F"{prefsPath}: skipping illegal key: {k}")
                     continue
                 if k not in self.__dict__:
-                    print(F"{prefsPath}: skipping unknown key: {k}")
+                    log.warning("prefs", F"{prefsPath}: skipping unknown key: {k}")
                     continue
 
                 originalType = type(self.__dict__[k])
@@ -65,7 +66,7 @@ class BasePrefs:
                     acceptedType = originalType
 
                 if type(obj[k]) != acceptedType:
-                    print(F"{prefsPath}: value type mismatch for {k}: expected {acceptedType}, got {type(obj[k])}")
+                    log.warning("prefs", F"{prefsPath}: value type mismatch for {k}: expected {acceptedType}, got {type(obj[k])}")
                     continue
                 self.__dict__[k] = originalType(obj[k])
 

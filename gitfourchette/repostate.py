@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from gitfourchette import log
 from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.benchmark import Benchmark
@@ -90,7 +91,7 @@ class RepoState:
         self.refsByCommit = defaultdict(list)
         self.refreshRefsByCommitCache()
 
-        print("TODO: parse superproject")
+        log.info("TODO", "parse superproject")
         self.superproject = None
         #self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
 
@@ -245,8 +246,8 @@ class RepoState:
 
         i = 0
         while graphSplicer.keepGoing:
-            if i % PROGRESS_INTERVAL == 0:
-                print("Commits processed:", i)
+            if i != 0 and i % PROGRESS_INTERVAL == 0:
+                log.info("progress", "GraphSplicer commits processed:", i)
                 QCoreApplication.processEvents()
             offsetFromTop = i
             i += 1

@@ -1,14 +1,15 @@
+from gitfourchette import log
+from gitfourchette import porcelain
 from gitfourchette.qt import *
-from html import escape
 from gitfourchette.remotelink import RemoteLink
+from gitfourchette.util import QSignalBlockerContext
 from gitfourchette.util import addComboBoxItem, stockIcon
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from gitfourchette.workqueue import WorkQueue
+from html import escape
 import enum
-from gitfourchette import porcelain
 import pygit2
-from gitfourchette.util import QSignalBlockerContext
 
 
 class ERemoteItem(enum.Enum):
@@ -189,7 +190,7 @@ class PushDialog(QDialog):
 
     def onPushClicked(self):
         remote = self.repo.remotes[self.currentRemoteName]
-        print(self.revspec, remote.name)
+        log.info("PushDialog", self.revspec, remote.name)
         link = RemoteLink()
 
         self.ui.statusForm.initProgress(F"Contacting remote host...")

@@ -1,7 +1,7 @@
 from __future__ import annotations
-
 from collections import defaultdict
 from dataclasses import dataclass
+from gitfourchette import log
 from gitfourchette.benchmark import Benchmark
 from pygit2 import Oid
 from typing import Iterable
@@ -381,7 +381,7 @@ class Graph:
         kfID = bisect.bisect_left(self.keyframeRows, frame.row)
         if kfID < len(self.keyframes) and self.keyframes[kfID].row == frame.row:
             assert self.keyframes[kfID] == kf
-            print("Not overwriting existing keyframe", kfID)
+            log.info("Graph", "Not overwriting existing keyframe", kfID)
             return kfID
 
         self.keyframes.insert(kfID, kf)
@@ -642,7 +642,7 @@ class GraphSplicer:
         equilibriumOldRow = self.oldPlayer.row
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
-        print(F"*** FOUND EQUILIBRIUM @new={equilibriumNewRow};old={equilibriumOldRow}!")
+        log.info("GraphSplicer", F"FOUND EQUILIBRIUM @new={equilibriumNewRow};old={equilibriumOldRow}!")
 
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.

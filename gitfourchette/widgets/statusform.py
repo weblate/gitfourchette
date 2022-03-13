@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette.qt import *
 from gitfourchette.widgets.ui_statusform import Ui_StatusForm
 
@@ -31,5 +32,5 @@ class StatusForm(QWidget):
 
     def setProgressMessage(self, message: str):
         if message.startswith("Sideband"):
-            print(">",message.encode("utf-8"),"<")
+            log.info("sideband", ">", message.encode("utf-8"), "<")
         self.ui.linkMessage.setText(message)

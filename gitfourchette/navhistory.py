@@ -1,5 +1,6 @@
 from copy import copy
 from dataclasses import dataclass
+from gitfourchette import log
 
 
 @dataclass
@@ -43,7 +44,7 @@ class NavHistory:
             return
 
         if not pos:
-            print("[nav] ignoring:", pos)
+            log.info("nav", "ignoring:", pos)
             return
 
         if len(self.history) == 0 or self.history[self.current] != pos:
@@ -54,19 +55,19 @@ class NavHistory:
             if self.current < len(self.history) - 1:
                 self.trim()
 
-            print(F"[nav] pushing #{len(self.history)}:", pos)
+            log.info("nav", F"pushing #{len(self.history)}:", pos)
             self.history.append(pos)
             self.current = len(self.history) - 1
         else:
-            print("[nav] discarding:", pos)
+            log.info("nav", "discarding:", pos)
 
     def trim(self):
-        print(F"[nav] trimming {self.current}")
+        log.info("nav", F"trimming: {self.current}")
         self.history = self.history[: self.current + 1]
         assert self.isAtTopOfStack
 
     def setRecent(self, pos):
-        print("[nav] setRecent", pos)
+        log.info("nav", "setRecent", pos)
         pos = copy(pos)
         self.recent[pos.context] = pos
         self.recent[F"{pos.context}:{pos.file}"] = pos
@@ -90,7 +91,7 @@ class NavHistory:
     def navigateBack(self):
         if self.current > 0:
             self.current -= 1
-            print("[nav] back to", self.current, self.history[self.current])
+            log.info("nav", "back to", self.current, self.history[self.current])
             return self.history[self.current]
         else:
             return None
@@ -98,7 +99,7 @@ class NavHistory:
     def navigateForward(self):
         if self.current < len(self.history) - 1:
             self.current += 1
-            print("[nav] fwd to", self.current, self.history[self.current])
+            log.info("nav", "fwd to", self.current, self.history[self.current])
             return self.history[self.current]
         else:
             return None

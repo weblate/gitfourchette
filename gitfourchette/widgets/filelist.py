@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
@@ -57,12 +58,12 @@ class FileListModel(QAbstractListModel):
             patch: pygit2.Patch = entry.diff[entry.patchNo]
             return patch
         except pygit2.GitError as e:
-            print("GitError when attempting to get patch:", type(e).__name__, e)
+            log.warning("FileList", "GitError when attempting to get patch:", type(e).__name__, e)
             return None
         except OSError as e:
             # We might get here if the UI attempts to update itself while a long async
             # operation is ongoing. (e.g. a file is being recreated)
-            print("UI attempting to update during async operation?", type(e).__name__, e)
+            log.warning("FileList", "UI attempting to update during async operation?", type(e).__name__, e)
             return None
 
     def getDeltaAt(self, index: QModelIndex) -> pygit2.DiffDelta:

@@ -146,11 +146,9 @@ class PrefsDialog(QDialog):
 
     def assign(self, k, v):
         if prefs.__dict__[k] == v:
-            print("Reverting to original value:", k, v, prefs.__dict__[k])
             if k in self.prefDiff:
                 del self.prefDiff[k]
         else:
-            print(k, prefs.__dict__[k], v)
             self.prefDiff[k] = v
 
     def getMostRecentValue(self, k):

@@ -1,5 +1,6 @@
 from collections import defaultdict
-from pygit2 import Commit, Diff, Oid, Repository, Signature, Branch
+from gitfourchette import log
+from pygit2 import Commit, Diff, Oid, Repository, Signature
 import pygit2
 
 
@@ -237,8 +238,8 @@ def getCommitOidFromReferenceName(repo: Repository, refName: str) -> Oid:
 
 def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
     raise NotImplementedError("getCommitOidFromTagName")
-    tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
-    return tag.commit.hexsha
+    # tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
+    # return tag.commit.hexsha
 
 
 def getOidsForAllReferences(repo: Repository) -> list[Oid]:
@@ -260,7 +261,7 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
             tips.append(commit)
         except pygit2.InvalidSpecError as e:
             # Some refs might not be committish, e.g. in linux's source repo
-            print(F"{e} - Skipping ref '{ref.name}'")
+            log.info("porcelain", F"{e} - Skipping ref '{ref.name}'")
             pass
 
     for stash in repo.listall_stashes():
@@ -268,7 +269,7 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
             commit: Commit = repo[stash.commit_id].peel(pygit2.Commit)
             tips.append(commit)
         except pygit2.InvalidSpecError as e:
-            print(F"{e} - Skipping stash '{stash.message}'")
+            log.info("porcelain", F"{e} - Skipping stash '{stash.message}'")
             pass
 
     tips = sorted(tips, key=lambda commit: commit.commit_time, reverse=True)
@@ -282,7 +283,7 @@ def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str
         ref = repo.references[refKey]
 
         if type(ref.target) != pygit2.Oid:
-            print(F"Skipping symbolic reference {refKey} --> {ref.target}")
+            log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
             continue
 
         assert refKey.startswith("refs/")

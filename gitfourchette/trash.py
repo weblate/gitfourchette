@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette import settings
 import datetime
 import os
@@ -32,7 +33,7 @@ class Trash:
             f = self.trashFiles.pop()
             fullPath = os.path.join(self.trashDir, f)
             if os.path.isfile(fullPath):
-                print("Deleting trash file", fullPath)
+                log.info("trash", "Deleting trash file", fullPath)
                 os.unlink(fullPath)
 
     def newFile(self, ext: str = "", originalPath: str = "") -> str:

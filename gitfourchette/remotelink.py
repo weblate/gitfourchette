@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette.qt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
 from gitfourchette.util import compactSystemPath
 import os.path
@@ -50,10 +51,9 @@ class RemoteLink(pygit2.RemoteCallbacks):
                 privkey = os.path.join(sshDirectory, file)
                 pubkey = privkey + ".pub"
                 if os.path.isfile(privkey) and os.path.isfile(pubkey):
-                    print("[RemoteLink] Discovered key pair", privkey)
+                    log.info("RemoteLink", "Discovered key pair", privkey)
                     self.keypairFiles.append((pubkey, privkey))
 
-        #self.signals.message.connect(lambda m: print("[RemoteLink] " + m))
         self.downloadRateTimer = QElapsedTimer()
         self.downloadRate = 0
         self.receivedBytesOnTimerStart = 0
@@ -91,7 +91,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self._sidebandProgressBuffer = split[-1]
 
     # def certificate_check(self, certificate, valid, host):
-    #     print("[RemoteCallbacks] Certificate Check", certificate, valid, host)
+    #     gflog("RemoteLink", "Certificate Check", certificate, valid, host)
     #     return 1
 
     def credentials(self, url, username_from_url, allowed_types):
@@ -104,11 +104,11 @@ class RemoteLink(pygit2.RemoteCallbacks):
             raise ConnectionRefusedError("Too many credential retries.")
 
         if self.attempts == 1:
-            print(F"[RemoteLink] Auths accepted by server: {getAuthNamesFromFlags(allowed_types)}")
+            log.info("RemoteLink", "Auths accepted by server:", getAuthNamesFromFlags(allowed_types))
 
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
-            print(F"[RemoteLink] Attempting login with {compactSystemPath(pubkey)}")
+            log.info("RemoteLink", "Attempting login with:", compactSystemPath(pubkey))
             self.signals.message.emit(F"Attempting login...\n{compactSystemPath(pubkey)}")
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
@@ -151,7 +151,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self.signals.message.emit(message)
 
     def update_tips(self, refname, old, new):
-        print(F"[RemoteLink] Update tip {refname}: {old} ---> {new}")
+        log.info("RemoteLink", F"Update tip {refname}: {old} ---> {new}")
 
     def push_update_reference(self, refname, message):
         self.signals.message.emit(F"Push update ref {refname} {message}")
