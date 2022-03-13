@@ -4,6 +4,7 @@ from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
 from gitfourchette.util import isZeroId
 from dataclasses import dataclass
+import html
 import pygit2
 
 
@@ -73,6 +74,24 @@ def createDocument():
     return document
 
 
+def noChange(delta: pygit2.DiffDelta):
+    message = "File contents didn’t change."
+    details = []
+
+    oldFileExists = not isZeroId(delta.old_file.id)
+
+    if not oldFileExists:
+        message = "File is empty."
+
+    if delta.old_file.path != delta.new_file.path:
+        details.append(F"Renamed: “{html.escape(delta.old_file.path)}” &rarr; “{html.escape(delta.new_file.path)}”.")
+
+    if oldFileExists and delta.old_file.mode != delta.new_file.mode:
+        details.append(F"Mode change: “{delta.old_file.mode:06o}” &rarr; “{delta.new_file.mode:06o}”.")
+
+    return DiffModelError(message, "\n".join(details))
+
+
 @dataclass
 class DiffModel:
     document: QTextDocument
@@ -81,6 +100,9 @@ class DiffModel:
 
     @staticmethod
     def fromPatch(patch: pygit2.Patch):
+        if patch.delta.similarity == 100:
+            raise noChange(patch.delta)
+
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
             raise DiffModelError("File appears to be binary.")
@@ -93,10 +115,7 @@ class DiffModel:
                 QStyle.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:
-            if isZeroId(patch.delta.old_file.id):
-                raise DiffModelError(F"File is empty.")
-            else:
-                raise DiffModelError(F"File contents did not change.")
+            raise noChange(patch.delta)
 
         style = DiffStyle()
         document = createDocument()  # recreating a document is faster than clearing the existing one
