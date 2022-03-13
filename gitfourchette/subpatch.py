@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from gitfourchette.util import isZeroId
 import io
 import pygit2
 
@@ -18,8 +19,8 @@ def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
 
     preamble = F"diff --git a/{of.path} b/{nf.path}\n"
 
-    ofExists = of.id.raw != b'\x00' * 20
-    nfExists = nf.id.raw != b'\x00' * 20
+    ofExists = not isZeroId(of.id)
+    nfExists = not isZeroId(nf.id)
 
     if ofExists:
         if of.mode != nf.mode:

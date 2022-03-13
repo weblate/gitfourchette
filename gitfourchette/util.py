@@ -62,6 +62,10 @@ def shortHash(oid: Oid) -> str:
     return oid.hex[:prefs.shortHashChars]
 
 
+def isZeroId(oid: Oid) -> bool:
+    return oid.raw == (b'\x00' * 20)
+
+
 # Ampersands from user strings must be sanitized for QLabel.
 def labelQuote(text: str) -> str:
     return F"“{text.replace('&', '&&')}”"

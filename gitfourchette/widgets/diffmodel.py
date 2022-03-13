@@ -2,8 +2,8 @@ from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
+from gitfourchette.util import isZeroId
 from dataclasses import dataclass
-import os
 import pygit2
 
 
@@ -93,7 +93,10 @@ class DiffModel:
                 QStyle.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:
-            raise DiffModelError(F"File contents did not change.")
+            if isZeroId(patch.delta.old_file.id):
+                raise DiffModelError(F"File is empty.")
+            else:
+                raise DiffModelError(F"File contents did not change.")
 
         style = DiffStyle()
         document = createDocument()  # recreating a document is faster than clearing the existing one
