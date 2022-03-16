@@ -1,4 +1,5 @@
 from gitfourchette.widgets.mainwindow import MainWindow
+from pytestqt.qtbot import QtBot
 import pytest
 import tempfile
 
@@ -11,7 +12,7 @@ def tempDir() -> tempfile.TemporaryDirectory:
 
 
 @pytest.fixture
-def mainWindow() -> MainWindow:
+def mainWindow(qtbot: QtBot) -> MainWindow:
     from gitfourchette import log
     log.VERBOSITY = 0
 
@@ -20,9 +21,7 @@ def mainWindow() -> MainWindow:
     settings.TEST_MODE = True
 
     mw = MainWindow()
-    #mw.show()
-    yield mw
+    qtbot.addWidget(mw)
 
-    # Tear down
-    mw.close()
-
+    # mw.show()
+    return mw
