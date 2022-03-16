@@ -1,8 +1,9 @@
 VERBOSE_TAGS = {"nav", "status", "benchmark"}
+VERBOSITY = 1
 
 
 def info(tag, *args):
-    if tag in VERBOSE_TAGS:
+    if VERBOSITY == 0 or (VERBOSITY == 1 and tag in VERBOSE_TAGS):
         return
     print(F"[{tag}]", *args)
 
