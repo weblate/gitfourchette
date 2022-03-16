@@ -4,7 +4,7 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (compactRepoPath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
+from gitfourchette.util import (abbreviateDirectories, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
 from pathlib import Path
 from typing import Generator, Any
 import html
@@ -80,7 +80,7 @@ class FileListModel(QAbstractListModel):
 
             path: str = self.getDeltaAt(index).new_file.path
             if settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES:
-                return compactRepoPath(path)
+                return abbreviateDirectories(path)
             elif settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.SHOW_FILENAME_ONLY:
                 return path.rsplit('/', 1)[-1]
             else:

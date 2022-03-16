@@ -1,8 +1,8 @@
 from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState, ShallowRepoNotSupportedError
-from gitfourchette.util import (compactSystemPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
+from gitfourchette.repostate import RepoState
+from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -247,7 +247,7 @@ class MainWindow(QMainWindow):
         self.recentMenu.clear()
         for historic in list(reversed(settings.history.history))[:settings.prefs.maxRecentRepos]:
             self.recentMenu.addAction(
-                F"{settings.history.getRepoNickname(historic)} [{compactSystemPath(historic)}]",
+                F"{settings.history.getRepoNickname(historic)} [{compactPath(historic)}]",
                 lambda h=historic: self.openRepo(h))
         self.recentMenu.addSeparator()
         self.recentMenu.addAction("Clear", onClearRecents)
@@ -266,12 +266,12 @@ class MainWindow(QMainWindow):
 
         # If we don't have a RepoState, then the tab is lazy-loaded.
         # We need to load it now.
-        if not w.state:
+        if not w.isLoaded:
             # Disable tabs widget while we're loading the repo to prevent tabs
             # from accidentally being dragged while the UI is locking up
             with DisableWidgetContext(self.tabs):
                 # Load repo
-                success = self._loadRepo(w, w.workingTreeDir)
+                success = self._loadRepo(w, w.workdir)
                 if not success:
                     return
 
@@ -295,11 +295,44 @@ class MainWindow(QMainWindow):
             menu.addAction("Unload", lambda: self.unloadTab(i))
         else:
             menu.addAction("Load", lambda: self.loadTab(i))
-        #self.tabs.tabs.
         menu.exec_(globalPoint)
 
-    def _loadRepo(self, rw: RepoWidget, path: str):
+    def _constructRepo(self, path: str):
+        try:
+            repo = pygit2.Repository(path)
+
+        except pygit2.GitError as gitError:
+            qmb = QMessageBox(QMessageBox.Warning, "Open repository",
+                              F"Couldn’t open “{path}”.\n\n{gitError}", parent=self)
+            qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+            qmb.show()
+            return None
+
+        if repo.is_shallow:
+            qmb = QMessageBox(QMessageBox.Warning, "Shallow repository",
+                              "Sorry, shallow repositories aren’t supported yet.", parent=self)
+            qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+            qmb.show()
+            return None
+
+        return repo
+
+    def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | pygit2.Repository):
         assert rw
+
+        repo: pygit2.Repository
+        path: str
+
+        if type(pathOrRepo) is pygit2.Repository:
+            repo = pathOrRepo
+            path = repo.workdir
+        elif type(pathOrRepo) is str:
+            path = pathOrRepo
+            repo = self._constructRepo(path)
+        else:
+            raise TypeError("pathOrRepo must either be an str or a Repository")
+
+        assert repo is not None
 
         shortname = settings.history.getRepoNickname(path)
         progress = QProgressDialog("Opening repository.", "Abort", 0, 0, self)
@@ -312,10 +345,9 @@ class MainWindow(QMainWindow):
         if not settings.TEST_MODE:
             progress.show()
         QCoreApplication.processEvents()
-        #import time; time.sleep(3)
 
         try:
-            newState = RepoState(path)
+            newState = RepoState(repo)
             orderedMetadata = newState.loadCommitList(progress)
 
             rw.state = newState
@@ -329,51 +361,43 @@ class MainWindow(QMainWindow):
             rw.sidebar.fill(newState.repo)
 
             self.refreshTabText(rw)
-        except pygit2.GitError as gitError:
-            known = path in settings.history.history
-            qmb = QMessageBox(self)
-            qmb.setIcon(QMessageBox.Critical)
-            qmb.setText(F"Couldn't open \"{path}\":\n{gitError}")
-            qmb.setWindowTitle("Reopen repository" if known else "Open repository")
-            ok = qmb.addButton("OK", QMessageBox.RejectRole)
-            if known:
-                nukeButton: QAbstractButton = qmb.addButton("Remove from recents", QMessageBox.DestructiveRole)
-                nukeButton.clicked.connect(lambda: settings.history.removeRepo(path))
-            qmb.setDefaultButton(ok)
-            qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-            qmb.show()
-            return False
-        except ShallowRepoNotSupportedError as exc:
-            excMessageBox(exc, message=F"Sorry, shallow repositories are not supported yet.",
-                          showExcSummary=False, title="Shallow Repository", parent=self)
-            return False
+
         except BaseException as exc:
-            excMessageBox(exc, message=F"An exception was thrown while opening \"{path}\"", parent=self)
+            excMessageBox(exc, message=F"An exception was thrown while opening “{path}”", parent=self)
             return False
+
         finally:
             progress.close()
 
         rw.graphView.selectUncommittedChanges()
         return True
 
-    def openRepo(self, repoPath: str, foreground=True, addToHistory=True) -> RepoWidget:
+    def openRepo(self, path: str, foreground=True, addToHistory=True) -> RepoWidget | None:
+        repo = self._constructRepo(path)
+
+        if not repo:
+            return None
+
+        workdir = repo.workdir
+
         # First check that we don't have a tab for this repo already
         for i in range(self.tabs.count()):
             existingRW: RepoWidget = self.tabs.widget(i)
-            if os.path.samefile(repoPath, existingRW.workingTreeDir):
+            if os.path.samefile(workdir, existingRW.workdir):
+                repo.free()
                 self.tabs.setCurrentIndex(i)
                 return existingRW
 
         newRW = RepoWidget(self, self.sharedSplitterStates)
 
         if foreground:
-            if not self._loadRepo(newRW, repoPath):
+            if not self._loadRepo(newRW, repo):
                 newRW.destroy()
                 return None  # don't create the tab if opening the repo failed
         else:
-            newRW.setPendingPath(repoPath)
+            newRW.setPendingWorkdir(workdir)
 
-        tabIndex = self.tabs.addTab(newRW, newRW.getTitle(), compactSystemPath(repoPath))
+        tabIndex = self.tabs.addTab(newRW, newRW.getTitle(), compactPath(workdir))
 
         if foreground:
             self.tabs.setCurrentIndex(tabIndex)
@@ -381,7 +405,7 @@ class MainWindow(QMainWindow):
         newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
 
         if addToHistory:
-            settings.history.addRepo(repoPath)
+            settings.history.addRepo(workdir)
             self.fillRecentMenu()
 
         return newRW
@@ -406,15 +430,15 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def refresh(self, rw: RepoWidget):
-        self._loadRepo(rw, rw.workingTreeDir)
+        self._loadRepo(rw, rw.workdir)
 
     @needRepoWidget
     def openRepoFolder(self, rw: RepoWidget):
-        showInFolder(rw.workingTreeDir)
+        showInFolder(rw.workdir)
 
     @needRepoWidget
     def copyRepoPath(self, rw: RepoWidget):
-        QApplication.clipboard().setText(rw.workingTreeDir)
+        QApplication.clipboard().setText(rw.workdir)
 
     @needRepoWidget
     def commit(self, rw: RepoWidget):
@@ -524,7 +548,7 @@ class MainWindow(QMainWindow):
 
     def loadTab(self, index: int):
         rw : RepoWidget = self.tabs.widget(index)
-        self._loadRepo(rw, rw.workingTreeDir)
+        self._loadRepo(rw, rw.workdir)
 
     def nextTab(self):
         if self.tabs.count() == 0:
@@ -588,7 +612,7 @@ class MainWindow(QMainWindow):
             session.splitterStates = {s.objectName(): settings.encodeBinary(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
         else:
             session.splitterStates = {}
-        session.tabs = [self.tabs.widget(i).workingTreeDir for i in range(self.tabs.count())]
+        session.tabs = [self.tabs.widget(i).workdir for i in range(self.tabs.count())]
         session.activeTabIndex = self.tabs.currentIndex()
         session.write()
 

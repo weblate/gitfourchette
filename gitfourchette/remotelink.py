@@ -1,6 +1,6 @@
 from gitfourchette import log
 from gitfourchette.qt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
-from gitfourchette.util import compactSystemPath
+from gitfourchette.util import compactPath
 import os.path
 import pygit2
 
@@ -108,8 +108,8 @@ class RemoteLink(pygit2.RemoteCallbacks):
 
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
-            log.info("RemoteLink", "Attempting login with:", compactSystemPath(pubkey))
-            self.signals.message.emit(F"Attempting login...\n{compactSystemPath(pubkey)}")
+            log.info("RemoteLink", "Attempting login with:", compactPath(pubkey))
+            self.signals.message.emit(F"Attempting login...\n{compactPath(pubkey)}")
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
         else:

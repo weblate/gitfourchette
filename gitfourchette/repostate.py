@@ -21,10 +21,6 @@ class BatchedOffset:
     offsetInBatch: int
 
 
-class ShallowRepoNotSupportedError(BaseException):
-    pass
-
-
 class RepoState:
     repo: pygit2.Repository
     settings: QSettings
@@ -63,11 +59,8 @@ class RepoState:
     # commit oid --> list of reference names
     refsByCommit: dict[pygit2.Oid, list[str]]
 
-    def __init__(self, dir):
-        self.repo = pygit2.Repository(dir)
-
-        if self.repo.is_shallow:
-            raise ShallowRepoNotSupportedError()
+    def __init__(self, repo: pygit2.Repository):
+        self.repo = repo
 
         # On Windows, core.autocrlf is usually set to true in the system config.
         # However, libgit2 cannot find the system config if git wasn't installed

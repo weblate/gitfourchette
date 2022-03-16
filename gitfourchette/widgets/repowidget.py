@@ -9,7 +9,7 @@ from gitfourchette.remotelink import RemoteLink
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.trash import Trash
-from gitfourchette.util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash, unimplementedDialog)
+from gitfourchette.util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash)
 from gitfourchette.workqueue import WorkQueue
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError
@@ -44,6 +44,10 @@ class RepoWidget(QWidget):
     @property
     def repo(self) -> pygit2.Repository:
         return self.state.repo
+
+    @property
+    def isLoaded(self):
+        return self.state is not None
 
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
@@ -312,7 +316,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     @property
-    def workingTreeDir(self):
+    def workdir(self):
         if self.state:
             return os.path.normpath(self.state.repo.workdir)
         else:
@@ -338,7 +342,7 @@ class RepoWidget(QWidget):
             self.state.repo.free()
             self.state = None
 
-    def setPendingPath(self, path):
+    def setPendingWorkdir(self, path):
         self.pathPending = os.path.normpath(path)
 
     def startCommitFlow(self):
@@ -347,13 +351,13 @@ class RepoWidget(QWidget):
 
     def renameRepo(self):
         def onAccept(newName):
-            settings.history.setRepoNickname(self.workingTreeDir, newName)
+            settings.history.setRepoNickname(self.workdir, newName)
             self.nameChange.emit()
         showTextInputDialog(
             self,
             "Edit repo nickname",
             "Enter new nickname for repo, or enter blank line to reset:",
-            settings.history.getRepoNickname(self.workingTreeDir),
+            settings.history.getRepoNickname(self.workdir),
             onAccept,
             okButtonText="Rename")
 

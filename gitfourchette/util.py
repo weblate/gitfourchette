@@ -39,7 +39,7 @@ def fplural(fmt: str, n: int) -> str:
     return out
 
 
-def compactSystemPath(path: str) -> str:
+def compactPath(path: str) -> str:
     # Normalize path first, which also turns forward slashes to backslashes on Windows.
     path = os.path.abspath(path)
     if path.startswith(HOME):
@@ -47,7 +47,7 @@ def compactSystemPath(path: str) -> str:
     return path
 
 
-def compactRepoPath(path: str) -> str:
+def abbreviateDirectories(path: str) -> str:
     splitLong = path.split('/')
     for i in range(len(splitLong) - 1):
         if splitLong[i][0] == '.':
@@ -164,10 +164,6 @@ def excMessageBox(
         qmb.show()
     else:  # without a parent, .show() won't work
         qmb.exec_()
-
-
-def unimplementedDialog(featureName="UNIMPLEMENTED"):
-    QMessageBox.warning(None, featureName, F"This feature isn't implemented yet\n({featureName})")
 
 
 def excStrings(exc):
