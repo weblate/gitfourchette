@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.util import excMessageBox
+from gitfourchette.util import excMessageBox, NonCriticalOperation
 import os
 import signal
 import sys
@@ -37,15 +37,17 @@ def main():
     commandLine.process(app)
 
     # Initialize assets
-    from gitfourchette import assets_rc
-    app.setWindowIcon(QIcon(":/gitfourchette.png"))
+    with NonCriticalOperation("Initialize assets"):
+        from gitfourchette import assets_rc
+        app.setWindowIcon(QIcon(":/gitfourchette.png"))
 
     # Apply application-wide stylesheet
-    styleSheetFile = QFile(":/style.qss")
-    if styleSheetFile.open(QFile.ReadOnly):
-        styleSheet = styleSheetFile.readAll().data().decode("utf-8")
-        app.setStyleSheet(styleSheet)
-        styleSheetFile.close()
+    with NonCriticalOperation("Apply application-wide stylesheet"):
+        styleSheetFile = QFile(":/style.qss")
+        if styleSheetFile.open(QFile.ReadOnly):
+            styleSheet = styleSheetFile.readAll().data().decode("utf-8")
+            app.setStyleSheet(styleSheet)
+            styleSheetFile.close()
 
     # Hack so we don't get out-of-place Tahoma on Windows.
     # TODO: Check whether Qt 6 has made this unnecessary (when it comes out).
@@ -60,10 +62,15 @@ def main():
     if commandLine.isSet("test-mode"):
         settings.TEST_MODE = True
     else:
-        settings.prefs.load()
-        settings.history.load()
-        if settings.prefs.qtStyle:
-            app.setStyle(settings.prefs.qtStyle)
+        # Load settings
+        with NonCriticalOperation(F"Loading {settings.prefs.filename}"):
+            settings.prefs.load()
+            if settings.prefs.qtStyle:
+                app.setStyle(settings.prefs.qtStyle)
+
+        # Load history
+        with NonCriticalOperation(F"Loading {settings.history.filename}"):
+            settings.history.load()
 
     # Initialize main window
     from gitfourchette.widgets.mainwindow import MainWindow
@@ -73,7 +80,8 @@ def main():
     # Initialize session
     session = settings.Session()
     if not settings.TEST_MODE:
-        session.load()
+        with NonCriticalOperation(F"Loading {session.filename}"):
+            session.load()
 
     # Open paths passed in via the command line
     pathList = commandLine.positionalArguments()
@@ -82,7 +90,8 @@ def main():
         session.activeTabIndex = len(session.tabs) - 1
 
     # Restore session
-    window.restoreSession(session)
+    with NonCriticalOperation("Restoring session"):
+        window.restoreSession(session)
 
     # Keep the app running
     app.exec_()

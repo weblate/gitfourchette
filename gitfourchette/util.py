@@ -259,3 +259,17 @@ class DisableWidgetContext:
 
     def __exit__(self, excType, excValue, excTraceback):
         self.objectToBlock.setEnabled(True)
+
+
+class NonCriticalOperation:
+    def __init__(self, operation: str):
+        self.operation = operation
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, excType, excValue, excTraceback):
+        if excValue:
+            excMessageBox(excValue, message=self.operation + " failed.")
+            return True  # don't propagate
+

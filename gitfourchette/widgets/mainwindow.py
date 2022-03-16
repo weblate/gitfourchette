@@ -373,6 +373,7 @@ class MainWindow(QMainWindow):
         return True
 
     def openRepo(self, path: str, foreground=True, addToHistory=True) -> RepoWidget | None:
+        # Construct a pygit2.Repository so we can get the workdir
         repo = self._constructRepo(path)
 
         if not repo:
@@ -580,7 +581,6 @@ class MainWindow(QMainWindow):
     def restoreSession(self, session: settings.Session):
         self.sharedSplitterStates = {k: settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
         self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
-        self.show()
 
         # Stop here if there are no tabs to load
         if not session.tabs:
@@ -589,21 +589,19 @@ class MainWindow(QMainWindow):
         # Normally, changing the current tab will load the corresponding repo in the background.
         # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
         with QSignalBlockerContext(self.tabs.stacked):
+            # We might not be able to load all tabs, so we may have to adjust session.activeTabIndex.
+            activeTab = -1
+
             # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
-            for r in session.tabs:
-                try:
-                    self.openRepo(r, foreground=False)
-                except BaseException as exc:
-                    excMessageBox(exc, title="Restore Session")
+            for i, path in enumerate(session.tabs):
+                newRepoWidget = self.openRepo(path, foreground=False)
+                if i == session.activeTabIndex and newRepoWidget is not None:
+                    activeTab = self.tabs.count()-1
 
-            # Set the current tab.
-            self.tabs.setCurrentIndex(session.activeTabIndex)
-
-            # Load the current tab's repo. Catch exceptions so __main__ doesn't get aborted.
-            try:
+            # Set current tab and load its repo.
+            if activeTab >= 0:
+                self.tabs.setCurrentIndex(session.activeTabIndex)
                 self.onTabChange(session.activeTabIndex)
-            except BaseException as exc:
-                excMessageBox(exc, title="Restore Session")
 
     def saveSession(self):
         session = settings.Session()
