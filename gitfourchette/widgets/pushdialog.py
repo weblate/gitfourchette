@@ -128,15 +128,16 @@ class PushDialog(QDialog):
                     if br == self.currentLocalBranch.upstream:
                         caption = F"{identifier} [tracked]"
                         self.trackedBranchIndex = comboBox.count()
-                        #icon = stockIcon(QStyle.SP_DirHomeIcon)
+                        icon = stockIcon(QStyle.SP_DirHomeIcon)
                         font = QFont()
                         font.setBold(True)
                     else:
+                        icon = stockIcon("vcs-branch")
                         caption = identifier
 
                     payload = (ERemoteItem.ExistingRef, br)
 
-                    comboBox.addItem(caption, payload)
+                    comboBox.addItem(icon, caption, payload)
 
                     if font:
                         comboBox.setItemData(comboBox.count()-1, font, Qt.FontRole)
