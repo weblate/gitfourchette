@@ -148,6 +148,13 @@ def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.Remot
     return tp
 
 
+def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
+    # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
+    remoteName, branchName = remoteBranchName.split("/", 1)
+    tp = repo.remotes[remoteName].fetch(refspecs=[branchName], callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_NO_PRUNE)
+    return tp
+
+
 def resetHead(repo: Repository, onto: Oid, resetMode: str, recurseSubmodules: bool=False):
     modes = {
         "soft": pygit2.GIT_RESET_SOFT,

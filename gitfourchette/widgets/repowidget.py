@@ -5,19 +5,19 @@ from gitfourchette.benchmark import Benchmark
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.navhistory import NavHistory, NavPos
 from gitfourchette.qt import *
-from gitfourchette.remotelink import RemoteLink
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.trash import Trash
 from gitfourchette.util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash)
-from gitfourchette.workqueue import WorkQueue
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from gitfourchette.widgets.graphview import GraphView
+from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.sidebar import Sidebar
+from gitfourchette.workqueue import WorkQueue
 import os
 import pygit2
 
@@ -104,6 +104,7 @@ class RepoWidget(QWidget):
         self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
         self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
+        self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
         self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
@@ -570,37 +571,36 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, F"Edit remote “{remoteName}”")
 
     def fetchRemoteAsync(self, remoteName: str):
-        progress = QProgressDialog(F"Connecting to “{remoteName}”...\n", "Abort", 0, 0, self)
-        progress.setWindowTitle(F"Fetching remote “{remoteName}”")
-        progress.setMinimumWidth(8 * progress.fontMetrics().horizontalAdvance("WWWWW"))
-        progress.setWindowFlags(Qt.Dialog)
-        progress.setAttribute(Qt.WA_DeleteOnClose)
-        if not settings.TEST_MODE:
-            progress.show()
-
-        def onRLMessage(m):
-            progress.setLabelText(m)
-
-        def onRLProgress(hi, cur):
-            progress.setMaximum(hi)
-            progress.setValue(cur)
-
-        rl = RemoteLink()
-        rl.signals.message.connect(onRLMessage)
-        rl.signals.progress.connect(onRLProgress)
+        rlpd = RemoteLinkProgressDialog(self)
 
         def work():
-            return porcelain.fetchRemote(self.repo, remoteName, rl)
+            return porcelain.fetchRemote(self.repo, remoteName, rlpd.remoteLink)
 
         def then(_):
-            progress.close()
+            rlpd.close()
             self.quickRefreshWithSidebar()
 
         def onError(exc):
-            progress.close()
+            rlpd.close()
             excMessageBox(exc, title="Fetch error", message=F"Couldn't fetch “{remoteName}”.", parent=self)
 
         self.workQueue.put(work, then, F"Fetch remote “{remoteName}”", errorCallback=onError)
+
+    def fetchRemoteBranchAsync(self, remoteBranchName: str):
+        rlpd = RemoteLinkProgressDialog(self)
+
+        def work():
+            return porcelain.fetchRemoteBranch(self.repo, remoteBranchName, rlpd.remoteLink)
+
+        def then(_):
+            rlpd.close()
+            self.quickRefreshWithSidebar()
+
+        def onError(exc):
+            rlpd.close()
+            excMessageBox(exc, title="Fetch error", message=F"Couldn't fetch remote branch “{remoteBranchName}”.", parent=self)
+
+        self.workQueue.put(work, then, F"Fetch remote branch “{remoteBranchName}”", errorCallback=onError)
 
     def deleteRemoteAsync(self, remoteName: str):
         work = lambda: porcelain.deleteRemote(self.repo, remoteName)

@@ -393,6 +393,7 @@ class Sidebar(QTreeView):
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
     newTrackingBranch = Signal(str)
+    fetchRemoteBranch = Signal(str)
     editTrackingBranch = Signal(str)
 
     newRemote = Signal()
@@ -476,12 +477,15 @@ class Sidebar(QTreeView):
             menu.addAction(F"New local branch tracking {labelQuote(data)}...",
                            lambda: self.newTrackingBranch.emit(data))
 
-        elif item == EItem.Remote:
-            a = menu.addAction("&Fetch Remote...", lambda: self.fetchRemote.emit(data))
+            a = menu.addAction(F"Fetch this remote branch...", lambda: self.fetchRemoteBranch.emit(data))
             a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
 
+        elif item == EItem.Remote:
             a = menu.addAction("&Edit Remote...", lambda: self.editRemote.emit(data))
             a.setIcon(QIcon.fromTheme("document-edit"))
+
+            a = menu.addAction("&Fetch all branches on this remote...", lambda: self.fetchRemote.emit(data))
+            a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
 
             menu.addSeparator()
 
