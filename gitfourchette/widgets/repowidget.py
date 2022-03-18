@@ -119,6 +119,9 @@ class RepoWidget(QWidget):
         self.sidebar.dropStash.connect(self.dropStashAsync)
         self.sidebar.popStash.connect(self.popStashAsync)
 
+        self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
+        self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
+
         # ----------------------------------
 
         flows = self.actionFlows
@@ -651,6 +654,15 @@ class RepoWidget(QWidget):
         def work(): porcelain.dropStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, "Delete stash")
+
+    def openSubmoduleRepo(self, submoduleKey: str):
+        path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
+        self.window().openRepo(path)
+
+    def openSubmoduleFolder(self, submoduleKey: str):
+        path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
+        url = QUrl.fromLocalFile(path)
+        QDesktopServices.openUrl(url)
 
     # -------------------------------------------------------------------------
     # Pull

@@ -18,6 +18,7 @@ class EItem(enum.Enum):
     StashesHeader = enum.auto()
     RemotesHeader = enum.auto()
     TagsHeader = enum.auto()
+    SubmodulesHeader = enum.auto()
     LocalBranch = enum.auto()
     DetachedHead = enum.auto()
     UnbornHead = enum.auto()
@@ -25,6 +26,7 @@ class EItem(enum.Enum):
     Remote = enum.auto()
     RemoteBranch = enum.auto()
     Tag = enum.auto()
+    Submodule = enum.auto()
     Spacer = enum.auto()
 
 
@@ -34,6 +36,7 @@ ITEM_NAMES = {
     EItem.StashesHeader: "Stashes",
     EItem.RemotesHeader: "Remotes",
     EItem.TagsHeader: "Tags",
+    EItem.SubmodulesHeader: "Submodules",
     EItem.LocalBranch: "Local branch",
     EItem.DetachedHead: "Detached HEAD",
     EItem.UnbornHead: "Unborn HEAD",
@@ -41,6 +44,7 @@ ITEM_NAMES = {
     EItem.Stash: "Stash",
     EItem.Remote: "Remote",
     EItem.Tag: "Tag",
+    EItem.Submodule: "Submodules",
     EItem.Spacer: "---",
 }
 
@@ -54,6 +58,8 @@ HEADER_ITEMS = [
     EItem.RemotesHeader,
     EItem.Spacer,
     EItem.TagsHeader,
+    EItem.Spacer,
+    EItem.SubmodulesHeader,
 ]
 
 LEAF_ITEMS = [
@@ -65,12 +71,14 @@ LEAF_ITEMS = [
     EItem.UnbornHead,
     EItem.DetachedHead,
     EItem.UncommittedChanges,
+    EItem.Submodule,
 ]
 
 UNINDENT_ITEMS = [
     EItem.LocalBranch,
     EItem.Stash,
     EItem.Tag,
+    EItem.Submodule,
 ]
 
 
@@ -85,6 +93,7 @@ class SidebarModel(QAbstractItemModel):
     _remoteURLs: list[str]
     _remoteBranchesDict: dict[str, list[str]]
     _tags: list[str]
+    _submodules: list[str]
 
     @staticmethod
     def packId(eid: EItem, offset: int = 0) -> int:
@@ -144,6 +153,8 @@ class SidebarModel(QAbstractItemModel):
 
         self._tags = porcelain.getTagNames(repo)
 
+        self._submodules = repo.listall_submodules()
+
     def columnCount(self, parent: QModelIndex) -> int:
         return 1
 
@@ -183,6 +194,9 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.StashesHeader:
             return self.createIndex(row, 0, self.packId(EItem.Stash))
 
+        elif item == EItem.SubmodulesHeader:
+            return self.createIndex(row, 0, self.packId(EItem.Submodule))
+
         return QModelIndex()
 
     def parent(self, index: QModelIndex = QModelIndex()) -> QModelIndex:
@@ -214,6 +228,9 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.Stash:
             return makeParentIndex(EItem.StashesHeader)
 
+        elif item == EItem.Submodule:
+            return makeParentIndex(EItem.SubmodulesHeader)
+
         else:
             return QModelIndex()
 
@@ -238,6 +255,9 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.StashesHeader:
             return len(self._stashes)
+
+        elif item == EItem.SubmodulesHeader:
+            return len(self._submodules)
 
         else:
             return 0
@@ -325,6 +345,14 @@ class SidebarModel(QAbstractItemModel):
             elif user:
                 return stash.commit_id.hex
 
+        elif item == EItem.Submodule:
+            if display:
+                return self._submodules[row].rsplit("/", 1)[-1]
+            elif tooltip:
+                return self._submodules[row]
+            elif user:
+                return self._submodules[row]
+
         else:
             if display:
                 return ITEM_NAMES[item]
@@ -405,6 +433,9 @@ class Sidebar(QTreeView):
     popStash = Signal(pygit2.Oid)
     applyStash = Signal(pygit2.Oid)
     dropStash = Signal(pygit2.Oid)
+
+    openSubmoduleRepo = Signal(str)
+    openSubmoduleFolder = Signal(str)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -505,6 +536,10 @@ class Sidebar(QTreeView):
             menu.addSeparator()
             menu.addAction(stockIcon(QStyle.SP_TrashIcon), "&Delete", lambda: self.dropStash.emit(oid))
 
+        elif item == EItem.Submodule:
+            menu.addAction(f"&Open submodule in {QApplication.applicationDisplayName()}", lambda: self.openSubmoduleRepo.emit(data))
+            menu.addAction(f"Open submodule &folder", lambda: self.openSubmoduleFolder.emit(data))
+
         return menu
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
@@ -541,7 +576,7 @@ class Sidebar(QTreeView):
         else:
             pass
 
-    def onEntryDoubleClicked(self, item: EItem, data: Any):
+    def onEntryDoubleClicked(self, item: EItem, data: str):
         if item == EItem.LocalBranch:
             self.switchToBranch.emit(data)
         elif item == EItem.Remote:
@@ -552,6 +587,8 @@ class Sidebar(QTreeView):
             self.newBranch.emit()
         elif item == EItem.UncommittedChanges:
             self.commit.emit()
+        elif item == EItem.Submodule:
+            self.openSubmoduleRepo.emit(data)
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)

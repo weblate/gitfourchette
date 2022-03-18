@@ -2,6 +2,7 @@ from collections import defaultdict
 from gitfourchette import log
 from pygit2 import Commit, Diff, Oid, Repository, Signature
 import pygit2
+import os
 
 
 def loadDirtyDiff(repo: Repository) -> Diff:
@@ -407,3 +408,8 @@ def patchApplies(repo: pygit2.Repository, patchData: bytes, discard: bool):
 
     diff = pygit2.Diff.parse_diff(patchData)
     return repo.applies(diff, location)
+
+
+def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str):
+    submo = repo.lookup_submodule(submoduleKey)
+    return os.path.join(repo.workdir, submo.path)
