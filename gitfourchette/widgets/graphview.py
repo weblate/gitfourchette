@@ -95,6 +95,9 @@ class GraphView(QListView):
         resetAction = QAction(F"&Reset HEAD to Here...", self)
         resetAction.triggered.connect(self.resetHeadFlow)
         self.addAction(resetAction)
+        copyHashAction = QAction("Copy Commit &Hash", self)
+        copyHashAction.triggered.connect(self.copyCommitHashToClipboard)
+        self.addAction(copyHashAction)
 
     @property
     def clModel(self) -> CommitLogModel:
@@ -243,6 +246,13 @@ class GraphView(QListView):
         dlg.accepted.connect(onAccept)
         dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
+
+    def copyCommitHashToClipboard(self):
+        oid = self.currentCommitOid
+        if not oid:  # uncommitted changes
+            return
+
+        QApplication.clipboard().setText(oid.hex)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
