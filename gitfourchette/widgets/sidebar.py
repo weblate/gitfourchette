@@ -488,18 +488,10 @@ class Sidebar(QTreeView):
                     rebaseAction.setEnabled(True)
 
             menu.addSeparator()
-
-            if branch.upstream:
-                menu.addAction(stockIcon("vcs-push"), F"&Push to {labelQuote(branch.upstream.shorthand)}...",
-                               lambda: self.pushBranch.emit(data))
-            else:
-                menu.addAction(stockIcon("vcs-push"), "&Push...",
-                               lambda: self.pushBranch.emit(data))
-
+            menu.addAction(stockIcon("vcs-push"), "&Push...", lambda: self.pushBranch.emit(data))
             menu.addAction("Set &Tracked Branch...", lambda: self.editTrackingBranch.emit(data))
 
             menu.addSeparator()
-
             menu.addAction("Re&name...", lambda: self.renameBranch.emit(data))
             a = menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data))
             a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
