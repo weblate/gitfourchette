@@ -378,8 +378,8 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work() -> tuple[pygit2.Diff, pygit2.Diff]:
-            dirtyDiff = porcelain.loadDirtyDiff(repo)
-            stageDiff = porcelain.loadStagedDiff(repo)
+            dirtyDiff = porcelain.diffWorkdirToIndex(repo)
+            stageDiff = porcelain.diffIndexToHead(repo)
             return dirtyDiff, stageDiff
 
         def then(result: tuple[pygit2.Diff, pygit2.Diff]):
@@ -422,7 +422,7 @@ class RepoWidget(QWidget):
         dirtyESR = self.dirtyFiles.earliestSelectedRow()
 
         self.saveFilePositions()
-        self.workQueue.put(work, then, "Refreshing index", -1000)
+        self.workQueue.put(work, then, "Refreshing working tree status", -1000)
 
     def loadCommitAsync(self, oid: pygit2.Oid):
         """Load commit details into Changed Files view"""

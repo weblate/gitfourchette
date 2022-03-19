@@ -5,16 +5,20 @@ import pygit2
 import os
 
 
-def loadDirtyDiff(repo: Repository) -> Diff:
+def diffWorkdirToIndex(repo: Repository) -> Diff:
+    # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
+    # index was stale, but this requires the repo to be writable.
     flags = (pygit2.GIT_DIFF_INCLUDE_UNTRACKED
              | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
-             | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT)
+             | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT
+             | pygit2.GIT_DIFF_UPDATE_INDEX
+             )
     dirtyDiff = repo.diff(None, None, flags=flags)
     dirtyDiff.find_similar()
     return dirtyDiff
 
 
-def loadStagedDiff(repo: Repository) -> Diff:
+def diffIndexToHead(repo: Repository) -> Diff:
     if repo.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
         indexTreeOid = repo.index.write_tree()
         tree: pygit2.Tree = repo[indexTreeOid].peel(pygit2.Tree)
