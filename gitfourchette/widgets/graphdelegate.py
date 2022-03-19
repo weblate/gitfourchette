@@ -6,6 +6,8 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.util import messageSummary
 from dataclasses import dataclass
 from datetime import datetime
+import pygit2
+import re
 
 
 @dataclass
@@ -20,6 +22,33 @@ CALLOUTS = {
     "refs/heads/": RefCallout(Qt.darkMagenta),
     "stash@{": RefCallout(Qt.darkGreen, keepPrefix=True),
 }
+
+
+INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
+
+
+def abbreviatePerson(sig: pygit2.Signature):
+    style = settings.prefs.authorDisplayStyle
+
+    if style == settings.AuthorDisplayStyle.FULL_NAME:
+        return sig.name
+    elif style == settings.AuthorDisplayStyle.FIRST_NAME:
+        return sig.name.split(' ')[0]
+    elif style == settings.AuthorDisplayStyle.LAST_NAME:
+        return sig.name.split(' ')[-1]
+    elif style == settings.AuthorDisplayStyle.INITIALS:
+        return re.sub(INITIALS_PATTERN, r"\1", sig.name)
+    elif style == settings.AuthorDisplayStyle.FULL_EMAIL:
+        return sig.email
+    elif style == settings.AuthorDisplayStyle.ABBREVIATED_EMAIL:
+        emailParts = sig.email.split('@', 1)
+        if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
+            # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
+            return emailParts[0].split('+', 1)[-1]
+        else:
+            return emailParts[0]
+    else:
+        return sig.email
 
 
 class GraphDelegate(QStyledItemDelegate):
@@ -84,22 +113,15 @@ class GraphDelegate(QStyledItemDelegate):
             self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
 
         if index.row() > 0:
-            commit: Commit = index.data()
+            commit: pygit2.Commit = index.data()
             summaryText, contd = messageSummary(commit.message)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
-
-            emailParts = commit.author.email.split('@', 1)
-            if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
-                # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
-                authorText = emailParts[0].split('+', 1)[-1]
-            else:
-                authorText = emailParts[0]
-
+            authorText = abbreviatePerson(commit.author)
             dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
         else:
-            commit: Commit = None
+            commit = None
             summaryText = "[Uncommitted Changes]"
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""

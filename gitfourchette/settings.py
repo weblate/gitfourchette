@@ -74,9 +74,18 @@ class BasePrefs:
 
 
 class PathDisplayStyle(enum.IntEnum):
-    FULL_PATHS = 1,
-    ABBREVIATE_DIRECTORIES = 2,
-    SHOW_FILENAME_ONLY = 3,
+    FULL_PATHS = 1
+    ABBREVIATE_DIRECTORIES = 2
+    SHOW_FILENAME_ONLY = 3
+
+
+class AuthorDisplayStyle(enum.IntEnum):
+    FULL_NAME = 1
+    FIRST_NAME = 2
+    LAST_NAME = 3
+    INITIALS = 4
+    FULL_EMAIL = 5
+    ABBREVIATED_EMAIL = 6
 
 
 @dataclass
@@ -87,6 +96,7 @@ class Prefs(BasePrefs):
     shortHashChars              : int           = 7
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
+    authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.ABBREVIATED_EMAIL
     maxRecentRepos              : int           = 20
     showStatusBar               : bool          = False
     autoHideMenuBar             : bool          = False
