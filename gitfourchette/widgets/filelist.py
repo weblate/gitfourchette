@@ -17,6 +17,8 @@ STATUS_ICONS = {}
 for status in "ACDMRTUX":
     STATUS_ICONS[status] = QIcon(F":/status_{status.lower()}.svg")
 
+FALLBACK_STATUS_ICON = QIcon(":/status_fallback.svg")
+
 
 class FileListModel(QAbstractListModel):
     @dataclass
@@ -89,11 +91,11 @@ class FileListModel(QAbstractListModel):
         elif role == Qt.DecorationRole:
             delta = self.getDeltaAt(index)
             if not delta:
-                return STATUS_ICONS.get('X', None)
+                return FALLBACK_STATUS_ICON
             elif delta.status == pygit2.GIT_DELTA_UNTRACKED:
-                return STATUS_ICONS.get('A', None)
+                return STATUS_ICONS.get('A', FALLBACK_STATUS_ICON)
             else:
-                return STATUS_ICONS.get(delta.status_char(), None)
+                return STATUS_ICONS.get(delta.status_char(), FALLBACK_STATUS_ICON)
 
         elif role == Qt.ToolTipRole:
             delta = self.getDeltaAt(index)
