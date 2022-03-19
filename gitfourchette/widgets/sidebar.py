@@ -151,7 +151,7 @@ class SidebarModel(QAbstractItemModel):
         self._remoteURLs = [repo.remotes[r].url for r in self._remotes]
         self._remoteBranchesDict = porcelain.getRemoteBranchNames(repo)
 
-        self._tags = porcelain.getTagNames(repo)
+        self._tags = sorted(porcelain.getTagNames(repo))
 
         self._submodules = repo.listall_submodules()
 
