@@ -1,4 +1,5 @@
 from gitfourchette import colors
+from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.graph import Frame, Graph
 from gitfourchette.qt import *
@@ -72,6 +73,13 @@ def paintGraphFrame(
     if not commit or not state.graph:
         return
 
+    try:
+        # Get this commit's sequential index in the graph
+        myRow = state.getCommitSequentialIndex(commit.oid)
+    except KeyError:
+        log.warning("graphpaint", "skipping unregistered commit:", commit.oid)
+        return
+
     painter.save()
     painter.setRenderHints(QPainter.Antialiasing, True)
 
@@ -80,9 +88,6 @@ def paintGraphFrame(
     top = int(rect.y())
     bottom = int(rect.y() + rect.height())  # Don't use rect.bottom(), which for historical reasons doesn't return what we want (see Qt docs)
     middle = (top + bottom) // 2
-
-    # Get this commit's sequential index in the graph
-    myRow = state.getCommitSequentialIndex(commit.oid)
 
     # Get graph frame for this row
     frame = state.graph.startPlayback(myRow).copyCleanFrame()

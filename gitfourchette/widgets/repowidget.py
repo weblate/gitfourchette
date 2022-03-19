@@ -783,24 +783,17 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def quickRefresh(self):
-        self.setUpdatesEnabled(False)
-
         with Benchmark("Load tainted commits only"):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
 
         with Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
             if nRemovedRows >= 0:
-                self.graphView.refreshTop(nRemovedRows, nAddedRows, self.state.commitSequence)
+                self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
             else:
-                self.graphView.fill(self.state.commitSequence)
+                self.graphView.setCommitSequence(self.state.commitSequence)
 
         with Benchmark("Refresh refs-by-commit cache"):
             self.state.refreshRefsByCommitCache()
-
-        self.setUpdatesEnabled(True)
-
-        # force redraw visible portion of the graph view to reflect any changed tags/refs
-        self.graphView.setDirtyRegion(QRegion(0, 0, self.graphView.width(), self.graphView.height()))
 
         if self.filesStack.currentWidget() == self.stageSplitter:
             self.fillStageViewAsync()

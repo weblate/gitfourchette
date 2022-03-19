@@ -9,6 +9,59 @@ from html import escape
 import pygit2
 
 
+class CommitLogModel(QAbstractListModel):
+    _commitSequence: list[pygit2.Commit] | None
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._commitSequence = None
+
+    @property
+    def isValid(self):
+        return self._commitSequence is not None
+
+    def clear(self):
+        self.beginResetModel()
+        self._commitSequence = None
+        self.endResetModel()
+
+    def setCommitSequence(self, newCommitSequence: list[pygit2.Commit]):
+        self.beginResetModel()
+        self._commitSequence = newCommitSequence
+        self.endResetModel()
+
+    def refreshTopOfCommitSequence(self, nRemovedRows, nAddedRows, newCommitSequence: list[pygit2.Commit]):
+        parent = QModelIndex()  # it's not a tree model so there's no parent
+        self.beginRemoveRows(parent, 1, nRemovedRows)
+        self.beginInsertRows(parent, 1, nAddedRows)
+        self._commitSequence = newCommitSequence
+        self.endInsertRows()
+        self.endRemoveRows()
+
+    def rowCount(self, *args, **kwargs) -> int:
+        if not self.isValid:
+            return 0
+        else:
+            return 1 + len(self._commitSequence)
+
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole):
+        if not self.isValid:
+            return None
+
+        if index.row() == 0:
+            return None
+
+        if role == Qt.DisplayRole:
+            return self._commitSequence[index.row() - 1]  # TODO: this shouldn't be DisplayRole!
+        elif role == Qt.UserRole:
+            return self._commitSequence[index.row()]
+        elif role == Qt.SizeHintRole:
+            parentWidget: QWidget = self.parent()
+            return QSize(-1, parentWidget.fontMetrics().height())
+        else:
+            return None
+
+
 class GraphView(QListView):
     uncommittedChangesClicked = Signal()
     emptyClicked = Signal()
@@ -18,6 +71,7 @@ class GraphView(QListView):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.setModel(CommitLogModel(self))
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
@@ -41,26 +95,16 @@ class GraphView(QListView):
         resetAction.triggered.connect(self.resetHeadFlow)
         self.addAction(resetAction)
 
-    def _replaceModel(self, model):
-        if self.model():
-            self.model().deleteLater()  # avoid memory leak
-        self.setModel(model)
+    @property
+    def clModel(self) -> CommitLogModel:
+        return self.model()
 
-    def fill(self, commitSequence: list[pygit2.Commit]):
-        model = QStandardItemModel(self)  # creating a model from scratch seems faster than clearing an existing one
-        model.appendRow(QStandardItem())
-        model.insertRows(1, len(commitSequence))
-        for i, meta in enumerate(commitSequence):
-            model.setData(model.index(1 + i, 0), meta, Qt.DisplayRole)
-        self._replaceModel(model)
+    def setCommitSequence(self, commitSequence: list[pygit2.Commit]):
+        self.clModel.setCommitSequence(commitSequence)
         self.onSetCurrent()
 
-    def refreshTop(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[pygit2.Commit]):
-        model: QAbstractListModel = self.model()
-        model.removeRows(1, nRemovedRows)
-        model.insertRows(1, nAddedRows)
-        for i in range(nAddedRows):
-            model.setData(model.index(1 + i, 0), commitSequence[i], Qt.DisplayRole)
+    def refreshTopOfCommitSequence(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[pygit2.Commit]):
+        self.clModel.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, commitSequence)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         self.getInfoOnCurrentCommit()

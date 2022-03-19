@@ -348,7 +348,7 @@ class MainWindow(QMainWindow):
 
         try:
             newState = RepoState(repo)
-            orderedMetadata = newState.loadCommitList(progress)
+            commitSequence = newState.loadCommitSequence(progress)
 
             rw.state = newState
             rw.actionFlows.repo = newState.repo
@@ -357,7 +357,7 @@ class MainWindow(QMainWindow):
             progress.setMaximum(0)
             progress.setValue(0)
 
-            rw.graphView.fill(orderedMetadata)
+            rw.graphView.setCommitSequence(commitSequence)
             rw.sidebar.fill(newState.repo)
 
             self.refreshTabText(rw)

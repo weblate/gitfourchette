@@ -143,7 +143,7 @@ class RepoState:
         except pygit2.GitError:
             self.activeCommitOid = None
 
-    def loadCommitList(self, progress: QProgressDialog):
+    def loadCommitSequence(self, progress: QProgressDialog):
         progress.setLabelText(F"Preparing refs...")
         QCoreApplication.processEvents()
 
@@ -156,8 +156,6 @@ class RepoState:
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
         commitSequence: list[pygit2.Commit] = []
-        #commit
-        # refs = {}
         graph = Graph()
         nextLocal = set()
 
