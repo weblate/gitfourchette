@@ -95,7 +95,7 @@ class Prefs(BasePrefs):
     qtStyle                     : str           = ""
     shortHashChars              : int           = 7
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
-    pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.ABBREVIATE_DIRECTORIES
+    pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS
     authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.ABBREVIATED_EMAIL
     maxRecentRepos              : int           = 20
     showStatusBar               : bool          = False
