@@ -89,9 +89,14 @@ class GraphDelegate(QStyledItemDelegate):
         super().paint(painter, option, index)
 
         XMargin = 4
-        ColW_Author = 16
         ColW_Hash = settings.prefs.shortHashChars + 1
         ColW_Date = 20
+        if settings.prefs.authorDisplayStyle == settings.AuthorDisplayStyle.INITIALS:
+            ColW_Author = 8
+        elif settings.prefs.authorDisplayStyle == settings.AuthorDisplayStyle.FULL_NAME:
+            ColW_Author = 20
+        else:
+            ColW_Author = 16
 
         painter.save()
 
