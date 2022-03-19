@@ -126,44 +126,51 @@ def excMessageBox(
         showExcSummary=True,
         icon=QMessageBox.Critical
 ):
-    if printExc:
-        traceback.print_exception(exc.__class__, exc, exc.__traceback__)
+    try:
+        if printExc:
+            traceback.print_exception(exc.__class__, exc, exc.__traceback__)
 
-    # bail out if we're not running on Qt's application thread
-    if not onAppThread():
-        sys.stderr.write("excMessageBox: not on application thread; bailing out\n")
-        return
+        # bail out if we're not running on Qt's application thread
+        if not onAppThread():
+            sys.stderr.write("excMessageBox: not on application thread; bailing out\n")
+            return
 
-    if showExcSummary:
-        summary = traceback.format_exception_only(exc.__class__, exc)
-        summary = ''.join(summary).strip()
-        message += "\n\n" + summary
+        if showExcSummary:
+            summary = traceback.format_exception_only(exc.__class__, exc)
+            summary = ''.join(summary).strip()
+            message += "\n\n" + summary
 
-    def shortenTracebackPath(line):
-        return re.sub(r'^\s*File "([^"]+)"',
-                      lambda m: F'File "{os.path.basename(m.group(1))}"',
-                      line, 1)
+        def shortenTracebackPath(line):
+            return re.sub(r'^\s*File "([^"]+)"',
+                          lambda m: F'File "{os.path.basename(m.group(1))}"',
+                          line, 1)
 
-    details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
-    details = [shortenTracebackPath(line) for line in details]
-    details = ''.join(details).strip()
+        details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+        details = [shortenTracebackPath(line) for line in details]
+        details = ''.join(details).strip()
 
-    qmb = QMessageBox(icon, title, message, parent=parent)
-    qmb.setDetailedText(details)
+        qmb = QMessageBox(icon, title, message, parent=parent)
+        qmb.setDetailedText(details)
 
-    detailsEdit: QTextEdit = qmb.findChild(QTextEdit, options=Qt.FindChildrenRecursively)
-    if detailsEdit:
-        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
-        font.setPointSize(min(font.pointSize(), 8))
-        detailsEdit.setFont(font)
-        detailsEdit.setMinimumWidth(600)
+        detailsEdit: QTextEdit = qmb.findChild(QTextEdit)
+        if detailsEdit:
+            font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+            font.setPointSize(min(font.pointSize(), 8))
+            detailsEdit.setFont(font)
+            detailsEdit.setMinimumWidth(600)
 
-    qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
 
-    if parent is not None:
-        qmb.show()
-    else:  # without a parent, .show() won't work
-        qmb.exec_()
+        if parent is not None:
+            qmb.show()
+        else:  # without a parent, .show() won't work
+            qmb.exec_()
+
+    except BaseException as excMessageBoxError:
+        sys.stderr.write(f"*********************************************\n")
+        sys.stderr.write(f"excMessageBox failed!!!\n")
+        sys.stderr.write(f"*********************************************\n")
+        traceback.print_exception(excMessageBoxError)
 
 
 def excStrings(exc):
