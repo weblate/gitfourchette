@@ -76,6 +76,8 @@ LEAF_ITEMS = [
 
 UNINDENT_ITEMS = [
     EItem.LocalBranch,
+    EItem.UnbornHead,
+    EItem.DetachedHead,
     EItem.Stash,
     EItem.Tag,
     EItem.Submodule,
@@ -241,7 +243,12 @@ class SidebarModel(QAbstractItemModel):
         item = self.unpackItem(parent)
 
         if item == EItem.LocalBranchesHeader:
-            return len(self._localBranches)
+            n = len(self._localBranches)
+            if self._unbornHead:
+                n += 1
+            if self._detachedHead:
+                n += 1
+            return n
 
         elif item == EItem.RemotesHeader:
             return len(self._remotes)

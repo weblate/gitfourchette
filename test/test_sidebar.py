@@ -5,10 +5,17 @@ from gitfourchette.widgets.repowidget import RepoWidget
 from gitfourchette.widgets.remotedialog import RemoteDialog
 from gitfourchette.widgets.sidebar import EItem
 from gitfourchette.widgets.stashdialog import StashDialog
+from gitfourchette import porcelain
 import re
 
 
 # TODO: Write test for switching
+
+
+def getEItemIndices(rw: RepoWidget, item: EItem):
+    model: QAbstractItemModel = rw.sidebar.model()
+    indexList: list[QModelIndex] = model.match(model.index(0, 0), Qt.UserRole + 1, item, flags=Qt.MatchRecursive)
+    return indexList
 
 
 def testNewBranch(qtbot, tempDir, mainWindow):
@@ -185,12 +192,6 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
     assert len(list(repo.remotes)) == 0
 
 
-def getEItemIndices(rw: RepoWidget, item: EItem):
-    model: QAbstractItemModel = rw.sidebar.model()
-    indexList: list[QModelIndex] = model.match(model.index(0, 0), Qt.UserRole + 1, item, flags=Qt.MatchRecursive)
-    return indexList
-
-
 def testNewStash(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
@@ -285,3 +286,18 @@ def testNewTrackingBranch(qtbot, tempDir, mainWindow):
     assert localBranch
     assert localBranch.upstream_name == "refs/remotes/origin/first-merge"
     assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"
+
+
+def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    repo = pygit2.Repository(wd)
+    porcelain.checkoutCommit(repo, pygit2.Oid(hex="7f822839a2fe9760f386cbbbcb3f92c5fe81def7"))
+
+    rw = mainWindow.openRepo(wd)
+
+    indices = getEItemIndices(rw, EItem.DetachedHead)
+    assert len(indices) == 1
+
+    indices = getEItemIndices(rw, EItem.LocalBranch)
+    assert len(indices) == 1
+
