@@ -66,6 +66,12 @@ def checkoutRef(repo: Repository, refName: str):
     repo.checkout(refName)
 
 
+def checkoutCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
+    commit: pygit2.Commit = repo[commitOid].peel(pygit2.Commit)
+    repo.checkout_tree(commit.tree)
+    repo.set_head(commitOid)
+
+
 def renameBranch(repo: Repository, oldName: str, newName: str):
     # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
     branch = repo.branches.local[oldName]

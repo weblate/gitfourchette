@@ -68,6 +68,7 @@ class GraphView(QListView):
     commitClicked = Signal(pygit2.Oid)
     resetHead = Signal(pygit2.Oid, str, bool)
     newBranchFromCommit = Signal(str, pygit2.Oid)
+    checkoutCommit = Signal(pygit2.Oid)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -83,7 +84,7 @@ class GraphView(QListView):
         getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
         self.addAction(getInfoAction)
         checkoutAction = QAction("&Check Out...", self)
-        checkoutAction.triggered.connect(self.checkoutCurrentCommit)
+        checkoutAction.triggered.connect(lambda: self.checkoutCommit.emit(self.currentCommitOid))
         self.addAction(checkoutAction)
         cherrypickAction = QAction("Cherry &Pick...", self)
         cherrypickAction.triggered.connect(self.cherrypickCurrentCommit)
@@ -197,20 +198,6 @@ class GraphView(QListView):
         messageBox.setDetailedText(details)
         messageBox.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
         messageBox.show()
-
-    def checkoutCurrentCommit(self):
-        oid = self.currentCommitOid
-        if not oid:
-            return
-
-        def work():
-            self.repo.git.checkout(oid)
-
-        def onComplete(_):
-            self.repoWidget.quickRefresh()
-            self.repoWidget.sidebar.fill(self.repo)
-
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Checking out “{shortHash(oid)}”")
 
     def cherrypickCurrentCommit(self):
         oid = self.currentCommitOid

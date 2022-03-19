@@ -261,3 +261,15 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     # Expect GF to save the state of the file before its deletion.
     assert readFile(F"{tempDir.name}/c2-2@c9ed7bf.txt") == b"c2\nc2\n"
 
+
+def testCheckoutCommit(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    oid = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    rw.graphView.selectCommit(oid)
+    rw.graphView.checkoutCommit.emit(oid)
+
+    assert repo.head_is_detached
+    assert repo.head.peel(pygit2.Commit).oid == oid
