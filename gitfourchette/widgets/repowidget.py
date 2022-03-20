@@ -199,6 +199,8 @@ class RepoWidget(QWidget):
         sideSplitter.addWidget(self.sidebar)
         sideSplitter.addWidget(mainSplitter)
         sideSplitter.setSizes([100, 500])
+        sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
+        sideSplitter.setStretchFactor(1, 1)
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
