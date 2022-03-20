@@ -8,6 +8,9 @@ import pygit2
 def testEmptyRepo(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir, "TestEmptyRepository")
     assert mainWindow.openRepo(wd)
+    assert mainWindow.tabs.count() == 1
+    mainWindow.closeCurrentTab()  # mustn't crash
+    assert mainWindow.tabs.count() == 0
 
 
 def testChangedFilesShownAtStart(qtbot, tempDir, mainWindow):

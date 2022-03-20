@@ -340,7 +340,7 @@ class RepoWidget(QWidget):
             self.committedFiles.clear()
             self.dirtyFiles.clear()
             self.stagedFiles.clear()
-            self.graphView._replaceModel(None)
+            self.graphView.clear()
             self.diffView.clear()
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
