@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>326</width>
-    <height>270</height>
+    <width>512</width>
+    <height>208</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -59,12 +59,12 @@
       <string>&amp;Edit author</string>
      </property>
      <property name="checked">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="QGroupBox" name="authorGroupBox">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -148,7 +148,7 @@
   <connection>
    <sender>revealAuthor</sender>
    <signal>toggled(bool)</signal>
-   <receiver>groupBox</receiver>
+   <receiver>authorGroupBox</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">

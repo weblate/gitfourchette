@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'commitdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.15.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,7 +15,7 @@ class Ui_CommitDialog(object):
     def setupUi(self, CommitDialog):
         if not CommitDialog.objectName():
             CommitDialog.setObjectName(u"CommitDialog")
-        CommitDialog.resize(326, 270)
+        CommitDialog.resize(512, 208)
         CommitDialog.setModal(True)
         self.verticalLayout = QVBoxLayout(CommitDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -46,24 +46,24 @@ class Ui_CommitDialog(object):
 
         self.revealAuthor = QCheckBox(CommitDialog)
         self.revealAuthor.setObjectName(u"revealAuthor")
-        self.revealAuthor.setChecked(True)
+        self.revealAuthor.setChecked(False)
 
         self.verticalLayout.addWidget(self.revealAuthor)
 
-        self.groupBox = QGroupBox(CommitDialog)
-        self.groupBox.setObjectName(u"groupBox")
-        self.groupBox.setEnabled(True)
-        self.groupBox.setFlat(False)
-        self.groupBox.setCheckable(False)
-        self.horizontalLayout = QHBoxLayout(self.groupBox)
+        self.authorGroupBox = QGroupBox(CommitDialog)
+        self.authorGroupBox.setObjectName(u"authorGroupBox")
+        self.authorGroupBox.setEnabled(True)
+        self.authorGroupBox.setFlat(False)
+        self.authorGroupBox.setCheckable(False)
+        self.horizontalLayout = QHBoxLayout(self.authorGroupBox)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.authorSignature = SignatureForm(self.groupBox)
+        self.authorSignature = SignatureForm(self.authorGroupBox)
         self.authorSignature.setObjectName(u"authorSignature")
 
         self.horizontalLayout.addWidget(self.authorSignature)
 
 
-        self.verticalLayout.addWidget(self.groupBox)
+        self.verticalLayout.addWidget(self.authorGroupBox)
 
         self.buttonBox = QDialogButtonBox(CommitDialog)
         self.buttonBox.setObjectName(u"buttonBox")
@@ -78,7 +78,7 @@ class Ui_CommitDialog(object):
         self.retranslateUi(CommitDialog)
         self.buttonBox.accepted.connect(CommitDialog.accept)
         self.buttonBox.rejected.connect(CommitDialog.reject)
-        self.revealAuthor.toggled.connect(self.groupBox.setVisible)
+        self.revealAuthor.toggled.connect(self.authorGroupBox.setVisible)
 
         QMetaObject.connectSlotsByName(CommitDialog)
 
@@ -88,4 +88,4 @@ class Ui_CommitDialog(object):
         self.counterLabel.setText(QCoreApplication.translate("CommitDialog", u"000", None))
         self.descriptionEditor.setPlaceholderText(QCoreApplication.translate("CommitDialog", u"Long-form description (optional)", None))
         self.revealAuthor.setText(QCoreApplication.translate("CommitDialog", u"&Edit author", None))
-        self.groupBox.setTitle("")
+        self.authorGroupBox.setTitle("")

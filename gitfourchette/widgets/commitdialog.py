@@ -55,6 +55,7 @@ class CommitDialog(QDialog):
         onSummaryChanged()
 
         self.ui.revealAuthor.setChecked(False)
+        self.ui.authorGroupBox.setVisible(False)
 
     def hasNonBlankSummary(self):
         return bool(self.ui.summaryEditor.text().strip())
