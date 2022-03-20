@@ -353,12 +353,8 @@ class MainWindow(QMainWindow):
             rw.state = newState
             rw.actionFlows.repo = newState.repo
 
-            progress.setLabelText(F"Filling model.")
-            progress.setMaximum(0)
-            progress.setValue(0)
-
             rw.graphView.setCommitSequence(commitSequence)
-            rw.sidebar.fill(newState.repo)
+            rw.sidebar.refresh(newState.repo)
 
             self.refreshTabText(rw)
 

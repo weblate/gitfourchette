@@ -21,11 +21,9 @@ class CommitLogModel(QAbstractListModel):
         return self._commitSequence is not None
 
     def clear(self):
-        self.beginResetModel()
-        self._commitSequence = None
-        self.endResetModel()
+        self.setCommitSequence(None)
 
-    def setCommitSequence(self, newCommitSequence: list[pygit2.Commit]):
+    def setCommitSequence(self, newCommitSequence: list[pygit2.Commit] | None):
         self.beginResetModel()
         self._commitSequence = newCommitSequence
         self.endResetModel()
@@ -103,7 +101,10 @@ class GraphView(QListView):
     def clModel(self) -> CommitLogModel:
         return self.model()
 
-    def setCommitSequence(self, commitSequence: list[pygit2.Commit]):
+    def clear(self):
+        self.setCommitSequence(None)
+
+    def setCommitSequence(self, commitSequence: list[pygit2.Commit] | None):
         self.clModel.setCommitSequence(commitSequence)
         self.onSetCurrent()
 

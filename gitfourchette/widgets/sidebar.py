@@ -85,6 +85,7 @@ UNINDENT_ITEMS = [
 
 
 class SidebarModel(QAbstractItemModel):
+    repo: pygit2.Repository | None
     _localBranches: list[str]
     _tracking: list[str]
     _unbornHead: str
@@ -117,13 +118,14 @@ class SidebarModel(QAbstractItemModel):
     def _parentWidget(self) -> QWidget:
         return QObject.parent(self)
 
-    def __init__(self, repo: pygit2.Repository, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.repo = repo
-        self.refreshCache()
+        self.repo = None
 
-    def refreshCache(self):
-        repo = self.repo
+    def refreshCache(self, repo: pygit2.Repository):
+        self.beginResetModel()
+
+        self.repo = repo
 
         self._localBranches = [b for b in repo.branches.local]
 
@@ -157,11 +159,13 @@ class SidebarModel(QAbstractItemModel):
 
         self._submodules = repo.listall_submodules()
 
+        self.endResetModel()
+
     def columnCount(self, parent: QModelIndex) -> int:
         return 1
 
     def index(self, row, column, parent: QModelIndex = None) -> QModelIndex:
-        if column != 0 or row < 0:
+        if not self.repo or column != 0 or row < 0:
             return QModelIndex()
 
         if not parent or not parent.isValid():  # root
@@ -202,7 +206,7 @@ class SidebarModel(QAbstractItemModel):
         return QModelIndex()
 
     def parent(self, index: QModelIndex = QModelIndex()) -> QModelIndex:
-        if not index.isValid():
+        if not self.repo or not index.isValid():
             return QModelIndex()
 
         item = self.unpackItem(index)
@@ -237,6 +241,9 @@ class SidebarModel(QAbstractItemModel):
             return QModelIndex()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+        if not self.repo:
+            return 0
+
         if not parent.isValid():
             return len(HEADER_ITEMS)
 
@@ -270,6 +277,9 @@ class SidebarModel(QAbstractItemModel):
             return 0
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
+        if not self.repo:
+            return None
+
         row = index.row()
         item = self.unpackItem(index)
 
@@ -459,6 +469,8 @@ class Sidebar(QTreeView):
 
         self.setItemDelegate(SidebarDelegate(self))
 
+        self.setModel(SidebarModel(self))
+
     def generateMenuForEntry(self, item: EItem, data: str = "", menu: QMenu = None):
         if menu is None:
             menu = QMenu(self)
@@ -548,14 +560,10 @@ class Sidebar(QTreeView):
             menu = self.generateMenuForEntry(*SidebarModel.unpackItemAndData(index))
             menu.exec_(globalPoint)
 
-    def fill(self, repo: pygit2.Repository):
-        self._replaceModel(SidebarModel(repo, parent=self))
+    def refresh(self, repo: pygit2.Repository):
+        sidebarModel: SidebarModel = self.model()
+        sidebarModel.refreshCache(repo)
         self.expandAll()
-
-    def _replaceModel(self, model):
-        if self.model():
-            self.model().deleteLater()  # avoid memory leak
-        self.setModel(model)
 
     def onEntryClicked(self, item: EItem, data: str):
         if item == EItem.UncommittedChanges:

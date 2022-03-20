@@ -809,7 +809,7 @@ class RepoWidget(QWidget):
 
     def quickRefreshWithSidebar(self):
         self.quickRefresh()
-        self.sidebar.fill(self.repo)
+        self.sidebar.refresh(self.repo)
 
     def refreshWindowTitle(self):
         shortname = self.state.shortName
