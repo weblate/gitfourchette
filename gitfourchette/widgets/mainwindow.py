@@ -2,7 +2,7 @@ from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext)
+from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext, PersistentFileDialog)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -485,7 +485,7 @@ class MainWindow(QMainWindow):
     # File menu callbacks
 
     def newRepo(self):
-        path, _ = QFileDialog.getSaveFileName(self, "New repository")
+        path, _ = PersistentFileDialog.getSaveFileName(self, "New repository")
         if path:
             pygit2.init_repository(path)
             self.openRepo(path)
@@ -502,11 +502,8 @@ class MainWindow(QMainWindow):
         dlg.show()
 
     def openDialog(self):
-        path = settings.history.openFileDialogLastPath
-        path = QFileDialog.getExistingDirectory(self, "Open repository", path)
+        path = PersistentFileDialog.getExistingDirectory(self, "Open repository")
         if path:
-            settings.history.openFileDialogLastPath = path
-            settings.history.write()
             self.openRepo(path)
             self.saveSession()
 

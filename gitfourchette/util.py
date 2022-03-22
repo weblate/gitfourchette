@@ -280,3 +280,43 @@ class NonCriticalOperation:
             excMessageBox(excValue, message=self.operation + " failed.")
             return True  # don't propagate
 
+
+class PersistentFileDialog:
+    @staticmethod
+    def getPath(key):
+        from gitfourchette import settings
+        try:
+            return settings.history.fileDialogPaths[key]
+        except KeyError:
+            return ""
+
+    @staticmethod
+    def savePath(key, path):
+        if path:
+            from gitfourchette import settings
+            settings.history.fileDialogPaths[key] = path
+            settings.history.write()
+
+    @staticmethod
+    def getSaveFileName(parent, caption: str, filter="", selectedFilter=""):
+        key = caption
+        initialDir = PersistentFileDialog.getPath(key)
+        path, selectedFilter = QFileDialog.getSaveFileName(parent, caption, initialDir, filter, selectedFilter)
+        PersistentFileDialog.savePath(key, path)
+        return path, selectedFilter
+
+    @staticmethod
+    def getOpenFileName(parent, caption: str, filter="", selectedFilter=""):
+        key = caption
+        initialDir = PersistentFileDialog.getPath(key)
+        path, selectedFilter = QFileDialog.getOpenFileName(parent, caption, initialDir, filter, selectedFilter)
+        PersistentFileDialog.savePath(key, path)
+        return path, selectedFilter
+
+    @staticmethod
+    def getExistingDirectory(parent, caption: str, options=QFileDialog.ShowDirsOnly):
+        key = caption
+        initialDir = PersistentFileDialog.getPath(key)
+        path = QFileDialog.getExistingDirectory(parent, caption, initialDir, options)
+        PersistentFileDialog.savePath(key, path)
+        return path

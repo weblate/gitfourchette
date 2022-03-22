@@ -1,6 +1,7 @@
 from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
+from gitfourchette.util import PersistentFileDialog
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_clonedialog import Ui_CloneDialog
 from gitfourchette.workqueue import WorkQueue
@@ -77,7 +78,7 @@ class CloneDialog(QDialog):
     def browse(self):
         projectName = self.url.rsplit("/", 1)[-1].removesuffix(".git")
 
-        path, _ = QFileDialog.getSaveFileName(self, "Clone repository into", projectName)
+        path, _ = PersistentFileDialog.getSaveFileName(self, "Clone repository into", projectName)
         if path:
             self.ui.pathEdit.setText(path)
 

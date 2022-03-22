@@ -5,7 +5,7 @@ from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.trash import Trash
-from gitfourchette.util import excMessageBox, ActionDef, quickMenu
+from gitfourchette.util import PersistentFileDialog, excMessageBox, ActionDef, quickMenu
 from gitfourchette.widgets.diffmodel import DiffModel, LineData
 from bisect import bisect_left, bisect_right
 from pygit2 import GitError, Patch, Repository, Diff
@@ -285,7 +285,7 @@ class DiffView(QPlainTextEdit):
         if saveInto:
             savePath = os.path.join(saveInto, name)
         else:
-            savePath, _ = QFileDialog.getSaveFileName(self, "Export selected lines", name)
+            savePath, _ = PersistentFileDialog.getSaveFileName(self, "Export selected lines", name)
 
         if savePath:
             with open(savePath, "wb") as file:

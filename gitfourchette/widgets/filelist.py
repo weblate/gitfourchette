@@ -4,7 +4,7 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (abbreviateDirectories, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur)
+from gitfourchette.util import (abbreviateDirectories, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur, PersistentFileDialog)
 from pathlib import Path
 from typing import Generator, Any
 import html
@@ -292,7 +292,7 @@ class FileList(QListView):
         if saveInto:
             savePath = os.path.join(saveInto, name)
         else:
-            savePath, _ = QFileDialog.getSaveFileName(self, "Save patch file", name)
+            savePath, _ = PersistentFileDialog.getSaveFileName(self, "Save patch file", name)
 
         if not savePath:
             return
@@ -447,7 +447,7 @@ class CommittedFiles(FileList):
             if saveInto:
                 savePath = os.path.join(saveInto, name)
             else:
-                savePath, _ = QFileDialog.getSaveFileName(self, "Save file revision", name)
+                savePath, _ = PersistentFileDialog.getSaveFileName(self, "Save file revision", name)
 
             if not savePath:
                 continue

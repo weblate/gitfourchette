@@ -123,7 +123,7 @@ class Prefs(BasePrefs):
 class History(BasePrefs):
     filename = "history.json"
 
-    openFileDialogLastPath      : str           = ""
+    fileDialogPaths             : dict          = field(default_factory=dict)
     history                     : list[str]     = field(default_factory=list)
     nicknames                   : dict          = field(default_factory=dict)
     cloneHistory                : list[str]     = field(default_factory=list)
