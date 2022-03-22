@@ -294,10 +294,13 @@ class DiffView(QPlainTextEdit):
     def revertPatch(self, patchData: bytes):
         if not patchData:
             QApplication.beep()
-        elif not porcelain.patchApplies(self.repo, patchData, discard=True):
+            return
+
+        diff = porcelain.patchApplies(self.repo, patchData)
+        if not diff:
             QMessageBox.warning(self, "Revert patch", "Couldn't revert this patch.\nThe code may have diverged too much from this revision.")
         else:
-            diff = porcelain.applyPatch(self.repo, patchData, discard=True)
+            diff = porcelain.applyPatch(self.repo, diff, discard=True)
             changedFile = get1FileChangedByDiff(diff)
             self.patchApplied.emit(NavPos("UNSTAGED", changedFile))  # send a NavPos to have RepoWidget show the file in the unstaged list
 

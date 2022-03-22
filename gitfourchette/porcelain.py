@@ -399,25 +399,34 @@ def dropStash(repo: Repository, commitId: pygit2.Oid):
     repo.stash_drop(findStashIndex(repo, commitId))
 
 
-def applyPatch(repo: pygit2.Repository, patchData: bytes, discard: bool):
+def patchApplies(repo: pygit2.Repository, patchData: bytes | str, discard: bool = False) -> pygit2.Diff | None:
     if discard:
         location = pygit2.GIT_APPLY_LOCATION_WORKDIR
     else:
         location = pygit2.GIT_APPLY_LOCATION_INDEX
 
     diff = pygit2.Diff.parse_diff(patchData)
+    if repo.applies(diff, location):
+        return diff
+    else:
+        return None
+
+
+def applyPatch(repo: pygit2.Repository, patchDataOrDiff: bytes | str | pygit2.Diff, discard: bool = False) -> pygit2.Diff:
+    if discard:
+        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
+    else:
+        location = pygit2.GIT_APPLY_LOCATION_INDEX
+
+    if type(patchDataOrDiff) in [bytes, str]:
+        diff = pygit2.Diff.parse_diff(patchDataOrDiff)
+    elif type(patchDataOrDiff) is pygit2.Diff:
+        diff = patchDataOrDiff
+    else:
+        raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
+
     repo.apply(diff, location)
     return diff
-
-
-def patchApplies(repo: pygit2.Repository, patchData: bytes, discard: bool):
-    if discard:
-        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
-    else:
-        location = pygit2.GIT_APPLY_LOCATION_INDEX
-
-    diff = pygit2.Diff.parse_diff(patchData)
-    return repo.applies(diff, location)
 
 
 def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str):
