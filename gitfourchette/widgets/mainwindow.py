@@ -1,3 +1,4 @@
+from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
@@ -154,6 +155,8 @@ class MainWindow(QMainWindow):
         self.recentMenu = fileMenu.addMenu("Open &Recent")
         self.recentMenu.setObjectName("RecentMenu")
         fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
+        fileMenu.addSeparator()
+        fileMenu.addAction("&Import Patch...", self.importPatch, QKeySequence("Ctrl+I"))
         fileMenu.addSeparator()
         fileMenu.addAction("&Preferences...", self.openSettings, QKeySequence.Preferences)
         fileMenu.addSeparator()
@@ -506,6 +509,24 @@ class MainWindow(QMainWindow):
         if path:
             self.openRepo(path)
             self.saveSession()
+
+    def importPatch(self):
+        if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
+            QMessageBox.warning(self, "Import patch", "Please open a repository before importing a patch.")
+            return
+
+        path, _ = PersistentFileDialog.getOpenFileName(self, "Import patch", filter="Patch file (*.patch)")
+        if not path:
+            return
+
+        with open(path, "r") as patchFile:
+            patchData = patchFile.read()
+
+        try:
+            repo = self.currentRepoWidget().repo
+            porcelain.applyPatch(repo, patchData)
+        except pygit2.GitError as error:
+            QMessageBox.warning(self, "Import patch", F"Couldn’t apply “{os.path.basename(path)}”:\n\n{error}")
 
     # -------------------------------------------------------------------------
     # Tab management
