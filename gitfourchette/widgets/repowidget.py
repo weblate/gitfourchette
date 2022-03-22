@@ -791,6 +791,9 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def quickRefresh(self):
+        with Benchmark("Refresh refs-by-commit cache"):
+            self.state.refreshRefsByCommitCache()
+
         with Benchmark("Load tainted commits only"):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
 
@@ -799,9 +802,6 @@ class RepoWidget(QWidget):
                 self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
             else:
                 self.graphView.setCommitSequence(self.state.commitSequence)
-
-        with Benchmark("Refresh refs-by-commit cache"):
-            self.state.refreshRefsByCommitCache()
 
         if self.filesStack.currentWidget() == self.stageSplitter:
             self.fillStageViewAsync()

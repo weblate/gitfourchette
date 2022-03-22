@@ -21,6 +21,31 @@ class BatchedOffset:
     offsetInBatch: int
 
 
+def progressTick(progress, i):
+    if i != 0 and i % PROGRESS_INTERVAL == 0:
+        progress.setLabelText(F"{i:,} commits processed.")
+        QCoreApplication.processEvents()
+        if progress.wasCanceled():
+            raise StopIteration()
+
+
+class ForeignCommitResolver:
+    def __init__(self, commitsToRefs):
+        self._nextLocal = set()
+        self.foreignCommits = set()
+        for commitOid, refList in commitsToRefs.items():
+            if any(name.startswith("refs/heads/") for name in refList):
+                self._nextLocal.add(commitOid)
+
+    def feed(self, commit: pygit2.Commit):
+        if commit.oid in self._nextLocal:
+            self._nextLocal.remove(commit.oid)
+            for p in commit.parents:
+                self._nextLocal.add(p.oid)
+        else:
+            self.foreignCommits.add(commit.oid)
+
+
 class RepoState:
     repo: pygit2.Repository
     settings: QSettings
@@ -57,7 +82,9 @@ class RepoState:
     mutex: QMutex
 
     # commit oid --> list of reference names
-    refsByCommit: dict[pygit2.Oid, list[str]]
+    commitsToRefs: dict[pygit2.Oid, list[str]]
+
+    foreignCommits: set[pygit2.Oid]
 
     def __init__(self, repo: pygit2.Repository):
         self.repo = repo
@@ -81,7 +108,6 @@ class RepoState:
         self.commitPositions = {}
         self.graph = None
 
-        self.refsByCommit = defaultdict(list)
         self.refreshRefsByCommitCache()
 
         log.info("TODO", "parse superproject")
@@ -105,7 +131,7 @@ class RepoState:
             self.settings.setValue(SETTING_KEY_DRAFT_MESSAGE, newMessage)
 
     def refreshRefsByCommitCache(self):
-        self.refsByCommit = porcelain.mapCommitsToReferences(self.repo)
+        self.commitsToRefs = porcelain.mapCommitsToReferences(self.repo)
 
     @property
     def shortName(self) -> str:
@@ -161,30 +187,22 @@ class RepoState:
 
         commitSequence: list[pygit2.Commit] = []
         graph = Graph()
-        nextLocal = set()
 
         progress.setLabelText(F"Preparing walk...")
-        QCoreApplication.processEvents()
 
-        i = 0
-        for commit in walker:
-            if i % PROGRESS_INTERVAL == 0:
-                progress.setLabelText(F"{i:,} commits processed.")
-                QCoreApplication.processEvents()
-                if progress.wasCanceled():
-                    QMessageBox.warning(progress.parent(),
-                        "Loading aborted",
-                        F"Loading aborted.\nHistory will be truncated to {i:,} commits.")
-                    break
-            offsetFromTop = i
-            i += 1
+        foreignCommitResolver = ForeignCommitResolver(self.commitsToRefs)
+        try:
+            for offsetFromTop, commit in enumerate(walker):
+                progressTick(progress, offsetFromTop)
 
-            commitSequence.append(commit)
-            self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
+                commitSequence.append(commit)
+                self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
 
-            #TODO self.traceOneCommitAvailability(nextLocal, meta)
+                foreignCommitResolver.feed(commit)
+        except StopIteration:
+            pass
 
-        globalstatus.setText(F"{self.shortName}: loaded {len(commitSequence):,} commits")
+        log.info("loadCommitSequence", F"{self.shortName}: loaded {len(commitSequence):,} commits")
 
         progress.setLabelText("Preparing graph...")
         progress.setMaximum(len(commitSequence))
@@ -197,6 +215,7 @@ class RepoState:
                 graph.saveKeyframe(graphGenerator)
 
         self.commitSequence = commitSequence
+        self.foreignCommits = foreignCommitResolver.foreignCommits
         self.graph = graph
         self.batchOffsets = [0]
         self.currentBatchID = 0
@@ -204,19 +223,6 @@ class RepoState:
         bench.__exit__(None, None, None)
 
         return commitSequence
-
-    @staticmethod
-    def traceOneCommitAvailability(nextLocal: set, meta: pygit2.Commit):
-        if meta.hexsha in nextLocal:
-            meta.hasLocal = True
-            nextLocal.remove(meta.hexsha)
-        elif meta.mainRefName == "HEAD" or meta.mainRefName.startswith("refs/heads/"):
-            meta.hasLocal = True
-        else:
-            meta.hasLocal = False
-        if meta.hasLocal:
-            for p in meta.parentHashes:
-                nextLocal.add(p)
 
     def loadTaintedCommitsOnly(self):
         globalstatus.setText(F"{self.shortName}: checking for new commits...")
@@ -285,24 +291,15 @@ class RepoState:
         self.batchOffsets = [previousOffset + graphSplicer.oldGraphRowOffset for previousOffset in self.batchOffsets]
         self.batchOffsets.append(0)
 
+        # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
-        self.traceCommitAvailability(self.commitSequence)
+        foreignCommitResolver = ForeignCommitResolver(self.commitsToRefs)
+        for i, commit in enumerate(self.commitSequence):
+            foreignCommitResolver.feed(commit)
+        self.foreignCommits = foreignCommitResolver.foreignCommits
 
         globalstatus.setProgressValue(4)
 
         self.updateActiveCommitOid()
 
         return nRemoved, nAdded
-
-    @staticmethod
-    def traceCommitAvailability(metas, progressTick=None):
-        """ TODO
-        nextLocal = set()
-        for i, meta in enumerate(metas):
-            if progressTick is not None and 0 == i % PROGRESS_INTERVAL:
-                progressTick(i)
-            RepoState.traceOneCommitAvailability(nextLocal, meta)
-        assert len(nextLocal) == 0, "there are unreachable commits at the bottom of the graph"
-        """
-        pass
-

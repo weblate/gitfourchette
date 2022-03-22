@@ -157,8 +157,8 @@ class GraphDelegate(QStyledItemDelegate):
             paintGraphFrame(self.state, commit, painter, rect, outlineColor)
 
         # ------ Callouts
-        if commit is not None and commit.oid in self.state.refsByCommit:
-            for refName in self.state.refsByCommit[commit.oid]:
+        if commit is not None and commit.oid in self.state.commitsToRefs:
+            for refName in self.state.commitsToRefs[commit.oid]:
                 calloutText = refName
                 calloutColor = Qt.darkMagenta
 
@@ -183,10 +183,8 @@ class GraphDelegate(QStyledItemDelegate):
             return metrics.elidedText(text, Qt.ElideRight, rect.width())
 
         # ------ message
-        ''' TODO: pygit2 migration
-        if commit and not meta.hasLocal:
+        if commit and commit.oid in self.state.foreignCommits:
              painter.setPen(QColor(Qt.gray))
-        '''
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
         painter.drawText(rect, Qt.AlignVCenter, elide(summaryText))
