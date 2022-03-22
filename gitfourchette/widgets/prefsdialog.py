@@ -109,9 +109,9 @@ class PrefsDialog(QDialog):
                 control = self.qtStyleControl(prefKey, prefValue)
             elif prefKey == 'diff_font':
                 control = self.fontControl(prefKey)
-            elif prefKey == 'graph_topoOrder':
+            elif prefKey == 'graph_chronologicalOrder':
                 caption = "Commit Order"
-                control = self.boolRadioControl(prefKey, prefValue, falseName="Chronological", trueName="Topological")
+                control = self.boolRadioControl(prefKey, prefValue, trueName="Chronological", falseName="Topological")
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
             elif prefKey == 'shortHashChars':

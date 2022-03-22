@@ -109,7 +109,7 @@ class Prefs(BasePrefs):
     tabs_closeButton            : bool          = True
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False
-    graph_topoOrder             : bool          = True
+    graph_chronologicalOrder    : bool          = True
     graph_maxLanes              : int           = 32
     graph_flattenLanes          : bool          = True
     graph_newLanesAlwaysRightmost:bool          = False

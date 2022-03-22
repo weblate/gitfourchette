@@ -122,10 +122,14 @@ class RepoState:
         return self.batchOffsets[position.batch] + position.offsetInBatch
 
     def initializeWalker(self, tipOids: list[pygit2.Oid]) -> pygit2.Walker:
-        if settings.prefs.graph_topoOrder:
-            sorting = pygit2.GIT_SORT_TOPOLOGICAL
-        else:
-            sorting = pygit2.GIT_SORT_TIME
+        sorting = pygit2.GIT_SORT_TOPOLOGICAL
+
+        if settings.prefs.graph_chronologicalOrder:
+            # In strictly chronological ordering, a commit may appear before its
+            # children if it was "created" later than its children. The graph
+            # generator produces garbage in this case. So, for chronological
+            # ordering, keep GIT_SORT_TOPOLOGICAL in addition to GIT_SORT_TIME.
+            sorting |= pygit2.GIT_SORT_TIME
 
         if self.walker is None:
             self.walker = self.repo.walk(None, sorting)
