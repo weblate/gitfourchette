@@ -49,14 +49,6 @@ def main():
             app.setStyleSheet(styleSheet)
             styleSheetFile.close()
 
-    # Hack so we don't get out-of-place Tahoma on Windows.
-    # TODO: Check whether Qt 6 has made this unnecessary (when it comes out).
-    if QSysInfo.productType() == "windows":
-        # Get QMenu's font (which is correct) instead of using raw Segoe UI,
-        # because some locales might use a different font than Segoe.
-        sysFont = QApplication.font("QMenu")
-        QApplication.setFont(sysFont)
-
     # Initialize settings
     from gitfourchette import settings
     if commandLine.isSet("test-mode"):
