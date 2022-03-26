@@ -20,6 +20,6 @@ class SignatureForm(QWidget):
         return Signature(
             name=self.ui.nameEdit.text(),
             email=self.ui.emailEdit.text(),
-            time=QDateTime.toTime_t(qdt),
+            time=qdt.toSecsSinceEpoch(),
             offset=qdt.offsetFromUtc()//60
         )

@@ -157,7 +157,7 @@ def testCommit(qtbot, tempDir, mainWindow):
     assert headCommit.message == "Some New Commit"
     assert headCommit.author.name == "Custom Author"
     assert headCommit.author.email == "custom.author@example.com"
-    assert headCommit.author.time == QDateTime.toTime_t(enteredDate)
+    assert headCommit.author.time == enteredDate.toSecsSinceEpoch()
 
     assert len(headCommit.parents) == 1
     diff: pygit2.Diff = rw.repo.diff(headCommit.parents[0], headCommit)
@@ -208,21 +208,36 @@ def testCommitMessageDraftSavedOnCancel(qtbot, tempDir, mainWindow):
 
 
 def testAmendCommit(qtbot, tempDir, mainWindow):
+    oldMessage = "Delete c/c2-2.txt"
+    newMessage = "amended commit message"
+    newAuthorName = "Jean-Michel Tartempion"
+    newAuthorEmail = "jmtartempion@example.com"
+
     wd = unpackRepo(tempDir)
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
 
+    # Select file
     qlvClickNthRow(rw.dirtyFiles, 0)
+
+    # Stage it
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
 
+    # Kick off amend dialog
     rw.amendButton.click()
+
     dialog: CommitDialog = findQDialog(rw, "amend")
-    assert dialog.ui.summaryEditor.text() == "Delete c/c2-2.txt"
-    dialog.ui.summaryEditor.setText("amended commit message")
+    assert dialog.ui.summaryEditor.text() == oldMessage
+    dialog.ui.summaryEditor.setText(newMessage)
+    dialog.ui.revealAuthor.setChecked(True)
+    dialog.ui.authorSignature.ui.nameEdit.setText(newAuthorName)
+    dialog.ui.authorSignature.ui.emailEdit.setText(newAuthorEmail)
     dialog.accept()
 
     headCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
-    assert headCommit.message == "amended commit message"
+    assert headCommit.message == newMessage
+    assert headCommit.author.name == newAuthorName
+    assert headCommit.author.email == newAuthorEmail
 
 
 def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
