@@ -326,13 +326,24 @@ def stageFiles(repo: Repository, patches: list[pygit2.Patch]):
 
 
 def discardFiles(repo: Repository, paths: list[str]):
+    """
+    Discards unstaged changes in the given files.
+    Does not discard any changes that are staged.
+    """
+
     strategy = (pygit2.GIT_CHECKOUT_FORCE
                 | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
-                | pygit2.GIT_CHECKOUT_DONT_UPDATE_INDEX
+                | pygit2.GIT_CHECKOUT_DONT_UPDATE_INDEX  # not strictly necessary, but prevents nuking staged changes inadvertently
                 | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 
-    repo.index.read()  # refresh index before getting indexTree
-    indexTree = repo[repo.index.write_tree()]
+    # refresh index before getting indexTree in case an external program modified the staging area
+    repo.index.read()
+
+    # get tree with staged changes
+    indexTreeId = repo.index.write_tree()
+    indexTree = repo[indexTreeId]
+
+    # reset files to their state in the staged tree
     repo.checkout_tree(indexTree, paths=paths, strategy=strategy)
 
 
