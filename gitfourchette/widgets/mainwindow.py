@@ -249,9 +249,7 @@ class MainWindow(QMainWindow):
 
         self.recentMenu.clear()
         for historic in list(reversed(settings.history.history))[:settings.prefs.maxRecentRepos]:
-            self.recentMenu.addAction(
-                F"{settings.history.getRepoNickname(historic)} [{compactPath(historic)}]",
-                lambda h=historic: self.openRepo(h))
+            self.recentMenu.addAction(compactPath(historic), lambda h=historic: self.openRepo(h))
         self.recentMenu.addSeparator()
         self.recentMenu.addAction("Clear", onClearRecents)
 
