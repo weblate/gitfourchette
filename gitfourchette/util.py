@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from gitfourchette.qt import *
+from gitfourchette.settings import PathDisplayStyle
 from pygit2 import Oid
 import os
 import re
@@ -47,14 +48,19 @@ def compactPath(path: str) -> str:
     return path
 
 
-def abbreviateDirectories(path: str) -> str:
-    splitLong = path.split('/')
-    for i in range(len(splitLong) - 1):
-        if splitLong[i][0] == '.':
-            splitLong[i] = splitLong[i][:2]
-        else:
-            splitLong[i] = splitLong[i][0]
-    return '/'.join(splitLong)
+def abbreviatePath(path: str, style: PathDisplayStyle = PathDisplayStyle.FULL_PATHS) -> str:
+    if style == PathDisplayStyle.ABBREVIATE_DIRECTORIES:
+        splitLong = path.split('/')
+        for i in range(len(splitLong) - 1):
+            if splitLong[i][0] == '.':
+                splitLong[i] = splitLong[i][:2]
+            else:
+                splitLong[i] = splitLong[i][0]
+        return '/'.join(splitLong)
+    elif style == PathDisplayStyle.SHOW_FILENAME_ONLY:
+        return path.rsplit('/', 1)[-1]
+    else:
+        return path
 
 
 def shortHash(oid: Oid) -> str:

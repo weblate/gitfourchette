@@ -4,7 +4,7 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (abbreviateDirectories, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur, PersistentFileDialog)
+from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur, PersistentFileDialog)
 from pathlib import Path
 from typing import Generator, Any
 import html
@@ -81,12 +81,7 @@ class FileListModel(QAbstractListModel):
                 return "<NO DELTA>"
 
             path: str = self.getDeltaAt(index).new_file.path
-            if settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES:
-                return abbreviateDirectories(path)
-            elif settings.prefs.pathDisplayStyle == settings.PathDisplayStyle.SHOW_FILENAME_ONLY:
-                return path.rsplit('/', 1)[-1]
-            else:
-                return path
+            return abbreviatePath(path, settings.prefs.pathDisplayStyle)
 
         elif role == Qt.DecorationRole:
             delta = self.getDeltaAt(index)

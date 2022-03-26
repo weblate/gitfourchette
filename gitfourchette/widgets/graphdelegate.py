@@ -27,10 +27,7 @@ CALLOUTS = {
 INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
 
 
-def abbreviatePerson(sig: pygit2.Signature, style: settings.AuthorDisplayStyle = None):
-    if not style:
-        style = settings.prefs.authorDisplayStyle
-
+def abbreviatePerson(sig: pygit2.Signature, style: settings.AuthorDisplayStyle = settings.AuthorDisplayStyle.FULL_NAME):
     if style == settings.AuthorDisplayStyle.FULL_NAME:
         return sig.name
     elif style == settings.AuthorDisplayStyle.FIRST_NAME:
@@ -122,7 +119,7 @@ class GraphDelegate(QStyledItemDelegate):
             commit: pygit2.Commit = index.data()
             summaryText, contd = messageSummary(commit.message)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
-            authorText = abbreviatePerson(commit.author)
+            authorText = abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle)
             dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)

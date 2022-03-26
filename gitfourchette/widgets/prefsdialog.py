@@ -1,5 +1,6 @@
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, SHORT_DATE_PRESETS
+from gitfourchette.util import abbreviatePath
 from gitfourchette.widgets.graphdelegate import abbreviatePerson
 import datetime
 import enum
@@ -8,6 +9,7 @@ import pygit2
 
 
 SAMPLE_SIGNATURE = pygit2.Signature("Jean-Michel Tartempion", "jm.tarte@example.com", 0, 0)
+SAMPLE_FILE_PATH = "spam/.ham/eggs/hello.c"
 
 
 def _boxWidget(layout, *controls):
@@ -64,8 +66,10 @@ class ComboBoxWithPreview(QComboBox):
 
             painter.save()
 
+            pw: QWidget = self.parent()
+
             rect = QRect(option.rect)
-            rect.setLeft(rect.left() + painter.fontMetrics().horizontalAdvance("M" * 12))
+            rect.setLeft(rect.left() + pw.width())
 
             painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
             painter.drawText(rect, Qt.AlignVCenter, self.previewCallback(index.data(Qt.UserRole)))
@@ -127,7 +131,7 @@ class PrefsDialog(QDialog):
         for prefKey in prefs.__dict__:
             prefValue = prefs.__dict__[prefKey]
             category, caption = prettifySetting(prefKey)
-            t = type(prefValue)
+            prefType = type(prefValue)
 
             if category != pCategory:
                 formContainer = QWidget(self)
@@ -146,21 +150,23 @@ class PrefsDialog(QDialog):
                 control = self.boolRadioControl(prefKey, prefValue, trueName="Chronological", falseName="Topological")
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
+            elif prefKey == 'pathDisplayStyle':
+                control = self.enumControl(prefKey, prefValue, prefType, previewCallback=lambda v: abbreviatePath(SAMPLE_FILE_PATH, v))
             elif prefKey == 'authorDisplayStyle':
-                control = self.authorFormatControl(prefKey, prefValue, t)
+                control = self.enumControl(prefKey, prefValue, prefType, previewCallback=lambda v: abbreviatePerson(SAMPLE_SIGNATURE, v))
             elif prefKey == 'shortHashChars':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
             elif prefKey == 'maxRecentRepos':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 50)
-            elif issubclass(t, enum.Enum):
-                control = self.enumControl(prefKey, prefValue, t)
-            elif t is str:
+            elif issubclass(prefType, enum.Enum):
+                control = self.enumControl(prefKey, prefValue, prefType)
+            elif prefType is str:
                 control = self.strControl(prefKey, prefValue)
-            elif t is int:
+            elif prefType is int:
                 control = self.intControl(prefKey, prefValue)
-            elif t is float:
+            elif prefType is float:
                 control = self.floatControl(prefKey, prefValue)
-            elif t is bool:
+            elif prefType is bool:
                 control = QCheckBox(caption, self)
                 control.setCheckState(Qt.CheckState.Checked if prefValue else Qt.CheckState.Unchecked)
                 control.stateChanged.connect(lambda v, k=prefKey: self.assign(k, v != Qt.CheckState.Unchecked))
@@ -184,6 +190,7 @@ class PrefsDialog(QDialog):
                 del self.prefDiff[k]
         else:
             self.prefDiff[k] = v
+        print("Assign", k, v)
 
     def getMostRecentValue(self, k):
         if k in self.prefDiff:
@@ -277,21 +284,17 @@ class PrefsDialog(QDialog):
 
         return vBoxWidget(trueButton, falseButton)
 
-    def enumControl(self, prefKey, prefValue, enumType):
-        control = QComboBox(self)
-        for enumMember in enumType:
-            control.addItem(prettifySnakeCase(enumMember.name), enumMember)
-            if prefValue == enumMember:
-                control.setCurrentIndex(control.count() - 1)
-        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.UserRole)))
-        return control
+    def enumControl(self, prefKey, prefValue, enumType, previewCallback=None):
+        if previewCallback:
+            control = ComboBoxWithPreview(self, previewCallback)
+        else:
+            control = QComboBox(self)
 
-    def enumControlWithPreview(self, prefKey, prefValue, enumType, previewCallback):
-        control = ComboBoxWithPreview(self, previewCallback)
         for enumMember in enumType:
             control.addItem(prettifySnakeCase(enumMember.name), enumMember)
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
+
         control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.UserRole)))
         return control
 
@@ -341,9 +344,3 @@ class PrefsDialog(QDialog):
         control.setEditText(prefValue)
 
         return vBoxWidget(control, preview)
-
-    def authorFormatControl(self, prefKey, prefValue, t):
-        return self.enumControlWithPreview(
-            prefKey, prefValue, t,
-            lambda itemData: abbreviatePerson(SAMPLE_SIGNATURE, itemData))
-
