@@ -1,8 +1,13 @@
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, SHORT_DATE_PRESETS
+from gitfourchette.widgets.graphdelegate import abbreviatePerson
 import datetime
 import enum
 import re
+import pygit2
+
+
+SAMPLE_SIGNATURE = pygit2.Signature("Jean-Michel Tartempion", "jm.tarte@example.com", 0, 0)
 
 
 def _boxWidget(layout, *controls):
@@ -48,6 +53,34 @@ def prettifySetting(n):
     return category, item
 
 
+class ComboBoxWithPreview(QComboBox):
+    class ItemDelegate(QStyledItemDelegate):
+        def __init__(self, parent, previewCallback):
+            super().__init__(parent)
+            self.previewCallback = previewCallback
+
+        def paint(self, painter, option, index):
+            super().paint(painter, option, index)
+
+            painter.save()
+
+            rect = QRect(option.rect)
+            rect.setLeft(rect.left() + painter.fontMetrics().horizontalAdvance("M" * 12))
+
+            painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
+            painter.drawText(rect, Qt.AlignVCenter, self.previewCallback(index.data(Qt.UserRole)))
+            painter.restore()
+
+    def __init__(self, parent, previewCallback):
+        super().__init__(parent)
+        delegate = ComboBoxWithPreview.ItemDelegate(self, previewCallback)
+        self.setItemDelegate(delegate)
+
+    def showPopup(self):
+        self.view().setMinimumWidth(300)
+        super().showPopup()
+
+
 class DatePresetDelegate(QStyledItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
@@ -62,11 +95,10 @@ class DatePresetDelegate(QStyledItemDelegate):
         painter.drawText(option.rect, Qt.AlignVCenter, F"{name}")
         painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
 
+        rect = QRect(option.rect)
+        rect.setLeft(rect.left() + painter.fontMetrics().horizontalAdvance("M"*8))
 
-        rekt = QRect(option.rect)
-        rekt.setLeft(rekt.left() + painter.fontMetrics().horizontalAdvance("M"*8))
-
-        painter.drawText(rekt, Qt.AlignVCenter, F"{now.strftime(format)}")
+        painter.drawText(rect, Qt.AlignVCenter, F"{now.strftime(format)}")
         painter.restore()
 
 
@@ -114,6 +146,8 @@ class PrefsDialog(QDialog):
                 control = self.boolRadioControl(prefKey, prefValue, trueName="Chronological", falseName="Topological")
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
+            elif prefKey == 'authorDisplayStyle':
+                control = self.authorFormatControl(prefKey, prefValue, t)
             elif prefKey == 'shortHashChars':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
             elif prefKey == 'maxRecentRepos':
@@ -252,6 +286,15 @@ class PrefsDialog(QDialog):
         control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.UserRole)))
         return control
 
+    def enumControlWithPreview(self, prefKey, prefValue, enumType, previewCallback):
+        control = ComboBoxWithPreview(self, previewCallback)
+        for enumMember in enumType:
+            control.addItem(prettifySnakeCase(enumMember.name), enumMember)
+            if prefValue == enumMember:
+                control.setCurrentIndex(control.count() - 1)
+        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.UserRole)))
+        return control
+
     def qtStyleControl(self, prefKey, prefValue):
         control = QComboBox(self)
 
@@ -298,3 +341,9 @@ class PrefsDialog(QDialog):
         control.setEditText(prefValue)
 
         return vBoxWidget(control, preview)
+
+    def authorFormatControl(self, prefKey, prefValue, t):
+        return self.enumControlWithPreview(
+            prefKey, prefValue, t,
+            lambda itemData: abbreviatePerson(SAMPLE_SIGNATURE, itemData))
+

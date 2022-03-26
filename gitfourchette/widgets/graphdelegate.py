@@ -27,8 +27,9 @@ CALLOUTS = {
 INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
 
 
-def abbreviatePerson(sig: pygit2.Signature):
-    style = settings.prefs.authorDisplayStyle
+def abbreviatePerson(sig: pygit2.Signature, style: settings.AuthorDisplayStyle = None):
+    if not style:
+        style = settings.prefs.authorDisplayStyle
 
     if style == settings.AuthorDisplayStyle.FULL_NAME:
         return sig.name
