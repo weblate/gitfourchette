@@ -522,7 +522,7 @@ class MainWindow(QMainWindow):
 
         try:
             repo = self.currentRepoWidget().repo
-            porcelain.applyPatch(repo, patchData)
+            porcelain.applyPatch(repo, patchData, pygit2.GIT_APPLY_LOCATION_WORKDIR)
         except pygit2.GitError as error:
             QMessageBox.warning(self, "Import patch", F"Couldn’t apply “{os.path.basename(path)}”:\n\n{error}")
 

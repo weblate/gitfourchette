@@ -410,12 +410,11 @@ def dropStash(repo: Repository, commitId: pygit2.Oid):
     repo.stash_drop(findStashIndex(repo, commitId))
 
 
-def patchApplies(repo: pygit2.Repository, patchData: bytes | str, discard: bool = False) -> pygit2.Diff | None:
-    if discard:
-        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
-    else:
-        location = pygit2.GIT_APPLY_LOCATION_INDEX
-
+def patchApplies(
+        repo: pygit2.Repository,
+        patchData: bytes | str,
+        location: int = pygit2.GIT_APPLY_LOCATION_WORKDIR
+) -> pygit2.Diff | None:
     diff = pygit2.Diff.parse_diff(patchData)
     if repo.applies(diff, location):
         return diff
@@ -423,12 +422,11 @@ def patchApplies(repo: pygit2.Repository, patchData: bytes | str, discard: bool 
         return None
 
 
-def applyPatch(repo: pygit2.Repository, patchDataOrDiff: bytes | str | pygit2.Diff, discard: bool = False) -> pygit2.Diff:
-    if discard:
-        location = pygit2.GIT_APPLY_LOCATION_WORKDIR
-    else:
-        location = pygit2.GIT_APPLY_LOCATION_INDEX
-
+def applyPatch(
+        repo: pygit2.Repository,
+        patchDataOrDiff: bytes | str | pygit2.Diff,
+        location: int = pygit2.GIT_APPLY_LOCATION_WORKDIR
+) -> pygit2.Diff:
     if type(patchDataOrDiff) in [bytes, str]:
         diff = pygit2.Diff.parse_diff(patchDataOrDiff)
     elif type(patchDataOrDiff) is pygit2.Diff:

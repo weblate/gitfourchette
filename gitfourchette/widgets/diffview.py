@@ -265,9 +265,12 @@ class DiffView(QPlainTextEdit):
         discard = purpose == PatchPurpose.DISCARD
         if discard:
             Trash(self.repo).backupPatch(patchData, self.currentPatch.delta.new_file.path)
+            applyLocation = pygit2.GIT_APPLY_LOCATION_WORKDIR
+        else:
+            applyLocation = pygit2.GIT_APPLY_LOCATION_INDEX
 
         try:
-            diff = porcelain.applyPatch(self.repo, patchData, discard)
+            diff = porcelain.applyPatch(self.repo, patchData, applyLocation)
         except GitError as e:
             excMessageBox(e, F"{purpose.name}: Apply Patch",
                           F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
@@ -296,11 +299,11 @@ class DiffView(QPlainTextEdit):
             QApplication.beep()
             return
 
-        diff = porcelain.patchApplies(self.repo, patchData)
+        diff = porcelain.patchApplies(self.repo, patchData, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
         if not diff:
             QMessageBox.warning(self, "Revert patch", "Couldn't revert this patch.\nThe code may have diverged too much from this revision.")
         else:
-            diff = porcelain.applyPatch(self.repo, diff, discard=True)
+            diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
             changedFile = get1FileChangedByDiff(diff)
             self.patchApplied.emit(NavPos("UNSTAGED", changedFile))  # send a NavPos to have RepoWidget show the file in the unstaged list
 
