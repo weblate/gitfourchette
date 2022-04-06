@@ -23,6 +23,7 @@ class ActionFlows(QObject):
     newRemote = Signal(str, str)  # name, url
     newTrackingBranch = Signal(str, str)
     renameBranch = Signal(str, str)
+    pullBranch = Signal(str, str)  # local branch, remote ref to pull
     updateCommitDraftMessage = Signal(str)
 
     pushComplete = Signal()
@@ -249,6 +250,30 @@ class ActionFlows(QObject):
         dlg.accepted.connect(self.pushComplete)
         dlg.show()
         return dlg
+
+    # -------------------------------------------------------------------------
+    # Pull
+
+    def pullFlow(self, branchName: str = None):
+        if not branchName:
+            branchName = porcelain.getActiveBranchShorthand(self.repo)
+
+        try:
+            branch = self.repo.branches.local[branchName]
+        except KeyError:
+            QMessageBox.warning(
+                self.parentWidget, "No Branch to Which to Pull",
+                "No valid local branch to which to pull. Try switching to a local branch first.")
+            return
+
+        bu: pygit2.Branch = branch.upstream
+        if not bu:
+            QMessageBox.warning(
+                self.parentWidget, "No Remote-Tracking Branch",
+                F"Can’t pull because “{branch.shorthand}” doesn’t track a remote branch.")
+            return
+
+        self.pullBranch.emit(branch.branch_name, bu.shorthand)
 
     # -------------------------------------------------------------------------
     # Stash

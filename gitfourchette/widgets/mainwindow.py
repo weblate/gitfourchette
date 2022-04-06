@@ -172,6 +172,7 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
         repoMenu.addAction("New &Branch...", self.newBranch, QKeySequence("Ctrl+B"))
         repoMenu.addAction("&Push Branch...", self.push, QKeySequence("Ctrl+P"))
+        repoMenu.addAction("Pul&l Branch...", self.pull, QKeySequence("Ctrl+Shift+P"))
         repoMenu.addSeparator()
         repoMenu.addAction("New Remote...", self.newRemote)
         repoMenu.addSeparator()
@@ -461,6 +462,10 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def push(self, rw: RepoWidget):
         rw.actionFlows.pushFlow()
+
+    @needRepoWidget
+    def pull(self, rw: RepoWidget):
+        rw.actionFlows.pullFlow()
 
     @needRepoWidget
     def openRescueFolder(self, rw: RepoWidget):

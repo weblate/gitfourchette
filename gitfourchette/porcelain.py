@@ -441,3 +441,35 @@ def applyPatch(
 def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str):
     submo = repo.lookup_submodule(submoduleKey)
     return os.path.join(repo.workdir, submo.path)
+
+
+def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
+    lb = repo.branches.local[localBranchName]
+    rb = repo.branches.remote[remoteBranchName]
+
+    mergeAnalysis, mergePref = repo.merge_analysis(rb.target, "refs/heads/" + localBranchName)# rb.target)
+    print(mergeAnalysis, mergePref)
+
+    if mergeAnalysis & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+        # Local branch is up to date with remote branch, nothing to do.
+        return
+
+    elif mergeAnalysis == (pygit2.GIT_MERGE_ANALYSIS_NORMAL | pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD):
+        # Go ahead and fast-forward.
+
+        # First, we need to check out the tree pointed to by the remote branch. This step is necessary,
+        # otherwise the contents of the commits we're pulling will spill into the unstaged area.
+        # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
+        # affect any of the files that are involved in the pull.
+        repo.checkout_tree(rb.peel(pygit2.Tree))
+
+        # Then make the local branch point to the same commit as the remote branch.
+        lb.set_target(rb.target)
+
+    elif mergeAnalysis == pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+        # Can't FF.
+        raise NotImplementedError("Can't fast-forward. Pulling would create a conflict.")
+
+    else:
+        # Unborn or something...
+        raise NotImplementedError(F"Unsupported merge analysis {mergeAnalysis}.")

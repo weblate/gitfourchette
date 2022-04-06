@@ -107,6 +107,7 @@ class RepoWidget(QWidget):
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
+        self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
         self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
         self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
@@ -139,6 +140,7 @@ class RepoWidget(QWidget):
         flows.newStash.connect(self.newStashAsync)
         flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
         flows.renameBranch.connect(self.renameBranchAsync)
+        flows.pullBranch.connect(self.pullBranchAsync)
         flows.updateCommitDraftMessage.connect(lambda message: self.state.setDraftCommitMessage(message))
 
         flows.pushComplete.connect(self.quickRefreshWithSidebar)
@@ -674,14 +676,11 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
     # Pull
-    # (WIP)
 
-    def pull(self):
-        repo = self.state.repo
-        branch = repo.active_branch
-        tracking = repo.active_branch.tracking_branch()
-        remote = repo.remote(tracking.remote_name)
-        remote.fetch()
+    def pullBranchAsync(self, localBranchName: str, remoteBranchName: str):
+        def work(): porcelain.pull(self.repo, localBranchName, remoteBranchName)
+        def then(_): self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, F"Pulling remote branch “{remoteBranchName}” into “{localBranchName}”")
 
     # -------------------------------------------------------------------------
     # Find, find next

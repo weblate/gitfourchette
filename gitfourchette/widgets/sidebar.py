@@ -437,6 +437,7 @@ class Sidebar(QTreeView):
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
+    pullBranch = Signal(str)
     newTrackingBranch = Signal(str)
     fetchRemoteBranch = Signal(str)
     editTrackingBranch = Signal(str)
@@ -508,6 +509,7 @@ class Sidebar(QTreeView):
 
             menu.addSeparator()
             menu.addAction(stockIcon("vcs-push"), "&Push...", lambda: self.pushBranch.emit(data))
+            menu.addAction(stockIcon("vcs-pull"), "Pul&l...", lambda: self.pullBranch.emit(data))
             menu.addAction("Set &Tracked Branch...", lambda: self.editTrackingBranch.emit(data))
 
             menu.addSeparator()
