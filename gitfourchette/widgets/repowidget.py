@@ -830,7 +830,12 @@ class RepoWidget(QWidget):
             inBrackets = F"detached HEAD @ {shortHash(oid)}"
         else:
             inBrackets = porcelain.getActiveBranchShorthand(repo)
-        self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {QApplication.applicationDisplayName()}")
+
+        suffix = QApplication.applicationDisplayName()
+        if settings.prefs.debug_showPID:
+            suffix += F" (PID {os.getpid()})"
+
+        self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {suffix}")
 
     # -------------------------------------------------------------------------
 

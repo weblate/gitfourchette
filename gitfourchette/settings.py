@@ -117,6 +117,7 @@ class Prefs(BasePrefs):
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True
     debug_showDirtyCommitsAfterRefresh : bool   = True
+    debug_showPID               : bool          = True
 
 
 @dataclass
