@@ -447,6 +447,11 @@ class RepoWidget(QWidget):
             if not self.navPos:
                 self.navPos = NavPos(context=oid.hex, file=self.committedFiles.getFirstPath())
 
+            # Show message if commit is empty
+            if self.committedFiles.flModel.rowCount() == 0:
+                self.diffStack.setCurrentWidget(self.richDiffView)
+                self.richDiffView.displayDiffModelError(DiffModelError("Empty commit."))
+
             # Switch to correct card in filesStack to show changedFilesView
             self.filesStack.setCurrentWidget(self.committedFiles)
 
