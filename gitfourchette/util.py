@@ -12,6 +12,9 @@ import typing
 HOME = os.path.abspath(os.path.expanduser('~'))
 
 
+_supportedImageFormats = None
+
+
 def sign(x):
     if x < 0:
         return -1
@@ -245,6 +248,22 @@ def stockIcon(iconId: QStyle.StandardPixmap | str):
         return QIcon.fromTheme(iconId)
     else:
         return QApplication.style().standardIcon(iconId)
+
+
+def isImageFormatSupported(filename: str):
+    """
+    Guesses whether an image is in a supported format from its filename.
+    This is for when QImageReader.imageFormat(path) doesn't cut it (e.g. if the file doesn't exist on disk).
+    """
+    global _supportedImageFormats
+
+    if _supportedImageFormats is None:
+        _supportedImageFormats = [str(fmt, 'ascii') for fmt in QImageReader.supportedImageFormats()]
+
+    ext = os.path.splitext(filename)[-1]
+    ext = ext.removeprefix(".").lower()
+
+    return ext in _supportedImageFormats
 
 
 class QSignalBlockerContext:

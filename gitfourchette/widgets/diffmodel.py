@@ -2,7 +2,7 @@ from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
-from gitfourchette.util import isZeroId
+from gitfourchette.util import isZeroId, isImageFormatSupported
 from dataclasses import dataclass
 import html
 import pygit2
@@ -33,6 +33,30 @@ class DiffModelError(BaseException):
         self.details = details
         self.icon = icon
         self.preformatted = preformatted
+
+
+class ShouldDisplayPatchAsImageDiff(BaseException):
+    def __init__(self):
+        super().__init__("This patch should be viewed as an image diff!")
+
+
+class DiffImagePair:
+    oldImage: QImage
+    newImage: QImage
+
+    def __init__(self, repo: pygit2.Repository, delta: pygit2.DiffDelta):
+        if not isZeroId(delta.old_file.id):
+            imageDataA = repo[delta.old_file.id].peel(pygit2.Blob).data
+        else:
+            imageDataA = b''
+
+        if not isZeroId(delta.new_file.id):
+            imageDataB = repo[delta.new_file.id].peel(pygit2.Blob).data
+        else:
+            imageDataB = b''
+
+        self.oldImage = QImage.fromData(imageDataA)
+        self.newImage = QImage.fromData(imageDataB)
 
 
 class DiffStyle:
@@ -105,13 +129,31 @@ class DiffModel:
 
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
-            raise DiffModelError("File appears to be binary.")
+            of = patch.delta.old_file
+            nf = patch.delta.new_file
+            if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
+                largestSize = max(of.size, nf.size)
+                threshold = settings.prefs.diff_imageFileThresholdKB * 1024
+                if largestSize > threshold:
+                    humanSize = QLocale().formattedDataSize(largestSize)
+                    humanThreshold = QLocale().formattedDataSize(threshold)
+                    raise DiffModelError(
+                        F"This image is too large to be previewed ({humanSize}).",
+                        F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
+                        QStyle.SP_MessageBoxWarning)
+                else:
+                    raise ShouldDisplayPatchAsImageDiff()
+            else:
+                raise DiffModelError("File appears to be binary.")
 
         # Don't load large diffs.
-        if len(patch.data) > settings.prefs.diff_largeFileThresholdKB * 1024:
+        threshold = settings.prefs.diff_largeFileThresholdKB * 1024
+        if len(patch.data) > threshold:
+            humanSize = QLocale().formattedDataSize(len(patch.data))
+            humanThreshold = QLocale().formattedDataSize(threshold)
             raise DiffModelError(
-                F"This patch is too large to be previewed ({len(patch.data)//1024:,} KB).",
-                "You can change the size threshold in the Preferences.",
+                F"This patch is too large to be previewed ({humanSize}).",
+                F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
                 QStyle.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:

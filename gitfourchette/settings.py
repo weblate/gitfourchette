@@ -103,6 +103,7 @@ class Prefs(BasePrefs):
     diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4
     diff_largeFileThresholdKB   : int           = 512
+    diff_imageFileThresholdKB   : int           = 5000
     diff_wordWrap               : bool          = False
     diff_showStrayCRs           : bool          = True
     diff_colorblindFriendlyColors : bool        = False

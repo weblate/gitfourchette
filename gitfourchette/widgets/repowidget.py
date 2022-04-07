@@ -10,7 +10,7 @@ from gitfourchette.stagingstate import StagingState
 from gitfourchette.trash import Trash
 from gitfourchette.util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError
+from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffImagePair, ShouldDisplayPatchAsImageDiff
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from gitfourchette.widgets.graphview import GraphView
@@ -18,6 +18,7 @@ from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDia
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.sidebar import Sidebar
 from gitfourchette.workqueue import WorkQueue
+import html
 import os
 import pygit2
 
@@ -474,23 +475,19 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work():
-            dm = None
-            error = None
             try:
                 dm = DiffModel.fromPatch(patch)
                 dm.document.moveToThread(QApplication.instance().thread())
+                return dm
             except DiffModelError as dme:
-                error = dme
+                return dme
+            except ShouldDisplayPatchAsImageDiff:
+                return DiffImagePair(self.repo, patch.delta)
             except BaseException as exc:
                 summary, details = excStrings(exc)
-                error = DiffModelError(summary, icon=QStyle.SP_MessageBoxCritical, preformatted=details)
-            return dm, error
+                return DiffModelError(summary, icon=QStyle.SP_MessageBoxCritical, preformatted=details)
 
-        def then(returned: tuple):
-            dm: DiffModel
-            error: DiffModelError
-            dm, error = returned
-
+        def then(result: DiffModel | DiffModelError | DiffImagePair):
             if stagingState == StagingState.COMMITTED:
                 assert len(self.navPos.context) == 40
                 posContext = self.navPos.context
@@ -501,13 +498,21 @@ class RepoWidget(QWidget):
             if not self.navPos:
                 self.navPos = NavPos(posContext, posFile)
 
-            if error:
+            if type(result) == DiffModelError:
                 self.diffStack.setCurrentWidget(self.richDiffView)
-                self.richDiffView.displayDiffModelError(error)
-            else:
+                self.richDiffView.displayDiffModelError(result)
+            elif type(result) == DiffModel:
                 self.diffStack.setCurrentWidget(self.diffView)
-                self.diffView.replaceDocument(repo, patch, stagingState, dm)
+                self.diffView.replaceDocument(repo, patch, stagingState, result)
                 self.restoreDiffPosition()  # restore position after we've replaced the document
+            elif type(result) == DiffImagePair:
+                self.diffStack.setCurrentWidget(self.richDiffView)
+                self.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
+            else:
+                self.diffStack.setCurrentWidget(self.richDiffView)
+                self.richDiffView.displayDiffModelError(DiffModelError(
+                    F"Can’t display diff of type {html.escape(str(type(result)))}",
+                    icon=QStyle.SP_MessageBoxCritical))
 
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
