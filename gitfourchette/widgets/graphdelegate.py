@@ -143,7 +143,8 @@ class GraphDelegate(QStyledItemDelegate):
         rect.setWidth(ColW_Hash * self.hashCharWidth)
         charRect = QRect(rect.left(), rect.top(), self.hashCharWidth, rect.height())
         painter.save()
-        painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
+        if not isSelected:  # use muted color for hash if not selected
+            painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
         for hashChar in hashText:
             painter.drawText(charRect, Qt.AlignCenter, hashChar)
             charRect.translate(self.hashCharWidth, 0)
@@ -181,7 +182,8 @@ class GraphDelegate(QStyledItemDelegate):
             return metrics.elidedText(text, Qt.ElideRight, rect.width())
 
         # ------ message
-        if commit and commit.oid in self.state.foreignCommits:
+        # use muted color for foreign commit messages if not selected
+        if not isSelected and commit and commit.oid in self.state.foreignCommits:
              painter.setPen(QColor(Qt.gray))
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
