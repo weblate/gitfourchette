@@ -103,7 +103,7 @@ def showInFolder(pathStr):
             return
     # Fallback.
     dirPath = path if os.path.isdir(path) else os.path.dirname(path)
-    QDesktopServices.openUrl(QUrl(dirPath))
+    QDesktopServices.openUrl(QUrl.fromLocalFile(dirPath))
 
 
 def messageSummary(body: str):

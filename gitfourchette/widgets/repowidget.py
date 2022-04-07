@@ -667,7 +667,7 @@ class RepoWidget(QWidget):
     def openSubmoduleFolder(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
         url = QUrl.fromLocalFile(path)
-        QDesktopServices.openUrl(url)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(url))
 
     def checkoutCommitAsync(self, oid: pygit2.Oid):
         work = lambda: porcelain.checkoutCommit(self.repo, oid)
@@ -844,7 +844,7 @@ class RepoWidget(QWidget):
     def openRescueFolder(self):
         trash = Trash(self.state.repo)
         if trash.exists():
-            QDesktopServices.openUrl(trash.trashDir)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(trash.trashDir))
         else:
             QMessageBox.information(
                 self,
