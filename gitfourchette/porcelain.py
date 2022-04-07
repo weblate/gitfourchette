@@ -154,16 +154,50 @@ def deleteRemote(repo: Repository, remoteName: str):
     repo.remotes.delete(remoteName)
 
 
+def deleteStaleRemoteHEADSymbolicRef(repo: Repository, remoteName: str):
+    """
+    Delete `refs/remotes/{remoteName}/HEAD` to work around a bug in libgit2
+    where `git_revwalk__push_glob` errors out on that symbolic ref
+    if it points to a branch that doesn't exist anymore.
+
+    This bug may prevent fetching.
+    """
+
+    HEADRefName = F"refs/remotes/{remoteName}/HEAD"
+    HEADRef = repo.references.get(HEADRefName)
+
+    # Only risk deleting remote HEAD if it's symbolic
+    if HEADRef and HEADRef.type == pygit2.GIT_REF_SYMBOLIC:
+        try:
+            HEADRef.resolve()
+        except KeyError:  # pygit2 wraps GIT_ENOTFOUND with KeyError
+            # Stale -- nuke it
+            repo.references.delete(HEADRefName)
+            log.info("porcelain", "Deleted stale remote HEAD symbolic ref: " + HEADRefName)
+
+
 def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
-    tp = repo.remotes[remoteName].fetch(callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_PRUNE)
-    return tp
+    # Delete `refs/remotes/{remoteName}/HEAD` before fetching.
+    # See docstring for that function for why.
+    deleteStaleRemoteHEADSymbolicRef(repo, remoteName)
+
+    remote = repo.remotes[remoteName]
+    transfer = remote.fetch(callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_PRUNE)
+    return transfer
 
 
 def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
     # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
     remoteName, branchName = remoteBranchName.split("/", 1)
-    tp = repo.remotes[remoteName].fetch(refspecs=[branchName], callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_NO_PRUNE)
-    return tp
+
+    # Delete .git/refs/{remoteName}/HEAD to work around a bug in libgit2
+    # where git_revwalk__push_glob chokes on refs/remotes/{remoteName}/HEAD
+    # if it points to a branch that doesn't exist anymore.
+    deleteStaleRemoteHEADSymbolicRef(repo, remoteName)
+
+    remote = repo.remotes[remoteName]
+    transfer = remote.fetch(refspecs=[branchName], callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_NO_PRUNE)
+    return transfer
 
 
 def resetHead(repo: Repository, onto: Oid, resetMode: str, recurseSubmodules: bool=False):
