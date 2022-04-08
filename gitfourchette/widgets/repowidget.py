@@ -346,11 +346,15 @@ class RepoWidget(QWidget):
             self.dirtyFiles.clear()
             self.stagedFiles.clear()
             self.graphView.clear()
-            self.diffView.clear()
+            self.clearDiffView()
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
             self.state.repo.free()
             self.state = None
+
+    def clearDiffView(self):
+        self.diffView.clear()
+        self.diffStack.setCurrentWidget(self.diffView)
 
     def setPendingWorkdir(self, path):
         self.pathPending = os.path.normpath(path)
@@ -377,6 +381,8 @@ class RepoWidget(QWidget):
 
         self.filesStack.setCurrentWidget(self.stageSplitter)
         self.committedFiles.clear()
+
+        self.clearDiffView()
 
     def fillStageViewAsync(self, forceSelectFile: NavPos = None):
         """Fill Staged/Unstaged views with uncommitted changes"""
@@ -420,7 +426,7 @@ class RepoWidget(QWidget):
 
             # If no file is selected in either FileListView, clear the diffView of any residual diff.
             if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
-                self.diffView.clear()
+                self.clearDiffView()
 
             self.navHistory.unlock()
 
