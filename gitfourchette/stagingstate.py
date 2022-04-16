@@ -7,6 +7,7 @@ class StagingState(enum.IntEnum):
     State of a patch in the staging pipeline
     """
 
+    UNKNOWN = 0
     UNTRACKED = 1
     UNSTAGED = 2
     STAGED = 3

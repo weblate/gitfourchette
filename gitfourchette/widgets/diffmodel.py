@@ -1,10 +1,12 @@
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.stagingstate import StagingState
 from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
 from gitfourchette.util import isZeroId, isImageFormatSupported
 from dataclasses import dataclass
 import html
+import os
 import pygit2
 
 
@@ -44,16 +46,21 @@ class DiffImagePair:
     oldImage: QImage
     newImage: QImage
 
-    def __init__(self, repo: pygit2.Repository, delta: pygit2.DiffDelta):
+    def __init__(self, repo: pygit2.Repository, delta: pygit2.DiffDelta, stagingState: StagingState = StagingState.UNKNOWN):
         if not isZeroId(delta.old_file.id):
             imageDataA = repo[delta.old_file.id].peel(pygit2.Blob).data
         else:
             imageDataA = b''
 
-        if not isZeroId(delta.new_file.id):
-            imageDataB = repo[delta.new_file.id].peel(pygit2.Blob).data
-        else:
+        if isZeroId(delta.new_file.id):
             imageDataB = b''
+        elif stagingState in [StagingState.UNTRACKED, StagingState.UNSTAGED]:
+            fullPath = os.path.join(repo.workdir, delta.new_file.path)
+            assert os.lstat(fullPath).st_size == delta.new_file.size, "Size mismatch in unstaged image file"
+            with open(fullPath, 'rb') as file:
+                imageDataB = file.read()
+        else:
+            imageDataB = repo[delta.new_file.id].peel(pygit2.Blob).data
 
         self.oldImage = QImage.fromData(imageDataA)
         self.newImage = QImage.fromData(imageDataB)

@@ -488,7 +488,7 @@ class RepoWidget(QWidget):
             except DiffModelError as dme:
                 return dme
             except ShouldDisplayPatchAsImageDiff:
-                return DiffImagePair(self.repo, patch.delta)
+                return DiffImagePair(self.repo, patch.delta, stagingState)
             except BaseException as exc:
                 summary, details = excStrings(exc)
                 return DiffModelError(summary, icon=QStyle.SP_MessageBoxCritical, preformatted=details)
