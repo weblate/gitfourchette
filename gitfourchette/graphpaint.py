@@ -5,7 +5,7 @@ from gitfourchette.graph import Frame, Graph
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from itertools import zip_longest
-from pygit2 import Commit
+from pygit2 import Commit, Oid
 
 
 LANE_WIDTH = 10
@@ -18,13 +18,13 @@ def getColor(laneID):
     return colors.rainbowBright[laneID % len(colors.rainbowBright)]
 
 
-def flattenLanes(frame: Frame) -> tuple[list[tuple[int, int]], int]:
+def flattenLanes(frame: Frame, hiddenCommits: set[Oid]) -> tuple[list[tuple[int, int]], int]:
     """
     Compute columns (horizontal positions) for each lane above and below this row.
     """
 
     if settings.prefs.graph_flattenLanes:
-        laneRemap, flatTotal = frame.flattenLanes()
+        laneRemap, flatTotal = frame.flattenLanes(hiddenCommits)
     else:
         # Straightforward lane positions (lane column == lane ID)
         laneRemap = []
@@ -97,7 +97,7 @@ def paintGraphFrame(
 
     # Flatten the lanes so there are no horizontal gaps in-between the lanes (optional).
     # laneColumnsAB is a table of lanes to columns (horizontal positions).
-    laneColumnsAB, numFlattenedColumns = flattenLanes(frame)#laneContinuity)
+    laneColumnsAB, numFlattenedColumns = flattenLanes(frame, state.hiddenCommits)#laneContinuity)
 
     # Get column (horizontal position) of commit bullet point.
     myColumn, numFlattenedColumns = getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
@@ -123,42 +123,54 @@ def paintGraphFrame(
             # clear path for next iteration
             path.clear()
 
-    for link in frame.getArcsPassingByCommit():
-        columnA, columnB = laneColumnsAB[link.lane]  # column above, column below
+    arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit()
+                           if arc.openedBy not in state.hiddenCommits]
+    arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit()]
+    arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit()
+                          if arc.openedBy not in state.hiddenCommits]
+
+    # draw arcs PASSING BY commit
+    for arc in arcsPassingByCommit:
+        columnA, columnB = laneColumnsAB[arc.lane]  # column above, column below
         ax = x + columnA * LANE_WIDTH
         bx = x + columnB * LANE_WIDTH
         path.moveTo(ax, top)
         path.cubicTo(ax, middle, bx, middle, bx, bottom)
-        submitPath(path, link.lane)
+        submitPath(path, arc.lane)
 
-    for link in reversed(list(frame.getArcsClosedByCommit())):
-        columnA, _ = laneColumnsAB[link.lane]  # column above, column below
+    # draw arcs CLOSED BY commit (from above)
+    for arc in reversed(arcsClosedByCommit):
+        columnA, _ = laneColumnsAB[arc.lane]  # column above, column below
         ax = x + columnA * LANE_WIDTH
         # Fork Up from Commit Bullet Point
         path.moveTo(mx, middle)
         path.quadTo(ax, middle, ax, top)
-        submitPath(path, link.lane)
+        submitPath(path, arc.lane)
 
-    for link in reversed(list(frame.getArcsOpenedByCommit())):
-        _, columnB = laneColumnsAB[link.lane]  # column above, column below
+    # draw arcs OPENED BY commit (downwards)
+    for arc in reversed(arcsOpenedByCommit):
+        _, columnB = laneColumnsAB[arc.lane]  # column above, column below
         bx = x + columnB * LANE_WIDTH
         # Fork Down from Commit Bullet Point
         path.moveTo(mx, middle)
         #path.lineTo(bx-dirB*LANE_WIDTH, middle)
         path.quadTo(bx, middle, bx, bottom)
-        submitPath(path, link.lane)
+        submitPath(path, arc.lane)
 
-    for link in frame.getArcsPassingByCommit():
-        for j in link.junctions:
+    # draw arc junctions
+    for arc in arcsPassingByCommit:
+        for j in arc.junctions:
             if j.joinedAt != frame.row:
                 continue
+            if j.joinedBy in state.hiddenCommits:
+                continue
             assert j.joinedBy == frame.commit
-            columnA, columnB = laneColumnsAB[link.lane]
+            columnA, columnB = laneColumnsAB[arc.lane]
             ax = x + columnA * LANE_WIDTH
             bx = x + columnB * LANE_WIDTH
             path.moveTo(mx, middle)
             path.quadTo(bx, middle, bx, bottom)
-            submitPath(path, link.lane)
+            submitPath(path, arc.lane)
 
     # draw bullet point for this commit
     painter.setPen(Qt.PenStyle.NoPen)

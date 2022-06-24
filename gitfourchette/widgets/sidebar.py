@@ -1,14 +1,16 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
+from gitfourchette.repostate import RepoState
 from gitfourchette.util import labelQuote, shortHash, stockIcon
 from html import escape
 from typing import Any
 import enum
 import pygit2
 
-
 ROLE_USERDATA = Qt.UserRole + 0
 ROLE_EITEM = Qt.UserRole + 1
+ROLE_ISHIDDEN = Qt.UserRole + 2
+
 ACTIVE_BULLET = "★ "
 
 
@@ -97,6 +99,7 @@ class SidebarModel(QAbstractItemModel):
     _remoteBranchesDict: dict[str, list[str]]
     _tags: list[str]
     _submodules: list[str]
+    _hiddenBranches: list[str]
 
     @staticmethod
     def packId(eid: EItem, offset: int = 0) -> int:
@@ -122,7 +125,7 @@ class SidebarModel(QAbstractItemModel):
         super().__init__(parent)
         self.repo = None
 
-    def refreshCache(self, repo: pygit2.Repository):
+    def refreshCache(self, repo: pygit2.Repository, hiddenBranches: list[str]):
         self.beginResetModel()
 
         self.repo = repo
@@ -158,6 +161,8 @@ class SidebarModel(QAbstractItemModel):
         self._tags = sorted(porcelain.getTagNames(repo))
 
         self._submodules = repo.listall_submodules()
+
+        self._hiddenBranches = hiddenBranches
 
         self.endResetModel()
 
@@ -286,13 +291,15 @@ class SidebarModel(QAbstractItemModel):
         if role == ROLE_EITEM:  # for testing (match by EItem type)
             return item
 
-        display = role == Qt.DisplayRole
-        user = role == ROLE_USERDATA
-        tooltip = role == Qt.ToolTipRole
-        sizeHint = role == Qt.SizeHintRole
+        displayRole = role == Qt.DisplayRole
+        userRole = role == ROLE_USERDATA
+        toolTipRole = role == Qt.ToolTipRole
+        sizeHintRole = role == Qt.SizeHintRole
+        hiddenRole = role == ROLE_ISHIDDEN
+        fontRole = role == Qt.FontRole
 
         if item == EItem.Spacer:
-            if sizeHint:
+            if sizeHintRole:
                 parentWidget: QWidget = QObject.parent(self)
                 return QSize(-1, int(0.5 * parentWidget.fontMetrics().height()))
             else:
@@ -301,86 +308,113 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.LocalBranch:
             branchNo = self.unpackOffset(index)
             branchName = self._localBranches[branchNo]
-            if display:
+            if displayRole:
                 if branchName == self._checkedOut:
                     return F"{ACTIVE_BULLET}{branchName}"
                 else:
                     return branchName
-            elif user:
+            elif userRole:
                 return branchName
-            elif tooltip:
+            elif toolTipRole:
                 text = F"Local branch “{branchName}”"
                 if branchName == self._checkedOut:
                     text += F"\n{ACTIVE_BULLET}Active branch"
                 if self._tracking[branchNo]:
                     text += F"\nTracking remote “{self._tracking[branchNo]}”"
                 return text
+            elif hiddenRole:
+                return branchName in self._hiddenBranches
 
         elif item == EItem.UnbornHead:
-            if display:
+            if displayRole:
                 return F"{ACTIVE_BULLET}{self._unbornHead} [unborn]"
-            elif user:
+            elif userRole:
                 return self._unbornHead
-            elif tooltip:
+            elif toolTipRole:
                 return "Unborn HEAD: does not point to a commit yet."
+            elif hiddenRole:
+                return False
 
         elif item == EItem.DetachedHead:
-            if display:
+            if displayRole:
                 return F"{ACTIVE_BULLET}[detached head]"
-            elif user:
+            elif userRole:
                 return self._detachedHead
-            elif tooltip:
+            elif toolTipRole:
                 return F"Detached HEAD @ {self._detachedHead}"
+            elif hiddenRole:
+                return False
 
         elif item == EItem.Remote:
-            if display or user:
+            if displayRole or userRole:
                 return self._remotes[row]
-            elif tooltip:
+            elif toolTipRole:
                 return self._remoteURLs[row]
+            elif hiddenRole:
+                return False
 
         elif item == EItem.RemoteBranch:
             remoteNo = self.unpackOffset(index)
             remoteName = self._remotes[remoteNo]
             branchName = self._remoteBranchesDict[remoteName][row]
-            if display:
+            if displayRole:
                 return branchName
-            elif user:
+            elif userRole:
                 return F"{remoteName}/{branchName}"
-            elif tooltip:
+            elif toolTipRole:
                 return F"{remoteName}/{branchName}"
+            elif fontRole:
+                if F"refs/remotes/{remoteName}/{branchName}" in self._hiddenBranches:
+                    font = self._parentWidget.font()
+                    font.setStrikeOut(True)
+                    return font
+                else:
+                    return None
+            elif hiddenRole:
+                return F"refs/remotes/{remoteName}/{branchName}" in self._hiddenBranches
 
         elif item == EItem.Tag:
-            if display or user:
+            if displayRole or userRole:
                 return self._tags[row]
+            elif hiddenRole:
+                return False
 
         elif item == EItem.Stash:
             stash = self._stashes[row]
-            if display:
+            if displayRole:
                 return stash.message
-            elif tooltip:
+            elif toolTipRole:
                 return F"<b>stash@{{{row}}}</b>:<br/>{escape(stash.message)}"
-            elif user:
+            elif userRole:
                 return stash.commit_id.hex
+            elif hiddenRole:
+                return False
 
         elif item == EItem.Submodule:
-            if display:
+            if displayRole:
                 return self._submodules[row].rsplit("/", 1)[-1]
-            elif tooltip:
+            elif toolTipRole:
                 return self._submodules[row]
-            elif user:
+            elif userRole:
                 return self._submodules[row]
+            elif hiddenRole:
+                return False
 
         else:
-            if display:
+            if displayRole:
                 return ITEM_NAMES[item]
-            elif role == Qt.FontRole:
+            elif fontRole:
                 font = self._parentWidget.font()
                 font.setBold(True)
                 return font
+            elif hiddenRole:
+                return False
 
         # fallback
-        if sizeHint:
+        if sizeHintRole:
             return QSize(-1, self._parentWidget.fontMetrics().height())
+        elif hiddenRole:
+            return False
 
         return None
 
@@ -438,6 +472,7 @@ class Sidebar(QTreeView):
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
     pullBranch = Signal(str)
+    toggleHideBranch = Signal(str)
     newTrackingBranch = Signal(str)
     fetchRemoteBranch = Signal(str)
     editTrackingBranch = Signal(str)
@@ -472,7 +507,10 @@ class Sidebar(QTreeView):
 
         self.setModel(SidebarModel(self))
 
-    def generateMenuForEntry(self, item: EItem, data: str = "", menu: QMenu = None):
+    def updateHiddenBranches(self, hiddenBranches: list[str]):
+        self.model().updateHiddenBranches(hiddenBranches)
+
+    def generateMenuForEntry(self, item: EItem, data: str = "", menu: QMenu = None, index: QModelIndex = None):
         if menu is None:
             menu = QMenu(self)
             menu.setObjectName("SidebarContextMenu")
@@ -524,6 +562,12 @@ class Sidebar(QTreeView):
             a = menu.addAction(F"Fetch this remote branch...", lambda: self.fetchRemoteBranch.emit(data))
             a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
 
+            a = menu.addAction("Hide in graph", lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
+            a.setCheckable(True)
+            if index:  # in test mode, we may not have an index
+                isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
+                a.setChecked(isBranchHidden)
+
         elif item == EItem.Remote:
             a = menu.addAction("&Edit Remote...", lambda: self.editRemote.emit(data))
             a.setIcon(QIcon.fromTheme("document-edit"))
@@ -559,12 +603,12 @@ class Sidebar(QTreeView):
         globalPoint = self.mapToGlobal(localPoint)
         index: QModelIndex = self.indexAt(localPoint)
         if index.isValid():
-            menu = self.generateMenuForEntry(*SidebarModel.unpackItemAndData(index))
+            menu = self.generateMenuForEntry(*SidebarModel.unpackItemAndData(index), index=index)
             menu.exec_(globalPoint)
 
-    def refresh(self, repo: pygit2.Repository):
+    def refresh(self, repoState: RepoState):
         sidebarModel: SidebarModel = self.model()
-        sidebarModel.refreshCache(repo)
+        sidebarModel.refreshCache(repoState.repo, repoState.hiddenBranches)
         self.expandAll()
 
     def onEntryClicked(self, item: EItem, data: str):

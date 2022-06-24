@@ -355,8 +355,9 @@ class MainWindow(QMainWindow):
             rw.state = newState
             rw.actionFlows.repo = newState.repo
 
+            rw.graphView.setHiddenCommits(newState.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
-            rw.sidebar.refresh(newState.repo)
+            rw.sidebar.refresh(newState)
 
             self.refreshTabText(rw)
 

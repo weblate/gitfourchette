@@ -161,18 +161,18 @@ class Frame:
 
         return theList
 
-    def flattenLanes(self) -> tuple[list[tuple[int, int]], int]:
+    def flattenLanes(self, hiddenCommits: set[Oid]) -> tuple[list[tuple[int, int]], int]:
         """Flatten the lanes so there are no unused columns in-between the lanes."""
 
         columnAbove, columnBelow = -1, -1
         laneRemap = []
 
         for staleArc, openArc in itertools.zip_longest(self.staleArcs, self.openArcs):
-            if openArc:
+            if openArc and openArc.openedBy not in hiddenCommits:
                 columnBelow += 1
                 if openArc.openedAt < self.row:
                     columnAbove += 1
-            if staleArc:
+            if staleArc:# and staleArc.openedBy not in hiddenCommits:
                 columnAbove += 1
                 if staleArc.isParentlessCommit():
                     columnBelow += 1

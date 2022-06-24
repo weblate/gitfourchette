@@ -30,11 +30,16 @@ class CommitLogModel(QAbstractListModel):
 
     def refreshTopOfCommitSequence(self, nRemovedRows, nAddedRows, newCommitSequence: list[pygit2.Commit]):
         parent = QModelIndex()  # it's not a tree model so there's no parent
-        self.beginRemoveRows(parent, 1, nRemovedRows)
-        self.beginInsertRows(parent, 1, nAddedRows)
+
         self._commitSequence = newCommitSequence
-        self.endInsertRows()
+
+        # DON'T interleave beginRemoveRows/beginInsertRows!
+        # It'll crash with QSortFilterProxyModel!
+        self.beginRemoveRows(parent, 1, nRemovedRows)
         self.endRemoveRows()
+
+        self.beginInsertRows(parent, 1, nAddedRows)
+        self.endInsertRows()
 
     def rowCount(self, *args, **kwargs) -> int:
         if not self.isValid:
@@ -60,6 +65,29 @@ class CommitLogModel(QAbstractListModel):
             return None
 
 
+class CommitFilter(QSortFilterProxyModel):
+    hiddenOids: set[pygit2.Oid]
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.hiddenOids = set()
+        self.setDynamicSortFilter(True)
+
+    @property
+    def clModel(self) -> CommitLogModel:
+        return self.sourceModel()
+
+    def setHiddenCommits(self, hiddenCommits: set[pygit2.Oid]):
+        self.hiddenOids = hiddenCommits
+
+    def filterAcceptsRow(self, sourceRow: int, sourceParent: QModelIndex) -> bool:
+        if sourceRow == 0:  # Uncommitted Changes
+            return True
+
+        commit = self.clModel._commitSequence[sourceRow - 1]  # -1 to account for Uncommited Changes
+        return commit.oid not in self.hiddenOids
+
+
 class GraphView(QListView):
     uncommittedChangesClicked = Signal()
     emptyClicked = Signal()
@@ -68,9 +96,18 @@ class GraphView(QListView):
     newBranchFromCommit = Signal(str, pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
 
+    clModel: CommitLogModel
+    clFilter: CommitFilter
+
     def __init__(self, parent):
         super().__init__(parent)
-        self.setModel(CommitLogModel(self))
+
+        self.clModel = CommitLogModel(self)
+        self.clFilter = CommitFilter(self)
+        self.clFilter.setSourceModel(self.clModel)
+
+        self.setModel(self.clFilter)
+
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
@@ -97,12 +134,12 @@ class GraphView(QListView):
         copyHashAction.triggered.connect(self.copyCommitHashToClipboard)
         self.addAction(copyHashAction)
 
-    @property
-    def clModel(self) -> CommitLogModel:
-        return self.model()
-
     def clear(self):
         self.setCommitSequence(None)
+
+    def setHiddenCommits(self, hiddenCommits: set[pygit2.Oid]):
+        self.clFilter.setHiddenCommits(hiddenCommits)  # update filter BEFORE updating model
+        self.clFilter.invalidateFilter()
 
     def setCommitSequence(self, commitSequence: list[pygit2.Commit] | None):
         self.clModel.setCommitSequence(commitSequence)

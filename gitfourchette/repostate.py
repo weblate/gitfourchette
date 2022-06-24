@@ -1,5 +1,4 @@
-from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from gitfourchette import log
 from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
@@ -7,12 +6,12 @@ from gitfourchette.benchmark import Benchmark
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
 from gitfourchette.qt import *
+from gitfourchette.settings import BasePrefs
 import os
 import pygit2
 
 
 PROGRESS_INTERVAL = 5000
-SETTING_KEY_DRAFT_MESSAGE = "DraftMessage"
 
 
 @dataclass
@@ -46,9 +45,46 @@ class ForeignCommitResolver:
             self.foreignCommits.add(commit.oid)
 
 
+class HiddenCommitResolver:
+    def __init__(self, seeds):
+        self._forceShow = set()
+        self._nextHidden = set()
+        self.hiddenCommits = set()
+        for commitOid in seeds:
+            self._nextHidden.add(commitOid)
+
+    @property
+    def done(self):
+        return len(self._nextHidden) == 0
+
+    def feed(self, commit: pygit2.Commit):
+        if commit.oid in self._nextHidden:
+            self.hiddenCommits.add(commit.oid)
+            self._nextHidden.remove(commit.oid)
+            for p in commit.parents:
+                self._nextHidden.add(p.oid)
+        else:
+            for p in commit.parents:
+                try:
+                    self._nextHidden.remove(p.oid)
+                except KeyError:
+                    pass
+
+
+@dataclass
+class RepoPrefs(BasePrefs):
+    filename = "prefs.json"
+    _parentDir = ""
+
+    draftMessage: str = ""
+    hiddenBranches: list[str] = field(default_factory=list)
+
+    def getParentDir(self):
+        return self._parentDir
+
+
 class RepoState:
     repo: pygit2.Repository
-    settings: QSettings
 
     # May be None; call initializeWalker before use.
     # Keep it around to speed up refreshing.
@@ -86,8 +122,16 @@ class RepoState:
 
     foreignCommits: set[pygit2.Oid]
 
+    hiddenCommits: set[pygit2.Oid]
+
+    uiPrefs: RepoPrefs
+
     def __init__(self, repo: pygit2.Repository):
         self.repo = repo
+
+        uiConfigPath = os.path.join(self.repo.path, settings.REPO_SETTINGS_DIR)
+        self.uiPrefs = RepoPrefs()
+        self.uiPrefs._parentDir = uiConfigPath
 
         # On Windows, core.autocrlf is usually set to true in the system config.
         # However, libgit2 cannot find the system config if git wasn't installed
@@ -96,7 +140,7 @@ class RepoState:
         # setting autocrlf=true in the config.
         if QSysInfo.productType() == "windows" and "core.autocrlf" not in self.repo.config:
             tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
-            print("Forcing core.autocrlf=true in:", tempConfigPath)
+            log.info("Forcing core.autocrlf=true in:", tempConfigPath)
             tempConfig = pygit2.Config(tempConfigPath)
             tempConfig["core.autocrlf"] = "true"
             self.repo.config.add_file(tempConfigPath, level=1)
@@ -105,30 +149,37 @@ class RepoState:
         self.currentBatchID = 0
 
         self.commitSequence = []
+        self.hiddenCommits = set()
+
         self.commitPositions = {}
         self.graph = None
 
         self.refreshRefsByCommitCache()
 
-        log.info("TODO", "parse superproject")
         self.superproject = None
+        # TODO: parse superproject
         #self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
 
         self.activeCommitOid = None
 
         self.currentRefs = []
 
-        repoConfigPath = os.path.join(self.repo.path, settings.REPO_SETTINGS_DIR, "config.ini")
-        self.settings = QSettings(repoConfigPath, QSettings.IniFormat)
+        self.uiPrefs.load()
+
+        self.resolveHiddenCommits()
+
+    @property
+    def hiddenBranches(self):
+        return self.uiPrefs.hiddenBranches
 
     def getDraftCommitMessage(self) -> str:
-        return self.settings.value(SETTING_KEY_DRAFT_MESSAGE, "")
+        return self.uiPrefs.draftMessage
 
     def setDraftCommitMessage(self, newMessage: str | None):
         if not newMessage:
-            self.settings.remove(SETTING_KEY_DRAFT_MESSAGE)
-        else:
-            self.settings.setValue(SETTING_KEY_DRAFT_MESSAGE, newMessage)
+            newMessage = ""
+        self.uiPrefs.draftMessage = newMessage
+        self.uiPrefs.write()
 
     def refreshRefsByCommitCache(self):
         self.commitsToRefs = porcelain.mapCommitsToReferences(self.repo)
@@ -191,6 +242,7 @@ class RepoState:
         progress.setLabelText(F"Preparing walk...")
 
         foreignCommitResolver = ForeignCommitResolver(self.commitsToRefs)
+        hiddenCommitResolver = HiddenCommitResolver(self.getHiddenBranchOids())
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop)
@@ -199,6 +251,7 @@ class RepoState:
                 self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
 
                 foreignCommitResolver.feed(commit)
+                hiddenCommitResolver.feed(commit)
         except StopIteration:
             pass
 
@@ -216,6 +269,7 @@ class RepoState:
 
         self.commitSequence = commitSequence
         self.foreignCommits = foreignCommitResolver.foreignCommits
+        self.hiddenCommits = hiddenCommitResolver.hiddenCommits
         self.graph = graph
         self.batchOffsets = [0]
         self.currentBatchID = 0
@@ -294,12 +348,53 @@ class RepoState:
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
         foreignCommitResolver = ForeignCommitResolver(self.commitsToRefs)
-        for i, commit in enumerate(self.commitSequence):
+        hiddenCommitResolver = HiddenCommitResolver(self.getHiddenBranchOids())
+        for commit in self.commitSequence:
             foreignCommitResolver.feed(commit)
+            hiddenCommitResolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
         self.foreignCommits = foreignCommitResolver.foreignCommits
+        self.hiddenCommits = hiddenCommitResolver.hiddenCommits
 
         globalstatus.setProgressValue(4)
 
         self.updateActiveCommitOid()
 
         return nRemoved, nAdded
+
+    def toggleHideBranch(self, branchName: str):
+        if branchName not in self.hiddenBranches:
+            self.hideBranch(branchName)
+        else:
+            self.unhideBranch(branchName)
+
+    def hideBranch(self, branchName: str):
+        if branchName in self.hiddenBranches:
+            return
+        self.uiPrefs.hiddenBranches.append(branchName)
+        self.uiPrefs.write()
+        self.resolveHiddenCommits()
+
+    def unhideBranch(self, branchName: str):
+        if branchName not in self.hiddenBranches:
+            return
+        self.uiPrefs.hiddenBranches.remove(branchName)
+        self.uiPrefs.write()
+        self.resolveHiddenCommits()
+
+    def getHiddenBranchOids(self):
+        hiddenCommitSeeds = []
+        for hiddenBranch in self.hiddenBranches[:]:
+            try:
+                a: pygit2.Commit = self.repo.lookup_reference(hiddenBranch).peel(pygit2.Commit)
+                hiddenCommitSeeds.append(a.oid)
+            except pygit2.InvalidSpecError:
+                pass
+        return hiddenCommitSeeds
+
+    def resolveHiddenCommits(self):
+        hiddenCommitResolver = HiddenCommitResolver(self.getHiddenBranchOids())
+        for commit in self.commitSequence:
+            hiddenCommitResolver.feed(commit)
+            if hiddenCommitResolver.done:
+                break
+        self.hiddenCommits = hiddenCommitResolver.hiddenCommits

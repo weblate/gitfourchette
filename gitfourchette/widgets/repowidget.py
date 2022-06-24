@@ -116,6 +116,7 @@ class RepoWidget(QWidget):
         self.sidebar.renameBranch.connect(self.actionFlows.renameBranchFlow)
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
+        self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
 
         self.sidebar.newStash.connect(self.actionFlows.newStashFlow)
         self.sidebar.applyStash.connect(self.applyStashAsync)
@@ -805,6 +806,12 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
+    def toggleHideBranch(self, branchName: str):
+        self.state.toggleHideBranch(branchName)
+        self.graphView.setHiddenCommits(self.state.hiddenCommits)
+
+    # -------------------------------------------------------------------------
+
     def quickRefresh(self):
         with Benchmark("Refresh refs-by-commit cache"):
             self.state.refreshRefsByCommitCache()
@@ -826,7 +833,7 @@ class RepoWidget(QWidget):
 
     def quickRefreshWithSidebar(self):
         self.quickRefresh()
-        self.sidebar.refresh(self.repo)
+        self.sidebar.refresh(self.state)
 
     def refreshWindowTitle(self):
         shortname = self.state.shortName

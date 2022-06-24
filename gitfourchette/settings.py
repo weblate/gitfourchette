@@ -33,19 +33,45 @@ def decodeBinary(encoded: str) -> QByteArray:
 
 
 class BasePrefs:
+    def getParentDir(self):
+        return QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
+
+    def _getFullPath(self, forWriting: bool):
+        prefsDir = self.getParentDir()
+        if not prefsDir:
+            return None
+
+        if forWriting:
+            os.makedirs(prefsDir, exist_ok=True)
+
+        fullPath = os.path.join(prefsDir, getattr(self, 'filename'))
+
+        if not forWriting and not os.path.isfile(fullPath):
+            return None
+
+        return fullPath
+
     def write(self):
         if TEST_MODE:
             log.info("prefs", "Disabling write prefs")
             return None
-        prefsDir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
-        os.makedirs(prefsDir, exist_ok=True)
-        prefsPath = os.path.join(prefsDir, getattr(self, 'filename'))
-        with open(prefsPath, 'w', encoding='utf-8') as f:
-            json.dump(self.__dict__, f, indent='\t')
+
+        prefsPath = self._getFullPath(forWriting=True)
+
+        if not prefsPath:
+            log.warning("prefs", "Couldn't get path for writing")
+            return None
+
+        with open(prefsPath, 'w', encoding='utf-8') as jsonFile:
+            json.dump(
+                obj={k: self.__dict__[k] for k in self.__dict__ if not k.startswith("_")},
+                fp=jsonFile,
+                indent='\t')
+
         return prefsPath
 
     def load(self):
-        prefsPath = QStandardPaths.locate(QStandardPaths.AppConfigLocation, getattr(self, 'filename'))
+        prefsPath = self._getFullPath(forWriting=False)
         if not prefsPath:  # couldn't be found
             return False
 
