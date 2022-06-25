@@ -281,6 +281,11 @@ class SidebarModel(QAbstractItemModel):
         else:
             return 0
 
+    def hiddenBranchFont(self) -> QFont:
+        font = self._parentWidget.font()
+        font.setStrikeOut(True)
+        return font
+
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
         if not self.repo:
             return None
@@ -323,7 +328,12 @@ class SidebarModel(QAbstractItemModel):
                     text += F"\nTracking remote “{self._tracking[branchNo]}”"
                 return text
             elif hiddenRole:
-                return branchName in self._hiddenBranches
+                return F"refs/heads/{branchName}" in self._hiddenBranches
+            elif fontRole:
+                if F"refs/heads/{branchName}" in self._hiddenBranches:
+                    return self.hiddenBranchFont()
+                else:
+                    return None
 
         elif item == EItem.UnbornHead:
             if displayRole:
@@ -365,9 +375,7 @@ class SidebarModel(QAbstractItemModel):
                 return F"{remoteName}/{branchName}"
             elif fontRole:
                 if F"refs/remotes/{remoteName}/{branchName}" in self._hiddenBranches:
-                    font = self._parentWidget.font()
-                    font.setStrikeOut(True)
-                    return font
+                    return self.hiddenBranchFont()
                 else:
                     return None
             elif hiddenRole:
@@ -555,6 +563,13 @@ class Sidebar(QTreeView):
             a = menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data))
             a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
 
+            menu.addSeparator()
+            a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/heads/" + data))
+            a.setCheckable(True)
+            if index:  # in test mode, we may not have an index
+                isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
+                a.setChecked(isBranchHidden)
+
         elif item == EItem.RemoteBranch:
             menu.addAction(F"New local branch tracking {labelQuote(data)}...",
                            lambda: self.newTrackingBranch.emit(data))
@@ -562,7 +577,8 @@ class Sidebar(QTreeView):
             a = menu.addAction(F"Fetch this remote branch...", lambda: self.fetchRemoteBranch.emit(data))
             a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
 
-            a = menu.addAction("Hide in graph", lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
+            menu.addSeparator()
+            a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
             a.setCheckable(True)
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
