@@ -314,14 +314,15 @@ class GraphView(QListView):
 
     def selectCommit(self, oid: pygit2.Oid):
         try:
-            index = self.repoWidget.state.getCommitSequentialIndex(oid)
+            rawIndex = self.repoWidget.state.getCommitSequentialIndex(oid)
         except KeyError:
             QMessageBox.warning(self, "pygit2.Commit not found",
                                 F"pygit2.Commit not found or not loaded:\n{oid.hex}")
             return False
 
-        ci = self.currentIndex()
-        newRow = 1 + index
-        if ci.row() != newRow:
-            self.setCurrentIndex(self.model().index(1 + index, 0))
+        newSourceIndex = self.clModel.index(1 + rawIndex, 0)
+        newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)
+
+        if self.currentIndex().row() != newFilterIndex.row():
+            self.setCurrentIndex(newFilterIndex)
         return True
