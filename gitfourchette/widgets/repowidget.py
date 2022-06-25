@@ -34,13 +34,15 @@ class RepoWidget(QWidget):
 
     state: RepoState
     actionFlows: ActionFlows
-    pathPending: str  # path of the repository if it isn't loaded yet (state=None)
+    pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
 
     previouslySearchedTerm: str
     previouslySearchedTermInDiff: str
 
     navPos: NavPos
     navHistory: NavHistory
+
+    scheduledRefresh: QTimer
 
     @property
     def repo(self) -> pygit2.Repository:
@@ -59,8 +61,12 @@ class RepoWidget(QWidget):
 
         self.state = None
         self.actionFlows = ActionFlows(None, self)
-
         self.pathPending = None
+
+        self.scheduledRefresh = QTimer(self)
+        self.scheduledRefresh.setSingleShot(True)
+        self.scheduledRefresh.setInterval(1000)
+        self.scheduledRefresh.timeout.connect(self.quickRefresh)
 
         self.navPos = NavPos()
         self.navHistory = NavHistory()
@@ -226,6 +232,25 @@ class RepoWidget(QWidget):
         #    w.setFrameStyle(QFrame.NoFrame)
         self.sidebar.setFrameStyle(QFrame.NoFrame)
 
+    # -------------------------------------------------------------------------
+
+    def setRepoState(self, state: RepoState):
+        if state:
+            self.state = state
+            self.state.fileWatcher.changeDetected.connect(self.onDetectedChange)
+            self.actionFlows.repo = state.repo
+        else:
+            self.state = None
+            self.actionFlows.repo = None
+
+    def onDetectedChange(self):
+        globalstatus.setText("Detected external change...")
+
+        self.scheduledRefresh.stop()
+        self.scheduledRefresh.start()
+
+    # -------------------------------------------------------------------------
+
     def saveSplitterState(self, splitter: QSplitter):
         self.splitterStates[splitter.objectName()] = splitter.saveState()
 
@@ -351,7 +376,7 @@ class RepoWidget(QWidget):
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
             self.state.repo.free()
-            self.state = None
+        self.setRepoState(None)
 
     def clearDiffView(self):
         self.diffView.clear()
@@ -813,6 +838,8 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def quickRefresh(self):
+        self.scheduledRefresh.stop()
+
         with Benchmark("Refresh refs-by-commit cache"):
             self.state.refreshRefsByCommitCache()
 

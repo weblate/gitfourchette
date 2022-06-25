@@ -352,8 +352,7 @@ class MainWindow(QMainWindow):
             newState = RepoState(repo)
             commitSequence = newState.loadCommitSequence(progress)
 
-            rw.state = newState
-            rw.actionFlows.repo = newState.repo
+            rw.setRepoState(newState)
 
             rw.graphView.setHiddenCommits(newState.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
