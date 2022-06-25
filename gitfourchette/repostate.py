@@ -28,7 +28,7 @@ def progressTick(progress, i):
             raise StopIteration()
 
 
-class ForeignCommitResolver:
+class ForeignCommitSolver:
     def __init__(self, commitsToRefs):
         self._nextLocal = set()
         self.foreignCommits = set()
@@ -45,7 +45,7 @@ class ForeignCommitResolver:
             self.foreignCommits.add(commit.oid)
 
 
-class HiddenCommitResolver:
+class HiddenCommitSolver:
     def __init__(self, seeds):
         self._forceShow = set()
         self._nextHidden = set()
@@ -59,12 +59,21 @@ class HiddenCommitResolver:
 
     def feed(self, commit: pygit2.Commit):
         if commit.oid in self._nextHidden:
+            assert commit.oid not in self._forceShow
             self.hiddenCommits.add(commit.oid)
             self._nextHidden.remove(commit.oid)
             for p in commit.parents:
-                self._nextHidden.add(p.oid)
+                if p.oid not in self._forceShow:
+                    self._nextHidden.add(p.oid)
         else:
+            try:
+                self._forceShow.remove(commit.oid)
+            except KeyError:
+                pass
+
             for p in commit.parents:
+                self._forceShow.add(p.oid)
+
                 try:
                     self._nextHidden.remove(p.oid)
                 except KeyError:
@@ -140,7 +149,7 @@ class RepoState:
         # setting autocrlf=true in the config.
         if QSysInfo.productType() == "windows" and "core.autocrlf" not in self.repo.config:
             tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
-            log.info("Forcing core.autocrlf=true in:", tempConfigPath)
+            log.info("RepoState", "Forcing core.autocrlf=true in: " + tempConfigPath)
             tempConfig = pygit2.Config(tempConfigPath)
             tempConfig["core.autocrlf"] = "true"
             self.repo.config.add_file(tempConfigPath, level=1)
@@ -241,8 +250,8 @@ class RepoState:
 
         progress.setLabelText(F"Preparing walk...")
 
-        foreignCommitResolver = ForeignCommitResolver(self.commitsToRefs)
-        hiddenCommitResolver = HiddenCommitResolver(self.getHiddenBranchOids())
+        foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
+        hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop)
@@ -347,8 +356,8 @@ class RepoState:
 
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
-        foreignCommitResolver = ForeignCommitResolver(self.commitsToRefs)
-        hiddenCommitResolver = HiddenCommitResolver(self.getHiddenBranchOids())
+        foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
+        hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
         for commit in self.commitSequence:
             foreignCommitResolver.feed(commit)
             hiddenCommitResolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
@@ -382,17 +391,27 @@ class RepoState:
         self.resolveHiddenCommits()
 
     def getHiddenBranchOids(self):
-        hiddenCommitSeeds = []
-        for hiddenBranch in self.hiddenBranches[:]:
+        seeds = set()
+
+        def isSharedByVisibleBranch(oid):
+            return any(
+                refName for refName in self.commitsToRefs[oid]
+                if refName not in self.hiddenBranches
+                and not refName.startswith('refs/tags/'))
+
+        for hiddenBranch in self.hiddenBranches:
             try:
-                a: pygit2.Commit = self.repo.lookup_reference(hiddenBranch).peel(pygit2.Commit)
-                hiddenCommitSeeds.append(a.oid)
+                commit: pygit2.Commit = self.repo.lookup_reference(hiddenBranch).peel(pygit2.Commit)
+                if not isSharedByVisibleBranch(commit.oid):
+                    seeds.add(commit.oid)
             except pygit2.InvalidSpecError:
+                log.info("RepoState", "Skipping invalid spec for hidden branch: " + hiddenBranch)
                 pass
-        return hiddenCommitSeeds
+
+        return seeds
 
     def resolveHiddenCommits(self):
-        hiddenCommitResolver = HiddenCommitResolver(self.getHiddenBranchOids())
+        hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
         for commit in self.commitSequence:
             hiddenCommitResolver.feed(commit)
             if hiddenCommitResolver.done:
