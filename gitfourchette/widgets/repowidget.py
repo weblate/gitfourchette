@@ -237,17 +237,22 @@ class RepoWidget(QWidget):
     def setRepoState(self, state: RepoState):
         if state:
             self.state = state
-            self.state.fileWatcher.changeDetected.connect(self.onDetectedChange)
+            self.state.fileWatcher.directoryChanged.connect(self.onDirectoryChange)
+            self.state.fileWatcher.indexChanged.connect(self.onIndexChange)
             self.actionFlows.repo = state.repo
         else:
             self.state = None
             self.actionFlows.repo = None
 
-    def onDetectedChange(self):
+    def onDirectoryChange(self):
         globalstatus.setText("Detected external change...")
 
         self.scheduledRefresh.stop()
         self.scheduledRefresh.start()
+
+    def onIndexChange(self):
+        self.repo.index.read()
+        self.quickRefresh()
 
     # -------------------------------------------------------------------------
 

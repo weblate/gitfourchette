@@ -25,7 +25,8 @@ def walkWatchableDirs(repo: pygit2.Repository, startDir=""):
 
 
 class FileWatcher(QObject):
-    changeDetected = Signal()
+    directoryChanged = Signal()
+    indexChanged = Signal()
 
     repo: pygit2.Repository
     fsw: QFileSystemWatcher
@@ -38,7 +39,9 @@ class FileWatcher(QObject):
         self.repo = repo
 
         self.fsw = QFileSystemWatcher()
-        self.fsw.addPaths(walkWatchableDirs(self.repo))
+        failed = self.fsw.addPaths(walkWatchableDirs(self.repo))
+        if failed:
+            log.warning(TAG, f"{len(failed)} paths failed to be watched")
 
         self.fsw.directoryChanged.connect(self.onDirectoryChanged)
         self.fsw.fileChanged.connect(self.onFileChanged)
@@ -49,6 +52,9 @@ class FileWatcher(QObject):
         self.rewatchDelay.setSingleShot(True)
         self.rewatchDelay.setInterval(delayMilliseconds)
         self.rewatchDelay.timeout.connect(self.onRewatchTimeout)
+
+        # Watch index file as well
+        self.fsw.addPath(os.path.join(repo.path, "index"))
 
     def prettifyPathList(self, pathList):
         prefix = os.path.normpath(self.repo.workdir) + "/"
@@ -69,7 +75,9 @@ class FileWatcher(QObject):
                     and fullChildPath not in directChildren
                     and not self.repo.path_is_ignored(fullChildPath)):
                 log.info(TAG, f"Watching new directory: {fullChildPath}")
-                self.fsw.addPaths(walkWatchableDirs(self.repo, fullChildPath))
+                failed = self.fsw.addPaths(walkWatchableDirs(self.repo, fullChildPath))
+                if failed:
+                    log.warning(TAG, f"{len(failed)} paths failed to be watched")
 
         zombieChildren = [d for d in recursiveChildren if not os.path.isdir(d)]
         if zombieChildren:
@@ -81,14 +89,18 @@ class FileWatcher(QObject):
         for d in self.pendingRewatch:
             self.refreshDirectory(d)
         self.pendingRewatch.clear()
-        log.info(TAG, f"Watched: {self.prettifyPathList(self.fsw.directories())}")
-        self.changeDetected.emit()
+        log.info(TAG, f"Directory watchlist: {self.prettifyPathList(self.fsw.directories())}")
+        self.directoryChanged.emit()
 
     def onDirectoryChanged(self, path: str):
         self.pendingRewatch.add(path)
         self.rewatchDelay.start()
 
     def onFileChanged(self, path: str):
-        log.info(TAG, f"File changed: {path}")
-        self.changeDetected.emit()
-
+        if path == os.path.join(self.repo.path, "index"):
+            # The index file may be deleted and rewritten.
+            # In that case the FSW stops watching the file, so re-add it to keep watching.
+            if path not in self.fsw.files():
+                self.fsw.addPath(path)
+            log.info(TAG, f"Index changed")
+            self.indexChanged.emit()
