@@ -2,6 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.actionflows import ActionFlows
 from gitfourchette.benchmark import Benchmark
+from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.navhistory import NavHistory, NavPos
 from gitfourchette.qt import *
@@ -51,6 +52,17 @@ class RepoWidget(QWidget):
     @property
     def isLoaded(self):
         return self.state is not None
+
+    @property
+    def workdir(self):
+        if self.state:
+            return os.path.normpath(self.state.repo.workdir)
+        else:
+            return self.pathPending
+
+    @property
+    def fileWatcher(self) -> FileWatcher:
+        return self.state.fileWatcher
 
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
@@ -251,6 +263,7 @@ class RepoWidget(QWidget):
         self.scheduledRefresh.start()
 
     def onIndexChange(self):
+        print("refreshing index...")
         self.repo.index.read()
         self.quickRefresh()
 
@@ -355,13 +368,6 @@ class RepoWidget(QWidget):
                 break
 
     # -------------------------------------------------------------------------
-
-    @property
-    def workdir(self):
-        if self.state:
-            return os.path.normpath(self.state.repo.workdir)
-        else:
-            return self.pathPending
 
     def getTitle(self):
         if self.state:
@@ -670,8 +676,13 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(onto)}, {resetMode}")
 
     def stageFilesAsync(self, patches: list[pygit2.Patch]):
-        work = lambda: porcelain.stageFiles(self.repo, patches)
-        then = lambda _: self.quickRefreshWithSidebar()
+        def work():
+            with self.fileWatcher.blockWatchingIndex():
+                porcelain.stageFiles(self.repo, patches)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
         self.workQueue.put(work, then, fplural("Staging # file^s", len(patches)))
 
     def discardFilesAsync(self, patches: list[pygit2.Patch]):
@@ -679,17 +690,30 @@ class RepoWidget(QWidget):
             paths = [patch.delta.new_file.path for patch in patches]
             Trash(self.repo).backupPatches(patches)
             porcelain.discardFiles(self.repo, paths)
-        then = lambda _: self.quickRefreshWithSidebar()
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
         self.workQueue.put(work, then, fplural("Discarding # file^s", len(patches)))
 
     def unstageFilesAsync(self, patches: list[pygit2.Patch]):
-        work = lambda: porcelain.unstageFiles(self.repo, patches)
-        then = lambda _: self.quickRefreshWithSidebar()
+        def work():
+            with self.fileWatcher.blockWatchingIndex():
+                porcelain.unstageFiles(self.repo, patches)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
         self.workQueue.put(work, then, fplural("Unstaging # file^s", len(patches)))
 
     def newStashAsync(self, message: str, flags: str):
-        def work(): return porcelain.newStash(self.repo, message, flags)
-        then = lambda _: self.quickRefreshWithSidebar()
+        def work():
+            with self.fileWatcher.blockWatchingIndex():
+                return porcelain.newStash(self.repo, message, flags)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
         self.workQueue.put(work, then, "New stash")
 
     def applyStashAsync(self, commitId: pygit2.Oid):

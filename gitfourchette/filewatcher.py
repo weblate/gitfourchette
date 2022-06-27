@@ -2,6 +2,7 @@ import os
 import pygit2
 
 from gitfourchette import log
+from gitfourchette import util
 from gitfourchette.qt import *
 
 
@@ -33,6 +34,10 @@ class FileWatcher(QObject):
     rewatchDelay: QTimer
     pendingRewatch: set[str]
 
+    @property
+    def indexFilePath(self):
+        return os.path.join(self.repo.path, "index")
+
     def __init__(self, repo: pygit2.Repository, delayMilliseconds=100):
         super().__init__(None)
 
@@ -54,7 +59,7 @@ class FileWatcher(QObject):
         self.rewatchDelay.timeout.connect(self.onRewatchTimeout)
 
         # Watch index file as well
-        self.fsw.addPath(os.path.join(repo.path, "index"))
+        self.fsw.addPath(self.indexFilePath)
 
     def prettifyPathList(self, pathList):
         prefix = os.path.normpath(self.repo.workdir) + "/"
@@ -97,10 +102,42 @@ class FileWatcher(QObject):
         self.rewatchDelay.start()
 
     def onFileChanged(self, path: str):
-        if path == os.path.join(self.repo.path, "index"):
+        if path == self.indexFilePath:
             # The index file may be deleted and rewritten.
             # In that case the FSW stops watching the file, so re-add it to keep watching.
             if path not in self.fsw.files():
                 self.fsw.addPath(path)
             log.info(TAG, f"Index changed")
             self.indexChanged.emit()
+
+    def stopWatchingIndex(self):
+        self.fsw.removePath(self.indexFilePath)
+
+    def startWatchingIndex(self):
+        self.fsw.addPath(self.indexFilePath)
+
+    def blockWatchingIndex(self):
+        """
+        Returns a context manager that temporarily ignores updates to the
+        repository's index file.
+
+        When you perform an operation that modifies the index via pygit2,
+        prefer using this context manager over a QSignalBlocker.
+
+        With QSignalBlocker (not recommended!) the signal may still fire after
+        you're done modifying the index, because the QFileSystemWatcher is
+        unlikely to detect a change to the index file immediately.
+        """
+
+        fw = self
+
+        class IndexWatchBlocker:
+            def __enter__(self):
+                assert not util.onAppThread()
+                fw.stopWatchingIndex()
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                assert not util.onAppThread()
+                fw.startWatchingIndex()
+
+        return IndexWatchBlocker()
