@@ -178,7 +178,7 @@ class GraphView(QListView):
 
         def formatSignature(sig: pygit2.Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
-            return F"{escape(sig.name)} &lt;{escape(commit.author.email)}&gt;<br>" \
+            return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
                    + escape(QLocale.system().toString(qdt, QLocale.LongFormat))
 
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
