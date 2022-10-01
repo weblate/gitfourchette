@@ -315,6 +315,22 @@ class FileList(QListView):
         self.selectRow(row)
         return True
 
+    def openRevisionPriorToChange(self):
+        for diff in self.confirmSelectedEntries("open # files"):
+            diffFile: pygit2.DiffFile = diff.delta.old_file
+
+            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+
+            name, ext = os.path.splitext(os.path.basename(diffFile.path))
+            name = F"{name}[lastcommit]{ext}"
+
+            tempPath = os.path.join(getSessionTemporaryDirectory(), name)
+
+            with open(tempPath, "wb") as f:
+                f.write(blob.data)
+
+            QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
+
 
 class DirtyFiles(FileList):
     stageFiles = Signal(list)
@@ -335,6 +351,8 @@ class DirtyFiles(FileList):
             None,
             ActionDef(plur("Open Containing Folder^s", n), self.showInFolder, icon=QStyle.SP_DirIcon),
             ActionDef(plur("&Copy Path^s", n), self.copyPaths),
+            None,
+            ActionDef(plur("Open Unmodified &Revision^s in External Editor", n), self.openRevisionPriorToChange),
         ]
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -370,6 +388,8 @@ class StagedFiles(FileList):
             None,
             ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.SP_DirIcon),
             ActionDef(plur("&Copy Path^s", n), self.copyPaths),
+            None,
+            ActionDef(plur("Open Unmodified &Revision^s in External Editor", n), self.openRevisionPriorToChange),
         ] + super().createContextMenuActions(n)
 
     def keyPressEvent(self, event: QKeyEvent):
