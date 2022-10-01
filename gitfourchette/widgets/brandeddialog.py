@@ -87,6 +87,8 @@ def showTextInputDialog(
     dlg.setMaximumHeight(dlg.height())
 
     dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+    dlg.setWindowModality(Qt.WindowModal)
 
     dlg.show()
+    dlg.setMaximumHeight(dlg.height())
     return dlg
