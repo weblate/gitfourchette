@@ -324,11 +324,20 @@ class DiffView(QPlainTextEdit):
         self.applySelection(PatchPurpose.UNSTAGE)
 
     def discardSelection(self):
-        rc = QMessageBox.warning(self, "Really discard lines?",
-                                 "Really discard the selected lines?\nThis cannot be undone!",
-                                 QMessageBox.Discard | QMessageBox.Cancel)
-        if rc == QMessageBox.Discard:
-            self.applySelection(PatchPurpose.DISCARD)
+        qmb = QMessageBox(
+            QMessageBox.Warning,
+            "Really discard lines?",
+            "Really discard the selected lines?\nThis cannot be undone!",
+            QMessageBox.Discard | QMessageBox.Cancel,
+            parent=self)
+
+        discardButton = qmb.button(QMessageBox.Discard)
+        discardButton.setText("Discard lines")
+        discardButton.clicked.connect(lambda: self.applySelection(PatchPurpose.DISCARD))
+
+        qmb.setWindowModality(Qt.WindowModal)
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.show()
 
     def exportSelection(self, saveInto=""):
         patchData = self.extractSelection()
