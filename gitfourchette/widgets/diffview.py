@@ -256,10 +256,37 @@ class DiffView(QPlainTextEdit):
             self.lineData[hunkLastLineIndex].hunkPos,
             reverse)
 
-    def applyPatch(self, patchData: bytes, purpose: PatchPurpose):
+    def applyEntirePatch(self, purpose: PatchPurpose):
+        if purpose == PatchPurpose.UNSTAGE:
+            porcelain.unstageFiles(self.repo, [self.currentPatch])
+        elif purpose == PatchPurpose.STAGE:
+            porcelain.stageFiles(self.repo, [self.currentPatch])
+        elif purpose == PatchPurpose.DISCARD:
+            porcelain.discardFiles(self.repo, [self.currentPatch.delta.new_file.path])
+        else:
+            raise KeyError(f"applyEntirePatch: unsupported purpose {purpose}")
+
+    def onWantToApplyPartialPatch(self, purpose: PatchPurpose):
+        verb: str = purpose.name
+
+        qmb = QMessageBox(
+            QMessageBox.Information,
+            "Selection empty for partial patch",
+            f"You haven’t selected any red/green lines to {verb.lower()}.",
+            QMessageBox.Ok | QMessageBox.Apply,
+            parent=self)
+
+        applyButton = qmb.button(QMessageBox.Apply)
+        applyButton.setText(f"{verb.title()} entire file")
+        applyButton.clicked.connect(lambda: self.applyEntirePatch(purpose))
+
+        qmb.setWindowModality(Qt.WindowModal)
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.show()
+
+    def applyPartialPatch(self, patchData: bytes, purpose: PatchPurpose):
         if not patchData:
-            QMessageBox.information(self, "Nothing to patch",
-                                    "Select one or more red/green lines before applying a partial patch.")
+            self.onWantToApplyPartialPatch(purpose)
             return
 
         discard = purpose == PatchPurpose.DISCARD
@@ -310,12 +337,12 @@ class DiffView(QPlainTextEdit):
     def applySelection(self, purpose: PatchPurpose):
         reverse = purpose != PatchPurpose.STAGE
         patchData = self.extractSelection(reverse)
-        self.applyPatch(patchData, purpose)
+        self.applyPartialPatch(patchData, purpose)
 
     def applyHunk(self, hunkID: int, purpose: PatchPurpose):
         reverse = purpose != PatchPurpose.STAGE
         patchData = self.extractHunk(hunkID, reverse)
-        self.applyPatch(patchData, purpose)
+        self.applyPartialPatch(patchData, purpose)
 
     def stageSelection(self):
         self.applySelection(PatchPurpose.STAGE)
