@@ -259,6 +259,14 @@ class GraphView(QListView):
         if not oid:
             return
 
+        # If a ref points to this commit, pre-fill the input field with the ref's name
+        try:
+            refsPointingHere = porcelain.mapCommitsToReferences(self.repo)[oid]
+            candidates = (r for r in refsPointingHere if r.startswith(('refs/heads/', 'refs/remotes/')))
+            initialName = next(candidates).split('/')[-1]
+        except (KeyError, StopIteration):
+            initialName = ""
+
         def onAccept(newBranchName):
             self.newBranchFromCommit.emit(newBranchName, oid)
 
@@ -266,7 +274,7 @@ class GraphView(QListView):
             self,
             F"New branch from {shortHash(oid)}",
             F"Enter name for new branch starting from {shortHash(oid)}:",
-            None,
+            initialName,
             onAccept)
 
     def resetHeadFlow(self):
