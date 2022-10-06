@@ -41,6 +41,10 @@ def showAboutDialog(parent: QWidget):
         </small></p>
         <p>
             Have fun!
-        </p>"""
+        </p>
+        <p>
+            <a href="https://ko-fi.com/jorio"><img src=":/kofi.png" height="32" alt="Support me on Ko-fi"></a>
+        </p>
+        """
 
     QMessageBox.about(parent, F"About {appName} {appVersion}", aboutText)
