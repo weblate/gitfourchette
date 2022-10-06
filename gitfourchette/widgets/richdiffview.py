@@ -33,6 +33,8 @@ class RichDiffView(QTextBrowser):
     def displayImageDiff(self, delta: pygit2.DiffDelta, imageA: QImage, imageB: QImage):
         document = QTextDocument()
 
+        imageB.setDevicePixelRatio(self.devicePixelRatio())
+
         document.addResource(QTextDocument.ImageResource, QUrl("image"), imageB)
         
         humanSizeA = QLocale.system().formattedDataSize(delta.old_file.size)
