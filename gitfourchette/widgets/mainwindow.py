@@ -204,6 +204,9 @@ class MainWindow(QMainWindow):
         goMenu.addSeparator()
         goMenu.addAction("&Next Tab", self.nextTab, QKeySequence("Ctrl+Tab"))
         goMenu.addAction("&Previous Tab", self.previousTab, QKeySequence("Ctrl+Shift+Tab"))
+        goMenu.addSeparator()
+        goMenu.addAction("Next File", self.nextFile, QKeySequence("Ctrl+]"))
+        goMenu.addAction("Previous File", self.previousFile, QKeySequence("Ctrl+["))
         #asyncDelay = QAction("Fake &Async Delay", debugMenu)
         #asyncDelay.setCheckable(True)
         #asyncDelay.connect(...)
@@ -591,6 +594,12 @@ class MainWindow(QMainWindow):
 
     def selectUncommittedChanges(self):
         self.currentRepoWidget().graphView.selectUncommittedChanges()
+
+    def nextFile(self):
+        self.currentRepoWidget().selectNextFile(True)
+
+    def previousFile(self):
+        self.currentRepoWidget().selectNextFile(False)
 
     # -------------------------------------------------------------------------
     # Session management

@@ -367,6 +367,86 @@ class RepoWidget(QWidget):
             if success and pos != startPos:
                 break
 
+
+    # -------------------------------------------------------------------------
+
+    def selectNextFile(self, down=True):
+        if self.filesStack.currentWidget() == self.committedFiles:
+            dirtyIndices = self.committedFiles.selectedIndexes()
+            dirtyRowCount = self.committedFiles.model().rowCount()
+
+            kpIndex = -1
+
+            if dirtyIndices:
+                leaderRow = dirtyIndices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
+                if down and leaderRow < dirtyRowCount-1:  # select next dirty file
+                    kpIndex = leaderRow+1
+                elif not down and leaderRow > 0:  # select prev dirty file
+                    kpIndex = leaderRow-1
+            elif dirtyRowCount > 0:
+                kpIndex = 0
+            
+            if kpIndex >= 0:
+                self.committedFiles.clearSelectionSilently()
+                self.committedFiles.selectRow(kpIndex)
+            else:
+                QApplication.beep()
+
+        elif self.filesStack.currentWidget() == self.stageSplitter:
+            dirtyIndices = self.dirtyFiles.selectedIndexes()
+            stagedIndices = self.stagedFiles.selectedIndexes()
+
+            dirtyRowCount = self.dirtyFiles.model().rowCount()
+            stagedRowCount = self.stagedFiles.model().rowCount()
+
+            kpWidget = None
+            kpIndex = 0
+
+            if not dirtyIndices and not stagedIndices:
+                if dirtyRowCount > 0:
+                    kpWidget = self.dirtyFiles
+                    kpIndex = 0
+                elif stagedRowCount > 0:
+                    kpWidget = self.stagedFiles
+                    kpIndex = 0
+
+            elif dirtyIndices:
+                leaderRow = dirtyIndices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
+
+                if down:
+                    if leaderRow < dirtyRowCount-1:  # select next dirty file
+                        kpWidget = self.dirtyFiles
+                        kpIndex = leaderRow+1
+                    elif stagedRowCount > 0:  # out of dirty rows, move on to first row in staged box
+                        kpWidget = self.stagedFiles
+                        kpIndex = 0
+                else:
+                    if leaderRow > 0:  # select prev dirty file
+                        kpWidget = self.dirtyFiles
+                        kpIndex = leaderRow-1
+            
+            elif stagedIndices:
+                leaderRow = stagedIndices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
+
+                if down:
+                    if leaderRow < stagedRowCount-1:  # select next staged file
+                        kpWidget = self.stagedFiles
+                        kpIndex = leaderRow+1
+                else:
+                    if leaderRow > 0:  # select prev staged file
+                        kpWidget = self.stagedFiles
+                        kpIndex = leaderRow-1
+                    elif dirtyRowCount > 0:  # out of staged rows, move on to last row in dirty box
+                        kpWidget = self.dirtyFiles
+                        kpIndex = dirtyRowCount-1
+            
+            if kpWidget:
+                #kpWidget.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Down if down else Qt.Key_Up, Qt.NoModifier))
+                kpWidget.clearSelectionSilently()
+                kpWidget.selectRow(kpIndex)
+            else:
+                QApplication.beep()
+
     # -------------------------------------------------------------------------
 
     def getTitle(self):
