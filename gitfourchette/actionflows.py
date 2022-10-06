@@ -49,6 +49,8 @@ class ActionFlows(QObject):
             QMessageBox.Ok | QMessageBox.Cancel,
             parent=self.parentWidget)
 
+        qmb.setWindowModality(Qt.WindowModal)
+
         # Using QMessageBox.Ok instead of QMessageBox.Discard so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.Ok)
         if acceptButtonIcon:
@@ -206,6 +208,7 @@ class ActionFlows(QObject):
         cd.accepted.connect(onAccept)
         cd.rejected.connect(onReject)
         cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        cd.setWindowModality(Qt.WindowModal)
         cd.show()
         return cd
 
@@ -227,6 +230,7 @@ class ActionFlows(QObject):
 
         cd.accepted.connect(onAccept)
         cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        cd.setWindowModality(Qt.WindowModal)
         cd.show()
         return cd
 
