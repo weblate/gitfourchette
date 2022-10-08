@@ -440,6 +440,14 @@ class SidebarDelegate(QStyledItemDelegate):
         super().__init__(parent)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        """
+        Draw custom branch indicator. The standard one is too cluttered in some
+        themes, e.g. Breeze, so I've disabled it in style.qss.
+        
+        In the macOS theme, the default actually looks fine... but let's
+        override it anyway for consistency with other platforms.
+        """
+
         view: QTreeView = option.widget
         item = SidebarModel.unpackItem(index)
 
@@ -448,13 +456,14 @@ class SidebarDelegate(QStyledItemDelegate):
         if item in UNINDENT_ITEMS:
             opt.rect.adjust(-view.indentation(), 0, 0, 0)
 
-        # Draw custom branch indicator. The standard one is too cluttered in some themes, e.g. Breeze.
         if item not in LEAF_ITEMS:
             opt2 = QStyleOptionViewItem(option)
 
             r: QRect = opt2.rect
-            r.adjust(-view.indentation(), 0, 0, 0)
-            r.setWidth(view.indentation())
+
+            # These metrics are a good compromise for Breeze, macOS, and Fusion.
+            r.adjust(-view.indentation() * 0.6, 0, 0, 0)
+            r.setWidth(6)
 
             # See QTreeView::drawBranches() in qtreeview.cpp for other interesting states
             opt2.state &= ~QStyle.State_MouseOver
