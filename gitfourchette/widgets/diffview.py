@@ -381,11 +381,20 @@ class DiffView(QPlainTextEdit):
         self.applyHunk(hunkID, PatchPurpose.UNSTAGE)
 
     def discardHunk(self, hunkID: int):
-        rc = QMessageBox.warning(self, "Really discard hunk?",
-                                 "Really discard this hunk?\nThis cannot be undone!",
-                                 QMessageBox.Discard | QMessageBox.Cancel)
-        if rc == QMessageBox.Discard:
-            self.applyHunk(hunkID, PatchPurpose.DISCARD)
+        qmb = QMessageBox(
+            QMessageBox.Warning,
+            "Really discard hunk?",
+            "Really discard this hunk?\nThis cannot be undone!",
+            QMessageBox.Discard | QMessageBox.Cancel,
+            parent=self)
+
+        discardButton = qmb.button(QMessageBox.Discard)
+        discardButton.setText("Discard hunk")
+        discardButton.clicked.connect(lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
+
+        qmb.setWindowModality(Qt.WindowModal)
+        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.show()
 
     def exportHunk(self, hunkID: int, saveInto=""):
         patchData = self.extractHunk(hunkID)
