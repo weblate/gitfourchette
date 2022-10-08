@@ -36,6 +36,7 @@ class CustomTabWidget(QWidget):
         self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
         self.tabs.setMovable(True)
+        self.tabs.setDocumentMode(True)  # dramatically improves the tabs' appearance on macOS
 
         self.previousMiddleIndex = -1
 
