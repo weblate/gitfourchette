@@ -1,9 +1,10 @@
 from gitfourchette.qt import *
 from gitfourchette.util import tweakWidgetFont
+from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
 
-def makeBrandedDialogLayout(dialog, promptText):
+def makeBrandedDialogLayout(dialog, promptText, subtitleText=""):
     gridLayout = QGridLayout(dialog)
 
     iconLabel = QLabel(dialog)
@@ -14,30 +15,40 @@ def makeBrandedDialogLayout(dialog, promptText):
 
     horizontalSpacer = QSpacerItem(0, 1, QSizePolicy.Fixed, QSizePolicy.Minimum)
 
-    prompt = QLabel(dialog)
-    prompt.setText(promptText)
-    tweakWidgetFont(prompt, 150, bold=True)
+    titleLayout = QVBoxLayout()
+    titleLayout.setSpacing(0)
+    titleLayout.setContentsMargins(0, 0, 0, 0)
+    title = QLabel(promptText, dialog)
+    tweakWidgetFont(title, 150, bold=True)
+    titleLayout.addWidget(title)
+
+    if subtitleText:
+        subtitle = QElidedLabel(subtitleText, dialog)
+        tweakWidgetFont(subtitle, relativeSize=80)
+        titleLayout.addWidget(subtitle)
+        title.setAlignment(Qt.AlignBottom)
+        subtitle.setAlignment(Qt.AlignTop)
 
     gridLayout.addWidget(iconLabel, 1, 0, 1, 1)
     gridLayout.addItem(horizontalSpacer, 1, 1, 1, 1)
-    gridLayout.addWidget(prompt, 1, 3, 1, 1)
+    gridLayout.addLayout(titleLayout, 1, 3, 1, 1)
 
     return gridLayout
 
 
-def makeBrandedDialog(dialog, innerLayout, promptText):
-    gridLayout = makeBrandedDialogLayout(dialog, promptText)
+def makeBrandedDialog(dialog, innerLayout, promptText, subtitleText: str = ""):
+    gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText)
     gridLayout.addLayout(innerLayout, 2, 3, 1, 1)
 
 
-def convertToBrandedDialog(dialog: QDialog, promptText: str = ""):
+def convertToBrandedDialog(dialog: QDialog, promptText: str = "", subtitleText: str = ""):
     if not promptText:
         promptText = dialog.windowTitle()
 
     innerContent = QWidget(dialog)
     innerContent.setLayout(dialog.layout())
 
-    gridLayout = makeBrandedDialogLayout(dialog, promptText)
+    gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText)
     gridLayout.addWidget(innerContent, 2, 3, 1, 1)
 
 

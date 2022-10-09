@@ -95,10 +95,11 @@ def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: 
     return branch
 
 
-def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid):
+def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid, switchTo: bool):
     commit: Commit = repo[commitOid].peel(Commit)
     branch = repo.create_branch(localBranchName, commit)
-    checkoutRef(repo, branch.name)  # branch.name is inherited from Reference
+    if switchTo:
+        checkoutRef(repo, branch.name)  # branch.name is inherited from Reference
 
 
 def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
@@ -221,6 +222,11 @@ def getHeadCommitOid(repo: Repository) -> Oid:
 
 def getHeadCommitMessage(repo: Repository) -> str:
     return getHeadCommit(repo).message
+
+
+def getCommitMessage(repo: Repository, oid: Oid) -> str:
+    commit: Commit = repo[oid].peel(Commit)
+    return commit.message
 
 
 def createCommit(

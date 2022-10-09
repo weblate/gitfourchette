@@ -1,8 +1,9 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import excMessageBox, labelQuote, shortHash
+from gitfourchette.util import excMessageBox, labelQuote, shortHash, messageSummary
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.widgets.newbranchdialog import NewBranchDialog
 from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.remotedialog import RemoteDialog
 from gitfourchette.widgets.stashdialog import StashDialog
@@ -19,7 +20,7 @@ class ActionFlows(QObject):
     discardFiles = Signal(list)  # list[Patch]
     editRemote = Signal(str, str, str)  # oldName, newName, newURL
     editTrackingBranch = Signal(str, str)
-    newBranch = Signal(str)
+    newBranch = Signal(str, pygit2.Oid, str, bool)  # name, commit oid, tracking branch, switch to
     newRemote = Signal(str, str)  # name, url
     newTrackingBranch = Signal(str, str)
     renameBranch = Signal(str, str)
@@ -85,16 +86,62 @@ class ActionFlows(QObject):
     # -------------------------------------------------------------------------
     # Branch
 
-    def newBranchFlow(self):
-        def onAccept(newBranchName):
-            self.newBranch.emit(newBranchName)
+    def newBranchFlowInternal(self, tip: pygit2.Oid, originalBranchName: str):
+        commitMessage = porcelain.getCommitMessage(self.repo, tip)
+        commitMessage, junk = messageSummary(commitMessage)
 
-        return showTextInputDialog(
-            self.parentWidget,
-            F"New branch at {shortHash(porcelain.getHeadCommit(self.repo).oid)}",
-            "Enter name for new branch:",
-            None,
-            onAccept)
+        dlg = NewBranchDialog(
+            originalBranchName,
+            shortHash(tip),
+            commitMessage,
+            trackingCandidates=[],
+            forbiddenBranchNames=[""] + self.repo.listall_branches(pygit2.GIT_BRANCH_LOCAL),
+            parent=self.parentWidget)
+
+        def onAccept():
+            localName = dlg.ui.nameEdit.text()
+            trackingBranch = ""
+            switchTo = dlg.ui.switchToBranchCheckBox.isChecked()
+
+            if dlg.ui.trackRemoteBranchCheckBox.isChecked():
+                trackingBranch = dlg.ui.trackRemoteBranchComboBox.currentText()
+
+            self.newBranch.emit(localName, tip, trackingBranch, switchTo)
+
+        dlg.accepted.connect(onAccept)
+
+        dlg.setWindowModality(Qt.WindowModal)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.show()
+        dlg.setMaximumHeight(dlg.height())
+
+    def newBranchFromCommitFlow(self, tip: pygit2.Oid):
+        initialName = ""
+
+        # If we're creating a branch at the tip of the current branch, default to its name
+        if (not self.repo.head_is_unborn
+                and not self.repo.head_is_detached
+                and self.repo.head.target == tip):
+            initialName = self.repo.head.shorthand
+        else:
+            # If a ref points to this commit, pre-fill the input field with the ref's name
+            try:
+                refsPointingHere = porcelain.mapCommitsToReferences(self.repo)[tip]
+                candidates = (r for r in refsPointingHere if r.startswith(('refs/heads/', 'refs/remotes/')))
+                initialName = next(candidates).split('/')[-1]
+            except (KeyError, StopIteration):
+                pass
+
+        self.newBranchFlowInternal(tip, initialName)
+
+    def newBranchFlow(self):
+        branchTip = porcelain.getHeadCommit(self.repo).oid
+        self.newBranchFromCommitFlow(branchTip)
+
+    def newBranchFromBranchFlow(self, originalBranchName: str):
+        branch = self.repo.branches[originalBranchName]
+        tip: pygit2.Oid = branch.target
+        self.newBranchFlowInternal(tip, originalBranchName)
 
     def newTrackingBranchFlow(self, remoteBranchName: str):
         def onAccept(localBranchName):

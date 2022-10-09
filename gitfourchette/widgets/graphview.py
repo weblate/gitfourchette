@@ -93,7 +93,7 @@ class GraphView(QListView):
     emptyClicked = Signal()
     commitClicked = Signal(pygit2.Oid)
     resetHead = Signal(pygit2.Oid, str, bool)
-    newBranchFromCommit = Signal(str, pygit2.Oid)
+    newBranchFromCommit = Signal(pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
 
     clModel: CommitLogModel
@@ -259,23 +259,7 @@ class GraphView(QListView):
         if not oid:
             return
 
-        # If a ref points to this commit, pre-fill the input field with the ref's name
-        try:
-            refsPointingHere = porcelain.mapCommitsToReferences(self.repo)[oid]
-            candidates = (r for r in refsPointingHere if r.startswith(('refs/heads/', 'refs/remotes/')))
-            initialName = next(candidates).split('/')[-1]
-        except (KeyError, StopIteration):
-            initialName = ""
-
-        def onAccept(newBranchName):
-            self.newBranchFromCommit.emit(newBranchName, oid)
-
-        showTextInputDialog(
-            self,
-            F"New branch from {shortHash(oid)}",
-            F"Enter name for new branch starting from {shortHash(oid)}:",
-            initialName,
-            onAccept)
+        self.newBranchFromCommit.emit(oid)
 
     def resetHeadFlow(self):
         oid = self.currentCommitOid

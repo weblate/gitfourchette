@@ -114,7 +114,7 @@ class RepoWidget(QWidget):
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
         self.graphView.resetHead.connect(self.resetHeadAsync)
-        self.graphView.newBranchFromCommit.connect(self.newBranchFromCommitAsync)
+        self.graphView.newBranchFromCommit.connect(self.actionFlows.newBranchFromCommitFlow)
         self.graphView.checkoutCommit.connect(self.checkoutCommitAsync)
 
         self.sidebar.commit.connect(self.startCommitFlow)
@@ -128,6 +128,7 @@ class RepoWidget(QWidget):
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
+        self.sidebar.newBranchFromBranch.connect(self.actionFlows.newBranchFromBranchFlow)
         self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
         self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
         self.sidebar.refClicked.connect(self.selectRef)
@@ -679,10 +680,19 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Deleting branch “{localBranchName}”")
 
-    def newBranchAsync(self, localBranchName: str):
+    def newBranchAsync(self, localBranchName: str, tip: pygit2.Oid, tracking: str, switchTo: bool):
         assert not localBranchName.startswith("refs/heads/")
-        work = lambda: porcelain.newBranch(self.repo, localBranchName)
-        then = lambda _: self.quickRefreshWithSidebar()
+
+        def work():
+            porcelain.newBranchFromCommit(self.repo, localBranchName, tip, switchTo=False)
+            if tracking:
+                porcelain.editTrackingBranch(self.repo, localBranchName, tracking)
+            # Switch last
+            if switchTo:
+                porcelain.checkoutLocalBranch(self.repo, localBranchName)
+
+        def then(_): self.quickRefreshWithSidebar()
+
         self.workQueue.put(work, then, F"Creating branch “{localBranchName}”")
 
     def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
@@ -690,11 +700,6 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.newTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
-
-    def newBranchFromCommitAsync(self, localBranchName: str, commitOid: pygit2.Oid):
-        work = lambda: porcelain.newBranchFromCommit(self.repo, localBranchName, commitOid)
-        then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Creating branch “{localBranchName}” from commit “{shortHash(commitOid)}”")
 
     def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)

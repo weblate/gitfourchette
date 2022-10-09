@@ -482,6 +482,7 @@ class Sidebar(QTreeView):
     commit = Signal()
 
     newBranch = Signal()
+    newBranchFromBranch = Signal(str)
     renameBranch = Signal(str)
     deleteBranch = Signal(str)
     switchToBranch = Signal(str)
@@ -571,6 +572,9 @@ class Sidebar(QTreeView):
             menu.addAction("Re&name...", lambda: self.renameBranch.emit(data))
             a = menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data))
             a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
+
+            menu.addSeparator()
+            menu.addAction("New branch from here...", lambda: self.newBranchFromBranch.emit(data))
 
             menu.addSeparator()
             a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/heads/" + data))
