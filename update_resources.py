@@ -1,14 +1,19 @@
 #! /usr/bin/env python3
-
-import os, re, subprocess, sys
+import difflib, os, re, subprocess, sys, platform
 
 srcDir = "gitfourchette"
 assetsDir = "assets"
 
-for path in srcDir, assetsDir:
-    if not os.path.isdir(path):
-        print(F"Directory {path} not found; please run this script from the root of the repo")
-        sys.exit(1)
+if platform.system() == 'Darwin':
+    UIC = 'pyside6-uic'  # "/opt/homebrew/opt/qt5/bin/uic"
+    RCC = 'pyside6-rcc'  # "/opt/homebrew/opt/qt5/bin/rcc"
+else:
+    UIC = "uic-qt5"
+    RCC = "rcc-qt5"
+
+if 'UIC' in os.environ: UIC = os.environ['UIC']
+if 'RCC' in os.environ: RCC = os.environ['RCC']
+
 
 def call(cmd, **kwargs) -> subprocess.CompletedProcess:
     cmdstr = ""
@@ -26,13 +31,35 @@ def call(cmd, **kwargs) -> subprocess.CompletedProcess:
         print(F"Aborting setup because: {e}")
         sys.exit(1)
 
-def writeIfDifferent(path, text):
+
+def writeIfDifferent(path, text, ignoreChangedLines=[]):
+    needRewrite = True
+
+    ignoreList = []
+    for icl in ignoreChangedLines:
+        ignoreList.append("+ " + icl)
+        ignoreList.append("- " + icl)
+
     if os.path.isfile(path):
-        with open(path, 'r') as f:
-            if f.read() == text:
-                return
-    with open(path, 'w') as f:
-        f.write(text)
+        with open(path, 'r') as existingFile:
+            oldText = existingFile.read()
+
+        # See if the differences can be ignored (e.g. Qt User Interface Compiler version comment)
+        if oldText != text:
+            needRewrite = False
+            t1 = oldText.splitlines(keepends=True)
+            t2 = text.splitlines(keepends=True)
+            for dl in difflib.ndiff(t1, t2):
+                if (dl.rstrip() not in ["+", "-"]  # pure whitespace change
+                        and not dl.startswith(tuple(ignoreList))
+                        and dl.startswith(("+ ", "- "))):
+                    needRewrite = True
+                    break
+
+    if needRewrite:
+        with open(path, 'w') as f:
+            f.write(text)
+
 
 def writeStatusIcon(fill='#ff00ff', char='X', round=2):
     svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>\n"
@@ -42,6 +69,13 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
     svgFileName = F"{assetsDir}/status_{char.lower()}.svg"
     print(svgFileName)
     writeIfDifferent(svgFileName, svg)
+
+
+for path in srcDir, assetsDir:
+    if not os.path.isdir(path):
+        print(F"Directory {path} not found; please run this script from the root of the repo")
+        sys.exit(1)
+
 
 # Generate status icons
 # https://git-scm.com/docs/git-diff#_raw_output_format
@@ -67,19 +101,22 @@ for root, dirs, files in os.walk(srcDir):
             continue
 
         if file.endswith(".ui"):
-            result = call(["uic-qt5", "--generator", "python", fullpath])
+            result = call([UIC, "--generator", "python", fullpath])
             text = result.stdout
 
             text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.MULTILINE)
-            text = re.sub(r"^from PySide2.* import .*$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
+            text = re.sub(r"^from PySide2.* import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
+            text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
             for nukePattern in [
                     r"^# -\*- coding:.*$",
-                    r"^from PySide2.* import .*$\n",
+                    r"^from PySide2.* import .+$\n",
+                    r"^from PySide6.* import \([^\)]+\)$\n",
                     r"^ {4}# (setupUi|retranslateUi)$\n"]:
                 text = re.sub(nukePattern, "", text, flags=re.MULTILINE)
             text = text.strip() + "\n"
 
-            writeIfDifferent(F"{root}/ui_{basename}.py", text)
+            writeIfDifferent(F"{root}/ui_{basename}.py", text,
+                             ["## Created by: Qt User Interface Compiler version"])
 
 for root, dirs, files in os.walk(assetsDir):
     for file in files:
@@ -88,8 +125,10 @@ for root, dirs, files in os.walk(assetsDir):
         os.utime(path, times=(0, 0))
 
 # Generate assets_rc.py from assets.qrc
-rccResult = call(["rcc-qt5", "--generator", "python", F"{assetsDir}/assets.qrc"])
+rccResult = call([RCC, "--generator", "python", F"{assetsDir}/assets.qrc"])
 rccText = rccResult.stdout
 rccText = re.sub(r"^(\s*)QtCore\.", r"\1", rccText, flags=re.MULTILINE)
 rccText = re.sub(r"^from PySide2.* import .*$", "from gitfourchette.qt import *", rccText, flags=re.MULTILINE)
-writeIfDifferent(F"{srcDir}/assets_rc.py", rccText)
+rccText = re.sub(r"^from PySide6.* import .*$", "from gitfourchette.qt import *", rccText, flags=re.MULTILINE)
+writeIfDifferent(F"{srcDir}/assets_rc.py", rccText,
+                 ["# Created by: The Resource Compiler for Qt version"])
