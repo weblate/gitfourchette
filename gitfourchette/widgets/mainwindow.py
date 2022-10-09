@@ -3,6 +3,7 @@ from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
+from gitfourchette.reverseunidiff import reverseUnidiff
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext, PersistentFileDialog)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
@@ -156,7 +157,8 @@ class MainWindow(QMainWindow):
         self.recentMenu.setObjectName("RecentMenu")
         fileMenu.addAction("&Close Tab", self.closeCurrentTab, QKeySequence.Close)
         fileMenu.addSeparator()
-        fileMenu.addAction("&Import Patch...", self.importPatch, QKeySequence("Ctrl+I"))
+        fileMenu.addAction("Apply Patch...", self.importPatch, QKeySequence("Ctrl+I"))
+        fileMenu.addAction("Reverse Patch...", lambda: self.importPatch(reverse=True))
         fileMenu.addSeparator()
         fileMenu.addAction("&Preferences...", self.openSettings, QKeySequence.Preferences)
         fileMenu.addSeparator()
@@ -516,23 +518,50 @@ class MainWindow(QMainWindow):
             self.openRepo(path)
             self.saveSession()
 
-    def importPatch(self):
+    def importPatch(self, reverse=False):
         if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
             QMessageBox.warning(self, "Import patch", "Please open a repository before importing a patch.")
             return
 
-        path, _ = PersistentFileDialog.getOpenFileName(self, "Import patch", filter="Patch file (*.patch)")
+        title = "Import patch"
+        if reverse:
+            title += " (reverse)"
+
+        path, _ = PersistentFileDialog.getOpenFileName(self, title, filter="Patch file (*.patch);;All files (*)")
         if not path:
             return
 
-        with open(path, "r") as patchFile:
-            patchData = patchFile.read()
+        try:
+            with open(path, "r") as patchFile:
+                patchData = patchFile.read()
+            loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
+        except (IOError,
+                UnicodeDecodeError,  # if passing in a random binary file
+                KeyError,  # 'no patch found'
+                pygit2.GitError) as loadError:
+            excMessageBox(loadError, title, "Can’t load this patch.", parent=self, icon=QMessageBox.Warning)
+            return
+
+        if reverse:
+            try:
+                patchData = reverseUnidiff(loadedDiff.patch)
+                loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
+            except Exception as reverseError:
+                excMessageBox(reverseError, title, "Can’t reverse this patch.", parent=self, icon=QMessageBox.Warning)
+                return
+
+        repo = self.currentRepoWidget().repo
 
         try:
-            repo = self.currentRepoWidget().repo
-            porcelain.applyPatch(repo, patchData, pygit2.GIT_APPLY_LOCATION_WORKDIR)
-        except pygit2.GitError as error:
-            QMessageBox.warning(self, "Import patch", F"Couldn’t apply “{os.path.basename(path)}”:\n\n{error}")
+            porcelain.patchApplies(repo, patchData)
+        except (pygit2.GitError, OSError) as applyCheckError:
+            excMessageBox(applyCheckError, title, "This patch doesn't apply.", parent=self, icon=QMessageBox.Warning)
+            return
+
+        try:
+            porcelain.applyPatch(repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)
+        except pygit2.GitError as applyError:
+            excMessageBox(applyError, title, "An error occurred while applying this patch.", parent=self, icon=QMessageBox.Warning)
 
     # -------------------------------------------------------------------------
     # Tab management

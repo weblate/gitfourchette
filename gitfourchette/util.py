@@ -171,6 +171,7 @@ def excMessageBox(
         qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
 
         if parent is not None:
+            qmb.setWindowModality(Qt.WindowModal)
             qmb.show()
         else:  # without a parent, .show() won't work
             qmb.exec_()

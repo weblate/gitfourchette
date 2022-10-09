@@ -454,12 +454,26 @@ def patchApplies(
         repo: pygit2.Repository,
         patchData: bytes | str,
         location: int = pygit2.GIT_APPLY_LOCATION_WORKDIR
-) -> pygit2.Diff | None:
+) -> pygit2.Diff:
     diff = pygit2.Diff.parse_diff(patchData)
-    if repo.applies(diff, location):
-        return diff
+    if pygit2.__version__ <= "1.9.1":
+        # TODO: Remove this
+        if not repo.applies(diff, location):
+            raise pygit2.GitError("Patch doesn't apply. Upgrade past pygit2 1.9.1 to get more info.")
     else:
-        return None
+        repo.applies(diff, location, raise_error=True)
+
+    return diff
+
+
+def loadPatch(patchDataOrDiff: bytes | str | pygit2.Diff) -> pygit2.Diff:
+    if type(patchDataOrDiff) in [bytes, str]:
+        return pygit2.Diff.parse_diff(patchDataOrDiff)
+    elif type(patchDataOrDiff) is pygit2.Diff:
+        return patchDataOrDiff
+    else:
+        raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
+    return diff
 
 
 def applyPatch(
