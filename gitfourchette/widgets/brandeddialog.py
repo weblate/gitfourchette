@@ -1,4 +1,5 @@
 from gitfourchette.qt import *
+from gitfourchette.util import tweakWidgetFont
 from typing import Callable
 
 
@@ -15,10 +16,7 @@ def makeBrandedDialogLayout(dialog, promptText):
 
     prompt = QLabel(dialog)
     prompt.setText(promptText)
-    font: QFont = prompt.font()
-    font.setPointSize(font.pointSize() * 150 // 100)
-    font.setBold(True)
-    prompt.setFont(font)
+    tweakWidgetFont(prompt, 150, bold=True)
 
     gridLayout.addWidget(iconLabel, 1, 0, 1, 1)
     gridLayout.addItem(horizontalSpacer, 1, 1, 1, 1)

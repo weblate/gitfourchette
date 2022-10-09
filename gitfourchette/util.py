@@ -266,6 +266,14 @@ def isImageFormatSupported(filename: str):
     return ext in _supportedImageFormats
 
 
+def tweakWidgetFont(widget: QWidget, relativeSize: int = 100, bold: bool = False):
+    font: QFont = widget.font()
+    font.setPointSize(font.pointSize() * relativeSize // 100)
+    font.setBold(bold)
+    widget.setFont(font)
+    return font
+
+
 class QSignalBlockerContext:
     """
     Context manager wrapper around QSignalBlocker.

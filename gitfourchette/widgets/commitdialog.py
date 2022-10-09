@@ -1,4 +1,5 @@
 from gitfourchette.qt import *
+from gitfourchette.util import tweakWidgetFont
 from gitfourchette.widgets.ui_commitdialog import Ui_CommitDialog
 from pygit2 import Signature
 
@@ -20,6 +21,9 @@ class CommitDialog(QDialog):
         counterLabel = self.ui.counterLabel
         summaryEditor = self.ui.summaryEditor
         descriptionEditor = self.ui.descriptionEditor
+
+        # Make summary text edit font larger
+        tweakWidgetFont(summaryEditor, 150)
 
         if isAmend:
             prompt = "Amend commit message"
