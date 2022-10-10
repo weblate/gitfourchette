@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'pushdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.15.6
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -27,6 +27,7 @@ class Ui_PushDialog(object):
         PushDialog.setModal(True)
         self.formLayout = QFormLayout(PushDialog)
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
         self.localBranchLabel = QLabel(PushDialog)
         self.localBranchLabel.setObjectName(u"localBranchLabel")
 
