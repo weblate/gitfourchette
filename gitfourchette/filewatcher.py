@@ -3,6 +3,7 @@ import pygit2
 
 from gitfourchette import log
 from gitfourchette import util
+from gitfourchette.benchmark import Benchmark
 from gitfourchette.qt import *
 
 
@@ -19,10 +20,11 @@ def walkWatchableDirs(repo: pygit2.Repository, startDir=""):
         parent = frontier.pop(0)
         yield parent
 
-        for item in os.listdir(parent):
-            fullPath = os.path.join(parent, item)
-            if os.path.isdir(fullPath) and not repo.path_is_ignored(fullPath):
-                frontier.append(fullPath)
+        for item in os.scandir(parent):
+            if item.is_dir():
+                p = item.path
+                if not repo.path_is_ignored(p):
+                    frontier.append(p)
 
 
 class FileWatcher(QObject):
@@ -44,7 +46,8 @@ class FileWatcher(QObject):
         self.repo = repo
 
         self.fsw = QFileSystemWatcher()
-        failed = self.fsw.addPaths(walkWatchableDirs(self.repo))
+        with Benchmark("Collect paths to watch"):
+            failed = self.fsw.addPaths(walkWatchableDirs(self.repo))
         if failed:
             log.warning(TAG, f"{len(failed)} paths failed to be watched")
 
