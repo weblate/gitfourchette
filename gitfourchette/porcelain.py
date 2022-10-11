@@ -18,25 +18,30 @@ def diffWorkdirToIndex(repo: Repository) -> Diff:
     return dirtyDiff
 
 
-def diffIndexToHead(repo: Repository) -> Diff:
+def diffIndexToHead(repo: Repository, fast=False) -> Diff:
     if repo.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
         indexTreeOid = repo.index.write_tree()
         tree: pygit2.Tree = repo[indexTreeOid].peel(pygit2.Tree)
         return tree.diff_to_tree(swap=True)
     else:
         stageDiff: Diff = repo.diff('HEAD', None, cached=True)  # compare HEAD to index
-        stageDiff.find_similar()
+        if not fast:
+            stageDiff.find_similar()
         return stageDiff
 
 
 def hasAnyStagedChanges(repo: Repository) -> bool:
-    status = repo.status()
+    return 0 != len(diffIndexToHead(repo, fast=True))
+    """
+    # This also works, but it's kinda slow...
+    status = repo.status(untracked_files="no")
     mask = (pygit2.GIT_STATUS_INDEX_NEW
             | pygit2.GIT_STATUS_INDEX_MODIFIED
             | pygit2.GIT_STATUS_INDEX_DELETED
             | pygit2.GIT_STATUS_INDEX_RENAMED
             | pygit2.GIT_STATUS_INDEX_TYPECHANGE)
     return any(0 != (flag & mask) for flag in status.values())
+    """
 
 
 def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
