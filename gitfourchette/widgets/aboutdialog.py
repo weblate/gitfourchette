@@ -43,7 +43,7 @@ def showAboutDialog(parent: QWidget):
             Have fun!
         </p>
         <p>
-            <a href="https://ko-fi.com/jorio"><img src=":/kofi.png" height="32" alt="Support me on Ko-fi"></a>
+            <a href="https://ko-fi.com/jorio"><img src="assets:kofi.png" height="32" alt="Support me on Ko-fi"></a>
         </p>
         """
 

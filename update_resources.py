@@ -2,17 +2,15 @@
 import difflib, os, re, subprocess, sys, platform
 
 srcDir = "gitfourchette"
-assetsDir = "assets"
+assetsDir = "gitfourchette/assets"
 
-if platform.system() == 'Darwin':
+
+if 'UIC' in os.environ:
+    UIC = os.environ['UIC']
+elif platform.system() == 'Darwin':
     UIC = 'pyside6-uic'  # "/opt/homebrew/opt/qt5/bin/uic"
-    RCC = 'pyside6-rcc'  # "/opt/homebrew/opt/qt5/bin/rcc"
 else:
     UIC = "uic-qt5"
-    RCC = "rcc-qt5"
-
-if 'UIC' in os.environ: UIC = os.environ['UIC']
-if 'RCC' in os.environ: RCC = os.environ['RCC']
 
 
 def call(cmd, **kwargs) -> subprocess.CompletedProcess:
@@ -71,6 +69,27 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
     writeIfDifferent(svgFileName, svg)
 
 
+def compileUi(uiPath, pyPath):
+    result = call([UIC, "--generator", "python", uiPath])
+    text = result.stdout
+
+    text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^from PySide2.* import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
+    text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
+    for nukePattern in [
+            r"^# -\*- coding:.*$",
+            r"^from PySide2.* import .+$\n",
+            r"^from PySide6.* import \([^\)]+\)$\n",
+            r"^ {4}# (setupUi|retranslateUi)$\n"]:
+        text = re.sub(nukePattern, "", text, flags=re.MULTILINE)
+    text = text.strip() + "\n"
+
+    basename = os.path.splitext(file)[0]
+    writeIfDifferent(pyPath, text,
+                     ["## Created by: Qt User Interface Compiler version"])
+
+
+# Ensure we're running from the correct directory
 for path in srcDir, assetsDir:
     if not os.path.isdir(path):
         print(F"Directory {path} not found; please run this script from the root of the repo")
@@ -101,34 +120,4 @@ for root, dirs, files in os.walk(srcDir):
             continue
 
         if file.endswith(".ui"):
-            result = call([UIC, "--generator", "python", fullpath])
-            text = result.stdout
-
-            text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.MULTILINE)
-            text = re.sub(r"^from PySide2.* import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
-            text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
-            for nukePattern in [
-                    r"^# -\*- coding:.*$",
-                    r"^from PySide2.* import .+$\n",
-                    r"^from PySide6.* import \([^\)]+\)$\n",
-                    r"^ {4}# (setupUi|retranslateUi)$\n"]:
-                text = re.sub(nukePattern, "", text, flags=re.MULTILINE)
-            text = text.strip() + "\n"
-
-            writeIfDifferent(F"{root}/ui_{basename}.py", text,
-                             ["## Created by: Qt User Interface Compiler version"])
-
-for root, dirs, files in os.walk(assetsDir):
-    for file in files:
-        path = os.path.join(root, file)
-        # Set a fixed mtime to make the contents of assets_rc.py deterministic
-        os.utime(path, times=(0, 0))
-
-# Generate assets_rc.py from assets.qrc
-rccResult = call([RCC, "--generator", "python", F"{assetsDir}/assets.qrc"])
-rccText = rccResult.stdout
-rccText = re.sub(r"^(\s*)QtCore\.", r"\1", rccText, flags=re.MULTILINE)
-rccText = re.sub(r"^from PySide2.* import .*$", "from gitfourchette.qt import *", rccText, flags=re.MULTILINE)
-rccText = re.sub(r"^from PySide6.* import .*$", "from gitfourchette.qt import *", rccText, flags=re.MULTILINE)
-writeIfDifferent(F"{srcDir}/assets_rc.py", rccText,
-                 ["# Created by: The Resource Compiler for Qt version"])
+            compileUi(fullpath, F"{root}/ui_{basename}.py")

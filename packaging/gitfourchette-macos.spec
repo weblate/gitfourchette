@@ -7,7 +7,7 @@ block_cipher = None
 a = Analysis(
     ['../gitfourchette/__main__.py'],
     pathex=[],
-    binaries=[],
+    binaries=[('../gitfourchette/assets', 'assets')],
     datas=[],
     hiddenimports=['_cffi_backend'],
     hookspath=[],

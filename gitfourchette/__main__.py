@@ -38,12 +38,12 @@ def main():
 
     # Initialize assets
     with NonCriticalOperation("Initialize assets"):
-        from gitfourchette import assets_rc
-        app.setWindowIcon(QIcon(":/gitfourchette.png"))
+        QDir.addSearchPath("assets", os.path.join(os.path.dirname(__file__), "assets"))
+        app.setWindowIcon(QIcon("assets:gitfourchette.png"))
 
     # Apply application-wide stylesheet
     with NonCriticalOperation("Apply application-wide stylesheet"):
-        styleSheetFile = QFile(":/style.qss")
+        styleSheetFile = QFile("assets:style.qss")
         if styleSheetFile.open(QFile.ReadOnly):
             styleSheet = styleSheetFile.readAll().data().decode("utf-8")
             app.setStyleSheet(styleSheet)

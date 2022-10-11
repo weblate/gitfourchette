@@ -15,9 +15,9 @@ import pygit2
 # If SVG icons don't show up, you may need to install the 'qt6-svg' package.
 STATUS_ICONS = {}
 for status in "ACDMRTUX":
-    STATUS_ICONS[status] = QIcon(F":/status_{status.lower()}.svg")
+    STATUS_ICONS[status] = QIcon(F"assets:status_{status.lower()}.svg")
 
-FALLBACK_STATUS_ICON = QIcon(":/status_fallback.svg")
+FALLBACK_STATUS_ICON = QIcon("assets:status_fallback.svg")
 
 
 class FileListModel(QAbstractListModel):
