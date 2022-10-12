@@ -29,15 +29,67 @@ class PatchPurpose(enum.IntEnum):
 
 
 class DiffGutter(QWidget):
+    diffView: 'DiffView'
+
     def __init__(self, parent):
         super().__init__(parent)
         self.diffView = parent
+        self.setCursor(Qt.UpArrowCursor)
 
     def sizeHint(self) -> QSize:
         return QSize(self.diffView.gutterWidth(), 0)
 
     def paintEvent(self, event: QPaintEvent):
         self.diffView.gutterPaintEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Doctor pos to keep Y only so it looks like we clicked the leftmost text column
+            pos = event.pos()
+            pos.setX(0)
+
+            # Get position of click in document
+            clickedPosition = self.diffView.cursorForPosition(pos).position()
+
+            hsb: QScrollBar = self.diffView.horizontalScrollBar()
+            if hsb:
+                hsbBackup = hsb.sliderPosition()
+
+            cursor: QTextCursor = self.diffView.textCursor()
+            cursor.setPosition(clickedPosition)
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            self.diffView.setTextCursor(cursor)
+
+            if hsb:
+                hsb.setSliderPosition(hsbBackup)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            # Doctor pos to keep Y only so it looks like we clicked the leftmost text column
+            pos = event.pos()
+            pos.setX(0)
+
+
+            # Get position of click in document
+            clickedPosition = self.diffView.cursorForPosition(pos).position()
+
+            hsb: QScrollBar = self.diffView.horizontalScrollBar()
+            if hsb:
+                hsbBackup = hsb.sliderPosition()
+
+            cursor: QTextCursor = self.diffView.textCursor()
+            anchorPosition = cursor.anchor()
+            #TODO: Fix this for moving up from anchor...
+            print(anchorPosition, clickedPosition)
+            cursor.setPosition(min(clickedPosition, anchorPosition))
+            cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
+            cursor.setPosition(max(clickedPosition, anchorPosition), QTextCursor.KeepAnchor)
+            #cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+
+            self.diffView.setTextCursor(cursor)
+
+            if hsb:
+                hsb.setSliderPosition(hsbBackup)
 
 
 class DiffView(QPlainTextEdit):
