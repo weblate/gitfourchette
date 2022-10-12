@@ -449,13 +449,18 @@ class DiffView(QPlainTextEdit):
                 break
 
             ld = self.lineData[blockNumber]
-            if ld.diffLine and block.isVisible() and bottom >= er.top():
-                old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else "·"
-                new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
+            if block.isVisible() and bottom >= er.top():
+                if ld.diffLine:
+                    # Draw line numbers
+                    old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else "·"
+                    new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
 
-                colW = (gr.width() - 4) // 2
-                painter.drawText(0, top, colW, FH, Qt.AlignRight, old)
-                painter.drawText(colW, top, colW, FH, Qt.AlignRight, new)
+                    colW = (gr.width() - 4) // 2
+                    painter.drawText(0, top, colW, FH, Qt.AlignRight, old)
+                    painter.drawText(colW, top, colW, FH, Qt.AlignRight, new)
+                else:
+                    # Draw hunk separator horizontal line
+                    painter.fillRect(0, round((top+bottom)/2), gr.width(), 1, gutterSepColor)
 
             block = block.next()
             top = bottom
