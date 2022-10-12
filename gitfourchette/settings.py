@@ -119,6 +119,7 @@ class Prefs(BasePrefs):
     filename = "prefs.json"
 
     qtStyle                     : str           = ""
+    fileWatcher                 : bool          = False
     shortHashChars              : int           = 7
     shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS

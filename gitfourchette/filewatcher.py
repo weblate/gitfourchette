@@ -1,7 +1,9 @@
+import contextlib
 import os
 import pygit2
 
 from gitfourchette import log
+from gitfourchette import settings
 from gitfourchette import util
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.qt import *
@@ -44,6 +46,10 @@ class FileWatcher(QObject):
         super().__init__(None)
 
         self.repo = repo
+
+        if not settings.prefs.fileWatcher:
+            self.fsw = None
+            return
 
         self.fsw = QFileSystemWatcher()
         with Benchmark("Collect paths to watch"):
@@ -131,6 +137,9 @@ class FileWatcher(QObject):
         you're done modifying the index, because the QFileSystemWatcher is
         unlikely to detect a change to the index file immediately.
         """
+
+        if not self.fsw:
+            return contextlib.nullcontext()
 
         fw = self
 
