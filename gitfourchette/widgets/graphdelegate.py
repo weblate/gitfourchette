@@ -63,7 +63,7 @@ class GraphDelegate(QStyledItemDelegate):
 
         self.smallFont = QFont()
         self.smallFont.setWeight(QFont.Light)
-        self.smallFontMetrics = QFontMetrics(self.smallFont)
+        self.smallFontMetrics = QFontMetricsF(self.smallFont)
 
     @property
     def state(self) -> RepoState:

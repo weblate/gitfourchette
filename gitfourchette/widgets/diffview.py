@@ -91,7 +91,7 @@ class DiffView(QPlainTextEdit):
         tabWidth = settings.prefs.diff_tabSpaces
 
         # now reset defaults that are lost when changing documents
-        self.setTabStopDistance(QFontMetrics(dm.document.defaultFont()).horizontalAdvance(' ' * tabWidth))
+        self.setTabStopDistance(QFontMetricsF(dm.document.defaultFont()).horizontalAdvance(' ' * tabWidth))
         self.refreshWordWrap()
         self.setCursorWidth(2)
 
