@@ -462,7 +462,7 @@ class SidebarDelegate(QStyledItemDelegate):
             r: QRect = opt2.rect
 
             # These metrics are a good compromise for Breeze, macOS, and Fusion.
-            r.adjust(-view.indentation() * 0.6, 0, 0, 0)
+            r.adjust(-view.indentation() * 6//10, 0, 0, 0)  # args must be integers for pyqt5!
             r.setWidth(6)
 
             # See QTreeView::drawBranches() in qtreeview.cpp for other interesting states

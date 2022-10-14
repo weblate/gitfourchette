@@ -174,7 +174,7 @@ class GraphDelegate(QStyledItemDelegate):
                 painter.setPen(calloutColor)
                 rect.setLeft(rect.right())
                 label = F"[{calloutText}] "
-                rect.setWidth(self.smallFontMetrics.horizontalAdvance(label))
+                rect.setWidth(int(self.smallFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
                 painter.drawText(rect, Qt.AlignVCenter, label)
                 painter.restore()
 
