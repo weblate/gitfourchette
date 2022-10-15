@@ -15,7 +15,7 @@
             "type": "python",
             "request": "launch",
             "module": "gitfourchette",
-            "env": {"QT_PREFERRED_BINDING": "pyside6"}
+            "env": {"QT_API": "pyside6"}
         },
         {
             "name": "GitFourchette Test Mode",

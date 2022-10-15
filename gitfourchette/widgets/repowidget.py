@@ -992,7 +992,7 @@ class RepoWidget(QWidget):
 
         suffix = QApplication.applicationDisplayName()
         if settings.prefs.debug_showPID:
-            suffix += F" (PID {os.getpid()})"
+            suffix += F" (PID {os.getpid()}, {qtBindingName})"
 
         self.window().setWindowTitle(F"{shortname} [{inBrackets}] — {suffix}")
 

@@ -1,16 +1,18 @@
 import os
 
-if not os.environ.get("PYTEST_QT_API"):
+# Keep qtpy binding (used by main app) in sync with pytest
+if os.environ.get("PYTEST_QT_API") and os.environ.get("QT_API"):
+    # PYTEST_QT_API takes precedence over QT_API
+    os.environ["QT_API"] = os.environ["PYTEST_QT_API"]
+elif os.environ.get("QT_API"):
+    os.environ["PYTEST_QT_API"] = os.environ["QT_API"]
+else:
     from pytestqt.qt_compat import qt_api
     os.environ["PYTEST_QT_API"] = qt_api.pytest_qt_api
+    os.environ["QT_API"] = qt_api.pytest_qt_api
+
+# Force qtpy to honor QT_API
+os.environ["FORCE_QT_API"] = "1"
 
 from gitfourchette.qt import *
-
-if qtBindingName == "pyqt5":
-    from PyQt5.QtTest import QTest
-elif qtBindingName == "pyside2":
-    from PySide2.QtTest import QTest
-elif qtBindingName == "pyside6":
-    from PySide6.QtTest import QTest
-else:
-    raise ImportError("Unsupported Qt binding")
+from qtpy.QtTest import QTest

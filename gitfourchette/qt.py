@@ -1,33 +1,15 @@
-def getPreferredQtBindingName(fallback="pyside2"):
-    import os
-    for variable in ["QT_PREFERRED_BINDING", "PYTEST_QT_API"]:
-        binding = os.environ.get(variable)
-        if binding:
-            return binding.lower()
-    return fallback
+# GitFourchette's preferred Qt binding is PySide6.
+# Compatibility with additional Qt bindings is provided through qtpy.
+# You can force a specific binding with the QT_API environment variable.
+# Values recognized by QT_API:
+#       pyside6     (preferred)
+#       pyside2
+#       pyqt6
+#       pyqt5
+# If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 
-
-qtBindingName = getPreferredQtBindingName()
-
-if qtBindingName == "pyqt5":
-    from PyQt5.QtWidgets import *
-    from PyQt5.QtGui import *
-    from PyQt5.QtCore import *
-    from PyQt5.QtCore import PYQT_VERSION_STR as qtBindingVersion
-    from PyQt5.QtCore import pyqtSignal as Signal
-    from PyQt5.QtCore import pyqtSlot as Slot
-elif qtBindingName == "pyside2":
-    from PySide2.QtWidgets import *
-    from PySide2.QtGui import *
-    from PySide2.QtCore import *
-    from PySide2 import __version__ as qtBindingVersion
-elif qtBindingName == "pyside6":
-    from PySide6.QtWidgets import *
-    from PySide6.QtGui import *
-    from PySide6.QtCore import *
-    from PySide6 import __version__ as qtBindingVersion
-elif qtBindingName == "pyqt6":
-    # PyQt6 requires fully qualified enums.
-    raise ImportError("PyQt6 isn't supported yet. You can use PySide6 instead.")
-else:
-    raise ImportError(F"Unknown Qt binding {qtBindingName}.")
+from qtpy.QtCore import *
+from qtpy.QtWidgets import *
+from qtpy.QtGui import *
+from qtpy import API_NAME as qtBindingName
+from qtpy.QtCore import __version__ as qtBindingVersion
