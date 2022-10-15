@@ -11,6 +11,7 @@ from gitfourchette.widgets.clonedialog import CloneDialog
 from gitfourchette.widgets.customtabwidget import CustomTabWidget
 from gitfourchette.widgets.prefsdialog import PrefsDialog
 from gitfourchette.widgets.repowidget import RepoWidget
+from gitfourchette.widgets.welcomewidget import WelcomeWidget
 from typing import Literal
 import gc
 import os
@@ -32,6 +33,8 @@ class Session:
 
 
 class MainWindow(QMainWindow):
+    welcomeStack: QStackedWidget
+    welcomeWidget: WelcomeWidget
     tabs: CustomTabWidget
     recentMenu: QMenu
     repoMenu: QMenu
@@ -51,7 +54,14 @@ class MainWindow(QMainWindow):
         self.tabs.stacked.currentChanged.connect(self.onTabChange)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
-        self.setCentralWidget(self.tabs)
+
+        self.welcomeWidget = WelcomeWidget(self)
+
+        self.welcomeStack = QStackedWidget()
+        self.welcomeStack.addWidget(self.welcomeWidget)
+        self.welcomeStack.addWidget(self.tabs)
+        self.welcomeStack.setCurrentWidget(self.welcomeWidget)
+        self.setCentralWidget(self.welcomeStack)
 
         menuBar = self.makeMenu()
         self.setMenuBar(menuBar)
@@ -344,6 +354,9 @@ class MainWindow(QMainWindow):
         if i < 0:
             self.setWindowTitle(QApplication.applicationDisplayName())
             return
+
+        # Get out of welcome widget
+        self.welcomeStack.setCurrentWidget(self.tabs)
 
         self.repoMenu.setEnabled(False)
         w = self.currentRepoWidget()
@@ -650,6 +663,11 @@ class MainWindow(QMainWindow):
     def closeTab(self, index: int, singleTab: bool = True):
         self.tabs.widget(index).cleanup()
         self.tabs.removeTab(index, destroy=True)
+
+        # If that was the last tab, back to welcome widget
+        if self.tabs.count() == 0:
+            self.welcomeStack.setCurrentWidget(self.welcomeWidget)
+
         if singleTab:
             self.saveSession()
             gc.collect()
