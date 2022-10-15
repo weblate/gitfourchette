@@ -301,15 +301,20 @@ class PrefsDialog(QDialog):
     def qtStyleControl(self, prefKey, prefValue):
         control = QComboBox(self)
 
-        control.addItem("System default")
+        control.addItem("System default", userData="")
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)
         for availableStyle in QStyleFactory.keys():
-            control.addItem(availableStyle)
+            control.addItem(availableStyle, userData=availableStyle)
             if prefValue == availableStyle:
                 control.setCurrentIndex(control.count() - 1)
-        control.textActivated.connect(lambda v, k=prefKey: self.assign(k, v))
+
+        def onPickStyle(index):
+            styleName = control.itemData(index, Qt.ItemDataRole.UserRole)
+            self.assign(prefKey, styleName)
+
+        control.activated.connect(onPickStyle)
         return control
 
     def dateFormatControl(self, prefKey, prefValue, presets):

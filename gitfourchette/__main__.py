@@ -41,6 +41,12 @@ def main():
         QDir.addSearchPath("assets", os.path.join(os.path.dirname(__file__), "assets"))
         app.setWindowIcon(QIcon("assets:gitfourchette.png"))
 
+    from gitfourchette import settings
+
+    # Get system default style name before applying further styling
+    with NonCriticalOperation("Get system default style name"):
+        app.PLATFORM_DEFAULT_STYLE_NAME = app.style().objectName()
+
     # Apply application-wide stylesheet
     with NonCriticalOperation("Apply application-wide stylesheet"):
         styleSheetFile = QFile("assets:style.qss")
@@ -50,7 +56,6 @@ def main():
             styleSheetFile.close()
 
     # Initialize settings
-    from gitfourchette import settings
     if commandLine.isSet("test-mode"):
         settings.TEST_MODE = True
     else:
