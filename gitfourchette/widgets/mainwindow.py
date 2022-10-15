@@ -647,10 +647,12 @@ class MainWindow(QMainWindow):
     def closeCurrentTab(self):
         self.closeTab(self.tabs.currentIndex())
 
-    def closeTab(self, index: int, collect: bool = True):
+    def closeTab(self, index: int, singleTab: bool = True):
         self.tabs.widget(index).cleanup()
         self.tabs.removeTab(index, destroy=True)
-        gc.collect()
+        if singleTab:
+            self.saveSession()
+            gc.collect()
 
     def closeOtherTabs(self, index: int):
         # First, set this tab as active so an active tab that gets closed doesn't trigger other tabs to load.
@@ -662,6 +664,7 @@ class MainWindow(QMainWindow):
             if i != index:
                 self.closeTab(i, False)
 
+        self.saveSession()
         gc.collect()
 
     def refreshTabText(self, rw):

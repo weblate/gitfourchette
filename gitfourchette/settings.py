@@ -68,6 +68,8 @@ class BasePrefs:
                 fp=jsonFile,
                 indent='\t')
 
+            log.info("prefs", f"Wrote {prefsPath}")
+
         return prefsPath
 
     def load(self):
