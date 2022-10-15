@@ -72,7 +72,7 @@ class ComboBoxWithPreview(QComboBox):
             rect.setLeft(rect.left() + pw.width())
 
             painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
-            painter.drawText(rect, Qt.AlignVCenter, self.previewCallback(index.data(Qt.UserRole)))
+            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, self.previewCallback(index.data(Qt.ItemDataRole.UserRole)))
             painter.restore()
 
     def __init__(self, parent, previewCallback):
@@ -93,16 +93,16 @@ class DatePresetDelegate(QStyledItemDelegate):
         super().paint(painter, option, index)
 
         painter.save()
-        name, format, now = index.data(Qt.UserRole)
-        if option.state & QStyle.State_Selected:
+        name, format, now = index.data(Qt.ItemDataRole.UserRole)
+        if option.state & QStyle.StateFlag.State_Selected:
             painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.HighlightedText))
-        painter.drawText(option.rect, Qt.AlignVCenter, F"{name}")
+        painter.drawText(option.rect, Qt.AlignmentFlag.AlignVCenter, F"{name}")
         painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
 
         rect = QRect(option.rect)
         rect.setLeft(rect.left() + painter.fontMetrics().horizontalAdvance("M"*8))
 
-        painter.drawText(rect, Qt.AlignVCenter, F"{now.strftime(format)}")
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, F"{now.strftime(format)}")
         painter.restore()
 
 
@@ -114,7 +114,7 @@ class PrefsDialog(QDialog):
 
         self.setWindowTitle(F"{QApplication.applicationDisplayName()} Preferences")
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
@@ -207,7 +207,7 @@ class PrefsDialog(QDialog):
                 font = QFont()
                 font.fromString(fontString)
             else:
-                font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+                font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
             return font
 
         def resetFont():
@@ -295,7 +295,7 @@ class PrefsDialog(QDialog):
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
 
-        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.UserRole)))
+        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.ItemDataRole.UserRole)))
         return control
 
     def qtStyleControl(self, prefKey, prefValue):

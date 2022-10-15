@@ -101,9 +101,9 @@ class ResetHeadDialog(QDialog):
         self.helpLabel = QLabel()
         self.helpLabel.setWordWrap(True)
         self.helpLabel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.helpLabel.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.helpLabel.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 

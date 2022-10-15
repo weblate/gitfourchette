@@ -196,7 +196,7 @@ class RepoWidget(QWidget):
         self.amendButton.clicked.connect(self.actionFlows.amendFlow)
         commitButtonsContainer.layout().addWidget(self.commitButton)
         commitButtonsContainer.layout().addWidget(self.amendButton)
-        self.stageSplitter = QSplitter(Qt.Vertical)
+        self.stageSplitter = QSplitter(Qt.Orientation.Vertical)
         self.stageSplitter.addWidget(dirtyContainer)
         self.stageSplitter.addWidget(stageContainer)
 
@@ -208,17 +208,17 @@ class RepoWidget(QWidget):
         self.diffStack.addWidget(self.richDiffView)
         self.diffStack.setCurrentWidget(self.diffView)
 
-        bottomSplitter = QSplitter(Qt.Horizontal)
+        bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
         bottomSplitter.addWidget(self.filesStack)
         bottomSplitter.addWidget(self.diffStack)
         bottomSplitter.setSizes([100, 300])
 
-        mainSplitter = QSplitter(Qt.Vertical)
+        mainSplitter = QSplitter(Qt.Orientation.Vertical)
         mainSplitter.addWidget(self.graphView)
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
 
-        sideSplitter = QSplitter(Qt.Horizontal)
+        sideSplitter = QSplitter(Qt.Orientation.Horizontal)
         sideSplitter.addWidget(self.sidebar)
         sideSplitter.addWidget(mainSplitter)
         sideSplitter.setSizes([100, 500])
@@ -242,8 +242,8 @@ class RepoWidget(QWidget):
 
         # remove frames for a cleaner look
         #for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView, self.sidebar:
-        #    w.setFrameStyle(QFrame.NoFrame)
-        self.sidebar.setFrameStyle(QFrame.NoFrame)
+        #    w.setFrameStyle(QFrame.Shape.NoFrame)
+        self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
     # -------------------------------------------------------------------------
 
@@ -442,7 +442,7 @@ class RepoWidget(QWidget):
                         kpIndex = dirtyRowCount-1
             
             if kpWidget:
-                #kpWidget.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key_Down if down else Qt.Key_Up, Qt.NoModifier))
+                #kpWidget.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key.Key_Down if down else Qt.Key.Key_Up, Qt.KeyboardModifier.NoModifier))
                 kpWidget.clearSelectionSilently()
                 kpWidget.selectRow(kpIndex)
             else:
@@ -593,7 +593,7 @@ class RepoWidget(QWidget):
             self.richDiffView.displayDiffModelError(DiffModelError(
                 "Patch is invalid.",
                 "The patched file may have changed on disk since we last read it. Try refreshing the window.",
-                icon=QStyle.SP_MessageBoxWarning))
+                icon=QStyle.StandardPixmap.SP_MessageBoxWarning))
             return
 
         repo = self.state.repo
@@ -609,7 +609,7 @@ class RepoWidget(QWidget):
                 return DiffImagePair(self.repo, patch.delta, stagingState)
             except BaseException as exc:
                 summary, details = excStrings(exc)
-                return DiffModelError(summary, icon=QStyle.SP_MessageBoxCritical, preformatted=details)
+                return DiffModelError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
         def then(result: DiffModel | DiffModelError | DiffImagePair):
             if stagingState == StagingState.COMMITTED:
@@ -636,7 +636,7 @@ class RepoWidget(QWidget):
                 self.diffStack.setCurrentWidget(self.richDiffView)
                 self.richDiffView.displayDiffModelError(DiffModelError(
                     F"Can’t display diff of type {html.escape(str(type(result)))}",
-                    icon=QStyle.SP_MessageBoxCritical))
+                    icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
         self.saveFilePositions()
         self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
@@ -1037,5 +1037,5 @@ class RepoWidget(QWidget):
             F"This will free up {humanSize} on disk.\n"
             F"This cannot be undone!")
 
-        if result == QMessageBox.Yes:
+        if result == QMessageBox.StandardButton.Yes:
             trash.clear()

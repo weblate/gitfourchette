@@ -133,7 +133,7 @@ def excMessageBox(
         parent=None,
         printExc=True,
         showExcSummary=True,
-        icon=QMessageBox.Critical
+        icon=QMessageBox.Icon.Critical
 ):
     try:
         if printExc:
@@ -163,15 +163,15 @@ def excMessageBox(
 
         detailsEdit: QTextEdit = qmb.findChild(QTextEdit)
         if detailsEdit:
-            font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+            font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
             font.setPointSize(min(font.pointSize(), 8))
             detailsEdit.setFont(font)
             detailsEdit.setMinimumWidth(600)
 
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
 
         if parent is not None:
-            qmb.setWindowModality(Qt.WindowModal)
+            qmb.setWindowModality(Qt.WindowModality.WindowModal)
             qmb.show()
         else:  # without a parent, .show() won't work
             qmb.exec_()
@@ -348,7 +348,7 @@ class PersistentFileDialog:
         return path, selectedFilter
 
     @staticmethod
-    def getExistingDirectory(parent, caption: str, options=QFileDialog.ShowDirsOnly):
+    def getExistingDirectory(parent, caption: str, options=QFileDialog.Option.ShowDirsOnly):
         key = caption
         initialDir = PersistentFileDialog.getPath(key)
         path = QFileDialog.getExistingDirectory(parent, caption, initialDir, options)

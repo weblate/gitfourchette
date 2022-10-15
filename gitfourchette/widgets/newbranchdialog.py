@@ -34,7 +34,7 @@ class NewBranchDialog(QDialog):
 
     @property
     def acceptButton(self):
-        return self.ui.buttonBox.button(QDialogButtonBox.Ok)
+        return self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
     def onBranchNameChanged(self):
         newBranchName = self.ui.nameEdit.text()

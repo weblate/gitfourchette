@@ -44,7 +44,7 @@ def main():
     # Apply application-wide stylesheet
     with NonCriticalOperation("Apply application-wide stylesheet"):
         styleSheetFile = QFile("assets:style.qss")
-        if styleSheetFile.open(QFile.ReadOnly):
+        if styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
             styleSheet = styleSheetFile.readAll().data().decode("utf-8")
             app.setStyleSheet(styleSheet)
             styleSheetFile.close()

@@ -16,7 +16,7 @@ class RichDiffView(QTextBrowser):
         document = QTextDocument()
 
         pixmap = QApplication.style().standardIcon(dme.icon).pixmap(48, 48)
-        document.addResource(QTextDocument.ImageResource, QUrl("icon"), pixmap)
+        document.addResource(QTextDocument.ResourceType.ImageResource, QUrl("icon"), pixmap)
 
         document.setHtml(
             "<table width='100%'>"
@@ -35,7 +35,7 @@ class RichDiffView(QTextBrowser):
 
         imageB.setDevicePixelRatio(self.devicePixelRatio())
 
-        document.addResource(QTextDocument.ImageResource, QUrl("image"), imageB)
+        document.addResource(QTextDocument.ResourceType.ImageResource, QUrl("image"), imageB)
         
         humanSizeA = QLocale.system().formattedDataSize(delta.old_file.size)
         humanSizeB = QLocale.system().formattedDataSize(delta.new_file.size)

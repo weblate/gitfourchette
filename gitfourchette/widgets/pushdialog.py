@@ -128,7 +128,7 @@ class PushDialog(QDialog):
                     if br == self.currentLocalBranch.upstream:
                         caption = F"{identifier} [tracked]"
                         self.trackedBranchIndex = comboBox.count()
-                        icon = stockIcon(QStyle.SP_DirHomeIcon)
+                        icon = stockIcon(QStyle.StandardPixmap.SP_DirHomeIcon)
                         font = QFont()
                         font.setBold(True)
                     else:
@@ -140,12 +140,12 @@ class PushDialog(QDialog):
                     comboBox.addItem(icon, caption, payload)
 
                     if font:
-                        comboBox.setItemData(comboBox.count()-1, font, Qt.FontRole)
-                    comboBox.setItemData(comboBox.count()-1, self.repo.remotes[remoteName].url, Qt.ToolTipRole)
+                        comboBox.setItemData(comboBox.count()-1, font, Qt.ItemDataRole.FontRole)
+                    comboBox.setItemData(comboBox.count()-1, self.repo.remotes[remoteName].url, Qt.ItemDataRole.ToolTipRole)
 
                 if firstRemote:
                     self.fallbackAutoNewIndex = comboBox.count()
-                comboBox.addItem(stockIcon(QStyle.SP_FileDialogNewFolder), F"New remote branch: {remoteName}/...", (ERemoteItem.NewRef, remoteName))
+                comboBox.addItem(stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder), F"New remote branch: {remoteName}/...", (ERemoteItem.NewRef, remoteName))
 
                 firstRemote = False
 
@@ -160,7 +160,7 @@ class PushDialog(QDialog):
         self.ui = Ui_PushDialog()
         self.ui.setupUi(self)
 
-        self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.Ok)
+        self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.cloneButton.setText("&Push")
         self.cloneButton.setIcon(stockIcon("vcs-push"))
         self.cloneButton.clicked.connect(self.onPushClicked)
@@ -183,7 +183,7 @@ class PushDialog(QDialog):
         convertToBrandedDialog(self)
 
         #self.setMaximumHeight(self.height())
-        self.setWindowModality(Qt.WindowModal)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
     def enableInputs(self, on: bool):
         for w in [self.ui.remoteBranchEdit, self.ui.localBranchEdit, self.ui.customRemoteBranchNameEdit, self.ui.forcePushCheckBox]:

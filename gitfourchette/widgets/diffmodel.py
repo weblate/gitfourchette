@@ -27,7 +27,7 @@ class DiffModelError(BaseException):
             self,
             message: str,
             details: str = "",
-            icon=QStyle.SP_MessageBoxInformation,
+            icon=QStyle.StandardPixmap.SP_MessageBoxInformation,
             preformatted: str = ""
     ):
         super().__init__(message)
@@ -90,12 +90,12 @@ class DiffStyle:
         self.arobaseCF.setForeground(QColor(0, 80, 240))
 
         self.warningCF1 = QTextCharFormat()
-        self.warningCF1.setFontWeight(QFont.Bold)
+        self.warningCF1.setFontWeight(QFont.Weight.Bold)
         self.warningCF1.setForeground(QColor(200, 30, 0))
 
 
 def createDocument():
-    monoFont = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+    monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
     if settings.prefs.diff_font:
         monoFont.fromString(settings.prefs.diff_font)
 
@@ -147,7 +147,7 @@ class DiffModel:
                     raise DiffModelError(
                         F"This image is too large to be previewed ({humanSize}).",
                         F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
-                        QStyle.SP_MessageBoxWarning)
+                        QStyle.StandardPixmap.SP_MessageBoxWarning)
                 else:
                     raise ShouldDisplayPatchAsImageDiff()
             else:
@@ -161,7 +161,7 @@ class DiffModel:
             raise DiffModelError(
                 F"This patch is too large to be previewed ({humanSize}).",
                 F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
-                QStyle.SP_MessageBoxWarning)
+                QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:
             raise noChange(patch.delta)

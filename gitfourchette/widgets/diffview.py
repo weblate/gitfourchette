@@ -34,7 +34,7 @@ class DiffGutter(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.diffView = parent
-        self.setCursor(Qt.UpArrowCursor)
+        self.setCursor(Qt.CursorShape.UpArrowCursor)
 
     def sizeHint(self) -> QSize:
         return QSize(self.diffView.gutterWidth(), 0)
@@ -68,7 +68,7 @@ class DiffView(QPlainTextEdit):
         super().__init__(parent)
 
         self.setReadOnly(True)
-        self.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.TextSelectableByKeyboard)
 
         # First-time init so callbacks don't crash looking for missing attributes
         self.lineData = []
@@ -120,9 +120,9 @@ class DiffView(QPlainTextEdit):
 
     def refreshWordWrap(self):
         if settings.prefs.diff_wordWrap:
-            self.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+            self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
         else:
-            self.setWordWrapMode(QTextOption.NoWrap)
+            self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         # Get position of click in document
@@ -167,7 +167,7 @@ class DiffView(QPlainTextEdit):
             if hasSelection:
                 actions = [
                     ActionDef("Stage Lines", self.stageSelection),
-                    ActionDef("Discard Lines", self.discardSelection, QStyle.SP_TrashIcon),
+                    ActionDef("Discard Lines", self.discardSelection, QStyle.StandardPixmap.SP_TrashIcon),
                     ActionDef("Export Lines as Patch...", self.exportSelection),
                 ]
             else:
@@ -284,18 +284,18 @@ class DiffView(QPlainTextEdit):
         verb: str = purpose.name
 
         qmb = QMessageBox(
-            QMessageBox.Information,
+            QMessageBox.Icon.Information,
             "Selection empty for partial patch",
             f"You haven’t selected any red/green lines to {verb.lower()}.",
-            QMessageBox.Ok | QMessageBox.Apply,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Apply,
             parent=self)
 
-        applyButton = qmb.button(QMessageBox.Apply)
+        applyButton = qmb.button(QMessageBox.StandardButton.Apply)
         applyButton.setText(f"{verb.title()} entire file")
         applyButton.clicked.connect(lambda: self.applyEntirePatch(purpose))
 
-        qmb.setWindowModality(Qt.WindowModal)
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setWindowModality(Qt.WindowModality.WindowModal)
+        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
 
     def applyPartialPatch(self, patchData: bytes, purpose: PatchPurpose):
@@ -366,18 +366,18 @@ class DiffView(QPlainTextEdit):
 
     def discardSelection(self):
         qmb = QMessageBox(
-            QMessageBox.Warning,
+            QMessageBox.Icon.Warning,
             "Really discard lines?",
             "Really discard the selected lines?\nThis cannot be undone!",
-            QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
             parent=self)
 
-        discardButton = qmb.button(QMessageBox.Discard)
+        discardButton = qmb.button(QMessageBox.StandardButton.Discard)
         discardButton.setText("Discard lines")
         discardButton.clicked.connect(lambda: self.applySelection(PatchPurpose.DISCARD))
 
-        qmb.setWindowModality(Qt.WindowModal)
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setWindowModality(Qt.WindowModality.WindowModal)
+        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
 
     def exportSelection(self, saveInto=""):
@@ -396,18 +396,18 @@ class DiffView(QPlainTextEdit):
 
     def discardHunk(self, hunkID: int):
         qmb = QMessageBox(
-            QMessageBox.Warning,
+            QMessageBox.Icon.Warning,
             "Really discard hunk?",
             "Really discard this hunk?\nThis cannot be undone!",
-            QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
             parent=self)
 
-        discardButton = qmb.button(QMessageBox.Discard)
+        discardButton = qmb.button(QMessageBox.StandardButton.Discard)
         discardButton.setText("Discard hunk")
         discardButton.clicked.connect(lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
 
-        qmb.setWindowModality(Qt.WindowModal)
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setWindowModality(Qt.WindowModality.WindowModal)
+        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
 
     def exportHunk(self, hunkID: int, saveInto=""):
@@ -445,10 +445,10 @@ class DiffView(QPlainTextEdit):
         gr = self.gutter.rect()
 
         # Background
-        painter.fillRect(er, palette.color(QPalette.AlternateBase))
+        painter.fillRect(er, palette.color(QPalette.ColorRole.AlternateBase))
 
         # Draw separator
-        gutterSepColor = palette.color(QPalette.PlaceholderText)
+        gutterSepColor = palette.color(QPalette.ColorRole.PlaceholderText)
         gutterSepColor.setAlpha(80)
         painter.fillRect(gr.x() + gr.width() - 1, er.y(), 1, er.height(), gutterSepColor)
 
@@ -457,7 +457,7 @@ class DiffView(QPlainTextEdit):
         top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
         bottom = top + round(self.blockBoundingRect(block).height())
 
-        painter.setPen(palette.color(QPalette.PlaceholderText))
+        painter.setPen(palette.color(QPalette.ColorRole.PlaceholderText))
         while block.isValid() and top <= er.bottom():
             if blockNumber >= len(self.lineData):
                 break
@@ -470,8 +470,8 @@ class DiffView(QPlainTextEdit):
                     new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
 
                     colW = (gr.width() - 4) // 2
-                    painter.drawText(0, top, colW, FH, Qt.AlignRight, old)
-                    painter.drawText(colW, top, colW, FH, Qt.AlignRight, new)
+                    painter.drawText(0, top, colW, FH, Qt.AlignmentFlag.AlignRight, old)
+                    painter.drawText(colW, top, colW, FH, Qt.AlignmentFlag.AlignRight, new)
                 else:
                     # Draw hunk separator horizontal line
                     painter.fillRect(0, round((top+bottom)/2), gr.width(), 1, gutterSepColor)
@@ -524,7 +524,7 @@ class DiffView(QPlainTextEdit):
 
         cursor: QTextCursor = self.textCursor()
         cursor.setPosition(clickedPosition)
-        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
 
         self.replaceCursor(cursor)
 

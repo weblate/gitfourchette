@@ -71,11 +71,11 @@ class FileListModel(QAbstractListModel):
     def getDeltaAt(self, index: QModelIndex) -> pygit2.DiffDelta:
         return self.entries[index.row()].delta
 
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
-        if role == Qt.UserRole:
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
+        if role == Qt.ItemDataRole.UserRole:
             return self.getPatchAt(index)
 
-        elif role == Qt.DisplayRole:
+        elif role == Qt.ItemDataRole.DisplayRole:
             delta = self.getDeltaAt(index)
             if not delta:
                 return "<NO DELTA>"
@@ -83,7 +83,7 @@ class FileListModel(QAbstractListModel):
             path: str = self.getDeltaAt(index).new_file.path
             return abbreviatePath(path, settings.prefs.pathDisplayStyle)
 
-        elif role == Qt.DecorationRole:
+        elif role == Qt.ItemDataRole.DecorationRole:
             delta = self.getDeltaAt(index)
             if not delta:
                 return FALLBACK_STATUS_ICON
@@ -92,7 +92,7 @@ class FileListModel(QAbstractListModel):
             else:
                 return STATUS_ICONS.get(delta.status_char(), FALLBACK_STATUS_ICON)
 
-        elif role == Qt.ToolTipRole:
+        elif role == Qt.ItemDataRole.ToolTipRole:
             delta = self.getDeltaAt(index)
 
             if not delta:
@@ -114,7 +114,7 @@ class FileListModel(QAbstractListModel):
                     F"<br><b>operation:</b> {delta.status_char()}{opSuffix}"
                 )
 
-        elif role == Qt.SizeHintRole:
+        elif role == Qt.ItemDataRole.SizeHintRole:
             parentWidget: QWidget = self.parent()
             return QSize(-1, parentWidget.fontMetrics().height())
 
@@ -135,10 +135,10 @@ class FileList(QListView):
         self.setModel(FileListModel(self))
         self.stagingState = stagingState
         self.repoWidget = parent
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
         self.setIconSize(QSize(iconSize, iconSize))
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # prevent editing text after double-clicking
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
 
     @property
     def flModel(self) -> FileListModel:
@@ -171,8 +171,8 @@ class FileList(QListView):
         prompt = text.replace("#", F"<b>{len(entries)}</b>")
         prompt = F"Really {prompt}?"
 
-        result = QMessageBox.question(self, title, prompt, QMessageBox.YesToAll | QMessageBox.Cancel)
-        if result == QMessageBox.YesToAll:
+        result = QMessageBox.question(self, title, prompt, QMessageBox.StandardButton.YesToAll | QMessageBox.StandardButton.Cancel)
+        if result == QMessageBox.StandardButton.YesToAll:
             return entries
         else:
             return []
@@ -189,7 +189,7 @@ class FileList(QListView):
     def keyPressEvent(self, event: QKeyEvent):
         # The default keyPressEvent copies the displayed label of the selected items.
         # We want to copy the full path of the selected items instead.
-        if event.matches(QKeySequence.Copy):
+        if event.matches(QKeySequence.StandardKey.Copy):
             self.copyPaths()
         else:
             super().keyPressEvent(event)
@@ -220,7 +220,7 @@ class FileList(QListView):
 
         current: QModelIndex = selected.indexes()[0]
         if current.isValid():
-            self.entryClicked.emit(current.data(Qt.UserRole), self.stagingState)
+            self.entryClicked.emit(current.data(Qt.ItemDataRole.UserRole), self.stagingState)
         else:
             self.nothingClicked.emit()
 
@@ -230,9 +230,9 @@ class FileList(QListView):
         holding down LMB and dragging. This event handler enforces single-item
         selection unless the user holds down Shift or Ctrl.
         """
-        isLMB = hasFlag(event.buttons(), Qt.LeftButton)
-        isShift = hasFlag(event.modifiers(), Qt.ShiftModifier)
-        isCtrl = hasFlag(event.modifiers(), Qt.ControlModifier)
+        isLMB = hasFlag(event.buttons(), Qt.MouseButton.LeftButton)
+        isShift = hasFlag(event.modifiers(), Qt.KeyboardModifier.ShiftModifier)
+        isCtrl = hasFlag(event.modifiers(), Qt.KeyboardModifier.ControlModifier)
 
         if isLMB and not isShift and not isCtrl:
             self.mousePressEvent(event)  # re-route event as if it were a click event
@@ -243,7 +243,7 @@ class FileList(QListView):
     def selectedEntries(self) -> Generator[pygit2.Patch, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():
-            patch: pygit2.Patch = index.data(Qt.UserRole)
+            patch: pygit2.Patch = index.data(Qt.ItemDataRole.UserRole)
             assert isinstance(patch, pygit2.Patch)
             yield patch
 
@@ -339,17 +339,17 @@ class DirtyFiles(FileList):
     def __init__(self, parent):
         super().__init__(parent, StagingState.UNSTAGED)
 
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(plur("&Stage #~File^s", n), self.stage, QStyle.SP_ArrowDown),
-            ActionDef(plur("&Discard Changes", n), self.discard, QStyle.SP_TrashIcon),
+            ActionDef(plur("&Stage #~File^s", n), self.stage, QStyle.StandardPixmap.SP_ArrowDown),
+            ActionDef(plur("&Discard Changes", n), self.discard, QStyle.StandardPixmap.SP_TrashIcon),
             None,
-            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, icon=QStyle.SP_FileIcon),
+            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
             ActionDef("Save As Patch...", self.savePatchAs),
             None,
-            ActionDef(plur("Open Containing Folder^s", n), self.showInFolder, icon=QStyle.SP_DirIcon),
+            ActionDef(plur("Open Containing Folder^s", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(plur("&Copy Path^s", n), self.copyPaths),
             None,
             ActionDef(plur("Open Unmodified &Revision^s in External Editor", n), self.openRevisionPriorToChange),
@@ -377,16 +377,16 @@ class StagedFiles(FileList):
     def __init__(self, parent):
         super().__init__(parent, StagingState.STAGED)
 
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(plur("&Unstage #~File^s", n), self.unstage, QStyle.SP_ArrowUp),
+            ActionDef(plur("&Unstage #~File^s", n), self.unstage, QStyle.StandardPixmap.SP_ArrowUp),
             None,
-            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, QStyle.SP_FileIcon),
+            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
             ActionDef("Save As Patch...", self.savePatchAs),
             None,
-            ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.SP_DirIcon),
+            ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(plur("&Copy Path^s", n), self.copyPaths),
             None,
             ActionDef(plur("Open Unmodified &Revision^s in External Editor", n), self.openRevisionPriorToChange),
@@ -412,11 +412,11 @@ class CommittedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-                ActionDef(plur("Open #~Revision^s in External Editor", n), self.openRevision, QStyle.SP_FileIcon),
-                ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.SP_DialogSaveButton),
+                ActionDef(plur("Open #~Revision^s in External Editor", n), self.openRevision, QStyle.StandardPixmap.SP_FileIcon),
+                ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
                 ActionDef("Save As Patch...", self.savePatchAs),
                 None,
-                ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.SP_DirIcon),
+                ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
                 ActionDef(plur("&Copy Path^s", n), self.copyPaths),
                 ]
 

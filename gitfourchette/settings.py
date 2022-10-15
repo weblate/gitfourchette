@@ -12,8 +12,8 @@ TEST_MODE = False
 REPO_SETTINGS_DIR = "gitfourchette"
 
 
-KEYS_ACCEPT = [Qt.Key_Enter, Qt.Key_Return]  # Enter = on keypad; Return = main keys
-KEYS_REJECT = [Qt.Key_Delete, Qt.Key_Backspace]
+KEYS_ACCEPT = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
+KEYS_REJECT = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
 
 
 SHORT_DATE_PRESETS = [
@@ -34,7 +34,7 @@ def decodeBinary(encoded: str) -> QByteArray:
 
 class BasePrefs:
     def getParentDir(self):
-        return QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
+        return QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
 
     def _getFullPath(self, forWriting: bool):
         prefsDir = self.getParentDir()

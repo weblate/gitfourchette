@@ -7,9 +7,9 @@ from typing import Any
 import enum
 import pygit2
 
-ROLE_USERDATA = Qt.UserRole + 0
-ROLE_EITEM = Qt.UserRole + 1
-ROLE_ISHIDDEN = Qt.UserRole + 2
+ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
+ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
+ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
 
 ACTIVE_BULLET = "★ "
 
@@ -115,7 +115,7 @@ class SidebarModel(QAbstractItemModel):
 
     @staticmethod
     def unpackItemAndData(index: QModelIndex):
-        return SidebarModel.unpackItem(index), index.data(Qt.UserRole)
+        return SidebarModel.unpackItem(index), index.data(Qt.ItemDataRole.UserRole)
 
     @property
     def _parentWidget(self) -> QWidget:
@@ -286,7 +286,7 @@ class SidebarModel(QAbstractItemModel):
         font.setStrikeOut(True)
         return font
 
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole) -> Any:
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
         if not self.repo:
             return None
 
@@ -296,12 +296,12 @@ class SidebarModel(QAbstractItemModel):
         if role == ROLE_EITEM:  # for testing (match by EItem type)
             return item
 
-        displayRole = role == Qt.DisplayRole
+        displayRole = role == Qt.ItemDataRole.DisplayRole
         userRole = role == ROLE_USERDATA
-        toolTipRole = role == Qt.ToolTipRole
-        sizeHintRole = role == Qt.SizeHintRole
+        toolTipRole = role == Qt.ItemDataRole.ToolTipRole
+        sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
         hiddenRole = role == ROLE_ISHIDDEN
-        fontRole = role == Qt.FontRole
+        fontRole = role == Qt.ItemDataRole.FontRole
 
         if item == EItem.Spacer:
             if sizeHintRole:
@@ -426,13 +426,13 @@ class SidebarModel(QAbstractItemModel):
 
         return None
 
-    def flags(self, index: QModelIndex) -> int:
+    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         item = self.unpackItem(index)
 
         if item == EItem.Spacer:
-            return Qt.NoItemFlags
+            return Qt.ItemFlag.NoItemFlags
 
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
 
 class SidebarDelegate(QStyledItemDelegate):
@@ -466,10 +466,10 @@ class SidebarDelegate(QStyledItemDelegate):
             r.setWidth(6)
 
             # See QTreeView::drawBranches() in qtreeview.cpp for other interesting states
-            opt2.state &= ~QStyle.State_MouseOver
+            opt2.state &= ~QStyle.StateFlag.State_MouseOver
 
             style: QStyle = view.style()
-            arrowPrimitive = QStyle.PE_IndicatorArrowDown if view.isExpanded(index) else QStyle.PE_IndicatorArrowRight
+            arrowPrimitive = QStyle.PrimitiveElement.PE_IndicatorArrowDown if view.isExpanded(index) else QStyle.PrimitiveElement.PE_IndicatorArrowRight
             style.drawPrimitive(arrowPrimitive, opt2, painter, view)
 
         super().paint(painter, opt, index)
@@ -515,11 +515,11 @@ class Sidebar(QTreeView):
         self.setMinimumWidth(128)
         self.setIndentation(16)
         self.setHeaderHidden(True)
-        self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
         self.setItemDelegate(SidebarDelegate(self))
 
@@ -588,7 +588,7 @@ class Sidebar(QTreeView):
                            lambda: self.newTrackingBranch.emit(data))
 
             a = menu.addAction(F"Fetch this remote branch...", lambda: self.fetchRemoteBranch.emit(data))
-            a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
+            a.setIcon(self.parentWidget().style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
             a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
@@ -602,12 +602,12 @@ class Sidebar(QTreeView):
             a.setIcon(QIcon.fromTheme("document-edit"))
 
             a = menu.addAction("&Fetch all branches on this remote...", lambda: self.fetchRemote.emit(data))
-            a.setIcon(self.parentWidget().style().standardIcon(QStyle.SP_BrowserReload))
+            a.setIcon(self.parentWidget().style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
 
             a = menu.addAction("&Delete Remote", lambda: self.deleteRemote.emit(data))
-            a.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
+            a.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
 
         elif item == EItem.RemotesHeader:
             menu.addAction("&New Remote...", lambda: self.newRemote.emit())
@@ -620,7 +620,7 @@ class Sidebar(QTreeView):
             menu.addAction("&Pop (apply and delete)", lambda: self.popStash.emit(oid))
             menu.addAction("&Apply", lambda: self.applyStash.emit(oid))
             menu.addSeparator()
-            menu.addAction(stockIcon(QStyle.SP_TrashIcon), "&Delete", lambda: self.dropStash.emit(oid))
+            menu.addAction(stockIcon(QStyle.StandardPixmap.SP_TrashIcon), "&Delete", lambda: self.dropStash.emit(oid))
 
         elif item == EItem.Submodule:
             menu.addAction(f"&Open submodule in {QApplication.applicationDisplayName()}", lambda: self.openSubmoduleRepo.emit(data))
@@ -680,5 +680,5 @@ class Sidebar(QTreeView):
     def mouseDoubleClickEvent(self, event):
         # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.
         index: QModelIndex = self.indexAt(event.pos())
-        if event.button() == Qt.LeftButton and index.isValid():
+        if event.button() == Qt.MouseButton.LeftButton and index.isValid():
             self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))

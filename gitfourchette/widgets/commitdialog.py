@@ -17,7 +17,7 @@ class CommitDialog(QDialog):
         self.ui = Ui_CommitDialog()
         self.ui.setupUi(self)
 
-        acceptButton = self.ui.buttonBox.button(QDialogButtonBox.Ok)
+        acceptButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         counterLabel = self.ui.counterLabel
         summaryEditor = self.ui.summaryEditor
         descriptionEditor = self.ui.descriptionEditor
@@ -39,7 +39,7 @@ class CommitDialog(QDialog):
         acceptButton.setText(buttonCaption)
         summaryEditor.setPlaceholderText(prompt)
 
-        counterLabel.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        counterLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         counterLabel.setMinimumWidth(counterLabel.fontMetrics().horizontalAdvance('000'))
         counterLabel.setMaximumWidth(counterLabel.minimumWidth())
 

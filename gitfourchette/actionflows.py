@@ -44,16 +44,16 @@ class ActionFlows(QObject):
     ) -> QMessageBox:
 
         qmb = QMessageBox(
-            QMessageBox.Question,
+            QMessageBox.Icon.Question,
             title,
             text,
-            QMessageBox.Ok | QMessageBox.Cancel,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             parent=self.parentWidget)
 
-        qmb.setWindowModality(Qt.WindowModal)
+        qmb.setWindowModality(Qt.WindowModality.WindowModal)
 
-        # Using QMessageBox.Ok instead of QMessageBox.Discard so it connects to the "accepted" signal.
-        yes: QAbstractButton = qmb.button(QMessageBox.Ok)
+        # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard so it connects to the "accepted" signal.
+        yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
         if acceptButtonIcon:
             if type(acceptButtonIcon) is str:
                 yes.setIcon(QIcon.fromTheme(acceptButtonIcon))
@@ -62,7 +62,7 @@ class ActionFlows(QObject):
         yes.setText(title)
 
         qmb.setDefaultButton(yes)
-        qmb.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
 
         return qmb
@@ -79,7 +79,7 @@ class ActionFlows(QObject):
         qmb = self.confirmAction(
             "Discard changes",
             F"{question}\nThis cannot be undone!",
-            QStyle.SP_DialogDiscardButton)
+            QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.discardFiles.emit(entries))
         return qmb
 
@@ -110,8 +110,8 @@ class ActionFlows(QObject):
 
         dlg.accepted.connect(onAccept)
 
-        dlg.setWindowModality(Qt.WindowModal)
-        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
 
@@ -162,7 +162,7 @@ class ActionFlows(QObject):
             self.editTrackingBranch.emit(localBranchName, dlg.newTrackedBranchName)
 
         dlg.accepted.connect(onAccept)
-        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
 
         return dlg
@@ -183,7 +183,7 @@ class ActionFlows(QObject):
         qmb = self.confirmAction(
             "Delete branch",
             F"Really delete local branch <b>{labelQuote(localBranchName)}</b>?<br/>This cannot be undone!",
-            QStyle.SP_DialogDiscardButton)
+            QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteBranch.emit(localBranchName))
         return qmb
 
@@ -196,7 +196,7 @@ class ActionFlows(QObject):
 
         dlg = RemoteDialog(False, "", "", self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
-        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
         return dlg
 
@@ -206,7 +206,7 @@ class ActionFlows(QObject):
 
         dlg = RemoteDialog(True, remoteName, self.repo.remotes[remoteName].url, self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
-        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
         return dlg
 
@@ -214,7 +214,7 @@ class ActionFlows(QObject):
         qmb = self.confirmAction(
             "Delete remote",
             F"Really delete remote <b>{labelQuote(remoteName)}</b>?<br/>This cannot be undone!",
-            QStyle.SP_DialogDiscardButton)
+            QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteRemote.emit(remoteName))
         return qmb
 
@@ -254,8 +254,8 @@ class ActionFlows(QObject):
 
         cd.accepted.connect(onAccept)
         cd.rejected.connect(onReject)
-        cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        cd.setWindowModality(Qt.WindowModal)
+        cd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        cd.setWindowModality(Qt.WindowModality.WindowModal)
         cd.show()
         return cd
 
@@ -276,8 +276,8 @@ class ActionFlows(QObject):
             self.amendCommit.emit(message, author, committer)
 
         cd.accepted.connect(onAccept)
-        cd.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-        cd.setWindowModality(Qt.WindowModal)
+        cd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        cd.setWindowModality(Qt.WindowModality.WindowModal)
         cd.show()
         return cd
 
@@ -297,7 +297,7 @@ class ActionFlows(QObject):
             return
 
         dlg = PushDialog(self.repo, branch, self.parentWidget)
-        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         dlg.accepted.connect(self.pushComplete)
         dlg.show()
         return dlg
@@ -342,7 +342,7 @@ class ActionFlows(QObject):
             self.newStash.emit(message, flags)
 
         dlg = StashDialog(self.parentWidget)
-        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         dlg.accepted.connect(onAccepted)
         dlg.show()
         return dlg

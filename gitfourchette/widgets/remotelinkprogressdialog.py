@@ -11,8 +11,8 @@ class RemoteLinkProgressDialog(QProgressDialog):
 
         progress.setWindowTitle("Remote operation")
         progress.setMinimumWidth(8 * progress.fontMetrics().horizontalAdvance("WWWWW"))
-        progress.setWindowFlags(Qt.Dialog)
-        progress.setAttribute(Qt.WA_DeleteOnClose)
+        progress.setWindowFlags(Qt.WindowType.Dialog)
+        progress.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         if not settings.TEST_MODE:
             progress.show()
 

@@ -12,15 +12,15 @@ import re
 
 @dataclass
 class RefCallout:
-    color: QColor = Qt.magenta
+    color: QColor = QColor(Qt.GlobalColor.magenta)
     keepPrefix: bool = False
 
 
 CALLOUTS = {
-    "refs/remotes/": RefCallout(Qt.darkCyan),
-    "refs/tags/": RefCallout(Qt.darkYellow),
-    "refs/heads/": RefCallout(Qt.darkMagenta),
-    "stash@{": RefCallout(Qt.darkGreen, keepPrefix=True),
+    "refs/remotes/": RefCallout(QColor(Qt.GlobalColor.darkCyan)),
+    "refs/tags/": RefCallout(QColor(Qt.GlobalColor.darkYellow)),
+    "refs/heads/": RefCallout(QColor(Qt.GlobalColor.darkMagenta)),
+    "stash@{": RefCallout(QColor(Qt.GlobalColor.darkGreen), keepPrefix=True),
 }
 
 
@@ -62,7 +62,7 @@ class GraphDelegate(QStyledItemDelegate):
         self.uncommittedFont.setItalic(True)
 
         self.smallFont = QFont()
-        self.smallFont.setWeight(QFont.Light)
+        self.smallFont.setWeight(QFont.Weight.Light)
         self.smallFontMetrics = QFontMetricsF(self.smallFont)
 
     @property
@@ -70,8 +70,8 @@ class GraphDelegate(QStyledItemDelegate):
         return self.repoWidget.state
 
     def paint(self, painter, option, index):
-        hasFocus = option.state & QStyle.State_HasFocus
-        isSelected = option.state & QStyle.State_Selected
+        hasFocus = option.state & QStyle.StateFlag.State_HasFocus
+        isSelected = option.state & QStyle.StateFlag.State_Selected
 
         # Draw selection background _underneath_ the style's default graphics.
         # This is a workaround for the "windowsvista" style, which does not draw a solid color background for
@@ -102,7 +102,7 @@ class GraphDelegate(QStyledItemDelegate):
         colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
 
         if isSelected:
-            #if option.state & QStyle.State_HasFocus:
+            #if option.state & QStyle.StateFlag.State_HasFocus:
             #    painter.fillRect(option.rect, palette.color(pcg, QPalette.ColorRole.Highlight))
             painter.setPen(palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
 
@@ -146,7 +146,7 @@ class GraphDelegate(QStyledItemDelegate):
         if not isSelected:  # use muted color for hash if not selected
             painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
         for hashChar in hashText:
-            painter.drawText(charRect, Qt.AlignCenter, hashChar)
+            painter.drawText(charRect, Qt.AlignmentFlag.AlignCenter, hashChar)
             charRect.translate(self.hashCharWidth, 0)
         painter.restore()
 
@@ -159,7 +159,7 @@ class GraphDelegate(QStyledItemDelegate):
         if commit is not None and commit.oid in self.state.commitsToRefs:
             for refName in self.state.commitsToRefs[commit.oid]:
                 calloutText = refName
-                calloutColor = Qt.darkMagenta
+                calloutColor = Qt.GlobalColor.darkMagenta
 
                 for prefix in CALLOUTS:
                     if refName.startswith(prefix):
@@ -175,29 +175,29 @@ class GraphDelegate(QStyledItemDelegate):
                 rect.setLeft(rect.right())
                 label = F"[{calloutText}] "
                 rect.setWidth(int(self.smallFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
-                painter.drawText(rect, Qt.AlignVCenter, label)
+                painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, label)
                 painter.restore()
 
         def elide(text):
-            return metrics.elidedText(text, Qt.ElideRight, rect.width())
+            return metrics.elidedText(text, Qt.TextElideMode.ElideRight, rect.width())
 
         # ------ message
         # use muted color for foreign commit messages if not selected
         if not isSelected and commit and commit.oid in self.state.foreignCommits:
-             painter.setPen(QColor(Qt.gray))
+             painter.setPen(Qt.GlobalColor.gray)
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
-        painter.drawText(rect, Qt.AlignVCenter, elide(summaryText))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(summaryText))
 
         # ------ Author
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Author * self.hashCharWidth)
-        painter.drawText(rect, Qt.AlignVCenter, elide(authorText))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText))
 
         # ------ Date
         rect.setLeft(rect.right())
         rect.setWidth(ColW_Date * self.hashCharWidth)
-        painter.drawText(rect, Qt.AlignVCenter, elide(dateText))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(dateText))
 
         # ------ Debug (show redrawn rows from last refresh)
         ''' TODO: pygit2 migration
@@ -206,7 +206,7 @@ class GraphDelegate(QStyledItemDelegate):
             rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * self.hashCharWidth)
             rect.setRight(rect.left() + 3*self.hashCharWidth)
             painter.fillRect(rect, colors.rainbow[meta.batchID % len(colors.rainbow)])
-            painter.drawText(rect, Qt.AlignVCenter, "-"+meta.debugPrefix)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, "-"+meta.debugPrefix)
         '''
 
         # ----------------

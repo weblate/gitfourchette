@@ -47,18 +47,18 @@ class CommitLogModel(QAbstractListModel):
         else:
             return 1 + len(self._commitSequence)
 
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.DisplayRole):
+    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole):
         if not self.isValid:
             return None
 
         if index.row() == 0:
             return None
 
-        if role == Qt.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole:
             return self._commitSequence[index.row() - 1]  # TODO: this shouldn't be DisplayRole!
-        elif role == Qt.UserRole:
+        elif role == Qt.ItemDataRole.UserRole:
             return self._commitSequence[index.row()]
-        elif role == Qt.SizeHintRole:
+        elif role == Qt.ItemDataRole.SizeHintRole:
             parentWidget: QWidget = self.parent()
             return QSize(-1, parentWidget.fontMetrics().height())
         else:
@@ -109,13 +109,13 @@ class GraphView(QListView):
         self.setModel(self.clFilter)
 
         self.repoWidget = parent
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setEditTriggers(QAbstractItemView.NoEditTriggers)  # sinon on peut double-cliquer pour éditer les lignes...
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevents double-clicking to edit row text
         self.setItemDelegate(GraphDelegate(parent, parent=self))
 
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         getInfoAction = QAction("Get &Info...", self)
-        getInfoAction.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxInformation))
+        getInfoAction.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
         getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
         self.addAction(getInfoAction)
         checkoutAction = QAction("&Check Out...", self)
@@ -179,7 +179,7 @@ class GraphView(QListView):
         def formatSignature(sig: pygit2.Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
             return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
-                   + escape(QLocale.system().toString(qdt, QLocale.LongFormat))
+                   + escape(QLocale.system().toString(qdt, QLocale.FormatType.LongFormat))
 
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
 
@@ -235,9 +235,9 @@ class GraphView(QListView):
 
         details = commit.message if contd else None
 
-        messageBox = QMessageBox(QMessageBox.Information, title, markup, parent=self)
+        messageBox = QMessageBox(QMessageBox.Icon.Information, title, markup, parent=self)
         messageBox.setDetailedText(details)
-        messageBox.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        messageBox.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         messageBox.show()
 
     def cherrypickCurrentCommit(self):
@@ -274,7 +274,7 @@ class GraphView(QListView):
             self.resetHead.emit(oid, resetMode, recurse)
 
         dlg.accepted.connect(onAccept)
-        dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
 
     def copyCommitHashToClipboard(self):

@@ -8,13 +8,13 @@ class CustomTabBar(QTabBar):
         self.middleClickedIndex = -1
 
     def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MiddleButton:
+        if event.button() == Qt.MouseButton.MiddleButton:
             self.middleClickedIndex = self.tabAt(event.pos())
         else:
             super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MiddleButton:
+        if event.button() == Qt.MouseButton.MiddleButton:
             i = self.tabAt(event.pos())
             if i >= 0 and i == self.middleClickedIndex:
                 self.tabCloseRequested.emit(i)
@@ -47,7 +47,7 @@ class CustomTabWidget(QWidget):
         layout.addWidget(self.stacked)
         self.setLayout(layout)
 
-        self.tabs.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabs.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
         self.refreshPrefs()

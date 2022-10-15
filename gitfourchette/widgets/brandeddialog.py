@@ -26,8 +26,8 @@ def makeBrandedDialogLayout(dialog, promptText, subtitleText=""):
         subtitle = QElidedLabel(subtitleText, dialog)
         tweakWidgetFont(subtitle, relativeSize=80)
         titleLayout.addWidget(subtitle)
-        title.setAlignment(Qt.AlignBottom)
-        subtitle.setAlignment(Qt.AlignTop)
+        title.setAlignment(Qt.AlignmentFlag.AlignBottom)
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignTop)
 
     gridLayout.addWidget(iconLabel, 1, 0, 1, 1)
     gridLayout.addItem(horizontalSpacer, 1, 1, 1, 1)
@@ -70,7 +70,7 @@ def showTextInputDialog(
         lineEdit.setText(text)
         lineEdit.selectAll()
 
-    buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, parent=dlg)
+    buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=dlg)
 
     layout = QVBoxLayout()
     if detailedPrompt:
@@ -87,7 +87,7 @@ def showTextInputDialog(
     dlg.rejected.connect(dlg.close)
 
     if okButtonText:
-        buttonBox.button(QDialogButtonBox.Ok).setText(okButtonText)
+        buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
 
     makeBrandedDialog(dlg, layout, title)
 
@@ -95,8 +95,8 @@ def showTextInputDialog(
     dlg.resize(512, 128)
     dlg.setMaximumHeight(dlg.height())
 
-    dlg.setAttribute(Qt.WA_DeleteOnClose)  # don't leak dialog
-    dlg.setWindowModality(Qt.WindowModal)
+    dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+    dlg.setWindowModality(Qt.WindowModality.WindowModal)
 
     dlg.show()
     dlg.setMaximumHeight(dlg.height())

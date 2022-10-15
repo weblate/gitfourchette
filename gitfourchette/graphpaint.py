@@ -81,7 +81,7 @@ def paintGraphFrame(
         return
 
     painter.save()
-    painter.setRenderHints(QPainter.Antialiasing, True)
+    painter.setRenderHints(QPainter.RenderHint.Antialiasing, True)
 
     # Ensure all coordinates below are integers so our straight lines don't look blurry
     x = int(rect.left() + LANE_WIDTH // 2)
@@ -106,7 +106,7 @@ def paintGraphFrame(
     mx = x + myColumn * LANE_WIDTH  # the screen X of this commit's bullet point
 
     # draw bullet point _outline_ for this commit, beneath everything else
-    painter.setPen(QPen(outlineColor, 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+    painter.setPen(QPen(outlineColor, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
     painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
 
@@ -115,10 +115,10 @@ def paintGraphFrame(
     def submitPath(path: QPainterPath, column):
         if not path.isEmpty():
             # white outline
-            painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+            painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
             painter.drawPath(path)
             # actual color
-            painter.setPen(QPen(getColor(column), LANE_THICKNESS, Qt.SolidLine, Qt.FlatCap, Qt.BevelJoin))
+            painter.setPen(QPen(getColor(column), LANE_THICKNESS, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
             painter.drawPath(path)
             # clear path for next iteration
             path.clear()

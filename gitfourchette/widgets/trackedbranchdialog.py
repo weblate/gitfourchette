@@ -13,7 +13,7 @@ class TrackedBranchDialog(QDialog):
 
         self.setWindowTitle(F"Edit Tracked Branch")
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
@@ -43,7 +43,7 @@ class TrackedBranchDialog(QDialog):
                     isCurrent=trackedBranch and trackedBranch.name == F"refs/remotes/{remoteName}/{remoteBranch}")
 
         comboBox.currentIndexChanged.connect(
-            lambda index: self.onChangeNewRemoteBranchName(comboBox.itemData(index, role=Qt.UserRole)))
+            lambda index: self.onChangeNewRemoteBranchName(comboBox.itemData(index, role=Qt.ItemDataRole.UserRole)))
 
         explainer = F"<p>Local branch <b>{labelQuote(localBranch.shorthand)}</b> currently "
         if trackedBranch:

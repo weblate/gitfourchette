@@ -5,13 +5,13 @@ from gitfourchette.qt import *
 
 
 class QElidedLabel(QLabel):
-    _elideMode = Qt.ElideRight
+    _elideMode = Qt.TextElideMode.ElideRight
 
     def elideMode(self):
         return self._elideMode
 
     def setElideMode(self, mode):
-        if self._elideMode != mode and mode != Qt.ElideNone:
+        if self._elideMode != mode and mode != Qt.TextElideMode.ElideNone:
             self._elideMode = mode
             self.updateGeometry()
 

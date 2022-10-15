@@ -24,7 +24,7 @@ class CloneDialog(QDialog):
         self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
 
     def onComboBoxItemActivated(self, index):
-        itemData = self.ui.urlEdit.itemData(index, Qt.UserRole)
+        itemData = self.ui.urlEdit.itemData(index, Qt.ItemDataRole.UserRole)
         if itemData == "CLEAR":  # clear history
             settings.history.clearCloneHistory()
             self.initUrlComboBox()
@@ -41,15 +41,15 @@ class CloneDialog(QDialog):
         self.initUrlComboBox()
         self.ui.urlEdit.activated.connect(self.onComboBoxItemActivated)
 
-        self.ui.browseButton.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.browseButton.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
         self.ui.browseButton.clicked.connect(self.browse)
 
-        self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.Ok)
+        self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.cloneButton.setText("C&lone")
         self.cloneButton.setIcon(QIcon.fromTheme("download"))
         self.cloneButton.clicked.connect(self.onCloneClicked)
 
-        self.cancelButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.Cancel)
+        self.cancelButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
         self.cancelButton.setAutoDefault(False)
 
         self.ui.statusForm.setBlurb("Hit “Clone” when ready.")
