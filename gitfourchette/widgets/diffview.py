@@ -51,6 +51,7 @@ class DiffGutter(QWidget):
             # Get position of click in document
             clickedPosition = self.diffView.cursorForPosition(pos).position()
 
+            # Back up horizontal slider position
             hsb: QScrollBar = self.diffView.horizontalScrollBar()
             if hsb:
                 hsbBackup = hsb.sliderPosition()
@@ -60,6 +61,7 @@ class DiffGutter(QWidget):
             cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
             self.diffView.setTextCursor(cursor)
 
+            # Restore horizontal slider position
             if hsb:
                 hsb.setSliderPosition(hsbBackup)
 
@@ -69,25 +71,35 @@ class DiffGutter(QWidget):
             pos = event.pos()
             pos.setX(0)
 
+            cursor: QTextCursor = self.diffView.textCursor()
 
-            # Get position of click in document
-            clickedPosition = self.diffView.cursorForPosition(pos).position()
-
+            # Back up horizontal slider position
             hsb: QScrollBar = self.diffView.horizontalScrollBar()
             if hsb:
                 hsbBackup = hsb.sliderPosition()
 
-            cursor: QTextCursor = self.diffView.textCursor()
-            anchorPosition = cursor.anchor()
-            #TODO: Fix this for moving up from anchor...
-            print(anchorPosition, clickedPosition)
-            cursor.setPosition(min(clickedPosition, anchorPosition))
-            cursor.movePosition(QTextCursor.StartOfLine, QTextCursor.MoveAnchor)
-            cursor.setPosition(max(clickedPosition, anchorPosition), QTextCursor.KeepAnchor)
-            #cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+            # Snap anchor to start of home line
+            cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
 
+            # Get position of click in document (at start of line because pos.x=0)
+            clickedPosition = self.diffView.cursorForPosition(pos).position()
+
+            if cursor.anchor() <= clickedPosition:
+                # Keep anchor at start of home line; move cursor to END of clicked line
+                cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+            else:
+                # Move anchor to END of home line
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.MoveAnchor)
+                # Move cursor to START of clicked line
+                cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
+                cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+
+            # Replace the cursor
             self.diffView.setTextCursor(cursor)
 
+            # Restore horizontal slider position
             if hsb:
                 hsb.setSliderPosition(hsbBackup)
 
