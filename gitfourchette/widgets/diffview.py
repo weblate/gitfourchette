@@ -44,64 +44,14 @@ class DiffGutter(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
-            # Doctor pos to keep Y only so it looks like we clicked the leftmost text column
-            pos = event.pos()
-            pos.setX(0)
-
-            # Get position of click in document
-            clickedPosition = self.diffView.cursorForPosition(pos).position()
-
-            # Back up horizontal slider position
-            hsb: QScrollBar = self.diffView.horizontalScrollBar()
-            if hsb:
-                hsbBackup = hsb.sliderPosition()
-
-            cursor: QTextCursor = self.diffView.textCursor()
-            cursor.setPosition(clickedPosition)
-            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-            self.diffView.setTextCursor(cursor)
-
-            # Restore horizontal slider position
-            if hsb:
-                hsb.setSliderPosition(hsbBackup)
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.diffView.selectWholeLinesTo(event.pos())
+            else:
+                self.diffView.selectWholeLineAt(event.pos())
 
     def mouseMoveEvent(self, event: QMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            # Doctor pos to keep Y only so it looks like we clicked the leftmost text column
-            pos = event.pos()
-            pos.setX(0)
-
-            cursor: QTextCursor = self.diffView.textCursor()
-
-            # Back up horizontal slider position
-            hsb: QScrollBar = self.diffView.horizontalScrollBar()
-            if hsb:
-                hsbBackup = hsb.sliderPosition()
-
-            # Snap anchor to start of home line
-            cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
-
-            # Get position of click in document (at start of line because pos.x=0)
-            clickedPosition = self.diffView.cursorForPosition(pos).position()
-
-            if cursor.anchor() <= clickedPosition:
-                # Keep anchor at start of home line; move cursor to END of clicked line
-                cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
-                cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
-            else:
-                # Move anchor to END of home line
-                cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.MoveAnchor)
-                # Move cursor to START of clicked line
-                cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
-                cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
-
-            # Replace the cursor
-            self.diffView.setTextCursor(cursor)
-
-            # Restore horizontal slider position
-            if hsb:
-                hsb.setSliderPosition(hsbBackup)
+            self.diffView.selectWholeLinesTo(event.pos())
 
 
 class DiffView(QPlainTextEdit):
@@ -541,3 +491,61 @@ class DiffView(QPlainTextEdit):
 
         if rect.contains(self.viewport().rect()):
             self.updateGutterWidth(0)
+
+    def getAnchorHomeLinePosition(self):
+        cursor: QTextCursor = self.textCursor()
+
+        # Snap anchor to start of home line
+        cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
+
+        return cursor.anchor()
+
+    def getStartOfLineAt(self, point: QPoint):
+        clickedCursor: QTextCursor = self.cursorForPosition(point)
+        clickedCursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
+        return clickedCursor.position()
+
+    def replaceCursor(self, cursor: QTextCursor):
+        # Back up horizontal slider position
+        hsb: QScrollBar = self.horizontalScrollBar()
+        if hsb:
+            hsbPos = hsb.sliderPosition()
+
+        # Replace the cursor
+        self.setTextCursor(cursor)
+
+        # Restore horizontal slider position
+        if hsb:
+            hsb.setSliderPosition(hsbPos)
+
+    def selectWholeLineAt(self, point: QPoint):
+        clickedPosition = self.getStartOfLineAt(point)
+
+        cursor: QTextCursor = self.textCursor()
+        cursor.setPosition(clickedPosition)
+        cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+
+        self.replaceCursor(cursor)
+
+    def selectWholeLinesTo(self, point: QPoint):
+        homeLinePosition = self.getAnchorHomeLinePosition()
+        clickedPosition = self.getStartOfLineAt(point)
+
+        cursor: QTextCursor = self.textCursor()
+
+        if homeLinePosition <= clickedPosition:
+            # Move anchor to START of home line
+            cursor.setPosition(homeLinePosition, QTextCursor.MoveMode.MoveAnchor)
+            # Move cursor to END of clicked line
+            cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+        else:
+            # Move anchor to END of home line
+            cursor.setPosition(homeLinePosition, QTextCursor.MoveMode.MoveAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.MoveAnchor)
+            # Move cursor to START of clicked line
+            cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+
+        self.replaceCursor(cursor)
