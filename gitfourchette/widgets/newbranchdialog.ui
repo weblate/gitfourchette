@@ -23,7 +23,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>New stash</string>
+   <string>New branch</string>
   </property>
   <property name="sizeGripEnabled">
    <bool>false</bool>

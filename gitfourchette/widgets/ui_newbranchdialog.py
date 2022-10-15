@@ -92,7 +92,7 @@ class Ui_NewBranchDialog(object):
         QMetaObject.connectSlotsByName(NewBranchDialog)
 
     def retranslateUi(self, NewBranchDialog):
-        NewBranchDialog.setWindowTitle(QCoreApplication.translate("NewBranchDialog", u"New stash", None))
+        NewBranchDialog.setWindowTitle(QCoreApplication.translate("NewBranchDialog", u"New branch", None))
         self.trackRemoteBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"&Track remote branch", None))
         self.nameValidationText.setText(QCoreApplication.translate("NewBranchDialog", u"TextLabel", None))
         self.switchToBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"Switch to branch after creating", None))
