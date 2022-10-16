@@ -95,6 +95,7 @@ class GraphView(QListView):
     resetHead = Signal(pygit2.Oid, str, bool)
     newBranchFromCommit = Signal(pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
+    revertCommit = Signal(pygit2.Oid)
 
     clModel: CommitLogModel
     clFilter: CommitFilter
@@ -124,8 +125,11 @@ class GraphView(QListView):
         cherrypickAction = QAction("Cherry &Pick...", self)
         cherrypickAction.triggered.connect(self.cherrypickCurrentCommit)
         self.addAction(cherrypickAction)
+        revertAction = QAction("Re&vert...", self)
+        revertAction.triggered.connect(lambda: self.revertCommit.emit(self.currentCommitOid))
+        self.addAction(revertAction)
         branchAction = QAction("Start &Branch from Here...", self)
-        branchAction.triggered.connect(self.branchFromCurrentCommit)
+        branchAction.triggered.connect(lambda: self.newBranchFromCommit.emit(self.currentCommitOid))
         self.addAction(branchAction)
         resetAction = QAction(F"&Reset HEAD to Here...", self)
         resetAction.triggered.connect(self.resetHeadFlow)
@@ -253,13 +257,6 @@ class GraphView(QListView):
             self.selectCommit(oid)
 
         self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(oid)}”")
-
-    def branchFromCurrentCommit(self):
-        oid = self.currentCommitOid
-        if not oid:
-            return
-
-        self.newBranchFromCommit.emit(oid)
 
     def resetHeadFlow(self):
         oid = self.currentCommitOid

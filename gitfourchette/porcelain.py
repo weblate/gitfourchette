@@ -77,6 +77,31 @@ def checkoutCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
     repo.set_head(commitOid)
 
 
+def revertCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
+    trashCommit = repo[commitOid].peel(pygit2.Commit)
+    headCommit = getHeadCommit(repo)
+    revertIndex = repo.revert_commit(trashCommit, headCommit)
+
+    if revertIndex.conflicts is not None:
+        earlyConflicts = []
+        for commonAncestor, ours, theirs in revertIndex.conflicts:
+            conflictPath = ""
+            # Figure out a path to display (note that elements of the 3-tuple may be None!)
+            for candidate in [commonAncestor, ours, theirs]:
+                conflictPath = candidate.path
+                if conflictPath:
+                    break
+            earlyConflicts.append(conflictPath)
+        earlyConflictsConcatenated = "\n".join(earlyConflicts)
+        raise ValueError(F"Reverting the commit would conflict against the head commit on {len(earlyConflicts)} files:\n{earlyConflictsConcatenated}")
+
+    # TODO: Extend pygit2 so we can report exactly which files conflict during checkout.
+    # See https://stackoverflow.com/a/63244216
+    # Possibly useful for implementation: https://cffi.readthedocs.io/en/latest/using.html#extern-python-new-style-callbacks
+    # Interestingly, there's a progress_cb in checkout_options as well.
+    repo.checkout_index(revertIndex)
+
+
 def renameBranch(repo: Repository, oldName: str, newName: str):
     # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
     branch = repo.branches.local[oldName]
@@ -520,6 +545,7 @@ def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
         # otherwise the contents of the commits we're pulling will spill into the unstaged area.
         # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
         # affect any of the files that are involved in the pull.
+        # TODO: Extend pygit2 so we can report exactly which files conflict during checkout. See https://stackoverflow.com/a/63244216
         repo.checkout_tree(rb.peel(pygit2.Tree))
 
         # Then make the local branch point to the same commit as the remote branch.

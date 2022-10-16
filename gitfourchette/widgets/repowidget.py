@@ -116,6 +116,7 @@ class RepoWidget(QWidget):
         self.graphView.resetHead.connect(self.resetHeadAsync)
         self.graphView.newBranchFromCommit.connect(self.actionFlows.newBranchFromCommitFlow)
         self.graphView.checkoutCommit.connect(self.checkoutCommitAsync)
+        self.graphView.revertCommit.connect(self.revertCommitAsync)
 
         self.sidebar.commit.connect(self.startCommitFlow)
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
@@ -829,6 +830,13 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.checkoutCommit(self.repo, oid)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Checking out commit “{shortHash(oid)}”")
+
+    def revertCommitAsync(self, oid: pygit2.Oid):
+        def work():
+            porcelain.revertCommit(self.repo, oid)
+        def then(_):
+            self.quickRefreshWithSidebar()
+        self.workQueue.put(work, then, F"Reverting commit “{shortHash(oid)}”")
 
     # -------------------------------------------------------------------------
     # Pull
