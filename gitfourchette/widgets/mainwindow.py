@@ -343,7 +343,10 @@ class MainWindow(QMainWindow):
 
         self.recentMenu.clear()
         for historic in list(reversed(settings.history.history))[:settings.prefs.maxRecentRepos]:
-            self.recentMenu.addAction(compactPath(historic), lambda h=historic: self.openRepo(h))
+            def doOpen(path):
+                self.openRepo(path)
+                self.saveSession()
+            self.recentMenu.addAction(compactPath(historic), lambda path=historic: doOpen(path))
         self.recentMenu.addSeparator()
         self.recentMenu.addAction("Clear", onClearRecents)
 
@@ -591,6 +594,7 @@ class MainWindow(QMainWindow):
         if path:
             pygit2.init_repository(path)
             self.openRepo(path)
+            self.saveSession()
 
     def cloneDialog(self, initialUrl: str = ""):
         dlg = CloneDialog(initialUrl, self)
@@ -810,3 +814,4 @@ class MainWindow(QMainWindow):
             self.cloneDialog(data)
         elif action == "open":
             self.openRepo(data)
+            self.saveSession()

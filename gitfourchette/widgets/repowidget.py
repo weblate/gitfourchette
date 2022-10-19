@@ -820,6 +820,7 @@ class RepoWidget(QWidget):
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
         self.window().openRepo(path)
+        self.window().saveSession()
 
     def openSubmoduleFolder(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
