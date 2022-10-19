@@ -22,7 +22,7 @@ class LineData:
     hunkPos: DiffLinePos
 
 
-class DiffModelError(BaseException):
+class DiffModelError(Exception):
     def __init__(
             self,
             message: str,
@@ -37,7 +37,7 @@ class DiffModelError(BaseException):
         self.preformatted = preformatted
 
 
-class ShouldDisplayPatchAsImageDiff(BaseException):
+class ShouldDisplayPatchAsImageDiff(Exception):
     def __init__(self):
         super().__init__("This patch should be viewed as an image diff!")
 
