@@ -5,6 +5,31 @@ import pygit2
 import os
 
 
+class ConflictError(Exception):
+    def __init__(self, conflicts: list[str], description="Conflicts"):
+        super().__init__(description)
+        self.caption = description
+        self.conflicts = conflicts
+
+    def __str__(self):
+        return f"ConflictError({len(self.conflicts)}, {self.description})"
+
+
+class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
+    status: dict[str, int]
+
+    def __init__(self):
+        super().__init__()
+        self.status = dict()
+
+    def checkout_notify(self, why: int, path: str, baseline=None, target=None, workdir=None):
+        self.status[path] = why
+
+    def get_conflicts(self):
+        return [path for path in self.status
+                if self.status[path] == pygit2.GIT_CHECKOUT_NOTIFY_CONFLICT]
+
+
 def diffWorkdirToIndex(repo: Repository) -> Diff:
     # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
     # index was stale, but this requires the repo to be writable.
@@ -82,24 +107,26 @@ def revertCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
     headCommit = getHeadCommit(repo)
     revertIndex = repo.revert_commit(trashCommit, headCommit)
 
-    if revertIndex.conflicts is not None:
+    if revertIndex.conflicts:
         earlyConflicts = []
         for commonAncestor, ours, theirs in revertIndex.conflicts:
-            conflictPath = ""
             # Figure out a path to display (note that elements of the 3-tuple may be None!)
             for candidate in [commonAncestor, ours, theirs]:
-                conflictPath = candidate.path
-                if conflictPath:
+                if candidate and candidate.path:
+                    earlyConflicts.append(candidate.path)
                     break
-            earlyConflicts.append(conflictPath)
-        earlyConflictsConcatenated = "\n".join(earlyConflicts)
-        raise ValueError(F"Reverting the commit would conflict against the head commit on {len(earlyConflicts)} files:\n{earlyConflictsConcatenated}")
+        raise ConflictError(earlyConflicts, "Reverting the commit would create a conflict with the head commit")
 
-    # TODO: Extend pygit2 so we can report exactly which files conflict during checkout.
-    # See https://stackoverflow.com/a/63244216
-    # Possibly useful for implementation: https://cffi.readthedocs.io/en/latest/using.html#extern-python-new-style-callbacks
-    # Interestingly, there's a progress_cb in checkout_options as well.
-    repo.checkout_index(revertIndex)
+    callbacks = CheckoutTraceCallbacks()
+    try:
+        repo.checkout_index(revertIndex, callbacks=callbacks)
+    except pygit2.GitError as gitError:
+        message = str(gitError)
+        if "prevents checkout" in message or "prevent checkout" in message:
+            conflicts = callbacks.get_conflicts()
+            if conflicts:
+                raise ConflictError(conflicts, "Reverting the commit would create a conflict with the working directory")
+        raise gitError
 
 
 def renameBranch(repo: Repository, oldName: str, newName: str):

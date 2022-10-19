@@ -834,9 +834,25 @@ class RepoWidget(QWidget):
     def revertCommitAsync(self, oid: pygit2.Oid):
         def work():
             porcelain.revertCommit(self.repo, oid)
+
         def then(_):
             self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Reverting commit “{shortHash(oid)}”")
+
+        def onError(exc):
+            if isinstance(exc, porcelain.ConflictError):
+                maxConflicts = 10
+                numConflicts = len(exc.conflicts)
+                message = exc.caption
+                message += ".\n\n"
+                message += fplural("# conflicting file^s:\n • ", numConflicts)
+                message += "\n • ".join(exc.conflicts[:maxConflicts])
+                if numConflicts > maxConflicts:
+                    message += f"\n... and {numConflicts-maxConflicts} more"
+                QMessageBox.warning(self, "Couldn’t revert commit", message)
+            else:
+                raise exc
+
+        self.workQueue.put(work, then, F"Reverting commit “{shortHash(oid)}”", errorCallback=onError)
 
     # -------------------------------------------------------------------------
     # Pull
