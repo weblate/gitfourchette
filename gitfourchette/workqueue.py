@@ -110,14 +110,20 @@ class WorkQueue:
         """
 
         if settings.TEST_MODE:
-            self.putSerial(work, then)
+            self.putSerial(work, then, caption, errorCallback)
         else:
             self.putAsync(work, then, caption, priority, errorCallback)
 
-    def putSerial(self, work, then):
-        result = work()
-        if then is not None:
-            then(result)
+    def putSerial(self, work, then, caption, errorCallback):
+        try:
+            result = work()
+            if then is not None:
+                then(result)
+        except BaseException as exc:
+            if errorCallback:
+                errorCallback(exc)
+            else:
+                excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self.parent)
 
     def putAsync(self, work, then, caption, priority, errorCallback):
         def workWrapper():
