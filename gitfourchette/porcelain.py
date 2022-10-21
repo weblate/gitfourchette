@@ -172,10 +172,14 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
             # See: https://stackoverflow.com/questions/8839958
             continue
 
-        remoteBranch = repo.branches.remote[name]
-        remoteName = remoteBranch.remote_name
-        strippedBranchName = name.removeprefix(remoteName + "/")
-        nameDict[remoteName].append(strippedBranchName)
+        try:
+            remoteBranch = repo.branches.remote[name]
+            remoteName = remoteBranch.remote_name
+            strippedBranchName = name.removeprefix(remoteName + "/")
+            nameDict[remoteName].append(strippedBranchName)
+        except (KeyError, ValueError) as exc:
+            # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
+            log.warning("porcelain", exc)
 
     return nameDict
 
