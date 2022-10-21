@@ -824,8 +824,7 @@ class RepoWidget(QWidget):
 
     def openSubmoduleFolder(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
-        url = QUrl.fromLocalFile(path)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(url))
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def checkoutCommitAsync(self, oid: pygit2.Oid):
         work = lambda: porcelain.checkoutCommit(self.repo, oid)
