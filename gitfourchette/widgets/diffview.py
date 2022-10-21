@@ -12,6 +12,7 @@ from pygit2 import GitError, Patch, Repository, Diff
 import enum
 import os
 import pygit2
+import sys
 
 
 def get1FileChangedByDiff(diff: Diff):
@@ -34,7 +35,15 @@ class DiffGutter(QWidget):
     def __init__(self, parent):
         super().__init__(parent)
         self.diffView = parent
-        self.setCursor(Qt.CursorShape.UpArrowCursor)
+
+        if sys.platform in ['darwin', 'win32']:
+            dpr = 4
+        else:
+            dpr = 1  # On Linux, Qt doesn't seem to support cursors at non-1 DPR
+        pix = QPixmap(f"assets:right_ptr@{dpr}x")
+        pix.setDevicePixelRatio(dpr)
+        flippedCursor = QCursor(pix, hotX=19, hotY=5)
+        self.setCursor(flippedCursor)
 
     def sizeHint(self) -> QSize:
         return QSize(self.diffView.gutterWidth(), 0)
