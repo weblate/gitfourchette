@@ -671,6 +671,8 @@ class Sidebar(QTreeView):
             self.commit.emit()
         elif item == EItem.Submodule:
             self.openSubmoduleRepo.emit(data)
+        elif item == EItem.StashesHeader:
+            self.newStash.emit()
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
