@@ -166,9 +166,7 @@ class RepoState:
 
         self.refreshRefsByCommitCache()
 
-        self.superproject = None
-        # TODO: parse superproject
-        #self.superproject = self.repo.git.rev_parse("--show-superproject-working-tree")
+        self.superproject = porcelain.getSuperproject(self.repo)
 
         self.activeCommitOid = None
 

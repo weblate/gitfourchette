@@ -585,3 +585,27 @@ def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
     else:
         # Unborn or something...
         raise NotImplementedError(F"Unsupported merge analysis {mergeAnalysis}.")
+
+
+def getSuperproject(repo: pygit2.Repository):
+    """
+    If `repo` is a submodule, returns the path to the superproject's working directory,
+    otherwise returns None.
+    Equivalent to `git rev-parse --show-superproject-working-tree`.
+    """
+
+    repoPath = repo.path  # e.g. "/home/user/superproj/.git/modules/src/extern/subproj/"
+    gitModules = "/.git/modules/"
+    gitModulesPos = repoPath.rfind(gitModules)
+
+    if gitModulesPos >= 0:
+        superWD = repoPath[:gitModulesPos]  # e.g. "/home/user/superproj"
+        subWDRelative = repoPath[gitModulesPos + len(gitModules):]  # e.g. "src/extern/subproj/"
+
+        # Recompose full path to submodule workdir to ensure we are indeed a submodule of the tentative superproject
+        subWD = superWD + "/" + subWDRelative  # e.g. "/home/user/superproj/src/extern/subproj/"
+        if subWD == repo.workdir:
+            return superWD
+
+    return None
+
