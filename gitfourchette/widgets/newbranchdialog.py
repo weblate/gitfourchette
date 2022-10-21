@@ -32,6 +32,9 @@ class NewBranchDialog(QDialog):
 
         self.onBranchNameChanged()  # do initial validation
 
+        self.ui.nameEdit.setFocus()
+        self.ui.nameEdit.selectAll()
+
     @property
     def acceptButton(self):
         return self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
