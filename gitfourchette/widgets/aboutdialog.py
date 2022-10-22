@@ -17,6 +17,12 @@ def getPygit2FeatureStrings():
 
 
 def showAboutDialog(parent: QWidget):
+    try:
+        import gitfourchette._buildconstants
+        buildDateLine = f"Built on: <b>{gitfourchette._buildconstants.buildDate}</b><br/>"
+    except ImportError:
+        buildDateLine = ""
+
     appName = QApplication.applicationDisplayName()
     appVersion = QApplication.applicationVersion()
 
@@ -33,6 +39,7 @@ def showAboutDialog(parent: QWidget):
             &copy; 2020-2022 Iliyas Jorio
         </p>
         <p><small>
+            {buildDateLine}
             libgit2         <b>{pygit2.LIBGIT2_VERSION}</b><br>
             pygit2          <b>{pygit2.__version__}</b> (with {', '.join(getPygit2FeatureStrings())})<br>
             Qt              <b>{qVersion()}</b><br>

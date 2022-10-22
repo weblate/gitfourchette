@@ -1,5 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import datetime
+
+
+# Write _buildconstants.py
+buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
+with open('gitfourchette/_buildconstants.py', 'wt') as f:
+	f.write(f"buildDate = \"{buildDate}\"\n")
+
 
 block_cipher = None
 
