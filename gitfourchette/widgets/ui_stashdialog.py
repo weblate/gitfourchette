@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'stashdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.15.6
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -25,6 +25,7 @@ class Ui_StashDialog(object):
         StashDialog.setModal(True)
         self.formLayout = QFormLayout(StashDialog)
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
         self.messageLabel = QLabel(StashDialog)
         self.messageLabel.setObjectName(u"messageLabel")
 
