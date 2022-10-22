@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from gitfourchette.qt import *
 from gitfourchette.settings import PathDisplayStyle
 from pygit2 import Oid
@@ -199,6 +199,7 @@ class ActionDef:
     callback: typing.Callable = None
     icon: QStyle.StandardPixmap = None
     checkState: int = 0
+    submenu: list['ActionDef'] = field(default_factory=list)
 
 
 def quickMenu(
@@ -206,12 +207,21 @@ def quickMenu(
         actionDefs: list[ActionDef],
         menu: QMenu = None
 ) -> QMenu:
-    actions = []
+    if menu:
+        menu.insertSeparator(menu.actions()[0])
+    else:
+        menu = QMenu(parent)
 
     for actionDef in actionDefs:
         if not actionDef:
-            newAction = QAction(parent)
-            newAction.setSeparator(True)
+            menu.addSeparator()
+        elif actionDef.submenu:
+            submenu = quickMenu(parent, actionDefs=actionDef.submenu, menu=None)
+            submenu.setTitle(actionDef.caption)
+            if actionDef.icon:
+                icon = parent.style().standardIcon(actionDef.icon)
+                submenu.setIcon(icon)
+            menu.addMenu(submenu)
         else:
             newAction = QAction(actionDef.caption, parent)
             newAction.triggered.connect(actionDef.callback)
@@ -221,15 +231,7 @@ def quickMenu(
             if actionDef.checkState != 0:
                 newAction.setCheckable(True)
                 newAction.setChecked(actionDef.checkState == 1)
-
-        actions.append(newAction)
-
-    if menu:
-        menu.insertSeparator(menu.actions()[0])
-        menu.insertActions(menu.actions()[0], actions)
-    else:
-        menu = QMenu(parent)
-        menu.addActions(actions)
+            menu.addAction(newAction)
 
     return menu
 
