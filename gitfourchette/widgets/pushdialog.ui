@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>635</width>
-    <height>225</height>
+    <width>570</width>
+    <height>355</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -115,7 +115,7 @@
         </sizepolicy>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="forcePushPage">
         <layout class="QHBoxLayout" name="horizontalLayout_3">
@@ -131,13 +131,6 @@
          <property name="bottomMargin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="QCheckBox" name="forcePushCheckBox">
-           <property name="text">
-            <string>&amp;Force push</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="customRemoteBranchNamePage">
@@ -167,14 +160,34 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="statusLabel">
+   <item row="2" column="1">
+    <widget class="QCheckBox" name="forcePushCheckBox">
      <property name="text">
-      <string>Status</string>
+      <string>&amp;Force push</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="6" column="1">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QCheckBox" name="trackCheckBox">
+     <property name="text">
+      <string>Set up “branch” to track “remote/branch” (instead of “remote/junk”)</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
     <widget class="QGroupBox" name="groupBox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -192,16 +205,17 @@
      </layout>
     </widget>
    </item>
-   <item row="3" column="1">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="4" column="0">
+    <widget class="QLabel" name="statusLabel">
+     <property name="text">
+      <string>Status</string>
      </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-     <property name="centerButtons">
-      <bool>false</bool>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Options</string>
      </property>
     </widget>
    </item>
@@ -215,6 +229,12 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>localBranchEdit</tabstop>
+  <tabstop>remoteBranchEdit</tabstop>
+  <tabstop>customRemoteBranchNameEdit</tabstop>
+  <tabstop>forcePushCheckBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

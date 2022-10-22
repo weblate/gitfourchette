@@ -3,7 +3,7 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import QSignalBlockerContext
-from gitfourchette.util import addComboBoxItem, stockIcon
+from gitfourchette.util import addComboBoxItem, stockIcon, labelQuote
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from gitfourchette.workqueue import WorkQueue
@@ -47,6 +47,8 @@ class PushDialog(QDialog):
         else:
             self.ui.remoteBranchEdit.setCurrentIndex(self.fallbackAutoNewIndex)
 
+        self.updateTrackCheckBox()
+
     def onPickRemoteBranch(self, index: int):
         localBranch = self.currentLocalBranch
 
@@ -59,6 +61,32 @@ class PushDialog(QDialog):
             self.ui.customRemoteBranchNameEdit.setFocus(Qt.TabFocusReason)
         else:
             self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.forcePushPage)
+
+        self.updateTrackCheckBox()
+
+    def updateTrackCheckBox(self, resetCheckedState=True):
+        localBranch = self.currentLocalBranch
+        localName = localBranch.shorthand
+        remoteName = self.currentRemoteBranchFullName
+
+        if not localBranch.upstream:
+            text = F"Make {labelQuote(localName)} trac&k {labelQuote(remoteName)} from now on"
+            checked = False
+            enabled = True
+        elif localBranch.upstream.shorthand == self.currentRemoteBranchFullName:
+            text = F"{labelQuote(localName)} already trac&ks {labelQuote(localBranch.upstream.shorthand)}"
+            checked = True
+            enabled = False
+        else:
+            text = (F"Make {labelQuote(localName)} trac&k {labelQuote(remoteName)} from now on,\n"
+                    F"instead of {labelQuote(localBranch.upstream.shorthand)}")
+            checked = False
+            enabled = True
+
+        self.ui.trackCheckBox.setText(text)
+        self.ui.trackCheckBox.setEnabled(enabled)
+        if resetCheckedState:
+            self.ui.trackCheckBox.setChecked(checked)
 
     @property
     def currentLocalBranchName(self) -> str:
@@ -97,6 +125,21 @@ class PushDialog(QDialog):
             return rbr.shorthand.removeprefix(rbr.remote_name + "/")
         elif remoteItem == ERemoteItem.NewRef:
             return self.ui.customRemoteBranchNameEdit.text()
+        else:
+            raise NotImplementedError()
+
+    @property
+    def currentRemoteBranchFullName(self) -> str:
+        data = self.ui.remoteBranchEdit.currentData()
+        if data is None:
+            return ""
+        remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
+
+        if remoteItem == ERemoteItem.ExistingRef:
+            rbr: pygit2.Branch = remoteData
+            return rbr.shorthand
+        elif remoteItem == ERemoteItem.NewRef:
+            return remoteData + "/" + self.ui.customRemoteBranchNameEdit.text()
         else:
             raise NotImplementedError()
 
@@ -176,6 +219,7 @@ class PushDialog(QDialog):
         self.ui.localBranchEdit.currentIndexChanged.connect(self.fillRemoteComboBox)
         self.ui.localBranchEdit.currentIndexChanged.connect(self.onPickLocalBranch)
         self.ui.remoteBranchEdit.currentIndexChanged.connect(self.onPickRemoteBranch)
+        self.ui.customRemoteBranchNameEdit.textEdited.connect(lambda text: self.updateTrackCheckBox(False))
 
         # Force the indexchanged signal to fire so the callbacks are guaranteed to run even if pickBranchIndex is 0.
         self.ui.localBranchEdit.currentIndexChanged.emit(pickBranchIndex)
@@ -198,8 +242,15 @@ class PushDialog(QDialog):
         link.signals.message.connect(self.ui.statusForm.setProgressMessage)
         link.signals.progress.connect(self.ui.statusForm.setProgressValue)
 
+        if self.ui.trackCheckBox.isEnabled() and self.ui.trackCheckBox.isChecked():
+            resetTrackingReference = self.currentRemoteBranchFullName
+        else:
+            resetTrackingReference = None
+
         def work():
             remote.push([self.revspec], callbacks=link)
+            if resetTrackingReference:
+                porcelain.editTrackingBranch(self.repo, self.currentLocalBranchName, resetTrackingReference)
 
         def then(_):
             self.pushInProgress = False

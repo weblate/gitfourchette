@@ -17,7 +17,7 @@ class Ui_PushDialog(object):
             PushDialog.setObjectName(u"PushDialog")
         PushDialog.setWindowModality(Qt.NonModal)
         PushDialog.setEnabled(True)
-        PushDialog.resize(635, 225)
+        PushDialog.resize(570, 355)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -88,11 +88,6 @@ class Ui_PushDialog(object):
         self.horizontalLayout_3 = QHBoxLayout(self.forcePushPage)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.forcePushCheckBox = QCheckBox(self.forcePushPage)
-        self.forcePushCheckBox.setObjectName(u"forcePushCheckBox")
-
-        self.horizontalLayout_3.addWidget(self.forcePushCheckBox)
-
         self.remoteBranchOptionsStack.addWidget(self.forcePushPage)
         self.customRemoteBranchNamePage = QWidget()
         self.customRemoteBranchNamePage.setObjectName(u"customRemoteBranchNamePage")
@@ -113,10 +108,23 @@ class Ui_PushDialog(object):
 
         self.formLayout.setLayout(1, QFormLayout.FieldRole, self.horizontalLayout)
 
-        self.statusLabel = QLabel(PushDialog)
-        self.statusLabel.setObjectName(u"statusLabel")
+        self.forcePushCheckBox = QCheckBox(PushDialog)
+        self.forcePushCheckBox.setObjectName(u"forcePushCheckBox")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.statusLabel)
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.forcePushCheckBox)
+
+        self.buttonBox = QDialogButtonBox(PushDialog)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setCenterButtons(False)
+
+        self.formLayout.setWidget(6, QFormLayout.FieldRole, self.buttonBox)
+
+        self.trackCheckBox = QCheckBox(PushDialog)
+        self.trackCheckBox.setObjectName(u"trackCheckBox")
+
+        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.trackCheckBox)
 
         self.groupBox = QGroupBox(PushDialog)
         self.groupBox.setObjectName(u"groupBox")
@@ -133,25 +141,30 @@ class Ui_PushDialog(object):
         self.verticalLayout.addWidget(self.statusForm)
 
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.groupBox)
+        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.groupBox)
 
-        self.buttonBox = QDialogButtonBox(PushDialog)
-        self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.buttonBox.setCenterButtons(False)
+        self.statusLabel = QLabel(PushDialog)
+        self.statusLabel.setObjectName(u"statusLabel")
 
-        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.buttonBox)
+        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.statusLabel)
+
+        self.label = QLabel(PushDialog)
+        self.label.setObjectName(u"label")
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label)
 
 #if QT_CONFIG(shortcut)
         self.localBranchLabel.setBuddy(self.localBranchEdit)
         self.remoteBranchLabel.setBuddy(self.remoteBranchEdit)
 #endif // QT_CONFIG(shortcut)
+        QWidget.setTabOrder(self.localBranchEdit, self.remoteBranchEdit)
+        QWidget.setTabOrder(self.remoteBranchEdit, self.customRemoteBranchNameEdit)
+        QWidget.setTabOrder(self.customRemoteBranchNameEdit, self.forcePushCheckBox)
 
         self.retranslateUi(PushDialog)
         self.buttonBox.rejected.connect(PushDialog.reject)
 
-        self.remoteBranchOptionsStack.setCurrentIndex(0)
+        self.remoteBranchOptionsStack.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(PushDialog)
@@ -160,7 +173,9 @@ class Ui_PushDialog(object):
         PushDialog.setWindowTitle(QCoreApplication.translate("PushDialog", u"Push branch", None))
         self.localBranchLabel.setText(QCoreApplication.translate("PushDialog", u"&Local branch", None))
         self.remoteBranchLabel.setText(QCoreApplication.translate("PushDialog", u"Push &to", None))
-        self.forcePushCheckBox.setText(QCoreApplication.translate("PushDialog", u"&Force push", None))
         self.customRemoteBranchNameEdit.setPlaceholderText(QCoreApplication.translate("PushDialog", u"Branch name on remote", None))
-        self.statusLabel.setText(QCoreApplication.translate("PushDialog", u"Status", None))
+        self.forcePushCheckBox.setText(QCoreApplication.translate("PushDialog", u"&Force push", None))
+        self.trackCheckBox.setText(QCoreApplication.translate("PushDialog", u"Set up \u201cbranch\u201d to track \u201cremote/branch\u201d (instead of \u201cremote/junk\u201d)", None))
         self.groupBox.setTitle("")
+        self.statusLabel.setText(QCoreApplication.translate("PushDialog", u"Status", None))
+        self.label.setText(QCoreApplication.translate("PushDialog", u"Options", None))
