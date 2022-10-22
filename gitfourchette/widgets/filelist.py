@@ -7,6 +7,7 @@ from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur, PersistentFileDialog)
 from pathlib import Path
 from typing import Generator, Any
+import errno
 import html
 import os
 import pygit2
@@ -412,8 +413,19 @@ class CommittedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-                ActionDef(plur("Open #~Revision^s in External Editor", n), self.openRevision, QStyle.StandardPixmap.SP_FileIcon),
-                ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
+                ActionDef(plur("&Open Revision^s...", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
+                [
+                    ActionDef("&At Commit", self.openNewRevision),
+                    ActionDef("&Before Commit", self.openOldRevision),
+                    None,
+                    ActionDef("&Current (working directory)", self.openHeadRevision),
+                ]),
+                ActionDef(plur("&Save Revision^s...", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
+                [
+                    ActionDef("&At Commit", self.saveNewRevision),
+                    ActionDef("&Before Commit", self.saveOldRevision),
+                ]),
+                #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
                 ActionDef("Save As Patch...", self.savePatchAs),
                 None,
                 ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
@@ -427,18 +439,27 @@ class CommittedFiles(FileList):
     def setCommit(self, oid: pygit2.Oid):
         self.commitOid = oid
 
-    def openRevision(self):
+    def openNewRevision(self):
+        self.openRevision(beforeCommit=False)
+
+    def openOldRevision(self):
+        self.openRevision(beforeCommit=True)
+
+    def saveNewRevision(self):
+        self.saveRevisionAs(beforeCommit=False)
+
+    def saveOldRevision(self):
+        self.saveRevisionAs(beforeCommit=True)
+
+    def openRevision(self, beforeCommit: bool = False):
+        errors = []
+
         for diff in self.confirmSelectedEntries("open # files"):
-            diffFile: pygit2.DiffFile
-            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
-                diffFile = diff.delta.old_file
-            else:
-                diffFile = diff.delta.new_file
-
-            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
-
-            name, ext = os.path.splitext(os.path.basename(diffFile.path))
-            name = F"{name}@{shortHash(self.commitOid)}{ext}"
+            try:
+                name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
+            except FileNotFoundError as fnf:
+                errors.append(fnf.filename + ": " + fnf.strerror)
+                continue
 
             tempPath = os.path.join(getSessionTemporaryDirectory(), name)
 
@@ -447,17 +468,18 @@ class CommittedFiles(FileList):
 
             QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
 
-    def saveRevisionAs(self, saveInto=None):
+        if errors:
+            QMessageBox.warning(self, "Open revision", "\n\n".join(errors))
+
+    def saveRevisionAs(self, beforeCommit: bool = False, saveInto=None):
+        errors = []
+
         for diff in self.confirmSelectedEntries("save # files"):
-            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
-                diffFile = diff.delta.old_file
-            else:
-                diffFile = diff.delta.new_file
-
-            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
-
-            name, ext = os.path.splitext(os.path.basename(diffFile.path))
-            name = F"{name}@{shortHash(self.commitOid)}{ext}"
+            try:
+                name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
+            except FileNotFoundError as fnf:
+                errors.append(fnf.filename + ": " + fnf.strerror)
+                continue
 
             if saveInto:
                 savePath = os.path.join(saveInto, name)
@@ -471,3 +493,40 @@ class CommittedFiles(FileList):
                 f.write(blob.data)
 
             os.chmod(savePath, diffFile.mode)
+
+        if errors:
+            QMessageBox.warning(self, "Save revision as", "\n\n".join(errors))
+
+    def getFileRevisionInfo(self, diff: pygit2.Diff, beforeCommit: bool = False):
+        if beforeCommit:
+            diffFile = diff.delta.old_file
+            if diff.delta.status == pygit2.GIT_DELTA_ADDED:
+                raise FileNotFoundError(errno.ENOENT, "This file didn’t exist before the commit.", diffFile.path)
+        else:
+            diffFile = diff.delta.new_file
+            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+                raise FileNotFoundError(errno.ENOENT, "This file was deleted by the commit.", diffFile.path)
+
+        blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+
+        atSuffix = shortHash(self.commitOid)
+        if beforeCommit:
+            atSuffix = F"before-{atSuffix}"
+
+        name, ext = os.path.splitext(os.path.basename(diffFile.path))
+        name = F"{name}@{atSuffix}{ext}"
+
+        return name, blob, diffFile
+
+    def openHeadRevision(self):
+        errors = []
+
+        for diff in self.confirmSelectedEntries("open # files"):
+            diffFile = diff.delta.new_file
+            if os.path.isfile(diffFile.path):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(diffFile.path))
+            else:
+                errors.append(f"{diffFile.path}: There’s no file at this path on HEAD.")
+
+        if errors:
+            QMessageBox.warning(self, "Open revision at HEAD", "\n\n".join(errors))
