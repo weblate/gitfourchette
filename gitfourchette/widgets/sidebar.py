@@ -588,7 +588,7 @@ class Sidebar(QTreeView):
                            lambda: self.newTrackingBranch.emit(data))
 
             a = menu.addAction(F"Fetch this remote branch...", lambda: self.fetchRemoteBranch.emit(data))
-            a.setIcon(self.parentWidget().style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
             a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
@@ -602,12 +602,12 @@ class Sidebar(QTreeView):
             a.setIcon(QIcon.fromTheme("document-edit"))
 
             a = menu.addAction("&Fetch all branches on this remote...", lambda: self.fetchRemote.emit(data))
-            a.setIcon(self.parentWidget().style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
 
             a = menu.addAction("&Delete Remote", lambda: self.deleteRemote.emit(data))
-            a.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
 
         elif item == EItem.RemotesHeader:
             menu.addAction("&New Remote...", lambda: self.newRemote.emit())

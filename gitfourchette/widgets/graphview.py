@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.qt import *
-from gitfourchette.util import messageSummary, fplural, shortHash
+from gitfourchette.util import messageSummary, fplural, shortHash, stockIcon
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.graphdelegate import GraphDelegate
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
@@ -116,7 +116,7 @@ class GraphView(QListView):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         getInfoAction = QAction("Get &Info...", self)
-        getInfoAction.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
+        getInfoAction.setIcon(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
         getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
         self.addAction(getInfoAction)
         checkoutAction = QAction("&Check Out...", self)

@@ -1,6 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import excMessageBox, labelQuote, shortHash, messageSummary
+from gitfourchette.util import labelQuote, messageSummary, shortHash, stockIcon
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
@@ -55,10 +55,7 @@ class ActionFlows(QObject):
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
         if acceptButtonIcon:
-            if type(acceptButtonIcon) is str:
-                yes.setIcon(QIcon.fromTheme(acceptButtonIcon))
-            else:
-                yes.setIcon(self.parentWidget.style().standardIcon(acceptButtonIcon))
+            yes.setIcon(stockIcon(acceptButtonIcon))
         yes.setText(title)
 
         qmb.setDefaultButton(yes)

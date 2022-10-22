@@ -219,15 +219,13 @@ def quickMenu(
             submenu = quickMenu(parent, actionDefs=actionDef.submenu, menu=None)
             submenu.setTitle(actionDef.caption)
             if actionDef.icon:
-                icon = parent.style().standardIcon(actionDef.icon)
-                submenu.setIcon(icon)
+                submenu.setIcon(stockIcon(actionDef.icon))
             menu.addMenu(submenu)
         else:
             newAction = QAction(actionDef.caption, parent)
             newAction.triggered.connect(actionDef.callback)
             if actionDef.icon:
-                icon = parent.style().standardIcon(actionDef.icon)
-                newAction.setIcon(icon)
+                newAction.setIcon(stockIcon(actionDef.icon))
             if actionDef.checkState != 0:
                 newAction.setCheckable(True)
                 newAction.setChecked(actionDef.checkState == 1)

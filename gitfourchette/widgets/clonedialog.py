@@ -2,6 +2,7 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import PersistentFileDialog
+from gitfourchette.util import stockIcon
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_clonedialog import Ui_CloneDialog
 from gitfourchette.workqueue import WorkQueue
@@ -41,7 +42,7 @@ class CloneDialog(QDialog):
         self.initUrlComboBox()
         self.ui.urlEdit.activated.connect(self.onComboBoxItemActivated)
 
-        self.ui.browseButton.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
+        self.ui.browseButton.setIcon(stockIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
         self.ui.browseButton.clicked.connect(self.browse)
 
         self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
