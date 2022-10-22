@@ -153,5 +153,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
     def update_tips(self, refname, old, new):
         log.info("RemoteLink", F"Update tip {refname}: {old} ---> {new}")
 
-    def push_update_reference(self, refname, message):
-        self.signals.message.emit(F"Push update ref {refname} {message}")
+    def push_update_reference(self, refname: str, message: str | None):
+        if not message:
+            message = ""
+        self.signals.message.emit(F"Push update reference:\n{refname} {message}")

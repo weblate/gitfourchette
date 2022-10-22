@@ -17,6 +17,7 @@ class ActionFlows(QObject):
     createCommit = Signal(str, object, object)
     deleteBranch = Signal(str)
     deleteRemote = Signal(str)
+    deleteRemoteBranch = Signal(str)
     discardFiles = Signal(list)  # list[Patch]
     editRemote = Signal(str, str, str)  # oldName, newName, newURL
     editTrackingBranch = Signal(str, str)
@@ -213,6 +214,15 @@ class ActionFlows(QObject):
             F"Really delete remote <b>{labelQuote(remoteName)}</b>?<br/>This cannot be undone!",
             QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteRemote.emit(remoteName))
+        return qmb
+
+    def deleteRemoteBranchFlow(self, remoteBranchName: str):
+        qmb = self.confirmAction(
+            "Delete branch on remote",
+            (f"Really delete branch <b>{labelQuote(remoteBranchName)}</b> from the remote repository?<br/>"
+            f"This cannot be undone!"),
+            QStyle.StandardPixmap.SP_DialogDiscardButton)
+        qmb.accepted.connect(lambda: self.deleteRemoteBranch.emit(remoteBranchName))
         return qmb
 
     # -------------------------------------------------------------------------

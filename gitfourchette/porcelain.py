@@ -216,6 +216,16 @@ def deleteRemote(repo: Repository, remoteName: str):
     repo.remotes.delete(remoteName)
 
 
+def deleteRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks):
+    remoteName, branchName = splitRemoteBranchName(remoteBranchName)
+
+    refspec = f":refs/heads/{branchName}"
+    log.info("porcelain", f"Delete remote branch: refspec: \"{refspec}\"")
+
+    remote = repo.remotes[remoteName]
+    remote.push([refspec], callbacks=remoteCallbacks)
+
+
 def deleteStaleRemoteHEADSymbolicRef(repo: Repository, remoteName: str):
     """
     Delete `refs/remotes/{remoteName}/HEAD` to work around a bug in libgit2
@@ -248,9 +258,17 @@ def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.Remot
     return transfer
 
 
-def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
+def splitRemoteBranchName(remoteBranchName: str):
+    if remoteBranchName.startswith("refs/"):
+        raise ValueError("splitRemoteBranchName: remote branch name mustn't start with refs/")
+
     # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
     remoteName, branchName = remoteBranchName.split("/", 1)
+    return remoteName, branchName
+
+
+def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
+    remoteName, branchName = splitRemoteBranchName(remoteBranchName)
 
     # Delete .git/refs/{remoteName}/HEAD to work around a bug in libgit2
     # where git_revwalk__push_glob chokes on refs/remotes/{remoteName}/HEAD

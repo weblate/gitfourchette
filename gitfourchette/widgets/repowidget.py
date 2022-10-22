@@ -126,6 +126,7 @@ class RepoWidget(QWidget):
         self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
+        self.sidebar.deleteRemoteBranch.connect(self.actionFlows.deleteRemoteBranchFlow)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
         self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
@@ -154,6 +155,7 @@ class RepoWidget(QWidget):
         flows.createCommit.connect(self.createCommitAsync)
         flows.deleteBranch.connect(self.deleteBranchAsync)
         flows.deleteRemote.connect(self.deleteRemoteAsync)
+        flows.deleteRemoteBranch.connect(self.deleteRemoteBranchAsync)
         flows.discardFiles.connect(self.discardFilesAsync)
         flows.editRemote.connect(self.editRemoteAsync)
         flows.editTrackingBranch.connect(self.editTrackingBranchAsync)
@@ -745,7 +747,7 @@ class RepoWidget(QWidget):
 
         def onError(exc):
             rlpd.close()
-            excMessageBox(exc, title="Fetch error", message=F"Couldn't fetch remote branch “{remoteBranchName}”.", parent=self)
+            excMessageBox(exc, title="Fetch error", message=F"Couldn’t fetch remote branch “{remoteBranchName}”.", parent=self)
 
         self.workQueue.put(work, then, F"Fetch remote branch “{remoteBranchName}”", errorCallback=onError)
 
@@ -753,6 +755,22 @@ class RepoWidget(QWidget):
         work = lambda: porcelain.deleteRemote(self.repo, remoteName)
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Deleting remote “{remoteName}”")
+
+    def deleteRemoteBranchAsync(self, remoteBranchName: str):
+        rlpd = RemoteLinkProgressDialog(self)
+
+        def work():
+            return porcelain.deleteRemoteBranch(self.repo, remoteBranchName, rlpd.remoteLink)
+
+        def then(_):
+            rlpd.close()
+            self.quickRefreshWithSidebar()
+
+        def onError(exc):
+            rlpd.close()
+            excMessageBox(exc, title="Delete remote branch", message=F"Couldn’t delete remote branch “{remoteBranchName}”.", parent=self)
+
+        self.workQueue.put(work, then, F"Delete remote branch “{remoteBranchName}”", errorCallback=onError)
 
     def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
