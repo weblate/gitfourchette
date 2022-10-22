@@ -4,6 +4,7 @@ from gitfourchette.qt import *
 import enum
 import json
 import os
+import sys
 
 
 TEST_MODE = False
@@ -237,3 +238,16 @@ class Session(BasePrefs):
 prefs = Prefs()
 history = History()
 
+
+
+def applyQtStylePref(forceApplyDefault: bool):
+    app = QApplication.instance() 
+
+    if prefs.qtStyle:
+        app.setStyle(prefs.qtStyle)
+    elif forceApplyDefault:
+        app.setStyle(app.PLATFORM_DEFAULT_STYLE_NAME)
+
+    if sys.platform == 'darwin':
+        isDefaultMacStyle = (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
+        app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, isDefaultMacStyle)

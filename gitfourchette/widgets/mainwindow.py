@@ -316,10 +316,7 @@ class MainWindow(QMainWindow):
 
         # Apply new style
         if 'qtStyle' in dlg.prefDiff:
-            if settings.prefs.qtStyle:
-                QApplication.instance().setStyle(settings.prefs.qtStyle)
-            else:
-                QApplication.instance().setStyle(QApplication.instance().PLATFORM_DEFAULT_STYLE_NAME)
+            settings.applyQtStylePref(forceApplyDefault=True)
 
         # Notify widgets
         self.tabs.refreshPrefs()

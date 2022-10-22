@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-import difflib, os, re, subprocess, sys, platform
+import difflib, os, re, subprocess, sys
 
 srcDir = "gitfourchette"
 assetsDir = "gitfourchette/assets"
@@ -7,7 +7,7 @@ assetsDir = "gitfourchette/assets"
 
 if 'UIC' in os.environ:
     UIC = os.environ['UIC']
-elif platform.system() == 'Darwin':
+elif sys.platform == 'darwin':
     UIC = 'pyside6-uic'  # "/opt/homebrew/opt/qt5/bin/uic"
 else:
     UIC = "uic-qt5"

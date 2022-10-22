@@ -62,8 +62,7 @@ def main():
         # Load settings
         with NonCriticalOperation(F"Loading {settings.prefs.filename}"):
             settings.prefs.load()
-            if settings.prefs.qtStyle:
-                app.setStyle(settings.prefs.qtStyle)
+            settings.applyQtStylePref(forceApplyDefault=False)
 
         # Load history
         with NonCriticalOperation(F"Loading {settings.history.filename}"):
