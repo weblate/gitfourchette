@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
@@ -317,6 +318,8 @@ class MainWindow(QMainWindow):
         # Apply new style
         if 'qtStyle' in dlg.prefDiff:
             settings.applyQtStylePref(forceApplyDefault=True)
+        if 'debug_verbosity' in dlg.prefDiff:
+            log.setVerbosity(settings.prefs.debug_verbosity)
 
         # Notify widgets
         self.tabs.refreshPrefs()

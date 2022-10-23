@@ -117,6 +117,12 @@ class AuthorDisplayStyle(enum.IntEnum):
     ABBREVIATED_EMAIL = 6
 
 
+class Verbosity(enum.IntEnum):
+    QUIET = 0
+    VERBOSE = 1
+    VERY_VERBOSE = 2
+
+
 @dataclass
 class Prefs(BasePrefs):
     filename = "prefs.json"
@@ -149,6 +155,7 @@ class Prefs(BasePrefs):
     debug_showMemoryIndicator   : bool          = True
     debug_showDirtyCommitsAfterRefresh : bool   = True
     debug_showPID               : bool          = True
+    debug_verbosity             : Verbosity     = Verbosity.VERBOSE
 
 
 @dataclass

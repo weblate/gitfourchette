@@ -42,6 +42,8 @@ def main():
         app.setWindowIcon(QIcon("assets:gitfourchette.png"))
 
     from gitfourchette import settings
+    from gitfourchette import log
+    log.setVerbosity(settings.prefs.debug_verbosity)
 
     # Get system default style name before applying further styling
     with NonCriticalOperation("Get system default style name"):

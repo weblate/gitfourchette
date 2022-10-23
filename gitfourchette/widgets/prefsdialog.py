@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, SHORT_DATE_PRESETS
 from gitfourchette.util import abbreviatePath
@@ -190,7 +191,7 @@ class PrefsDialog(QDialog):
                 del self.prefDiff[k]
         else:
             self.prefDiff[k] = v
-        print("Assign", k, v)
+        log.info("prefsdialog", f"Assign {k} {v}")
 
     def getMostRecentValue(self, k):
         if k in self.prefDiff:
