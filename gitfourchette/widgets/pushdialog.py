@@ -189,10 +189,10 @@ class PushDialog(QDialog):
         self.ui = Ui_PushDialog()
         self.ui.setupUi(self)
 
-        self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        self.cloneButton.setText("&Push")
-        self.cloneButton.setIcon(stockIcon("vcs-push"))
-        self.cloneButton.clicked.connect(self.onPushClicked)
+        self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        self.startOperationButton.setText("&Push")
+        self.startOperationButton.setIcon(stockIcon("vcs-push"))
+        self.startOperationButton.clicked.connect(self.onPushClicked)
 
         pickBranchIndex = 0
 
@@ -216,13 +216,27 @@ class PushDialog(QDialog):
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
     def enableInputs(self, on: bool):
-        for w in [self.ui.remoteBranchEdit, self.ui.localBranchEdit, self.ui.customRemoteBranchNameEdit, self.ui.forcePushCheckBox]:
-            w.setEnabled(on)
+        widgets = [self.ui.remoteBranchEdit,
+                   self.ui.localBranchEdit,
+                   self.ui.customRemoteBranchNameEdit,
+                   self.ui.forcePushCheckBox,
+                   self.ui.trackCheckBox,
+                   self.startOperationButton]
+
+        if not on:
+            # Remember which widgets were disabled already
+            self.enableInputsBackup = [w.isEnabled() for w in widgets]
+            for w in widgets:
+                w.setEnabled(False)
+        else:
+            for w, enableW in zip(widgets, self.enableInputsBackup):
+                w.setEnabled(enableW)
 
     def onPushClicked(self):
         remote = self.repo.remotes[self.currentRemoteName]
         log.info("PushDialog", self.refspec, remote.name)
         link = RemoteLink()
+        self.remoteLink = link
 
         self.ui.statusForm.initProgress(F"Contacting remote host...")
         link.signals.message.connect(self.ui.statusForm.setProgressMessage)
@@ -253,6 +267,11 @@ class PushDialog(QDialog):
 
         self.pushInProgress = True
         self.enableInputs(False)
-
         wq = WorkQueue(self)
         wq.put(work, then, "Pushing", errorCallback=onError)
+
+    def reject(self):
+        if self.pushInProgress:
+            self.remoteLink.raiseAbortFlag()
+        else:
+            super().reject()
