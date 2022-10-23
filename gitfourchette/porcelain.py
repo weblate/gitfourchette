@@ -3,6 +3,10 @@ from gitfourchette import log
 from pygit2 import Commit, Diff, Oid, Repository, Signature
 import pygit2
 import os
+import re
+
+
+CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On [^\s:]+: (.+)")
 
 
 class ConflictError(Exception):
@@ -556,6 +560,17 @@ def popStash(repo: Repository, commitId: pygit2.Oid):
 
 def dropStash(repo: Repository, commitId: pygit2.Oid):
     repo.stash_drop(findStashIndex(repo, commitId))
+
+
+def getCoreStashMessage(stashMessage: str):
+    exp = re.compile(r"^On [^\s:]+: (.+)")
+
+    m = exp.match(stashMessage)
+
+    if m:
+        return m.group(1)
+    else:
+        return stashMessage
 
 
 def patchApplies(

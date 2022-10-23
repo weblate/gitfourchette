@@ -390,7 +390,7 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.Stash:
             stash = self._stashes[row]
             if displayRole:
-                return stash.message
+                return porcelain.getCoreStashMessage(stash.message)
             elif toolTipRole:
                 return F"<b>stash@{{{row}}}</b>:<br/>{escape(stash.message)}"
             elif userRole:
