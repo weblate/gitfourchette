@@ -271,6 +271,24 @@ def deleteRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks:
     remote.push([refspec], callbacks=remoteCallbacks)
 
 
+def renameRemoteBranch(repo: Repository, oldRemoteBranchName: str, newBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks):
+    """
+    Warning: this function does not refresh the state of the remote branch before renaming it!
+    """
+    remoteName, oldBranchName = splitRemoteBranchName(oldRemoteBranchName)
+
+    # First, make a new branch pointing to the same ref as the old one
+    refspec1 = f"refs/remotes/{oldRemoteBranchName}:refs/heads/{newBranchName}"
+
+    # Next, delete the old branch
+    refspec2 = f":refs/heads/{oldBranchName}"
+
+    log.info("porcelain", f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
+
+    remote = repo.remotes[remoteName]
+    remote.push([refspec1, refspec2], callbacks=remoteCallbacks)
+
+
 def deleteStaleRemoteHEADSymbolicRef(repo: Repository, remoteName: str):
     """
     Delete `refs/remotes/{remoteName}/HEAD` to work around a bug in libgit2

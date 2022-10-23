@@ -126,6 +126,7 @@ class RepoWidget(QWidget):
         self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
+        self.sidebar.renameRemoteBranch.connect(self.actionFlows.renameRemoteBranchFlow)
         self.sidebar.deleteRemoteBranch.connect(self.actionFlows.deleteRemoteBranchFlow)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
@@ -164,6 +165,7 @@ class RepoWidget(QWidget):
         flows.newStash.connect(self.newStashAsync)
         flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
         flows.renameBranch.connect(self.renameBranchAsync)
+        flows.renameRemoteBranch.connect(self.renameRemoteBranchAsync)
         flows.pullBranch.connect(self.pullBranchAsync)
         flows.updateCommitDraftMessage.connect(lambda message: self.state.setDraftCommitMessage(message))
 
@@ -771,6 +773,22 @@ class RepoWidget(QWidget):
             excMessageBox(exc, title="Delete remote branch", message=F"Couldn’t delete remote branch “{remoteBranchName}”.", parent=self)
 
         self.workQueue.put(work, then, F"Delete remote branch “{remoteBranchName}”", errorCallback=onError)
+
+    def renameRemoteBranchAsync(self, remoteBranchName: str, newName: str):
+        rlpd = RemoteLinkProgressDialog(self)
+
+        def work():
+            return porcelain.renameRemoteBranch(self.repo, remoteBranchName, newName, rlpd.remoteLink)
+
+        def then(_):
+            rlpd.close()
+            self.quickRefreshWithSidebar()
+
+        def onError(exc):
+            rlpd.close()
+            excMessageBox(exc, title="Rename remote branch", message=F"Couldn’t rename remote branch “{remoteBranchName}”.", parent=self)
+
+        self.workQueue.put(work, then, F"Rename remote branch “{remoteBranchName}”", errorCallback=onError)
 
     def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)

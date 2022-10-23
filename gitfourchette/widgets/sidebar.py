@@ -493,6 +493,7 @@ class Sidebar(QTreeView):
     toggleHideBranch = Signal(str)
     newTrackingBranch = Signal(str)
     fetchRemoteBranch = Signal(str)
+    renameRemoteBranch = Signal(str)
     deleteRemoteBranch = Signal(str)
     editTrackingBranch = Signal(str)
 
@@ -592,6 +593,9 @@ class Sidebar(QTreeView):
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
+
+            a = menu.addAction(F"Rename branch on remote...", lambda: self.renameRemoteBranch.emit(data))
+
             a = menu.addAction(F"Delete branch on remote...", lambda: self.deleteRemoteBranch.emit(data))
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
 

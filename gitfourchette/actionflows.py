@@ -25,6 +25,7 @@ class ActionFlows(QObject):
     newRemote = Signal(str, str)  # name, url
     newTrackingBranch = Signal(str, str)
     renameBranch = Signal(str, str)
+    renameRemoteBranch = Signal(str, str)
     pullBranch = Signal(str, str)  # local branch, remote ref to pull
     updateCommitDraftMessage = Signal(str)
 
@@ -215,6 +216,20 @@ class ActionFlows(QObject):
             QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteRemote.emit(remoteName))
         return qmb
+
+    def renameRemoteBranchFlow(self, remoteBranchName: str):
+        def onAccept(newName):
+            self.renameRemoteBranch.emit(remoteBranchName, newName)
+
+        remoteName, branchName = porcelain.splitRemoteBranchName(remoteBranchName)
+
+        return showTextInputDialog(
+            self.parentWidget,
+            F"Rename remote branch “{remoteBranchName}”",
+            F"Enter new name for remote “{remoteBranchName}”:",
+            branchName,
+            onAccept,
+            okButtonText="Rename on remote")
 
     def deleteRemoteBranchFlow(self, remoteBranchName: str):
         qmb = self.confirmAction(
