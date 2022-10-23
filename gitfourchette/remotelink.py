@@ -38,9 +38,23 @@ class RemoteLinkSignals(QObject):
     message = Signal(str)
     progress = Signal(int, int)
 
+    def __init__(self):
+        super().__init__(parent=None)
+
 
 class RemoteLink(pygit2.RemoteCallbacks):
+    @staticmethod
+    def mayAbortNetworkOperation(f):
+        def wrapper(*args):
+            x: RemoteLink = args[0]
+            if x._aborting:
+                raise InterruptedError("Remote operation interrupted by user.")
+            return f(*args)
+        return wrapper
+
     def __init__(self):
+        super().__init__()
+
         self.attempts = 0
         self.signals = RemoteLinkSignals()
 
@@ -67,13 +81,15 @@ class RemoteLink(pygit2.RemoteCallbacks):
         return self._aborting
 
     def raiseAbortFlag(self):
-        self.signals.message.emit("Aborting...")
+        self.signals.message.emit("Aborting remote operation...")
         self.signals.progress.emit(0, 0)
         self.signals.userAbort.emit()
 
     def _onAbort(self):
         self._aborting = True
+        log.info("RemoteLink", "Abort flag set.")
 
+    @mayAbortNetworkOperation
     def sideband_progress(self, string):
         # The remote sends a stream of characters intended to be printed
         # progressively. So, the string we receive may be incomplete.
@@ -94,10 +110,8 @@ class RemoteLink(pygit2.RemoteCallbacks):
     #     gflog("RemoteLink", "Certificate Check", certificate, valid, host)
     #     return 1
 
+    @mayAbortNetworkOperation
     def credentials(self, url, username_from_url, allowed_types):
-        if self._aborting:
-            raise InterruptedError("User interrupted login.")
-
         self.attempts += 1
 
         if self.attempts > 10:
@@ -118,10 +132,8 @@ class RemoteLink(pygit2.RemoteCallbacks):
             else:
                 raise NotImplementedError(F"Unsupported auth type. The remote claims to accept: {getAuthNamesFromFlags(allowed_types)}.")
 
+    @mayAbortNetworkOperation
     def transfer_progress(self, stats: pygit2.remote.TransferProgress):
-        if self._aborting:
-            raise InterruptedError("User interrupted transfer.")
-
         if not self.downloadRateTimer.isValid():
             self.downloadRateTimer.start()
             self.receivedBytesOnTimerStart = stats.received_bytes
