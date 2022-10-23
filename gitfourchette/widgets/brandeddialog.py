@@ -24,7 +24,7 @@ def makeBrandedDialogLayout(dialog, promptText, subtitleText=""):
 
     if subtitleText:
         subtitle = QElidedLabel(subtitleText, dialog)
-        tweakWidgetFont(subtitle, relativeSize=80)
+        tweakWidgetFont(subtitle, relativeSize=90)
         titleLayout.addWidget(subtitle)
         title.setAlignment(Qt.AlignmentFlag.AlignBottom)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignTop)
