@@ -184,6 +184,35 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     return nameDict
 
 
+def validateBranchName(newBranchName: str):
+    if not newBranchName:
+        raise ValueError("Cannot be empty.")
+    elif newBranchName == '@':
+        raise ValueError("Illegal name.")
+    elif any(c in " ~^:[?*\\" for c in newBranchName):
+        raise ValueError("Contains a forbidden character.")
+    elif any(seq in newBranchName for seq in ["..", "//", "@{", "/.", ".lock/"]):
+        raise ValueError("Contains a forbidden character sequence.")
+    elif newBranchName.startswith("."):
+        raise ValueError("Illegal prefix.")
+    elif newBranchName.endswith(".lock"):
+        raise ValueError("Illegal suffix.")
+
+
+def generateUniqueBranchNameOnRemote(repo: pygit2.Repository, remoteName: str, seedBranchName: str):
+    """ Generate a name that doesn't clash with any existing branches on the remote """
+
+    i = 1
+    newBranchName = seedBranchName
+    allRemoteBranches = list(repo.branches.remote)
+
+    while F"{remoteName}/{newBranchName}" in allRemoteBranches:
+        i += 1
+        newBranchName = F"{seedBranchName}-{i}"
+
+    return newBranchName
+
+
 def getTagNames(repo: Repository) -> list[str]:
     return [
         name.removeprefix("refs/tags/")

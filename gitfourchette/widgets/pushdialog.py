@@ -17,20 +17,6 @@ class ERemoteItem(enum.Enum):
     NewRef = enum.auto()
 
 
-def generateUniqueBranchNameOnRemote(repo: pygit2.Repository, remoteName: str, seedBranchName: str):
-    """ Generate a name that doesn't clash with any existing branches on the remote """
-
-    i = 1
-    newBranchName = seedBranchName
-    allRemoteBranches = list(repo.branches.remote)
-
-    while F"{remoteName}/{newBranchName}" in allRemoteBranches:
-        i += 1
-        newBranchName = F"{seedBranchName}-{i}"
-
-    return newBranchName
-
-
 class PushDialog(QDialog):
     pushSuccessful = Signal()
 
@@ -55,7 +41,7 @@ class PushDialog(QDialog):
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
 
         if remoteItem != ERemoteItem.ExistingRef:
-            newRBN = generateUniqueBranchNameOnRemote(self.repo, remoteData, localBranch.branch_name)
+            newRBN = porcelain.generateUniqueBranchNameOnRemote(self.repo, remoteData, localBranch.branch_name)
             self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.customRemoteBranchNamePage)
             self.ui.customRemoteBranchNameEdit.setText(newRBN)
             self.ui.customRemoteBranchNameEdit.setFocus(Qt.TabFocusReason)

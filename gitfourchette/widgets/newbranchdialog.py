@@ -2,6 +2,7 @@ from gitfourchette.qt import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_newbranchdialog import Ui_NewBranchDialog
 from gitfourchette.util import labelQuote
+from gitfourchette import porcelain
 
 
 class NewBranchDialog(QDialog):
@@ -43,21 +44,12 @@ class NewBranchDialog(QDialog):
         newBranchName = self.ui.nameEdit.text()
         error = ""
 
-        if not newBranchName:
-            error = "Cannot be empty."
-        elif newBranchName == '@':
-            error = "Illegal name."
-        elif any(c in " ~^:[?*\\" for c in newBranchName):
-            error = "Contains a forbidden character."
-        elif any(seq in newBranchName for seq in ["..", "//", "@{", "/.", ".lock/"]):
-            error = "Contains a forbidden character sequence."
-        elif newBranchName.startswith("."):
-            error = "Illegal prefix."
-        elif newBranchName.endswith(".lock"):
-            error = "Illegal suffix."
-        elif newBranchName in self.forbiddenBranchNames:
-            error = "Already taken by another local branch."
+        try:
+            porcelain.validateBranchName(newBranchName)
+            if newBranchName in self.forbiddenBranchNames:
+                error = "Already taken by another local branch."
+        except ValueError as exc:
+            error = str(exc)
 
         self.ui.nameValidationText.setText(error)
         self.acceptButton.setEnabled(error == "")
-
