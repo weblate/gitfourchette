@@ -289,6 +289,8 @@ class DiffView(QPlainTextEdit):
         else:
             raise KeyError(f"applyEntirePatch: unsupported purpose {purpose}")
 
+        self.patchApplied.emit(NavPos())
+
     def onWantToApplyPartialPatch(self, purpose: PatchPurpose):
         verb: str = purpose.name
 
