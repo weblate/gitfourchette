@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'commitdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.3
+## Created by: Qt User Interface Compiler version 5.15.6
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -23,9 +23,6 @@ class Ui_CommitDialog(object):
         self.summaryRowLayout.setObjectName(u"summaryRowLayout")
         self.summaryEditor = QLineEdit(CommitDialog)
         self.summaryEditor.setObjectName(u"summaryEditor")
-        font = QFont()
-        font.setPointSize(12)
-        self.summaryEditor.setFont(font)
 
         self.summaryRowLayout.addWidget(self.summaryEditor)
 
