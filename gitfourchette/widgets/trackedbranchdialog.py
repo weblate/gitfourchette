@@ -21,6 +21,7 @@ class TrackedBranchDialog(QDialog):
         trackedBranch: pygit2.Branch = localBranch.upstream
 
         comboBox = QComboBox(self)
+        comboBox.setInsertPolicy(QComboBox.NoInsert)  # Prevent QComboBox from stealing enter keypresses on Linux
         self.comboBox = comboBox
 
         self.newTrackedBranchName = None

@@ -75,6 +75,7 @@ class Ui_PushDialog(object):
         self.remoteBranchEdit.setObjectName(u"remoteBranchEdit")
         sizePolicy1.setHeightForWidth(self.remoteBranchEdit.sizePolicy().hasHeightForWidth())
         self.remoteBranchEdit.setSizePolicy(sizePolicy1)
+        self.remoteBranchEdit.setInsertPolicy(QComboBox.NoInsert)
         self.remoteBranchEdit.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
 
         self.horizontalLayout.addWidget(self.remoteBranchEdit)
