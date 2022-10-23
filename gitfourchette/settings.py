@@ -19,8 +19,10 @@ KEYS_REJECT = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
 
 SHORT_DATE_PRESETS = [
     ('ISO', '%Y-%m-%d %H:%M'),
-    ('Universal', '%d %b %Y %H:%M'),
-    ('European', '%d/%m/%Y %H:%M'),
+    ('Universal 1', '%d %b %Y %H:%M'),
+    ('Universal 2', '%a %d %b %Y %H:%M'),
+    ('European 1', '%d/%m/%Y %H:%M'),
+    ('European 2', '%d.%m.%Y %H:%M'),
     ('American', '%m/%d/%Y %I:%M %p'),
 ]
 

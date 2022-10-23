@@ -319,7 +319,7 @@ class PrefsDialog(QDialog):
         return control
 
     def dateFormatControl(self, prefKey, prefValue, presets):
-        now = datetime.datetime.now(datetime.timezone.utc).astimezone()
+        now = datetime.datetime(1999, 12, 31, 23, 59)
         bogusTime = "Wednesday, December 99, 9999 99:99:99 AM"
 
         def onEditTextChanged(text):
