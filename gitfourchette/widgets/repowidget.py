@@ -823,12 +823,12 @@ class RepoWidget(QWidget):
     def applyStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.applyStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, "Apply stash")
+        self.workQueue.put(work, then, "Apply stash", errorCallback=self._processCheckoutError)
 
     def popStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.popStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, "Pop stash")
+        self.workQueue.put(work, then, "Pop stash", errorCallback=self._processCheckoutError)
 
     def dropStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.dropStash(self.repo, commitId)
@@ -849,6 +849,19 @@ class RepoWidget(QWidget):
         then = lambda _: self.quickRefreshWithSidebar()
         self.workQueue.put(work, then, F"Checking out commit “{shortHash(oid)}”")
 
+    def _processCheckoutError(self, exc):
+        if isinstance(exc, porcelain.ConflictError):
+            maxConflicts = 10
+            numConflicts = len(exc.conflicts)
+            title = fplural("# conflicting file^s", numConflicts)
+            message = f"{exc.description}.\n\n{title}:\n • "
+            message += "\n • ".join(exc.conflicts[:maxConflicts])
+            if numConflicts > maxConflicts:
+                message += f"\n... and {numConflicts - maxConflicts} more"
+            QMessageBox.warning(self, title, message)
+        else:
+            raise exc
+
     def revertCommitAsync(self, oid: pygit2.Oid):
         def work():
             porcelain.revertCommit(self.repo, oid)
@@ -856,21 +869,7 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        def onError(exc):
-            if isinstance(exc, porcelain.ConflictError):
-                maxConflicts = 10
-                numConflicts = len(exc.conflicts)
-                message = exc.caption
-                message += ".\n\n"
-                message += fplural("# conflicting file^s:\n • ", numConflicts)
-                message += "\n • ".join(exc.conflicts[:maxConflicts])
-                if numConflicts > maxConflicts:
-                    message += f"\n... and {numConflicts-maxConflicts} more"
-                QMessageBox.warning(self, "Couldn’t revert commit", message)
-            else:
-                raise exc
-
-        self.workQueue.put(work, then, F"Reverting commit “{shortHash(oid)}”", errorCallback=onError)
+        self.workQueue.put(work, then, F"Reverting commit “{shortHash(oid)}”", errorCallback=self._processCheckoutError)
 
     # -------------------------------------------------------------------------
     # Pull

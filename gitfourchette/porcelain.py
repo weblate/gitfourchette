@@ -12,7 +12,7 @@ CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On [^\s:]+: (.+)")
 class ConflictError(Exception):
     def __init__(self, conflicts: list[str], description="Conflicts"):
         super().__init__(description)
-        self.caption = description
+        self.description = description
         self.conflicts = conflicts
 
     def __str__(self):
@@ -22,9 +22,10 @@ class ConflictError(Exception):
 class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
     status: dict[str, int]
 
-    def __init__(self):
+    def __init__(self, operationDescription="Checkout"):
         super().__init__()
         self.status = dict()
+        self.operationDescription = operationDescription
 
     def checkout_notify(self, why: int, path: str, baseline=None, target=None, workdir=None):
         self.status[path] = why
@@ -32,6 +33,25 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
     def get_conflicts(self):
         return [path for path in self.status
                 if self.status[path] == pygit2.GIT_CHECKOUT_NOTIFY_CONFLICT]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if not exc_type:
+            return False
+        if issubclass(exc_type, pygit2.GitError):
+            message = str(exc_val)
+            if "prevents checkout" in message or "prevent checkout" in message:
+                conflicts = self.get_conflicts()
+                if conflicts:
+                    raise ConflictError(conflicts, f"{self.operationDescription} would create a conflict with the working directory")
+        return False  # let error propagate
+
+
+class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallbacks):
+    def stash_apply_progress(self, pr):
+        log.info("porcelain", f"stash apply progress: {pr}")
 
 
 def diffWorkdirToIndex(repo: Repository) -> Diff:
@@ -121,16 +141,8 @@ def revertCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
                     break
         raise ConflictError(earlyConflicts, "Reverting the commit would create a conflict with the head commit")
 
-    callbacks = CheckoutTraceCallbacks()
-    try:
+    with CheckoutTraceCallbacks("Reverting the commit") as callbacks:
         repo.checkout_index(revertIndex, callbacks=callbacks)
-    except pygit2.GitError as gitError:
-        message = str(gitError)
-        if "prevents checkout" in message or "prevent checkout" in message:
-            conflicts = callbacks.get_conflicts()
-            if conflicts:
-                raise ConflictError(conflicts, "Reverting the commit would create a conflict with the working directory")
-        raise gitError
 
 
 def renameBranch(repo: Repository, oldName: str, newName: str):
@@ -551,11 +563,13 @@ def findStashIndex(repo: Repository, commitOid: pygit2.Oid):
 
 
 def applyStash(repo: Repository, commitId: pygit2.Oid):
-    repo.stash_apply(findStashIndex(repo, commitId))
+    with StashApplyTraceCallbacks("Applying the stash") as callbacks:
+        repo.stash_apply(findStashIndex(repo, commitId), callbacks=callbacks)
 
 
 def popStash(repo: Repository, commitId: pygit2.Oid):
-    repo.stash_pop(findStashIndex(repo, commitId))
+    with StashApplyTraceCallbacks("Applying the stash") as callbacks:
+        repo.stash_pop(findStashIndex(repo, commitId), callbacks=callbacks)
 
 
 def dropStash(repo: Repository, commitId: pygit2.Oid):
@@ -563,10 +577,7 @@ def dropStash(repo: Repository, commitId: pygit2.Oid):
 
 
 def getCoreStashMessage(stashMessage: str):
-    exp = re.compile(r"^On [^\s:]+: (.+)")
-
-    m = exp.match(stashMessage)
-
+    m = CORE_STASH_MESSAGE_PATTERN.match(stashMessage)
     if m:
         return m.group(1)
     else:
