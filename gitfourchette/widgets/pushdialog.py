@@ -144,7 +144,7 @@ class PushDialog(QDialog):
             raise NotImplementedError()
 
     @property
-    def revspec(self):
+    def refspec(self):
         prefix = "+" if self.forcePush else ""
         return F"{prefix}refs/heads/{self.currentLocalBranchName}:refs/heads/{self.currentRemoteBranchName}"
 
@@ -235,7 +235,7 @@ class PushDialog(QDialog):
 
     def onPushClicked(self):
         remote = self.repo.remotes[self.currentRemoteName]
-        log.info("PushDialog", self.revspec, remote.name)
+        log.info("PushDialog", self.refspec, remote.name)
         link = RemoteLink()
 
         self.ui.statusForm.initProgress(F"Contacting remote host...")
@@ -248,7 +248,7 @@ class PushDialog(QDialog):
             resetTrackingReference = None
 
         def work():
-            remote.push([self.revspec], callbacks=link)
+            remote.push([self.refspec], callbacks=link)
             if resetTrackingReference:
                 porcelain.editTrackingBranch(self.repo, self.currentLocalBranchName, resetTrackingReference)
 
