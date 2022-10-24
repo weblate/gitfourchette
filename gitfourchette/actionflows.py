@@ -85,7 +85,7 @@ class ActionFlows(QObject):
     # -------------------------------------------------------------------------
     # Branch
 
-    def newBranchFlowInternal(self, tip: pygit2.Oid, originalBranchName: str):
+    def _newBranchFlowInternal(self, tip: pygit2.Oid, originalBranchName: str, trackingCandidates: list[str] = []):
         commitMessage = porcelain.getCommitMessage(self.repo, tip)
         commitMessage, junk = messageSummary(commitMessage)
 
@@ -93,7 +93,7 @@ class ActionFlows(QObject):
             originalBranchName,
             shortHash(tip),
             commitMessage,
-            trackingCandidates=[],
+            trackingCandidates=trackingCandidates,
             forbiddenBranchNames=[""] + self.repo.listall_branches(pygit2.GIT_BRANCH_LOCAL),
             parent=self.parentWidget)
 
@@ -115,23 +115,39 @@ class ActionFlows(QObject):
         dlg.setMaximumHeight(dlg.height())
 
     def newBranchFromCommitFlow(self, tip: pygit2.Oid):
+        HEADS_PREFIX = "refs/heads/"
+        REMOTES_PREFIX = "refs/remotes/"
+
         initialName = ""
+        trackingCandidates = []
 
         # If we're creating a branch at the tip of the current branch, default to its name
         if (not self.repo.head_is_unborn
                 and not self.repo.head_is_detached
                 and self.repo.head.target == tip):
             initialName = self.repo.head.shorthand
-        else:
-            # If a ref points to this commit, pre-fill the input field with the ref's name
-            try:
-                refsPointingHere = porcelain.mapCommitsToReferences(self.repo)[tip]
-                candidates = (r for r in refsPointingHere if r.startswith(('refs/heads/', 'refs/remotes/')))
-                initialName = next(candidates).split('/')[-1]
-            except (KeyError, StopIteration):
-                pass
 
-        self.newBranchFlowInternal(tip, initialName)
+        refsPointingHere = porcelain.mapCommitsToReferences(self.repo)[tip]
+
+        # Collect remote-tracking branch candidates and set initialName
+        for r in refsPointingHere:
+            if r.startswith(HEADS_PREFIX):
+                branchName = r.removeprefix(HEADS_PREFIX)
+                if not initialName:
+                    initialName = branchName
+
+                branch = self.repo.branches[branchName]
+                if branch.upstream and branch.upstream.shorthand not in trackingCandidates:
+                    trackingCandidates.append(branch.upstream.shorthand)
+
+            elif r.startswith(REMOTES_PREFIX):
+                shorthand = r.removeprefix(REMOTES_PREFIX)
+                if not initialName:
+                    _, initialName = porcelain.splitRemoteBranchShorthand(shorthand)
+                if shorthand not in trackingCandidates:
+                    trackingCandidates.append(shorthand)
+
+        self._newBranchFlowInternal(tip, initialName, trackingCandidates=trackingCandidates)
 
     def newBranchFlow(self):
         branchTip = porcelain.getHeadCommit(self.repo).oid
@@ -139,8 +155,11 @@ class ActionFlows(QObject):
 
     def newBranchFromBranchFlow(self, originalBranchName: str):
         branch = self.repo.branches[originalBranchName]
+        trackingCandidates = []
+        if branch.upstream:
+            trackingCandidates = [branch.upstream.shorthand]
         tip: pygit2.Oid = branch.target
-        self.newBranchFlowInternal(tip, originalBranchName)
+        self._newBranchFlowInternal(tip, originalBranchName, trackingCandidates)
 
     def newTrackingBranchFlow(self, remoteBranchName: str):
         def onAccept(localBranchName):
@@ -221,7 +240,7 @@ class ActionFlows(QObject):
         def onAccept(newName):
             self.renameRemoteBranch.emit(remoteBranchName, newName)
 
-        remoteName, branchName = porcelain.splitRemoteBranchName(remoteBranchName)
+        remoteName, branchName = porcelain.splitRemoteBranchShorthand(remoteBranchName)
 
         return showTextInputDialog(
             self.parentWidget,

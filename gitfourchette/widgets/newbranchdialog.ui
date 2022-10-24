@@ -13,7 +13,7 @@
     <x>0</x>
     <y>0</y>
     <width>543</width>
-    <height>193</height>
+    <height>202</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -35,17 +35,7 @@
    <property name="fieldGrowthPolicy">
     <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
    </property>
-   <item row="3" column="1">
-    <widget class="QCheckBox" name="trackRemoteBranchCheckBox">
-     <property name="text">
-      <string>&amp;Track remote branch</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="1">
-    <widget class="QComboBox" name="trackRemoteBranchComboBox"/>
-   </item>
-   <item row="5" column="1">
+   <item row="6" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -59,7 +49,7 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <layout class="QVBoxLayout" name="nameLayout">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -105,6 +95,36 @@
      </property>
     </widget>
    </item>
+   <item row="3" column="1">
+    <layout class="QHBoxLayout" name="trackRemoteBranchLayout">
+     <item>
+      <widget class="QCheckBox" name="trackRemoteBranchCheckBox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>&amp;Track remote branch</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="trackRemoteBranchComboBox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="insertPolicy">
+        <enum>QComboBox::NoInsert</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -122,8 +142,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>232</x>
-     <y>161</y>
+     <x>299</x>
+     <y>197</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
@@ -138,8 +158,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>396</x>
-     <y>161</y>
+     <x>463</x>
+     <y>197</y>
     </hint>
     <hint type="destinationlabel">
      <x>364</x>
@@ -154,8 +174,8 @@
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>138</x>
-     <y>89</y>
+     <x>205</x>
+     <y>122</y>
     </hint>
     <hint type="destinationlabel">
      <x>244</x>

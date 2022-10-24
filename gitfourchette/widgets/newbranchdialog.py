@@ -1,7 +1,6 @@
 from gitfourchette.qt import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_newbranchdialog import Ui_NewBranchDialog
-from gitfourchette.util import labelQuote
 from gitfourchette import porcelain
 
 
@@ -25,9 +24,16 @@ class NewBranchDialog(QDialog):
         self.ui.nameEdit.textChanged.connect(self.onBranchNameChanged)
         self.ui.nameEdit.setText(initialName)
 
-        self.ui.trackRemoteBranchCheckBox.setChecked(False)  # TODO: emit signal to disable the combobox
-        self.ui.trackRemoteBranchCheckBox.setVisible(False)  # TODO: For now, tracking branch selection isn't implemented
-        self.ui.trackRemoteBranchComboBox.setVisible(False)
+        self.ui.trackRemoteBranchComboBox.addItems(trackingCandidates)
+
+        # hack to trickle down initial 'toggled' signal to combobox
+        self.ui.trackRemoteBranchCheckBox.setChecked(True)
+        self.ui.trackRemoteBranchCheckBox.setChecked(False)
+
+        if not trackingCandidates:
+            self.ui.trackRemoteBranchCheckBox.setChecked(False)
+            self.ui.trackRemoteBranchCheckBox.setVisible(False)
+            self.ui.trackRemoteBranchComboBox.setVisible(False)
 
         convertToBrandedDialog(self, f"New branch", f"Commit at tip: {target}\n“{targetSubtitle}”")
 

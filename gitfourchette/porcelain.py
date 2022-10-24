@@ -262,7 +262,7 @@ def deleteRemote(repo: Repository, remoteName: str):
 
 
 def deleteRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks):
-    remoteName, branchName = splitRemoteBranchName(remoteBranchName)
+    remoteName, branchName = splitRemoteBranchShorthand(remoteBranchName)
 
     refspec = f":refs/heads/{branchName}"
     log.info("porcelain", f"Delete remote branch: refspec: \"{refspec}\"")
@@ -275,7 +275,7 @@ def renameRemoteBranch(repo: Repository, oldRemoteBranchName: str, newBranchName
     """
     Warning: this function does not refresh the state of the remote branch before renaming it!
     """
-    remoteName, oldBranchName = splitRemoteBranchName(oldRemoteBranchName)
+    remoteName, oldBranchName = splitRemoteBranchShorthand(oldRemoteBranchName)
 
     # First, make a new branch pointing to the same ref as the old one
     refspec1 = f"refs/remotes/{oldRemoteBranchName}:refs/heads/{newBranchName}"
@@ -321,9 +321,9 @@ def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.Remot
     return transfer
 
 
-def splitRemoteBranchName(remoteBranchName: str):
+def splitRemoteBranchShorthand(remoteBranchName: str):
     if remoteBranchName.startswith("refs/"):
-        raise ValueError("splitRemoteBranchName: remote branch name mustn't start with refs/")
+        raise ValueError("splitRemoteBranchName: remote branch shorthand name mustn't start with refs/")
 
     # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
     remoteName, branchName = remoteBranchName.split("/", 1)
@@ -331,7 +331,7 @@ def splitRemoteBranchName(remoteBranchName: str):
 
 
 def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
-    remoteName, branchName = splitRemoteBranchName(remoteBranchName)
+    remoteName, branchName = splitRemoteBranchShorthand(remoteBranchName)
 
     # Delete .git/refs/{remoteName}/HEAD to work around a bug in libgit2
     # where git_revwalk__push_glob chokes on refs/remotes/{remoteName}/HEAD
