@@ -136,14 +136,15 @@ class DiffModel:
 
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
+            locale = QLocale()
             of = patch.delta.old_file
             nf = patch.delta.new_file
             if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
                 largestSize = max(of.size, nf.size)
                 threshold = settings.prefs.diff_imageFileThresholdKB * 1024
                 if largestSize > threshold:
-                    humanSize = QLocale().formattedDataSize(largestSize)
-                    humanThreshold = QLocale().formattedDataSize(threshold)
+                    humanSize = locale.formattedDataSize(largestSize)
+                    humanThreshold = locale.formattedDataSize(threshold)
                     raise DiffModelError(
                         F"This image is too large to be previewed ({humanSize}).",
                         F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
@@ -151,7 +152,10 @@ class DiffModel:
                 else:
                     raise ShouldDisplayPatchAsImageDiff()
             else:
-                raise DiffModelError("File appears to be binary.")
+                oldHumanSize = locale.formattedDataSize(of.size)
+                newHumanSize = locale.formattedDataSize(nf.size)
+                raise DiffModelError("File appears to be binary.",
+                                     f"{oldHumanSize} &rarr; {newHumanSize}")
 
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
