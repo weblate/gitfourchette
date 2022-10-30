@@ -195,18 +195,16 @@ class ActionDef:
 def quickMenu(
         parent: QWidget,
         actionDefs: list[ActionDef],
-        menu: QMenu = None
+        bottomEntries: QMenu = None
 ) -> QMenu:
-    if menu:
-        menu.insertSeparator(menu.actions()[0])
-    else:
-        menu = QMenu(parent)
+
+    menu = QMenu(parent)
 
     for actionDef in actionDefs:
         if not actionDef:
             menu.addSeparator()
         elif actionDef.submenu:
-            submenu = quickMenu(parent, actionDefs=actionDef.submenu, menu=None)
+            submenu = quickMenu(parent, actionDefs=actionDef.submenu)
             submenu.setTitle(actionDef.caption)
             if actionDef.icon:
                 submenu.setIcon(stockIcon(actionDef.icon))
@@ -220,6 +218,10 @@ def quickMenu(
                 newAction.setCheckable(True)
                 newAction.setChecked(actionDef.checkState == 1)
             menu.addAction(newAction)
+
+    if bottomEntries:
+        menu.addSeparator()
+        menu.addActions(bottomEntries.actions())
 
     return menu
 

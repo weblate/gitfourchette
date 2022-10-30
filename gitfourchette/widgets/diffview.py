@@ -143,8 +143,6 @@ class DiffView(QPlainTextEdit):
         # Find hunk at click position
         clickedHunkID = self.findHunkIDAt(clickedPosition)
 
-        menu: QMenu = self.createStandardContextMenu()
-
         actions = []
 
         if self.currentStagingState == None:
@@ -207,7 +205,8 @@ class DiffView(QPlainTextEdit):
             ActionDef(self.tr("&Word wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
         ]
 
-        menu = quickMenu(self, actions, menu)
+        bottom: QMenu = self.createStandardContextMenu()
+        menu = quickMenu(self, actions, bottom)
         menu.exec_(event.globalPos())
 
     def toggleWordWrap(self):
