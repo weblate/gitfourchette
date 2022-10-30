@@ -9,8 +9,11 @@
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 
 import os
+import sys
 
-if "pyside6" == os.environ.get("QT_API", "").lower():
+isPyInstallerBundle = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
+
+if isPyInstallerBundle or "pyside6" == os.environ.get("QT_API", "").lower():
     # If we're making a PyInstaller build, qtpy will try to pull in QtOpenGL and other bloat.
     # So, bypass qtpy and import PySide6 manually.
     from PySide6.QtCore import *

@@ -1,6 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import datetime
+import os
+
+
+# Bypass qtpy when building
+os.environ["QT_API"] = "pyside6"
 
 
 # Write _buildconstants.py
