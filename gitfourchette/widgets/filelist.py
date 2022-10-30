@@ -261,6 +261,8 @@ class FileList(QListView):
         index: QModelIndex
         for index in self.selectedIndexes():
             patch: pygit2.Patch = index.data(Qt.ItemDataRole.UserRole)
+            if not patch:
+                raise ValueError(self.tr("This file appears to have changed since we last read it. Try refreshing the window."))
             assert isinstance(patch, pygit2.Patch)
             yield patch
 
