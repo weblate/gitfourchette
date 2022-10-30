@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'statusform.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.15.6
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -14,6 +14,7 @@ class Ui_StatusForm(object):
         if not StatusForm.objectName():
             StatusForm.setObjectName(u"StatusForm")
         StatusForm.resize(455, 125)
+        StatusForm.setWindowTitle(u"Form")
         self.verticalLayout = QVBoxLayout(StatusForm)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -60,10 +61,10 @@ class Ui_StatusForm(object):
 
         self.retranslateUi(StatusForm)
 
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(StatusForm)
 
     def retranslateUi(self, StatusForm):
-        StatusForm.setWindowTitle(QCoreApplication.translate("StatusForm", u"Form", None))
+        pass

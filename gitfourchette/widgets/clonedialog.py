@@ -21,7 +21,7 @@ class CloneDialog(QDialog):
             for url in settings.history.cloneHistory:
                 self.ui.urlEdit.addItem(url)
             self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
-            self.ui.urlEdit.addItem("Clear history", "CLEAR")
+            self.ui.urlEdit.addItem(self.tr("Clear history"), "CLEAR")
         self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
 
     def onComboBoxItemActivated(self, index):
@@ -46,14 +46,14 @@ class CloneDialog(QDialog):
         self.ui.browseButton.clicked.connect(self.browse)
 
         self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        self.cloneButton.setText("C&lone")
+        self.cloneButton.setText(self.tr("C&lone"))
         self.cloneButton.setIcon(QIcon.fromTheme("download"))
         self.cloneButton.clicked.connect(self.onCloneClicked)
 
         self.cancelButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
         self.cancelButton.setAutoDefault(False)
 
-        self.ui.statusForm.setBlurb("Hit “Clone” when ready.")
+        self.ui.statusForm.setBlurb(self.tr("Hit “Clone” when ready."))
 
         self.ui.urlEdit.setCurrentText(initialUrl)
 
@@ -79,7 +79,7 @@ class CloneDialog(QDialog):
     def browse(self):
         projectName = self.url.rsplit("/", 1)[-1].removesuffix(".git")
 
-        path, _ = PersistentFileDialog.getSaveFileName(self, "Clone repository into", projectName)
+        path, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Clone repository into"), projectName)
         if path:
             self.ui.pathEdit.setText(path)
 
@@ -101,9 +101,9 @@ class CloneDialog(QDialog):
         link = RemoteLink()
         self.remoteLink = link
 
-        self.ui.statusForm.initProgress(F"Contacting remote host...")
-        link.signals.message.connect(self.ui.statusForm.setProgressMessage)
-        link.signals.progress.connect(self.ui.statusForm.setProgressValue)
+        self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
+        link.message.connect(self.ui.statusForm.setProgressMessage)
+        link.progress.connect(self.ui.statusForm.setProgressValue)
 
         def work():
             pygit2.clone_repository(url, path, callbacks=link)
@@ -122,4 +122,4 @@ class CloneDialog(QDialog):
             self.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
 
         wq = WorkQueue(self)
-        wq.put(work, then, "Cloning", errorCallback=onError)
+        wq.put(work, then, translate("Operation", "Clone"), errorCallback=onError)

@@ -45,6 +45,7 @@ class Ui_NewBranchDialog(object):
         self.nameValidationText = QLabel(NewBranchDialog)
         self.nameValidationText.setObjectName(u"nameValidationText")
         self.nameValidationText.setEnabled(False)
+        self.nameValidationText.setText(u"Validation")
 
         self.nameLayout.addWidget(self.nameValidationText)
 
@@ -109,7 +110,6 @@ class Ui_NewBranchDialog(object):
 
     def retranslateUi(self, NewBranchDialog):
         NewBranchDialog.setWindowTitle(QCoreApplication.translate("NewBranchDialog", u"New branch", None))
-        self.nameValidationText.setText(QCoreApplication.translate("NewBranchDialog", u"TextLabel", None))
         self.switchToBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"Switch to branch after creating", None))
         self.optionsLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Options", None))
         self.nameLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Name", None))

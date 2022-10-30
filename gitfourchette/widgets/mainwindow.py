@@ -20,6 +20,7 @@ import pygit2
 import re
 
 
+
 try:
     import psutil
 except ImportError:
@@ -160,102 +161,91 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        fileMenu = menubar.addMenu("&File")
+        fileMenu = menubar.addMenu(self.tr("&File"))
         fileMenu.setObjectName("MWFileMenu")
 
-        a = fileMenu.addAction("&New Repository...", self.newRepo)
+        a = fileMenu.addAction(self.tr("&New Repository..."), self.newRepo)
         a.setShortcut(QKeySequence.StandardKey.New)
 
-        a = fileMenu.addAction("Cl&one Repository...", self.cloneDialog)
+        a = fileMenu.addAction(self.tr("C&lone Repository..."), self.cloneDialog)
         a.setShortcut("Ctrl+Shift+N")
 
         fileMenu.addSeparator()
 
-        a = fileMenu.addAction("&Open Repository...", self.openDialog)
+        a = fileMenu.addAction(self.tr("&Open Repository..."), self.openDialog)
         a.setShortcut(QKeySequence.StandardKey.Open)
 
-        self.recentMenu = fileMenu.addMenu("Open &Recent")
+        self.recentMenu = fileMenu.addMenu(self.tr("Open &Recent"))
         self.recentMenu.setObjectName("RecentMenu")
 
-        a = fileMenu.addAction("&Close Tab", self.closeCurrentTab)
+        a = fileMenu.addAction(self.tr("&Close Tab"), self.closeCurrentTab)
         a.setShortcut(QKeySequence.StandardKey.Close)
 
         fileMenu.addSeparator()
 
-        a = fileMenu.addAction("Apply Patch...", self.importPatch)
+        a = fileMenu.addAction(self.tr("Apply Patch..."), self.importPatch)
         a.setShortcut("Ctrl+I")
 
-        fileMenu.addAction("Reverse Patch...", lambda: self.importPatch(reverse=True))
+        fileMenu.addAction(self.tr("Reverse Patch..."), lambda: self.importPatch(reverse=True))
 
         fileMenu.addSeparator()
 
-        a = fileMenu.addAction("&Preferences...", self.openSettings)
+        a = fileMenu.addAction(self.tr("&Preferences..."), self.openSettings)
         a.setShortcut(QKeySequence.StandardKey.Preferences)
 
         fileMenu.addSeparator()
 
-        a = fileMenu.addAction("&Quit", self.close)
+        a = fileMenu.addAction(self.tr("&Quit"), self.close)
         a.setShortcut(QKeySequence.StandardKey.Quit)
 
         # -------------------------------------------------------------
 
-        repoMenu: QMenu = menubar.addMenu("&Repo")
+        repoMenu: QMenu = menubar.addMenu(self.tr("&Repo"))
         repoMenu.setObjectName("MWRepoMenu")
         repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
 
-        a = repoMenu.addAction("&Refresh", self.quickRefresh)
+        a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
         a.setShortcut(QKeySequence.StandardKey.Refresh)
 
-        a = repoMenu.addAction("&Hard Refresh", self.refresh)
+        a = repoMenu.addAction(self.tr("&Hard Refresh"), self.refresh)
         a.setShortcut("Ctrl+F5")
 
         repoMenu.addSeparator()
 
-        a = repoMenu.addAction("&Commit...", self.commit)
+        a = repoMenu.addAction(self.tr("&Commit..."), self.commit)
         a.setShortcut("Ctrl+K")
 
-        a = repoMenu.addAction("&Amend Last Commit...", self.amend)
+        a = repoMenu.addAction(self.tr("&Amend Last Commit..."), self.amend)
         a.setShortcut("Ctrl+Shift+K")
 
         repoMenu.addSeparator()
 
-        a = repoMenu.addAction("New &Branch...", self.newBranch)
-        a.setShortcut("Ctrl+B")
-
-        a = repoMenu.addAction("&Push Branch...", self.push)
-        a.setShortcut("Ctrl+P")
-
-        a = repoMenu.addAction("Pul&l Branch...", self.pull)
-        a.setShortcut("Ctrl+Shift+P")
+        repoMenu.addAction(self.tr("Add Re&mote..."), self.newRemote)
 
         repoMenu.addSeparator()
 
-        repoMenu.addAction("New Remote...", self.newRemote)
-
-        repoMenu.addSeparator()
-
-        a = repoMenu.addAction("&Find Commit...", lambda: self.currentRepoWidget().findFlow())
+        a = repoMenu.addAction(self.tr("&Find Commit..."), lambda: self.currentRepoWidget().findFlow())
         a.setShortcut(QKeySequence.StandardKey.Find)
 
-        a = repoMenu.addAction("Find Next", lambda: self.currentRepoWidget().findNext())
+        a = repoMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().findNext())
         a.setShortcut(QKeySequence.StandardKey.FindNext)
 
-        a = repoMenu.addAction("Find Previous", lambda: self.currentRepoWidget().findPrevious())
+        a = repoMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().findPrevious())
         a.setShortcut(QKeySequence.StandardKey.FindPrevious)
 
         repoMenu.addSeparator()
 
-        configFilesMenu = repoMenu.addMenu("&Local Config Files")
+        configFilesMenu = repoMenu.addMenu(self.tr("&Local Config Files"))
 
-        a = repoMenu.addAction("&Open Repo Folder", self.openRepoFolder)
+        a = repoMenu.addAction(self.tr("&Open Repo Folder"), self.openRepoFolder)
         a.setShortcut("Ctrl+Shift+O")
 
-        repoMenu.addAction("Cop&y Repo Path", self.copyRepoPath)
-        repoMenu.addAction("Rename Repo...", self.renameRepo)
+        repoMenu.addAction(self.tr("Cop&y Repo Path"), self.copyRepoPath)
+        repoMenu.addAction(self.tr("Rename Repo..."), self.renameRepo)
         repoMenu.addSeparator()
-        repoMenu.addAction("Resc&ue Discarded Changes...", self.openRescueFolder)
-        repoMenu.addAction("Clear Discarded Changes...", self.clearRescueFolder)
+        repoMenu.addAction(self.tr("Resc&ue Discarded Changes..."), self.openRescueFolder)
+        repoMenu.addAction(self.tr("Clear Discarded Changes..."), self.clearRescueFolder)
 
         configFilesMenu.addAction(".gitignore", self.openGitignore)
         configFilesMenu.addAction("config", self.openLocalConfig)
@@ -263,40 +253,54 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        patchMenu = menubar.addMenu("&Patch")
-        patchMenu.setObjectName("MWPatchMenu")
-        a = patchMenu.addAction("&Find in Patch...", lambda: self.currentRepoWidget().findInDiffFlow())
+        branchMenu = menubar.addMenu(self.tr("&Branch"))
+        branchMenu.setObjectName("MWBranchMenu")
+
+        a = branchMenu.addAction(self.tr("New &Branch..."), self.newBranch)
+        a.setShortcut("Ctrl+B")
+
+        a = branchMenu.addAction(self.tr("&Push Branch..."), self.push)
+        a.setShortcut("Ctrl+P")
+
+        a = branchMenu.addAction(self.tr("Pul&l Branch..."), self.pull)
+        a.setShortcut("Ctrl+Shift+P")
+
+        # -------------------------------------------------------------
+
+        patchMenu = menubar.addMenu(self.tr("&Diff"))
+        patchMenu.setObjectName("MWDiffMenu")
+        a = patchMenu.addAction(self.tr("&Find in Diff..."), lambda: self.currentRepoWidget().findInDiffFlow())
         a.setShortcut("Ctrl+Alt+F")
 
         # -------------------------------------------------------------
 
-        goMenu: QMenu = menubar.addMenu("&Go")
+        goMenu: QMenu = menubar.addMenu(self.tr("&Go"))
         goMenu.setObjectName("MWGoMenu")
 
-        a = goMenu.addAction("&Uncommitted Changes", self.selectUncommittedChanges)
+        a = goMenu.addAction(self.tr("&Uncommitted Changes"), self.selectUncommittedChanges)
         a.setShortcut("Ctrl+U")
 
         goMenu.addSeparator()
 
-        a = goMenu.addAction("&Next Tab", self.nextTab)
+        a = goMenu.addAction(self.tr("&Next Tab"), self.nextTab)
         a.setShortcut("Ctrl+Tab")
 
-        a = goMenu.addAction("&Previous Tab", self.previousTab)
+        a = goMenu.addAction(self.tr("&Previous Tab"), self.previousTab)
         a.setShortcut("Ctrl+Shift+Tab")
 
         goMenu.addSeparator()
 
-        a = goMenu.addAction("Next File", self.nextFile)
+        a = goMenu.addAction(self.tr("Next File"), self.nextFile)
         a.setShortcut("Ctrl+]")
 
-        a = goMenu.addAction("Previous File", self.previousFile)
+        a = goMenu.addAction(self.tr("Previous File"), self.previousFile)
         a.setShortcut("Ctrl+[")
 
         # -------------------------------------------------------------
 
-        helpMenu = menubar.addMenu("&Help")
+        helpMenu = menubar.addMenu(self.tr("&Help"))
         helpMenu.setObjectName("MWHelpMenu")
-        helpMenu.addAction(F"&About {QApplication.applicationDisplayName()}", lambda: showAboutDialog(self))
+        helpMenu.addAction(self.tr("&About {0}").format(QApplication.applicationDisplayName()), lambda: showAboutDialog(self))
 
         # -------------------------------------------------------------
 
@@ -327,8 +331,8 @@ class MainWindow(QMainWindow):
 
         QMessageBox.warning(
             self,
-            "Apply Settings",
-            F"Some changes may require restarting {QApplication.applicationDisplayName()} to take effect.")
+            self.tr("Apply Settings"),
+            self.tr("Some changes may require restarting {0} to take effect.").format(QApplication.applicationDisplayName()))
 
     def openSettings(self):
         dlg = PrefsDialog(self)
@@ -348,7 +352,7 @@ class MainWindow(QMainWindow):
                 self.saveSession()
             self.recentMenu.addAction(compactPath(historic), lambda path=historic: doOpen(path))
         self.recentMenu.addSeparator()
-        self.recentMenu.addAction("Clear", onClearRecents)
+        self.recentMenu.addAction(self.tr("Clear"), onClearRecents)
 
     def currentRepoWidget(self) -> RepoWidget:
         return self.tabs.currentWidget()
@@ -385,17 +389,17 @@ class MainWindow(QMainWindow):
         rw: RepoWidget = self.tabs.stacked.widget(i)
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
-        menu.addAction("Close Tab", lambda: self.closeTab(i))
-        menu.addAction("Close Other Tabs", lambda: self.closeOtherTabs(i))
+        menu.addAction(self.tr("Close Tab"), lambda: self.closeTab(i))
+        menu.addAction(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i))
         menu.addSeparator()
-        menu.addAction("Open Repo Folder", lambda: self.openRepoFolder(rw))
-        menu.addAction("Copy Repo Path", lambda: self.copyRepoPath(rw))
-        menu.addAction("Rename", lambda: self.renameRepo(rw))
+        menu.addAction(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw))
+        menu.addAction(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw))
+        menu.addAction(self.tr("Rename", "RepoTabCM"), lambda: self.renameRepo(rw))
         menu.addSeparator()
         if rw.state:
-            menu.addAction("Unload", lambda: self.unloadTab(i))
+            menu.addAction(self.tr("Unload", "RepoTabCM"), lambda: self.unloadTab(i))
         else:
-            menu.addAction("Load", lambda: self.loadTab(i))
+            menu.addAction(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i))
         menu.exec_(globalPoint)
 
     def _constructRepo(self, path: str):
@@ -403,15 +407,21 @@ class MainWindow(QMainWindow):
             repo = pygit2.Repository(path)
 
         except pygit2.GitError as gitError:
-            qmb = QMessageBox(QMessageBox.Icon.Warning, "Open repository",
-                              F"Couldn’t open “{path}”.\n\n{gitError}", parent=self)
+            qmb = QMessageBox(
+                QMessageBox.Icon.Warning,
+                self.tr("Open repository"),
+                self.tr("Couldn’t open “{0}”.").format(path) + f"\n\n{gitError}",
+                parent=self)
             qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
             qmb.show()
             return None
 
         if repo.is_shallow:
-            qmb = QMessageBox(QMessageBox.Icon.Warning, "Shallow repository",
-                              "Sorry, shallow repositories aren’t supported yet.", parent=self)
+            qmb = QMessageBox(
+                QMessageBox.Icon.Warning,
+                self.tr("Shallow repository"),
+                self.tr("Sorry, shallow repositories aren’t supported yet."),
+                parent=self)
             qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
             qmb.show()
             return None
@@ -436,7 +446,7 @@ class MainWindow(QMainWindow):
         assert repo is not None
 
         shortname = settings.history.getRepoNickname(path)
-        progress = QProgressDialog("Opening repository.", "Abort", 0, 0, self)
+        progress = QProgressDialog(self.tr("Opening repository..."), self.tr("Abort"), 0, 0, self)
         progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setWindowTitle(shortname)
         progress.setWindowFlags(Qt.WindowType.Dialog)
@@ -460,7 +470,10 @@ class MainWindow(QMainWindow):
             self.refreshTabText(rw)
 
         except BaseException as exc:
-            excMessageBox(exc, message=F"An exception was thrown while opening “{path}”", parent=self)
+            excMessageBox(
+                exc,
+                message=self.tr("An exception was thrown while opening “{0}”").format(path),
+                parent=self)
             return False
 
         finally:
@@ -590,7 +603,7 @@ class MainWindow(QMainWindow):
     # File menu callbacks
 
     def newRepo(self):
-        path, _ = PersistentFileDialog.getSaveFileName(self, "New repository")
+        path, _ = PersistentFileDialog.getSaveFileName(self, self.tr("New repository"))
         if path:
             pygit2.init_repository(path)
             self.openRepo(path)
@@ -615,14 +628,18 @@ class MainWindow(QMainWindow):
 
     def importPatch(self, reverse=False):
         if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
-            QMessageBox.warning(self, "Import patch", "Please open a repository before importing a patch.")
+            QMessageBox.warning(self, self.tr("Import patch"), self.tr("Please open a repository before importing a patch."))
             return
 
-        title = "Import patch"
         if reverse:
-            title += " (reverse)"
+            title = self.tr("Import patch (reverse)")
+        else:
+            title = self.tr("Import patch")
 
-        path, _ = PersistentFileDialog.getOpenFileName(self, title, filter="Patch file (*.patch);;All files (*)")
+        patchFileCaption = self.tr("Patch file")
+        allFilesCaption = self.tr("All files")
+
+        path, _ = PersistentFileDialog.getOpenFileName(self, title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
         if not path:
             return
 
@@ -634,7 +651,7 @@ class MainWindow(QMainWindow):
                 UnicodeDecodeError,  # if passing in a random binary file
                 KeyError,  # 'no patch found'
                 pygit2.GitError) as loadError:
-            excMessageBox(loadError, title, "Can’t load this patch.", parent=self, icon=QMessageBox.Icon.Warning)
+            excMessageBox(loadError, title, self.tr("Can’t load this patch."), parent=self, icon=QMessageBox.Icon.Warning)
             return
 
         if reverse:
@@ -642,7 +659,7 @@ class MainWindow(QMainWindow):
                 patchData = reverseUnidiff(loadedDiff.patch)
                 loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
             except Exception as reverseError:
-                excMessageBox(reverseError, title, "Can’t reverse this patch.", parent=self, icon=QMessageBox.Icon.Warning)
+                excMessageBox(reverseError, title, self.tr("Can’t reverse this patch."), parent=self, icon=QMessageBox.Icon.Warning)
                 return
 
         repo = self.currentRepoWidget().repo
@@ -650,13 +667,13 @@ class MainWindow(QMainWindow):
         try:
             porcelain.patchApplies(repo, patchData)
         except (pygit2.GitError, OSError) as applyCheckError:
-            excMessageBox(applyCheckError, title, "This patch doesn't apply.", parent=self, icon=QMessageBox.Icon.Warning)
+            excMessageBox(applyCheckError, title, self.tr("This patch doesn’t apply."), parent=self, icon=QMessageBox.Icon.Warning)
             return
 
         try:
             porcelain.applyPatch(repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)
         except pygit2.GitError as applyError:
-            excMessageBox(applyError, title, "An error occurred while applying this patch.", parent=self, icon=QMessageBox.Icon.Warning)
+            excMessageBox(applyError, title, self.tr("An error occurred while applying this patch."), parent=self, icon=QMessageBox.Icon.Warning)
 
     # -------------------------------------------------------------------------
     # Tab management

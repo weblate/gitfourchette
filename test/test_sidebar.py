@@ -142,9 +142,9 @@ def testNewRemote(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemotesHeader)
 
-    findMenuAction(menu, "new remote").trigger()
+    findMenuAction(menu, "add remote").trigger()
 
-    q: RemoteDialog = findQDialog(rw, "new remote")
+    q: RemoteDialog = findQDialog(rw, "add remote")
     q.ui.nameEdit.setText("otherremote")
     q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
     q.accept()

@@ -3,14 +3,20 @@ import difflib, os, re, subprocess, sys
 
 srcDir = "gitfourchette"
 assetsDir = "gitfourchette/assets"
+langDir = "lang"
 
 
-if 'UIC' in os.environ:
-    UIC = os.environ['UIC']
-elif sys.platform == 'darwin':
-    UIC = 'pyside6-uic'  # "/opt/homebrew/opt/qt5/bin/uic"
-else:
-    UIC = "uic-qt5"
+def getTool(envName, darwinFallback, fallback):
+    if envName in os.environ:
+        return os.environ[envName]
+    elif sys.platform == 'darwin':
+        return darwinFallback
+    else:
+        return fallback
+
+
+UIC = getTool('UIC', 'pyside6-uic', 'uic-qt5')
+LRELEASE = getTool('LRELEASE', 'pyside6-lrelease', 'lrelease-qt5')
 
 
 def call(cmd, **kwargs) -> subprocess.CompletedProcess:
@@ -121,3 +127,16 @@ for root, dirs, files in os.walk(srcDir):
 
         if file.endswith(".ui"):
             compileUi(fullpath, F"{root}/ui_{basename}.py")
+
+# Generate .qm files from .ts files
+for root, dirs, files in os.walk(langDir):
+    for file in files:
+        basename = os.path.splitext(file)[0]
+        if file.endswith(".ts"):
+            call([
+                LRELEASE,
+                "-removeidentical",
+                os.path.join(root, file),
+                "-qm",
+                os.path.join(assetsDir, F"{basename}.qm")
+            ])

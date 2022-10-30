@@ -1,8 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.qt import *
-from gitfourchette.util import messageSummary, fplural, shortHash, stockIcon
-from gitfourchette.widgets.brandeddialog import showTextInputDialog
+from gitfourchette.util import messageSummary, shortHash, stockIcon
 from gitfourchette.widgets.graphdelegate import GraphDelegate
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from html import escape
@@ -115,26 +114,26 @@ class GraphView(QListView):
         self.setItemDelegate(GraphDelegate(parent, parent=self))
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
-        getInfoAction = QAction("Get &Info...", self)
+        getInfoAction = QAction(self.tr("Get &Info..."), self)
         getInfoAction.setIcon(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
         getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
         self.addAction(getInfoAction)
-        checkoutAction = QAction("&Check Out...", self)
+        checkoutAction = QAction(self.tr("&Check Out..."), self)
         checkoutAction.triggered.connect(lambda: self.checkoutCommit.emit(self.currentCommitOid))
         self.addAction(checkoutAction)
-        cherrypickAction = QAction("Cherry &Pick...", self)
+        cherrypickAction = QAction(self.tr("Cherry &Pick..."), self)
         cherrypickAction.triggered.connect(self.cherrypickCurrentCommit)
         self.addAction(cherrypickAction)
-        revertAction = QAction("Re&vert...", self)
+        revertAction = QAction(self.tr("Re&vert..."), self)
         revertAction.triggered.connect(lambda: self.revertCommit.emit(self.currentCommitOid))
         self.addAction(revertAction)
-        branchAction = QAction("Start &Branch from Here...", self)
+        branchAction = QAction(self.tr("Start &Branch from Here..."), self)
         branchAction.triggered.connect(lambda: self.newBranchFromCommit.emit(self.currentCommitOid))
         self.addAction(branchAction)
-        resetAction = QAction(F"&Reset HEAD to Here...", self)
+        resetAction = QAction(self.tr("&Reset HEAD to Here..."), self)
         resetAction.triggered.connect(self.resetHeadFlow)
         self.addAction(resetAction)
-        copyHashAction = QAction("Copy Commit &Hash", self)
+        copyHashAction = QAction(self.tr("Copy Commit &Hash"), self)
         copyHashAction.triggered.connect(self.copyCommitHashToClipboard)
         self.addAction(copyHashAction)
 
@@ -194,11 +193,12 @@ class GraphView(QListView):
         postSummary = ""
         nLines = len(commit.message.rstrip().split('\n'))
         if contd:
-            postSummary = F"<br>\u25bc <i>click &ldquo;Show Details&rdquo; to reveal full message " \
-                  F"({nLines} lines)</i>"
+            showDetailsText = self.tr("click “Show Details” to reveal full message")
+            lineCountText = self.tr("(%n line(s))", "", nLines)
+            postSummary = F"<br>\u25bc <i>{showDetailsText} {lineCountText}</i>"
 
         parentHashes = [shortHash(p) for p in commit.parent_ids]
-        parentLabelMarkup = escape(fplural('# Parent^s', len(parentHashes)))
+        parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
         parentValueMarkup = escape(', '.join(parentHashes))
 
         #childHashes = [shortHash(c) for c in commit.children]
@@ -208,12 +208,13 @@ class GraphView(QListView):
         authorMarkup = formatSignature(commit.author)
 
         if commit.author == commit.committer:
-            committerMarkup = F"<i>(same as author)</i>"
+            sameAsAuthor = self.tr("(same as author)")
+            committerMarkup = F"<i>{sameAsAuthor}</i>"
         else:
             committerMarkup = formatSignature(commit.committer)
 
-        diffs = porcelain.loadCommitDiffs(self.repo, oid)
         '''
+        diffs = porcelain.loadCommitDiffs(self.repo, oid)
         statsMarkup = (
                 fplural("<b>#</b> changed file^s", sum(diff.stats.files_changed for diff in diffs)) +
                 fplural("<br/><b>#</b> insertion^s", sum(diff.stats.insertions for diff in diffs)) +
@@ -221,13 +222,17 @@ class GraphView(QListView):
         )
         '''
 
+        hashTitle = self.tr("Hash")
+        authorTitle = self.tr("Author")
+        committerTitle = self.tr("Committer")
+
         markup = F"""<big>{summary}</big>{postSummary}
             <br>
             <table>
-            <tr><td><b>Full Hash </b></td><td>{commit.oid.hex}</td></tr>
-            <tr><td><b>{parentLabelMarkup} </b></td><td>{parentValueMarkup}</td></tr>
-            <tr><td><b>Author </b></td><td>{authorMarkup}</td></tr>
-            <tr><td><b>Committer </b></td><td>{committerMarkup}</td></tr>
+            <tr><td><b>{hashTitle} </b></td><td>{commit.oid.hex}</td></tr>
+            <tr><td><b>{parentTitle} </b></td><td>{parentValueMarkup}</td></tr>
+            <tr><td><b>{authorTitle} </b></td><td>{authorMarkup}</td></tr>
+            <tr><td><b>{committerTitle} </b></td><td>{committerMarkup}</td></tr>
             </table>"""
             # <tr><td><b>Debug</b></td><td>
             #     batch {data.batchID},
@@ -235,7 +240,7 @@ class GraphView(QListView):
             #     ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
             #     </td></tr>
 
-        title = F"Commit info {shortHash(commit.oid)}"
+        title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
 
         details = commit.message if contd else None
 
@@ -305,8 +310,10 @@ class GraphView(QListView):
         try:
             rawIndex = self.repoWidget.state.getCommitSequentialIndex(oid)
         except KeyError:
-            QMessageBox.warning(self, "pygit2.Commit not found",
-                                F"pygit2.Commit not found or not loaded:\n{oid.hex}")
+            QMessageBox.warning(
+                self,
+                self.tr("Commit not found"),
+                self.tr("Commit not found or not loaded:") + f"\n{oid.hex}")
             return False
 
         newSourceIndex = self.clModel.index(1 + rawIndex, 0)

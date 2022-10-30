@@ -36,16 +36,20 @@ class RichDiffView(QTextBrowser):
         imageB.setDevicePixelRatio(self.devicePixelRatio())
 
         document.addResource(QTextDocument.ResourceType.ImageResource, QUrl("image"), imageB)
-        
-        humanSizeA = QLocale.system().formattedDataSize(delta.old_file.size)
-        humanSizeB = QLocale.system().formattedDataSize(delta.new_file.size)
+
+        humanSizeA = self.locale().formattedDataSize(delta.old_file.size)
+        humanSizeB = self.locale().formattedDataSize(delta.new_file.size)
+
+        textA = self.tr("Old: {0}&times;{1} pixels, {2}").format(imageA.width(), imageA.height(), humanSizeA)
+        textB = self.tr("New: {0}&times;{1} pixels, {2}").format(imageB.width(), imageB.height(), humanSizeB)
+        newFileDisplayedBelow = self.tr("(new file displayed below)")
 
         document.setHtml(
             "<style> p { text-align: center; } </style>"
             "<p>"
-            F"Old: {imageA.width()}&times;{imageA.height()} pixels, {humanSizeA}<br/>"
-            F"New: {imageB.width()}&times;{imageB.height()} pixels, {humanSizeB}<br/>"
-            F"(new file displayed below)"
+            F"{textA}<br/>"
+            F"{textB}<br/>"
+            F"{newFileDisplayedBelow}"
             "</p>"
             "<p><img src='image' /></p>")
 

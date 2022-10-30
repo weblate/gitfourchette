@@ -125,7 +125,7 @@ class GraphDelegate(QStyledItemDelegate):
                 painter.setFont(self.activeCommitFont)
         else:
             commit = None
-            summaryText = "[Uncommitted Changes]"
+            summaryText = self.tr("[Uncommitted Changes]")
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
             dateText = ""

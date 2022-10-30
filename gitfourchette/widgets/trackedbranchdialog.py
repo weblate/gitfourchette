@@ -1,6 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import labelQuote, addComboBoxItem
+from gitfourchette.util import escamp, addComboBoxItem, tweakWidgetFont
 from gitfourchette.widgets.brandeddialog import makeBrandedDialog
 import pygit2
 
@@ -11,7 +11,7 @@ class TrackedBranchDialog(QDialog):
     def __init__(self, repo: pygit2.Repository, localBranchName: str, parent):
         super().__init__(parent)
 
-        self.setWindowTitle(F"Edit Tracked Branch")
+        self.setWindowTitle(self.tr("Edit Tracked Branch"))
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -28,7 +28,7 @@ class TrackedBranchDialog(QDialog):
         if trackedBranch:
             self.newTrackedBranchName = trackedBranch.shorthand
 
-        addComboBoxItem(comboBox, "[don’t track any remote branch]", userData=None, isCurrent=not trackedBranch)
+        addComboBoxItem(comboBox, self.tr("[don’t track any remote branch]"), userData=None, isCurrent=not trackedBranch)
 
         for remoteName, remoteBranches in porcelain.getRemoteBranchNames(repo).items():
             if not remoteBranches:
@@ -46,25 +46,26 @@ class TrackedBranchDialog(QDialog):
         comboBox.currentIndexChanged.connect(
             lambda index: self.onChangeNewRemoteBranchName(comboBox.itemData(index, role=Qt.ItemDataRole.UserRole)))
 
-        explainer = F"<p>Local branch <b>{labelQuote(localBranch.shorthand)}</b> currently "
+        explainer = "<p>"
         if trackedBranch:
-            explainer += F"tracks remote branch <b>{labelQuote(trackedBranch.shorthand)}</b>."
+            explainer += self.tr("Local branch <b>“{0}”</b> currently tracks remote branch <b>“{1}”</b>.").format(escamp(localBranch.shorthand), escamp(trackedBranch.shorthand))
         else:
-            explainer += "does <b>not</b> track a remote branch."
-        explainer += "</p><p>Pick a new remote branch to track:</p>"
+            explainer += self.tr("Local branch <b>“{0}”</b> currently does <b>not</b> track a remote branch.").format(escamp(localBranch.shorthand))
+        explainer += "</p><p>" + self.tr("Pick a new remote branch to track:") + "</p>"
         explainerLabel = QLabel(explainer)
         explainerLabel.setWordWrap(True)
-
         explainerLabel.setMinimumHeight(explainerLabel.fontMetrics().height()*4)
+
+        hintLabel = QLabel(self.tr("If you can’t find the remote branch you want, try fetching the remote first."))
+        tweakWidgetFont(hintLabel, 90)
 
         layout = QVBoxLayout()
         layout.addWidget(explainerLabel)
         layout.addWidget(comboBox)
-        layout.addWidget(QLabel("<small>If you can’t find the remote branch you want, "
-                                "try fetching the remote first.</small>"))
+        layout.addWidget(hintLabel)
         layout.addWidget(buttonBox)
 
-        makeBrandedDialog(self, layout, F"Set branch tracked by “{localBranch.shorthand}”")
+        makeBrandedDialog(self, layout, self.tr("Set branch tracked by “{0}”").format(localBranch.shorthand))
 
         self.setModal(True)
         self.resize(512, 128)

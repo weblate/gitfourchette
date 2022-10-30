@@ -22,10 +22,9 @@ class ConflictError(Exception):
 class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
     status: dict[str, int]
 
-    def __init__(self, operationDescription="Checkout"):
+    def __init__(self):
         super().__init__()
         self.status = dict()
-        self.operationDescription = operationDescription
 
     def checkout_notify(self, why: int, path: str, baseline=None, target=None, workdir=None):
         self.status[path] = why
@@ -45,7 +44,7 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
             if "prevents checkout" in message or "prevent checkout" in message:
                 conflicts = self.get_conflicts()
                 if conflicts:
-                    raise ConflictError(conflicts, f"{self.operationDescription} would create a conflict with the working directory")
+                    raise ConflictError(conflicts, "workdir")
         return False  # let error propagate
 
 
@@ -139,9 +138,9 @@ def revertCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
                 if candidate and candidate.path:
                     earlyConflicts.append(candidate.path)
                     break
-        raise ConflictError(earlyConflicts, "Reverting the commit would create a conflict with the head commit")
+        raise ConflictError(earlyConflicts, "HEAD")
 
-    with CheckoutTraceCallbacks("Reverting the commit") as callbacks:
+    with CheckoutTraceCallbacks() as callbacks:
         repo.checkout_index(revertIndex, callbacks=callbacks)
 
 
@@ -200,19 +199,33 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     return nameDict
 
 
+class BranchNameValidationError(ValueError):
+    CANNOT_BE_EMPTY = 0
+    ILLEGAL_NAME = 1
+    ILLEGAL_PREFIX = 2
+    ILLEGAL_SUFFIX = 3
+    CONTAINS_ILLEGAL_CHAR = 4
+    CONTAINS_ILLEGAL_SEQ = 5
+
+    def __init__(self, code: int):
+        super().__init__(F"Branch name validation failed ({code})")
+        self.code = code
+
+
 def validateBranchName(newBranchName: str):
+    E = BranchNameValidationError
     if not newBranchName:
-        raise ValueError("Cannot be empty.")
+        raise E(E.CANNOT_BE_EMPTY)
     elif newBranchName == '@':
-        raise ValueError("Illegal name.")
+        raise E(E.ILLEGAL_NAME)
     elif any(c in " ~^:[?*\\" for c in newBranchName):
-        raise ValueError("Contains a forbidden character.")
+        raise E(E.CONTAINS_ILLEGAL_CHAR)
     elif any(seq in newBranchName for seq in ["..", "//", "@{", "/.", ".lock/"]):
-        raise ValueError("Contains a forbidden character sequence.")
+        raise E(E.CONTAINS_ILLEGAL_SEQ)
     elif newBranchName.startswith("."):
-        raise ValueError("Illegal prefix.")
+        raise E(E.ILLEGAL_PREFIX)
     elif newBranchName.endswith(".lock"):
-        raise ValueError("Illegal suffix.")
+        raise E(E.ILLEGAL_SUFFIX)
 
 
 def generateUniqueBranchNameOnRemote(repo: pygit2.Repository, remoteName: str, seedBranchName: str):
@@ -581,12 +594,12 @@ def findStashIndex(repo: Repository, commitOid: pygit2.Oid):
 
 
 def applyStash(repo: Repository, commitId: pygit2.Oid):
-    with StashApplyTraceCallbacks("Applying the stash") as callbacks:
+    with StashApplyTraceCallbacks() as callbacks:
         repo.stash_apply(findStashIndex(repo, commitId), callbacks=callbacks)
 
 
 def popStash(repo: Repository, commitId: pygit2.Oid):
-    with StashApplyTraceCallbacks("Applying the stash") as callbacks:
+    with StashApplyTraceCallbacks() as callbacks:
         repo.stash_pop(findStashIndex(repo, commitId), callbacks=callbacks)
 
 

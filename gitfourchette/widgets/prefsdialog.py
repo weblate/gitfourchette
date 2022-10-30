@@ -1,6 +1,6 @@
 from gitfourchette import log
 from gitfourchette.qt import *
-from gitfourchette.settings import prefs, SHORT_DATE_PRESETS
+from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES
 from gitfourchette.util import abbreviatePath
 from gitfourchette.widgets.graphdelegate import abbreviatePerson
 import datetime
@@ -142,7 +142,9 @@ class PrefsDialog(QDialog):
                 tabWidget.addTab(formContainer, category or "General")
                 pCategory = category
 
-            if prefKey == 'qtStyle':
+            if prefKey == 'language':
+                control = self.languageControl(prefKey, prefValue)
+            elif prefKey == 'qtStyle':
                 control = self.qtStyleControl(prefKey, prefValue)
             elif prefKey == 'diff_font':
                 control = self.fontControl(prefKey)
@@ -201,6 +203,22 @@ class PrefsDialog(QDialog):
         else:
             return None
 
+    def languageControl(self, prefKey: str, prefValue: str):
+        control = QComboBox(self)
+
+        control.addItem(self.tr("System default"), userData="")
+        if not prefValue:
+            control.setCurrentIndex(0)
+        control.insertSeparator(1)
+        for enumMember in LANGUAGES:
+            lang = QLocale(enumMember)
+            control.addItem(lang.nativeLanguageName(), enumMember)
+            if prefValue == enumMember:
+                control.setCurrentIndex(control.count() - 1)
+
+        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.ItemDataRole.UserRole)))
+        return control
+
     def fontControl(self, prefKey: str):
         def currentFont():
             fontString = self.getMostRecentValue(prefKey)
@@ -225,14 +243,14 @@ class PrefsDialog(QDialog):
                 self.assign(prefKey, newFont.toString())
                 refreshFontButton()
 
-        fontButton = QPushButton("Font")
+        fontButton = QPushButton(self.tr("Font"))
         fontButton.clicked.connect(lambda e: pickFont())
         fontButton.setMinimumWidth(256)
         fontButton.setMaximumWidth(256)
         fontButton.setMaximumHeight(128)
 
         resetButton = QToolButton(self)
-        resetButton.setText("Reset")
+        resetButton.setText(self.tr("Reset"))
         resetButton.clicked.connect(lambda: resetFont())
 
         def refreshFontButton():
@@ -302,7 +320,7 @@ class PrefsDialog(QDialog):
     def qtStyleControl(self, prefKey, prefValue):
         control = QComboBox(self)
 
-        control.addItem("System default", userData="")
+        control.addItem(self.tr("System default"), userData="")
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)

@@ -1,6 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import labelQuote, messageSummary, shortHash, stockIcon
+from gitfourchette.util import escamp, messageSummary, shortHash, stockIcon
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
@@ -8,7 +8,6 @@ from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.remotedialog import RemoteDialog
 from gitfourchette.widgets.stashdialog import StashDialog
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
-from html import escape
 import pygit2
 
 
@@ -71,13 +70,13 @@ class ActionFlows(QObject):
 
     def discardFilesFlow(self, entries: list[pygit2.Patch]):
         if len(entries) == 1:
-            question = F"Really discard changes to {entries[0].delta.new_file.path}?"
+            question = self.tr("Really discard changes to “{0}”?").format(entries[0].delta.new_file.path)
         else:
-            question = F"Really discard changes to {len(entries)} files?"
+            question = self.tr("Really discard changes to %n files?", "", len(entries))
 
         qmb = self.confirmAction(
-            "Discard changes",
-            F"{question}\nThis cannot be undone!",
+            self.tr("Discard changes"),
+            question + "\n" + self.tr("This cannot be undone!"),
             QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.discardFiles.emit(entries))
         return qmb
@@ -167,11 +166,11 @@ class ActionFlows(QObject):
 
         return showTextInputDialog(
             self.parentWidget,
-            f"New branch tracking {labelQuote(remoteBranchName)}",
-            F"Enter name for a new local branch that will\ntrack remote branch {labelQuote(remoteBranchName)}:",
+            self.tr("New branch tracking “{0}”").format(escamp(remoteBranchName)),
+            self.tr("Enter name for a new local branch that will\ntrack remote branch “{0}”:").format(escamp(remoteBranchName)),
             remoteBranchName[remoteBranchName.rfind('/') + 1:],
             onAccept,
-            okButtonText="Create")
+            okButtonText=self.tr("Create"))
 
     def editTrackingBranchFlow(self, localBranchName: str):
         dlg = TrackedBranchDialog(self.repo, localBranchName, self.parentWidget)
@@ -191,16 +190,16 @@ class ActionFlows(QObject):
 
         return showTextInputDialog(
             self.parentWidget,
-            F"Rename branch {labelQuote(oldName)}",
-            "Enter new name:",
+            self.tr("Rename branch “{0}”").format(escamp(oldName)),
+            self.tr("Enter new name:"),
             oldName,
             onAccept,
-            okButtonText="Rename")
+            okButtonText=self.tr("Rename"))
 
     def deleteBranchFlow(self, localBranchName: str):
         qmb = self.confirmAction(
-            "Delete branch",
-            F"Really delete local branch <b>{labelQuote(localBranchName)}</b>?<br/>This cannot be undone!",
+            self.tr("Delete branch"),
+            self.tr("Really delete local branch <b>“{0}”</b>?").format(escamp(localBranchName)) + "<br>" + self.tr("This cannot be undone!"),
             QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteBranch.emit(localBranchName))
         return qmb
@@ -230,8 +229,8 @@ class ActionFlows(QObject):
 
     def deleteRemoteFlow(self, remoteName: str):
         qmb = self.confirmAction(
-            "Delete remote",
-            F"Really delete remote <b>{labelQuote(remoteName)}</b>?<br/>This cannot be undone!",
+            self.tr("Delete remote"),
+            self.tr("Really delete remote <b>“{0}”</b>?").format(escamp(remoteName)) + "<br/>" + self.tr("This cannot be undone!"),
             QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteRemote.emit(remoteName))
         return qmb
@@ -244,17 +243,16 @@ class ActionFlows(QObject):
 
         return showTextInputDialog(
             self.parentWidget,
-            F"Rename remote branch “{remoteBranchName}”",
-            F"Enter new name for remote “{remoteBranchName}”:",
+            self.tr("Rename remote branch “{0}”").format(escamp(remoteBranchName)),
+            self.tr("Enter new name for remote branch “{0}”:").format(escamp(remoteBranchName)),
             branchName,
             onAccept,
-            okButtonText="Rename on remote")
+            okButtonText=self.tr("Rename on remote"))
 
     def deleteRemoteBranchFlow(self, remoteBranchName: str):
         qmb = self.confirmAction(
-            "Delete branch on remote",
-            (f"Really delete branch <b>{labelQuote(remoteBranchName)}</b> from the remote repository?<br/>"
-            f"This cannot be undone!"),
+            self.tr("Delete branch on remote"),
+            self.tr("Really delete branch <b>“{0}”</b> from the remote repository?").format(escamp(remoteBranchName)) + "<br/>" + self.tr("This cannot be undone!"),
             QStyle.StandardPixmap.SP_DialogDiscardButton)
         qmb.accepted.connect(lambda: self.deleteRemoteBranch.emit(remoteBranchName))
         return qmb
@@ -264,8 +262,8 @@ class ActionFlows(QObject):
 
     def emptyCommitFlow(self, initialText: str):
         qmb = self.confirmAction(
-            "Create empty commit",
-            "No files are staged for commit.\nDo you want to create an empty commit anyway?")
+            self.tr("Create empty commit"),
+            self.tr("No files are staged for commit.\nDo you want to create an empty commit anyway?"))
         qmb.accepted.connect(lambda: self.commitFlow(initialText, bypassEmptyCommitCheck=True))
         return qmb
 
@@ -333,8 +331,9 @@ class ActionFlows(QObject):
             branch = self.repo.branches.local[branchName]
         except KeyError:
             QMessageBox.warning(
-                self.parentWidget, "No Branch to Push",
-                "No valid local branch to push. Try switching to a local branch first.")
+                self.parentWidget,
+                self.tr("No Branch to Push"),
+                self.tr("No active local branch to push. Try switching to a local branch first."))
             return
 
         dlg = PushDialog(self.repo, branch, self.parentWidget)
@@ -354,15 +353,17 @@ class ActionFlows(QObject):
             branch = self.repo.branches.local[branchName]
         except KeyError:
             QMessageBox.warning(
-                self.parentWidget, "No Branch to Which to Pull",
-                "No valid local branch to which to pull. Try switching to a local branch first.")
+                self.parentWidget,
+                self.tr("No Branch to Which to Pull"),
+                self.tr("No valid local branch to which to pull. Try switching to a local branch first."))
             return
 
         bu: pygit2.Branch = branch.upstream
         if not bu:
             QMessageBox.warning(
-                self.parentWidget, "No Remote-Tracking Branch",
-                F"Can’t pull because “{branch.shorthand}” doesn’t track a remote branch.")
+                self.parentWidget,
+                self.tr("No Remote-Tracking Branch"),
+                self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(branch.shorthand))
             return
 
         self.pullBranch.emit(branch.branch_name, bu.shorthand)

@@ -29,6 +29,7 @@ class Ui_CommitDialog(object):
         self.counterLabel = QLabel(CommitDialog)
         self.counterLabel.setObjectName(u"counterLabel")
         self.counterLabel.setEnabled(False)
+        self.counterLabel.setText(u"000")
 
         self.summaryRowLayout.addWidget(self.counterLabel)
 
@@ -82,7 +83,6 @@ class Ui_CommitDialog(object):
     def retranslateUi(self, CommitDialog):
         CommitDialog.setWindowTitle(QCoreApplication.translate("CommitDialog", u"Commit", None))
         self.summaryEditor.setPlaceholderText(QCoreApplication.translate("CommitDialog", u"Enter commit summary", None))
-        self.counterLabel.setText(QCoreApplication.translate("CommitDialog", u"000", None))
         self.descriptionEditor.setPlaceholderText(QCoreApplication.translate("CommitDialog", u"Long-form description (optional)", None))
         self.revealAuthor.setText(QCoreApplication.translate("CommitDialog", u"&Edit author", None))
         self.authorGroupBox.setTitle("")

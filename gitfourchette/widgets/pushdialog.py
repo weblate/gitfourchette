@@ -3,7 +3,7 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import QSignalBlockerContext
-from gitfourchette.util import addComboBoxItem, stockIcon, labelQuote
+from gitfourchette.util import addComboBoxItem, stockIcon, escamp
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from gitfourchette.workqueue import WorkQueue
@@ -24,9 +24,9 @@ class PushDialog(QDialog):
         localBranch = self.currentLocalBranch
 
         if localBranch.upstream:
-            self.ui.trackingLabel.setText(F"tracking “{localBranch.upstream.shorthand}”")
+            self.ui.trackingLabel.setText(self.tr("tracking “{0}”").format(localBranch.upstream.shorthand))
         else:
-            self.ui.trackingLabel.setText(F"non-tracking")
+            self.ui.trackingLabel.setText(self.tr("non-tracking"))
 
         if self.trackedBranchIndex >= 0:
             self.ui.remoteBranchEdit.setCurrentIndex(self.trackedBranchIndex)
@@ -54,18 +54,18 @@ class PushDialog(QDialog):
         localBranch = self.currentLocalBranch
         localName = localBranch.shorthand
         remoteName = self.currentRemoteBranchFullName
+        lbUpstream = localBranch.upstream.shorthand if localBranch.upstream else "???"
 
         if not localBranch.upstream:
-            text = F"Make {labelQuote(localName)} trac&k {labelQuote(remoteName)} from now on"
+            text = self.tr("Make “{0}” trac&k “{1}” from now on").format(escamp(localName), escamp(remoteName))
             checked = False
             enabled = True
         elif localBranch.upstream.shorthand == self.currentRemoteBranchFullName:
-            text = F"{labelQuote(localName)} already trac&ks {labelQuote(localBranch.upstream.shorthand)}"
+            text = self.tr("“{0}” already trac&ks “{1}”").format(escamp(localName), escamp(lbUpstream))
             checked = True
             enabled = False
         else:
-            text = (F"Make {labelQuote(localName)} trac&k {labelQuote(remoteName)} from now on,\n"
-                    F"instead of {labelQuote(localBranch.upstream.shorthand)}")
+            text = self.tr("Make “{0}” trac&k “{1}” from now on,\ninstead of “{2}”").format(escamp(localName), escamp(remoteName), escamp(lbUpstream))
             checked = False
             enabled = True
 
@@ -155,7 +155,7 @@ class PushDialog(QDialog):
                     font = None
 
                     if br == self.currentLocalBranch.upstream:
-                        caption = F"{identifier} [tracked]"
+                        caption = F"{identifier} " + self.tr("[tracked]")
                         self.trackedBranchIndex = comboBox.count()
                         icon = stockIcon(QStyle.StandardPixmap.SP_DirHomeIcon)
                         font = QFont()
@@ -174,7 +174,10 @@ class PushDialog(QDialog):
 
                 if firstRemote:
                     self.fallbackAutoNewIndex = comboBox.count()
-                comboBox.addItem(stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder), F"New remote branch: {remoteName}/...", (ERemoteItem.NewRef, remoteName))
+                comboBox.addItem(
+                    stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder),
+                    self.tr("New remote branch:") + F" {remoteName}/...",
+                    (ERemoteItem.NewRef, remoteName))
 
                 firstRemote = False
 
@@ -190,7 +193,7 @@ class PushDialog(QDialog):
         self.ui.setupUi(self)
 
         self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        self.startOperationButton.setText("&Push")
+        self.startOperationButton.setText(self.tr("&Push"))
         self.startOperationButton.setIcon(stockIcon("vcs-push"))
         self.startOperationButton.clicked.connect(self.onPushClicked)
 
@@ -238,9 +241,9 @@ class PushDialog(QDialog):
         link = RemoteLink()
         self.remoteLink = link
 
-        self.ui.statusForm.initProgress(F"Contacting remote host...")
-        link.signals.message.connect(self.ui.statusForm.setProgressMessage)
-        link.signals.progress.connect(self.ui.statusForm.setProgressValue)
+        self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
+        link.message.connect(self.ui.statusForm.setProgressMessage)
+        link.progress.connect(self.ui.statusForm.setProgressValue)
 
         if self.ui.trackCheckBox.isEnabled() and self.ui.trackCheckBox.isChecked():
             resetTrackingReference = self.currentRemoteBranchFullName
@@ -267,8 +270,10 @@ class PushDialog(QDialog):
 
         self.pushInProgress = True
         self.enableInputs(False)
+
+        # Create separate workqueue for pushing
         wq = WorkQueue(self)
-        wq.put(work, then, "Pushing", errorCallback=onError)
+        wq.put(work, then, translate("Operation", "Push"), errorCallback=onError)
 
     def reject(self):
         if self.pushInProgress:

@@ -24,3 +24,11 @@ else:
     from qtpy.QtGui import *
     from qtpy import API_NAME as qtBindingName
     from qtpy.QtCore import __version__ as qtBindingVersion
+
+
+def tr(s, *args, **kwargs):
+    return QCoreApplication.translate("", s, *args, **kwargs)
+
+
+def translate(context, s, *args, **kwargs):
+    return QCoreApplication.translate(context, s, *args, **kwargs)

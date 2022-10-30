@@ -26,6 +26,11 @@ SHORT_DATE_PRESETS = [
     ('American', '%m/%d/%Y %I:%M %p'),
 ]
 
+LANGUAGES = [
+    "en_US",
+    "fr_FR"
+]
+
 
 def encodeBinary(b: QByteArray) -> str:
     return b.toBase64().data().decode('utf-8')
@@ -129,6 +134,7 @@ class Verbosity(enum.IntEnum):
 class Prefs(BasePrefs):
     filename = "prefs.json"
 
+    language                    : str           = LANGUAGES[0]
     qtStyle                     : str           = ""
     fileWatcher                 : bool          = False
     shortHashChars              : int           = 7

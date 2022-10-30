@@ -12,7 +12,7 @@ class WelcomeWidget(QFrame):
         logo.setPixmap(logoPixmap)
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        welcomeText = QLabel(f"Welcome to {QApplication.instance().applicationName()} {QApplication.instance().applicationVersion()}!")
+        welcomeText = QLabel(self.tr("Welcome to {0} {1}!").format(QApplication.instance().applicationName(), QApplication.instance().applicationVersion()))
         welcomeText.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         layout = QVBoxLayout()

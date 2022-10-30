@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'signatureform.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.15.6
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -57,7 +57,7 @@ class Ui_SignatureForm(object):
         QMetaObject.connectSlotsByName(SignatureForm)
 
     def retranslateUi(self, SignatureForm):
-        SignatureForm.setWindowTitle(QCoreApplication.translate("SignatureForm", u"Form", None))
+        SignatureForm.setWindowTitle(QCoreApplication.translate("SignatureForm", u"Signature", None))
         self.nameLabel.setText(QCoreApplication.translate("SignatureForm", u"Name", None))
         self.emailLabel.setText(QCoreApplication.translate("SignatureForm", u"Email", None))
         self.timeLabel.setText(QCoreApplication.translate("SignatureForm", u"Time", None))

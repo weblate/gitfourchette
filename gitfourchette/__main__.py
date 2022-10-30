@@ -70,6 +70,21 @@ def main():
         with NonCriticalOperation(F"Loading {settings.history.filename}"):
             settings.history.load()
 
+    # Set language
+    if settings.prefs.language:
+        defaultLocale = QLocale(settings.prefs.language)
+        QLocale.setDefault(defaultLocale)
+
+    appTranslator = QTranslator()
+    if appTranslator.load(f"assets:{settings.prefs.language}") or appTranslator.load("assets:en"):
+        app.installTranslator(appTranslator)
+
+    if qtBindingName.endswith("6"):  # Do this on Qt 6 and up only
+        with NonCriticalOperation("Load Qt base translation"):
+            baseTranslator = QTranslator()
+            if baseTranslator.load(QLocale(settings.prefs.language), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
+                app.installTranslator(baseTranslator)
+
     # Initialize main window
     from gitfourchette.widgets.mainwindow import MainWindow
     window = MainWindow()

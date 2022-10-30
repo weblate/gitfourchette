@@ -62,7 +62,7 @@
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>TextLabel</string>
+        <string notr="true">Validation</string>
        </property>
       </widget>
      </item>

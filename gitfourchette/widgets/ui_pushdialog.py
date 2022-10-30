@@ -124,6 +124,7 @@ class Ui_PushDialog(object):
 
         self.trackCheckBox = QCheckBox(PushDialog)
         self.trackCheckBox.setObjectName(u"trackCheckBox")
+        self.trackCheckBox.setText(u"Track")
 
         self.formLayout.setWidget(3, QFormLayout.FieldRole, self.trackCheckBox)
 
@@ -176,7 +177,6 @@ class Ui_PushDialog(object):
         self.remoteBranchLabel.setText(QCoreApplication.translate("PushDialog", u"Push &to", None))
         self.customRemoteBranchNameEdit.setPlaceholderText(QCoreApplication.translate("PushDialog", u"Branch name on remote", None))
         self.forcePushCheckBox.setText(QCoreApplication.translate("PushDialog", u"&Force push", None))
-        self.trackCheckBox.setText(QCoreApplication.translate("PushDialog", u"Set up \u201cbranch\u201d to track \u201cremote/branch\u201d (instead of \u201cremote/junk\u201d)", None))
         self.groupBox.setTitle("")
         self.statusLabel.setText(QCoreApplication.translate("PushDialog", u"Status", None))
         self.label.setText(QCoreApplication.translate("PushDialog", u"Options", None))

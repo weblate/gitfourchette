@@ -153,49 +153,49 @@ class DiffView(QPlainTextEdit):
         elif self.currentStagingState == StagingState.COMMITTED:
             if hasSelection:
                 actions = [
-                    ActionDef("Export Lines as Patch...", self.exportSelection),
-                    ActionDef("Revert Lines...", self.revertSelection),
+                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
+                    ActionDef(self.tr("Revert Lines..."), self.revertSelection),
                 ]
             else:
                 actions = [
-                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
-                    ActionDef("Revert Hunk...", lambda: self.revertHunk(clickedHunkID)),
+                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(self.tr("Revert Hunk..."), lambda: self.revertHunk(clickedHunkID)),
                 ]
 
         elif self.currentStagingState == StagingState.UNTRACKED:
             if hasSelection:
                 actions = [
-                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
                 ]
             else:
                 actions = [
-                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
         elif self.currentStagingState == StagingState.UNSTAGED:
             if hasSelection:
                 actions = [
-                    ActionDef("Stage Lines", self.stageSelection),
-                    ActionDef("Discard Lines", self.discardSelection, QStyle.StandardPixmap.SP_TrashIcon),
-                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                    ActionDef(self.tr("Stage Lines"), self.stageSelection),
+                    ActionDef(self.tr("Discard Lines"), self.discardSelection, QStyle.StandardPixmap.SP_TrashIcon),
+                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
                 ]
             else:
                 actions = [
-                    ActionDef(F"Stage Hunk {clickedHunkID}", lambda: self.stageHunk(clickedHunkID)),
-                    ActionDef(F"Discard Hunk {clickedHunkID}", lambda: self.discardHunk(clickedHunkID)),
-                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(self.tr("Stage Hunk {0}").format(clickedHunkID), lambda: self.stageHunk(clickedHunkID)),
+                    ActionDef(self.tr("Discard Hunk {0}").format(clickedHunkID), lambda: self.discardHunk(clickedHunkID)),
+                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
         elif self.currentStagingState == StagingState.STAGED:
             if hasSelection:
                 actions = [
-                    ActionDef("Unstage Lines", self.unstageSelection),
-                    ActionDef("Export Lines as Patch...", self.exportSelection),
+                    ActionDef(self.tr("Unstage Lines"), self.unstageSelection),
+                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
                 ]
             else:
                 actions = [
-                    ActionDef(F"Unstage Hunk {clickedHunkID}", lambda: self.unstageHunk(clickedHunkID)),
-                    ActionDef("Export Hunk as Patch...", lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(self.tr("Unstage Hunk {0}").format(clickedHunkID), lambda: self.unstageHunk(clickedHunkID)),
+                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
         else:
@@ -204,7 +204,7 @@ class DiffView(QPlainTextEdit):
 
         actions += [
             None,
-            ActionDef(F"&Word wrap", self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
+            ActionDef(self.tr("&Word wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
         ]
 
         menu = quickMenu(self, actions, menu)
@@ -291,18 +291,29 @@ class DiffView(QPlainTextEdit):
 
         self.patchApplied.emit(NavPos())
 
+    def getPatchPurposeVerb(self, purpose: PatchPurpose):
+        if purpose == PatchPurpose.STAGE:
+            return self.tr("Stage")
+        elif purpose == PatchPurpose.UNSTAGE:
+            return self.tr("Unstage")
+        elif purpose == PatchPurpose.DISCARD:
+            return self.tr("Discard")
+        else:
+            return "???"
+
     def onWantToApplyPartialPatch(self, purpose: PatchPurpose):
-        verb: str = purpose.name
+        verb = self.getPatchPurposeVerb(purpose)
 
         qmb = QMessageBox(
             QMessageBox.Icon.Information,
-            "Selection empty for partial patch",
-            f"You haven’t selected any red/green lines to {verb.lower()}.",
+            self.tr("Selection empty for partial patch"),
+            self.tr("You haven’t selected any red/green lines to {0}.").format(verb),
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Apply,
             parent=self)
 
-        applyButton = qmb.button(QMessageBox.StandardButton.Apply)
-        applyButton.setText(f"{verb.title()} entire file")
+        applyButton: QPushButton = qmb.button(QMessageBox.StandardButton.Apply)
+        applyButton.setText(self.tr("{0} entire &file").format(verb))
+        applyButton.setIcon(QIcon())
         applyButton.clicked.connect(lambda: self.applyEntirePatch(purpose))
 
         qmb.setWindowModality(Qt.WindowModality.WindowModal)
@@ -321,11 +332,16 @@ class DiffView(QPlainTextEdit):
         else:
             applyLocation = pygit2.GIT_APPLY_LOCATION_INDEX
 
+
         try:
             diff = porcelain.applyPatch(self.repo, patchData, applyLocation)
         except GitError as e:
-            excMessageBox(e, F"{purpose.name}: Apply Patch",
-                          F"Failed to apply patch for operation “{purpose.name}”.", parent=self)
+            verb = self.getPatchPurposeVerb(purpose)
+            excMessageBox(
+                e,
+                self.tr("Apply Patch to {0}").format(verb),
+                self.tr("Failed to apply patch for operation “{0}”.").format(verb),
+                parent=self)
             return
 
         self.patchApplied.emit(NavPos())
@@ -340,7 +356,7 @@ class DiffView(QPlainTextEdit):
         if saveInto:
             savePath = os.path.join(saveInto, name)
         else:
-            savePath, _ = PersistentFileDialog.getSaveFileName(self, "Export selected lines", name)
+            savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Export selected lines"), name)
 
         if savePath:
             with open(savePath, "wb") as file:
@@ -353,7 +369,10 @@ class DiffView(QPlainTextEdit):
 
         diff = porcelain.patchApplies(self.repo, patchData, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
         if not diff:
-            QMessageBox.warning(self, "Revert patch", "Couldn't revert this patch.\nThe code may have diverged too much from this revision.")
+            QMessageBox.warning(
+                self,
+                self.tr("Revert patch"),
+                self.tr("Couldn’t revert this patch.\nThe code may have diverged too much from this revision."))
         else:
             diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
             changedFile = get1FileChangedByDiff(diff)
@@ -378,13 +397,13 @@ class DiffView(QPlainTextEdit):
     def discardSelection(self):
         qmb = QMessageBox(
             QMessageBox.Icon.Warning,
-            "Really discard lines?",
-            "Really discard the selected lines?\nThis cannot be undone!",
+            self.tr("Really discard lines?"),
+            self.tr("Really discard the selected lines?") + "\n" + self.tr("This cannot be undone!"),
             QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
             parent=self)
 
         discardButton = qmb.button(QMessageBox.StandardButton.Discard)
-        discardButton.setText("Discard lines")
+        discardButton.setText(self.tr("Discard lines"))
         discardButton.clicked.connect(lambda: self.applySelection(PatchPurpose.DISCARD))
 
         qmb.setWindowModality(Qt.WindowModality.WindowModal)
@@ -408,13 +427,13 @@ class DiffView(QPlainTextEdit):
     def discardHunk(self, hunkID: int):
         qmb = QMessageBox(
             QMessageBox.Icon.Warning,
-            "Really discard hunk?",
-            "Really discard this hunk?\nThis cannot be undone!",
+            self.tr("Really discard hunk?"),
+            self.tr("Really discard this hunk?") + "\n" + self.tr("This cannot be undone!"),
             QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
             parent=self)
 
         discardButton = qmb.button(QMessageBox.StandardButton.Discard)
-        discardButton.setText("Discard hunk")
+        discardButton.setText(self.tr("Discard hunk"))
         discardButton.clicked.connect(lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
 
         qmb.setWindowModality(Qt.WindowModality.WindowModal)

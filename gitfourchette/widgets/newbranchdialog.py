@@ -35,7 +35,7 @@ class NewBranchDialog(QDialog):
             self.ui.trackRemoteBranchCheckBox.setVisible(False)
             self.ui.trackRemoteBranchComboBox.setVisible(False)
 
-        convertToBrandedDialog(self, f"New branch", f"Commit at tip: {target}\n“{targetSubtitle}”")
+        convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
 
         self.onBranchNameChanged()  # do initial validation
 
@@ -53,9 +53,21 @@ class NewBranchDialog(QDialog):
         try:
             porcelain.validateBranchName(newBranchName)
             if newBranchName in self.forbiddenBranchNames:
-                error = "Already taken by another local branch."
-        except ValueError as exc:
-            error = str(exc)
+                error = self.tr("Already taken by another local branch.")
+        except porcelain.BranchNameValidationError as exc:
+            E = porcelain.BranchNameValidationError
+            errorDescriptions = {
+                E.ILLEGAL_NAME: self.tr("Illegal name."),
+                E.ILLEGAL_SUFFIX: self.tr("Illegal suffix."),
+                E.ILLEGAL_PREFIX: self.tr("Illegal prefix."),
+                E.CONTAINS_ILLEGAL_SEQ: self.tr("Contains illegal character sequence."),
+                E.CONTAINS_ILLEGAL_CHAR: self.tr("Contains illegal character."),
+                E.CANNOT_BE_EMPTY: self.tr("Cannot be empty."),
+            }
+            if exc.code in errorDescriptions:
+                error = errorDescriptions[exc.code]
+            else:
+                error = str(exc)
 
         self.ui.nameValidationText.setText(error)
         self.acceptButton.setEnabled(error == "")

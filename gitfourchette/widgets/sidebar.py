@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.util import labelQuote, shortHash, stockIcon
+from gitfourchette.util import escamp, stockIcon
 from html import escape
 from typing import Any
 import enum
@@ -31,24 +31,6 @@ class EItem(enum.Enum):
     Submodule = enum.auto()
     Spacer = enum.auto()
 
-
-ITEM_NAMES = {
-    EItem.UncommittedChanges: "Changes",
-    EItem.LocalBranchesHeader: "Branches",
-    EItem.StashesHeader: "Stashes",
-    EItem.RemotesHeader: "Remotes",
-    EItem.TagsHeader: "Tags",
-    EItem.SubmodulesHeader: "Submodules",
-    EItem.LocalBranch: "Local branch",
-    EItem.DetachedHead: "Detached HEAD",
-    EItem.UnbornHead: "Unborn HEAD",
-    EItem.RemoteBranch: "Remote branch",
-    EItem.Stash: "Stash",
-    EItem.Remote: "Remote",
-    EItem.Tag: "Tag",
-    EItem.Submodule: "Submodules",
-    EItem.Spacer: "---",
-}
 
 HEADER_ITEMS = [
     EItem.UncommittedChanges,
@@ -321,11 +303,11 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return branchName
             elif toolTipRole:
-                text = F"Local branch “{branchName}”"
+                text = self.tr("Local branch “{0}”").format(branchName)
                 if branchName == self._checkedOut:
-                    text += F"\n{ACTIVE_BULLET}Active branch"
+                    text += "\n" + ACTIVE_BULLET + self.tr("Active branch")
                 if self._tracking[branchNo]:
-                    text += F"\nTracking remote “{self._tracking[branchNo]}”"
+                    text += "\n" + self.tr("Tracking remote branch “{0}”").format(self._tracking[branchNo])
                 return text
             elif hiddenRole:
                 return F"refs/heads/{branchName}" in self._hiddenBranches
@@ -337,21 +319,21 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.UnbornHead:
             if displayRole:
-                return F"{ACTIVE_BULLET}{self._unbornHead} [unborn]"
+                return F"{ACTIVE_BULLET}{self._unbornHead} " + self.tr("[unborn]")
             elif userRole:
                 return self._unbornHead
             elif toolTipRole:
-                return "Unborn HEAD: does not point to a commit yet."
+                return self.tr("Unborn HEAD: does not point to a commit yet.")
             elif hiddenRole:
                 return False
 
         elif item == EItem.DetachedHead:
             if displayRole:
-                return F"{ACTIVE_BULLET}[detached head]"
+                return ACTIVE_BULLET + self.tr("[detached head]")
             elif userRole:
                 return self._detachedHead
             elif toolTipRole:
-                return F"Detached HEAD @ {self._detachedHead}"
+                return self.tr("Detached HEAD") + " @ " + self._detachedHead
             elif hiddenRole:
                 return False
 
@@ -410,6 +392,23 @@ class SidebarModel(QAbstractItemModel):
 
         else:
             if displayRole:
+                ITEM_NAMES = {
+                    EItem.UncommittedChanges: self.tr("Changes"),
+                    EItem.LocalBranchesHeader: self.tr("Branches"),
+                    EItem.StashesHeader: self.tr("Stashes"),
+                    EItem.RemotesHeader: self.tr("Remotes"),
+                    EItem.TagsHeader: self.tr("Tags"),
+                    EItem.SubmodulesHeader: self.tr("Submodules"),
+                    EItem.LocalBranch: self.tr("Local branch"),
+                    EItem.DetachedHead: self.tr("Detached HEAD"),
+                    EItem.UnbornHead: self.tr("Unborn HEAD"),
+                    EItem.RemoteBranch: self.tr("Remote branch"),
+                    EItem.Stash: self.tr("Stash"),
+                    EItem.Remote: self.tr("Remote"),
+                    EItem.Tag: self.tr("Tag"),
+                    EItem.Submodule: self.tr("Submodules"),
+                    EItem.Spacer: "---",
+                }
                 return ITEM_NAMES[item]
             elif fontRole:
                 font = self._parentWidget.font()
@@ -536,7 +535,7 @@ class Sidebar(QTreeView):
             menu.setObjectName("SidebarContextMenu")
 
         if item == EItem.LocalBranchesHeader:
-            menu.addAction(F"&New Branch...", lambda: self.newBranch.emit())
+            menu.addAction(self.tr("&New Branch..."), lambda: self.newBranch.emit())
 
         elif item == EItem.LocalBranch:
             model: SidebarModel = self.model()
@@ -544,10 +543,10 @@ class Sidebar(QTreeView):
             branch = repo.branches.local[data]
             activeBranchName = porcelain.getActiveBranchShorthand(repo)
 
-            switchAction: QAction = menu.addAction(F"&Switch to {labelQuote(data)}")
+            switchAction: QAction = menu.addAction(self.tr("&Switch to “{0}”").format(escamp(data)))
             menu.addSeparator()
-            mergeAction: QAction = menu.addAction(F"&Merge {labelQuote(data)} into {labelQuote(activeBranchName)}...")
-            rebaseAction: QAction = menu.addAction(F"&Rebase {labelQuote(activeBranchName)} onto {labelQuote(data)}...")
+            mergeAction: QAction = menu.addAction(self.tr("&Merge “{0}” into “{1}”...").format(escamp(data), escamp(activeBranchName)))
+            rebaseAction: QAction = menu.addAction(self.tr("&Rebase “{0}” onto “{1}”...").format(escamp(activeBranchName), escamp(data)))
 
             switchAction.setIcon(QIcon.fromTheme("document-swap"))
 
@@ -566,74 +565,74 @@ class Sidebar(QTreeView):
                     rebaseAction.setEnabled(True)
 
             menu.addSeparator()
-            menu.addAction(stockIcon("vcs-push"), "&Push...", lambda: self.pushBranch.emit(data))
-            menu.addAction(stockIcon("vcs-pull"), "Pul&l...", lambda: self.pullBranch.emit(data))
-            menu.addAction("Set &Tracked Branch...", lambda: self.editTrackingBranch.emit(data))
+            menu.addAction(stockIcon("vcs-push"), self.tr("&Push..."), lambda: self.pushBranch.emit(data))
+            menu.addAction(stockIcon("vcs-pull"), self.tr("Pul&l..."), lambda: self.pullBranch.emit(data))
+            menu.addAction(self.tr("Set &Tracked Branch..."), lambda: self.editTrackingBranch.emit(data))
 
             menu.addSeparator()
-            menu.addAction("Re&name...", lambda: self.renameBranch.emit(data))
-            a = menu.addAction("&Delete...", lambda: self.deleteBranch.emit(data))
+            menu.addAction(self.tr("Re&name..."), lambda: self.renameBranch.emit(data))
+            a = menu.addAction(self.tr("&Delete..."), lambda: self.deleteBranch.emit(data))
             a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
 
             menu.addSeparator()
-            menu.addAction("New branch from here...", lambda: self.newBranchFromBranch.emit(data))
+            menu.addAction(self.tr("New branch from here..."), lambda: self.newBranchFromBranch.emit(data))
 
             menu.addSeparator()
-            a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/heads/" + data))
+            a = menu.addAction(self.tr("&Hide in graph"), lambda: self.toggleHideBranch.emit("refs/heads/" + data))
             a.setCheckable(True)
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
                 a.setChecked(isBranchHidden)
 
         elif item == EItem.RemoteBranch:
-            menu.addAction(F"New local branch tracking {labelQuote(data)}...",
+            menu.addAction(self.tr("New local branch tracking {0}...").format(escamp(data)),
                            lambda: self.newTrackingBranch.emit(data))
 
-            a = menu.addAction(F"Fetch this remote branch...", lambda: self.fetchRemoteBranch.emit(data))
+            a = menu.addAction(self.tr("Fetch this remote branch..."), lambda: self.fetchRemoteBranch.emit(data))
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
 
-            a = menu.addAction(F"Rename branch on remote...", lambda: self.renameRemoteBranch.emit(data))
+            a = menu.addAction(self.tr("Rename branch on remote..."), lambda: self.renameRemoteBranch.emit(data))
 
-            a = menu.addAction(F"Delete branch on remote...", lambda: self.deleteRemoteBranch.emit(data))
+            a = menu.addAction(self.tr("Delete branch on remote..."), lambda: self.deleteRemoteBranch.emit(data))
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
 
             menu.addSeparator()
-            a = menu.addAction("&Hide in graph", lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
+            a = menu.addAction(self.tr("&Hide in graph"), lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
             a.setCheckable(True)
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
                 a.setChecked(isBranchHidden)
 
         elif item == EItem.Remote:
-            a = menu.addAction("&Edit Remote...", lambda: self.editRemote.emit(data))
+            a = menu.addAction(self.tr("&Edit Remote..."), lambda: self.editRemote.emit(data))
             a.setIcon(QIcon.fromTheme("document-edit"))
 
-            a = menu.addAction("&Fetch all branches on this remote...", lambda: self.fetchRemote.emit(data))
+            a = menu.addAction(self.tr("&Fetch all branches on this remote..."), lambda: self.fetchRemote.emit(data))
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
 
             menu.addSeparator()
 
-            a = menu.addAction("&Delete Remote", lambda: self.deleteRemote.emit(data))
+            a = menu.addAction(self.tr("&Delete Remote"), lambda: self.deleteRemote.emit(data))
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
 
         elif item == EItem.RemotesHeader:
-            menu.addAction("&New Remote...", lambda: self.newRemote.emit())
+            menu.addAction(self.tr("&Add Remote..."), lambda: self.newRemote.emit())
 
         elif item == EItem.StashesHeader:
-            menu.addAction("&New stash", lambda: self.newStash.emit())
+            menu.addAction(self.tr("&New stash"), lambda: self.newStash.emit())
 
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
-            menu.addAction("&Pop (apply and delete)", lambda: self.popStash.emit(oid))
-            menu.addAction("&Apply", lambda: self.applyStash.emit(oid))
+            menu.addAction(self.tr("&Pop (apply and delete)"), lambda: self.popStash.emit(oid))
+            menu.addAction(self.tr("&Apply"), lambda: self.applyStash.emit(oid))
             menu.addSeparator()
-            menu.addAction(stockIcon(QStyle.StandardPixmap.SP_TrashIcon), "&Delete", lambda: self.dropStash.emit(oid))
+            menu.addAction(stockIcon(QStyle.StandardPixmap.SP_TrashIcon), self.tr("&Delete"), lambda: self.dropStash.emit(oid))
 
         elif item == EItem.Submodule:
-            menu.addAction(f"&Open submodule in {QApplication.applicationDisplayName()}", lambda: self.openSubmoduleRepo.emit(data))
-            menu.addAction(f"Open submodule &folder", lambda: self.openSubmoduleFolder.emit(data))
+            menu.addAction(self.tr("&Open submodule in {0}").format(QApplication.applicationDisplayName()), lambda: self.openSubmoduleRepo.emit(data))
+            menu.addAction(self.tr("Open submodule &folder"), lambda: self.openSubmoduleFolder.emit(data))
 
         return menu
 

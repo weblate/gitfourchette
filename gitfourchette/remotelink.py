@@ -1,5 +1,5 @@
 from gitfourchette import log
-from gitfourchette.qt import QStandardPaths, QObject, Signal, QElapsedTimer, QLocale
+from gitfourchette.qt import *
 from gitfourchette.util import compactPath
 import os.path
 import pygit2
@@ -33,22 +33,17 @@ def getAuthNamesFromFlags(allowedTypes):
     return ", ".join(allowedTypeNames)
 
 
-class RemoteLinkSignals(QObject):
+class RemoteLink(QObject, pygit2.RemoteCallbacks):
     userAbort = Signal()
     message = Signal(str)
     progress = Signal(int, int)
 
-    def __init__(self):
-        super().__init__(parent=None)
-
-
-class RemoteLink(pygit2.RemoteCallbacks):
     @staticmethod
     def mayAbortNetworkOperation(f):
         def wrapper(*args):
             x: RemoteLink = args[0]
             if x._aborting:
-                raise InterruptedError("Remote operation interrupted by user.")
+                raise InterruptedError(translate("RemoteLink", "Remote operation interrupted by user."))
             return f(*args)
         return wrapper
 
@@ -56,7 +51,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         super().__init__()
 
         self.attempts = 0
-        self.signals = RemoteLinkSignals()
+        #self.signals = RemoteLinkSignals()
 
         self.keypairFiles = []
         sshDirectory = QStandardPaths.locate(QStandardPaths.HomeLocation, ".ssh", QStandardPaths.LocateDirectory)
@@ -72,7 +67,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self.downloadRate = 0
         self.receivedBytesOnTimerStart = 0
 
-        self.signals.userAbort.connect(self._onAbort)
+        self.userAbort.connect(self._onAbort)
 
         self._aborting = False
         self._sidebandProgressBuffer = ""
@@ -81,9 +76,9 @@ class RemoteLink(pygit2.RemoteCallbacks):
         return self._aborting
 
     def raiseAbortFlag(self):
-        self.signals.message.emit("Aborting remote operation...")
-        self.signals.progress.emit(0, 0)
-        self.signals.userAbort.emit()
+        self.message.emit(self.tr("Aborting remote operation..."))
+        self.progress.emit(0, 0)
+        self.userAbort.emit()
 
     def _onAbort(self):
         self._aborting = True
@@ -99,7 +94,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         # Send the last complete line we have.
         split = string.replace("\r", "\n").rsplit("\n", 2)
         try:
-            self.signals.message.emit("Remote: " + split[-2])
+            self.message.emit(self.tr("Remote:", "message from remote") + " " + split[-2])
         except IndexError:
             pass
 
@@ -115,7 +110,7 @@ class RemoteLink(pygit2.RemoteCallbacks):
         self.attempts += 1
 
         if self.attempts > 10:
-            raise ConnectionRefusedError("Too many credential retries.")
+            raise ConnectionRefusedError(self.tr("Too many credential retries."))
 
         if self.attempts == 1:
             log.info("RemoteLink", "Auths accepted by server:", getAuthNamesFromFlags(allowed_types))
@@ -123,14 +118,18 @@ class RemoteLink(pygit2.RemoteCallbacks):
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
             log.info("RemoteLink", "Attempting login with:", compactPath(pubkey))
-            self.signals.message.emit(F"Attempting login...\n{compactPath(pubkey)}")
+            self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
         else:
             if self.attempts > 1:
-                raise ConnectionRefusedError(F"Credentials rejected by remote. The remote claims to accept: {getAuthNamesFromFlags(allowed_types)}.")
+                raise ConnectionRefusedError(
+                    self.tr("Credentials rejected by remote.") + " " +
+                    self.tr("The remote claims to accept: {0}.").format(getAuthNamesFromFlags(allowed_types)))
             else:
-                raise NotImplementedError(F"Unsupported auth type. The remote claims to accept: {getAuthNamesFromFlags(allowed_types)}.")
+                raise NotImplementedError(
+                    self.tr("Unsupported auth type.") + " " +
+                    self.tr("The remote claims to accept: {0}.").format(getAuthNamesFromFlags(allowed_types)))
 
     @mayAbortNetworkOperation
     def transfer_progress(self, stats: pygit2.remote.TransferProgress):
@@ -144,23 +143,25 @@ class RemoteLink(pygit2.RemoteCallbacks):
 
         obj = min(stats.indexed_objects, stats.total_objects)
         if obj == stats.total_objects:
-            self.signals.progress.emit(0, 0)
+            self.progress.emit(0, 0)
         else:
-            self.signals.progress.emit(obj, stats.total_objects)
+            self.progress.emit(obj, stats.total_objects)
 
         locale = QLocale.system()
 
-        message = (
-            F"{obj:,} of {stats.total_objects:,} objects ready\n"
-            + locale.formattedDataSize(stats.received_bytes))
+        objectsReadyText = self.tr("{0:,} of {1:,} objects ready.").format(obj, stats.total_objects)
+        dataSizeText = locale.formattedDataSize(stats.received_bytes)
+        downloadRateText = locale.formattedDataSize(self.downloadRate)
+
+        message = objectsReadyText + "\n"
 
         if stats.received_objects == stats.total_objects:
-            message += " total. Indexing..."
+            message += self.tr("{0} total. Indexing...", "e.g. '12 MB total'").format(dataSizeText)
         else:
-            message += " received"
+            message += self.tr("{0} received.", "e.g. '12 MB received so far'").format(dataSizeText)
             if self.downloadRate != 0:
-                message += F" - {locale.formattedDataSize(self.downloadRate)}/s"
-        self.signals.message.emit(message)
+                message += " " + self.tr("({0}/s)", "e.g. 1 MB per second").format(downloadRateText)
+        self.message.emit(message)
 
     def update_tips(self, refname, old, new):
         log.info("RemoteLink", F"Update tip {refname}: {old} ---> {new}")
@@ -168,4 +169,4 @@ class RemoteLink(pygit2.RemoteCallbacks):
     def push_update_reference(self, refname: str, message: str | None):
         if not message:
             message = ""
-        self.signals.message.emit(F"Push update reference:\n{refname} {message}")
+        self.message.emit(self.tr("Push update reference:") + f"\n{refname} {message}")

@@ -74,9 +74,9 @@ class Worker(QRunnable):
             self.signals.finished.emit()  # Done
 
 
-class WorkQueue:
+class WorkQueue(QObject):
     def __init__(self, parent, maxThreadCount=1):
-        self.parent = parent
+        super().__init__(parent)
         self.threadpool = QThreadPool(parent)
         self.threadpool.setMaxThreadCount(maxThreadCount)
         self.mutex = QMutex()
@@ -85,7 +85,7 @@ class WorkQueue:
             self,
             work: Callable[[], object],
             then: Callable[[object], None] = None,
-            caption: str = "Unnamed task",
+            caption: str = "UnnamedTask",
             priority: int = 0,
             errorCallback: Callable[[BaseException], None] = None):
         """
@@ -123,7 +123,8 @@ class WorkQueue:
             if errorCallback:
                 errorCallback(exc)
             else:
-                excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self.parent)
+                message = self.tr("Operation failed: {0}.").format(caption)
+                excMessageBox(exc, title=caption, message=message, parent=self.parent)
 
     def putAsync(self, work, then, caption, priority, errorCallback):
         def workWrapper():
@@ -143,13 +144,14 @@ class WorkQueue:
 
         if not errorCallback:
             def errorCallback(exc: BaseException):
-                excMessageBox(exc, title=caption, message=F"Operation failed: {caption}", parent=self.parent)
+                message = self.tr("Operation failed: {0}.").format(caption)
+                excMessageBox(exc, title=caption, message=message, parent=self.parent)
 
         w = Worker(workWrapper)
         w.signals.result.connect(thenWrapper)
         w.signals.error.connect(lambda: globalstatus.clearIndeterminateProgressCaption())
         w.signals.error.connect(errorCallback)
-        globalstatus.setIndeterminateProgressCaption(caption + "...")
+        globalstatus.setIndeterminateProgressCaption(self.tr("{0}...").format(caption))
 
         # Remove any pending worker from the queue.
         # TODO: we should prevent the currently-running worker's completion callback from running as well.

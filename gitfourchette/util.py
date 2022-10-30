@@ -28,21 +28,6 @@ def hasFlag(value, flag):
     return (value & flag) == flag
 
 
-def fplural(fmt: str, n: int) -> str:
-    if n == 1:
-        fmt = fmt.replace("#~", "")
-    else:
-        fmt = fmt.replace("#~", "# ")
-
-    out = fmt.replace("#", str(n))
-
-    if n == 1:
-        out = re.sub(r"\^\w+", "", out)
-    else:
-        out = out.replace("^", "")
-    return out
-
-
 def compactPath(path: str) -> str:
     # Normalize path first, which also turns forward slashes to backslashes on Windows.
     path = os.path.abspath(path)
@@ -76,8 +61,8 @@ def isZeroId(oid: Oid) -> bool:
 
 
 # Ampersands from user strings must be sanitized for QLabel.
-def labelQuote(text: str) -> str:
-    return F"“{text.replace('&', '&&')}”"
+def escamp(text: str) -> str:
+    return text.replace('&', '&&')
 
 
 def showInFolder(pathStr):
@@ -128,8 +113,8 @@ def onAppThread():
 
 def excMessageBox(
         exc,
-        title="Unhandled Exception",
-        message="An exception was thrown.",
+        title="",
+        message="",
         parent=None,
         printExc=True,
         showExcSummary=True,
@@ -143,6 +128,11 @@ def excMessageBox(
         if not onAppThread():
             sys.stderr.write("excMessageBox: not on application thread; bailing out\n")
             return
+
+        if not title:
+            title = tr("Unhandled exception")
+        if not message:
+            message = tr("An exception was raised.")
 
         if showExcSummary:
             summary = traceback.format_exception_only(exc.__class__, exc)
@@ -311,7 +301,7 @@ class NonCriticalOperation:
 
     def __exit__(self, excType, excValue, excTraceback):
         if excValue:
-            excMessageBox(excValue, message=self.operation + " failed.")
+            excMessageBox(excValue, message=tr("Operation failed: {0}.").format(self.operation))
             return True  # don't propagate
 
 

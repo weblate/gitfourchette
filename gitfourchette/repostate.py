@@ -23,7 +23,7 @@ class BatchedOffset:
 
 def progressTick(progress, i):
     if i != 0 and i % PROGRESS_INTERVAL == 0:
-        progress.setLabelText(F"{i:,} commits processed.")
+        progress.setLabelText(tr("{0} commits processed.").format(f"{i:,}"))
         QCoreApplication.processEvents()
         if progress.wasCanceled():
             raise StopIteration()
@@ -235,7 +235,7 @@ class RepoState:
             self.activeCommitOid = None
 
     def loadCommitSequence(self, progress: QProgressDialog):
-        progress.setLabelText(F"Preparing refs...")
+        progress.setLabelText(tr("Gathering refs..."))
         QCoreApplication.processEvents()
 
         self.currentRefs = porcelain.getOidsForAllReferences(self.repo)
@@ -249,7 +249,7 @@ class RepoState:
         commitSequence: list[pygit2.Commit] = []
         graph = Graph()
 
-        progress.setLabelText(F"Preparing walk...")
+        progress.setLabelText(tr("Preparing walk..."))
 
         foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
         hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
@@ -267,7 +267,7 @@ class RepoState:
 
         log.info("loadCommitSequence", F"{self.shortName}: loaded {len(commitSequence):,} commits")
 
-        progress.setLabelText("Preparing graph...")
+        progress.setLabelText(tr("Preparing graph..."))
         progress.setMaximum(len(commitSequence))
         graphGenerator = graph.startGenerator()
         for commit in commitSequence:
@@ -289,7 +289,7 @@ class RepoState:
         return commitSequence
 
     def loadTaintedCommitsOnly(self):
-        globalstatus.setText(F"{self.shortName}: checking for new commits...")
+        globalstatus.setText(tr("{0}: Checking for new commits...").format(self.shortName))
 
         self.currentBatchID += 1
 

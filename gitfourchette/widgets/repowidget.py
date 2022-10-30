@@ -9,7 +9,7 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.trash import Trash
-from gitfourchette.util import (fplural, excMessageBox, excStrings, labelQuote, QSignalBlockerContext, shortHash)
+from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffImagePair, ShouldDisplayPatchAsImageDiff
 from gitfourchette.widgets.diffview import DiffView
@@ -195,9 +195,9 @@ class RepoWidget(QWidget):
         commitButtonsContainer.setLayout(QHBoxLayout())
         commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(commitButtonsContainer)
-        self.commitButton = QPushButton("&Commit")
+        self.commitButton = QPushButton(self.tr("&Commit"))
         self.commitButton.clicked.connect(self.startCommitFlow)
-        self.amendButton = QPushButton("&Amend")
+        self.amendButton = QPushButton(self.tr("&Amend"))
         self.amendButton.clicked.connect(self.actionFlows.amendFlow)
         commitButtonsContainer.layout().addWidget(self.commitButton)
         commitButtonsContainer.layout().addWidget(self.amendButton)
@@ -263,7 +263,7 @@ class RepoWidget(QWidget):
             self.actionFlows.repo = None
 
     def onDirectoryChange(self):
-        globalstatus.setText("Detected external change...")
+        globalstatus.setText(self.tr("Detected external change..."))
 
         self.scheduledRefresh.stop()
         self.scheduledRefresh.start()
@@ -492,11 +492,11 @@ class RepoWidget(QWidget):
             self.nameChange.emit()
         showTextInputDialog(
             self,
-            "Edit repo nickname",
-            "Enter new nickname for repo, or enter blank line to reset:",
+            self.tr("Edit repo nickname"),
+            self.tr("Enter new nickname for repo, or enter blank line to reset:"),
             settings.history.getRepoNickname(self.workdir),
             onAccept,
-            okButtonText="Rename")
+            okButtonText=self.tr("Rename", "edit repo nickname"))
 
     def setNoCommitSelected(self):
         self.saveFilePositions()
@@ -529,8 +529,8 @@ class RepoWidget(QWidget):
 
             nDirty = self.dirtyFiles.model().rowCount()
             nStaged = self.stagedFiles.model().rowCount()
-            self.dirtyLabel.setText(fplural(F"# dirty file^s:", nDirty))
-            self.stageLabel.setText(fplural(F"# file^s staged for commit:", nStaged))
+            self.dirtyLabel.setText(self.tr("%n dirty file(s):", "", nDirty))
+            self.stageLabel.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
 
             # Switch to correct card in filesStack to show dirtyView and stageView
             self.filesStack.setCurrentWidget(self.stageSplitter)
@@ -557,7 +557,9 @@ class RepoWidget(QWidget):
         dirtyESR = self.dirtyFiles.earliestSelectedRow()
 
         self.saveFilePositions()
-        self.workQueue.put(work, then, "Refreshing working tree status", -1000)
+
+        opName = translate("Operation", "Refresh working directory")
+        self.workQueue.put(work, then, opName, -1000)
 
     def loadCommitAsync(self, oid: pygit2.Oid):
         """Load commit details into Changed Files view"""
@@ -580,7 +582,7 @@ class RepoWidget(QWidget):
             # Show message if commit is empty
             if self.committedFiles.flModel.rowCount() == 0:
                 self.diffStack.setCurrentWidget(self.richDiffView)
-                self.richDiffView.displayDiffModelError(DiffModelError("Empty commit."))
+                self.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
 
             # Switch to correct card in filesStack to show changedFilesView
             self.filesStack.setCurrentWidget(self.committedFiles)
@@ -588,7 +590,9 @@ class RepoWidget(QWidget):
             self.restoreSelectedFile()
 
         self.saveFilePositions()
-        self.workQueue.put(work, then, F"Loading commit “{shortHash(oid)}”", -1000)
+
+        opName = translate("Operation", "Load commit “{0}”").format(shortHash(oid))
+        self.workQueue.put(work, then, opName, -1000)
 
     def loadPatchAsync(self, patch: pygit2.Patch, stagingState: StagingState):
         """Load a file diff into the pygit2.Diff View"""
@@ -596,8 +600,8 @@ class RepoWidget(QWidget):
         if not patch:
             self.diffStack.setCurrentWidget(self.richDiffView)
             self.richDiffView.displayDiffModelError(DiffModelError(
-                "Patch is invalid.",
-                "The patched file may have changed on disk since we last read it. Try refreshing the window.",
+                self.tr("Patch is invalid."),
+                self.tr("The patched file may have changed on disk since we last read it. Try refreshing the window."),
                 icon=QStyle.StandardPixmap.SP_MessageBoxWarning))
             return
 
@@ -640,11 +644,13 @@ class RepoWidget(QWidget):
             else:
                 self.diffStack.setCurrentWidget(self.richDiffView)
                 self.richDiffView.displayDiffModelError(DiffModelError(
-                    F"Can’t display diff of type {html.escape(str(type(result)))}",
+                    self.tr("Can’t display diff of type {0}.").format(html.escape(str(type(result)))),
                     icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
         self.saveFilePositions()
-        self.workQueue.put(work, then, F"Loading diff “{patch.delta.new_file.path}”", -500)
+
+        opName = translate("Operation", "Load diff “{0}”").format(patch.delta.new_file.path)
+        self.workQueue.put(work, then, opName, -500)
 
     def createCommitAsync(self, message: str, author: pygit2.Signature | None, committer: pygit2.Signature | None):
         def work():
@@ -656,7 +662,9 @@ class RepoWidget(QWidget):
 
         # Save commit message as draft now, so we don't lose it if the commit fails.
         self.state.setDraftCommitMessage(message)
-        self.workQueue.put(work, then, F"Committing")
+
+        opName = translate("Operation", "Commit")
+        self.workQueue.put(work, then, opName)
 
     def amendCommitAsync(self, message: str, author: pygit2.Signature | None, committer: pygit2.Signature | None):
         def work():
@@ -665,25 +673,35 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, F"Amending")
+        opName = translate("Operation", "Amend commit")
+        self.workQueue.put(work, then, opName)
 
     def switchToBranchAsync(self, newBranch: str):
         assert not newBranch.startswith("refs/heads/")
+
         work = lambda: porcelain.checkoutLocalBranch(self.repo, newBranch)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Switching to branch “{newBranch}”")
+
+        opName = translate("Operation", "Switch to branch “{0}”").format(newBranch)
+        self.workQueue.put(work, then, opName)
 
     def renameBranchAsync(self, oldName: str, newName: str):
         assert not oldName.startswith("refs/heads/")
+
         work = lambda: porcelain.renameBranch(self.repo, oldName, newName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Renaming branch “{oldName}” to “{newName}”")
+
+        opName = translate("Operation", "Rename local branch “{0}”").format(oldName)
+        self.workQueue.put(work, then, opName)
 
     def deleteBranchAsync(self, localBranchName: str):
         assert not localBranchName.startswith("refs/heads/")
+
         work = lambda: porcelain.deleteBranch(self.repo, localBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Deleting branch “{localBranchName}”")
+
+        opName = translate("Operation", "Delete local branch “{0}”").format(localBranchName)
+        self.workQueue.put(work, then, opName)
 
     def newBranchAsync(self, localBranchName: str, tip: pygit2.Oid, tracking: str, switchTo: bool):
         assert not localBranchName.startswith("refs/heads/")
@@ -698,28 +716,38 @@ class RepoWidget(QWidget):
 
         def then(_): self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, F"Creating branch “{localBranchName}”")
+        opName = translate("Operation", "Create local branch “{0}”").format(localBranchName)
+        self.workQueue.put(work, then, opName)
 
     def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         assert not localBranchName.startswith("refs/heads/")
+
         work = lambda: porcelain.newTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Setting up branch “{localBranchName}” to track “{remoteBranchName}”")
+
+        opName = translate("Operation", "New branch “{0}”").format(localBranchName)
+        self.workQueue.put(work, then, opName)
 
     def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
         work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Making local branch “{localBranchName}” track “{remoteBranchName}”")
+
+        opName = translate("Operation", "Change remote branch tracked by “{0}”").format(localBranchName)
+        self.workQueue.put(work, then, opName)
 
     def newRemoteAsync(self, name: str, url: str):
         work = lambda: porcelain.newRemote(self.repo, name, url)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"New remote “{name}”")
+
+        opName = translate("Operation", "Add remote “{0}”").format(name)
+        self.workQueue.put(work, then, opName)
 
     def editRemoteAsync(self, remoteName: str, newName: str, newURL: str):
         work = lambda: porcelain.editRemote(self.repo, remoteName, newName, newURL)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Edit remote “{remoteName}”")
+
+        opName = translate("Operation", "Edit remote “{0}”").format(remoteName)
+        self.workQueue.put(work, then, opName)
 
     def fetchRemoteAsync(self, remoteName: str):
         rlpd = RemoteLinkProgressDialog(self)
@@ -733,9 +761,10 @@ class RepoWidget(QWidget):
 
         def onError(exc):
             rlpd.close()
-            excMessageBox(exc, title="Fetch error", message=F"Couldn't fetch “{remoteName}”.", parent=self)
+            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t fetch remote “{0}”.").format(remoteName))
 
-        self.workQueue.put(work, then, F"Fetch remote “{remoteName}”", errorCallback=onError)
+        opName = translate("Operation", "Fetch remote “{0}”").format(remoteName)
+        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     def fetchRemoteBranchAsync(self, remoteBranchName: str):
         rlpd = RemoteLinkProgressDialog(self)
@@ -749,14 +778,17 @@ class RepoWidget(QWidget):
 
         def onError(exc):
             rlpd.close()
-            excMessageBox(exc, title="Fetch error", message=F"Couldn’t fetch remote branch “{remoteBranchName}”.", parent=self)
+            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t fetch remote branch “{0}”.").format(remoteBranchName))
 
-        self.workQueue.put(work, then, F"Fetch remote branch “{remoteBranchName}”", errorCallback=onError)
+        opName = translate("Operation", "Fetch remote branch “{0}”").format(remoteBranchName)
+        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     def deleteRemoteAsync(self, remoteName: str):
         work = lambda: porcelain.deleteRemote(self.repo, remoteName)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Deleting remote “{remoteName}”")
+
+        opName = translate("Operation", "Delete remote “{0}”").format(remoteName)
+        self.workQueue.put(work, then, opName)
 
     def deleteRemoteBranchAsync(self, remoteBranchName: str):
         rlpd = RemoteLinkProgressDialog(self)
@@ -770,9 +802,10 @@ class RepoWidget(QWidget):
 
         def onError(exc):
             rlpd.close()
-            excMessageBox(exc, title="Delete remote branch", message=F"Couldn’t delete remote branch “{remoteBranchName}”.", parent=self)
+            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t delete remote branch “{0}”.").format(remoteBranchName))
 
-        self.workQueue.put(work, then, F"Delete remote branch “{remoteBranchName}”", errorCallback=onError)
+        opName = translate("Operation", "Delete remote branch “{0}”").format(remoteBranchName)
+        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     def renameRemoteBranchAsync(self, remoteBranchName: str, newName: str):
         rlpd = RemoteLinkProgressDialog(self)
@@ -786,16 +819,19 @@ class RepoWidget(QWidget):
 
         def onError(exc):
             rlpd.close()
-            excMessageBox(exc, title="Rename remote branch", message=F"Couldn’t rename remote branch “{remoteBranchName}”.", parent=self)
+            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t rename remote branch “{0}”.").format(remoteBranchName))
 
-        self.workQueue.put(work, then, F"Rename remote branch “{remoteBranchName}”", errorCallback=onError)
+        opName = translate("Operation", "Rename remote branch “{0}”").format(remoteBranchName)
+        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
         def then(_):
             self.quickRefreshWithSidebar()
             self.graphView.selectCommit(onto)
-        self.workQueue.put(work, then, F"Reset HEAD onto {shortHash(onto)}, {resetMode}")
+
+        opName = translate("Operation", "Reset HEAD onto “{0}” ({1})").format(shortHash(onto), resetMode)
+        self.workQueue.put(work, then, opName)
 
     def stageFilesAsync(self, patches: list[pygit2.Patch]):
         def work():
@@ -805,7 +841,10 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, fplural("Staging # file^s", len(patches)))
+        numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
+        opName = QCoreApplication.translate("Operation", "Stage %n file(s)", "", numPatches)
+
+        self.workQueue.put(work, then, opName)
 
     def discardFilesAsync(self, patches: list[pygit2.Patch]):
         def work():
@@ -816,7 +855,10 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, fplural("Discarding # file^s", len(patches)))
+        numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
+        opName = translate("Operation", "Discard %n file(s)", "", numPatches)
+
+        self.workQueue.put(work, then, opName)
 
     def unstageFilesAsync(self, patches: list[pygit2.Patch]):
         def work():
@@ -826,7 +868,10 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, fplural("Unstaging # file^s", len(patches)))
+        numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
+        opName = translate("Operation", "Unstage %n file(s)", "", numPatches)
+
+        self.workQueue.put(work, then, opName)
 
     def newStashAsync(self, message: str, flags: str):
         def work():
@@ -836,22 +881,28 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, "New stash")
+        opName = translate("Operation", "New stash")
+        self.workQueue.put(work, then, opName)
 
     def applyStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.applyStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, "Apply stash", errorCallback=self._processCheckoutError)
+        opName = translate("Operation", "Apply stash")
+        self.workQueue.put(work, then, opName,
+                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
 
     def popStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.popStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, "Pop stash", errorCallback=self._processCheckoutError)
+        opName = translate("Operation", "Pop stash")
+        self.workQueue.put(work, then, opName,
+                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
 
     def dropStashAsync(self, commitId: pygit2.Oid):
         def work(): porcelain.dropStash(self.repo, commitId)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, "Delete stash")
+        opName = translate("Operation", "Delete stash")
+        self.workQueue.put(work, then, opName)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
@@ -865,17 +916,32 @@ class RepoWidget(QWidget):
     def checkoutCommitAsync(self, oid: pygit2.Oid):
         work = lambda: porcelain.checkoutCommit(self.repo, oid)
         then = lambda _: self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Checking out commit “{shortHash(oid)}”")
 
-    def _processCheckoutError(self, exc):
+        opName = translate("Operation", "Check out commit “{0}”").format(shortHash(oid))
+        self.workQueue.put(work, then, opName)
+
+    def _processCheckoutError(self, exc, opName="Operation"):
         if isinstance(exc, porcelain.ConflictError):
             maxConflicts = 10
             numConflicts = len(exc.conflicts)
-            title = fplural("# conflicting file^s", numConflicts)
-            message = f"{exc.description}.\n\n{title}:\n • "
-            message += "\n • ".join(exc.conflicts[:maxConflicts])
+
+            title = self.tr("%n conflicting file(s)", "", numConflicts)
+
+            if exc.description == "workdir":
+                message = self.tr("Operation <b>{0}</b> conflicts with the working directory.").format(opName)
+            elif exc.description == "HEAD":
+                message = self.tr("Operation <b>{0}</b> conflicts with the commit at HEAD.").format(opName)
+            else:
+                message = self.tr("Operation <b>{0}</b> caused a conflict ({1}).").format(opName, exc.description)
+
+            message += f"<br><br>{title}:<ul><li>"
+
+            message += "</li><li>".join(exc.conflicts[:maxConflicts])
+
             if numConflicts > maxConflicts:
-                message += f"\n... and {numConflicts - maxConflicts} more"
+                message += "</li></ul>"
+                message += self.tr("... and %n more", "", (numConflicts - maxConflicts))
+
             QMessageBox.warning(self, title, message)
         else:
             raise exc
@@ -887,7 +953,9 @@ class RepoWidget(QWidget):
         def then(_):
             self.quickRefreshWithSidebar()
 
-        self.workQueue.put(work, then, F"Reverting commit “{shortHash(oid)}”", errorCallback=self._processCheckoutError)
+        opName = translate("Operation", "Revert commit “{0}”").format(shortHash(oid))
+        self.workQueue.put(work, then, opName,
+                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
 
     # -------------------------------------------------------------------------
     # Pull
@@ -895,7 +963,9 @@ class RepoWidget(QWidget):
     def pullBranchAsync(self, localBranchName: str, remoteBranchName: str):
         def work(): porcelain.pull(self.repo, localBranchName, remoteBranchName)
         def then(_): self.quickRefreshWithSidebar()
-        self.workQueue.put(work, then, F"Pulling remote branch “{remoteBranchName}” into “{localBranchName}”")
+
+        opName = translate("Operation", "Pull branch “{0}”").format(localBranchName)
+        self.workQueue.put(work, then, opName)
 
     # -------------------------------------------------------------------------
     # Find, find next
@@ -904,7 +974,7 @@ class RepoWidget(QWidget):
         message = self.previouslySearchedTerm
         message = sanitizeSearchTerm(message)
         if not message:
-            QMessageBox.warning(self, "Find Commit", "Invalid search term.")
+            QMessageBox.warning(self, self.tr("Find Commit"), self.tr("Invalid search term."))
             return
 
         likelyHash = False
@@ -926,7 +996,7 @@ class RepoWidget(QWidget):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
-        QMessageBox.information(self, "Find Commit", F"No more occurrences of “{message}”.")
+        QMessageBox.information(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}”.").format(message))
 
     def findFlow(self):
         def onAccept(verbatimTerm):
@@ -934,17 +1004,17 @@ class RepoWidget(QWidget):
             self._search(range(0, self.graphView.model().rowCount()))
         showTextInputDialog(
             self,
-            "Find commit",
-            "Search for partial commit hash or message:",
+            self.tr("Find Commit"),
+            self.tr("Search for partial commit hash or message:"),
             self.previouslySearchedTerm,
             onAccept)
 
     def _findNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTerm):
-            QMessageBox.warning(self, "Find Commit", "Please use “Find” to specify a search term before using “Find Next” or “Find Previous”.")
+            QMessageBox.warning(self, self.tr("Find Commit"), self.tr("Please use “Find” to specify a search term before using “Find Next” or “Find Previous”."))
             return
         if len(self.graphView.selectedIndexes()) == 0:
-            QMessageBox.warning(self, "Find Commit", "Please select a commit from whence to resume the search.")
+            QMessageBox.warning(self, self.tr("Find Commit"), self.tr("Please select a commit from whence to resume the search."))
             return
         start = self.graphView.currentIndex().row()
         if findNext:
@@ -965,7 +1035,7 @@ class RepoWidget(QWidget):
         message = self.previouslySearchedTermInDiff
         message = sanitizeSearchTerm(message)
         if not message:
-            QMessageBox.warning(self, "Find in pygit2.Patch", "Invalid search term.")
+            QMessageBox.warning(self, self.tr("Find in Diff"), self.tr("Invalid search term."))
             return
 
         doc: QTextDocument = self.diffView.document()
@@ -974,7 +1044,7 @@ class RepoWidget(QWidget):
             self.diffView.setTextCursor(newCursor)
             return
 
-        QMessageBox.information(self, "Find in pygit2.Patch", F"No more occurrences of “{message}”.")
+        QMessageBox.information(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}”.").format(message))
 
     def findInDiffFlow(self):
         def onAccept(verbatimTerm):
@@ -982,18 +1052,18 @@ class RepoWidget(QWidget):
             self._searchDiff()
         showTextInputDialog(
             self,
-            "Find in patch",
-            "Search for text in current patch:",
+            self.tr("Find in Diff"),
+            self.tr("Search for text in current diff:"),
             self.previouslySearchedTermInDiff,
             onAccept)
 
     def _findInDiffNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):
-            QMessageBox.warning(self, "Find in pygit2.Patch", "Please use “Find in Patch” to specify a search term before using “Find Next” or “Find Previous”.")
+            QMessageBox.warning(
+                self,
+                self.tr("Find in Diff"),
+                self.tr("Please use “Find in Diff” to specify a search term before using “Find Next” or “Find Previous”."))
             return
-        #if len(self.graphView.selectedIndexes()) == 0:
-        #    QMessageBox.warning(self, "Find in pygit2.Patch", "Please select a commit from whence to resume the search.")
-        #    return
         self._searchInDiff(findNext)
 
     def findInDiffNext(self):
@@ -1040,12 +1110,12 @@ class RepoWidget(QWidget):
         repo = self.repo
         inBrackets = ""
         if repo.head_is_unborn:
-            inBrackets = F"unborn HEAD"
+            inBrackets = self.tr("unborn HEAD")
         elif repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
-            inBrackets = "repo is empty"
+            inBrackets = self.tr("repo is empty")
         elif repo.head_is_detached:
             oid = porcelain.getHeadCommitOid(repo)
-            inBrackets = F"detached HEAD @ {shortHash(oid)}"
+            inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
         else:
             inBrackets = porcelain.getActiveBranchShorthand(repo)
 
@@ -1076,25 +1146,27 @@ class RepoWidget(QWidget):
         else:
             QMessageBox.information(
                 self,
-                "Open Rescue Folder",
-                "There’s no rescue folder for this repository. Perhaps you haven’t "
-                F"discarded a change with {QApplication.applicationDisplayName()} yet.")
+                self.tr("Open Rescue Folder"),
+                self.tr("There’s no rescue folder for this repository. Perhaps you haven’t discarded a change with {0} yet.").format(QApplication.applicationDisplayName()))
 
     def clearRescueFolder(self):
         trash = Trash(self.state.repo)
         sizeOnDisk, patchCount = trash.getSize()
 
         if patchCount <= 0:
-            QMessageBox.information(self, "Clear Rescue Folder", "There are no discarded changes to delete.")
+            QMessageBox.information(
+                self,
+                self.tr("Clear Rescue Folder"),
+                self.tr("There are no discarded changes to delete."))
             return
 
         humanSize = self.locale().formattedDataSize(sizeOnDisk)
         result = QMessageBox.question(
             self,
-            "Clear Rescue Folder",
-            F"Do you want to permanently delete {fplural('# discarded patch^es', patchCount)}?\n"
-            F"This will free up {humanSize} on disk.\n"
-            F"This cannot be undone!")
+            self.tr("Clear Rescue Folder"),
+            self.tr("Do you want to permanently delete %n discarded patch(es)?", "", patchCount) + "\n" +
+            self.tr("This will free up {0} on disk.").format(humanSize) + "\n" +
+            self.tr("This cannot be undone!"))
 
         if result == QMessageBox.StandardButton.Yes:
             trash.clear()

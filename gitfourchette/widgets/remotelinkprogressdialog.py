@@ -14,10 +14,10 @@ class RemoteLinkProgressDialog(QProgressDialog):
 
         progress = self
 
-        self.abortButton = QPushButton(stockIcon(QStyle.StandardPixmap.SP_DialogAbortButton), "Abort")
+        self.abortButton = QPushButton(stockIcon(QStyle.StandardPixmap.SP_DialogAbortButton), self.tr("Abort"))
         progress.setCancelButton(self.abortButton)
 
-        progress.setWindowTitle("Remote operation")
+        progress.setWindowTitle(self.tr("Remote operation"))
         progress.setMinimumWidth(progress.fontMetrics().horizontalAdvance(fittingLine))
         progress.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowTitleHint | Qt.WindowType.CustomizeWindowHint)  # hide close button
         progress.setWindowModality(Qt.WindowModality.WindowModal)
@@ -32,11 +32,11 @@ class RemoteLinkProgressDialog(QProgressDialog):
             progress.show()
 
         # Set initial text after showing the dialog so it is sized correctly
-        progress.setLabelText("Connecting to remote...")
+        progress.setLabelText(self.tr("Connecting to remote..."))
 
         self.remoteLink = RemoteLink()
-        self.remoteLink.signals.message.connect(self.setLabelText)
-        self.remoteLink.signals.progress.connect(self.onRemoteLinkProgress)
+        self.remoteLink.message.connect(self.setLabelText)
+        self.remoteLink.progress.connect(self.onRemoteLinkProgress)
 
     #def reject(self):
     #    """Called when user clicks window close button"""

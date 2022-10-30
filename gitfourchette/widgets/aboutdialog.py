@@ -19,12 +19,18 @@ def getPygit2FeatureStrings():
 def showAboutDialog(parent: QWidget):
     try:
         import gitfourchette._buildconstants
-        buildDateLine = f"Built on: <b>{gitfourchette._buildconstants.buildDate}</b><br/>"
+        buildDateLine = (translate("AboutDialog", "Built on:", "when the software was built") +
+                         " <b>" + gitfourchette._buildconstants.buildDate + "</b><br/>")
     except ImportError:
         buildDateLine = ""
 
     appName = QApplication.applicationDisplayName()
     appVersion = QApplication.applicationVersion()
+
+    tagLine = translate("AboutDialog", "The comfy Git UI for Linux.")
+    haveFun = translate("AboutDialog", "Have fun!")
+    title = translate("AboutDialog", "About {0} {1}").format(appName, appVersion)
+    supportMe = translate("AboutDialog", "Support me on Ko-fi")
 
     aboutText = F"""\
         <span style="font-size: xx-large">
@@ -32,7 +38,7 @@ def showAboutDialog(parent: QWidget):
             <b>{appVersion}</b>
         </span>
         <p>
-            The comfortable git GUI.
+            {tagLine}
             <br><a href="https://github.com/jorio/gitfourchette">https://github.com/jorio/gitfourchette</a>
         </p>
         <p>
@@ -47,11 +53,11 @@ def showAboutDialog(parent: QWidget):
             Python          <b>{'.'.join(str(i) for i in sys.version_info)}</b>
         </small></p>
         <p>
-            Have fun!
+            {haveFun}
         </p>
         <p>
-            <a href="https://ko-fi.com/jorio"><img src="assets:kofi.png" height="32" alt="Support me on Ko-fi"></a>
+            <a href="https://ko-fi.com/jorio"><img src="assets:kofi.png" height="32" alt="{supportMe}"></a>
         </p>
         """
 
-    QMessageBox.about(parent, F"About {appName} {appVersion}", aboutText)
+    QMessageBox.about(parent, title, aboutText)

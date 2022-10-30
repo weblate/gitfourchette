@@ -4,7 +4,7 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, fplural as plur, PersistentFileDialog)
+from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, PersistentFileDialog)
 from pathlib import Path
 from typing import Generator, Any
 import errno
@@ -101,18 +101,36 @@ class FileListModel(QAbstractListModel):
 
             if delta.status == pygit2.GIT_DELTA_UNTRACKED:
                 return (
-                    "<b>untracked file</b><br>" +
+                    "<b>" + self.tr("untracked file") + "</b><br>" +
                     F"{html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
                 )
             else:
-                opSuffix = ""
-                if delta.status == pygit2.GIT_DELTA_RENAMED:
-                    opSuffix += F", {delta.similarity}% similarity"
+                fromText = self.tr("from:")
+                toText = self.tr("to:")
+                opText = self.tr("operation:")
+
+                operationCaptions = {
+                    "A": self.tr("(added)"),
+                    "C": self.tr("(copied)"),
+                    "D": self.tr("(deleted)"),
+                    "M": self.tr("(modified)"),
+                    "R": self.tr("(renamed, {0}% similarity)"),
+                    "T": self.tr("(file type changed)"),
+                    "U": self.tr("(updated but unmerged)"),
+                }
+
+                try:
+                    opCap = operationCaptions[delta.status_char()]
+                    if delta.status == pygit2.GIT_DELTA_RENAMED:
+                        opCap = opCap.format(delta.similarity)
+
+                except KeyError:
+                    opCap = ''
 
                 return (
-                    F"<b>from:</b> {html.escape(delta.old_file.path)} ({delta.old_file.mode:o})"
-                    F"<br><b>to:</b> {html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
-                    F"<br><b>operation:</b> {delta.status_char()}{opSuffix}"
+                    F"<b>{fromText} </b> {html.escape(delta.old_file.path)} ({delta.old_file.mode:o})"
+                    F"<br><b>{toText} </b> {html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
+                    F"<br><b>{opText} </b> {delta.status_char()} {opCap}"
                 )
 
         elif role == Qt.ItemDataRole.SizeHintRole:
@@ -161,30 +179,28 @@ class FileList(QListView):
     def createContextMenuActions(self, count):
         return []
 
-    def confirmSelectedEntries(self, text: str, threshold: int =3) -> list[pygit2.Patch]:
+    def confirmSelectedEntries(self, prompt: str, threshold: int = 3) -> list[pygit2.Patch]:
         entries = list(self.selectedEntries())
 
         if len(entries) <= threshold:
             return entries
 
-        title = text.replace("#", "many").title()
+        numFiles = len(entries)
+        title = self.tr("{0} files selected").format(numFiles) # with %n, self.tr doesn't work here for some reason...
 
-        prompt = text.replace("#", F"<b>{len(entries)}</b>")
-        prompt = F"Really {prompt}?"
-
-        result = QMessageBox.question(self, title, prompt, QMessageBox.StandardButton.YesToAll | QMessageBox.StandardButton.Cancel)
+        result = QMessageBox.question(self, title, prompt.format(numFiles), QMessageBox.StandardButton.YesToAll | QMessageBox.StandardButton.Cancel)
         if result == QMessageBox.StandardButton.YesToAll:
             return entries
         else:
             return []
 
     def openFile(self):
-        for entry in self.confirmSelectedEntries("open # files"):
+        for entry in self.confirmSelectedEntries(self.tr("Really open {0} files in external editor?")):
             entryPath = os.path.join(self.repo.workdir, entry.delta.new_file.path)
             QDesktopServices.openUrl(QUrl.fromLocalFile(entryPath))
 
     def showInFolder(self):
-        for entry in self.confirmSelectedEntries("open # folders"):
+        for entry in self.confirmSelectedEntries(self.tr("Really open {0} folders?")):
             showInFolder(os.path.join(self.repo.workdir, entry.delta.new_file.path))
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -288,7 +304,7 @@ class FileList(QListView):
         if saveInto:
             savePath = os.path.join(saveInto, name)
         else:
-            savePath, _ = PersistentFileDialog.getSaveFileName(self, "Save patch file", name)
+            savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Save patch file"), name)
 
         if not savePath:
             return
@@ -317,7 +333,7 @@ class FileList(QListView):
         return True
 
     def openRevisionPriorToChange(self):
-        for diff in self.confirmSelectedEntries("open # files"):
+        for diff in self.confirmSelectedEntries(self.tr("Really open {0} files in external editor?")):
             diffFile: pygit2.DiffFile = diff.delta.old_file
 
             blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
@@ -344,16 +360,16 @@ class DirtyFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(plur("&Stage #~File^s", n), self.stage, QStyle.StandardPixmap.SP_ArrowDown),
-            ActionDef(plur("&Discard Changes", n), self.discard, QStyle.StandardPixmap.SP_TrashIcon),
+            ActionDef(self.tr("&Stage %n File(s)", "", n), self.stage, QStyle.StandardPixmap.SP_ArrowDown),
+            ActionDef(self.tr("&Discard Changes", "", n), self.discard, QStyle.StandardPixmap.SP_TrashIcon),
             None,
-            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef("Save As Patch...", self.savePatchAs),
+            ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
+            ActionDef(self.tr("Export As Patch..."), self.savePatchAs),
             None,
-            ActionDef(plur("Open Containing Folder^s", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
-            ActionDef(plur("&Copy Path^s", n), self.copyPaths),
+            ActionDef(self.tr("Open Containing Folder(s)", "", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
+            ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
             None,
-            ActionDef(plur("Open Unmodified &Revision^s in External Editor", n), self.openRevisionPriorToChange),
+            ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
         ]
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -382,15 +398,15 @@ class StagedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(plur("&Unstage #~File^s", n), self.unstage, QStyle.StandardPixmap.SP_ArrowUp),
+            ActionDef(self.tr("&Unstage %n File(s)", "", n), self.unstage, QStyle.StandardPixmap.SP_ArrowUp),
             None,
-            ActionDef(plur("&Open #~File^s in External Editor", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef("Save As Patch...", self.savePatchAs),
+            ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
+            ActionDef(self.tr("Export As Patch..."), self.savePatchAs),
             None,
-            ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
-            ActionDef(plur("&Copy Path^s", n), self.copyPaths),
+            ActionDef(self.tr("Open Containing &Folder(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
+            ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
             None,
-            ActionDef(plur("Open Unmodified &Revision^s in External Editor", n), self.openRevisionPriorToChange),
+            ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
         ] + super().createContextMenuActions(n)
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -413,23 +429,23 @@ class CommittedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-                ActionDef(plur("&Open Revision^s...", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
+                ActionDef(self.tr("&Open Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
                 [
-                    ActionDef("&At Commit", self.openNewRevision),
-                    ActionDef("&Before Commit", self.openOldRevision),
+                    ActionDef(self.tr("&At Commit"), self.openNewRevision),
+                    ActionDef(self.tr("&Before Commit"), self.openOldRevision),
                     None,
-                    ActionDef("&Current (working directory)", self.openHeadRevision),
+                    ActionDef(self.tr("&Current (working directory)"), self.openHeadRevision),
                 ]),
-                ActionDef(plur("&Save Revision^s...", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
+                ActionDef(self.tr("&Save Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
                 [
-                    ActionDef("&At Commit", self.saveNewRevision),
-                    ActionDef("&Before Commit", self.saveOldRevision),
+                    ActionDef(self.tr("&At Commit"), self.saveNewRevision),
+                    ActionDef(self.tr("&Before Commit"), self.saveOldRevision),
                 ]),
                 #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
-                ActionDef("Save As Patch...", self.savePatchAs),
+                ActionDef(self.tr("Export As Patch..."), self.savePatchAs),
                 None,
-                ActionDef(plur("Open Containing &Folder^s", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
-                ActionDef(plur("&Copy Path^s", n), self.copyPaths),
+                ActionDef(self.tr("Open Containing &Folders", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
+                ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
                 ]
 
     def clear(self):
@@ -454,7 +470,7 @@ class CommittedFiles(FileList):
     def openRevision(self, beforeCommit: bool = False):
         errors = []
 
-        for diff in self.confirmSelectedEntries("open # files"):
+        for diff in self.confirmSelectedEntries(self.tr("Really open {0} files in external editor?")):
             try:
                 name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
             except FileNotFoundError as fnf:
@@ -469,12 +485,12 @@ class CommittedFiles(FileList):
             QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
 
         if errors:
-            QMessageBox.warning(self, "Open revision", "\n\n".join(errors))
+            QMessageBox.warning(self, self.tr("Open revision"), "\n\n".join(errors))
 
     def saveRevisionAs(self, beforeCommit: bool = False, saveInto=None):
         errors = []
 
-        for diff in self.confirmSelectedEntries("save # files"):
+        for diff in self.confirmSelectedEntries(self.tr("Really export {0} files?")):
             try:
                 name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
             except FileNotFoundError as fnf:
@@ -484,7 +500,7 @@ class CommittedFiles(FileList):
             if saveInto:
                 savePath = os.path.join(saveInto, name)
             else:
-                savePath, _ = PersistentFileDialog.getSaveFileName(self, "Save file revision", name)
+                savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Save file revision as"), name)
 
             if not savePath:
                 continue
@@ -495,17 +511,17 @@ class CommittedFiles(FileList):
             os.chmod(savePath, diffFile.mode)
 
         if errors:
-            QMessageBox.warning(self, "Save revision as", "\n\n".join(errors))
+            QMessageBox.warning(self, self.tr("Save file revision as"), "\n\n".join(errors))
 
     def getFileRevisionInfo(self, diff: pygit2.Diff, beforeCommit: bool = False):
         if beforeCommit:
             diffFile = diff.delta.old_file
             if diff.delta.status == pygit2.GIT_DELTA_ADDED:
-                raise FileNotFoundError(errno.ENOENT, "This file didn’t exist before the commit.", diffFile.path)
+                raise FileNotFoundError(errno.ENOENT, self.tr("This file didn’t exist before the commit."), diffFile.path)
         else:
             diffFile = diff.delta.new_file
             if diff.delta.status == pygit2.GIT_DELTA_DELETED:
-                raise FileNotFoundError(errno.ENOENT, "This file was deleted by the commit.", diffFile.path)
+                raise FileNotFoundError(errno.ENOENT, self.tr("This file was deleted by the commit."), diffFile.path)
 
         blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
 
@@ -521,12 +537,12 @@ class CommittedFiles(FileList):
     def openHeadRevision(self):
         errors = []
 
-        for diff in self.confirmSelectedEntries("open # files"):
+        for diff in self.confirmSelectedEntries(self.tr("Really open {0} files?")):
             diffFile = diff.delta.new_file
             if os.path.isfile(diffFile.path):
                 QDesktopServices.openUrl(QUrl.fromLocalFile(diffFile.path))
             else:
-                errors.append(f"{diffFile.path}: There’s no file at this path on HEAD.")
+                errors.append(f"{diffFile.path}: " + self.tr("There’s no file at this path on HEAD."))
 
         if errors:
-            QMessageBox.warning(self, "Open revision at HEAD", "\n\n".join(errors))
+            QMessageBox.warning(self, self.tr("Open revision at HEAD"), "\n\n".join(errors))

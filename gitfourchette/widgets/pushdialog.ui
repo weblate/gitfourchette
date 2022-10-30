@@ -186,7 +186,7 @@
    <item row="3" column="1">
     <widget class="QCheckBox" name="trackCheckBox">
      <property name="text">
-      <string>Set up “branch” to track “remote/branch” (instead of “remote/junk”)</string>
+      <string notr="true">Track</string>
      </property>
     </widget>
    </item>

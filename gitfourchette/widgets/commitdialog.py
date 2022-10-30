@@ -26,13 +26,13 @@ class CommitDialog(QDialog):
         tweakWidgetFont(summaryEditor, 150)
 
         if isAmend:
-            prompt = "Amend commit message"
-            buttonCaption = "&Amend"
-            self.setWindowTitle("Amend Commit")
+            prompt = self.tr("Amend commit message")
+            buttonCaption = self.tr("&Amend")
+            self.setWindowTitle(self.tr("Amend Commit"))
         else:
-            prompt = "Enter commit summary"
-            buttonCaption = "&Commit"
-            self.setWindowTitle("Commit")
+            prompt = self.tr("Enter commit summary")
+            buttonCaption = self.tr("&Commit")
+            self.setWindowTitle(self.tr("Commit"))
 
         self.ui.authorSignature.setSignature(authorSignature)
 

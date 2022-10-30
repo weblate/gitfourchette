@@ -106,19 +106,19 @@ def createDocument():
 
 
 def noChange(delta: pygit2.DiffDelta):
-    message = "File contents didn’t change."
+    message = translate("DiffModel", "File contents didn’t change.")
     details = []
 
     oldFileExists = not isZeroId(delta.old_file.id)
 
     if not oldFileExists:
-        message = "File is empty."
+        message = translate("DiffModel", "File is empty.")
 
     if delta.old_file.path != delta.new_file.path:
-        details.append(F"Renamed: “{html.escape(delta.old_file.path)}” &rarr; “{html.escape(delta.new_file.path)}”.")
+        details.append(translate("DiffModel", "Renamed:") + f" “{html.escape(delta.old_file.path)}” &rarr; “{html.escape(delta.new_file.path)}”.")
 
     if oldFileExists and delta.old_file.mode != delta.new_file.mode:
-        details.append(F"Mode change: “{delta.old_file.mode:06o}” &rarr; “{delta.new_file.mode:06o}”.")
+        details.append(translate("DiffModel", "Mode change:") + f" “{delta.old_file.mode:06o}” &rarr; “{delta.new_file.mode:06o}”.")
 
     return DiffModelError(message, "\n".join(details))
 
@@ -134,9 +134,10 @@ class DiffModel:
         if patch.delta.similarity == 100:
             raise noChange(patch.delta)
 
+        locale = QLocale()
+
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
-            locale = QLocale()
             of = patch.delta.old_file
             nf = patch.delta.new_file
             if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
@@ -146,25 +147,26 @@ class DiffModel:
                     humanSize = locale.formattedDataSize(largestSize)
                     humanThreshold = locale.formattedDataSize(threshold)
                     raise DiffModelError(
-                        F"This image is too large to be previewed ({humanSize}).",
-                        F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
+                        translate("DiffModel", "This image is too large to be previewed ({0}).").format(humanSize),
+                        translate("DiffModel", "You can change the size threshold in the Preferences (current limit: {0}).").format(humanThreshold),
                         QStyle.StandardPixmap.SP_MessageBoxWarning)
                 else:
                     raise ShouldDisplayPatchAsImageDiff()
             else:
                 oldHumanSize = locale.formattedDataSize(of.size)
                 newHumanSize = locale.formattedDataSize(nf.size)
-                raise DiffModelError("File appears to be binary.",
-                                     f"{oldHumanSize} &rarr; {newHumanSize}")
+                raise DiffModelError(
+                    translate("DiffModel", "File appears to be binary."),
+                    f"{oldHumanSize} &rarr; {newHumanSize}")
 
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
         if len(patch.data) > threshold:
-            humanSize = QLocale().formattedDataSize(len(patch.data))
-            humanThreshold = QLocale().formattedDataSize(threshold)
+            humanSize = locale.formattedDataSize(len(patch.data))
+            humanThreshold = locale.formattedDataSize(threshold)
             raise DiffModelError(
-                F"This patch is too large to be previewed ({humanSize}).",
-                F"You can change the size threshold in the Preferences (current limit: {humanThreshold}).",
+                translate("DiffModel", "This patch is too large to be previewed ({0}).").format(humanSize),
+                translate("DiffModel", "You can change the size threshold in the Preferences (current limit: {0}).").format(humanThreshold),
                 QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:
@@ -197,7 +199,7 @@ class DiffModel:
             elif ld.text.endswith('\n'):
                 trimBack = -1
             else:
-                trailer = "<no newline at end of file>"
+                trailer = translate("DiffModel", "<no newline at end of file>")
                 trimBack = None
 
             if not document.isEmpty():
