@@ -5,6 +5,7 @@ import enum
 import json
 import os
 import sys
+import time
 
 
 TEST_MODE = False
@@ -170,72 +171,85 @@ class Prefs(BasePrefs):
 class History(BasePrefs):
     filename = "history.json"
 
-    fileDialogPaths             : dict          = field(default_factory=dict)
-    history                     : list[str]     = field(default_factory=list)
-    nicknames                   : dict          = field(default_factory=dict)
+    repos: dict = field(default_factory=dict)
     cloneHistory                : list[str]     = field(default_factory=list)
+    fileDialogPaths             : dict          = field(default_factory=dict)
 
-    def _addToList(self, item, list):
-        try:
-            list.remove(item)
-        except ValueError:
-            pass
-        list.append(item)
-        self.trim()
-        self.write()
-
-    def addRepo(self, path):
+    def addRepo(self, path: str):
         path = os.path.normpath(path)
-        self._addToList(path, self.history)
+        repo = self.getRepo(path)
+        repo['time'] = int(time.time())
+        return repo
+
+    def getRepo(self, path) -> dict:
+        try:
+            repo = self.repos[path]
+        except KeyError:
+            repo = {}
+            self.repos[path] = repo
+        return repo
 
     def getRepoNickname(self, path):
         path = os.path.normpath(path)
-        if path in self.nicknames:
-            return self.nicknames[path]
-        else:
-            return os.path.basename(path)
+        repo = self.getRepo(path)
+        return repo.get("nickname", os.path.basename(path))
 
     def setRepoNickname(self, path: str, nickname: str):
         path = os.path.normpath(path)
+        repo = self.getRepo(path)
         nickname = nickname.strip()
-        if not nickname:
-            if path not in self.nicknames:
-                # no nickname given, no existing nickname in history: no-op
-                return
-            del self.nicknames[path]
+        if nickname:
+            repo['nickname'] = nickname
         else:
-            self.nicknames[path] = nickname
-        self.write()
+            repo.pop('nickname', None)
 
-    def removeRepo(self, path):
+    def getRepoNumCommits(self, path: str):
         path = os.path.normpath(path)
-        self.history.remove(path)
-        if path in self.nicknames:
-            del self.nicknames[path]
-        self.write()
+        repo = self.getRepo(path)
+        return repo.get('length', 0)
+
+    def setRepoNumCommits(self, path: str, commitCount: int):
+        path = os.path.normpath(path)
+        repo = self.getRepo(path)
+        if commitCount > 0:
+            repo['length'] = commitCount
+        else:
+            repo.pop('length', None)
+
+    def removeRepo(self, path: str):
+        path = os.path.normpath(path)
+        self.repos.pop(path, None)
 
     def clearRepoHistory(self):
-        self.history.clear()
-        self.nicknames.clear()
-        self.write()
+        self.repos.clear()
 
-    def clearCloneHistory(self):
-        self.cloneHistory.clear()
-        self.write()
+    def getRecentRepoPaths(self, n):
+        return (path
+                for path, _
+                in sorted(self.repos.items(), key=lambda i: i[1].get('time', 0), reverse=True))
+
+    def write(self):
+        self.trim()
+        super().write()
 
     def trim(self):
         n = prefs.maxRecentRepos
 
-        if len(self.history) > n:
-            for path in self.history[:-n]:
-                self.nicknames.pop(path, None)
-            self.history = self.history[-n:]
+        if len(self.repos) > n:
+            self.repos = self.repos[-n:]
 
         if len(self.cloneHistory) > n:
             self.cloneHistory = self.cloneHistory[-n:]
 
     def addCloneUrl(self, url):
-        self._addToList(url, self.cloneHistory)
+        try:
+            self.cloneHistory.remove(url)
+        except ValueError:
+            pass
+        self.cloneHistory.append(url)
+
+    def clearCloneHistory(self):
+        self.cloneHistory.clear()
 
 
 @dataclass

@@ -343,10 +343,11 @@ class MainWindow(QMainWindow):
     def fillRecentMenu(self):
         def onClearRecents():
             settings.history.clearRepoHistory()
+            settings.history.write()
             self.fillRecentMenu()
 
         self.recentMenu.clear()
-        for historic in list(reversed(settings.history.history))[:settings.prefs.maxRecentRepos]:
+        for historic in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
             def doOpen(path):
                 self.openRepo(path)
                 self.saveSession()
@@ -379,6 +380,7 @@ class MainWindow(QMainWindow):
                 success = self._loadRepo(w, w.workdir)
                 if not success:
                     return
+                settings.history.write()
 
         self.repoMenu.setEnabled(True)
         w.refreshWindowTitle()
@@ -489,6 +491,8 @@ class MainWindow(QMainWindow):
         finally:
             progress.close()
 
+        settings.history.setRepoNumCommits(repo.workdir, len(commitSequence))
+
         rw.graphView.selectUncommittedChanges()
         return True
 
@@ -527,6 +531,7 @@ class MainWindow(QMainWindow):
 
         if addToHistory:
             settings.history.addRepo(workdir)
+            settings.history.write()
             self.fillRecentMenu()
 
         return newRW

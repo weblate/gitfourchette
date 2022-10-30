@@ -28,6 +28,7 @@ class CloneDialog(QDialog):
         itemData = self.ui.urlEdit.itemData(index, Qt.ItemDataRole.UserRole)
         if itemData == "CLEAR":  # clear history
             settings.history.clearCloneHistory()
+            settings.history.write()
             self.initUrlComboBox()
 
     def __init__(self, initialUrl: str, parent: QWidget):
@@ -111,6 +112,7 @@ class CloneDialog(QDialog):
         def then(_):
             self.cloneInProgress = False
             settings.history.addCloneUrl(url)
+            settings.history.write()
             self.cloneSuccessful.emit(path)
             self.accept()
 

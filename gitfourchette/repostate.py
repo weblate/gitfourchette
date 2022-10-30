@@ -21,9 +21,14 @@ class BatchedOffset:
     offsetInBatch: int
 
 
-def progressTick(progress, i):
+def progressTick(progress, i, numCommitsBallpark=0):
     if i != 0 and i % PROGRESS_INTERVAL == 0:
-        progress.setLabelText(tr("{0} commits processed.").format(f"{i:,}"))
+        if numCommitsBallpark > 0 and i <= numCommitsBallpark:
+            # Updating the text too often prevents progress bar from updating on macOS theme,
+            # so don't use setLabelText if we're changing the progress value
+            progress.setValue(i)
+        else:
+            progress.setLabelText(tr("{0:,} commits processed.").format(i))
         QCoreApplication.processEvents()
         if progress.wasCanceled():
             raise StopIteration()
@@ -249,13 +254,20 @@ class RepoState:
         commitSequence: list[pygit2.Commit] = []
         graph = Graph()
 
-        progress.setLabelText(tr("Preparing walk..."))
+        progress.setLabelText(tr("Processing commit log..."))
+
+        # Retrieve the number of commits that we loaded last time we opened this repo
+        # so we can estimate how long it'll take to load it again
+        numCommitsBallpark = settings.history.getRepoNumCommits(self.repo.workdir)
+        if numCommitsBallpark != 0:
+            progress.setMinimum(0)
+            progress.setMaximum(2 * numCommitsBallpark)  # reserve second half of progress bar for graph progress
 
         foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
         hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
         try:
             for offsetFromTop, commit in enumerate(walker):
-                progressTick(progress, offsetFromTop)
+                progressTick(progress, offsetFromTop, numCommitsBallpark)
 
                 commitSequence.append(commit)
                 self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
@@ -266,9 +278,12 @@ class RepoState:
             pass
 
         log.info("loadCommitSequence", F"{self.shortName}: loaded {len(commitSequence):,} commits")
-
         progress.setLabelText(tr("Preparing graph..."))
+
+        if numCommitsBallpark != 0:
+            progress.setMinimum(-len(commitSequence))  # first half of progress bar was for commit log
         progress.setMaximum(len(commitSequence))
+
         graphGenerator = graph.startGenerator()
         for commit in commitSequence:
             graphGenerator.createArcsForNewCommit(commit.oid, commit.parent_ids)

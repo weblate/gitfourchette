@@ -489,6 +489,7 @@ class RepoWidget(QWidget):
     def renameRepo(self):
         def onAccept(newName):
             settings.history.setRepoNickname(self.workdir, newName)
+            settings.history.write()
             self.nameChange.emit()
         showTextInputDialog(
             self,
