@@ -191,11 +191,13 @@ class MainWindow(QMainWindow):
         fileMenu.addSeparator()
 
         a = fileMenu.addAction(self.tr("&Preferences..."), self.openSettings)
+        a.setMenuRole(QAction.MenuRole.PreferencesRole)
         a.setShortcut(QKeySequence.StandardKey.Preferences)
 
         fileMenu.addSeparator()
 
         a = fileMenu.addAction(self.tr("&Quit"), self.close)
+        a.setMenuRole(QAction.MenuRole.QuitRole)
         a.setShortcut(QKeySequence.StandardKey.Quit)
 
         # -------------------------------------------------------------
@@ -207,6 +209,7 @@ class MainWindow(QMainWindow):
 
         a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
         a.setShortcut(QKeySequence.StandardKey.Refresh)
+        a.setMenuRole(QAction.ApplicationSpecificRole)
 
         a = repoMenu.addAction(self.tr("&Hard Refresh"), self.refresh)
         a.setShortcut("Ctrl+F5")
@@ -300,7 +303,9 @@ class MainWindow(QMainWindow):
 
         helpMenu = menubar.addMenu(self.tr("&Help"))
         helpMenu.setObjectName("MWHelpMenu")
-        helpMenu.addAction(self.tr("&About {0}").format(QApplication.applicationDisplayName()), lambda: showAboutDialog(self))
+
+        a = helpMenu.addAction(self.tr("&About {0}").format(QApplication.applicationDisplayName()), lambda: showAboutDialog(self))
+        a.setMenuRole(QAction.AboutRole)
 
         # -------------------------------------------------------------
 
@@ -636,7 +641,7 @@ class MainWindow(QMainWindow):
         dlg.show()
 
     def openDialog(self):
-        path = PersistentFileDialog.getExistingDirectory(self, "Open repository")
+        path = PersistentFileDialog.getExistingDirectory(self, self.tr("Open repository"))
         if path:
             self.openRepo(path)
             self.saveSession()
