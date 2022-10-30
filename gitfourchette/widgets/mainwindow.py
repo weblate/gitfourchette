@@ -426,6 +426,16 @@ class MainWindow(QMainWindow):
             qmb.show()
             return None
 
+        if repo.is_bare:
+            qmb = QMessageBox(
+                QMessageBox.Icon.Warning,
+                self.tr("Bare repository"),
+                self.tr("Sorry, bare repositories aren’t supported yet."),
+                parent=self)
+            qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+            qmb.show()
+            return None
+
         return repo
 
     def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | pygit2.Repository):
