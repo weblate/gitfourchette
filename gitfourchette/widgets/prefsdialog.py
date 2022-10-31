@@ -34,25 +34,13 @@ def hBoxWidget(*controls):
     return _boxWidget(QHBoxLayout(), *controls)
 
 
-def prettifyCamelCase(x):
-    x = re.sub(r'([A-Z]+)', r' \1', x)
-    return x[0].upper() + x[1:]
-
-
-def prettifySnakeCase(x):
-    return x.replace('_', ' ').title()
-
-
-def prettifySetting(n):
+def splitSettingKey(n):
     split = n.split('_', 1)
     if len(split) == 1:
-        category = None
+        category = "general"
         item = split[0]
     else:
         category, item = split
-    if category:
-        category = prettifyCamelCase(category)
-    item = prettifyCamelCase(item)
     return category, item
 
 
@@ -111,9 +99,12 @@ class PrefsDialog(QDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.settingsTranslationTable = {}
+        self.initSettingsTranslationTable()
+
         self.setObjectName("PrefsDialog")
 
-        self.setWindowTitle(F"{QApplication.applicationDisplayName()} Preferences")
+        self.setWindowTitle(self.tr("{0} Preferences", "{0} = GitFourchette").format(QApplication.applicationDisplayName()))
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -131,7 +122,7 @@ class PrefsDialog(QDialog):
 
         for prefKey in prefs.__dict__:
             prefValue = prefs.__dict__[prefKey]
-            category, caption = prettifySetting(prefKey)
+            category, caption = splitSettingKey(prefKey)
             prefType = type(prefValue)
 
             if category != pCategory:
@@ -139,8 +130,15 @@ class PrefsDialog(QDialog):
                 form = QFormLayout(formContainer)
                 form.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
                 formContainer.setLayout(form)
-                tabWidget.addTab(formContainer, category or "General")
+                tabWidget.addTab(formContainer, self.translateSetting(category) or self.tr("General"))
                 pCategory = category
+
+            if caption:
+                caption = self.translateSetting(prefKey)
+                if isinstance(caption, tuple):
+                    caption, suffix = caption
+                else:
+                    suffix = ""
 
             if prefKey == 'language':
                 control = self.languageControl(prefKey, prefValue)
@@ -149,8 +147,7 @@ class PrefsDialog(QDialog):
             elif prefKey == 'diff_font':
                 control = self.fontControl(prefKey)
             elif prefKey == 'graph_chronologicalOrder':
-                caption = "Commit Order"
-                control = self.boolRadioControl(prefKey, prefValue, trueName="Chronological", falseName="Topological")
+                control = self.boolRadioControl(prefKey, prefValue, trueName=self.tr("Chronological"), falseName=self.tr("Topological"))
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
             elif prefKey == 'pathDisplayStyle':
@@ -172,8 +169,14 @@ class PrefsDialog(QDialog):
             elif prefType is bool:
                 control = QCheckBox(caption, self)
                 control.setCheckState(Qt.CheckState.Checked if prefValue else Qt.CheckState.Unchecked)
-                control.stateChanged.connect(lambda v, k=prefKey: self.assign(k, v != Qt.CheckState.Unchecked))
+                control.stateChanged.connect(lambda v, k=prefKey, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
                 caption = None  # The checkbox contains its own caption
+
+            if suffix:
+                hbl = QHBoxLayout()
+                hbl.addWidget(control)
+                hbl.addWidget(QLabel(suffix))
+                control = hbl
 
             if caption:
                 form.addRow(caption, control)
@@ -310,7 +313,7 @@ class PrefsDialog(QDialog):
             control = QComboBox(self)
 
         for enumMember in enumType:
-            control.addItem(prettifySnakeCase(enumMember.name), enumMember)
+            control.addItem(self.translateSetting(enumMember.name), enumMember)
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
 
@@ -368,3 +371,59 @@ class PrefsDialog(QDialog):
         control.setEditText(prefValue)
 
         return vBoxWidget(control, preview)
+
+    def translateSetting(self, s: str):
+        return self.settingsTranslationTable.get(s, s)
+
+    def initSettingsTranslationTable(self):
+        self.settingsTranslationTable = {
+            "general": self.tr("General"),
+            "diff": self.tr("Diff"),
+            "tabs": self.tr("Tabs"),
+            "graph": self.tr("Graph"),
+            "trash": self.tr("Trash"),
+            "debug": self.tr("Debug"),
+
+            "language": self.tr("Language"),
+            "qtStyle": self.tr("Theme"),
+            "fileWatcher": self.tr("File watcher"),
+            "shortHashChars": (self.tr("Shorten hashes to"), self.tr("characters")),
+            "shortTimeFormat": self.tr("Short time format"),
+            "pathDisplayStyle": self.tr("Path display style"),
+            "authorDisplayStyle": self.tr("Author display style"),
+            "maxRecentRepos": self.tr("Max recent repos"),
+            "showStatusBar": self.tr("Show status bar"),
+            "autoHideMenuBar": self.tr("Toggle menu bar visibility with Alt key"),
+
+            "diff_font": self.tr("Font"),
+            "diff_tabSpaces": (self.tr("One tab is"), self.tr("spaces")),
+            "diff_largeFileThresholdKB": (self.tr("Max diff size"), self.tr("KB")),
+            "diff_imageFileThresholdKB": (self.tr("Max image size"), self.tr("KB")),
+            "diff_wordWrap": self.tr("Word wrap"),
+            "diff_showStrayCRs": self.tr("Highlight stray “CR” characters"),
+            "diff_colorblindFriendlyColors": self.tr("Colorblind-friendly color scheme"),
+
+            "tabs_closeButton": self.tr("Show tab close button"),
+            "tabs_expanding": self.tr("Tab bar takes all available width"),
+            "tabs_autoHide": self.tr("Auto-hide tab bar if there’s just 1 tab"),
+
+            "graph_chronologicalOrder": self.tr("Commit order"),
+            "graph_maxLanes": self.tr("Max lanes"),
+            "graph_flattenLanes": self.tr("Flatten lanes"),
+            "graph_newLanesAlwaysRightmost": self.tr("Never start a new lane in a gap"),
+
+            "trash_maxFiles": (self.tr("Max discarded patches in the trash"), self.tr("files")),
+            "trash_maxFileSizeKB": (self.tr("Don’t salvage patches bigger than"), self.tr("KB")),
+
+            "FULL_PATHS": self.tr("Full paths"),
+            "ABBREVIATE_DIRECTORIES": self.tr("Abbreviate directories"),
+            "SHOW_FILENAME_ONLY": self.tr("Show filename only"),
+
+            "FULL_NAME": self.tr("Full name"),
+            "FIRST_NAME": self.tr("First name"),
+            "LAST_NAME": self.tr("Last name"),
+            "INITIALS": self.tr("Initials"),
+            "FULL_EMAIL": self.tr("Full email"),
+            "ABBREVIATED_EMAIL": self.tr("Abbreviated email"),
+        }
+
