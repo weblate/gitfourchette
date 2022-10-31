@@ -43,7 +43,6 @@ def main():
 
     from gitfourchette import settings
     from gitfourchette import log
-    log.setVerbosity(settings.prefs.debug_verbosity)
 
     # Get system default style name before applying further styling
     with NonCriticalOperation("Get system default style name"):
@@ -69,6 +68,8 @@ def main():
         # Load history
         with NonCriticalOperation(F"Loading {settings.history.filename}"):
             settings.history.load()
+
+    log.setVerbosity(settings.prefs.debug_verbosity.value)
 
     # Set language
     if settings.prefs.language:
