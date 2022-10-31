@@ -645,7 +645,7 @@ class Sidebar(QTreeView):
                 menu.deleteLater()
             else:
                 menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-                menu.exec_(globalPoint)
+                menu.exec(globalPoint)
 
     def refresh(self, repoState: RepoState):
         sidebarModel: SidebarModel = self.model()

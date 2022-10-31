@@ -214,7 +214,7 @@ class DiffView(QPlainTextEdit):
         bottom.deleteLater()  # don't need this menu anymore
         menu.setObjectName("DiffViewContextMenu")
         menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        menu.exec_(event.globalPos())
+        menu.exec(event.globalPos())
 
     def toggleWordWrap(self):
         settings.prefs.diff_wordWrap = not settings.prefs.diff_wordWrap

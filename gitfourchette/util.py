@@ -164,7 +164,7 @@ def excMessageBox(
             qmb.setWindowModality(Qt.WindowModality.WindowModal)
             qmb.show()
         else:  # without a parent, .show() won't work
-            qmb.exec_()
+            qmb.exec()
 
     except BaseException as excMessageBoxError:
         sys.stderr.write(f"*********************************************\n")

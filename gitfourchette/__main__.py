@@ -108,7 +108,7 @@ def main():
         window.restoreSession(session)
 
     # Keep the app running
-    app.exec_()
+    app.exec()
 
 
 if __name__ == "__main__":

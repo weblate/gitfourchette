@@ -35,3 +35,11 @@ def tr(s, *args, **kwargs):
 
 def translate(context, s, *args, **kwargs):
     return QCoreApplication.translate(context, s, *args, **kwargs)
+
+
+# Patch PySide2's exec_ functions
+if qtBindingName.lower() == "pyside2":
+    def qMenuExec(menu: QMenu, *args, **kwargs):
+        menu.exec_(*args, **kwargs)
+    QApplication.exec = QApplication.exec_
+    QMenu.exec = qMenuExec
