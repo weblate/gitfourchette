@@ -34,7 +34,7 @@ class RemoteLinkProgressDialog(QProgressDialog):
         # Set initial text after showing the dialog so it is sized correctly
         progress.setLabelText(self.tr("Connecting to remote..."))
 
-        self.remoteLink = RemoteLink()
+        self.remoteLink = RemoteLink(self)
         self.remoteLink.message.connect(self.setLabelText)
         self.remoteLink.progress.connect(self.onRemoteLinkProgress)
 

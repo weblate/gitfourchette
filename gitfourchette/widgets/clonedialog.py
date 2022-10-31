@@ -99,7 +99,7 @@ class CloneDialog(QDialog):
 
         self.cloneInProgress = True
 
-        link = RemoteLink()
+        link = RemoteLink(self)
         self.remoteLink = link
 
         self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))

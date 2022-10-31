@@ -47,8 +47,11 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
             return f(*args)
         return wrapper
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QObject):
+        QObject.__init__(self, parent)
+        pygit2.RemoteCallbacks.__init__(self)
+
+        self.setObjectName("RemoteLink")
 
         self.attempts = 0
         #self.signals = RemoteLinkSignals()

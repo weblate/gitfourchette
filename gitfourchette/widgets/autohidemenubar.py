@@ -6,6 +6,8 @@ class AutoHideMenuBar(QObject):
     def __init__(self, menuBar: QMenuBar):
         super().__init__(menuBar)
 
+        self.setObjectName("AutoHideMenuBar")
+
         self.menuBar = menuBar
         self.defaultMaximumHeight = self.menuBar.maximumHeight()
         self.sticky = True

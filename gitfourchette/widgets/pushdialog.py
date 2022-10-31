@@ -238,7 +238,7 @@ class PushDialog(QDialog):
     def onPushClicked(self):
         remote = self.repo.remotes[self.currentRemoteName]
         log.info("PushDialog", self.refspec, remote.name)
-        link = RemoteLink()
+        link = RemoteLink(self)
         self.remoteLink = link
 
         self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
