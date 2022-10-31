@@ -1,6 +1,6 @@
 class Logger:
     def __init__(self):
-        self.verboseTags = {"nav", "status", "benchmark"}
+        self.verboseTags = {"nav", "status", "benchmark", "workqueue"}
         self.verbosity = 1
 
     def info(self, tag, *args):

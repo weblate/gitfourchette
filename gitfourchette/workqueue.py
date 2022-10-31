@@ -1,4 +1,5 @@
 # Based on https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
+from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
@@ -20,15 +21,10 @@ class WorkerSignals(QObject):
 
     result
         `object` data returned from processing, anything
-
-    progress
-        `int` indicating % progress
-
     """
     finished = Signal()
     error = Signal(object)
     result = Signal(object)
-    #progress = Signal(int)
 
 
 class Worker(QRunnable):
@@ -45,19 +41,21 @@ class Worker(QRunnable):
 
     """
 
-    def __init__(self, fn, *args, **kwargs):
+    def __init__(self, parent: QObject, name: str, fn, *args, **kwargs):
         super().__init__()
 
-        # Store constructor arguments (re-used for processing)
+        self.name = name  # for debugging
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
-        self.signals = WorkerSignals()
 
-        # Add the callback to our kwargs
-        #self.kwargs['progress_callback'] = self.signals.progress
+        self.signals = WorkerSignals(parent)
 
-    @Slot()
+        self.setAutoDelete(True)
+
+    def __del__(self):
+        log.info("workqueue", F"Worker destroyed: {self.name}")
+
     def run(self):
         """
         Initialize the runner function with passed args, kwargs.
@@ -72,11 +70,13 @@ class Worker(QRunnable):
             self.signals.result.emit(result)  # Return the result of the processing
         finally:
             self.signals.finished.emit()  # Done
+            self.signals.deleteLater()  # Tell Qt we're done with that QObject
 
 
 class WorkQueue(QObject):
     def __init__(self, parent, maxThreadCount=1):
         super().__init__(parent)
+        self.setObjectName("WorkQueue")
         self.threadpool = QThreadPool(parent)
         self.threadpool.setMaxThreadCount(maxThreadCount)
         self.mutex = QMutex()
@@ -147,7 +147,7 @@ class WorkQueue(QObject):
                 message = self.tr("Operation failed: {0}.").format(caption)
                 excMessageBox(exc, title=caption, message=message, parent=self.parent)
 
-        w = Worker(workWrapper)
+        w = Worker(self, caption, workWrapper)
         w.signals.result.connect(thenWrapper)
         w.signals.error.connect(lambda: globalstatus.clearIndeterminateProgressCaption())
         w.signals.error.connect(errorCallback)
