@@ -195,22 +195,23 @@ class ActionDef:
 def quickMenu(
         parent: QWidget,
         actionDefs: list[ActionDef],
-        bottomEntries: QMenu = None
+        bottomEntries: QMenu | None = None
 ) -> QMenu:
 
     menu = QMenu(parent)
+    menu.setObjectName("quickMenu")
 
     for actionDef in actionDefs:
         if not actionDef:
             menu.addSeparator()
         elif actionDef.submenu:
-            submenu = quickMenu(parent, actionDefs=actionDef.submenu)
+            submenu = quickMenu(parent=menu, actionDefs=actionDef.submenu)
             submenu.setTitle(actionDef.caption)
             if actionDef.icon:
                 submenu.setIcon(stockIcon(actionDef.icon))
             menu.addMenu(submenu)
         else:
-            newAction = QAction(actionDef.caption, parent)
+            newAction = QAction(actionDef.caption, parent=menu)
             newAction.triggered.connect(actionDef.callback)
             if actionDef.icon:
                 newAction.setIcon(stockIcon(actionDef.icon))

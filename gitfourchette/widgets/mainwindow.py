@@ -409,6 +409,7 @@ class MainWindow(QMainWindow):
             menu.addAction(self.tr("Unload", "RepoTabCM"), lambda: self.unloadTab(i))
         else:
             menu.addAction(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i))
+        menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         menu.exec_(globalPoint)
 
     def _constructRepo(self, path: str):

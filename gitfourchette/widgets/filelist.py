@@ -174,6 +174,8 @@ class FileList(QListView):
         if numIndexes == 0:
             return
         menu = quickMenu(self, self.createContextMenuActions(numIndexes))
+        menu.setObjectName("FileListContextMenu")
+        menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         menu.exec_(event.globalPos())
 
     def createContextMenuActions(self, count):
