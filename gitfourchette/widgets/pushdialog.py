@@ -213,9 +213,11 @@ class PushDialog(QDialog):
         # Force the indexchanged signal to fire so the callbacks are guaranteed to run even if pickBranchIndex is 0.
         self.ui.localBranchEdit.currentIndexChanged.emit(pickBranchIndex)
 
+        # Also fire indexchanged on remoteBranchEdit to run the callback even if the 0th remote entry is selected.
+        self.ui.remoteBranchEdit.currentIndexChanged.emit(self.ui.remoteBranchEdit.currentIndex())
+
         convertToBrandedDialog(self)
 
-        #self.setMaximumHeight(self.height())
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
     def enableInputs(self, on: bool):
