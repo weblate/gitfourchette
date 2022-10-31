@@ -134,12 +134,14 @@ class MainWindow(QMainWindow):
         self.updateMemoryIndicator()
 
     def updateMemoryIndicator(self):
-        nChildren = len(self.findChildren(QObject))
+        numQObjects = sum(1 + len(tlw.findChildren(QObject))  # "+1" to account for tlw itself
+                          for tlw in QApplication.topLevelWidgets())
+
         if psutil:
             rss = psutil.Process(os.getpid()).memory_info().rss
-            self.memoryIndicator.setText(F"{rss // 1024:,}K {nChildren}Q")
+            self.memoryIndicator.setText(F"{rss // 1024:,}K {numQObjects:,}Q")
         else:
-            self.memoryIndicator.setText(F"{nChildren}Q")
+            self.memoryIndicator.setText(F"{numQObjects:,}Q")
 
     def updateStatusMessage(self, message):
         self.statusBar.showMessage(message)
