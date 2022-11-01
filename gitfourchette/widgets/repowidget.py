@@ -515,6 +515,7 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work() -> tuple[pygit2.Diff, pygit2.Diff]:
+            porcelain.refreshIndex(repo)
             dirtyDiff = porcelain.diffWorkdirToIndex(repo)
             stageDiff = porcelain.diffIndexToHead(repo)
             return dirtyDiff, stageDiff

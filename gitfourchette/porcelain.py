@@ -53,6 +53,16 @@ class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallback
         log.info("porcelain", f"stash apply progress: {pr}")
 
 
+def refreshIndex(repo: Repository):
+    """
+    Reload the index. Call this before manipulating the staging area
+    to ensure any external modifications are taken into account.
+
+    This is a fairly cheap operation if the index hasn't changed on disk.
+    """
+    repo.index.read()
+
+
 def diffWorkdirToIndex(repo: Repository) -> Diff:
     # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
     # index was stale, but this requires the repo to be writable.
