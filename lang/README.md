@@ -24,9 +24,15 @@ For instance, the source code contains `Stage %n file(s)`, which `en.ts` “tran
 
 - Run `lang/update_ts.sh` to sync the `.ts` files with the translatable contents of the `.py` and `.ui` files.
 - Edit the `.ts` file for your language in Qt Linguist.
-- Run `update_resources.py` to update the `.qm` file in `gitfourchette/assets`.
+- Run `update_resources.py` to update the `.qm` file in `gitfourchette/assets` (**please read the warning below before running this**).
 - Before committing your changes, run `lang/scrub_ts.sh` to clean up the `.ts` files.
 - Commit both the `.ts` file and the `.qm` file.
+
+### Warning: avoid updating .qm files while GitFourchette is running
+
+Modifying or deleting a `.qm` file (compiled translations) that is currently loaded in GitFourchette may cause Qt to **crash!**
+
+So, if you’re running a development copy of GitFourchette while working on the translations, you should **close it before updating the `.qm` files**.
 
 ## How to create a new language
 
@@ -36,3 +42,4 @@ Let’s say you want to translate the software into Dutch (ISO-639 language code
 - Add an extra lupdate command for `nl` in `lang/update_ts.sh`
 - Add an extra lupdate command for `nl` in `lang/scrub_ts.sh`
 - Add `"nl"` to the `SETTINGS` list in `gitfourchette/settings.py`
+
