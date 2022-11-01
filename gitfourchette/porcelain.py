@@ -213,18 +213,41 @@ class BranchNameValidationError(ValueError):
 
 
 def validateBranchName(newBranchName: str):
+    """
+    Checks the validity of a branch name according to `man git-check-ref-format`.
+    """
+
     E = BranchNameValidationError
+
     if not newBranchName:
         raise E(E.CANNOT_BE_EMPTY)
+
+    # Rule 9: can't be single character '@'
     elif newBranchName == '@':
         raise E(E.ILLEGAL_NAME)
+
+    # Rule 4: forbid space, tilde, caret, colon
+    # Rule 5: forbid question mark, asterisk, open bracket
+    # Rule 10: forbid backslash
     elif any(c in " ~^:[?*\\" for c in newBranchName):
         raise E(E.CONTAINS_ILLEGAL_CHAR)
-    elif any(seq in newBranchName for seq in ["..", "//", "@{", "/.", ".lock/"]):
+
+    # Rule 1: slash-separated components can't start with dot or end with .lock
+    # Rule 3: forbid consecutive dots
+    # Rule 6: forbid consecutive slashes
+    # Rule 8: forbid '@{'
+    elif any(seq in newBranchName for seq in ["/.", ".lock/", "..", "//", "@{"]):
         raise E(E.CONTAINS_ILLEGAL_SEQ)
-    elif newBranchName.startswith("."):
+
+    # Rule 1: can't start with dot
+    # Rule 6: can't start with slash
+    elif newBranchName.startswith((".", "/")):
         raise E(E.ILLEGAL_PREFIX)
-    elif newBranchName.endswith(".lock"):
+
+    # Rule 1: can't end with .lock
+    # Rule 6: can't end with slash
+    # Rule 7: can't end with dot
+    elif newBranchName.endswith((".lock", "/", ".")):
         raise E(E.ILLEGAL_SUFFIX)
 
 
