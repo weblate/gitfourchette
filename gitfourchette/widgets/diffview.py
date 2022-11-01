@@ -6,7 +6,8 @@ from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.trash import Trash
-from gitfourchette.util import PersistentFileDialog, excMessageBox, ActionDef, quickMenu, QSignalBlockerContext
+from gitfourchette.util import (PersistentFileDialog, excMessageBox, ActionDef, quickMenu, QSignalBlockerContext,
+                                showWarning, askConfirmation, asyncMessageBox, stockIcon)
 from gitfourchette.widgets.diffmodel import DiffModel, LineData
 from bisect import bisect_left, bisect_right
 from pygit2 import GitError, Patch, Repository, Diff
@@ -201,7 +202,7 @@ class DiffView(QPlainTextEdit):
                 ]
 
         else:
-            QMessageBox.warning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
+            showWarning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
             return
 
         actions += [
@@ -307,28 +308,27 @@ class DiffView(QPlainTextEdit):
         else:
             return "???"
 
-    def onWantToApplyPartialPatch(self, purpose: PatchPurpose):
+    def onWantToApplyEmptyPartialPatch(self, purpose: PatchPurpose):
         verb = self.getPatchPurposeVerb(purpose)
 
-        qmb = QMessageBox(
-            QMessageBox.Icon.Information,
+        qmb = asyncMessageBox(
+            self,
+            'information',
             self.tr("Selection empty for partial patch"),
             self.tr("You haven’t selected any red/green lines to {0}.").format(verb),
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Apply,
-            parent=self)
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Apply)
 
         applyButton: QPushButton = qmb.button(QMessageBox.StandardButton.Apply)
         applyButton.setText(self.tr("{0} entire &file").format(verb))
         applyButton.setIcon(QIcon())
         applyButton.clicked.connect(lambda: self.applyEntirePatch(purpose))
 
-        qmb.setWindowModality(Qt.WindowModality.WindowModal)
-        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        qmb.setEscapeButton(QMessageBox.StandardButton.Ok)
         qmb.show()
 
     def applyPartialPatch(self, patchData: bytes, purpose: PatchPurpose):
         if not patchData:
-            self.onWantToApplyPartialPatch(purpose)
+            self.onWantToApplyEmptyPartialPatch(purpose)
             return
 
         discard = purpose == PatchPurpose.DISCARD
@@ -375,7 +375,7 @@ class DiffView(QPlainTextEdit):
 
         diff = porcelain.patchApplies(self.repo, patchData, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
         if not diff:
-            QMessageBox.warning(
+            showWarning(
                 self,
                 self.tr("Revert patch"),
                 self.tr("Couldn’t revert this patch.\nThe code may have diverged too much from this revision."))
@@ -401,20 +401,13 @@ class DiffView(QPlainTextEdit):
         self.applySelection(PatchPurpose.UNSTAGE)
 
     def discardSelection(self):
-        qmb = QMessageBox(
-            QMessageBox.Icon.Warning,
-            self.tr("Really discard lines?"),
-            self.tr("Really discard the selected lines?") + "\n" + self.tr("This cannot be undone!"),
-            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
-            parent=self)
-
-        discardButton = qmb.button(QMessageBox.StandardButton.Discard)
-        discardButton.setText(self.tr("Discard lines"))
-        discardButton.clicked.connect(lambda: self.applySelection(PatchPurpose.DISCARD))
-
-        qmb.setWindowModality(Qt.WindowModality.WindowModal)
-        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
+        askConfirmation(
+            parent = self,
+            title = self.tr("Discard lines"),
+            text = self.tr("Really discard the selected lines?") + "\n" + self.tr("This cannot be undone!"),
+            okButtonText = self.tr("Discard lines"),
+            okButtonIcon = stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+            callback = lambda: self.applySelection(PatchPurpose.DISCARD))
 
     def exportSelection(self, saveInto=""):
         patchData = self.extractSelection()
@@ -431,20 +424,13 @@ class DiffView(QPlainTextEdit):
         self.applyHunk(hunkID, PatchPurpose.UNSTAGE)
 
     def discardHunk(self, hunkID: int):
-        qmb = QMessageBox(
-            QMessageBox.Icon.Warning,
-            self.tr("Really discard hunk?"),
-            self.tr("Really discard this hunk?") + "\n" + self.tr("This cannot be undone!"),
-            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
-            parent=self)
-
-        discardButton = qmb.button(QMessageBox.StandardButton.Discard)
-        discardButton.setText(self.tr("Discard hunk"))
-        discardButton.clicked.connect(lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
-
-        qmb.setWindowModality(Qt.WindowModality.WindowModal)
-        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        qmb.show()
+        askConfirmation(
+            parent = self,
+            title = self.tr("Discard hunk"),
+            text = self.tr("Really discard this hunk?") + "\n" + self.tr("This cannot be undone!"),
+            okButtonText = self.tr("Discard hunk"),
+            okButtonIcon = stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+            callback = lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
 
     def exportHunk(self, hunkID: int, saveInto=""):
         patchData = self.extractHunk(hunkID)

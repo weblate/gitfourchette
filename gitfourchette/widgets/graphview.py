@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.qt import *
-from gitfourchette.util import messageSummary, shortHash, stockIcon
+from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning
 from gitfourchette.widgets.graphdelegate import GraphDelegate
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from html import escape
@@ -310,10 +310,8 @@ class GraphView(QListView):
         try:
             rawIndex = self.repoWidget.state.getCommitSequentialIndex(oid)
         except KeyError:
-            QMessageBox.warning(
-                self,
-                self.tr("Commit not found"),
-                self.tr("Commit not found or not loaded:") + f"\n{oid.hex}")
+            showWarning(self, self.tr("Commit not found"),
+                        self.tr("Commit not found or not loaded:") + f"\n{oid.hex}")
             return False
 
         newSourceIndex = self.clModel.index(1 + rawIndex, 0)

@@ -5,7 +5,8 @@ from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
-from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext, PersistentFileDialog)
+from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
+                                PersistentFileDialog, showWarning, showInformation)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -336,7 +337,7 @@ class MainWindow(QMainWindow):
         self.tabs.refreshPrefs()
         self.autoHideMenuBar.refreshPrefs()
 
-        QMessageBox.warning(
+        showInformation(
             self,
             self.tr("Apply Settings"),
             self.tr("Some changes may require restarting {0} to take effect.").format(QApplication.applicationDisplayName()))
@@ -417,33 +418,18 @@ class MainWindow(QMainWindow):
             repo = pygit2.Repository(path)
 
         except pygit2.GitError as gitError:
-            qmb = QMessageBox(
-                QMessageBox.Icon.Warning,
-                self.tr("Open repository"),
-                self.tr("Couldn’t open “{0}”.").format(path) + f"\n\n{gitError}",
-                parent=self)
-            qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-            qmb.show()
+            showWarning(self, self.tr("Open repository"),
+                        self.tr("Couldn’t open “{0}”.").format(path) + f"\n\n{gitError}")
             return None
 
         if repo.is_shallow:
-            qmb = QMessageBox(
-                QMessageBox.Icon.Warning,
-                self.tr("Shallow repository"),
-                self.tr("Sorry, shallow repositories aren’t supported yet."),
-                parent=self)
-            qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-            qmb.show()
+            showWarning(self, self.tr("Shallow repository"),
+                        self.tr("Sorry, shallow repositories aren’t supported yet."))
             return None
 
         if repo.is_bare:
-            qmb = QMessageBox(
-                QMessageBox.Icon.Warning,
-                self.tr("Bare repository"),
-                self.tr("Sorry, bare repositories aren’t supported yet."),
-                parent=self)
-            qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-            qmb.show()
+            showWarning(self, self.tr("Bare repository"),
+                        self.tr("Sorry, bare repositories aren’t supported yet."))
             return None
 
         return repo
@@ -651,7 +637,7 @@ class MainWindow(QMainWindow):
 
     def importPatch(self, reverse=False):
         if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
-            QMessageBox.warning(self, self.tr("Import patch"), self.tr("Please open a repository before importing a patch."))
+            showWarning(self, self.tr("Import patch"), self.tr("Please open a repository before importing a patch."))
             return
 
         if reverse:
@@ -674,7 +660,7 @@ class MainWindow(QMainWindow):
                 UnicodeDecodeError,  # if passing in a random binary file
                 KeyError,  # 'no patch found'
                 pygit2.GitError) as loadError:
-            excMessageBox(loadError, title, self.tr("Can’t load this patch."), parent=self, icon=QMessageBox.Icon.Warning)
+            excMessageBox(loadError, title, self.tr("Can’t load this patch."), parent=self, icon='warning')
             return
 
         if reverse:
@@ -682,7 +668,7 @@ class MainWindow(QMainWindow):
                 patchData = reverseUnidiff(loadedDiff.patch)
                 loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
             except Exception as reverseError:
-                excMessageBox(reverseError, title, self.tr("Can’t reverse this patch."), parent=self, icon=QMessageBox.Icon.Warning)
+                excMessageBox(reverseError, title, self.tr("Can’t reverse this patch."), parent=self, icon='warning')
                 return
 
         repo = self.currentRepoWidget().repo
@@ -690,13 +676,13 @@ class MainWindow(QMainWindow):
         try:
             porcelain.patchApplies(repo, patchData)
         except (pygit2.GitError, OSError) as applyCheckError:
-            excMessageBox(applyCheckError, title, self.tr("This patch doesn’t apply."), parent=self, icon=QMessageBox.Icon.Warning)
+            excMessageBox(applyCheckError, title, self.tr("This patch doesn’t apply."), parent=self, icon='warning')
             return
 
         try:
             porcelain.applyPatch(repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)
         except pygit2.GitError as applyError:
-            excMessageBox(applyError, title, self.tr("An error occurred while applying this patch."), parent=self, icon=QMessageBox.Icon.Warning)
+            excMessageBox(applyError, title, self.tr("An error occurred while applying this patch."), parent=self, icon='warning')
 
     # -------------------------------------------------------------------------
     # Tab management

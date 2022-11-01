@@ -118,7 +118,7 @@ def excMessageBox(
         parent=None,
         printExc=True,
         showExcSummary=True,
-        icon=QMessageBox.Icon.Critical
+        icon: str = 'critical'
 ):
     try:
         if printExc:
@@ -148,7 +148,7 @@ def excMessageBox(
         details = [shortenTracebackPath(line) for line in details]
         details = ''.join(details).strip()
 
-        qmb = QMessageBox(icon, title, message, parent=parent)
+        qmb = asyncMessageBox(parent, icon, title, message)
         qmb.setDetailedText(details)
 
         detailsEdit: QTextEdit = qmb.findChild(QTextEdit)
@@ -227,6 +227,78 @@ def quickMenu(
     return menu
 
 
+def asyncMessageBox(
+        parent: QWidget,
+        icon: typing.Literal['warning', 'information', 'question', 'critical'],
+        title: str,
+        text: str,
+        buttons=QMessageBox.StandardButton.NoButton
+) -> QMessageBox:
+
+    icons = {
+        'warning': QMessageBox.Icon.Warning,
+        'information': QMessageBox.Icon.Information,
+        'question': QMessageBox.Icon.Question,
+        'critical': QMessageBox.Icon.Critical,
+    }
+
+    qmb = QMessageBox(
+        icons.get(icon, QMessageBox.Icon.NoIcon),
+        title,
+        text,
+        buttons,
+        parent=parent
+    )
+
+    qmb.setWindowModality(Qt.WindowModality.WindowModal)
+    qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+    return qmb
+
+
+def showWarning(parent: QWidget, title: str, text: str) -> QMessageBox:
+    qmb = asyncMessageBox(parent, 'warning', title, text)
+    qmb.show()
+    return qmb
+
+
+def showInformation(parent: QWidget, title: str, text: str) -> QMessageBox:
+    qmb = asyncMessageBox(parent, 'information', title, text)
+    qmb.show()
+    return qmb
+
+
+def askConfirmation(
+        parent: QWidget,
+        title: str,
+        text: str,
+        callback: typing.Callable | Slot | None = None,
+        buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+        okButtonText: str = "",
+        okButtonIcon: QIcon | None = None,
+        show=True
+) -> QMessageBox:
+
+    # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
+    # so it connects to the "accepted" signal.
+    qmb = asyncMessageBox(parent, 'question', title, text, buttons)
+
+    okButton = qmb.button(QMessageBox.StandardButton.Ok)
+    if okButton:
+        if okButtonText:
+            okButton.setText(okButtonText)
+        if okButtonIcon:
+            okButton.setIcon(okButtonIcon)
+
+    if callback:
+        qmb.accepted.connect(callback)
+
+    if show:
+        qmb.show()
+
+    return qmb
+
+
 def addComboBoxItem(comboBox: QComboBox, caption: str, userData=None, isCurrent=False):
     if isCurrent:
         caption = "• " + caption
@@ -237,8 +309,10 @@ def addComboBoxItem(comboBox: QComboBox, caption: str, userData=None, isCurrent=
     return index
 
 
-def stockIcon(iconId: QStyle.StandardPixmap | str):
-    if type(iconId) is str:
+def stockIcon(iconId: QStyle.StandardPixmap | str | None) -> QIcon:
+    if iconId is None:
+        return QIcon()
+    elif type(iconId) is str:
         return QIcon.fromTheme(iconId)
     else:
         return QApplication.style().standardIcon(iconId)

@@ -4,7 +4,8 @@ from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext, shortHash, PersistentFileDialog)
+from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext,
+                                shortHash, PersistentFileDialog, showWarning, askConfirmation)
 from pathlib import Path
 from typing import Generator, Any
 import errno
@@ -19,6 +20,10 @@ for status in "ACDMRTUX":
     STATUS_ICONS[status] = QIcon(F"assets:status_{status.lower()}.svg")
 
 FALLBACK_STATUS_ICON = QIcon("assets:status_fallback.svg")
+
+
+class SelectedFileBatchError(Exception):
+    pass
 
 
 class FileListModel(QAbstractListModel):
@@ -101,22 +106,22 @@ class FileListModel(QAbstractListModel):
 
             if delta.status == pygit2.GIT_DELTA_UNTRACKED:
                 return (
-                    "<b>" + self.tr("untracked file") + "</b><br>" +
+                    "<b>" + translate("FileList", "untracked file") + "</b><br>" +
                     F"{html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
                 )
             else:
-                fromText = self.tr("from:")
-                toText = self.tr("to:")
-                opText = self.tr("operation:")
+                fromText = translate("FileList", "from:")
+                toText = translate("FileList", "to:")
+                opText = translate("FileList", "operation:")
 
                 operationCaptions = {
-                    "A": self.tr("(added)"),
-                    "C": self.tr("(copied)"),
-                    "D": self.tr("(deleted)"),
-                    "M": self.tr("(modified)"),
-                    "R": self.tr("(renamed, {0}% similarity)"),
-                    "T": self.tr("(file type changed)"),
-                    "U": self.tr("(updated but unmerged)"),
+                    "A": translate("FileList", "(added)"),
+                    "C": translate("FileList", "(copied)"),
+                    "D": translate("FileList", "(deleted)"),
+                    "M": translate("FileList", "(modified)"),
+                    "R": translate("FileList", "(renamed, {0}% similarity)"),
+                    "T": translate("FileList", "(file type changed)"),
+                    "U": translate("FileList", "(updated but unmerged)"),
                 }
 
                 try:
@@ -181,29 +186,51 @@ class FileList(QListView):
     def createContextMenuActions(self, count):
         return []
 
-    def confirmSelectedEntries(self, prompt: str, threshold: int = 3) -> list[pygit2.Patch]:
+    def confirmBatch(self, callback, title: str, prompt: str, threshold: int = 3):
         entries = list(self.selectedEntries())
 
+        def runBatch():
+            errors = []
+
+            for e in entries:
+                try:
+                    callback(e)
+                except SelectedFileBatchError as exc:
+                    errors.append(str(exc))
+
+            if errors:
+                showWarning(self, title, "\n\n".join(errors))
+
         if len(entries) <= threshold:
-            return entries
-
-        numFiles = len(entries)
-        title = self.tr("{0} files selected").format(numFiles) # with %n, self.tr doesn't work here for some reason...
-
-        result = QMessageBox.question(self, title, prompt.format(numFiles), QMessageBox.StandardButton.YesToAll | QMessageBox.StandardButton.Cancel)
-        if result == QMessageBox.StandardButton.YesToAll:
-            return entries
+            runBatch()
         else:
-            return []
+            numFiles = len(entries)
+
+            qmb = askConfirmation(
+                self,
+                title,
+                prompt.format(numFiles),
+                runBatch,
+                QMessageBox.StandardButton.YesAll | QMessageBox.StandardButton.Cancel,
+                show=False)
+
+            qmb.button(QMessageBox.StandardButton.YesAll).clicked.connect(runBatch)
+            qmb.show()
 
     def openFile(self):
-        for entry in self.confirmSelectedEntries(self.tr("Really open {0} files in external editor?")):
+        def run(entry: pygit2.Patch):
             entryPath = os.path.join(self.repo.workdir, entry.delta.new_file.path)
             QDesktopServices.openUrl(QUrl.fromLocalFile(entryPath))
 
+        self.confirmBatch(run, self.tr("Open in external editor"),
+                          self.tr("Really open <b>{0} files</b> in external editor?"))
+
     def showInFolder(self):
-        for entry in self.confirmSelectedEntries(self.tr("Really open {0} folders?")):
+        def run(entry: pygit2.Patch):
             showInFolder(os.path.join(self.repo.workdir, entry.delta.new_file.path))
+
+        self.confirmBatch(run, self.tr("Open containing folder"),
+                          self.tr("Really open <b>{0} folders</b>?"))
 
     def keyPressEvent(self, event: QKeyEvent):
         # The default keyPressEvent copies the displayed label of the selected items.
@@ -337,7 +364,7 @@ class FileList(QListView):
         return True
 
     def openRevisionPriorToChange(self):
-        for diff in self.confirmSelectedEntries(self.tr("Really open {0} files in external editor?")):
+        def run(diff):
             diffFile: pygit2.DiffFile = diff.delta.old_file
 
             blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
@@ -351,6 +378,9 @@ class FileList(QListView):
                 f.write(blob.data)
 
             QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
+
+        self.confirmBatch(run, self.tr("Open unmodified revision"),
+                          self.tr("Really open <b>{0} files</b> in external editor?"))
 
 
 class DirtyFiles(FileList):
@@ -472,14 +502,11 @@ class CommittedFiles(FileList):
         self.saveRevisionAs(beforeCommit=True)
 
     def openRevision(self, beforeCommit: bool = False):
-        errors = []
-
-        for diff in self.confirmSelectedEntries(self.tr("Really open {0} files in external editor?")):
+        def run(diff):
             try:
                 name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
             except FileNotFoundError as fnf:
-                errors.append(fnf.filename + ": " + fnf.strerror)
-                continue
+                raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
             tempPath = os.path.join(getSessionTemporaryDirectory(), name)
 
@@ -488,34 +515,37 @@ class CommittedFiles(FileList):
 
             QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
 
-        if errors:
-            QMessageBox.warning(self, self.tr("Open revision"), "\n\n".join(errors))
+        if beforeCommit:
+            title = self.tr("Open revision before commit")
+        else:
+            title = self.tr("Open revision at commit")
+
+        self.confirmBatch(run, title,
+                          self.tr("Really open <b>{0} files</b> in external editor?"))
 
     def saveRevisionAs(self, beforeCommit: bool = False, saveInto=None):
-        errors = []
-
-        for diff in self.confirmSelectedEntries(self.tr("Really export {0} files?")):
+        def run(diff):
             try:
                 name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
             except FileNotFoundError as fnf:
-                errors.append(fnf.filename + ": " + fnf.strerror)
-                continue
+                raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
             if saveInto:
                 savePath = os.path.join(saveInto, name)
             else:
                 savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Save file revision as"), name)
 
-            if not savePath:
-                continue
+            if savePath:
+                with open(savePath, "wb") as f:
+                    f.write(blob.data)
+                os.chmod(savePath, diffFile.mode)
 
-            with open(savePath, "wb") as f:
-                f.write(blob.data)
+        if beforeCommit:
+            title = self.tr("Save revision before commit")
+        else:
+            title = self.tr("Save revision at commit")
 
-            os.chmod(savePath, diffFile.mode)
-
-        if errors:
-            QMessageBox.warning(self, self.tr("Save file revision as"), "\n\n".join(errors))
+        self.confirmBatch(run, title, self.tr("Really export <b>{0} files</b>?"))
 
     def getFileRevisionInfo(self, diff: pygit2.Diff, beforeCommit: bool = False):
         if beforeCommit:
@@ -539,14 +569,11 @@ class CommittedFiles(FileList):
         return name, blob, diffFile
 
     def openHeadRevision(self):
-        errors = []
-
-        for diff in self.confirmSelectedEntries(self.tr("Really open {0} files?")):
+        def run(diff):
             diffFile = diff.delta.new_file
             if os.path.isfile(diffFile.path):
                 QDesktopServices.openUrl(QUrl.fromLocalFile(diffFile.path))
             else:
-                errors.append(f"{diffFile.path}: " + self.tr("There’s no file at this path on HEAD."))
+                raise SelectedFileBatchError(f"{diffFile.path}: " + self.tr("There’s no file at this path on HEAD."))
 
-        if errors:
-            QMessageBox.warning(self, self.tr("Open revision at HEAD"), "\n\n".join(errors))
+        self.confirmBatch(run, self.tr("Open revision at HEAD"), self.tr("Really open <b>{0} files</b>?"))

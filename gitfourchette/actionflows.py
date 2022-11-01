@@ -1,6 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import escamp, messageSummary, shortHash, stockIcon
+from gitfourchette.util import escamp, messageSummary, shortHash, stockIcon, asyncMessageBox
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
@@ -44,25 +44,21 @@ class ActionFlows(QObject):
             acceptButtonIcon: (QStyle.StandardPixmap | str | None) = None
     ) -> QMessageBox:
 
-        qmb = QMessageBox(
-            QMessageBox.Icon.Question,
+        qmb = asyncMessageBox(
+            self.parentWidget,
+            'question',
             title,
             text,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            parent=self.parentWidget)
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
-        qmb.setWindowModality(Qt.WindowModality.WindowModal)
-
-        # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard so it connects to the "accepted" signal.
+        # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
+        # so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
         if acceptButtonIcon:
             yes.setIcon(stockIcon(acceptButtonIcon))
         yes.setText(title)
 
-        qmb.setDefaultButton(yes)
-        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         qmb.show()
-
         return qmb
 
     # -------------------------------------------------------------------------
@@ -330,10 +326,8 @@ class ActionFlows(QObject):
         try:
             branch = self.repo.branches.local[branchName]
         except KeyError:
-            QMessageBox.warning(
-                self.parentWidget,
-                self.tr("No Branch to Push"),
-                self.tr("No active local branch to push. Try switching to a local branch first."))
+            showWarning(self, self.tr("No Branch to Push"),
+                            self.tr("To push, you must be on a local branch. Try switching to a local branch first."))
             return
 
         dlg = PushDialog(self.repo, branch, self.parentWidget)
@@ -352,18 +346,14 @@ class ActionFlows(QObject):
         try:
             branch = self.repo.branches.local[branchName]
         except KeyError:
-            QMessageBox.warning(
-                self.parentWidget,
-                self.tr("No Branch to Which to Pull"),
-                self.tr("No valid local branch to which to pull. Try switching to a local branch first."))
+            showWarning(self, self.tr("No Branch to Which to Pull"),
+                            self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
             return
 
         bu: pygit2.Branch = branch.upstream
         if not bu:
-            QMessageBox.warning(
-                self.parentWidget,
-                self.tr("No Remote-Tracking Branch"),
-                self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(branch.shorthand))
+            showWarning(self, self.tr("No Remote-Tracking Branch"),
+                            self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(branch.shorthand))
             return
 
         self.pullBranch.emit(branch.branch_name, bu.shorthand)

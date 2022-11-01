@@ -9,7 +9,8 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.trash import Trash
-from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash)
+from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
+                                showWarning, showInformation, askConfirmation, stockIcon)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffImagePair, ShouldDisplayPatchAsImageDiff
 from gitfourchette.widgets.diffview import DiffView
@@ -943,7 +944,7 @@ class RepoWidget(QWidget):
                 message += "</li></ul>"
                 message += self.tr("... and %n more", "", (numConflicts - maxConflicts))
 
-            QMessageBox.warning(self, title, message)
+            showWarning(self, title, message)
         else:
             raise exc
 
@@ -975,7 +976,7 @@ class RepoWidget(QWidget):
         message = self.previouslySearchedTerm
         message = sanitizeSearchTerm(message)
         if not message:
-            QMessageBox.warning(self, self.tr("Find Commit"), self.tr("Invalid search term."))
+            showWarning(self, self.tr("Find Commit"), self.tr("Invalid search term."))
             return
 
         likelyHash = False
@@ -997,7 +998,7 @@ class RepoWidget(QWidget):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
-        QMessageBox.information(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}”.").format(message))
+        showInformation(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}”.").format(message))
 
     def findFlow(self):
         def onAccept(verbatimTerm):
@@ -1012,10 +1013,10 @@ class RepoWidget(QWidget):
 
     def _findNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTerm):
-            QMessageBox.warning(self, self.tr("Find Commit"), self.tr("Please use “Find” to specify a search term before using “Find Next” or “Find Previous”."))
+            showWarning(self, self.tr("Find Commit"), self.tr("Please use “Find” to specify a search term before using “Find Next” or “Find Previous”."))
             return
         if len(self.graphView.selectedIndexes()) == 0:
-            QMessageBox.warning(self, self.tr("Find Commit"), self.tr("Please select a commit from whence to resume the search."))
+            showWarning(self, self.tr("Find Commit"), self.tr("Please select a commit from whence to resume the search."))
             return
         start = self.graphView.currentIndex().row()
         if findNext:
@@ -1036,7 +1037,7 @@ class RepoWidget(QWidget):
         message = self.previouslySearchedTermInDiff
         message = sanitizeSearchTerm(message)
         if not message:
-            QMessageBox.warning(self, self.tr("Find in Diff"), self.tr("Invalid search term."))
+            showWarning(self, self.tr("Find in Diff"), self.tr("Invalid search term."))
             return
 
         doc: QTextDocument = self.diffView.document()
@@ -1045,7 +1046,7 @@ class RepoWidget(QWidget):
             self.diffView.setTextCursor(newCursor)
             return
 
-        QMessageBox.information(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}”.").format(message))
+        showInformation(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}”.").format(message))
 
     def findInDiffFlow(self):
         def onAccept(verbatimTerm):
@@ -1060,7 +1061,7 @@ class RepoWidget(QWidget):
 
     def _findInDiffNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):
-            QMessageBox.warning(
+            showWarning(
                 self,
                 self.tr("Find in Diff"),
                 self.tr("Please use “Find in Diff” to specify a search term before using “Find Next” or “Find Previous”."))
@@ -1145,7 +1146,7 @@ class RepoWidget(QWidget):
         if trash.exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(trash.trashDir))
         else:
-            QMessageBox.information(
+            showInformation(
                 self,
                 self.tr("Open Rescue Folder"),
                 self.tr("There’s no rescue folder for this repository. Perhaps you haven’t discarded a change with {0} yet.").format(QApplication.applicationDisplayName()))
@@ -1155,19 +1156,23 @@ class RepoWidget(QWidget):
         sizeOnDisk, patchCount = trash.getSize()
 
         if patchCount <= 0:
-            QMessageBox.information(
+            showInformation(
                 self,
                 self.tr("Clear Rescue Folder"),
                 self.tr("There are no discarded changes to delete."))
             return
 
         humanSize = self.locale().formattedDataSize(sizeOnDisk)
-        result = QMessageBox.question(
-            self,
-            self.tr("Clear Rescue Folder"),
+
+        askPrompt = (
             self.tr("Do you want to permanently delete %n discarded patch(es)?", "", patchCount) + "\n" +
             self.tr("This will free up {0} on disk.").format(humanSize) + "\n" +
             self.tr("This cannot be undone!"))
 
-        if result == QMessageBox.StandardButton.Yes:
-            trash.clear()
+        askConfirmation(
+            parent=self,
+            title=self.tr("Clear Rescue Folder"),
+            text=askPrompt,
+            callback=lambda: trash.clear(),
+            okButtonText=self.tr("Delete permanently"),
+            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
