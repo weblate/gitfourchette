@@ -13,8 +13,10 @@ import re
 
 
 def getEItemIndices(rw: RepoWidget, item: EItem):
+    ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
+
     model: QAbstractItemModel = rw.sidebar.model()
-    indexList: list[QModelIndex] = model.match(model.index(0, 0), Qt.UserRole + 1, item, flags=Qt.MatchRecursive)
+    indexList: list[QModelIndex] = model.match(model.index(0, 0), ROLE_EITEM, item, flags=Qt.MatchRecursive)
     return indexList
 
 

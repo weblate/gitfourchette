@@ -273,11 +273,11 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     rw.graphView.selectCommit(commitOid)
     assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
     rw.committedFiles.selectRow(0)
-    rw.committedFiles.saveRevisionAs(saveInto=tempDir.name)
 
     # c2-2.txt was deleted by the commit.
-    # Expect GF to save the state of the file before its deletion.
-    assert readFile(F"{tempDir.name}/c2-2@c9ed7bf.txt") == b"c2\nc2\n"
+    # Expect GF to warn us about it.
+    rw.committedFiles.saveRevisionAs(saveInto=tempDir.name, beforeCommit=False)
+    acceptQMessageBox(rw, r"save.+revision", r"file.+deleted by.+commit")
 
 
 def testCheckoutCommit(qtbot, tempDir, mainWindow):
