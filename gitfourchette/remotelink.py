@@ -150,9 +150,11 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
         else:
             self.progress.emit(obj, stats.total_objects)
 
-        locale = QLocale.system()
+        locale = QLocale()
 
-        objectsReadyText = self.tr("{0:,} of {1:,} objects ready.").format(obj, stats.total_objects)
+        objectsReadyText = self.tr("{0} of {1} objects ready.").format(
+            locale.toString(obj),
+            locale.toString(stats.total_objects))
         dataSizeText = locale.formattedDataSize(stats.received_bytes)
         downloadRateText = locale.formattedDataSize(self.downloadRate)
 

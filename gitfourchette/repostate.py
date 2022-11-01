@@ -28,7 +28,7 @@ def progressTick(progress, i, numCommitsBallpark=0):
             # so don't use setLabelText if we're changing the progress value
             progress.setValue(i)
         else:
-            progress.setLabelText(tr("{0:,} commits processed.").format(i))
+            progress.setLabelText(tr("{0} commits processed.").format(progress.locale().toString(i)))
         QCoreApplication.processEvents()
         if progress.wasCanceled():
             raise StopIteration()
