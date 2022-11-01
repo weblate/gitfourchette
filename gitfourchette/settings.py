@@ -223,10 +223,11 @@ class History(BasePrefs):
     def clearRepoHistory(self):
         self.repos.clear()
 
-    def getRecentRepoPaths(self, n):
-        return (path
-                for path, _
-                in sorted(self.repos.items(), key=lambda i: i[1].get('time', 0), reverse=True))
+    def getRecentRepoPaths(self, n: int, newestFirst=True):
+        sortedPaths = (path for path, _ in
+                       sorted(self.repos.items(), key=lambda i: i[1].get('time', 0), reverse=newestFirst))
+
+        return (path for path, _ in zip(sortedPaths, range(n)))
 
     def write(self):
         self.trim()
@@ -236,7 +237,9 @@ class History(BasePrefs):
         n = prefs.maxRecentRepos
 
         if len(self.repos) > n:
-            self.repos = self.repos[-n:]
+            # Recreate self.repos with only the n most recent paths
+            topPaths = self.getRecentRepoPaths(n)
+            self.repos = {path: self.repos[path] for path in topPaths}
 
         if len(self.cloneHistory) > n:
             self.cloneHistory = self.cloneHistory[-n:]
