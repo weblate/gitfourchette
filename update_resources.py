@@ -6,17 +6,8 @@ assetsDir = "gitfourchette/assets"
 langDir = "lang"
 
 
-def getTool(envName, darwinFallback, fallback):
-    if envName in os.environ:
-        return os.environ[envName]
-    elif sys.platform == 'darwin':
-        return darwinFallback
-    else:
-        return fallback
-
-
-UIC = getTool('UIC', 'pyside6-uic', 'uic-qt5')
-LRELEASE = getTool('LRELEASE', 'pyside6-lrelease', 'lrelease-qt5')
+UIC = os.environ.get('UIC', 'pyside6-uic')
+LRELEASE = os.environ.get('LRELEASE', 'pyside6-lrelease')
 
 
 def call(cmd, **kwargs) -> subprocess.CompletedProcess:
