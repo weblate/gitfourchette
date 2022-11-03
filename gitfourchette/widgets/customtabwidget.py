@@ -23,6 +23,7 @@ class CustomTabBar(QTabBar):
 
 
 class CustomTabWidget(QWidget):
+    currentChanged: Signal = Signal(int)
     tabCloseRequested: Signal = Signal(int)
     tabContextMenuRequested: Signal = Signal(QPoint, int)
 
@@ -34,11 +35,10 @@ class CustomTabWidget(QWidget):
         self.tabs = CustomTabBar(self)
         self.tabs.tabMoved.connect(self.onTabMoved)
         self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
+        self.tabs.currentChanged.connect(self.currentChanged)
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
         self.tabs.setMovable(True)
         self.tabs.setDocumentMode(True)  # dramatically improves the tabs' appearance on macOS
-
-        self.previousMiddleIndex = -1
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -67,11 +67,9 @@ class CustomTabWidget(QWidget):
         self.stacked.removeWidget(w)
         self.stacked.insertWidget(toIndex, w)
 
-    def addTab(self, w: QWidget, name: str, toolTip: str = None):
+    def addTab(self, w: QWidget, name: str) -> int:
         i1 = self.stacked.addWidget(w)
         i2 = self.tabs.addTab(name)
-        if toolTip:
-            self.tabs.setTabToolTip(i2, toolTip)
         assert i1 == i2
         return i1
 
@@ -79,11 +77,20 @@ class CustomTabWidget(QWidget):
         self.tabs.setCurrentIndex(i)
         self.stacked.setCurrentIndex(i)
 
+    def indexOf(self, widget: QWidget):
+        return self.stacked.indexOf(widget)
+
     def widget(self, i: int):
         return self.stacked.widget(i)
 
     def currentIndex(self) -> int:
         return self.stacked.currentIndex()
+
+    def setTabText(self, i: int, text: str):
+        self.tabs.setTabText(i, text)
+
+    def setTabTooltip(self, i: int, toolTip: str):
+        self.tabs.setTabToolTip(i, toolTip)
 
     def currentWidget(self) -> QWidget:
         return self.stacked.currentWidget()
@@ -91,12 +98,9 @@ class CustomTabWidget(QWidget):
     def count(self) -> int:
         return self.stacked.count()
 
-    def removeTab(self, i: int, destroy: bool):
+    def removeTab(self, i: int):
         widget = self.stacked.widget(i)
         # remove widget from stacked view _before_ removing the tab,
         # because removing the tab may send a tab change event
         self.stacked.removeWidget(widget)
         self.tabs.removeTab(i)
-        if destroy:
-            # QStackedWidget does not delete the widget in removeWidget, so we must do it manually.
-            widget.deleteLater()

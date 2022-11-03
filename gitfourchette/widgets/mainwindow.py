@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         self.move(QPoint(50, 50))
 
         self.tabs = CustomTabWidget(self)
-        self.tabs.stacked.currentChanged.connect(self.onTabChange)
+        self.tabs.currentChanged.connect(self.onTabChange)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
 
@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
         if i < 0:  # Right mouse button released outside tabs
             return
-        rw: RepoWidget = self.tabs.stacked.widget(i)
+        rw: RepoWidget = self.tabs.widget(i)
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
         menu.addAction(self.tr("Close Tab"), lambda: self.closeTab(i))
@@ -517,7 +517,8 @@ class MainWindow(QMainWindow):
         else:
             newRW.setPendingWorkdir(workdir)
 
-        tabIndex = self.tabs.addTab(newRW, newRW.getTitle(), compactPath(workdir))
+        tabIndex = self.tabs.addTab(newRW, newRW.getTitle())
+        self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
 
         if foreground:
             self.tabs.setCurrentIndex(tabIndex)
@@ -692,8 +693,10 @@ class MainWindow(QMainWindow):
         self.closeTab(self.tabs.currentIndex())
 
     def closeTab(self, index: int, singleTab: bool = True):
-        self.tabs.widget(index).cleanup()
-        self.tabs.removeTab(index, destroy=True)
+        widget = self.tabs.widget(index)
+        widget.cleanup()
+        self.tabs.removeTab(index)
+        widget.deleteLater()
 
         # If that was the last tab, back to welcome widget
         if self.tabs.count() == 0:
@@ -717,7 +720,7 @@ class MainWindow(QMainWindow):
         gc.collect()
 
     def refreshTabText(self, rw):
-        index = self.tabs.stacked.indexOf(rw)
+        index = self.tabs.indexOf(rw)
         self.tabs.tabs.setTabText(index, rw.getTitle())
 
     def unloadTab(self, index: int):
@@ -737,7 +740,7 @@ class MainWindow(QMainWindow):
         index = self.tabs.currentIndex()
         index += 1
         index %= self.tabs.count()
-        self.tabs.tabs.setCurrentIndex(index)
+        self.tabs.setCurrentIndex(index)
 
     def previousTab(self):
         if self.tabs.count() == 0:
@@ -746,7 +749,7 @@ class MainWindow(QMainWindow):
         index = self.tabs.currentIndex()
         index += self.tabs.count() - 1
         index %= self.tabs.count()
-        self.tabs.tabs.setCurrentIndex(index)
+        self.tabs.setCurrentIndex(index)
 
     # -------------------------------------------------------------------------
     # Go menu
@@ -773,7 +776,7 @@ class MainWindow(QMainWindow):
 
         # Normally, changing the current tab will load the corresponding repo in the background.
         # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
-        with QSignalBlockerContext(self.tabs.stacked):
+        with QSignalBlockerContext(self.tabs):
             # We might not be able to load all tabs, so we may have to adjust session.activeTabIndex.
             activeTab = -1
 
