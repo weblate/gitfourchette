@@ -477,6 +477,10 @@ class RepoWidget(QWidget):
         else:
             return "???"
 
+    def closeEvent(self, event: QCloseEvent):
+        """ Called when closing a repo tab """
+        self.cleanup()
+
     def cleanup(self):
         if self.state and self.state.repo:
             self.committedFiles.clear()
@@ -487,6 +491,8 @@ class RepoWidget(QWidget):
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
             self.state.repo.free()
+        if self.state and self.state.fileWatcher:
+            self.state.fileWatcher.shutdown()
         self.setRepoState(None)
 
     def clearDiffView(self):

@@ -698,7 +698,7 @@ class MainWindow(QMainWindow):
 
     def closeTab(self, index: int, singleTab: bool = True):
         widget = self.tabs.widget(index)
-        widget.cleanup()
+        widget.close()  # will call RepoWidget.cleanup
         self.tabs.removeTab(index)
         widget.deleteLater()
 
@@ -722,6 +722,12 @@ class MainWindow(QMainWindow):
 
         self.saveSession()
         gc.collect()
+
+    def closeAllTabs(self):
+        start = self.tabs.count() - 1
+        with QSignalBlockerContext(self.tabs):  # Don't let awaken unloaded tabs
+            for i in range(start, -1, -1):  # Close tabs in reverse order
+                self.closeTab(i, False)
 
     def refreshTabText(self, rw):
         index = self.tabs.indexOf(rw)
@@ -809,6 +815,11 @@ class MainWindow(QMainWindow):
     def closeEvent(self, e):
         QApplication.instance().removeEventFilter(self)
         self.saveSession()
+
+        # Close all tabs so RepoWidgets release all their resources.
+        # Important so unit tests wind down properly!
+        self.closeAllTabs()
+
         e.accept()
 
     # -------------------------------------------------------------------------

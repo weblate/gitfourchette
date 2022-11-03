@@ -47,9 +47,6 @@ def testFSWDetectsNewFile(qtbot, mainWindow, tempDir):
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
 
-    # let unit test wind down peacefully -- todo this should be done by RW itself
-    rw.stopFileWatcher()
-
 
 def testFSWDetectsChangedFile(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
@@ -69,5 +66,3 @@ def testFSWDetectsChangedFile(qtbot, tempDir, mainWindow):
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["master.txt"]
 
-    # let unit test wind down peacefully -- todo this should be done by RW itself
-    rw.stopFileWatcher()
