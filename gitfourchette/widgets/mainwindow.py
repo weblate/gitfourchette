@@ -690,6 +690,10 @@ class MainWindow(QMainWindow):
     # Tab management
 
     def closeCurrentTab(self):
+        if self.tabs.count() == 0:  # don't attempt to close if no tabs are open
+            QApplication.beep()
+            return
+
         self.closeTab(self.tabs.currentIndex())
 
     def closeTab(self, index: int, singleTab: bool = True):
