@@ -238,7 +238,7 @@ class PrefsDialog(QDialog):
 
         def pickFont():
             result = QFontDialog.getFont(currentFont(), parent=self)
-            if qtBindingName == "pyqt5":
+            if qtBindingName.startswith("PyQt"):
                 newFont, ok = result
             else:
                 ok, newFont = result
@@ -260,7 +260,7 @@ class PrefsDialog(QDialog):
             font = currentFont()
             if not self.getMostRecentValue(prefKey):
                 resetButton.setVisible(False)
-                fontButton.setText(F"Default ({font.family()} {font.pointSize()})")
+                fontButton.setText(self.tr("Default", "as in Default Font") + f" ({font.family()} {font.pointSize()})")
             else:
                 resetButton.setVisible(True)
                 fontButton.setText(F"{font.family()} {font.pointSize()}")
