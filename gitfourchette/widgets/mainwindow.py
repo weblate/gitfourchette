@@ -88,6 +88,7 @@ class MainWindow(QMainWindow):
             self.memoryIndicator.setMinimumWidth(128)
             self.memoryIndicator.clicked.connect(lambda e: self.onMemoryIndicatorClicked())
             self.memoryIndicator.setToolTip("Force GC")
+            self.memoryIndicator.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             self.statusBar.addPermanentWidget(self.memoryIndicator)
         else:
             self.memoryIndicator = None
