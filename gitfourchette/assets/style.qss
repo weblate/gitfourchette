@@ -5,7 +5,7 @@ QListView::item:selected:!active {
 }
 
 QTreeView#sidebar {
-    background: transparent;
+    background: palette(window);
 }
 
 QTreeView#sidebar::branch {
