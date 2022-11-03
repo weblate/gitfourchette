@@ -31,3 +31,43 @@ def testExternalUnstage(qtbot, tempDir, mainWindow):
 
     rw.quickRefresh()
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
+
+
+def testFSWDetectsNewFile(qtbot, mainWindow, tempDir):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    # we're starting clean
+    assert qlvGetRowData(rw.dirtyFiles) == []
+
+    writeFile(F"{wd}/SomeNewFile.txt", "gotta see this change without manually refreshing...\n")
+    qtbot.wait(500)
+
+    # we must see the change
+    assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
+
+    # let unit test wind down peacefully -- todo this should be done by RW itself
+    rw.stopFileWatcher()
+
+
+def testFSWDetectsChangedFile(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    # we're starting clean
+    assert qlvGetRowData(rw.dirtyFiles) == []
+
+    writeFile(F"{wd}/master.txt", "gotta see this change without manually refreshing...\n")
+
+    # gotta do this for the FSW to pick up modifications to existing files in a unit testing environment.
+    touchFile(F"{wd}/master.txt")
+
+    qtbot.wait(500)
+
+    # we must see the change
+    assert qlvGetRowData(rw.dirtyFiles) == ["master.txt"]
+
+    # let unit test wind down peacefully -- todo this should be done by RW itself
+    rw.stopFileWatcher()

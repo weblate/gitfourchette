@@ -256,6 +256,7 @@ class RepoWidget(QWidget):
     def setRepoState(self, state: RepoState):
         if state:
             self.state = state
+            self.state.fileWatcher.setParent(self)
             self.state.fileWatcher.directoryChanged.connect(self.onDirectoryChange)
             self.state.fileWatcher.indexChanged.connect(self.onIndexChange)
             self.actionFlows.repo = state.repo
@@ -263,11 +264,23 @@ class RepoWidget(QWidget):
             self.state = None
             self.actionFlows.repo = None
 
+    def installFileWatcher(self, intervalMS=100):
+        self.state.fileWatcher.boot(intervalMS)
+        self.scheduledRefresh.setInterval(intervalMS)
+
+    def stopFileWatcher(self):
+        self.state.fileWatcher.shutdown()
+
     def onDirectoryChange(self):
         globalstatus.setText(self.tr("Detected external change..."))
 
-        self.scheduledRefresh.stop()
-        self.scheduledRefresh.start()
+        if self.scheduledRefresh.interval() == 0:
+            # Just fire it now if instantaneous
+            # TODO: Do we need this one? There's already a delay in FSW
+            self.scheduledRefresh.timeout.emit()
+        else:
+            self.scheduledRefresh.stop()
+            self.scheduledRefresh.start()
 
     def onIndexChange(self):
         print("refreshing index...")

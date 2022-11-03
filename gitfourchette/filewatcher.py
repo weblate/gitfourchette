@@ -42,16 +42,23 @@ class FileWatcher(QObject):
     def indexFilePath(self):
         return os.path.join(self.repo.path, "index")
 
-    def __init__(self, repo: pygit2.Repository, delayMilliseconds=100):
-        super().__init__(None)
+    def __init__(self, parent: QObject, repo: pygit2.Repository, delayMilliseconds=100):
+        super().__init__(parent)
 
         self.repo = repo
+        self.fsw = None
+        self.rewatchDelay = None
+        self.pendingRewatch = []
 
-        if not settings.prefs.fileWatcher:
-            self.fsw = None
+        if settings.prefs.fileWatcher:
+            self.boot(delayMilliseconds)
+
+    def boot(self, delayMilliseconds=100):
+        if self.fsw:
             return
 
-        self.fsw = QFileSystemWatcher()
+        self.fsw = QFileSystemWatcher(self)
+
         with Benchmark("Collect paths to watch"):
             failed = self.fsw.addPaths(walkWatchableDirs(self.repo))
         if failed:
@@ -69,6 +76,19 @@ class FileWatcher(QObject):
 
         # Watch index file as well
         self.fsw.addPath(self.indexFilePath)
+
+    def shutdown(self):
+        if not self.fsw:
+            return
+
+        self.fsw.directoryChanged.disconnect(self.onDirectoryChanged)
+        self.fsw.fileChanged.disconnect(self.onFileChanged)
+        self.fsw.deleteLater()
+        self.fsw = None
+
+        self.rewatchDelay.stop()
+        self.rewatchDelay.deleteLater()
+        self.rewatchDelay = None
 
     def prettifyPathList(self, pathList):
         prefix = os.path.normpath(self.repo.workdir) + "/"

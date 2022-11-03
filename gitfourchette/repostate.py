@@ -181,7 +181,7 @@ class RepoState:
 
         self.resolveHiddenCommits()
 
-        self.fileWatcher = FileWatcher(self.repo)
+        self.fileWatcher = FileWatcher(None, self.repo)
 
     @property
     def hiddenBranches(self):

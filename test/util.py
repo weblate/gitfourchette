@@ -18,6 +18,9 @@ def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
 def touchFile(path):
     open(path, 'a').close()
 
+    # Also gotta do this for QFileSystemWatcher to pick up a change in a unit testing environment
+    os.utime(path, (0, 0))
+
 
 def writeFile(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)
