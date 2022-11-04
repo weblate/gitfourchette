@@ -74,12 +74,9 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     assert False, F"did not find qdialog matching \"{pattern}\""
 
 
-def acceptQMessageBox(parent: QWidget, titlePattern: str, textPattern: str = ""):
+def acceptQMessageBox(parent: QWidget, textPattern: str):
     for qmb in parent.findChildren(QMessageBox):
-        if re.search(titlePattern, qmb.windowTitle(), re.IGNORECASE):
-            if textPattern:
-                assert re.search(textPattern, qmb.text(), re.IGNORECASE),\
-                    f"qmessagebox \"{titlePattern}\" found, but its text doesn't match \"{textPattern}\""
+        if re.search(textPattern, qmb.text(), re.IGNORECASE):
             qmb.accept()
             return
 

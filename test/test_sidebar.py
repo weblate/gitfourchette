@@ -111,7 +111,7 @@ def testDeleteBranch(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "somebranch")
     findMenuAction(menu, "delete").trigger()
-    acceptQMessageBox(rw, "delete branch")
+    acceptQMessageBox(rw, "really delete.+branch")
     assert "somebranch" not in repo.branches.local
 
 
@@ -189,7 +189,7 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
     findMenuAction(menu, "delete remote").trigger()
-    acceptQMessageBox(rw, "delete remote")
+    acceptQMessageBox(rw, "really delete remote")
 
     assert len(list(repo.remotes)) == 0
 

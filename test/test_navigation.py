@@ -128,7 +128,7 @@ def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, tempDir, mainWin
     assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
 
     rw.dirtyFiles.discard()  # discard b/b1.txt
-    acceptQMessageBox(rw, "discard")
+    acceptQMessageBox(rw, "really discard changes")
 
     assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
 
@@ -160,7 +160,7 @@ def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow
 
     assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
     rw.dirtyFiles.discard()
-    acceptQMessageBox(rw, "discard")
+    acceptQMessageBox(rw, "really discard changes")
 
     assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
 

@@ -63,7 +63,7 @@ def testDiscardUntrackedFile(qtbot, tempDir, mainWindow):
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
 
-    acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "really discard changes")
 
     assert rw.dirtyFiles.model().rowCount() == 0
     assert rw.stagedFiles.model().rowCount() == 0
@@ -81,7 +81,7 @@ def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow):
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
 
-    acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "really discard changes")
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == []
@@ -98,7 +98,7 @@ def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, main
     qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
 
-    acceptQMessageBox(rw, "discard changes")
+    acceptQMessageBox(rw, "really discard changes")
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
@@ -244,8 +244,7 @@ def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     rw.commitButton.click()
-    q = findQDialog(rw, "empty commit")
-    q.reject()
+    acceptQMessageBox(rw, "create an empty commit")
 
 
 def testSaveOldRevision(qtbot, tempDir, mainWindow):
@@ -277,7 +276,7 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     # c2-2.txt was deleted by the commit.
     # Expect GF to warn us about it.
     rw.committedFiles.saveRevisionAs(saveInto=tempDir.name, beforeCommit=False)
-    acceptQMessageBox(rw, r"save.+revision", r"file.+deleted by.+commit")
+    acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
 def testCheckoutCommit(qtbot, tempDir, mainWindow):
