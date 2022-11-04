@@ -66,3 +66,35 @@ def testFSWDetectsChangedFile(qtbot, tempDir, mainWindow):
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["master.txt"]
 
+
+def testFSWDetectsFileDeletion(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    # we're starting clean
+    assert qlvGetRowData(rw.dirtyFiles) == []
+
+    os.unlink(F"{wd}/c/c1.txt")
+
+    qtbot.wait(500)
+
+    # we must see the change
+    assert qlvGetRowData(rw.dirtyFiles) == ["c/c1.txt"]
+
+
+def testFSWDetectsFolderDeletion(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    # we're starting clean
+    assert qlvGetRowData(rw.dirtyFiles) == []
+
+    os.unlink(F"{wd}/c/c1.txt")
+    os.rmdir(F"{wd}/c")
+
+    qtbot.wait(500)
+
+    # we must see the change
+    assert qlvGetRowData(rw.dirtyFiles) == ["c/c1.txt"]
