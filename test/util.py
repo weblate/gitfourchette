@@ -11,7 +11,11 @@ def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
 
     with tarfile.open(F"{testPath}/data/{testRepoName}.tar") as tar:
         tar.extractall(tempDir.name)
-    path = F"{tempDir.name}/{testRepoName}/"
+
+    path = F"{tempDir.name}/{testRepoName}"
+    path = os.path.realpath(path)
+    path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
+
     return path
 
 
