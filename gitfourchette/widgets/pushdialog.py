@@ -24,7 +24,7 @@ class PushDialog(QDialog):
         localBranch = self.currentLocalBranch
 
         if localBranch.upstream:
-            self.ui.trackingLabel.setText(self.tr("tracking “{0}”").format(localBranch.upstream.shorthand))
+            self.ui.trackingLabel.setText(self.tr("tracking “{0}”").format(escamp(localBranch.upstream.shorthand)))
         else:
             self.ui.trackingLabel.setText(self.tr("non-tracking"))
 

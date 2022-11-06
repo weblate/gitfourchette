@@ -56,6 +56,7 @@ class Ui_PushDialog(object):
         sizePolicy2.setHeightForWidth(self.trackingLabel.sizePolicy().hasHeightForWidth())
         self.trackingLabel.setSizePolicy(sizePolicy2)
         self.trackingLabel.setText(u"tracking very very long remote branch name lalala")
+        self.trackingLabel.setTextFormat(Qt.PlainText)
 
         self.horizontalLayout_6.addWidget(self.trackingLabel)
 

@@ -378,7 +378,7 @@ class DiffView(QPlainTextEdit):
             showWarning(
                 self,
                 self.tr("Revert patch"),
-                self.tr("Couldn’t revert this patch.\nThe code may have diverged too much from this revision."))
+                self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
         else:
             diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
             changedFile = get1FileChangedByDiff(diff)
@@ -402,12 +402,12 @@ class DiffView(QPlainTextEdit):
 
     def discardSelection(self):
         askConfirmation(
-            parent = self,
-            title = self.tr("Discard lines"),
-            text = self.tr("Really discard the selected lines?") + "\n" + self.tr("This cannot be undone!"),
-            okButtonText = self.tr("Discard lines"),
-            okButtonIcon = stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
-            callback = lambda: self.applySelection(PatchPurpose.DISCARD))
+            parent=self,
+            title=self.tr("Discard lines"),
+            text=self.tr("Really discard the selected lines?") + "<br>" + translate("Global", "This cannot be undone!"),
+            okButtonText=self.tr("Discard lines"),
+            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+            callback=lambda: self.applySelection(PatchPurpose.DISCARD))
 
     def exportSelection(self, saveInto=""):
         patchData = self.extractSelection()
@@ -425,12 +425,12 @@ class DiffView(QPlainTextEdit):
 
     def discardHunk(self, hunkID: int):
         askConfirmation(
-            parent = self,
-            title = self.tr("Discard hunk"),
-            text = self.tr("Really discard this hunk?") + "\n" + self.tr("This cannot be undone!"),
-            okButtonText = self.tr("Discard hunk"),
-            okButtonIcon = stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
-            callback = lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
+            parent=self,
+            title=self.tr("Discard hunk"),
+            text=self.tr("Really discard this hunk?") + "<br>" + translate("Global", "This cannot be undone!"),
+            okButtonText=self.tr("Discard hunk"),
+            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
+            callback=lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
 
     def exportHunk(self, hunkID: int, saveInto=""):
         patchData = self.extractHunk(hunkID)

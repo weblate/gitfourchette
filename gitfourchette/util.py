@@ -137,7 +137,7 @@ def excMessageBox(
         if showExcSummary:
             summary = traceback.format_exception_only(exc.__class__, exc)
             summary = ''.join(summary).strip()
-            message += "\n\n" + summary
+            message += "<br><br>" + summary
 
         def shortenTracebackPath(line):
             return re.sub(r'^\s*File "([^"]+)"',

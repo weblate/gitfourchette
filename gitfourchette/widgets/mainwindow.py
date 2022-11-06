@@ -14,6 +14,7 @@ from gitfourchette.widgets.customtabwidget import CustomTabWidget
 from gitfourchette.widgets.prefsdialog import PrefsDialog
 from gitfourchette.widgets.repowidget import RepoWidget
 from gitfourchette.widgets.welcomewidget import WelcomeWidget
+from html import escape
 from typing import Literal
 import gc
 import os
@@ -479,7 +480,7 @@ class MainWindow(QMainWindow):
         except BaseException as exc:
             excMessageBox(
                 exc,
-                message=self.tr("An exception was thrown while opening “{0}”").format(path),
+                message=self.tr("An exception was thrown while opening “{0}”").format(escape(path)),
                 parent=self)
             return False
 

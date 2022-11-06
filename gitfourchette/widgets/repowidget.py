@@ -20,7 +20,7 @@ from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDia
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.sidebar import Sidebar
 from gitfourchette.workqueue import WorkQueue
-import html
+from html import escape
 import os
 import pygit2
 
@@ -666,7 +666,7 @@ class RepoWidget(QWidget):
             else:
                 self.diffStack.setCurrentWidget(self.richDiffView)
                 self.richDiffView.displayDiffModelError(DiffModelError(
-                    self.tr("Can’t display diff of type {0}.").format(html.escape(str(type(result)))),
+                    self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
                     icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
         self.saveFilePositions()
@@ -783,7 +783,7 @@ class RepoWidget(QWidget):
 
         def onError(exc):
             rlpd.close()
-            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t fetch remote “{0}”.").format(remoteName))
+            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t fetch remote “{0}”.").format(escape(remoteName)))
 
         opName = translate("Operation", "Fetch remote “{0}”").format(remoteName)
         self.workQueue.put(work, then, opName, errorCallback=onError)
@@ -1018,7 +1018,7 @@ class RepoWidget(QWidget):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
-        showInformation(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}”.").format(message))
+        showInformation(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}”.").format(escape(message)))
 
     def findFlow(self):
         def onAccept(verbatimTerm):
@@ -1066,7 +1066,7 @@ class RepoWidget(QWidget):
             self.diffView.setTextCursor(newCursor)
             return
 
-        showInformation(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}”.").format(message))
+        showInformation(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}”.").format(escape(message)))
 
     def findInDiffFlow(self):
         def onAccept(verbatimTerm):
@@ -1185,13 +1185,13 @@ class RepoWidget(QWidget):
         humanSize = self.locale().formattedDataSize(sizeOnDisk)
 
         askPrompt = (
-            self.tr("Do you want to permanently delete %n discarded patch(es)?", "", patchCount) + "\n" +
-            self.tr("This will free up {0} on disk.").format(humanSize) + "\n" +
-            self.tr("This cannot be undone!"))
+            self.tr("Do you want to permanently delete <b>%n</b> discarded patch(es)?", "", patchCount) + "<br>" +
+            self.tr("This will free up {0} on disk.").format(humanSize) + "<br>" +
+            translate("Global", "This cannot be undone!"))
 
         askConfirmation(
             parent=self,
-            title=self.tr("Clear Rescue Folder"),
+            title=self.tr("Clear rescue folder"),
             text=askPrompt,
             callback=lambda: trash.clear(),
             okButtonText=self.tr("Delete permanently"),

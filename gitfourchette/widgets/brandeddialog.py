@@ -4,7 +4,7 @@ from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
 
-def makeBrandedDialogLayout(dialog, promptText, subtitleText=""):
+def makeBrandedDialogLayout(dialog, titleText, subtitleText=""):
     gridLayout = QGridLayout(dialog)
 
     iconLabel = QLabel(dialog)
@@ -18,7 +18,8 @@ def makeBrandedDialogLayout(dialog, promptText, subtitleText=""):
     titleLayout = QVBoxLayout()
     titleLayout.setSpacing(0)
     titleLayout.setContentsMargins(0, 0, 0, 0)
-    title = QLabel(promptText, dialog)
+    title = QLabel(titleText, dialog)
+    title.setTextFormat(Qt.TextFormat.RichText)
     tweakWidgetFont(title, 150, bold=True)
     titleLayout.addWidget(title)
 
@@ -74,7 +75,9 @@ def showTextInputDialog(
 
     layout = QVBoxLayout()
     if detailedPrompt:
-        layout.addWidget(QLabel(detailedPrompt, parent=dlg))
+        detailedPromptLabel = QLabel(detailedPrompt, parent=dlg)
+        detailedPromptLabel.setTextFormat(Qt.TextFormat.RichText)
+        layout.addWidget(detailedPromptLabel)
     layout.addWidget(lineEdit)
     layout.addWidget(buttonBox)
 

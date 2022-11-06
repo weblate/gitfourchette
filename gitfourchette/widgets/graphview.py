@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.qt import *
-from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning
+from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox
 from gitfourchette.widgets.graphdelegate import GraphDelegate
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from html import escape
@@ -244,9 +244,8 @@ class GraphView(QListView):
 
         details = commit.message if contd else None
 
-        messageBox = QMessageBox(QMessageBox.Icon.Information, title, markup, parent=self)
+        messageBox = asyncMessageBox(self, 'information', title, markup)
         messageBox.setDetailedText(details)
-        messageBox.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         messageBox.show()
 
     def cherrypickCurrentCommit(self):
@@ -311,7 +310,7 @@ class GraphView(QListView):
             rawIndex = self.repoWidget.state.getCommitSequentialIndex(oid)
         except KeyError:
             showWarning(self, self.tr("Commit not found"),
-                        self.tr("Commit not found or not loaded:") + f"\n{oid.hex}")
+                        self.tr("Commit not found or not loaded:") + f"<br>{oid.hex}")
             return False
 
         newSourceIndex = self.clModel.index(1 + rawIndex, 0)

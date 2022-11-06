@@ -199,7 +199,7 @@ class FileList(QListView):
                     errors.append(str(exc))
 
             if errors:
-                showWarning(self, title, "\n\n".join(errors))
+                showWarning(self, title, "<br>".join(errors))
 
         if len(entries) <= threshold:
             runBatch()

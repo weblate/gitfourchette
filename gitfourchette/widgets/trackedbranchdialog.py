@@ -2,6 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.util import escamp, addComboBoxItem, tweakWidgetFont
 from gitfourchette.widgets.brandeddialog import makeBrandedDialog
+from html import escape
 import pygit2
 
 
@@ -48,9 +49,11 @@ class TrackedBranchDialog(QDialog):
 
         explainer = "<p>"
         if trackedBranch:
-            explainer += self.tr("Local branch <b>“{0}”</b> currently tracks remote branch <b>“{1}”</b>.").format(escamp(localBranch.shorthand), escamp(trackedBranch.shorthand))
+            explainer += self.tr("Local branch <b>“{0}”</b> currently tracks remote branch <b>“{1}”</b>.")\
+                .format(escape(localBranch.shorthand), escape(trackedBranch.shorthand))
         else:
-            explainer += self.tr("Local branch <b>“{0}”</b> currently does <b>not</b> track a remote branch.").format(escamp(localBranch.shorthand))
+            explainer += self.tr("Local branch <b>“{0}”</b> currently does <b>not</b> track a remote branch.")\
+                .format(escape(localBranch.shorthand))
         explainer += "</p><p>" + self.tr("Pick a new remote branch to track:") + "</p>"
         explainerLabel = QLabel(explainer)
         explainerLabel.setWordWrap(True)
@@ -65,7 +68,7 @@ class TrackedBranchDialog(QDialog):
         layout.addWidget(hintLabel)
         layout.addWidget(buttonBox)
 
-        makeBrandedDialog(self, layout, self.tr("Set branch tracked by “{0}”").format(localBranch.shorthand))
+        makeBrandedDialog(self, layout, self.tr("Set branch tracked by “{0}”").format(escape(localBranch.shorthand)))
 
         self.setModal(True)
         self.resize(512, 128)

@@ -1,7 +1,7 @@
 from gitfourchette.qt import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_remotedialog import Ui_RemoteDialog
-from gitfourchette.util import escamp
+from html import escape
 
 
 class RemoteDialog(QDialog):
@@ -21,12 +21,11 @@ class RemoteDialog(QDialog):
         self.ui.urlEdit.setText(remoteURL)
 
         if edit:
-            title = self.tr("Edit remote “{0}”").format(escamp(remoteName))
+            title = self.tr("Edit remote “{0}”").format(escape(remoteName))
             self.setWindowTitle(self.tr("Edit remote"))
         else:
             title = self.tr("Add remote")
             self.setWindowTitle(self.tr("Add remote"))
-        self.setWindowTitle(title)
         convertToBrandedDialog(self, title)
 
         self.setMaximumHeight(self.height())
