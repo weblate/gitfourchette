@@ -42,7 +42,8 @@ def testFSWDetectsNewFile(qtbot, mainWindow, tempDir):
     assert qlvGetRowData(rw.dirtyFiles) == []
 
     writeFile(F"{wd}/SomeNewFile.txt", "gotta see this change without manually refreshing...\n")
-    qtbot.wait(500)
+
+    qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
 
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
@@ -61,7 +62,7 @@ def testFSWDetectsChangedFile(qtbot, tempDir, mainWindow):
     # gotta do this for the FSW to pick up modifications to existing files in a unit testing environment.
     touchFile(F"{wd}/master.txt")
 
-    qtbot.wait(500)
+    qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
 
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["master.txt"]
@@ -77,7 +78,7 @@ def testFSWDetectsFileDeletion(qtbot, tempDir, mainWindow):
 
     os.unlink(F"{wd}/c/c1.txt")
 
-    qtbot.wait(500)
+    qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
 
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["c/c1.txt"]
@@ -94,7 +95,7 @@ def testFSWDetectsFolderDeletion(qtbot, tempDir, mainWindow):
     os.unlink(F"{wd}/c/c1.txt")
     os.rmdir(F"{wd}/c")
 
-    qtbot.wait(500)
+    qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
 
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["c/c1.txt"]

@@ -128,7 +128,10 @@ class FileWatcher(QObject):
 
     def onDirectoryChanged(self, path: str):
         self.pendingRewatch.add(path)
-        self.rewatchDelay.start()
+        if self.rewatchDelay.interval() > 0:
+            self.rewatchDelay.start()
+        else:
+            self.rewatchDelay.timeout.emit()
 
     def onFileChanged(self, path: str):
         if path == self.indexFilePath:
