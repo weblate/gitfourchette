@@ -416,23 +416,13 @@ class MainWindow(QMainWindow):
         menu.deleteLater()
 
     def _constructRepo(self, path: str):
-        try:
-            repo = pygit2.Repository(path)
-
-        except pygit2.GitError as gitError:
-            showWarning(self, self.tr("Open repository"),
-                        self.tr("Couldn’t open “{0}”.").format(path) + f"\n\n{gitError}")
-            return None
+        repo = pygit2.Repository(path)
 
         if repo.is_shallow:
-            showWarning(self, self.tr("Shallow repository"),
-                        self.tr("Sorry, shallow repositories aren’t supported yet."))
-            return None
+            raise NotImplementedError(self.tr("Sorry, shallow repositories aren’t supported yet.").format(path))
 
         if repo.is_bare:
-            showWarning(self, self.tr("Bare repository"),
-                        self.tr("Sorry, bare repositories aren’t supported yet."))
-            return None
+            raise NotImplementedError(self.tr("Sorry, bare repositories aren’t supported yet.").format(path))
 
         return repo
 
@@ -635,9 +625,21 @@ class MainWindow(QMainWindow):
 
     def openDialog(self):
         path = PersistentFileDialog.getExistingDirectory(self, self.tr("Open repository"))
-        if path:
+        if not path:
+            return
+
+        try:
             self.openRepo(path)
-            self.saveSession()
+        except BaseException as exc:
+            excMessageBox(
+                exc,
+                self.tr("Open repository"),
+                self.tr("Couldn’t open the repository at “{0}”.").format(escape(path)),
+                parent=self,
+                icon='warning')
+            return
+
+        self.saveSession()
 
     def importPatch(self, reverse=False):
         if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
@@ -786,22 +788,55 @@ class MainWindow(QMainWindow):
         if not session.tabs:
             return
 
+        errors = []
+
         # Normally, changing the current tab will load the corresponding repo in the background.
         # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
         with QSignalBlockerContext(self.tabs):
             # We might not be able to load all tabs, so we may have to adjust session.activeTabIndex.
             activeTab = -1
+            numSuccessfullyOpenedRepos = 0
 
             # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
             for i, path in enumerate(session.tabs):
-                newRepoWidget = self.openRepo(path, foreground=False)
+                try:
+                    newRepoWidget = self.openRepo(path, foreground=False)
+                    numSuccessfullyOpenedRepos += 1
+                except (pygit2.GitError, NotImplementedError) as exc:
+                    errors.append((path, exc))
+                    continue
+
                 if i == session.activeTabIndex and newRepoWidget is not None:
                     activeTab = self.tabs.count()-1
+
+            # If we failed to load anything, tell the user about it
+            if errors:
+                self._reportSessionErrors(errors)
+
+            # Fall back to tab #0 if the previously active tab couldn't be restored
+            # (Otherwise welcome page will stick around)
+            if activeTab < 0 and numSuccessfullyOpenedRepos > 0:
+                activeTab = 0
 
             # Set current tab and load its repo.
             if activeTab >= 0:
                 self.tabs.setCurrentIndex(session.activeTabIndex)
                 self.onTabChange(session.activeTabIndex)
+
+    def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):
+        numErrors = len(errors)
+        text = self.tr("The session couldn’t be restored fully because %n repositories failed to load:", "", numErrors)
+
+        for path, exc in errors:
+            errorText = str(exc)
+
+            # Translate some common GitError texts
+            if errorText.startswith("Repository not found at "):
+                errorText = self.tr("Repository not found at this path.")
+
+            text += F"<small><br><br></small>{escape(path)}<small><br>{errorText}</small>"
+
+        showWarning(self, self.tr("Restore session"), text)
 
     def saveSession(self):
         session = settings.Session()
