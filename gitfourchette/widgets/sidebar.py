@@ -641,11 +641,9 @@ class Sidebar(QTreeView):
         index: QModelIndex = self.indexAt(localPoint)
         if index.isValid():
             menu = self.generateMenuForEntry(*SidebarModel.unpackItemAndData(index), index=index)
-            if not menu.actions():
-                menu.deleteLater()
-            else:
-                menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            if menu.actions():
                 menu.exec(globalPoint)
+            menu.deleteLater()
 
     def refresh(self, repoState: RepoState):
         sidebarModel: SidebarModel = self.model()

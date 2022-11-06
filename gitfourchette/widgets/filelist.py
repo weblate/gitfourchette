@@ -178,10 +178,16 @@ class FileList(QListView):
         numIndexes = len(self.selectedIndexes())
         if numIndexes == 0:
             return
+
         menu = quickMenu(self, self.createContextMenuActions(numIndexes))
         menu.setObjectName("FileListContextMenu")
-        menu.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         menu.exec(event.globalPos())
+
+        # Can't set WA_DeleteOnClose because this crashes on macOS e.g. when exporting a patch.
+        # (Context menu gets deleted while callback is running)
+        # Qt docs say: "for the object to be deleted, the control must return to the event loop from which deleteLater()
+        # was called" -- I suppose this means the context menu won't be deleted until the FileList has control again.
+        menu.deleteLater()
 
     def createContextMenuActions(self, count):
         return []
