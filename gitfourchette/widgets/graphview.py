@@ -244,7 +244,7 @@ class GraphView(QListView):
 
         details = commit.message if contd else None
 
-        messageBox = asyncMessageBox(self, 'information', title, markup)
+        messageBox = asyncMessageBox(self, 'information', title, markup, macShowTitle=False)
         messageBox.setDetailedText(details)
         messageBox.show()
 

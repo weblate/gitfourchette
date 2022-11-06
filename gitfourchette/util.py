@@ -232,7 +232,8 @@ def asyncMessageBox(
         icon: typing.Literal['warning', 'information', 'question', 'critical'],
         title: str,
         text: str,
-        buttons=QMessageBox.StandardButton.NoButton
+        buttons=QMessageBox.StandardButton.NoButton,
+        macShowTitle=True
 ) -> QMessageBox:
 
     icons = {
@@ -242,6 +243,10 @@ def asyncMessageBox(
         'critical': QMessageBox.Icon.Critical,
     }
 
+    # macOS doesn't have a titlebar for message boxes, so put the title in the text
+    if macShowTitle and sys.platform == 'darwin':
+        text = "<p><b>" + title + "</b></p>" + text
+
     qmb = QMessageBox(
         icons.get(icon, QMessageBox.Icon.NoIcon),
         title,
@@ -249,6 +254,10 @@ def asyncMessageBox(
         buttons,
         parent=parent
     )
+
+    # On macOS (since Big Sur?), all QMessageBox text is bold by default
+    if sys.platform == 'darwin':
+        qmb.setStyleSheet("QMessageBox QLabel { font-weight: normal; }")
 
     qmb.setWindowModality(Qt.WindowModality.WindowModal)
     qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
