@@ -27,6 +27,7 @@ class Ui_CloneDialog(object):
         CloneDialog.setModal(True)
         self.formLayout = QFormLayout(CloneDialog)
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
         self.urlLabel = QLabel(CloneDialog)
         self.urlLabel.setObjectName(u"urlLabel")
 

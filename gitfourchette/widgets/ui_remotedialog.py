@@ -24,6 +24,7 @@ class Ui_RemoteDialog(object):
         RemoteDialog.setModal(True)
         self.formLayout = QFormLayout(RemoteDialog)
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
         self.nameLabel = QLabel(RemoteDialog)
         self.nameLabel.setObjectName(u"nameLabel")
 

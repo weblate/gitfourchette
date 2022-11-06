@@ -212,7 +212,9 @@ class ActionFlows(QObject):
         dlg = RemoteDialog(False, "", "", self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.show()
+        dlg.setMaximumHeight(dlg.height())
         return dlg
 
     def editRemoteFlow(self, remoteName: str) -> RemoteDialog:
@@ -222,7 +224,9 @@ class ActionFlows(QObject):
         dlg = RemoteDialog(True, remoteName, self.repo.remotes[remoteName].url, self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.show()
+        dlg.setMaximumHeight(dlg.height())
         return dlg
 
     def deleteRemoteFlow(self, remoteName: str):
@@ -378,6 +382,8 @@ class ActionFlows(QObject):
 
         dlg = StashDialog(self.parentWidget)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.accepted.connect(onAccepted)
         dlg.show()
+        dlg.setMaximumHeight(dlg.height())
         return dlg

@@ -27,5 +27,3 @@ class RemoteDialog(QDialog):
             title = self.tr("Add remote")
             self.setWindowTitle(self.tr("Add remote"))
         convertToBrandedDialog(self, title)
-
-        self.setMaximumHeight(self.height())

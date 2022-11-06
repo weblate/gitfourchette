@@ -630,6 +630,7 @@ class MainWindow(QMainWindow):
         dlg.cloneSuccessful.connect(onSuccess)
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.show()
 
     def openDialog(self):
