@@ -7,7 +7,7 @@ setup(
     python_requires='>=3',
     install_requires=[
         'qtpy',
-        'pygit2>=1.8.0',
+        'pygit2>=1.11.0',
         'psutil',
     ],
     tests_require=[
