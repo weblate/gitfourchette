@@ -6,7 +6,7 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
-                                PersistentFileDialog, showWarning, showInformation)
+                                PersistentFileDialog, setWindowModal, showWarning, showInformation)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -445,7 +445,7 @@ class MainWindow(QMainWindow):
 
         shortname = settings.history.getRepoNickname(path)
         progress = QProgressDialog(self.tr("Opening repository..."), self.tr("Abort"), 0, 0, self)
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(progress)
         progress.setWindowTitle(shortname)
         progress.setWindowFlags(Qt.WindowType.Dialog)
         progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
@@ -620,7 +620,7 @@ class MainWindow(QMainWindow):
         dlg.cloneSuccessful.connect(onSuccess)
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(dlg)
         dlg.show()
 
     def openDialog(self):

@@ -111,6 +111,18 @@ def onAppThread():
     return appInstance and appInstance.thread() is QThread.currentThread()
 
 
+def setWindowModal(widget: QWidget):
+    """
+    Sets the WindowModal modality on a widget unless we're in test mode.
+    (On macOS, window-modal dialogs trigger an unskippable animation
+    that wastes time in unit tests.)
+    """
+
+    from gitfourchette.settings import TEST_MODE
+    if not TEST_MODE:
+        widget.setWindowModality(Qt.WindowModality.WindowModal)
+
+
 def excMessageBox(
         exc,
         title="",
@@ -161,7 +173,7 @@ def excMessageBox(
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
 
         if parent is not None:
-            qmb.setWindowModality(Qt.WindowModality.WindowModal)
+            setWindowModal(qmb)
             qmb.show()
         else:  # without a parent, .show() won't work
             qmb.exec()
@@ -259,7 +271,7 @@ def asyncMessageBox(
     if sys.platform == 'darwin':
         qmb.setStyleSheet("QMessageBox QLabel { font-weight: normal; }")
 
-    qmb.setWindowModality(Qt.WindowModality.WindowModal)
+    setWindowModal(qmb)
     qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
     return qmb

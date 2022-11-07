@@ -1,6 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import messageSummary, shortHash, stockIcon, asyncMessageBox, showWarning
+from gitfourchette.util import messageSummary, shortHash, stockIcon, asyncMessageBox, showWarning, setWindowModal
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
@@ -105,8 +105,8 @@ class ActionFlows(QObject):
 
         dlg.accepted.connect(onAccept)
 
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
 
@@ -212,7 +212,7 @@ class ActionFlows(QObject):
         dlg = RemoteDialog(False, "", "", self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         return dlg
@@ -224,7 +224,7 @@ class ActionFlows(QObject):
         dlg = RemoteDialog(True, remoteName, self.repo.remotes[remoteName].url, self.parentWidget)
         dlg.accepted.connect(lambda: onAccept(dlg.ui.nameEdit.text(), dlg.ui.urlEdit.text()))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         return dlg
@@ -297,7 +297,7 @@ class ActionFlows(QObject):
         cd.accepted.connect(onAccept)
         cd.rejected.connect(onReject)
         cd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        cd.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(cd)
         cd.show()
         return cd
 
@@ -319,7 +319,7 @@ class ActionFlows(QObject):
 
         cd.accepted.connect(onAccept)
         cd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        cd.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(cd)
         cd.show()
         return cd
 
@@ -381,9 +381,10 @@ class ActionFlows(QObject):
             self.newStash.emit(message, flags)
 
         dlg = StashDialog(self.parentWidget)
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.accepted.connect(onAccepted)
+
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         return dlg

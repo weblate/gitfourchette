@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.util import stockIcon
+from gitfourchette.util import stockIcon, setWindowModal
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette import settings
 
@@ -20,8 +20,8 @@ class RemoteLinkProgressDialog(QProgressDialog):
         progress.setWindowTitle(self.tr("Remote operation"))
         progress.setMinimumWidth(progress.fontMetrics().horizontalAdvance(fittingLine))
         progress.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowTitleHint | Qt.WindowType.CustomizeWindowHint)  # hide close button
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
         progress.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        setWindowModal(progress)
 
         # By default, the cancel button emits the 'canceled' signal, which is connected to the 'cancel' slot.
         # The 'cancel' slot hides the dialog. However, we don't want to hide it immediately after the user aborts.

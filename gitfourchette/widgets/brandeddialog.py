@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.util import tweakWidgetFont
+from gitfourchette.util import tweakWidgetFont, setWindowModal
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
@@ -99,7 +99,7 @@ def showTextInputDialog(
     dlg.setMaximumHeight(dlg.height())
 
     dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-    dlg.setWindowModality(Qt.WindowModality.WindowModal)
+    setWindowModal(dlg)
 
     dlg.show()
     dlg.setMaximumHeight(dlg.height())

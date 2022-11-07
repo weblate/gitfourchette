@@ -3,7 +3,7 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import QSignalBlockerContext
-from gitfourchette.util import addComboBoxItem, stockIcon, escamp
+from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from gitfourchette.workqueue import WorkQueue
@@ -218,7 +218,7 @@ class PushDialog(QDialog):
 
         convertToBrandedDialog(self)
 
-        self.setWindowModality(Qt.WindowModality.WindowModal)
+        setWindowModal(self)
 
     def enableInputs(self, on: bool):
         widgets = [self.ui.remoteBranchEdit,
