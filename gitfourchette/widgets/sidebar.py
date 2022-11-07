@@ -14,7 +14,7 @@ ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
 ACTIVE_BULLET = "★ "
 
 
-class EItem(enum.Enum):
+class EItem(enum.IntEnum):
     UncommittedChanges = enum.auto()
     LocalBranchesHeader = enum.auto()
     StashesHeader = enum.auto()
@@ -276,7 +276,7 @@ class SidebarModel(QAbstractItemModel):
         item = self.unpackItem(index)
 
         if role == ROLE_EITEM:  # for testing (match by EItem type)
-            return item
+            return item.value
 
         displayRole = role == Qt.ItemDataRole.DisplayRole
         userRole = role == ROLE_USERDATA
