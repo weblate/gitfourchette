@@ -468,6 +468,10 @@ class MainWindow(QMainWindow):
             self.refreshTabText(rw)
 
         except BaseException as exc:
+            # In test mode, we really want this to fail
+            if settings.TEST_MODE:
+                raise exc
+
             excMessageBox(
                 exc,
                 message=self.tr("An exception was thrown while opening “{0}”").format(escape(path)),

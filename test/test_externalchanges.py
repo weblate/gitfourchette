@@ -33,6 +33,21 @@ def testExternalUnstage(qtbot, tempDir, mainWindow):
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
 
 
+def testHiddenBranchGotDeleted(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    subprocess.run(["git", "branch", "master2", "master"], check=True, cwd=wd)
+
+    rw = mainWindow.openRepo(wd)
+    rw.toggleHideBranch("refs/heads/master2")
+    rw.state.uiPrefs.write(force=True)
+    mainWindow.closeCurrentTab()
+
+    subprocess.run(["git", "branch", "-D", "master2"], check=True, cwd=wd)
+
+    mainWindow.openRepo(wd)  # reopening the repo must not crash
+
+
 def testFSWDetectsNewFile(qtbot, mainWindow, tempDir):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)

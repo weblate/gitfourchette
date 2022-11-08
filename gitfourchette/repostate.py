@@ -415,14 +415,15 @@ class RepoState:
                 if refName not in self.hiddenBranches
                 and not refName.startswith('refs/tags/'))
 
-        for hiddenBranch in self.hiddenBranches:
+        hiddenBranches = self.hiddenBranches[:]
+        for hiddenBranch in hiddenBranches:
             try:
                 commit: pygit2.Commit = self.repo.lookup_reference(hiddenBranch).peel(pygit2.Commit)
                 if not isSharedByVisibleBranch(commit.oid):
                     seeds.add(commit.oid)
-            except pygit2.InvalidSpecError:
-                log.info("RepoState", "Skipping invalid spec for hidden branch: " + hiddenBranch)
-                pass
+            except (KeyError, pygit2.InvalidSpecError):
+                log.info("RepoState", "Skipping missing hidden branch: " + hiddenBranch)
+                self.uiPrefs.hiddenBranches.remove(hiddenBranch)  # Remove it from prefs
 
         return seeds
 

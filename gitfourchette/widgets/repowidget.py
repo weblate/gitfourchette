@@ -1097,6 +1097,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def toggleHideBranch(self, branchName: str):
+        assert branchName.startswith("refs/")
         self.state.toggleHideBranch(branchName)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 

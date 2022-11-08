@@ -60,8 +60,8 @@ class BasePrefs:
 
         return fullPath
 
-    def write(self):
-        if TEST_MODE:
+    def write(self, force=False):
+        if not force and TEST_MODE:
             log.info("prefs", "Disabling write prefs")
             return None
 
