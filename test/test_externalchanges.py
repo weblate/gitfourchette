@@ -1,5 +1,3 @@
-import subprocess
-
 from . import reposcenario
 from .fixtures import *
 from .util import *
@@ -9,6 +7,8 @@ from gitfourchette.widgets.sidebar import EItem
 from gitfourchette.widgets.stashdialog import StashDialog
 from gitfourchette import porcelain
 import re
+import shutil
+import subprocess
 
 
 def testExternalUnstage(qtbot, tempDir, mainWindow):
@@ -99,3 +99,31 @@ def testFSWDetectsFolderDeletion(qtbot, tempDir, mainWindow):
 
     # we must see the change
     assert qlvGetRowData(rw.dirtyFiles) == ["c/c1.txt"]
+
+
+def testFSWDetectsNestedFolderDeletion(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    os.mkdir(F"{wd}/c/x")
+    os.mkdir(F"{wd}/c/x/y")
+    touchFile(F"{wd}/c/x/y/z.txt")
+
+    # Create a directory that starts with the same prefix as the directory we're going to delete ("c")
+    # to ensure that it doesn't get swept up with "c" when "c" and its subdirectories get unwatched.
+    os.mkdir(F"{wd}/c-keepwatching")
+    touchFile(F"{wd}/c-keepwatching/keepwatchingme.txt")
+
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    assert set(qlvGetRowData(rw.dirtyFiles)) == {"c/x/y/z.txt", "c-keepwatching/keepwatchingme.txt"}
+
+    # Delete "c" recursively; make sure the FSW picked up the changes
+    shutil.rmtree(F"{wd}/c")
+    qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
+    assert set(qlvGetRowData(rw.dirtyFiles)) == {"c/c1.txt", "c-keepwatching/keepwatchingme.txt"}
+
+    # Make sure c-keepwatching is still being watched
+    touchFile(F"{wd}/c-keepwatching/watchmetoo.txt")
+    qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
+    assert set(qlvGetRowData(rw.dirtyFiles)) == {"c/c1.txt", "c-keepwatching/keepwatchingme.txt", "c-keepwatching/watchmetoo.txt"}

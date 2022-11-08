@@ -91,14 +91,21 @@ class FileWatcher(QObject):
         self.rewatchDelay = None
 
     def prettifyPathList(self, pathList):
-        prefix = os.path.normpath(self.repo.workdir) + "/"
-        return [d.removeprefix(prefix) for d in pathList]
+        wd = os.path.normpath(self.repo.workdir)
+        prefix = wd + os.sep
+        return ["[ROOT]" if d == wd else d.removeprefix(prefix) for d in pathList]
 
     def refreshDirectory(self, path: str):
         assert path == os.path.normpath(path)
+        assert not path.endswith(os.sep)
 
         recursiveChildren = {d for d in self.fsw.directories()
-                             if d.startswith(path)}
+                             if d.startswith(path + os.sep)}  # postfix '/' so we don't sweep up "a/b/cde" if path is "a/b/c"
+
+        if not os.path.isdir(path):
+            self.fsw.removePaths(list(recursiveChildren))
+            self.fsw.removePath(path)
+            return
 
         directChildren = {d for d in recursiveChildren
                           if os.path.split(d)[0] == path}
