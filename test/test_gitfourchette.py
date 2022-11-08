@@ -244,7 +244,7 @@ def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     rw.commitButton.click()
-    acceptQMessageBox(rw, "create an empty commit")
+    rejectQMessageBox(rw, "create an empty commit")
 
 
 def testSaveOldRevision(qtbot, tempDir, mainWindow):

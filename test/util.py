@@ -78,13 +78,20 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     assert False, F"did not find qdialog matching \"{pattern}\""
 
 
-def acceptQMessageBox(parent: QWidget, textPattern: str):
+def findQMessageBox(parent: QWidget, textPattern: str):
     for qmb in parent.findChildren(QMessageBox):
         if re.search(textPattern, qmb.text(), re.IGNORECASE):
-            qmb.accept()
-            return
+            return qmb
 
     assert False, F"did not find qmessagebox \"{textPattern}\""
+
+
+def acceptQMessageBox(parent: QWidget, textPattern: str):
+    findQMessageBox(parent, textPattern).accept()
+
+
+def rejectQMessageBox(parent: QWidget, textPattern: str):
+    findQMessageBox(parent, textPattern).reject()
 
 
 def hexToOid(hexstr: str):
