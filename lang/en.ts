@@ -4,10 +4,10 @@
 <context>
     <name>ActionFlows</name>
     <message numerus="yes">
-        <source>Really discard changes to %n files?</source>
+        <source>Really discard changes to &lt;b&gt;%n files&lt;/b&gt;?</source>
         <translation>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+            <numerusform>Really discard changes to &lt;b&gt;%n file&lt;/b&gt;?</numerusform>
+            <numerusform>Really discard changes to &lt;b&gt;%n files&lt;/b&gt;?</numerusform>
         </translation>
     </message>
 </context>
@@ -105,6 +105,16 @@
     </message>
 </context>
 <context>
+    <name>MainWindow</name>
+    <message numerus="yes">
+        <source>The session couldn’t be restored fully because %n repositories failed to load:</source>
+        <translation>
+            <numerusform>The session couldn’t be restored fully because %n repository failed to load:</numerusform>
+            <numerusform>The session couldn’t be restored fully because %n repositories failed to load:</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>RepoWidget</name>
     <message numerus="yes">
         <source>%n dirty file(s):</source>
@@ -135,10 +145,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Do you want to permanently delete %n discarded patch(es)?</source>
+        <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch(es)?</source>
         <translation>
-            <numerusform>Do you want to permanently delete %n discarded patch?</numerusform>
-            <numerusform>Do you want to permanently delete %n discarded patches?</numerusform>
+            <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch?</numerusform>
+            <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patches?</numerusform>
         </translation>
     </message>
 </context>
