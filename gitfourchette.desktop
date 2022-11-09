@@ -1,6 +1,0 @@
-[Desktop Entry]
-Exec=bash -c 'PYTHONPATH="$(dirname "%k")" python3 -m gitfourchette'
-Icon=gitfourchette
-Name=GitFourchette
-StartupNotify=true
-Type=Application
