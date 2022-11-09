@@ -9,6 +9,7 @@ from gitfourchette import porcelain
 import re
 import shutil
 import subprocess
+import threading
 
 
 def testExternalUnstage(qtbot, tempDir, mainWindow):
@@ -142,3 +143,118 @@ def testFSWDetectsNestedFolderDeletion(qtbot, tempDir, mainWindow):
     touchFile(F"{wd}/c-keepwatching/watchmetoo.txt")
     qtbot.waitSignal(rw.fileWatcher.directoryChanged).wait()
     assert set(qlvGetRowData(rw.dirtyFiles)) == {"c/c1.txt", "c-keepwatching/keepwatchingme.txt", "c-keepwatching/watchmetoo.txt"}
+
+
+def testFSWConcurrencyStressTest1(qtbot, tempDir, mainWindow):
+    # mainWindow.show()
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+    rw.workQueue.forceSerial = False
+
+    for i in range(100):
+        subprocess.run(F"git checkout -b master{i} --track origin/no-parent".split(" "), check=True, cwd=wd)
+        with open(f"{wd}/newfile.txt", "a") as f:
+            f.write(f"toto{i}")
+        subprocess.run(["git", "add", f"{wd}/newfile.txt"], check=True, cwd=wd)
+        subprocess.run(["git", "commit", "-m", f"newcommit{i}"], check=True, cwd=wd)
+        subprocess.run(["git", "rebase", "master"], check=True, cwd=wd)
+        QCoreApplication.instance().processEvents()
+
+
+def testFSWConcurrencyStressTest2(qtbot, tempDir, mainWindow):
+    # mainWindow.show()
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    class StressThread(threading.Thread):
+        def __init__(self, wd):
+            super().__init__()
+            self.wd = wd
+            self.exc = None
+
+        def run(self):
+            try:
+                for i in range(1000):
+                    subprocess.run(["git", "stash"], check=True, cwd=self.wd)
+                    subprocess.run(["git", "stash", "pop"], check=True, cwd=self.wd)
+            except BaseException as exc:
+                self.exc = exc
+
+    with open(f"{wd}/master.txt", "a") as f:
+        f.write("coucou\n")
+    touchFile(f"{wd}/gutenmorgen")
+    subprocess.run(["git", "add", "."], check=True, cwd=wd)
+    QCoreApplication.instance().processEvents()
+
+    rw.stagedFiles.selectRow(0)
+    QCoreApplication.instance().processEvents()
+
+    rw.workQueue.forceSerial = False
+
+    th = StressThread(wd)
+    th.start()
+
+    while th.is_alive():
+        qtbot.wait(100)
+
+    assert not th.exc
+
+
+def testFSWConcurrencyStressTest3(qtbot, tempDir, mainWindow):
+    # mainWindow.show()
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    touchFile(f"{wd}/gutenmorgen")
+    subprocess.run(["git", "add", "."], check=True, cwd=wd)
+
+    rw.workQueue.forceSerial = False
+
+    gitLoop = subprocess.Popen(["bash", "-c", """
+    set -e
+    for i in $(seq 1000); do
+        echo iteration $i
+        git stash && git stash pop
+    done
+    """], cwd=wd)
+
+    while gitLoop.poll() is None:
+        qtbot.wait(100)
+
+    assert 0 == gitLoop.returncode
+
+
+def testFSWConcurrencyStressTest4(qtbot, tempDir, mainWindow):
+    # mainWindow.show()
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.installFileWatcher(0)  # boot FSW
+
+    class StressThread(threading.Thread):
+        def __init__(self, wd):
+            super().__init__()
+            self.wd = wd
+            self.exc = None
+
+        def run(self):
+            try:
+                for i in range(1000):
+                    subprocess.run(["git", "rebase", "-i", "49322bb"], check=True, cwd=self.wd, env={"GIT_SEQUENCE_EDITOR": "true"})
+            except BaseException as exc:
+                self.exc = exc
+
+    rw.stagedFiles.selectRow(0)
+    QCoreApplication.instance().processEvents()
+
+    rw.workQueue.forceSerial = False
+
+    th = StressThread(wd)
+    th.start()
+
+    while th.is_alive():
+        qtbot.wait(100)
+
+    assert not th.exc

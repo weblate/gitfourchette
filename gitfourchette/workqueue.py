@@ -80,6 +80,7 @@ class WorkQueue(QObject):
         self.threadpool = QThreadPool(parent)
         self.threadpool.setMaxThreadCount(maxThreadCount)
         self.mutex = QMutex()
+        self.forceSerial = bool(settings.TEST_MODE)
 
     def put(
             self,
@@ -109,7 +110,7 @@ class WorkQueue(QObject):
         aborts due to an error. If None, an exception dialog is shown.
         """
 
-        if settings.TEST_MODE:
+        if self.forceSerial:
             self.putSerial(work, then, caption, errorCallback)
         else:
             self.putAsync(work, then, caption, priority, errorCallback)
