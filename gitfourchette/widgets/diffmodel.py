@@ -105,6 +105,14 @@ def createDocument():
     return document
 
 
+def mergeConflict(delta: pygit2.DiffDelta):
+    return DiffModelError(
+        translate("DiffModel", "Merge conflict."),
+        translate("DiffModel", "You must reconcile the conflict before you can commit the file."),
+        QStyle.StandardPixmap.SP_MessageBoxWarning
+    )
+
+
 def noChange(delta: pygit2.DiffDelta):
     message = translate("DiffModel", "File contents didn’t change.")
     details = []
@@ -131,6 +139,9 @@ class DiffModel:
 
     @staticmethod
     def fromPatch(patch: pygit2.Patch):
+        if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
+            raise mergeConflict(patch.delta)
+
         if patch.delta.similarity == 100:
             raise noChange(patch.delta)
 

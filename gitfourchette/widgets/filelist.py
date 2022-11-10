@@ -109,19 +109,29 @@ class FileListModel(QAbstractListModel):
                     "<b>" + translate("FileList", "untracked file") + "</b><br>" +
                     F"{html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
                 )
+            elif delta.status == pygit2.GIT_DELTA_CONFLICTED:
+                conflictedText = translate("FileList", "merge conflict")
+
+                return (
+                    f"<b>{conflictedText}</b><br>"
+                )
             else:
                 fromText = translate("FileList", "from:")
                 toText = translate("FileList", "to:")
                 opText = translate("FileList", "operation:")
 
+                # see git_diff_status_char (diff_print.c)
                 operationCaptions = {
                     "A": translate("FileList", "(added)"),
                     "C": translate("FileList", "(copied)"),
                     "D": translate("FileList", "(deleted)"),
+                    "I": translate("FileList", "(ignored)"),
                     "M": translate("FileList", "(modified)"),
                     "R": translate("FileList", "(renamed, {0}% similarity)"),
                     "T": translate("FileList", "(file type changed)"),
                     "U": translate("FileList", "(updated but unmerged)"),
+                    "X": translate("FileList", "(unreadable)"),
+                    "?": translate("FileList", "(untracked)"),
                 }
 
                 try:
