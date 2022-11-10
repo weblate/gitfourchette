@@ -305,17 +305,29 @@ class GraphView(QListView):
     def selectUncommittedChanges(self):
         self.setCurrentIndex(self.model().index(0, 0))
 
-    def selectCommit(self, oid: pygit2.Oid):
+    def getFilterIndexForCommit(self, oid: pygit2.Oid):
         try:
             rawIndex = self.repoWidget.state.getCommitSequentialIndex(oid)
         except KeyError:
+            return None
+
+        newSourceIndex = self.clModel.index(1 + rawIndex, 0)
+        newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)
+        return newFilterIndex
+
+    def selectCommit(self, oid: pygit2.Oid):
+        newFilterIndex = self.getFilterIndexForCommit(oid)
+
+        if not newFilterIndex:
             showWarning(self, self.tr("Commit not found"),
                         self.tr("Commit not found or not loaded:") + f"<br>{oid.hex}")
             return False
 
-        newSourceIndex = self.clModel.index(1 + rawIndex, 0)
-        newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)
-
         if self.currentIndex().row() != newFilterIndex.row():
             self.setCurrentIndex(newFilterIndex)
         return True
+
+    def repaintCommit(self, oid: pygit2.Oid):
+        newFilterIndex = self.getFilterIndexForCommit(oid)
+        if newFilterIndex:
+            self.update(newFilterIndex)

@@ -961,11 +961,15 @@ class RepoWidget(QWidget):
             raise exc
 
     def checkoutCommitAsync(self, oid: pygit2.Oid):
+        oldCommit = self.state.activeCommitOid
+
         def work():
             porcelain.checkoutCommit(self.repo, oid)
 
         def then(_):
             self.quickRefreshWithSidebar()
+            self.graphView.repaintCommit(oldCommit)
+            self.graphView.repaintCommit(oid)
 
         opName = translate("Operation", "Check out commit “{0}”").format(shortHash(oid))
         self.workQueue.put(work, then, opName,
