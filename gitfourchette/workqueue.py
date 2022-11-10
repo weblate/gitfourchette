@@ -125,7 +125,7 @@ class WorkQueue(QObject):
                 errorCallback(exc)
             else:
                 message = self.tr("Operation failed: {0}.").format(caption)
-                excMessageBox(exc, title=caption, message=message, parent=self.parent)
+                excMessageBox(exc, title=caption, message=message, parent=self.parent())
 
     def putAsync(self, work, then, caption, priority, errorCallback):
         def workWrapper():
@@ -146,7 +146,7 @@ class WorkQueue(QObject):
         if not errorCallback:
             def errorCallback(exc: BaseException):
                 message = self.tr("Operation failed: {0}.").format(caption)
-                excMessageBox(exc, title=caption, message=message, parent=self.parent)
+                excMessageBox(exc, title=caption, message=message, parent=self.parent())
 
         w = Worker(self, caption, workWrapper)
         w.signals.result.connect(thenWrapper)
