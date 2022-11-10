@@ -98,8 +98,8 @@ class RepoWidget(QWidget):
         self.stagedFiles.entryClicked.connect(self.dirtyFiles.clearSelectionSilently)
         self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
 
-        # Refresh file list views after applying a patch...
-        self.diffView.patchApplied.connect(self.fillStageViewAsync)  # ...from the diff view (partial line patch);
+        # Refresh file list views after applying a patch from the diff view (partial line patch)
+        self.diffView.patchApplied.connect(lambda: self.fillStageViewAsync(allowUpdateIndex=True))
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
@@ -527,14 +527,14 @@ class RepoWidget(QWidget):
 
         self.clearDiffView()
 
-    def fillStageViewAsync(self, forceSelectFile: NavPos = None):
+    def fillStageViewAsync(self, forceSelectFile: NavPos = None, allowUpdateIndex: bool = False):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
         repo = self.state.repo
 
         def work() -> tuple[pygit2.Diff, pygit2.Diff]:
             porcelain.refreshIndex(repo)
-            dirtyDiff = porcelain.diffWorkdirToIndex(repo)
+            dirtyDiff = porcelain.diffWorkdirToIndex(repo, allowUpdateIndex)
             stageDiff = porcelain.diffIndexToHead(repo)
             return dirtyDiff, stageDiff
 
@@ -860,7 +860,7 @@ class RepoWidget(QWidget):
                 porcelain.stageFiles(self.repo, patches)
 
         def then(_):
-            self.quickRefreshWithSidebar()
+            self.fillStageViewAsync(allowUpdateIndex=True)
 
         numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
         opName = QCoreApplication.translate("Operation", "Stage %n file(s)", "", numPatches)
@@ -874,7 +874,7 @@ class RepoWidget(QWidget):
             porcelain.discardFiles(self.repo, paths)
 
         def then(_):
-            self.quickRefreshWithSidebar()
+            self.fillStageViewAsync(allowUpdateIndex=True)
 
         numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
         opName = translate("Operation", "Discard %n file(s)", "", numPatches)
@@ -887,7 +887,7 @@ class RepoWidget(QWidget):
                 porcelain.unstageFiles(self.repo, patches)
 
         def then(_):
-            self.quickRefreshWithSidebar()
+            self.fillStageViewAsync(allowUpdateIndex=True)
 
         numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
         opName = translate("Operation", "Unstage %n file(s)", "", numPatches)

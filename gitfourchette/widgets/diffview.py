@@ -287,6 +287,7 @@ class DiffView(QPlainTextEdit):
             reverse)
 
     def applyEntirePatch(self, purpose: PatchPurpose):
+        # TODO: This should be a repo task!
         if purpose == PatchPurpose.UNSTAGE:
             porcelain.unstageFiles(self.repo, [self.currentPatch])
         elif purpose == PatchPurpose.STAGE:
@@ -338,7 +339,7 @@ class DiffView(QPlainTextEdit):
         else:
             applyLocation = pygit2.GIT_APPLY_LOCATION_INDEX
 
-
+        # TODO: This should be a repo task!
         try:
             diff = porcelain.applyPatch(self.repo, patchData, applyLocation)
         except GitError as e:
@@ -380,6 +381,7 @@ class DiffView(QPlainTextEdit):
                 self.tr("Revert patch"),
                 self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
         else:
+            # TODO: This should be a repo task!
             diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
             changedFile = get1FileChangedByDiff(diff)
             self.patchApplied.emit(NavPos("UNSTAGED", changedFile))  # send a NavPos to have RepoWidget show the file in the unstaged list
