@@ -49,6 +49,34 @@ def testHiddenBranchGotDeleted(qtbot, tempDir, mainWindow):
     mainWindow.openRepo(wd)  # reopening the repo must not crash
 
 
+def testStayOnFileAfterPartialPatchDespiteExternalChange(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    writeFile(f"{wd}/a/a2.txt", "change a\nchange b\nchange c\n")
+    writeFile(f"{wd}/b/b2.txt", "change a\nchange b\nchange c\n")
+    writeFile(f"{wd}/c/c1.txt", "change a\nchange b\nchange c\n")
+
+    rw = mainWindow.openRepo(wd)
+
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt", "b/b2.txt", "c/c1.txt"]
+
+    # Create a new change to a file that comes before b2.txt alphabetically
+    writeFile(f"{wd}/a/a1.txt", "change a\nchange b\nchange c\n")
+
+    # Stage a single line
+    qlvClickNthRow(rw.dirtyFiles, 1)
+    rw.diffView.setFocus()
+    QTest.keyPress(rw.diffView, Qt.Key_Return)
+
+    # This was a partial patch, so b2 is both dirty and staged;
+    # also, a1 should appear among the dirty files now
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt", "b/b2.txt", "c/c1.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == ["b/b2.txt"]
+
+    # Ensure we're still selecting b2.txt despite a1.txt appearing before us in the list
+    assert qlvGetSelection(rw.dirtyFiles) == ["b/b2.txt"]
+
+
 def testFSWDetectsNewFile(qtbot, mainWindow, tempDir):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
