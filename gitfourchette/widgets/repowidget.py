@@ -283,9 +283,8 @@ class RepoWidget(QWidget):
             self.scheduledRefresh.start()
 
     def onIndexChange(self):
-        print("refreshing index...")
-        self.repo.index.read()
-        self.quickRefresh()
+        if self.isStageViewShown:
+            self.quickRefresh()
 
     # -------------------------------------------------------------------------
 
@@ -1103,6 +1102,10 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
+    @property
+    def isStageViewShown(self):
+        return self.filesStack.currentWidget() == self.stageSplitter
+
     def quickRefresh(self):
         self.scheduledRefresh.stop()
 
@@ -1118,7 +1121,7 @@ class RepoWidget(QWidget):
             else:
                 self.graphView.setCommitSequence(self.state.commitSequence)
 
-        if self.filesStack.currentWidget() == self.stageSplitter:
+        if self.isStageViewShown:
             self.fillStageViewAsync()
         globalstatus.clearProgress()
 
