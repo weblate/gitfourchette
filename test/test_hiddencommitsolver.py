@@ -1,6 +1,6 @@
 import pytest
 
-from repostate import HiddenCommitSolver
+from gitfourchette.repostate import HiddenCommitSolver
 
 
 class MockCommit:
