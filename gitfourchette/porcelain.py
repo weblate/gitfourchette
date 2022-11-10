@@ -525,8 +525,8 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
 def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str]]:
     commit2refs = defaultdict(list)
 
-    for refKey in repo.references:
-        ref = repo.references[refKey]
+    for ref in repo.references.objects:
+        refKey = ref.name
 
         if type(ref.target) != pygit2.Oid:
             log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
