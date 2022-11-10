@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
 from gitfourchette import log
 from gitfourchette.qt import *
+import dataclasses
 import enum
 import json
 import os
@@ -71,14 +71,30 @@ class BasePrefs:
             log.warning("prefs", "Couldn't get path for writing")
             return None
 
+        # Get default values if we're saving a dataclass
+        defaults = {}
+        if dataclasses.is_dataclass(self):
+            for f in dataclasses.fields(self):
+                if f.default_factory != dataclasses.MISSING:
+                    defaults[f.name] = f.default_factory()
+                else:
+                    defaults[f.name] = f.default
+
+        # Skip private fields starting with an underscore,
+        # and skip fields that are set to the default value
+        filtered = {}
+        for k in self.__dict__:
+            if k.startswith("_"):
+                continue
+            v = self.__dict__[k]
+            if (k not in defaults) or (defaults[k] != v):
+                filtered[k] = v
+
+        # Dump the object to disk
         with open(prefsPath, 'w', encoding='utf-8') as jsonFile:
-            json.dump(
-                obj={k: self.__dict__[k] for k in self.__dict__ if not k.startswith("_")},
-                fp=jsonFile,
-                indent='\t')
+            json.dump(obj=filtered, fp=jsonFile, indent='\t')
 
-            log.info("prefs", f"Wrote {prefsPath}")
-
+        log.info("prefs", f"Wrote {prefsPath}")
         return prefsPath
 
     def load(self):
@@ -131,11 +147,11 @@ class Verbosity(enum.IntEnum):
     VERY_VERBOSE = 2
 
 
-@dataclass
+@dataclasses.dataclass
 class Prefs(BasePrefs):
     filename = "prefs.json"
 
-    language                    : str           = LANGUAGES[0]
+    language                    : str           = ""
     qtStyle                     : str           = ""
     fileWatcher                 : bool          = False
     shortHashChars              : int           = 7
@@ -167,13 +183,13 @@ class Prefs(BasePrefs):
     debug_verbosity             : Verbosity     = Verbosity.VERBOSE
 
 
-@dataclass
+@dataclasses.dataclass
 class History(BasePrefs):
     filename = "history.json"
 
-    repos: dict = field(default_factory=dict)
-    cloneHistory                : list[str]     = field(default_factory=list)
-    fileDialogPaths             : dict          = field(default_factory=dict)
+    repos: dict = dataclasses.field(default_factory=dict)
+    cloneHistory: list[str] = dataclasses.field(default_factory=list)
+    fileDialogPaths: dict = dataclasses.field(default_factory=dict)
 
     def addRepo(self, path: str):
         path = os.path.normpath(path)
@@ -255,14 +271,14 @@ class History(BasePrefs):
         self.cloneHistory.clear()
 
 
-@dataclass
+@dataclasses.dataclass
 class Session(BasePrefs):
     filename = "session.json"
 
-    tabs                        : list[str]     = field(default_factory=list)
+    tabs                        : list[str]     = dataclasses.field(default_factory=list)
     activeTabIndex              : int           = -1
     windowGeometry              : str           = ""
-    splitterStates              : dict          = field(default_factory=dict)
+    splitterStates              : dict          = dataclasses.field(default_factory=dict)
 
 
 # Initialize default prefs and history.
