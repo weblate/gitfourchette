@@ -245,9 +245,9 @@ class History(BasePrefs):
 
         return (path for path, _ in zip(sortedPaths, range(n)))
 
-    def write(self):
+    def write(self, force=False):
         self.trim()
-        super().write()
+        super().write(force)
 
     def trim(self):
         n = prefs.maxRecentRepos
