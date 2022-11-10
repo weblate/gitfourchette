@@ -135,8 +135,9 @@ def checkoutRef(repo: Repository, refName: str):
 
 def checkoutCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
     commit: pygit2.Commit = repo[commitOid].peel(pygit2.Commit)
-    repo.checkout_tree(commit.tree)
-    repo.set_head(commitOid)
+    with CheckoutTraceCallbacks() as callbacks:
+        repo.checkout_tree(commit.tree, callbacks=callbacks)
+        repo.set_head(commitOid)
 
 
 def revertCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):

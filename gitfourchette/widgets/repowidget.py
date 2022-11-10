@@ -934,13 +934,6 @@ class RepoWidget(QWidget):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
-    def checkoutCommitAsync(self, oid: pygit2.Oid):
-        work = lambda: porcelain.checkoutCommit(self.repo, oid)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Check out commit “{0}”").format(shortHash(oid))
-        self.workQueue.put(work, then, opName)
-
     def _processCheckoutError(self, exc, opName="Operation"):
         if isinstance(exc, porcelain.ConflictError):
             maxConflicts = 10
@@ -966,6 +959,17 @@ class RepoWidget(QWidget):
             showWarning(self, title, message)
         else:
             raise exc
+
+    def checkoutCommitAsync(self, oid: pygit2.Oid):
+        def work():
+            porcelain.checkoutCommit(self.repo, oid)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
+        opName = translate("Operation", "Check out commit “{0}”").format(shortHash(oid))
+        self.workQueue.put(work, then, opName,
+                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
 
     def revertCommitAsync(self, oid: pygit2.Oid):
         def work():
