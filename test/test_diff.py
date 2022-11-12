@@ -52,3 +52,19 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     stagedBlob: pygit2.Blob = rw.repo[stagedId].peel(pygit2.Blob)
     assert stagedBlob.data == b"line A\n"
 
+
+def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
+    NEW_CONTENTS = "change without eol"
+
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/master.txt", NEW_CONTENTS)
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.repo.status() == {"master.txt": pygit2.GIT_STATUS_WT_MODIFIED}
+
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.diffView.setFocus()
+    rw.diffView.discardHunk(0)
+
+    acceptQMessageBox(rw, "discard.+hunk")
+    assert NEW_CONTENTS not in readFile(f"{wd}/master.txt").decode('utf-8')

@@ -78,6 +78,42 @@ def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
     return preamble
 
 
+def originToDelta(origin):
+    if origin == '+':
+        return 1
+    elif origin == '-':
+        return -1
+    else:
+        return 0
+
+
+def reverseOrigin(origin):
+    if origin == '+':
+        return '-'
+    elif origin == '-':
+        return '+'
+    else:
+        return origin
+
+
+def writeContext(subpatch, reverse, lines):
+    skipOrigin = '-' if reverse else '+'
+    for line in lines:
+        if line.origin == skipOrigin:
+            # Skip that line entirely
+            continue
+        elif line.origin in "=><":
+            # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+            # Just copy "\No newline at end of file" verbatim without an origin character
+            pass
+        elif line.origin in " -+":
+            # Make it a context line
+            subpatch.write(b" ")
+        else:
+            raise ValueError("extractSubpatch: writeContext: unknown origin char")
+        subpatch.write(line.raw_content)
+
+
 def extractSubpatch(
         masterPatch: pygit2.Patch,
         startPos: DiffLinePos,  # index of first selected line in master patch
@@ -87,30 +123,6 @@ def extractSubpatch(
     """
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
-
-    def originToDelta(origin):
-        if origin == '+':
-            return 1
-        elif origin == '-':
-            return -1
-        else:
-            return 0
-
-    def reverseOrigin(origin):
-        if origin == '+':
-            return '-'
-        elif origin == '-':
-            return '+'
-        else:
-            return origin
-
-    def writeContext(subpatch, lines):
-        skipOrigin = '-' if reverse else '+'
-        for line in lines:
-            if line.origin == skipOrigin:
-                continue
-            subpatch.write(b" ")
-            subpatch.write(line.raw_content)
 
     patch = io.BytesIO()
 
@@ -173,7 +185,8 @@ def extractSubpatch(
         newHunkStartOffset += lineCountDelta
 
         # Write non-selected lines at beginning of hunk as context
-        writeContext(patch, (hunk.lines[ln] for ln in range(0, startLineNum)))
+        writeContext(patch, reverse,
+                     (hunk.lines[ln] for ln in range(0, startLineNum)))
 
         # Write selected lines within the hunk
         for ln in range(startLineNum, endLineNum + 1):
@@ -186,7 +199,8 @@ def extractSubpatch(
             patch.write(line.raw_content)
 
         # Write non-selected lines at end of hunk as context
-        writeContext(patch, (hunk.lines[ln] for ln in range(endLineNum + 1, len(hunk.lines))))
+        writeContext(patch, reverse,
+                     (hunk.lines[ln] for ln in range(endLineNum + 1, len(hunk.lines))))
 
     if subpatchIsEmpty:
         return b""
