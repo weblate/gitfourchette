@@ -57,7 +57,7 @@ def reverseUnidiff(original: str):
             assert numSubs == 1
             newPatch += newStr
 
-        elif ol.startswith(" "):
+        elif ol.startswith((" ", "\\")):  # context or "\No newline at end of file"
             newPatch += ol
         elif ol.startswith("+"):
             newPatch += "-" + ol[1:]
