@@ -257,7 +257,9 @@ class FileList(QListView):
             super().keyPressEvent(event)
 
     def copyPaths(self):
-        text = '\n'.join([entry.delta.new_file.path for entry in self.selectedEntries()])
+        wd = self.repo.workdir
+        text = '\n'.join(os.path.join(wd, entry.delta.new_file.path)
+                         for entry in self.selectedEntries())
         if text:
             QApplication.clipboard().setText(text)
 
