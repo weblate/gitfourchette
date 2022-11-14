@@ -589,9 +589,10 @@ class CommittedFiles(FileList):
     def openHeadRevision(self):
         def run(diff):
             diffFile = diff.delta.new_file
-            if os.path.isfile(diffFile.path):
-                QDesktopServices.openUrl(QUrl.fromLocalFile(diffFile.path))
+            path = os.path.join(self.repo.workdir, diffFile.path)
+            if os.path.isfile(path):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(path))
             else:
-                raise SelectedFileBatchError(f"{diffFile.path}: " + self.tr("There’s no file at this path on HEAD."))
+                raise SelectedFileBatchError(self.tr("{0}: There’s no file at this path on HEAD.").format(diffFile.path))
 
         self.confirmBatch(run, self.tr("Open revision at HEAD"), self.tr("Really open <b>{0} files</b>?"))
