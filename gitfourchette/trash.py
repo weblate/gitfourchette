@@ -56,6 +56,17 @@ class Trash:
 
         return path
 
+    def backupFile(self, path: str):
+        fullPath = os.path.join(self.repo.workdir, path)
+
+        if os.lstat(fullPath).st_size > 1024*settings.prefs.trash_maxFileSizeKB:
+            return None
+
+        # Copy new file
+        trashedPath = self.newFile(originalPath=path)
+        shutil.copyfile(fullPath, trashedPath)
+        return trashedPath
+
     def backupPatch(self, data: bytes, originalPath: str = ""):
         trashFile = self.newFile(ext=".patch", originalPath=originalPath)
         with open(trashFile, 'wb') as f:
@@ -70,14 +81,7 @@ class Trash:
                 continue
 
             elif patch.delta.status == pygit2.GIT_DELTA_UNTRACKED or patch.delta.is_binary:
-                fullPath = os.path.join(self.repo.workdir, path)
-
-                if os.lstat(fullPath).st_size > 1024*settings.prefs.trash_maxFileSizeKB:
-                    continue
-
-                # Copy new file
-                trashedPath = self.newFile(originalPath=path)
-                shutil.copyfile(fullPath, trashedPath)
+                self.backupFile(path)
 
             else:
                 # Write text patch

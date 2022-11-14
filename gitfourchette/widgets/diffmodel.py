@@ -66,6 +66,17 @@ class DiffImagePair:
         self.newImage = QImage.fromData(imageDataB)
 
 
+class DiffConflict:
+    ancestor: pygit2.IndexEntry
+    ours: pygit2.IndexEntry
+    theirs: pygit2.IndexEntry
+
+    def __init__(self, repo: pygit2.Repository, ancestor: pygit2.IndexEntry, ours: pygit2.IndexEntry, theirs: pygit2.IndexEntry):
+        self.ancestor = ancestor
+        self.ours = ours
+        self.theirs = theirs
+
+
 class DiffStyle:
     def __init__(self):
         if settings.prefs.diff_colorblindFriendlyColors:
@@ -105,14 +116,6 @@ def createDocument():
     return document
 
 
-def mergeConflict(delta: pygit2.DiffDelta):
-    return DiffModelError(
-        translate("DiffModel", "Merge conflict."),
-        translate("DiffModel", "You must reconcile the conflict before you can commit the file."),
-        QStyle.StandardPixmap.SP_MessageBoxWarning
-    )
-
-
 def noChange(delta: pygit2.DiffDelta):
     message = translate("DiffModel", "File contents didn’t change.")
     details = []
@@ -139,9 +142,6 @@ class DiffModel:
 
     @staticmethod
     def fromPatch(patch: pygit2.Patch):
-        if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
-            raise mergeConflict(patch.delta)
-
         if patch.delta.similarity == 100:
             raise noChange(patch.delta)
 

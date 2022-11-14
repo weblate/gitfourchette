@@ -12,7 +12,8 @@ from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffImagePair, ShouldDisplayPatchAsImageDiff
+from gitfourchette.widgets.conflictview import ConflictView
+from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from gitfourchette.widgets.graphview import GraphView
@@ -93,6 +94,7 @@ class RepoWidget(QWidget):
         self.stagedFiles = StagedFiles(self)
         self.diffView = DiffView(self)
         self.richDiffView = RichDiffView(self)
+        self.conflictView = ConflictView(self)
 
         # The staged files and unstaged files view are mutually exclusive.
         self.stagedFiles.entryClicked.connect(self.dirtyFiles.clearSelectionSilently)
@@ -110,6 +112,10 @@ class RepoWidget(QWidget):
         for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
+
+        self.conflictView.hardSolve.connect(lambda path, oid: self.hardSolveConflictAsync(path, oid))
+        self.conflictView.markSolved.connect(lambda path: self.markConflictSolvedAsync(path))
+        self.conflictView.openFile.connect(lambda path: self.openConflictFile(path))
 
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
@@ -212,6 +218,7 @@ class RepoWidget(QWidget):
 
         self.diffStack.addWidget(self.diffView)
         self.diffStack.addWidget(self.richDiffView)
+        self.diffStack.addWidget(self.conflictView)
         self.diffStack.setCurrentWidget(self.diffView)
 
         bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
@@ -629,6 +636,10 @@ class RepoWidget(QWidget):
         repo = self.state.repo
 
         def work():
+            if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
+                ancestor, ours, theirs = repo.index.conflicts[patch.delta.new_file.path]
+                return DiffConflict(repo, ancestor, ours, theirs)
+
             try:
                 dm = DiffModel.fromPatch(patch)
                 dm.document.moveToThread(QApplication.instance().thread())
@@ -652,7 +663,10 @@ class RepoWidget(QWidget):
             if not self.navPos:
                 self.navPos = NavPos(posContext, posFile)
 
-            if type(result) == DiffModelError:
+            if type(result) == DiffConflict:
+                self.diffStack.setCurrentWidget(self.conflictView)
+                self.conflictView.displayConflict(result)
+            elif type(result) == DiffModelError:
                 self.diffStack.setCurrentWidget(self.richDiffView)
                 self.richDiffView.displayDiffModelError(result)
             elif type(result) == DiffModel:
@@ -997,6 +1011,55 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, opName)
 
     # -------------------------------------------------------------------------
+    # Conflicts
+
+    def hardSolveConflictAsync(self, path: str, keepOid: pygit2.Oid):
+        repo = self.repo
+
+        def work():
+            porcelain.refreshIndex(repo)
+            assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
+
+            trash = Trash(repo)
+            trash.backupFile(path)
+
+            # TODO: we should probably set the modes correctly and stuff as well
+            blob: pygit2.Blob = repo[keepOid].peel(pygit2.Blob)
+            with open(os.path.join(repo.workdir, path), "wb") as f:
+                f.write(blob.data)
+
+            del repo.index.conflicts[path]
+            assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
+            repo.index.write()
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
+        opName = translate("Operation", "Hard solve conflict")
+        self.workQueue.put(work, then, opName)
+
+    def markConflictSolvedAsync(self, path: str):
+        repo = self.repo
+
+        def work():
+            porcelain.refreshIndex(repo)
+            assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
+
+            del repo.index.conflicts[path]
+            assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
+            repo.index.write()
+
+        def then(_):
+            self.quickRefreshWithSidebar()
+
+        opName = translate("Operation", "Mark conflict solved")
+        self.workQueue.put(work, then, opName)
+
+    def openConflictFile(self, path: str):
+        fullPath = os.path.join(self.repo.workdir, path)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
+
+    # -------------------------------------------------------------------------
     # Find, find next
 
     def _search(self, searchRange):
@@ -1174,7 +1237,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def openRescueFolder(self):
-        trash = Trash(self.state.repo)
+        trash = Trash(self.repo)
         if trash.exists():
             QDesktopServices.openUrl(QUrl.fromLocalFile(trash.trashDir))
         else:
@@ -1184,7 +1247,7 @@ class RepoWidget(QWidget):
                 self.tr("There’s no rescue folder for this repository. Perhaps you haven’t discarded a change with {0} yet.").format(QApplication.applicationDisplayName()))
 
     def clearRescueFolder(self):
-        trash = Trash(self.state.repo)
+        trash = Trash(self.repo)
         sizeOnDisk, patchCount = trash.getSize()
 
         if patchCount <= 0:
