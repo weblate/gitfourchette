@@ -6,7 +6,7 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
-                                PersistentFileDialog, setWindowModal, showWarning, showInformation)
+                                PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -593,17 +593,33 @@ class MainWindow(QMainWindow):
     def clearRescueFolder(self, rw: RepoWidget):
         rw.clearRescueFolder()
 
+    def _openLocalConfigFile(self, fullPath: str):
+        def createAndOpen():
+            open(fullPath, "ab").close()
+            QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
+
+        if not os.path.exists(fullPath):
+            basename = os.path.basename(fullPath)
+            askConfirmation(
+                self,
+                self.tr("Open “{0}”").format(basename),
+                self.tr("There’s no file at this location:<br>{0}<br><br>Do you want to create it?").format(escape(fullPath)),
+                okButtonText=self.tr("Create “{0}”").format(basename),
+                callback=createAndOpen)
+        else:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
+
     @needRepoWidget
     def openGitignore(self, rw: RepoWidget):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(rw.repo.workdir + ".gitignore"))
+        self._openLocalConfigFile(os.path.join(rw.repo.workdir, ".gitignore"))
 
     @needRepoWidget
     def openLocalConfig(self, rw: RepoWidget):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(rw.repo.path + "/config"))
+        self._openLocalConfigFile(os.path.join(rw.repo.path, "config"))
 
     @needRepoWidget
     def openLocalExclude(self, rw: RepoWidget):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(rw.repo.path + "/info/exclude"))
+        self._openLocalConfigFile(os.path.join(rw.repo.path, "info", "exclude"))
 
     # -------------------------------------------------------------------------
     # File menu callbacks
