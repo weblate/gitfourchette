@@ -9,6 +9,16 @@ import re
 CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On [^\s:]+: (.+)")
 
 
+class DivergentBranchesError(Exception):
+    def __init__(self, localBranch: pygit2.Branch, remoteBranch: pygit2.Branch):
+        super().__init__()
+        self.localBranch = localBranch
+        self.remoteBranch = remoteBranch
+
+    def __str__(self):
+        return f"DivergentBranchesError(local: {self.localBranch.shorthand}, remote: {self.remoteBranch.shorthand})"
+
+
 class ConflictError(Exception):
     def __init__(self, conflicts: list[str], description="Conflicts"):
         super().__init__(description)
@@ -698,8 +708,14 @@ def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
     lb = repo.branches.local[localBranchName]
     rb = repo.branches.remote[remoteBranchName]
 
-    mergeAnalysis, mergePref = repo.merge_analysis(rb.target, "refs/heads/" + localBranchName)# rb.target)
-    print(mergeAnalysis, mergePref)
+    mergeAnalysis, mergePref = repo.merge_analysis(rb.target, "refs/heads/" + localBranchName)
+
+    mergePrefNames = {
+        pygit2.GIT_MERGE_PREFERENCE_NONE: "none",
+        pygit2.GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY: "ff only",
+        pygit2.GIT_MERGE_PREFERENCE_NO_FASTFORWARD: "no ff"
+    }
+    log.info("porcelain", f"Merge analysis: {mergeAnalysis}. Merge preference: {mergePrefNames.get(mergePref, '???')}.")
 
     if mergeAnalysis & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
         # Local branch is up to date with remote branch, nothing to do.
@@ -712,15 +728,15 @@ def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
         # otherwise the contents of the commits we're pulling will spill into the unstaged area.
         # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
         # affect any of the files that are involved in the pull.
-        # TODO: Extend pygit2 so we can report exactly which files conflict during checkout. See https://stackoverflow.com/a/63244216
-        repo.checkout_tree(rb.peel(pygit2.Tree))
+        with CheckoutTraceCallbacks() as callbacks:
+            repo.checkout_tree(rb.peel(pygit2.Tree), callbacks=callbacks)
 
         # Then make the local branch point to the same commit as the remote branch.
         lb.set_target(rb.target)
 
     elif mergeAnalysis == pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-        # Can't FF.
-        raise NotImplementedError("Can't fast-forward. Pulling would create a conflict.")
+        # Can't FF. Divergent branches?
+        raise DivergentBranchesError(lb, rb)
 
     else:
         # Unborn or something...

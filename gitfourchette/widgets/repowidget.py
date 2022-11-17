@@ -1004,11 +1004,22 @@ class RepoWidget(QWidget):
     # Pull
 
     def pullBranchAsync(self, localBranchName: str, remoteBranchName: str):
-        def work(): porcelain.pull(self.repo, localBranchName, remoteBranchName)
-        def then(_): self.quickRefreshWithSidebar()
+        def work():
+            porcelain.pull(self.repo, localBranchName, remoteBranchName)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
 
         opName = translate("Operation", "Pull branch “{0}”").format(localBranchName)
-        self.workQueue.put(work, then, opName)
+
+        def onError(exc):
+            if isinstance(exc, porcelain.DivergentBranchesError):
+                showWarning(self, opName,
+                            self.tr("Can’t fast-forward: You have divergent branches."))
+            else:
+                self._processCheckoutError(exc, opName)
+
+        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     # -------------------------------------------------------------------------
     # Conflicts
