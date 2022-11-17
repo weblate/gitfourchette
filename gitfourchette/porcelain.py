@@ -136,11 +136,13 @@ def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
 
 def checkoutLocalBranch(repo: Repository, localBranchName: str):
     branch = repo.branches.local[localBranchName]
-    repo.checkout(branch.raw_name)
+    with CheckoutTraceCallbacks() as callbacks:
+        repo.checkout(branch.raw_name, callbacks=callbacks)
 
 
 def checkoutRef(repo: Repository, refName: str):
-    repo.checkout(refName)
+    with CheckoutTraceCallbacks() as callbacks:
+        repo.checkout(refName, callbacks=callbacks)
 
 
 def checkoutCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):

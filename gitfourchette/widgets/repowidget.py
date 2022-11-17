@@ -714,11 +714,15 @@ class RepoWidget(QWidget):
     def switchToBranchAsync(self, newBranch: str):
         assert not newBranch.startswith("refs/heads/")
 
-        work = lambda: porcelain.checkoutLocalBranch(self.repo, newBranch)
-        then = lambda _: self.quickRefreshWithSidebar()
+        def work():
+            porcelain.checkoutLocalBranch(self.repo, newBranch)
+
+        def then(_):
+            self.quickRefreshWithSidebar()
 
         opName = translate("Operation", "Switch to branch “{0}”").format(newBranch)
-        self.workQueue.put(work, then, opName)
+        self.workQueue.put(work, then, opName,
+                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
 
     def renameBranchAsync(self, oldName: str, newName: str):
         assert not oldName.startswith("refs/heads/")
@@ -955,6 +959,11 @@ class RepoWidget(QWidget):
 
             title = self.tr("%n conflicting file(s)", "", numConflicts)
 
+            if numConflicts > maxConflicts:
+                intro = self.tr("Showing the first {0} conflicting files out of {1} total below:").format(maxConflicts, numConflicts)
+            else:
+                intro = self.tr("%n conflicting file(s):", "", numConflicts)
+
             if exc.description == "workdir":
                 message = self.tr("Operation <b>{0}</b> conflicts with the working directory.").format(opName)
             elif exc.description == "HEAD":
@@ -962,15 +971,17 @@ class RepoWidget(QWidget):
             else:
                 message = self.tr("Operation <b>{0}</b> caused a conflict ({1}).").format(opName, exc.description)
 
-            message += f"<br><br>{title}:<ul><li>"
-
+            message += f"<br><br>{intro}<ul><li>"
             message += "</li><li>".join(exc.conflicts[:maxConflicts])
+            if numConflicts > maxConflicts:
+                numHidden = numConflicts - maxConflicts
+                message += "</li><li><i>" + self.tr("... and %n more (click “Show Details” to view full list)", "", numHidden) + "</li>"
+            message += "</li></ul>"
+
+            qmb = showWarning(self, title, message)
 
             if numConflicts > maxConflicts:
-                message += "</li></ul>"
-                message += self.tr("... and %n more", "", (numConflicts - maxConflicts))
-
-            showWarning(self, title, message)
+                qmb.setDetailedText("\n".join(exc.conflicts))
         else:
             raise exc
 
