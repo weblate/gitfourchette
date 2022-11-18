@@ -4,6 +4,10 @@ from gitfourchette.widgets.diffmodel import DiffModelError
 import html
 import pygit2
 
+if qtBindingName == "PySide6" and qtBindingVersion in ["6.4.0", "6.4.0.1"]:
+    IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource.value
+else:
+    IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
 
 class RichDiffView(QTextBrowser):
     def replaceDocument(self, newDocument: QTextDocument):
@@ -23,7 +27,7 @@ class RichDiffView(QTextBrowser):
         document = QTextDocument()
 
         pixmap = QApplication.style().standardIcon(dme.icon).pixmap(48, 48)
-        document.addResource(QTextDocument.ResourceType.ImageResource, QUrl("icon"), pixmap)
+        document.addResource(IMAGE_RESOURCE_TYPE, QUrl("icon"), pixmap)
 
         html = (
             "<table width='100%'>"
@@ -47,7 +51,7 @@ class RichDiffView(QTextBrowser):
 
         imageB.setDevicePixelRatio(self.devicePixelRatio())
 
-        document.addResource(QTextDocument.ResourceType.ImageResource, QUrl("image"), imageB)
+        document.addResource(IMAGE_RESOURCE_TYPE, QUrl("image"), imageB)
 
         humanSizeA = self.locale().formattedDataSize(delta.old_file.size)
         humanSizeB = self.locale().formattedDataSize(delta.new_file.size)
