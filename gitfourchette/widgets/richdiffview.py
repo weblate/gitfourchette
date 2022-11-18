@@ -1,4 +1,5 @@
 from gitfourchette.qt import *
+from gitfourchette import log
 from gitfourchette.widgets.diffmodel import DiffModelError
 import html
 import pygit2
@@ -12,22 +13,33 @@ class RichDiffView(QTextBrowser):
         self.setDocument(newDocument)
         self.clearHistory()
 
+        self.setOpenLinks(False)
+        self.anchorClicked.connect(self.onAnchorClicked)
+
+    def onAnchorClicked(self, link: QUrl):
+        log.info("RichDiffView", F"Anchor clicked: {link}")
+
     def displayDiffModelError(self, dme: DiffModelError):
         document = QTextDocument()
 
         pixmap = QApplication.style().standardIcon(dme.icon).pixmap(48, 48)
         document.addResource(QTextDocument.ResourceType.ImageResource, QUrl("icon"), pixmap)
 
-        document.setHtml(
+        html = (
             "<table width='100%'>"
             "<tr>"
             "<td><img src='icon'/></td>"
             "<td width=8></td>"
             F"<td width='100%'><big>{dme.message}</big><br/>{dme.details}</td>"
             "</tr>"
-            "</table>"
-            F"<pre>{html.escape(dme.preformatted)}</pre>")
+            "</table>")
 
+        if dme.preformatted:
+            html += F"<pre>{html.escape(dme.preformatted)}</pre>"
+
+        html += dme.longform
+
+        document.setHtml(html)
         self.replaceDocument(document)
 
     def displayImageDiff(self, delta: pygit2.DiffDelta, imageA: QImage, imageB: QImage):

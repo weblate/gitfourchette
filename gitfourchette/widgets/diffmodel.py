@@ -28,13 +28,15 @@ class DiffModelError(Exception):
             message: str,
             details: str = "",
             icon=QStyle.StandardPixmap.SP_MessageBoxInformation,
-            preformatted: str = ""
+            preformatted: str = "",
+            longform: str = "",
     ):
         super().__init__(message)
         self.message = message
         self.details = details
         self.icon = icon
         self.preformatted = preformatted
+        self.longform = longform
 
 
 class ShouldDisplayPatchAsImageDiff(Exception):
