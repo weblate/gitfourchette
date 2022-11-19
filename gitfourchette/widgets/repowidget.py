@@ -396,73 +396,53 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def selectNextFile(self, down=True):
-        kpWidget: FileList | None = None
-        kpIndex = -1
-
         if self.filesStack.currentWidget() == self.committedFiles:
-            kpWidget = self.committedFiles
-
-            indices = self.committedFiles.selectedIndexes()
-            rowCount = self.committedFiles.model().rowCount()
-
-            if indices:
-                leaderRow = indices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
-                if down and leaderRow < rowCount-1:  # select next dirty file
-                    kpIndex = leaderRow+1
-                elif not down and leaderRow > 0:  # select prev dirty file
-                    kpIndex = leaderRow-1
-            elif rowCount > 0:
-                kpIndex = 0
-
+            widgets = [self.committedFiles]
         elif self.filesStack.currentWidget() == self.stageSplitter:
-            dirtyIndices = self.dirtyFiles.selectedIndexes()
-            stagedIndices = self.stagedFiles.selectedIndexes()
+            widgets = [self.dirtyFiles, self.stagedFiles]
+        else:
+            return
 
-            dirtyRowCount = self.dirtyFiles.model().rowCount()
-            stagedRowCount = self.stagedFiles.model().rowCount()
+        numWidgets = len(widgets)
+        selections = [w.selectedIndexes() for w in widgets]
+        lengths = [w.model().rowCount() for w in widgets]
 
-            if not dirtyIndices and not stagedIndices:
-                if dirtyRowCount > 0:
-                    kpWidget = self.dirtyFiles
-                    kpIndex = 0
-                elif stagedRowCount > 0:
-                    kpWidget = self.stagedFiles
-                    kpIndex = 0
+        # find widget to start from: topmost widget that has any selection
+        leader = -1
+        for i, selection in enumerate(selections):
+            if selection:
+                leader = i
+                break
 
-            elif dirtyIndices:
-                leaderRow = dirtyIndices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
+        if leader < 0:
+            # selection empty; pick first non-empty widget as leader
+            leader = 0
+            row = 0
+            while (leader < numWidgets) and (lengths[leader] == 0):
+                leader += 1
+        else:
+            # get selected row in leader widget - TODO: this may not be accurate when multiple rows are selected
+            row = selections[leader][-1].row()
 
-                if down:
-                    if leaderRow < dirtyRowCount-1:  # select next dirty file
-                        kpWidget = self.dirtyFiles
-                        kpIndex = leaderRow+1
-                    elif stagedRowCount > 0:  # out of dirty rows, move on to first row in staged box
-                        kpWidget = self.stagedFiles
-                        kpIndex = 0
-                else:
-                    if leaderRow > 0:  # select prev dirty file
-                        kpWidget = self.dirtyFiles
-                        kpIndex = leaderRow-1
-            
-            elif stagedIndices:
-                leaderRow = stagedIndices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
+            if down:
+                row += 1
+                while (leader < numWidgets) and (row >= lengths[leader]):
+                    # out of rows in leader widget; jump to first row in next widget
+                    leader += 1
+                    row = 0
+            else:
+                row -= 1
+                while (leader >= 0) and (row < 0):
+                    # out of rows in leader widget; jump to last row in prev widget
+                    leader -= 1
+                    if leader >= 0:
+                        row = lengths[leader] - 1
 
-                if down:
-                    if leaderRow < stagedRowCount-1:  # select next staged file
-                        kpWidget = self.stagedFiles
-                        kpIndex = leaderRow+1
-                else:
-                    if leaderRow > 0:  # select prev staged file
-                        kpWidget = self.stagedFiles
-                        kpIndex = leaderRow-1
-                    elif dirtyRowCount > 0:  # out of staged rows, move on to last row in dirty box
-                        kpWidget = self.dirtyFiles
-                        kpIndex = dirtyRowCount-1
-            
-        if kpWidget and kpIndex >= 0:
-            kpWidget.setFocus()
-            kpWidget.clearSelectionSilently()
-            kpWidget.selectRow(kpIndex)
+        # if we have a new valid selection, apply it, otherwise bail
+        if 0 <= leader < numWidgets and 0 <= row < lengths[leader]:
+            widgets[leader].setFocus()
+            widgets[leader].clearSelectionSilently()
+            widgets[leader].selectRow(row)
         else:
             QApplication.beep()
 
