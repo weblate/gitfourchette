@@ -393,30 +393,26 @@ class RepoWidget(QWidget):
             if success and pos != startPos:
                 break
 
-
     # -------------------------------------------------------------------------
 
     def selectNextFile(self, down=True):
+        kpWidget: FileList | None = None
+        kpIndex = -1
+
         if self.filesStack.currentWidget() == self.committedFiles:
-            dirtyIndices = self.committedFiles.selectedIndexes()
-            dirtyRowCount = self.committedFiles.model().rowCount()
+            kpWidget = self.committedFiles
 
-            kpIndex = -1
+            indices = self.committedFiles.selectedIndexes()
+            rowCount = self.committedFiles.model().rowCount()
 
-            if dirtyIndices:
-                leaderRow = dirtyIndices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
-                if down and leaderRow < dirtyRowCount-1:  # select next dirty file
+            if indices:
+                leaderRow = indices[-1].row()  # TODO: this may not be accurate when multiple rows are selected
+                if down and leaderRow < rowCount-1:  # select next dirty file
                     kpIndex = leaderRow+1
                 elif not down and leaderRow > 0:  # select prev dirty file
                     kpIndex = leaderRow-1
-            elif dirtyRowCount > 0:
+            elif rowCount > 0:
                 kpIndex = 0
-            
-            if kpIndex >= 0:
-                self.committedFiles.clearSelectionSilently()
-                self.committedFiles.selectRow(kpIndex)
-            else:
-                QApplication.beep()
 
         elif self.filesStack.currentWidget() == self.stageSplitter:
             dirtyIndices = self.dirtyFiles.selectedIndexes()
@@ -424,9 +420,6 @@ class RepoWidget(QWidget):
 
             dirtyRowCount = self.dirtyFiles.model().rowCount()
             stagedRowCount = self.stagedFiles.model().rowCount()
-
-            kpWidget = None
-            kpIndex = 0
 
             if not dirtyIndices and not stagedIndices:
                 if dirtyRowCount > 0:
@@ -466,12 +459,12 @@ class RepoWidget(QWidget):
                         kpWidget = self.dirtyFiles
                         kpIndex = dirtyRowCount-1
             
-            if kpWidget:
-                #kpWidget.keyPressEvent(QKeyEvent(QEvent.KeyPress, Qt.Key.Key_Down if down else Qt.Key.Key_Up, Qt.KeyboardModifier.NoModifier))
-                kpWidget.clearSelectionSilently()
-                kpWidget.selectRow(kpIndex)
-            else:
-                QApplication.beep()
+        if kpWidget and kpIndex >= 0:
+            kpWidget.setFocus()
+            kpWidget.clearSelectionSilently()
+            kpWidget.selectRow(kpIndex)
+        else:
+            QApplication.beep()
 
     # -------------------------------------------------------------------------
 
