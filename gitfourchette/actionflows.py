@@ -333,7 +333,7 @@ class ActionFlows(QObject):
         try:
             branch = self.repo.branches.local[branchName]
         except KeyError:
-            showWarning(self, self.tr("No branch to push"),
+            showWarning(self.parentWidget, self.tr("No branch to push"),
                         self.tr("To push, you must be on a local branch. Try switching to a local branch first."))
             return
 
@@ -353,13 +353,13 @@ class ActionFlows(QObject):
         try:
             branch = self.repo.branches.local[branchName]
         except KeyError:
-            showWarning(self, self.tr("No branch to pull"),
+            showWarning(self.parentWidget, self.tr("No branch to pull"),
                         self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
             return
 
         bu: pygit2.Branch = branch.upstream
         if not bu:
-            showWarning(self, self.tr("No remote-tracking branch"),
+            showWarning(self.parentWidget, self.tr("No remote-tracking branch"),
                         self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(escape(branch.shorthand)))
             return
 
