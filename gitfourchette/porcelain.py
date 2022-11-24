@@ -223,6 +223,11 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
             # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
             log.warning("porcelain", exc)
 
+    # Add empty lists for branchless remotes
+    for remote in repo.remotes:
+        if remote.name not in nameDict:
+            nameDict[remote.name] = []
+
     return nameDict
 
 

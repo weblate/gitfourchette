@@ -144,8 +144,6 @@ class PushDialog(QDialog):
             firstRemote = True
 
             for remoteName, remoteBranches in porcelain.getRemoteBranchNames(self.repo).items():
-                if not remoteBranches:
-                    continue
                 if not firstRemote:
                     comboBox.insertSeparator(comboBox.count())
 
