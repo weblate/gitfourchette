@@ -358,10 +358,7 @@ class MainWindow(QMainWindow):
 
         self.recentMenu.clear()
         for historic in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
-            def doOpen(path):
-                self.openRepo(path)
-                self.saveSession()
-            self.recentMenu.addAction(compactPath(historic), lambda path=historic: doOpen(path))
+            self.recentMenu.addAction(compactPath(historic), lambda path=historic: self.openRepo(path))
         self.recentMenu.addSeparator()
         self.recentMenu.addAction(self.tr("Clear"), onClearRecents)
 
@@ -486,7 +483,7 @@ class MainWindow(QMainWindow):
         rw.graphView.selectUncommittedChanges()
         return True
 
-    def openRepo(self, path: str, foreground=True, addToHistory=True) -> RepoWidget | None:
+    def _openRepo(self, path: str, foreground=True, addToHistory=True) -> RepoWidget | None:
         # Construct a pygit2.Repository so we can get the workdir
         repo = self._constructRepo(path)
 
@@ -629,15 +626,11 @@ class MainWindow(QMainWindow):
         if path:
             pygit2.init_repository(path)
             self.openRepo(path)
-            self.saveSession()
 
     def cloneDialog(self, initialUrl: str = ""):
         dlg = CloneDialog(initialUrl, self)
 
-        def onSuccess(path: str):
-            self.openRepo(path)
-            self.saveSession()
-        dlg.cloneSuccessful.connect(onSuccess)
+        dlg.cloneSuccessful.connect(lambda path: self.openRepo(path))
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         setWindowModal(dlg)
@@ -645,11 +638,12 @@ class MainWindow(QMainWindow):
 
     def openDialog(self):
         path = PersistentFileDialog.getExistingDirectory(self, self.tr("Open repository"))
-        if not path:
-            return
-
-        try:
+        if path:
             self.openRepo(path)
+
+    def openRepo(self, path):
+        try:
+            rw = self._openRepo(path)
         except BaseException as exc:
             excMessageBox(
                 exc,
@@ -657,9 +651,10 @@ class MainWindow(QMainWindow):
                 self.tr("Couldn’t open the repository at “{0}”.").format(escape(path)),
                 parent=self,
                 icon='warning')
-            return
+            return None
 
         self.saveSession()
+        return rw
 
     def importPatch(self, reverse=False):
         if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
@@ -820,7 +815,7 @@ class MainWindow(QMainWindow):
             # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
             for i, path in enumerate(session.tabs):
                 try:
-                    newRepoWidget = self.openRepo(path, foreground=False)
+                    newRepoWidget = self._openRepo(path, foreground=False)
                     numSuccessfullyOpenedRepos += 1
                 except (pygit2.GitError, NotImplementedError) as exc:
                     errors.append((path, exc))
@@ -916,4 +911,3 @@ class MainWindow(QMainWindow):
             self.cloneDialog(data)
         elif action == "open":
             self.openRepo(data)
-            self.saveSession()
