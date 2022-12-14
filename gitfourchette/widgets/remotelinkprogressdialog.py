@@ -46,9 +46,9 @@ class RemoteLinkProgressDialog(QProgressDialog):
         self.remoteLink.raiseAbortFlag()
         self.abortButton.setEnabled(False)
 
-    def onRemoteLinkProgress(self, hi, cur):
-        self.setMaximum(hi)
-        self.setValue(cur)
+    def onRemoteLinkProgress(self, value: int, maximum: int):
+        self.setMaximum(maximum)
+        self.setValue(value)
 
     def close(self):
         # We're being closed by user code on completion, don't raise abort flag
