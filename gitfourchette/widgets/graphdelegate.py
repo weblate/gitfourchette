@@ -12,7 +12,7 @@ import re
 
 @dataclass
 class RefCallout:
-    color: QColor = QColor(Qt.GlobalColor.magenta)
+    color: QColor
     keepPrefix: bool = False
 
 
