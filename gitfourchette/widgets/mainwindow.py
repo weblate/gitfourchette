@@ -674,7 +674,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            with open(path, "r") as patchFile:
+            with open(path, 'rt', encoding='utf-8') as patchFile:
                 patchData = patchFile.read()
             loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
         except (IOError,

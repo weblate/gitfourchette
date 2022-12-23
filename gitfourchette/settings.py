@@ -91,7 +91,7 @@ class BasePrefs:
                 filtered[k] = v
 
         # Dump the object to disk
-        with open(prefsPath, 'w', encoding='utf-8') as jsonFile:
+        with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
             json.dump(obj=filtered, fp=jsonFile, indent='\t')
 
         log.info("prefs", f"Wrote {prefsPath}")
@@ -102,7 +102,7 @@ class BasePrefs:
         if not prefsPath:  # couldn't be found
             return False
 
-        with open(prefsPath, 'r') as f:
+        with open(prefsPath, 'rt', encoding='utf-8') as f:
             obj = json.load(f)
             for k in obj:
                 if k.startswith('_'):
