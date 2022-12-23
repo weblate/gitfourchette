@@ -172,9 +172,7 @@ class Prefs(BasePrefs):
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False
     graph_chronologicalOrder    : bool          = True
-    graph_maxLanes              : int           = 32
     graph_flattenLanes          : bool          = True
-    graph_newLanesAlwaysRightmost:bool          = False
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True

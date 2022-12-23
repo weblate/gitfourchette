@@ -208,9 +208,8 @@ class GeneratorState(Frame):
         super().__init__(-1, "", [], [], lastArc=startArcSentinel)
         self.freeLanes = []
         self.parentLookup = defaultdict(list)
-        self.canStartLaneInGap = False
 
-    def createArcsForNewCommit(self, me: Oid, myParents: list[Oid]):
+    def createArcsForNewCommit(self, me: Oid, myParents: list[Oid], allocLanesInGaps: bool):
         self.row += 1
         self.commit = me
 
@@ -230,12 +229,12 @@ class GeneratorState(Frame):
                 self.openArcs[arc.lane] = None  # Free up the lane below
                 if hasParents and arc.lane == myHomeLane:
                     handOffHomeLane = True
-                elif self.canStartLaneInGap:
+                elif allocLanesInGaps:
                     bisect.insort(self.freeLanes, arc.lane)
             del self.parentLookup[me]
 
             # Compact null arcs at right of graph
-            if not self.canStartLaneInGap:
+            if not allocLanesInGaps:
                 for _ in range(len(self.openArcs)-1, myHomeLane, -1):
                     if self.openArcs[-1] is not None:
                         break
@@ -397,11 +396,11 @@ class Graph:
     def isEmpty(self):
         return self.startArc.nextArc is None
 
-    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]]):
+    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]], allocLanesInGaps: bool):
         cacher = GeneratorState(self.startArc)
 
         for me in sequence:
-            cacher.createArcsForNewCommit(me, parentsOf[me])
+            cacher.createArcsForNewCommit(me, parentsOf[me], allocLanesInGaps)
             if cacher.row % KF_INTERVAL == 0:
                 self.saveKeyframe(cacher)
 
@@ -609,11 +608,11 @@ class GraphSplicer:
         """
         self.finish()
 
-    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], newCommitWasKnown: bool):
+    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], newCommitWasKnown: bool, allocLanesInGaps: bool):
         self.newCommitsSeen.add(newCommit)
 
         # Generate arcs for new frame.
-        self.newGenerator.createArcsForNewCommit(newCommit, parentsOfNewCommit)
+        self.newGenerator.createArcsForNewCommit(newCommit, parentsOfNewCommit, allocLanesInGaps)
 
         # Save keyframe in new context.
         if self.newGenerator.row % KF_INTERVAL == 0:

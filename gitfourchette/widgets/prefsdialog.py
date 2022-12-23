@@ -408,9 +408,7 @@ class PrefsDialog(QDialog):
             "tabs_autoHide": self.tr("Auto-hide tab bar if there’s just 1 tab"),
 
             "graph_chronologicalOrder": self.tr("Commit order"),
-            "graph_maxLanes": self.tr("Max lanes"),
             "graph_flattenLanes": self.tr("Flatten lanes"),
-            "graph_newLanesAlwaysRightmost": self.tr("Never start a new lane in a gap"),
 
             "trash_maxFiles": (self.tr("Max discarded patches in the trash"), self.tr("files")),
             "trash_maxFileSizeKB": (self.tr("Don’t salvage patches bigger than"), self.tr("KB")),

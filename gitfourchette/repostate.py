@@ -153,6 +153,12 @@ class RepoState:
     def hiddenBranches(self):
         return self.uiPrefs.hiddenBranches
 
+    @property
+    def allocLanesInGaps(self):
+        # Flattened graphs are easier to read when new lanes are always allocated to the right.
+        # Non-flattened graphs look better if we try to fill up the gaps in the graph.
+        return not settings.prefs.graph_flattenLanes
+
     def getDraftCommitMessage(self) -> str:
         return self.uiPrefs.draftMessage
 
@@ -252,7 +258,7 @@ class RepoState:
 
         graphGenerator = graph.startGenerator()
         for commit in commitSequence:
-            graphGenerator.createArcsForNewCommit(commit.oid, commit.parent_ids)
+            graphGenerator.createArcsForNewCommit(commit.oid, commit.parent_ids, self.allocLanesInGaps)
             if graphGenerator.row % KF_INTERVAL == 0:
                 progress.setValue(graphGenerator.row)
                 QCoreApplication.processEvents()
@@ -307,7 +313,7 @@ class RepoState:
             self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
 
             newCommitSequence.append(commit)
-            graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids, wasKnown)
+            graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids, wasKnown, self.allocLanesInGaps)
 
         graphSplicer.finish()
 
