@@ -214,7 +214,6 @@ class MainWindow(QMainWindow):
 
         a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
         a.setShortcut(QKeySequence.StandardKey.Refresh)
-        a.setMenuRole(QAction.ApplicationSpecificRole)
 
         a = repoMenu.addAction(self.tr("&Hard Refresh"), self.refresh)
         a.setShortcut("Ctrl+F5")
