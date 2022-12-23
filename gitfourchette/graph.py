@@ -193,8 +193,6 @@ class Frame:
                     columnAbove += 1
             if staleArc and not staleArc.connectsHiddenCommit(hiddenCommits):
                 columnAbove += 1
-                if staleArc.isParentlessCommit():
-                    columnBelow += 1
             laneRemap.append( (columnAbove, columnBelow) )
 
         numFlattenedLanes = max(columnAbove, columnBelow)
