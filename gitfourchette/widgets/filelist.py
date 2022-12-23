@@ -243,9 +243,12 @@ class FileList(QListView):
 
     def showInFolder(self):
         def run(entry: pygit2.Patch):
-            showInFolder(os.path.join(self.repo.workdir, entry.delta.new_file.path))
+            path = os.path.join(self.repo.workdir, entry.delta.new_file.path)
+            if not os.path.isfile(path):
+                raise SelectedFileBatchError(self.tr("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
+            showInFolder(path)
 
-        self.confirmBatch(run, self.tr("Open containing folder"),
+        self.confirmBatch(run, self.tr("Open paths"),
                           self.tr("Really open <b>{0} folders</b>?"))
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -416,9 +419,9 @@ class DirtyFiles(FileList):
             ActionDef(self.tr("&Discard Changes", "", n), self.discard, QStyle.StandardPixmap.SP_TrashIcon),
             None,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef(self.tr("Export As Patch..."), self.savePatchAs),
+            ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
             None,
-            ActionDef(self.tr("Open Containing Folder(s)", "", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
+            ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
             None,
             ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
@@ -453,9 +456,9 @@ class StagedFiles(FileList):
             ActionDef(self.tr("&Unstage %n File(s)", "", n), self.unstage, QStyle.StandardPixmap.SP_ArrowUp),
             None,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef(self.tr("Export As Patch..."), self.savePatchAs),
+            ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
             None,
-            ActionDef(self.tr("Open Containing &Folder(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
+            ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
             None,
             ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
@@ -494,9 +497,9 @@ class CommittedFiles(FileList):
                     ActionDef(self.tr("&Before Commit"), self.saveOldRevision),
                 ]),
                 #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
-                ActionDef(self.tr("Export As Patch..."), self.savePatchAs),
+                ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
                 None,
-                ActionDef(self.tr("Open Containing &Folders", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
+                ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
                 ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
                 ]
 
