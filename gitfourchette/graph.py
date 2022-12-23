@@ -210,6 +210,7 @@ class GeneratorState(Frame):
         super().__init__(-1, "", [], [], lastArc=startArcSentinel)
         self.freeLanes = []
         self.parentLookup = defaultdict(list)
+        self.canStartLaneInGap = False
 
     def createArcsForNewCommit(self, me: Oid, myParents: list[Oid]):
         self.row += 1
@@ -217,6 +218,7 @@ class GeneratorState(Frame):
 
         hasParents = len(myParents) > 0
 
+        # Close arcs that my child commits opened higher up in the graph, waiting for me to appear in the commit sequence
         myOpenArcs = self.parentLookup.get(me)
         myHomeLane = -1
         handOffHomeLane = False
@@ -227,16 +229,24 @@ class GeneratorState(Frame):
                 assert arc.closedAt == -1
                 arc.closedAt = self.row
                 self.staleArcs[arc.lane] = arc
-                self.openArcs[arc.lane] = None
-                if arc.lane != myHomeLane or not hasParents:
-                    bisect.insort(self.freeLanes, arc.lane)
-                else:
+                self.openArcs[arc.lane] = None  # Free up the lane below
+                if hasParents and arc.lane == myHomeLane:
                     handOffHomeLane = True
+                elif self.canStartLaneInGap:
+                    bisect.insort(self.freeLanes, arc.lane)
             del self.parentLookup[me]
+
+            # Compact null arcs at right of graph
+            if not self.canStartLaneInGap:
+                for _ in range(len(self.openArcs)-1, myHomeLane, -1):
+                    if self.openArcs[-1] is not None:
+                        break
+                    self.openArcs.pop()
+                    self.staleArcs.pop()
 
         firstParentFound = False
         for parent in myParents:
-            # see if there's already a arc for my parent
+            # See if there's already an arc for my parent
             if firstParentFound:
                 arcsOfParent = self.parentLookup.get(parent)
                 if arcsOfParent:
@@ -253,10 +263,12 @@ class GeneratorState(Frame):
                 freeLane = myHomeLane
                 handOffHomeLane = False
             elif not self.freeLanes:
+                # Allocate new lane on the right
                 freeLane = len(self.openArcs)
-                self.openArcs.append(None)
-                self.staleArcs.append(None)
+                self.openArcs.append(None)  # Reserve the lane
+                self.staleArcs.append(None)  # Reserve the lane
             else:
+                # Pick leftmost free lane
                 freeLane = self.freeLanes.pop(0)
 
             newArc = Arc(self.row, -1, freeLane, me, parent, [], None)
@@ -284,6 +296,7 @@ class GeneratorState(Frame):
             self.lastArc = newArc
 
         assert not handOffHomeLane
+        assert len(self.openArcs) == len(self.staleArcs)
 
 
 class PlaybackState(Frame):
