@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from gitfourchette.qt import *
 from gitfourchette.settings import PathDisplayStyle
 from pygit2 import Oid
+import html
 import os
 import re
 import sys
@@ -149,7 +150,7 @@ def excMessageBox(
         if showExcSummary:
             summary = traceback.format_exception_only(exc.__class__, exc)
             summary = ''.join(summary).strip()
-            message += "<br><br>" + summary
+            message += "<br><br>" + html.escape(summary)
 
         def shortenTracebackPath(line):
             return re.sub(r'^\s*File "([^"]+)"',
