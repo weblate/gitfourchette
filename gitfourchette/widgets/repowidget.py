@@ -17,6 +17,7 @@ from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConfl
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from gitfourchette.widgets.graphview import GraphView
+from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.sidebar import Sidebar
@@ -182,8 +183,8 @@ class RepoWidget(QWidget):
 
         self.splitterStates = sharedSplitterStates or {}
 
-        self.dirtyLabel = QLabel("Dirty Files")
-        self.stageLabel = QLabel("Files Staged For Commit")
+        self.dirtyLabel = QElidedLabel("Loading dirty files...")
+        self.stageLabel = QElidedLabel("Loading staged files...")
 
         self.previouslySearchedTerm = None
         self.previouslySearchedTermInDiff = None
