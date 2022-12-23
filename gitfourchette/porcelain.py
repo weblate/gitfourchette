@@ -29,6 +29,19 @@ class ConflictError(Exception):
         return f"ConflictError({len(self.conflicts)}, {self.description})"
 
 
+class MultiFileError(Exception):
+    fileExceptions: dict[str, Exception]
+
+    def __init__(self):
+        self.fileExceptions = {}
+
+    def addFileError(self, path: str, exc: Exception):
+        self.fileExceptions[path] = exc
+
+    def __bool__(self):
+        return bool(self.fileExceptions)
+
+
 class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
     status: dict[str, int]
 
@@ -676,8 +689,20 @@ def patchApplies(
         location: int = pygit2.GIT_APPLY_LOCATION_WORKDIR
 ) -> pygit2.Diff:
     diff = pygit2.Diff.parse_diff(patchData)
-    repo.applies(diff, location, raise_error=True)
-    return diff
+    error = MultiFileError()
+
+    # Attempt to apply every patch in the diff separately, so we can report which file an error pertains to
+    for patch in diff:
+        patchDiff = pygit2.Diff.parse_diff(patch.data)  # can we extract a diff from the patch without re-parsing it?
+        try:
+            repo.applies(patchDiff, location, raise_error=True)
+        except (pygit2.GitError, OSError) as exc:
+            error.addFileError(patch.delta.old_file.path, exc)
+
+    if error:
+        raise error
+    else:
+        return diff
 
 
 def loadPatch(patchDataOrDiff: bytes | str | pygit2.Diff) -> pygit2.Diff:
@@ -687,7 +712,6 @@ def loadPatch(patchDataOrDiff: bytes | str | pygit2.Diff) -> pygit2.Diff:
         return patchDataOrDiff
     else:
         raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
-    return diff
 
 
 def applyPatch(

@@ -695,8 +695,11 @@ class MainWindow(QMainWindow):
 
         try:
             porcelain.patchApplies(repo, patchData)
-        except (pygit2.GitError, OSError) as applyCheckError:
-            excMessageBox(applyCheckError, title, self.tr("This patch doesn’t apply."), parent=self, icon='warning')
+        except porcelain.MultiFileError as multiFileError:
+            message = self.tr("This patch doesn’t apply.")
+            for filePath, fileException in multiFileError.fileExceptions.items():
+                message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
+            showWarning(self, title, message)
             return
 
         try:
