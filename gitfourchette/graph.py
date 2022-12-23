@@ -15,8 +15,10 @@ ABRIDGMENT_THRESHOLD = 25
 
 @dataclass
 class ArcJunction:
-    joinedAt: int
-    joinedBy: Oid
+    """ Represents the merging of an Arc into another Arc. """
+
+    joinedAt: int  # Row number in which this junction occurs
+    joinedBy: Oid  # Hash of the joining arc's opening commit
 
     def __lt__(self, other):
         """
@@ -30,13 +32,23 @@ class ArcJunction:
 
 @dataclass
 class Arc:
-    openedAt: int
-    closedAt: int
-    lane: int
-    openedBy: Oid
-    closedBy: Oid
-    junctions: list[ArcJunction]
-    nextArc: Arc | None = None
+    """ An arc connects two commits in the graph.
+
+    Commits appear before their parents in the commit sequence.
+    When processing the commit sequence, we "open" a new arc when
+    encountering a new commit. The arc stays "open" until we've found
+    the commit's parent in the sequence, at which point we "close" it.
+
+    Other arcs may merge into an open arc via an ArcJunction.
+    """
+
+    openedAt: int  # Row number in which this arc was opened
+    closedAt: int  # Row number in which this arc was closed
+    lane: int  # Lane assigned to this arc
+    openedBy: Oid  # Hash of the opening commit (in git parlance, the child commit)
+    closedBy: Oid  # Hash of the closing commit (in git parlance, the parent commit)
+    junctions: list[ArcJunction]  # Other arcs merging into this arc
+    nextArc: Arc | None = None  # Next node in the arc linked list
 
     def __repr__(self):
         s = F"{str(self.openedBy)[:5]}->{str(self.closedBy)[:5]}"
@@ -68,9 +80,14 @@ class Arc:
     def isParentlessCommit(self):
         return self.openedBy == self.closedBy
 
+    def connectsHiddenCommit(self, hiddenCommits: set):
+        return self.openedBy in hiddenCommits or self.closedBy in hiddenCommits
+
 
 @dataclass
 class Frame:
+    """ A frame is a slice of the graph at a given row. """
+
     row: int
     commit: Oid
     staleArcs: list[Arc | None]
@@ -167,12 +184,14 @@ class Frame:
         columnAbove, columnBelow = -1, -1
         laneRemap = []
 
+        staleArc: Arc
+        openArc: Arc
         for staleArc, openArc in itertools.zip_longest(self.staleArcs, self.openArcs):
-            if openArc and openArc.openedBy not in hiddenCommits:
+            if openArc and not openArc.connectsHiddenCommit(hiddenCommits):
                 columnBelow += 1
                 if openArc.openedAt < self.row:
                     columnAbove += 1
-            if staleArc:# and staleArc.openedBy not in hiddenCommits:
+            if staleArc and not staleArc.connectsHiddenCommit(hiddenCommits):
                 columnAbove += 1
                 if staleArc.isParentlessCommit():
                     columnBelow += 1

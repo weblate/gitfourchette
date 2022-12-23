@@ -149,6 +149,8 @@ def paintGraphFrame(
 
     # draw arcs OPENED BY commit (downwards)
     for arc in reversed(arcsOpenedByCommit):
+        if arc.closedBy in state.hiddenCommits:
+            continue
         _, columnB = laneColumnsAB[arc.lane]  # column above, column below
         bx = x + columnB * LANE_WIDTH
         # Fork Down from Commit Bullet Point

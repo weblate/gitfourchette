@@ -4,6 +4,7 @@ from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
+from gitfourchette.hiddencommitsolver import HiddenCommitSolver
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
 from gitfourchette.qt import *
@@ -49,41 +50,6 @@ class ForeignCommitSolver:
                 self._nextLocal.add(p.oid)
         else:
             self.foreignCommits.add(commit.oid)
-
-
-class HiddenCommitSolver:
-    def __init__(self, seeds):
-        self._forceShow = set()
-        self._nextHidden = set()
-        self.hiddenCommits = set()
-        for commitOid in seeds:
-            self._nextHidden.add(commitOid)
-
-    @property
-    def done(self):
-        return len(self._nextHidden) == 0
-
-    def feed(self, commit: pygit2.Commit):
-        if commit.oid in self._nextHidden:
-            assert commit.oid not in self._forceShow
-            self.hiddenCommits.add(commit.oid)
-            self._nextHidden.remove(commit.oid)
-            for p in commit.parents:
-                if p.oid not in self._forceShow:
-                    self._nextHidden.add(p.oid)
-        else:
-            try:
-                self._forceShow.remove(commit.oid)
-            except KeyError:
-                pass
-
-            for p in commit.parents:
-                self._forceShow.add(p.oid)
-
-                try:
-                    self._nextHidden.remove(p.oid)
-                except KeyError:
-                    pass
 
 
 @dataclass
@@ -263,8 +229,8 @@ class RepoState:
             progress.setMinimum(0)
             progress.setMaximum(2 * numCommitsBallpark)  # reserve second half of progress bar for graph progress
 
-        foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
-        hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
+        foreignCommitSolver = ForeignCommitSolver(self.commitsToRefs)
+        hiddenCommitSolver = self.newHiddenCommitSolver()
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop, numCommitsBallpark)
@@ -272,8 +238,8 @@ class RepoState:
                 commitSequence.append(commit)
                 self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
 
-                foreignCommitResolver.feed(commit)
-                hiddenCommitResolver.feed(commit)
+                foreignCommitSolver.feed(commit)
+                hiddenCommitSolver.feed(commit)
         except StopIteration:
             pass
 
@@ -293,8 +259,8 @@ class RepoState:
                 graph.saveKeyframe(graphGenerator)
 
         self.commitSequence = commitSequence
-        self.foreignCommits = foreignCommitResolver.foreignCommits
-        self.hiddenCommits = hiddenCommitResolver.hiddenCommits
+        self.foreignCommits = foreignCommitSolver.foreignCommits
+        self.hiddenCommits = hiddenCommitSolver.hiddenCommits
         self.graph = graph
         self.batchOffsets = [0]
         self.currentBatchID = 0
@@ -373,7 +339,7 @@ class RepoState:
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
         foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
-        hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
+        hiddenCommitResolver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:
             foreignCommitResolver.feed(commit)
             hiddenCommitResolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
@@ -427,10 +393,25 @@ class RepoState:
 
         return seeds
 
+    def newHiddenCommitSolver(self) -> HiddenCommitSolver:
+        solver = HiddenCommitSolver()
+
+        for hiddenBranchTip in self.getHiddenBranchOids():
+            solver.hideCommit(hiddenBranchTip)
+
+        for stash in self.repo.listall_stashes():
+            stashCommit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
+            if len(stashCommit.parents) == 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):
+                solver.hideCommit(stashCommit.parents[1].id, force=True)
+            else:
+                log.warning("RepoState", f"stash has abnormal parents: {stash.commit_id}")
+
+        return solver
+
     def resolveHiddenCommits(self):
-        hiddenCommitResolver = HiddenCommitSolver(self.getHiddenBranchOids())
+        solver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:
-            hiddenCommitResolver.feed(commit)
-            if hiddenCommitResolver.done:
+            solver.feed(commit)
+            if solver.done:
                 break
-        self.hiddenCommits = hiddenCommitResolver.hiddenCommits
+        self.hiddenCommits = solver.hiddenCommits
