@@ -1183,6 +1183,10 @@ class RepoWidget(QWidget):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
 
         with Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
+            # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
+            # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
+            self.graphView.setHiddenCommits(self.state.hiddenCommits)
+
             if nRemovedRows >= 0:
                 self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
             else:
