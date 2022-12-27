@@ -199,16 +199,6 @@ class GraphDelegate(QStyledItemDelegate):
         rect.setWidth(ColW_Date * self.hashCharWidth)
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(dateText))
 
-        # ------ Debug (show redrawn rows from last refresh)
-        ''' TODO: pygit2 migration
-        if settings.prefs.debug_showDirtyCommitsAfterRefresh and commit and meta.debugPrefix:
-            rect = QRect(option.rect)
-            rect.setLeft(rect.left() + XMargin + (ColW_Hash-3) * self.hashCharWidth)
-            rect.setRight(rect.left() + 3*self.hashCharWidth)
-            painter.fillRect(rect, colors.rainbow[meta.batchID % len(colors.rainbow)])
-            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, "-"+meta.debugPrefix)
-        '''
-
         # ----------------
         painter.restore()
         pass  # QStyledItemDelegate.paint(self, painter, option, index)

@@ -344,13 +344,13 @@ class RepoState:
 
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
-        foreignCommitResolver = ForeignCommitSolver(self.commitsToRefs)
-        hiddenCommitResolver = self.newHiddenCommitSolver()
+        foreignCommitSolver = ForeignCommitSolver(self.commitsToRefs)
+        hiddenCommitSolver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:
-            foreignCommitResolver.feed(commit)
-            hiddenCommitResolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
-        self.foreignCommits = foreignCommitResolver.foreignCommits
-        self.hiddenCommits = hiddenCommitResolver.hiddenCommits
+            foreignCommitSolver.feed(commit)
+            hiddenCommitSolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
+        self.foreignCommits = foreignCommitSolver.foreignCommits
+        self.hiddenCommits = hiddenCommitSolver.hiddenCommits
 
         globalstatus.setProgressValue(4)
 

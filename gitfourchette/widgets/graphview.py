@@ -179,6 +179,8 @@ class GraphView(QListView):
         if not oid:
             return
 
+        debugInfoRequested = QGuiApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
+
         def formatSignature(sig: pygit2.Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
             return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
@@ -239,6 +241,15 @@ class GraphView(QListView):
             #     offset {self.repoWidget.state.batchOffsets[data.batchID]+data.offsetInBatch}
             #     ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
             #     </td></tr>
+
+        if debugInfoRequested:
+            state = self.repoWidget.state
+            seqIndex = state.getCommitSequentialIndex(oid)
+            markup += f"""<hr><b>Top secret debug info</b><br>
+                GraphView row: {self.currentIndex().row()}<br>
+                Commit sequence index: {seqIndex}<br>
+                {state.graph.startPlayback(seqIndex).copyCleanFrame()}
+            """
 
         title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
 
