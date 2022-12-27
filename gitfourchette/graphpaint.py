@@ -28,7 +28,7 @@ def flattenLanes(frame: Frame, hiddenCommits: set[Oid]) -> tuple[list[tuple[int,
     else:
         # Straightforward lane positions (lane column == lane ID)
         laneRemap = []
-        for i, (cl, ol) in enumerate(zip_longest(frame.staleArcs, frame.openArcs)):
+        for i, (cl, ol) in enumerate(zip_longest(frame.solvedArcs, frame.openArcs)):
             laneRemap.append( (i, i) )
         flatTotal = len(laneRemap)
 
@@ -123,11 +123,9 @@ def paintGraphFrame(
             # clear path for next iteration
             path.clear()
 
-    arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit()
-                           if arc.openedBy not in state.hiddenCommits]
-    arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit()]
-    arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit()
-                          if arc.openedBy not in state.hiddenCommits]
+    arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
+    arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
+    arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
 
     # draw arcs PASSING BY commit
     for arc in arcsPassingByCommit:
@@ -149,8 +147,6 @@ def paintGraphFrame(
 
     # draw arcs OPENED BY commit (downwards)
     for arc in reversed(arcsOpenedByCommit):
-        if arc.closedBy in state.hiddenCommits:
-            continue
         _, columnB = laneColumnsAB[arc.lane]  # column above, column below
         bx = x + columnB * LANE_WIDTH
         # Fork Down from Commit Bullet Point

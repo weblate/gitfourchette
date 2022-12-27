@@ -11,6 +11,7 @@ import itertools
 
 KF_INTERVAL = 5000
 ABRIDGMENT_THRESHOLD = 25
+DEAD_VALUE = "!DEAD"
 
 
 @dataclass
@@ -83,6 +84,13 @@ class Arc:
     def connectsHiddenCommit(self, hiddenCommits: set):
         return self.openedBy in hiddenCommits or self.closedBy in hiddenCommits
 
+    def isIndependentOfRowsAbove(self, row: int):
+        """ Return True if this arc is entirely independent of row numbers lower than `row`. """
+        return self.openedAt >= row and self.closedAt >= row
+
+    def isStale(self, row: int):
+        return 0 <= self.closedAt < row
+
 
 @dataclass
 class Frame:
@@ -90,12 +98,12 @@ class Frame:
 
     row: int
     commit: Oid
-    staleArcs: list[Arc | None]
-    openArcs: list[Arc | None]
+    solvedArcs: list[Arc | None]  # Arcs that have resolved their parent commit
+    openArcs: list[Arc | None]  # Arcs that have not resolved their parent commit yet
     lastArc: Arc
 
     def getArcsClosedByCommit(self):
-        return filter(lambda arc: arc and arc.closedAt == self.row, self.staleArcs)
+        return filter(lambda arc: arc and arc.closedAt == self.row, self.solvedArcs)
 
     def getArcsOpenedByCommit(self):
         return filter(lambda arc: arc and arc.openedAt == self.row, self.openArcs)
@@ -120,22 +128,26 @@ class Frame:
             assert self.lastArc.openedBy == self.commit
             return self.lastArc.lane
 
-    def copyCleanFrame(self):
-        closedArcsCopy = self.staleArcs.copy()
+    def copyCleanFrame(self) -> Frame:
+        solvedArcsCopy = self.solvedArcs.copy()
         openArcsCopy = self.openArcs.copy()
 
         # Clean up arcs that just got closed
         for lane, arc in enumerate(openArcsCopy):
             if arc and 0 <= arc.closedAt <= self.row:
-                self.reserveArcListCapacity(closedArcsCopy, lane+1)
-                closedArcsCopy[lane] = arc
+                self.reserveArcListCapacity(solvedArcsCopy, lane+1)
+                solvedArcsCopy[lane] = arc
                 openArcsCopy[lane] = None
 
-        # Remove stale closed arcs
+        # Remove stale closed arcs and trim "Nones" off end of list
         self.cleanUpArcList(openArcsCopy, self.row, alsoTrimBack=True)
-        self.cleanUpArcList(closedArcsCopy, self.row, alsoTrimBack=True)
+        self.cleanUpArcList(solvedArcsCopy, self.row, alsoTrimBack=True)
 
-        return Frame(self.row, self.commit, closedArcsCopy, openArcsCopy, self.lastArc)
+        # In debug mode, make sure none of the arcs are dangling
+        assert all(arc is None or arc.openedBy != DEAD_VALUE for arc in openArcsCopy)
+        assert all(arc is None or arc.openedBy != DEAD_VALUE for arc in solvedArcsCopy)
+
+        return Frame(self.row, self.commit, solvedArcsCopy, openArcsCopy, self.lastArc)
 
     def isEquilibriumReached(self, peer):
         for mine, theirs in itertools.zip_longest(self.openArcs, peer.openArcs):
@@ -165,7 +177,7 @@ class Frame:
             theList.append(None)
 
     @staticmethod
-    def cleanUpArcList(theList: list[Arc|None], olderThanRow, alsoTrimBack=True):
+    def cleanUpArcList(theList: list[Arc|None], olderThanRow: int, alsoTrimBack: bool = True):
         # Remove references to arcs that were closed earlier than `olderThanRow`
         for j, arc in enumerate(theList):
             if arc and 0 <= arc.closedAt < olderThanRow:
@@ -184,14 +196,14 @@ class Frame:
         columnAbove, columnBelow = -1, -1
         laneRemap = []
 
-        staleArc: Arc
+        solvedArc: Arc
         openArc: Arc
-        for staleArc, openArc in itertools.zip_longest(self.staleArcs, self.openArcs):
+        for solvedArc, openArc in itertools.zip_longest(self.solvedArcs, self.openArcs):
             if openArc and not openArc.connectsHiddenCommit(hiddenCommits):
                 columnBelow += 1
                 if openArc.openedAt < self.row:
                     columnAbove += 1
-            if staleArc and not staleArc.connectsHiddenCommit(hiddenCommits):
+            if solvedArc and not solvedArc.connectsHiddenCommit(hiddenCommits):
                 columnAbove += 1
             laneRemap.append( (columnAbove, columnBelow) )
 
@@ -225,7 +237,7 @@ class GeneratorState(Frame):
                 assert arc.closedBy == me
                 assert arc.closedAt == -1
                 arc.closedAt = self.row
-                self.staleArcs[arc.lane] = arc
+                self.solvedArcs[arc.lane] = arc
                 self.openArcs[arc.lane] = None  # Free up the lane below
                 if hasParents and arc.lane == myHomeLane:
                     handOffHomeLane = True
@@ -239,7 +251,7 @@ class GeneratorState(Frame):
                     if self.openArcs[-1] is not None:
                         break
                     self.openArcs.pop()
-                    self.staleArcs.pop()
+                    self.solvedArcs.pop()
 
         firstParentFound = False
         for parent in myParents:
@@ -263,7 +275,7 @@ class GeneratorState(Frame):
                 # Allocate new lane on the right
                 freeLane = len(self.openArcs)
                 self.openArcs.append(None)  # Reserve the lane
-                self.staleArcs.append(None)  # Reserve the lane
+                self.solvedArcs.append(None)  # Reserve the lane
             else:
                 # Pick leftmost free lane
                 freeLane = self.freeLanes.pop(0)
@@ -278,7 +290,7 @@ class GeneratorState(Frame):
 
         # Parentless commit: we'll insert a bogus arc so playback doesn't need the commit sequence.
         # This is just to keep the big linked list of arcs flowing.
-        # Do NOT put it in stale or open arcs! This would interfere with detection of arcs that the commit
+        # Do NOT put it in solved or open arcs! This would interfere with detection of arcs that the commit
         # actually closes or opens.
         if not firstParentFound:
             if myHomeLane < 0:
@@ -293,7 +305,7 @@ class GeneratorState(Frame):
             self.lastArc = newArc
 
         assert not handOffHomeLane
-        assert len(self.openArcs) == len(self.staleArcs)
+        assert len(self.openArcs) == len(self.solvedArcs)
 
 
 class PlaybackState(Frame):
@@ -301,11 +313,11 @@ class PlaybackState(Frame):
         super().__init__(
             row=keyframe.row,
             commit=keyframe.commit,
-            staleArcs=[],
+            solvedArcs=[],
             openArcs=[],
             lastArc=keyframe.lastArc)
 
-        self.staleArcs = keyframe.staleArcs.copy()
+        self.solvedArcs = keyframe.solvedArcs.copy()
         self.openArcs = keyframe.openArcs.copy()
         self.callingNextWillAdvanceFrame = True
         self.seenCommits = set()
@@ -338,10 +350,10 @@ class PlaybackState(Frame):
                 # Keep iterating on arcs in the goal row. Gather them in a frame.
                 pass
 
-            self.reserveArcListCapacity(self.staleArcs, arc.lane + 1)
+            self.reserveArcListCapacity(self.solvedArcs, arc.lane + 1)
             self.reserveArcListCapacity(self.openArcs, arc.lane + 1)
 
-            self.staleArcs[arc.lane] = self.openArcs[arc.lane]  # move any open arc to "just closed"
+            self.solvedArcs[arc.lane] = self.openArcs[arc.lane]  # move any open arc to "just closed"
             self.openArcs[arc.lane] = arc
             self.lastArc = arc
 
@@ -405,6 +417,8 @@ class Graph:
                 self.saveKeyframe(cacher)
 
     def saveKeyframe(self, frame: Frame) -> int:
+        assert len(self.keyframes) == len(self.keyframeRows)
+
         kf = frame.copyCleanFrame()
 
         kfID = bisect.bisect_left(self.keyframeRows, frame.row)
@@ -417,15 +431,26 @@ class Graph:
         self.keyframeRows.insert(kfID, frame.row)
         return kfID
 
-    def getBestKeyframeID(self, row: int):
+    def getBestKeyframeID(self, row: int) -> int:
+        """
+        Attempts to find a keyframe closest to `row` in the frame sequence.
+        If an adequate keyframe is found, return its index into the keyframes list; otherwise, return -1.
+        Note that the returned value is an **index into the list of keyframes**; it is NOT a frame row number.
+
+        If a valid keyframe was found, its row is guaranteed to be lower or equal to `row`.
+        This function never returns a keyframe located at a greater row than `row`.
+
+        If the keyframe occurs before the desired `row`, you can create a PlaybackState from that keyframe
+        and iterate the PlaybackState until it reaches the desired row.
+        """
+        assert len(self.keyframes) == len(self.keyframeRows)
+
         bestKeyframeID = bisect.bisect_right(self.keyframeRows, row) - 1
         if bestKeyframeID < 0:
-            return None
+            return -1
 
         bestKeyframeRow = self.keyframeRows[bestKeyframeID]
-
-        assert bestKeyframeRow >= 0
-        assert row >= bestKeyframeRow
+        assert 0 <= bestKeyframeRow <= row
 
         return bestKeyframeID
 
@@ -435,8 +460,7 @@ class Graph:
 
     def startPlayback(self, goalRow: int = 0) -> PlaybackState:
         kfID = self.getBestKeyframeID(goalRow)
-
-        if kfID is not None:
+        if kfID >= 0:
             kf = self.keyframes[kfID]
         else:
             kf = self.getKF0()
@@ -468,30 +492,40 @@ class Graph:
         return Frame(
             row=-1,
             commit=self.startArc.openedBy,
-            staleArcs=[],
+            solvedArcs=[],
             openArcs=[],
             lastArc=self.startArc)
 
-    def deleteKeyframesWithArcsOpenedAbove(self, row):
+    def deleteKeyframesWithArcsOpenedAbove(self, row: int):
         """
         Deletes all keyframes containing any arcs opened above the given row.
         """
 
-        keyframeID = self.getBestKeyframeID(row - 1)
+        if len(self.keyframes) == 0:
+            return
 
-        if keyframeID is None:
-            keyframeID = 0
+        # Get a starting keyframe for a row <= the desired row.
+        kfID = self.getBestKeyframeID(row)
+        if kfID < 0:
+            kfID = 0
 
-        while keyframeID < len(self.keyframes):
-            keyframe = self.keyframes[keyframeID]
+        # Fast-forward to the next keyframe with a row >= the desired row.
+        while kfID < len(self.keyframes) and self.keyframes[kfID].row < row:
+            kfID += 1
 
-            if keyframe.row >= row and all(arc is None or arc.openedAt >= row for arc in keyframe.openArcs):
+        # Once we reach keyframes occuring at a row >= `row`, see if we should stop deleting keyframes.
+        # All open arcs, and all non-stale solved arcs, must be independent of rows <= `row`.
+        while kfID < len(self.keyframes):
+            kf = self.keyframes[kfID]
+
+            if (all(arc is None or arc.isIndependentOfRowsAbove(row) for arc in kf.openArcs)
+                    and all(arc is None or arc.isIndependentOfRowsAbove(row) or arc.isStale(row) for arc in kf.solvedArcs)):
                 break
+            else:
+                kfID += 1
 
-            keyframeID += 1
-
-        # Delete the keyframes up to keyframeID.
-        self.keyframes = self.keyframes[keyframeID:]
+        # Delete the keyframes up to kfID.
+        self.keyframes = self.keyframes[kfID:]
 
         # Invalidate keyframe row cache.
         self.keyframeRows = None
@@ -504,13 +538,13 @@ class Graph:
         if row == 0:
             return
 
-        # In debug mode, bulldoze opening commits in dead arcs so they stand out in the debugger
+        # In debug mode, bulldoze opening commits in dead arcs so they stand out in the debugger (make them dangling)
         if __debug__:
             for deadArc in self.startArc:
                 if deadArc.openedAt >= row:
                     break
                 if deadArc != self.startArc:
-                    deadArc.openedBy = '!DeadArc!'
+                    deadArc.openedBy = DEAD_VALUE
 
         # Rewire top of list
         self.startArc.nextArc =\
@@ -559,7 +593,7 @@ class Graph:
         assert theirLastArc is not None
         assert theirLastArc != frontGraph.startArc
 
-        # Rewire their last arc onto my first actual arc
+        # In the arc linked list, rewire their last arc onto my first arc.
         theirLastArc.nextArc = self.startArc.nextArc
 
         # Rewire my top sentinel onto their first actual arc
@@ -567,7 +601,7 @@ class Graph:
 
         # Steal their keyframes
         lastFrontKeyframeID = frontGraph.getBestKeyframeID(numRowsToInsert - 1)
-        if lastFrontKeyframeID is not None:
+        if lastFrontKeyframeID >= 0:
             self.keyframes = frontGraph.keyframes[:lastFrontKeyframeID + 1] + self.keyframes
             self.keyframeRows = None  # Invalidate cache of keyframe rows
 
@@ -737,7 +771,7 @@ class GraphSplicer:
             if not (arcA.openedBy == arcB.openedBy and arcA.closedBy == arcB.closedBy):
                 return False
 
-        # Do NOT test non-open arcs!
+        # Do NOT test solved arcs!
         return True
 
     @staticmethod
