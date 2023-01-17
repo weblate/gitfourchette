@@ -548,7 +548,7 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def quickRefresh(self, rw: RepoWidget):
-        rw.quickRefresh()
+        rw.quickRefreshWithSidebar()
 
     @needRepoWidget
     def refresh(self, rw: RepoWidget):
