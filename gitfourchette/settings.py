@@ -14,10 +14,6 @@ TEST_MODE = False
 REPO_SETTINGS_DIR = "gitfourchette"
 
 
-KEYS_ACCEPT = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
-KEYS_REJECT = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
-
-
 SHORT_DATE_PRESETS = [
     ('ISO', '%Y-%m-%d %H:%M'),
     ('Universal 1', '%d %b %Y %H:%M'),

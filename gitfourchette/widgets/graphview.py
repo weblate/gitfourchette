@@ -1,5 +1,4 @@
-from gitfourchette import porcelain
-from gitfourchette import settings
+from gitfourchette import globalshortcuts
 from gitfourchette.qt import *
 from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox
 from gitfourchette.widgets.graphdelegate import GraphDelegate
@@ -156,7 +155,7 @@ class GraphView(QListView):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in settings.KEYS_ACCEPT:
+        if k in globalshortcuts.stageHotkeys:
             self.getInfoOnCurrentCommit()
         else:
             super().keyPressEvent(event)

@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from gitfourchette.qt import *
 from gitfourchette.settings import PathDisplayStyle
 from pygit2 import Oid
@@ -194,50 +193,6 @@ def excStrings(exc):
     details = ''.join(details).strip()
 
     return summary, details
-
-
-@dataclass
-class ActionDef:
-    caption: str = ""
-    callback: typing.Callable = None
-    icon: QStyle.StandardPixmap = None
-    checkState: int = 0
-    submenu: list['ActionDef'] = field(default_factory=list)
-
-
-def quickMenu(
-        parent: QWidget,
-        actionDefs: list[ActionDef],
-        bottomEntries: QMenu | None = None
-) -> QMenu:
-
-    menu = QMenu(parent)
-    menu.setObjectName("quickMenu")
-
-    for actionDef in actionDefs:
-        if not actionDef:
-            menu.addSeparator()
-        elif actionDef.submenu:
-            submenu = quickMenu(parent=menu, actionDefs=actionDef.submenu)
-            submenu.setTitle(actionDef.caption)
-            if actionDef.icon:
-                submenu.setIcon(stockIcon(actionDef.icon))
-            menu.addMenu(submenu)
-        else:
-            newAction = QAction(actionDef.caption, parent=menu)
-            newAction.triggered.connect(actionDef.callback)
-            if actionDef.icon:
-                newAction.setIcon(stockIcon(actionDef.icon))
-            if actionDef.checkState != 0:
-                newAction.setCheckable(True)
-                newAction.setChecked(actionDef.checkState == 1)
-            menu.addAction(newAction)
-
-    if bottomEntries:
-        menu.addSeparator()
-        menu.addActions(bottomEntries.actions())
-
-    return menu
 
 
 def asyncMessageBox(

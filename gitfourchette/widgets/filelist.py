@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+
+from gitfourchette import globalshortcuts
 from gitfourchette import log
 from gitfourchette import settings
+from gitfourchette.actiondef import ActionDef
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, ActionDef, quickMenu, QSignalBlockerContext,
+from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBlockerContext,
                                 shortHash, PersistentFileDialog, showWarning, askConfirmation)
 from pathlib import Path
 from typing import Generator, Any
@@ -189,7 +192,7 @@ class FileList(QListView):
         if numIndexes == 0:
             return
 
-        menu = quickMenu(self, self.createContextMenuActions(numIndexes))
+        menu = ActionDef.makeQMenu(self, self.createContextMenuActions(numIndexes))
         menu.setObjectName("FileListContextMenu")
         menu.exec(event.globalPos())
 
@@ -199,7 +202,7 @@ class FileList(QListView):
         # was called" -- I suppose this means the context menu won't be deleted until the FileList has control again.
         menu.deleteLater()
 
-    def createContextMenuActions(self, count):
+    def createContextMenuActions(self, count) -> list[ActionDef]:
         return []
 
     def confirmBatch(self, callback, title: str, prompt: str, threshold: int = 3):
@@ -415,8 +418,18 @@ class DirtyFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(self.tr("&Stage %n File(s)", "", n), self.stage, QStyle.StandardPixmap.SP_ArrowDown),
-            ActionDef(self.tr("&Discard Changes", "", n), self.discard, QStyle.StandardPixmap.SP_TrashIcon),
+            ActionDef(
+                self.tr("&Stage %n File(s)", "", n),
+                self.stage,
+                QStyle.StandardPixmap.SP_ArrowDown,
+                shortcuts=globalshortcuts.stageHotkeys,
+            ),
+            ActionDef(
+                self.tr("&Discard Changes", "", n),
+                self.discard,
+                QStyle.StandardPixmap.SP_TrashIcon,
+                shortcuts=globalshortcuts.discardHotkeys,
+            ),
             None,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
@@ -429,9 +442,9 @@ class DirtyFiles(FileList):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in settings.KEYS_ACCEPT:
+        if k in globalshortcuts.stageHotkeys:
             self.stage()
-        elif k in settings.KEYS_REJECT:
+        elif k in globalshortcuts.discardHotkeys:
             self.discard()
         else:
             super().keyPressEvent(event)
@@ -453,7 +466,12 @@ class StagedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(self.tr("&Unstage %n File(s)", "", n), self.unstage, QStyle.StandardPixmap.SP_ArrowUp),
+            ActionDef(
+                self.tr("&Unstage %n File(s)", "", n),
+                self.unstage,
+                QStyle.StandardPixmap.SP_ArrowUp,
+                shortcuts=globalshortcuts.discardHotkeys,
+            ),
             None,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
@@ -466,7 +484,7 @@ class StagedFiles(FileList):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in settings.KEYS_ACCEPT + settings.KEYS_REJECT:
+        if k in globalshortcuts.stageHotkeys + globalshortcuts.discardHotkeys:
             self.unstage()
         else:
             super().keyPressEvent(event)

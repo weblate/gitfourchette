@@ -1,12 +1,14 @@
+from gitfourchette import globalshortcuts
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
+from gitfourchette.actiondef import ActionDef
 from gitfourchette.navhistory import NavPos
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.trash import Trash
-from gitfourchette.util import (PersistentFileDialog, excMessageBox, ActionDef, quickMenu, QSignalBlockerContext,
+from gitfourchette.util import (PersistentFileDialog, excMessageBox, QSignalBlockerContext,
                                 showWarning, askConfirmation, asyncMessageBox, stockIcon)
 from gitfourchette.widgets.diffmodel import DiffModel, LineData
 from bisect import bisect_left, bisect_right
@@ -178,27 +180,61 @@ class DiffView(QPlainTextEdit):
         elif self.currentStagingState == StagingState.UNSTAGED:
             if hasSelection:
                 actions = [
-                    ActionDef(self.tr("Stage Lines"), self.stageSelection),
-                    ActionDef(self.tr("Discard Lines"), self.discardSelection, QStyle.StandardPixmap.SP_TrashIcon),
-                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
+                    ActionDef(
+                        self.tr("Stage Lines"),
+                        self.stageSelection,
+                        shortcuts=globalshortcuts.stageHotkeys,
+                    ),
+                    ActionDef(
+                        self.tr("Discard Lines"),
+                        self.discardSelection,
+                        QStyle.StandardPixmap.SP_TrashIcon,
+                        shortcuts=globalshortcuts.discardHotkeys,
+                    ),
+                    ActionDef(
+                        self.tr("Export Lines as Patch..."),
+                        self.exportSelection
+                    ),
                 ]
             else:
                 actions = [
-                    ActionDef(self.tr("Stage Hunk {0}").format(clickedHunkID), lambda: self.stageHunk(clickedHunkID)),
-                    ActionDef(self.tr("Discard Hunk {0}").format(clickedHunkID), lambda: self.discardHunk(clickedHunkID)),
+                    ActionDef(
+                        self.tr("Stage Hunk {0}").format(clickedHunkID),
+                        lambda: self.stageHunk(clickedHunkID),
+                        shortcuts=globalshortcuts.stageHotkeys,
+                    ),
+                    ActionDef(
+                        self.tr("Discard Hunk {0}").format(clickedHunkID),
+                        lambda: self.discardHunk(clickedHunkID),
+                        shortcuts=globalshortcuts.discardHotkeys,
+                    ),
                     ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
         elif self.currentStagingState == StagingState.STAGED:
             if hasSelection:
                 actions = [
-                    ActionDef(self.tr("Unstage Lines"), self.unstageSelection),
-                    ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
+                    ActionDef(
+                        self.tr("Unstage Lines"),
+                        self.unstageSelection,
+                        shortcuts=globalshortcuts.discardHotkeys,
+                    ),
+                    ActionDef(
+                        self.tr("Export Lines as Patch..."),
+                        self.exportSelection,
+                    ),
                 ]
             else:
                 actions = [
-                    ActionDef(self.tr("Unstage Hunk {0}").format(clickedHunkID), lambda: self.unstageHunk(clickedHunkID)),
-                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(
+                        self.tr("Unstage Hunk {0}").format(clickedHunkID),
+                        lambda: self.unstageHunk(clickedHunkID),
+                        shortcuts=globalshortcuts.stageHotkeys,
+                    ),
+                    ActionDef(
+                        self.tr("Export Hunk as Patch..."),
+                        lambda: self.exportHunk(clickedHunkID),
+                    ),
                 ]
 
         else:
@@ -211,7 +247,7 @@ class DiffView(QPlainTextEdit):
         ]
 
         bottom: QMenu = self.createStandardContextMenu()
-        menu = quickMenu(self, actions, bottom)
+        menu = ActionDef.makeQMenu(self, actions, bottom)
         bottom.deleteLater()  # don't need this menu anymore
         menu.setObjectName("DiffViewContextMenu")
         menu.exec(event.globalPos())
@@ -224,12 +260,12 @@ class DiffView(QPlainTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in settings.KEYS_ACCEPT:
+        if k in globalshortcuts.stageHotkeys:
             if self.currentStagingState == StagingState.UNSTAGED:
                 self.stageSelection()
             else:
                 QApplication.beep()
-        elif k in settings.KEYS_REJECT:
+        elif k in globalshortcuts.discardHotkeys:
             if self.currentStagingState == StagingState.STAGED:
                 self.unstageSelection()
             elif self.currentStagingState == StagingState.UNSTAGED:

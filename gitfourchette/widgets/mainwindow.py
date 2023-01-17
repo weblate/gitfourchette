@@ -1,3 +1,4 @@
+from gitfourchette import globalshortcuts
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
@@ -170,7 +171,7 @@ class MainWindow(QMainWindow):
         fileMenu.setObjectName("MWFileMenu")
 
         a = fileMenu.addAction(self.tr("&New Repository..."), self.newRepo)
-        a.setShortcut(QKeySequence.StandardKey.New)
+        a.setShortcuts(QKeySequence.StandardKey.New)
 
         a = fileMenu.addAction(self.tr("C&lone Repository..."), self.cloneDialog)
         a.setShortcut("Ctrl+Shift+N")
@@ -178,13 +179,13 @@ class MainWindow(QMainWindow):
         fileMenu.addSeparator()
 
         a = fileMenu.addAction(self.tr("&Open Repository..."), self.openDialog)
-        a.setShortcut(QKeySequence.StandardKey.Open)
+        a.setShortcuts(QKeySequence.StandardKey.Open)
 
         self.recentMenu = fileMenu.addMenu(self.tr("Open &Recent"))
         self.recentMenu.setObjectName("RecentMenu")
 
         a = fileMenu.addAction(self.tr("&Close Tab"), self.closeCurrentTab)
-        a.setShortcut(QKeySequence.StandardKey.Close)
+        a.setShortcuts(globalshortcuts.closeTab)
 
         fileMenu.addSeparator()
 
@@ -197,13 +198,13 @@ class MainWindow(QMainWindow):
 
         a = fileMenu.addAction(self.tr("&Preferences..."), self.openSettings)
         a.setMenuRole(QAction.MenuRole.PreferencesRole)
-        a.setShortcut(QKeySequence.StandardKey.Preferences)
+        a.setShortcuts(QKeySequence.StandardKey.Preferences)
 
         fileMenu.addSeparator()
 
         a = fileMenu.addAction(self.tr("&Quit"), self.close)
         a.setMenuRole(QAction.MenuRole.QuitRole)
-        a.setShortcut(QKeySequence.StandardKey.Quit)
+        a.setShortcuts(QKeySequence.StandardKey.Quit)
 
         # -------------------------------------------------------------
 
@@ -213,7 +214,7 @@ class MainWindow(QMainWindow):
         self.repoMenu = repoMenu
 
         a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
-        a.setShortcut(QKeySequence.StandardKey.Refresh)
+        a.setShortcuts(globalshortcuts.refresh)
 
         a = repoMenu.addAction(self.tr("&Hard Refresh"), self.refresh)
         a.setShortcut("Ctrl+F5")
@@ -226,6 +227,9 @@ class MainWindow(QMainWindow):
         a = repoMenu.addAction(self.tr("&Amend Last Commit..."), self.amend)
         a.setShortcut("Ctrl+Shift+K")
 
+        a = repoMenu.addAction(self.tr("Stash Changes..."), self.newStash)
+        a.setShortcuts(globalshortcuts.newStash)
+
         repoMenu.addSeparator()
 
         repoMenu.addAction(self.tr("Add Re&mote..."), self.newRemote)
@@ -233,20 +237,20 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
 
         a = repoMenu.addAction(self.tr("&Find Commit..."), lambda: self.currentRepoWidget().findFlow())
-        a.setShortcut(QKeySequence.StandardKey.Find)
+        a.setShortcuts(QKeySequence.StandardKey.Find)
 
         a = repoMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().findNext())
-        a.setShortcut(QKeySequence.StandardKey.FindNext)
+        a.setShortcuts(QKeySequence.StandardKey.FindNext)
 
         a = repoMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().findPrevious())
-        a.setShortcut(QKeySequence.StandardKey.FindPrevious)
+        a.setShortcuts(QKeySequence.StandardKey.FindPrevious)
 
         repoMenu.addSeparator()
 
         configFilesMenu = repoMenu.addMenu(self.tr("&Local Config Files"))
 
         a = repoMenu.addAction(self.tr("&Open Repo Folder"), self.openRepoFolder)
-        a.setShortcut("Ctrl+Shift+O")
+        a.setShortcuts(globalshortcuts.openRepoFolder)
 
         repoMenu.addAction(self.tr("Cop&y Repo Path"), self.copyRepoPath)
         repoMenu.addAction(self.tr("Rename Repo..."), self.renameRepo)
@@ -264,13 +268,13 @@ class MainWindow(QMainWindow):
         branchMenu.setObjectName("MWBranchMenu")
 
         a = branchMenu.addAction(self.tr("New &Branch..."), self.newBranch)
-        a.setShortcut("Ctrl+B")
+        a.setShortcuts(globalshortcuts.newBranch)
 
         a = branchMenu.addAction(self.tr("&Push Branch..."), self.push)
-        a.setShortcut("Ctrl+P")
+        a.setShortcuts(globalshortcuts.pushBranch)
 
         a = branchMenu.addAction(self.tr("Pul&l Branch..."), self.pull)
-        a.setShortcut("Ctrl+Shift+P")
+        a.setShortcuts(globalshortcuts.pullBranch)
 
         # -------------------------------------------------------------
 
@@ -397,10 +401,10 @@ class MainWindow(QMainWindow):
         rw: RepoWidget = self.tabs.widget(i)
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
-        menu.addAction(self.tr("Close Tab"), lambda: self.closeTab(i))
+        closeTabAction = menu.addAction(self.tr("Close Tab"), lambda: self.closeTab(i))
         menu.addAction(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i))
         menu.addSeparator()
-        menu.addAction(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw))
+        openRepoFolderAction = menu.addAction(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw))
         menu.addAction(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw))
         menu.addAction(self.tr("Rename", "RepoTabCM"), lambda: self.renameRepo(rw))
         menu.addSeparator()
@@ -408,6 +412,11 @@ class MainWindow(QMainWindow):
             menu.addAction(self.tr("Unload", "RepoTabCM"), lambda: self.unloadTab(i))
         else:
             menu.addAction(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i))
+
+        if i == self.tabs.currentIndex():
+            closeTabAction.setShortcuts(globalshortcuts.closeTab)
+            openRepoFolderAction.setShortcuts(globalshortcuts.openRepoFolder)
+
         menu.exec(globalPoint)
         menu.deleteLater()
 
@@ -560,6 +569,10 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def amend(self, rw: RepoWidget):
         rw.actionFlows.amendFlow()
+
+    @needRepoWidget
+    def newStash(self, rw: RepoWidget):
+        rw.actionFlows.newStashFlow()
 
     @needRepoWidget
     def newBranch(self, rw: RepoWidget):

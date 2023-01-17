@@ -1,3 +1,4 @@
+from gitfourchette import globalshortcuts
 from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
@@ -535,13 +536,16 @@ class Sidebar(QTreeView):
             menu.setObjectName("SidebarContextMenu")
 
         if item == EItem.LocalBranchesHeader:
-            menu.addAction(self.tr("&New Branch..."), lambda: self.newBranch.emit())
+            newBranchAction = menu.addAction(self.tr("&New Branch..."), lambda: self.newBranch.emit())
+            newBranchAction.setShortcuts(globalshortcuts.newBranch)
 
         elif item == EItem.LocalBranch:
             model: SidebarModel = self.model()
             repo = model.repo
             branch = repo.branches.local[data]
+
             activeBranchName = porcelain.getActiveBranchShorthand(repo)
+            isCurrentBranch = branch and branch.is_checked_out()
 
             switchAction: QAction = menu.addAction(self.tr("&Switch to “{0}”").format(escamp(data)))
             menu.addSeparator()
@@ -553,20 +557,9 @@ class Sidebar(QTreeView):
             for action in switchAction, mergeAction, rebaseAction:
                 action.setEnabled(False)
 
-            if branch and not branch.is_checked_out():
-                switchAction.triggered.connect(lambda: self.switchToBranch.emit(data))
-                switchAction.setEnabled(True)
-
-                if activeBranchName:
-                    mergeAction.triggered.connect(lambda: self.mergeBranchIntoActive.emit(data))
-                    rebaseAction.triggered.connect(lambda: self.rebaseActiveOntoBranch.emit(data))
-
-                    mergeAction.setEnabled(True)
-                    rebaseAction.setEnabled(True)
-
             menu.addSeparator()
-            menu.addAction(stockIcon("vcs-push"), self.tr("&Push..."), lambda: self.pushBranch.emit(data))
-            menu.addAction(stockIcon("vcs-pull"), self.tr("Pul&l..."), lambda: self.pullBranch.emit(data))
+            pushBranchAction = menu.addAction(stockIcon("vcs-push"), self.tr("&Push..."), lambda: self.pushBranch.emit(data))
+            pullBranchAction = menu.addAction(stockIcon("vcs-pull"), self.tr("Pul&l..."), lambda: self.pullBranch.emit(data))
             menu.addAction(self.tr("Set &Tracked Branch..."), lambda: self.editTrackingBranch.emit(data))
 
             menu.addSeparator()
@@ -583,6 +576,20 @@ class Sidebar(QTreeView):
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
                 a.setChecked(isBranchHidden)
+
+            if not isCurrentBranch:
+                switchAction.triggered.connect(lambda: self.switchToBranch.emit(data))
+                switchAction.setEnabled(True)
+
+                pushBranchAction.setShortcuts(globalshortcuts.pushBranch)
+                pullBranchAction.setShortcuts(globalshortcuts.pullBranch)
+
+                if activeBranchName:
+                    mergeAction.triggered.connect(lambda: self.mergeBranchIntoActive.emit(data))
+                    rebaseAction.triggered.connect(lambda: self.rebaseActiveOntoBranch.emit(data))
+
+                    mergeAction.setEnabled(True)
+                    rebaseAction.setEnabled(True)
 
         elif item == EItem.RemoteBranch:
             menu.addAction(self.tr("New local branch tracking {0}...").format(escamp(data)),
@@ -621,7 +628,8 @@ class Sidebar(QTreeView):
             menu.addAction(self.tr("&Add Remote..."), lambda: self.newRemote.emit())
 
         elif item == EItem.StashesHeader:
-            menu.addAction(self.tr("&New stash"), lambda: self.newStash.emit())
+            newStashAction = menu.addAction(self.tr("&New Stash..."), lambda: self.newStash.emit())
+            newStashAction.setShortcuts(globalshortcuts.newStash)
 
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
