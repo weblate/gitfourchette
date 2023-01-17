@@ -187,7 +187,7 @@ class History(BasePrefs):
     def addRepo(self, path: str):
         path = os.path.normpath(path)
         repo = self.getRepo(path)
-        repo['time'] = int(time.time())
+        repo['time'] = time.time()
         return repo
 
     def getRepo(self, path) -> dict:
