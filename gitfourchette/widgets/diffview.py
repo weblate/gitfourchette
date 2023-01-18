@@ -611,10 +611,11 @@ class DiffView(QPlainTextEdit):
         self.replaceCursor(cursor)
 
     def onCopyAvailable(self, yes: bool):
-        if yes:
-            QApplication.clipboard().changed.connect(self.fixU2029InClipboard)
-        else:
-            QApplication.clipboard().changed.disconnect(self.fixU2029InClipboard)
+        if QSysInfo.productType() != "windows":
+            if yes:
+                QApplication.clipboard().changed.connect(self.fixU2029InClipboard)
+            else:
+                QApplication.clipboard().changed.disconnect(self.fixU2029InClipboard)
 
     def fixU2029InClipboard(self, mode: QClipboard.Mode):
         """
