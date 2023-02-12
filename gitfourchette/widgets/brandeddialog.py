@@ -58,15 +58,16 @@ def showTextInputDialog(
         title: str,
         detailedPrompt: str,
         text: str,
-        onAccept: Callable[[str], None],
+        onAccept: Callable[[str], None] = None,
         okButtonText: str = None
-) -> QInputDialog:
+) -> QDialog:
 
     dlg = QDialog(parent)
     dlg.setWindowTitle(title)
     dlg.setModal(True)
 
     lineEdit = QLineEdit(dlg)
+    dlg.lineEdit = lineEdit
     if text:
         lineEdit.setText(text)
         lineEdit.selectAll()

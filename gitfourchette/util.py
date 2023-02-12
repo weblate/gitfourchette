@@ -355,7 +355,7 @@ class NonCriticalOperation:
 
     def __exit__(self, excType, excValue, excTraceback):
         if excValue:
-            excMessageBox(excValue, message=tr("Operation failed: {0}.").format(self.operation))
+            excMessageBox(excValue, message=tr("Operation failed: {0}.").format(html.escape(self.operation)))
             return True  # don't propagate
 
 

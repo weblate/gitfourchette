@@ -674,7 +674,7 @@ def dropStash(repo: Repository, commitId: pygit2.Oid):
     repo.stash_drop(findStashIndex(repo, commitId))
 
 
-def getCoreStashMessage(stashMessage: str):
+def getCoreStashMessage(stashMessage: str) -> str:
     m = CORE_STASH_MESSAGE_PATTERN.match(stashMessage)
     if m:
         return m.group(1)

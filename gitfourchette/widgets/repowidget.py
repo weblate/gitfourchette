@@ -8,6 +8,13 @@ from gitfourchette.navhistory import NavHistory, NavPos
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
+from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskAffectsWhat
+from gitfourchette.tasks.stagetasks import StageFilesTask, UnstageFilesTask, DiscardFilesTask
+from gitfourchette.tasks.committasks import NewCommitTask, AmendCommitTask
+from gitfourchette.tasks.remotetasks import NewRemoteTask, EditRemoteTask, DeleteRemoteTask
+from gitfourchette.tasks.stashtasks import NewStashTask, ApplyStashTask, PopStashTask, DropStashTask
+from gitfourchette.tasks.branchtasks import SwitchBranchTask, RenameBranchTask, DeleteBranchTask, NewBranchTask, \
+    NewTrackingBranchTask, EditTrackedBranchTask
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon)
@@ -72,10 +79,12 @@ class RepoWidget(QWidget):
 
         # Use workQueue to schedule operations on the repository
         # to run on a thread separate from the UI thread.
-        self.workQueue = WorkQueue(self, maxThreadCount=1)
+        self.workQueue = WorkQueue(self, maxThreadCount=1)   # TODO: Get rid of this, ultimately
+        self.repoTaskRunner = RepoTaskRunner(self)
+        self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
 
         self.state = None
-        self.actionFlows = ActionFlows(None, self)
+        self.actionFlows = ActionFlows(None, self)  # TODO: Get rid of this, eventually
         self.pathPending = None
 
         self.scheduledRefresh = QTimer(self)
@@ -108,7 +117,7 @@ class RepoWidget(QWidget):
 
         self.stagedFiles.unstageFiles.connect(self.unstageFilesAsync)
         self.dirtyFiles.stageFiles.connect(self.stageFilesAsync)
-        self.dirtyFiles.discardFiles.connect(self.actionFlows.discardFilesFlow)  # we need to confirm deletions
+        self.dirtyFiles.discardFiles.connect(self.discardFilesAsync)
 
         for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             v.nothingClicked.connect(self.diffView.clear)
@@ -126,29 +135,29 @@ class RepoWidget(QWidget):
         self.graphView.checkoutCommit.connect(self.checkoutCommitAsync)
         self.graphView.revertCommit.connect(self.revertCommitAsync)
 
-        self.sidebar.commit.connect(self.startCommitFlow)
+        self.sidebar.commit.connect(self.newCommitAsync)
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
-        self.sidebar.deleteBranch.connect(self.actionFlows.deleteBranchFlow)
-        self.sidebar.deleteRemote.connect(self.actionFlows.deleteRemoteFlow)
-        self.sidebar.editRemote.connect(self.actionFlows.editRemoteFlow)
-        self.sidebar.editTrackingBranch.connect(self.actionFlows.editTrackingBranchFlow)
+        self.sidebar.deleteBranch.connect(self.deleteBranchAsync)
+        self.sidebar.deleteRemote.connect(self.deleteRemoteAsync)
+        self.sidebar.editRemote.connect(self.editRemoteAsync)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
         self.sidebar.renameRemoteBranch.connect(self.actionFlows.renameRemoteBranchFlow)
         self.sidebar.deleteRemoteBranch.connect(self.actionFlows.deleteRemoteBranchFlow)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
-        self.sidebar.newBranch.connect(self.actionFlows.newBranchFlow)
+        self.sidebar.newBranch.connect(self.newBranchFromHeadAsync)
         self.sidebar.newBranchFromBranch.connect(self.actionFlows.newBranchFromBranchFlow)
-        self.sidebar.newRemote.connect(self.actionFlows.newRemoteFlow)
-        self.sidebar.newTrackingBranch.connect(self.actionFlows.newTrackingBranchFlow)
+        self.sidebar.newRemote.connect(self.newRemoteAsync)
+        self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
+        self.sidebar.editTrackingBranch.connect(self.editTrackedBranchAsync)
         self.sidebar.refClicked.connect(self.selectRef)
-        self.sidebar.renameBranch.connect(self.actionFlows.renameBranchFlow)
+        self.sidebar.renameBranch.connect(self.renameBranchAsync)
         self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
 
-        self.sidebar.newStash.connect(self.actionFlows.newStashFlow)
+        self.sidebar.newStash.connect(self.newStashAsync)
         self.sidebar.applyStash.connect(self.applyStashAsync)
         self.sidebar.dropStash.connect(self.dropStashAsync)
         self.sidebar.popStash.connect(self.popStashAsync)
@@ -159,24 +168,9 @@ class RepoWidget(QWidget):
         # ----------------------------------
 
         flows = self.actionFlows
-
-        flows.amendCommit.connect(self.amendCommitAsync)
-        flows.createCommit.connect(self.createCommitAsync)
-        flows.deleteBranch.connect(self.deleteBranchAsync)
-        flows.deleteRemote.connect(self.deleteRemoteAsync)
         flows.deleteRemoteBranch.connect(self.deleteRemoteBranchAsync)
-        flows.discardFiles.connect(self.discardFilesAsync)
-        flows.editRemote.connect(self.editRemoteAsync)
-        flows.editTrackingBranch.connect(self.editTrackingBranchAsync)
-        flows.newBranch.connect(self.newBranchAsync)
-        flows.newRemote.connect(self.newRemoteAsync)
-        flows.newStash.connect(self.newStashAsync)
-        flows.newTrackingBranch.connect(self.newTrackingBranchAsync)
-        flows.renameBranch.connect(self.renameBranchAsync)
         flows.renameRemoteBranch.connect(self.renameRemoteBranchAsync)
         flows.pullBranch.connect(self.pullBranchAsync)
-        flows.updateCommitDraftMessage.connect(lambda message: self.state.setDraftCommitMessage(message))
-
         flows.pushComplete.connect(self.quickRefreshWithSidebar)
 
         # ----------------------------------
@@ -204,9 +198,9 @@ class RepoWidget(QWidget):
         commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
         stageContainer.layout().addWidget(commitButtonsContainer)
         self.commitButton = QPushButton(self.tr("&Commit"))
-        self.commitButton.clicked.connect(self.startCommitFlow)
         self.amendButton = QPushButton(self.tr("&Amend"))
-        self.amendButton.clicked.connect(self.actionFlows.amendFlow)
+        self.commitButton.clicked.connect(self.newCommitAsync)
+        self.amendButton.clicked.connect(self.amendCommitAsync)
         commitButtonsContainer.layout().addWidget(self.commitButton)
         commitButtonsContainer.layout().addWidget(self.amendButton)
         self.stageSplitter = QSplitter(Qt.Orientation.Vertical)
@@ -482,10 +476,6 @@ class RepoWidget(QWidget):
     def setPendingWorkdir(self, path):
         self.pathPending = os.path.normpath(path)
 
-    def startCommitFlow(self):
-        initialMessage = self.state.getDraftCommitMessage()
-        self.actionFlows.commitFlow(initialMessage)
-
     def renameRepo(self):
         def onAccept(newName):
             settings.history.setRepoNickname(self.workdir, newName)
@@ -661,106 +651,45 @@ class RepoWidget(QWidget):
         opName = translate("Operation", "Load diff “{0}”").format(patch.delta.new_file.path)
         self.workQueue.put(work, then, opName, -500)
 
-    def createCommitAsync(self, message: str, author: pygit2.Signature | None, committer: pygit2.Signature | None):
-        def work():
-            porcelain.createCommit(self.repo, message, author, committer)
+    def newCommitAsync(self):
+        task = NewCommitTask(self)
+        self.repoTaskRunner.put(task)
 
-        def then(_):
-            self.state.setDraftCommitMessage(None)  # Clear draft message
-            self.quickRefreshWithSidebar()
-
-        # Save commit message as draft now, so we don't lose it if the commit fails.
-        self.state.setDraftCommitMessage(message)
-
-        opName = translate("Operation", "Commit")
-        self.workQueue.put(work, then, opName)
-
-    def amendCommitAsync(self, message: str, author: pygit2.Signature | None, committer: pygit2.Signature | None):
-        def work():
-            porcelain.amendCommit(self.repo, message, author, committer)
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Amend commit")
-        self.workQueue.put(work, then, opName)
+    def amendCommitAsync(self):
+        task = AmendCommitTask(self)
+        self.repoTaskRunner.put(task)
 
     def switchToBranchAsync(self, newBranch: str):
-        assert not newBranch.startswith("refs/heads/")
+        task = SwitchBranchTask(self, newBranch)
+        self.repoTaskRunner.put(task)
 
-        def work():
-            porcelain.checkoutLocalBranch(self.repo, newBranch)
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Switch to branch “{0}”").format(newBranch)
-        self.workQueue.put(work, then, opName,
-                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
-
-    def renameBranchAsync(self, oldName: str, newName: str):
-        assert not oldName.startswith("refs/heads/")
-
-        work = lambda: porcelain.renameBranch(self.repo, oldName, newName)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Rename local branch “{0}”").format(oldName)
-        self.workQueue.put(work, then, opName)
+    def renameBranchAsync(self, oldName: str):
+        task = RenameBranchTask(self, oldName)
+        self.repoTaskRunner.put(task)
 
     def deleteBranchAsync(self, localBranchName: str):
-        assert not localBranchName.startswith("refs/heads/")
+        task = DeleteBranchTask(self, localBranchName)
+        self.repoTaskRunner.put(task)
 
-        work = lambda: porcelain.deleteBranch(self.repo, localBranchName)
-        then = lambda _: self.quickRefreshWithSidebar()
+    def newBranchFromHeadAsync(self):
+        task = NewBranchTask(self)
+        self.repoTaskRunner.put(task)
 
-        opName = translate("Operation", "Delete local branch “{0}”").format(localBranchName)
-        self.workQueue.put(work, then, opName)
+    def newTrackingBranchAsync(self, remoteBranchName: str):
+        task = NewTrackingBranchTask(self, remoteBranchName)
+        self.repoTaskRunner.put(task)
 
-    def newBranchAsync(self, localBranchName: str, tip: pygit2.Oid, tracking: str, switchTo: bool):
-        assert not localBranchName.startswith("refs/heads/")
+    def editTrackedBranchAsync(self, localBranchName: str):
+        task = EditTrackedBranchTask(self, localBranchName)
+        self.repoTaskRunner.put(task)
 
-        def work():
-            porcelain.newBranchFromCommit(self.repo, localBranchName, tip, switchTo=False)
-            if tracking:
-                porcelain.editTrackingBranch(self.repo, localBranchName, tracking)
-            # Switch last
-            if switchTo:
-                porcelain.checkoutLocalBranch(self.repo, localBranchName)
+    def newRemoteAsync(self):
+        task = NewRemoteTask(self)
+        self.repoTaskRunner.put(task)
 
-        def then(_): self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Create local branch “{0}”").format(localBranchName)
-        self.workQueue.put(work, then, opName)
-
-    def newTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
-        assert not localBranchName.startswith("refs/heads/")
-
-        work = lambda: porcelain.newTrackingBranch(self.repo, localBranchName, remoteBranchName)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "New branch “{0}”").format(localBranchName)
-        self.workQueue.put(work, then, opName)
-
-    def editTrackingBranchAsync(self, localBranchName: str, remoteBranchName: str):
-        work = lambda: porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Change remote branch tracked by “{0}”").format(localBranchName)
-        self.workQueue.put(work, then, opName)
-
-    def newRemoteAsync(self, name: str, url: str):
-        work = lambda: porcelain.newRemote(self.repo, name, url)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Add remote “{0}”").format(name)
-        self.workQueue.put(work, then, opName)
-
-    def editRemoteAsync(self, remoteName: str, newName: str, newURL: str):
-        work = lambda: porcelain.editRemote(self.repo, remoteName, newName, newURL)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Edit remote “{0}”").format(remoteName)
-        self.workQueue.put(work, then, opName)
+    def editRemoteAsync(self, name: str):
+        task = EditRemoteTask(self, name)
+        self.repoTaskRunner.put(task)
 
     def fetchRemoteAsync(self, remoteName: str):
         rlpd = RemoteLinkProgressDialog(self)
@@ -797,11 +726,8 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, opName, errorCallback=onError)
 
     def deleteRemoteAsync(self, remoteName: str):
-        work = lambda: porcelain.deleteRemote(self.repo, remoteName)
-        then = lambda _: self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Delete remote “{0}”").format(remoteName)
-        self.workQueue.put(work, then, opName)
+        task = DeleteRemoteTask(self, remoteName)
+        self.repoTaskRunner.put(task)
 
     def deleteRemoteBranchAsync(self, remoteBranchName: str):
         rlpd = RemoteLinkProgressDialog(self)
@@ -847,75 +773,32 @@ class RepoWidget(QWidget):
         self.workQueue.put(work, then, opName)
 
     def stageFilesAsync(self, patches: list[pygit2.Patch]):
-        def work():
-            with self.fileWatcher.blockWatchingIndex():
-                porcelain.stageFiles(self.repo, patches)
-
-        def then(_):
-            self.fillStageViewAsync(allowUpdateIndex=True)
-
-        numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
-        opName = QCoreApplication.translate("Operation", "Stage %n file(s)", "", numPatches)
-
-        self.workQueue.put(work, then, opName)
+        task = StageFilesTask(self, patches)
+        self.repoTaskRunner.put(task)
 
     def discardFilesAsync(self, patches: list[pygit2.Patch]):
-        def work():
-            paths = [patch.delta.new_file.path for patch in patches]
-            Trash(self.repo).backupPatches(patches)
-            porcelain.discardFiles(self.repo, paths)
-
-        def then(_):
-            self.fillStageViewAsync(allowUpdateIndex=True)
-
-        numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
-        opName = translate("Operation", "Discard %n file(s)", "", numPatches)
-
-        self.workQueue.put(work, then, opName)
+        task = DiscardFilesTask(self, patches)
+        self.repoTaskRunner.put(task)
 
     def unstageFilesAsync(self, patches: list[pygit2.Patch]):
-        def work():
-            with self.fileWatcher.blockWatchingIndex():
-                porcelain.unstageFiles(self.repo, patches)
+        task = UnstageFilesTask(self, patches)
+        self.repoTaskRunner.put(task)
 
-        def then(_):
-            self.fillStageViewAsync(allowUpdateIndex=True)
-
-        numPatches = len(patches)  # Work around Qt Linguist parsing bug -- but it fails to pick up the numerus anyway...
-        opName = translate("Operation", "Unstage %n file(s)", "", numPatches)
-
-        self.workQueue.put(work, then, opName)
-
-    def newStashAsync(self, message: str, flags: str):
-        def work():
-            with self.fileWatcher.blockWatchingIndex():
-                return porcelain.newStash(self.repo, message, flags)
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "New stash")
-        self.workQueue.put(work, then, opName)
+    def newStashAsync(self):
+        task = NewStashTask(self)
+        self.repoTaskRunner.put(task)
 
     def applyStashAsync(self, commitId: pygit2.Oid):
-        def work(): porcelain.applyStash(self.repo, commitId)
-        then = lambda _: self.quickRefreshWithSidebar()
-        opName = translate("Operation", "Apply stash")
-        self.workQueue.put(work, then, opName,
-                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
+        task = ApplyStashTask(self, commitId)
+        self.repoTaskRunner.put(task)
 
     def popStashAsync(self, commitId: pygit2.Oid):
-        def work(): porcelain.popStash(self.repo, commitId)
-        then = lambda _: self.quickRefreshWithSidebar()
-        opName = translate("Operation", "Pop stash")
-        self.workQueue.put(work, then, opName,
-                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
+        task = PopStashTask(self, commitId)
+        self.repoTaskRunner.put(task)
 
     def dropStashAsync(self, commitId: pygit2.Oid):
-        def work(): porcelain.dropStash(self.repo, commitId)
-        then = lambda _: self.quickRefreshWithSidebar()
-        opName = translate("Operation", "Delete stash")
-        self.workQueue.put(work, then, opName)
+        task = DropStashTask(self, commitId)
+        self.repoTaskRunner.put(task)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
@@ -1271,3 +1154,9 @@ class RepoWidget(QWidget):
             callback=lambda: trash.clear(),
             okButtonText=self.tr("Delete permanently"),
             okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
+
+    # -------------------------------------------------------------------------
+
+    def refreshPostTask(self, what: TaskAffectsWhat):
+        if 0 != (what & (TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS)):
+            self.quickRefreshWithSidebar()

@@ -564,11 +564,11 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def commit(self, rw: RepoWidget):
-        rw.startCommitFlow()
+        rw.newCommitAsync()
 
     @needRepoWidget
     def amend(self, rw: RepoWidget):
-        rw.actionFlows.amendFlow()
+        rw.amendCommitAsync()
 
     @needRepoWidget
     def newStash(self, rw: RepoWidget):
@@ -576,11 +576,11 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def newBranch(self, rw: RepoWidget):
-        rw.actionFlows.newBranchFlow()
+        rw.newBranchFromHeadAsync()#actionFlows.newBranchFlow()
 
     @needRepoWidget
     def newRemote(self, rw: RepoWidget):
-        rw.actionFlows.newRemoteFlow()
+        rw.newRemoteAsync()
 
     @needRepoWidget
     def renameRepo(self, rw: RepoWidget):

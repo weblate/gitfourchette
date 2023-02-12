@@ -117,6 +117,7 @@ class GraphDelegate(QStyledItemDelegate):
 
         if index.row() > 0:
             commit: pygit2.Commit = index.data()
+            # TODO: If is stash, getCoreStashMessage
             summaryText, contd = messageSummary(commit.message)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
             authorText = abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle)

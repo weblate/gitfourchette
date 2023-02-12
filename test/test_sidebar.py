@@ -93,7 +93,7 @@ def testRenameBranch(qtbot, tempDir, mainWindow):
 
     findMenuAction(menu, "rename").trigger()
 
-    q = findQDialog(rw, "rename branch")
+    q = findQDialog(rw, "rename.+branch")
     q.findChild(QLineEdit).setText("mainbranch")
     q.accept()
 
@@ -269,6 +269,8 @@ def testDropStash(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
     findMenuAction(menu, "^delete").trigger()
+
+    acceptQMessageBox(rw, "really delete.+stash")
 
     stashIndices = getEItemIndices(rw, EItem.Stash)
     assert len(repo.listall_stashes()) == 0

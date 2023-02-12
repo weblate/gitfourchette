@@ -57,7 +57,8 @@ class RepoPrefs(BasePrefs):
     filename = "prefs.json"
     _parentDir = ""
 
-    draftMessage: str = ""
+    draftCommitMessage: str = ""
+    draftAmendMessage: str = ""
     hiddenBranches: list[str] = field(default_factory=list)
 
     def getParentDir(self):
@@ -159,13 +160,19 @@ class RepoState:
         # Non-flattened graphs look better if we try to fill up the gaps in the graph.
         return not settings.prefs.graph_flattenLanes
 
-    def getDraftCommitMessage(self) -> str:
-        return self.uiPrefs.draftMessage
+    def getDraftCommitMessage(self, forAmending = False) -> str:
+        if forAmending:
+            return self.uiPrefs.draftAmendMessage
+        else:
+            return self.uiPrefs.draftCommitMessage
 
-    def setDraftCommitMessage(self, newMessage: str | None):
+    def setDraftCommitMessage(self, newMessage: str | None, forAmending: bool = False):
         if not newMessage:
             newMessage = ""
-        self.uiPrefs.draftMessage = newMessage
+        if forAmending:
+            self.uiPrefs.draftAmendMessage = newMessage
+        else:
+            self.uiPrefs.draftCommitMessage = newMessage
         self.uiPrefs.write()
 
     def refreshRefsByCommitCache(self):
