@@ -1,4 +1,4 @@
-from gitfourchette import globalshortcuts
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox
 from gitfourchette.widgets.graphdelegate import GraphDelegate
@@ -155,7 +155,7 @@ class GraphView(QListView):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in globalshortcuts.stageHotkeys:
+        if k in GlobalShortcuts.stageHotkeys:
             self.getInfoOnCurrentCommit()
         else:
             super().keyPressEvent(event)

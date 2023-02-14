@@ -86,6 +86,10 @@ def main():
             if baseTranslator.load(QLocale(settings.prefs.language), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
                 app.installTranslator(baseTranslator)
 
+    # Initialize global shortcuts
+    from gitfourchette.globalshortcuts import GlobalShortcuts
+    GlobalShortcuts.initialize()
+
     # Initialize main window
     from gitfourchette.widgets.mainwindow import MainWindow
     window = MainWindow()

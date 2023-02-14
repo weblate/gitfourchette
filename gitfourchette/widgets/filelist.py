@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from gitfourchette import globalshortcuts
 from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.actiondef import ActionDef
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
@@ -422,13 +422,13 @@ class DirtyFiles(FileList):
                 self.tr("&Stage %n File(s)", "", n),
                 self.stage,
                 QStyle.StandardPixmap.SP_ArrowDown,
-                shortcuts=globalshortcuts.stageHotkeys,
+                shortcuts=GlobalShortcuts.stageHotkeys,
             ),
             ActionDef(
                 self.tr("&Discard Changes", "", n),
                 self.discard,
                 QStyle.StandardPixmap.SP_TrashIcon,
-                shortcuts=globalshortcuts.discardHotkeys,
+                shortcuts=GlobalShortcuts.discardHotkeys,
             ),
             None,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
@@ -442,9 +442,9 @@ class DirtyFiles(FileList):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in globalshortcuts.stageHotkeys:
+        if k in GlobalShortcuts.stageHotkeys:
             self.stage()
-        elif k in globalshortcuts.discardHotkeys:
+        elif k in GlobalShortcuts.discardHotkeys:
             self.discard()
         else:
             super().keyPressEvent(event)
@@ -470,7 +470,7 @@ class StagedFiles(FileList):
                 self.tr("&Unstage %n File(s)", "", n),
                 self.unstage,
                 QStyle.StandardPixmap.SP_ArrowUp,
-                shortcuts=globalshortcuts.discardHotkeys,
+                shortcuts=GlobalShortcuts.discardHotkeys,
             ),
             None,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
@@ -484,7 +484,7 @@ class StagedFiles(FileList):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in globalshortcuts.stageHotkeys + globalshortcuts.discardHotkeys:
+        if k in GlobalShortcuts.stageHotkeys + GlobalShortcuts.discardHotkeys:
             self.unstage()
         else:
             super().keyPressEvent(event)

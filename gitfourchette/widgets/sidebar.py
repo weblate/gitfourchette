@@ -1,5 +1,5 @@
-from gitfourchette import globalshortcuts
 from gitfourchette import porcelain
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.util import escamp, stockIcon
@@ -537,7 +537,7 @@ class Sidebar(QTreeView):
 
         if item == EItem.LocalBranchesHeader:
             newBranchAction = menu.addAction(self.tr("&New Branch..."), lambda: self.newBranch.emit())
-            newBranchAction.setShortcuts(globalshortcuts.newBranch)
+            newBranchAction.setShortcuts(GlobalShortcuts.newBranch)
 
         elif item == EItem.LocalBranch:
             model: SidebarModel = self.model()
@@ -581,8 +581,8 @@ class Sidebar(QTreeView):
                 switchAction.triggered.connect(lambda: self.switchToBranch.emit(data))
                 switchAction.setEnabled(True)
 
-                pushBranchAction.setShortcuts(globalshortcuts.pushBranch)
-                pullBranchAction.setShortcuts(globalshortcuts.pullBranch)
+                pushBranchAction.setShortcuts(GlobalShortcuts.pushBranch)
+                pullBranchAction.setShortcuts(GlobalShortcuts.pullBranch)
 
                 if activeBranchName:
                     mergeAction.triggered.connect(lambda: self.mergeBranchIntoActive.emit(data))
@@ -629,7 +629,7 @@ class Sidebar(QTreeView):
 
         elif item == EItem.StashesHeader:
             newStashAction = menu.addAction(self.tr("&New Stash..."), lambda: self.newStash.emit())
-            newStashAction.setShortcuts(globalshortcuts.newStash)
+            newStashAction.setShortcuts(GlobalShortcuts.newStash)
 
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)

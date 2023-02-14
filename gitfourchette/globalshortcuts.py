@@ -1,9 +1,9 @@
 from gitfourchette.qt import *
 
-assert QApplication.instance(), "QApplication must have been created before instantiating QKeySequence"
+MultiShortcut = list[QKeySequence]
 
 
-def _makeShortcuts(*args) -> list[QKeySequence]:
+def _makeShortcuts(*args) -> MultiShortcut:
     shortcuts = []
 
     for alt in args:
@@ -24,14 +24,27 @@ def _makeShortcuts(*args) -> list[QKeySequence]:
     return shortcuts
 
 
-refresh = _makeShortcuts(QKeySequence.StandardKey.Refresh, "Ctrl+R", "F5")
-newBranch = _makeShortcuts("Ctrl+B")
-pushBranch = _makeShortcuts("Ctrl+P")
-pullBranch = _makeShortcuts("Ctrl+Shift+P")
-closeTab = _makeShortcuts(QKeySequence.StandardKey.Close)
-openRepoFolder = _makeShortcuts("Ctrl+Shift+O")
-newStash = _makeShortcuts(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S")
+class GlobalShortcuts:
+    NO_SHORTCUT = []
 
-stageHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
-discardHotkeys = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
+    refresh: MultiShortcut = NO_SHORTCUT
+    newBranch: MultiShortcut = NO_SHORTCUT
+    pushBranch: MultiShortcut = NO_SHORTCUT
+    pullBranch: MultiShortcut = NO_SHORTCUT
+    closeTab: MultiShortcut = NO_SHORTCUT
+    openRepoFolder: MultiShortcut = NO_SHORTCUT
+    newStash: MultiShortcut = NO_SHORTCUT
 
+    stageHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
+    discardHotkeys = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
+
+    @classmethod
+    def initialize(cls):
+        assert QApplication.instance(), "QApplication must have been created before instantiating QKeySequence"
+        cls.refresh = _makeShortcuts(QKeySequence.StandardKey.Refresh, "Ctrl+R", "F5")
+        cls.newBranch = _makeShortcuts("Ctrl+B")
+        cls.pushBranch = _makeShortcuts("Ctrl+P")
+        cls.pullBranch = _makeShortcuts("Ctrl+Shift+P")
+        cls.closeTab = _makeShortcuts(QKeySequence.StandardKey.Close)
+        cls.openRepoFolder = _makeShortcuts("Ctrl+Shift+O")
+        cls.newStash = _makeShortcuts(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S")
