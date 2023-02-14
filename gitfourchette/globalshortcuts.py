@@ -15,10 +15,16 @@ def _makeShortcuts(*args) -> list[QKeySequence]:
             assert isinstance(alt, QKeySequence)
             shortcuts.append(alt)
 
+    # Ensure no duplicates (stable order since Python 3.7+)
+    if qtBindingName == "PySide2":  # QKeySequence isn't hashable in PySide2
+        shortcuts = list(dict((str(s), s) for s in shortcuts).values())
+    else:
+        shortcuts = list(dict.fromkeys(shortcuts))
+
     return shortcuts
 
 
-refresh = _makeShortcuts(QKeySequence.StandardKey.Refresh, "Ctrl+R")
+refresh = _makeShortcuts(QKeySequence.StandardKey.Refresh, "Ctrl+R", "F5")
 newBranch = _makeShortcuts("Ctrl+B")
 pushBranch = _makeShortcuts("Ctrl+P")
 pullBranch = _makeShortcuts("Ctrl+Shift+P")
