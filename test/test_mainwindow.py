@@ -15,13 +15,13 @@ def testDropDirectoryOntoMainWindowOpensRepository(qtbot, tempDir, mainWindow):
     assert mainWindow.tabs.count() == 0
     assert mainWindow.currentRepoWidget() is None
 
-    pos = QPoint(mainWindow.width()//2, mainWindow.height()//2)
+    pos = QPointF(mainWindow.width()//2, mainWindow.height()//2)
     dropEvent = QDropEvent(pos, Qt.MoveAction, mime, Qt.LeftButton, Qt.NoModifier)
     dropEvent.acceptProposedAction()
     mainWindow.dropEvent(dropEvent)
 
     assert mainWindow.tabs.count() == 1
-    assert mainWindow.currentRepoWidget().repo.workdir == wd
+    assert os.path.normpath(mainWindow.currentRepoWidget().repo.workdir) == os.path.normpath(wd)
 
 
 def testDropUrlOntoMainWindowBringsUpCloneDialog(qtbot, mainWindow):
@@ -33,7 +33,7 @@ def testDropUrlOntoMainWindowBringsUpCloneDialog(qtbot, mainWindow):
     mime = QMimeData()
     mime.setUrls([wdUrl])
 
-    pos = QPoint(mainWindow.width()//2, mainWindow.height()//2)
+    pos = QPointF(mainWindow.width()//2, mainWindow.height()//2)
     dropEvent = QDropEvent(pos, Qt.MoveAction, mime, Qt.LeftButton, Qt.NoModifier)
     dropEvent.acceptProposedAction()
     mainWindow.dropEvent(dropEvent)

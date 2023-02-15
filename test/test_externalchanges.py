@@ -173,6 +173,8 @@ def testFSWDetectsNestedFolderDeletion(qtbot, tempDir, mainWindow):
     assert set(qlvGetRowData(rw.dirtyFiles)) == {"c/c1.txt", "c-keepwatching/keepwatchingme.txt", "c-keepwatching/watchmetoo.txt"}
 
 
+@pytest.mark.skipif(not os.getenv("WITH_STRESS"),
+                    reason="stress tests skipped unless the WITH_STRESS environment variable is set")
 def testFSWConcurrencyStressTest1(qtbot, tempDir, mainWindow):
     # mainWindow.show()
     wd = unpackRepo(tempDir)
@@ -190,6 +192,8 @@ def testFSWConcurrencyStressTest1(qtbot, tempDir, mainWindow):
         QCoreApplication.instance().processEvents()
 
 
+@pytest.mark.skipif(not os.getenv("WITH_STRESS"),
+                    reason="stress tests skipped unless the WITH_STRESS environment variable is set")
 def testFSWConcurrencyStressTest2(qtbot, tempDir, mainWindow):
     # mainWindow.show()
     wd = unpackRepo(tempDir)
@@ -230,6 +234,8 @@ def testFSWConcurrencyStressTest2(qtbot, tempDir, mainWindow):
     assert not th.exc
 
 
+@pytest.mark.skipif(not os.getenv("WITH_STRESS"),
+                    reason="stress tests skipped unless the WITH_STRESS environment variable is set")
 def testFSWConcurrencyStressTest3(qtbot, tempDir, mainWindow):
     # mainWindow.show()
     wd = unpackRepo(tempDir)
@@ -255,6 +261,8 @@ def testFSWConcurrencyStressTest3(qtbot, tempDir, mainWindow):
     assert 0 == gitLoop.returncode
 
 
+@pytest.mark.skipif(not os.getenv("WITH_STRESS"),
+                    reason="stress tests skipped unless the WITH_STRESS environment variable is set")
 def testFSWConcurrencyStressTest4(qtbot, tempDir, mainWindow):
     # mainWindow.show()
     wd = unpackRepo(tempDir)

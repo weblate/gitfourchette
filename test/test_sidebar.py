@@ -293,8 +293,11 @@ def testNewTrackingBranch(qtbot, tempDir, mainWindow):
 
 def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
+
     repo = pygit2.Repository(wd)
     porcelain.checkoutCommit(repo, pygit2.Oid(hex="7f822839a2fe9760f386cbbbcb3f92c5fe81def7"))
+    repo.free()  # necessary for correct test teardown on Windows
+    del repo
 
     rw = mainWindow.openRepo(wd)
 
