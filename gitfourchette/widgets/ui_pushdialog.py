@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'pushdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.6
+## Created by: Qt User Interface Compiler version 6.4.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -9,7 +9,6 @@
 from gitfourchette.qt import *
 
 from gitfourchette.widgets.statusform import StatusForm
-
 
 class Ui_PushDialog(object):
     def setupUi(self, PushDialog):
@@ -85,23 +84,23 @@ class Ui_PushDialog(object):
         self.remoteBranchOptionsStack.setObjectName(u"remoteBranchOptionsStack")
         sizePolicy.setHeightForWidth(self.remoteBranchOptionsStack.sizePolicy().hasHeightForWidth())
         self.remoteBranchOptionsStack.setSizePolicy(sizePolicy)
-        self.forcePushPage = QWidget()
-        self.forcePushPage.setObjectName(u"forcePushPage")
-        self.horizontalLayout_3 = QHBoxLayout(self.forcePushPage)
+        self.remoteBranchOptionsBlankPage = QWidget()
+        self.remoteBranchOptionsBlankPage.setObjectName(u"remoteBranchOptionsBlankPage")
+        self.horizontalLayout_3 = QHBoxLayout(self.remoteBranchOptionsBlankPage)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.remoteBranchOptionsStack.addWidget(self.forcePushPage)
-        self.customRemoteBranchNamePage = QWidget()
-        self.customRemoteBranchNamePage.setObjectName(u"customRemoteBranchNamePage")
-        self.horizontalLayout_4 = QHBoxLayout(self.customRemoteBranchNamePage)
+        self.remoteBranchOptionsStack.addWidget(self.remoteBranchOptionsBlankPage)
+        self.remoteBranchOptionsNameEditPage = QWidget()
+        self.remoteBranchOptionsNameEditPage.setObjectName(u"remoteBranchOptionsNameEditPage")
+        self.horizontalLayout_4 = QHBoxLayout(self.remoteBranchOptionsNameEditPage)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.customRemoteBranchNameEdit = QLineEdit(self.customRemoteBranchNamePage)
+        self.customRemoteBranchNameEdit = QLineEdit(self.remoteBranchOptionsNameEditPage)
         self.customRemoteBranchNameEdit.setObjectName(u"customRemoteBranchNameEdit")
 
         self.horizontalLayout_4.addWidget(self.customRemoteBranchNameEdit)
 
-        self.remoteBranchOptionsStack.addWidget(self.customRemoteBranchNamePage)
+        self.remoteBranchOptionsStack.addWidget(self.remoteBranchOptionsNameEditPage)
 
         self.horizontalLayout.addWidget(self.remoteBranchOptionsStack)
 

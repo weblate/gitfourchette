@@ -28,10 +28,11 @@ class PushDialog(QDialog):
         else:
             self.ui.trackingLabel.setText(self.tr("non-tracking"))
 
-        if self.trackedBranchIndex >= 0:
-            self.ui.remoteBranchEdit.setCurrentIndex(self.trackedBranchIndex)
-        else:
-            self.ui.remoteBranchEdit.setCurrentIndex(self.fallbackAutoNewIndex)
+        remoteIndex = self.trackedBranchIndex
+        if self.trackedBranchIndex < 0:
+            remoteIndex = self.fallbackAutoNewIndex
+        self.ui.remoteBranchEdit.setCurrentIndex(remoteIndex)
+        self.onPickRemoteBranch(remoteIndex)
 
         self.updateTrackCheckBox()
 
@@ -42,11 +43,11 @@ class PushDialog(QDialog):
 
         if remoteItem != ERemoteItem.ExistingRef:
             newRBN = porcelain.generateUniqueBranchNameOnRemote(self.repo, remoteData, localBranch.branch_name)
-            self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.customRemoteBranchNamePage)
+            self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.remoteBranchOptionsNameEditPage)
             self.ui.customRemoteBranchNameEdit.setText(newRBN)
             self.ui.customRemoteBranchNameEdit.setFocus(Qt.TabFocusReason)
         else:
-            self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.forcePushPage)
+            self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.remoteBranchOptionsBlankPage)
 
         self.updateTrackCheckBox()
 
@@ -203,16 +204,13 @@ class PushDialog(QDialog):
                 pickBranchIndex = i
         self.ui.localBranchEdit.setCurrentIndex(pickBranchIndex)
 
-        self.ui.localBranchEdit.currentIndexChanged.connect(self.fillRemoteComboBox)
-        self.ui.localBranchEdit.currentIndexChanged.connect(self.onPickLocalBranch)
-        self.ui.remoteBranchEdit.currentIndexChanged.connect(self.onPickRemoteBranch)
+        self.ui.localBranchEdit.activated.connect(self.fillRemoteComboBox)
+        self.ui.localBranchEdit.activated.connect(self.onPickLocalBranch)
+        self.ui.remoteBranchEdit.activated.connect(self.onPickRemoteBranch)
         self.ui.customRemoteBranchNameEdit.textEdited.connect(lambda text: self.updateTrackCheckBox(False))
 
-        # Force the indexchanged signal to fire so the callbacks are guaranteed to run even if pickBranchIndex is 0.
-        self.ui.localBranchEdit.currentIndexChanged.emit(pickBranchIndex)
-
-        # Also fire indexchanged on remoteBranchEdit to run the callback even if the 0th remote entry is selected.
-        self.ui.remoteBranchEdit.currentIndexChanged.emit(self.ui.remoteBranchEdit.currentIndex())
+        # Fire initial activated signal to set up comboboxes
+        self.ui.localBranchEdit.activated.emit(pickBranchIndex)
 
         convertToBrandedDialog(self)
 
