@@ -37,7 +37,7 @@ def readFile(path):
         return f.read()
 
 
-def qlvGetRowData(view: QListView, role=Qt.DisplayRole):
+def qlvGetRowData(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     model = view.model()
     data = []
     for row in range(model.rowCount()):
@@ -50,10 +50,10 @@ def qlvClickNthRow(view: QListView, n: int):
     index = view.model().index(n, 0)
     view.scrollTo(index)
     rect = view.visualRect(index)
-    QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=rect.center())
+    QTest.mouseClick(view.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
 
 
-def qlvGetSelection(view: QListView, role=Qt.DisplayRole):
+def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     data = []
     for index in view.selectedIndexes():
         data.append(index.data(role))
@@ -97,3 +97,4 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
 def hexToOid(hexstr: str):
     assert len(hexstr) == 40
     return pygit2.Oid(hex=hexstr)
+

@@ -702,3 +702,10 @@ class Sidebar(QTreeView):
         index: QModelIndex = self.indexAt(event.pos())
         if event.button() == Qt.MouseButton.LeftButton and index.isValid():
             self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))
+
+    def indicesForItemType(self, item: EItem) -> list[QModelIndex]:
+        """ Unit testing helper """
+        model: QAbstractItemModel = self.model()
+        value = item.value
+        indexList: list[QModelIndex] = model.match(model.index(0, 0), ROLE_EITEM, value, hits=-1, flags=Qt.MatchFlag.MatchRecursive)
+        return indexList

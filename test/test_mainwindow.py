@@ -3,7 +3,6 @@ from .fixtures import *
 from .util import *
 from gitfourchette.widgets.clonedialog import CloneDialog
 import os
-import pygit2
 
 
 def testDropDirectoryOntoMainWindowOpensRepository(qtbot, tempDir, mainWindow):
