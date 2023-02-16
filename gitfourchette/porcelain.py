@@ -596,7 +596,6 @@ def discardFiles(repo: Repository, paths: list[str]):
 
     strategy = (pygit2.GIT_CHECKOUT_FORCE
                 | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
-                | pygit2.GIT_CHECKOUT_DONT_UPDATE_INDEX  # not strictly necessary, but prevents nuking staged changes inadvertently
                 | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 
     # refresh index before getting indexTree in case an external program modified the staging area
