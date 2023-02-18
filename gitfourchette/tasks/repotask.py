@@ -158,27 +158,34 @@ class RepoTask(QObject):
         return AbortIfDialogRejected(qmb)
 
 
-class _AsyncTaskExecutor(QRunnable, QObject):
+class _AsyncTaskRunner(QObject):
+    """
+    Wraps RepoTask.execute() and dispatches the outcome as signals.
+    This enables execution to occur on a separate thread.
+    """
+
     error = Signal(object)
     result = Signal(object)
     finished = Signal()
 
+    task: RepoTask
+    taskName: str
+    isRunSerially: bool
+    qRunnable: QRunnable
+
     def __init__(self, parent: QObject, task: RepoTask):
-        QRunnable.__init__(self)  # <-- PyQt6 says too many arguments here?! (Works in PySide6)
         QObject.__init__(self, parent)
 
         self.task = task
         self.taskName = task.name()  # keep the name around for use in __del__
-
         self.setObjectName("AsyncTaskExecutor")
-        self.setAutoDelete(True)
-
         self.isRunSerially = False
+        self.qRunnable = util.QRunnableFunctionWrapper(self._run)
 
     def __del__(self):
-        log.info(TAG, F"Async task executor destroyed: {self.taskName}")
+        log.info(TAG, F"AsyncTaskExecutor (QObject) destroyed: {self.taskName}")
 
-    def run(self):
+    def _run(self):
         assert self.isRunSerially or not util.onAppThread()
         try:
             #result = self.fn(*self.args, **self.kwargs)
@@ -270,7 +277,7 @@ class RepoTaskRunner(QObject):
 
     def _executeTask(self, task):
         assert task == self.currentTask
-        worker = _AsyncTaskExecutor(self, self.currentTask)
+        worker = _AsyncTaskRunner(self, self.currentTask)
         worker.result.connect(self.currentTask.postExecute)
         worker.error.connect(self.currentTask.onError)
         worker.finished.connect(lambda: self.refreshPostTask.emit(task.refreshWhat()))
@@ -278,6 +285,6 @@ class RepoTaskRunner(QObject):
 
         if self.forceSerial:
             worker.isRunSerially = True
-            worker.run()
+            worker.qRunnable.run()
         else:
-            self.threadpool.start(worker)
+            self.threadpool.start(worker.qRunnable)
