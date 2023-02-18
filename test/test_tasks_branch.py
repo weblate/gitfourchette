@@ -5,9 +5,6 @@ from gitfourchette.widgets.sidebar import EItem
 import re
 
 
-# TODO: Write test for switching
-
-
 def testNewBranch(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -124,3 +121,23 @@ def testNewRemoteTrackingBranch2(qtbot, tempDir, mainWindow):
     assert localBranch.upstream_name == "refs/remotes/origin/first-merge"
     assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"
 
+
+def testSwitchBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    rw = mainWindow.openRepo(wd)
+    localBranches = rw.repo.branches.local
+
+    # make sure initial branch state is correct
+    assert localBranches['master'].is_checked_out()
+    assert not localBranches['no-parent'].is_checked_out()
+    assert os.path.isfile(f"{wd}/master.txt")
+    assert os.path.isfile(f"{wd}/c/c1.txt")
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
+    findMenuAction(menu, "switch to").trigger()
+
+    assert not localBranches['master'].is_checked_out()
+    assert localBranches['no-parent'].is_checked_out()
+    assert not os.path.isfile(f"{wd}/master.txt")  # this file doesn't exist on the no-parent branch
+    assert os.path.isfile(f"{wd}/c/c1.txt")
