@@ -30,9 +30,6 @@ def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
 
-    indices = rw.sidebar.indicesForItemType(EItem.DetachedHead)
-    assert len(indices) == 1
-
-    indices = rw.sidebar.indicesForItemType(EItem.LocalBranch)
-    assert len(indices) == 1
+    assert 1 == len(rw.sidebar.datasForItemType(EItem.DetachedHead))
+    assert {'no-parent', 'master'} == set(rw.sidebar.datasForItemType(EItem.LocalBranch))
 

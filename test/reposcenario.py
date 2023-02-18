@@ -31,3 +31,4 @@ def stashedChange(path):
     repo.stash(sig, "helloworld")
     assert repo.status() == {}
     repo.free()  # necessary for correct test teardown on Windows
+

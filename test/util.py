@@ -3,6 +3,7 @@ import pygit2
 import os
 import re
 import tarfile
+import shutil
 
 
 def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
@@ -17,6 +18,23 @@ def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
     path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
 
     return path
+
+
+def makeBareCopy(path: str, addAsRemote: bool):
+    basename = os.path.basename(os.path.normpath(path))  # normpath first, because basename may return an empty string if path ends with a slash
+    barePath = os.path.normpath(F"{path}/../{basename}-bare.git")  # create bare repo besides real repo in temporary directory
+    shutil.copytree(F"{path}/.git", barePath)
+
+    conf = pygit2.Config(F"{barePath}/config")
+    conf['core.bare'] = True
+    del conf
+
+    if addAsRemote:
+        repo = pygit2.Repository(path)
+        repo.remotes.create("localfs", barePath)  # TODO: Should we add file:// ?
+        repo.free()  # necessary for correct test teardown on Windows
+
+    return barePath
 
 
 def touchFile(path):

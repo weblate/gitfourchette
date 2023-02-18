@@ -68,4 +68,3 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
 
     assert len(list(repo.remotes)) == 0
 
-

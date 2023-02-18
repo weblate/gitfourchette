@@ -709,3 +709,9 @@ class Sidebar(QTreeView):
         value = item.value
         indexList: list[QModelIndex] = model.match(model.index(0, 0), ROLE_EITEM, value, hits=-1, flags=Qt.MatchFlag.MatchRecursive)
         return indexList
+
+    def datasForItemType(self, item: EItem, role: int = ROLE_USERDATA) -> list[str]:
+        """ Unit testing helper """
+        model: QAbstractItemModel = self.model()
+        indices = self.indicesForItemType(item)
+        return [model.data(index, role) for index in indices]

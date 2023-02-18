@@ -13,7 +13,7 @@ def testNewStash(qtbot, tempDir, mainWindow):
 
     assert len(repo.listall_stashes()) == 0
 
-    assert len(rw.sidebar.indicesForItemType(EItem.Stash)) == 0
+    assert len(rw.sidebar.datasForItemType(EItem.Stash)) == 0
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
@@ -23,10 +23,8 @@ def testNewStash(qtbot, tempDir, mainWindow):
     dlg.ui.messageEdit.setText("helloworld")
     dlg.accept()
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
     assert len(repo.listall_stashes()) == 1
-    assert len(stashIndices) == 1
-    assert stashIndices[0].data(Qt.DisplayRole).endswith("helloworld")
+    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)]
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
@@ -36,15 +34,15 @@ def testPopStash(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
-    assert len(stashIndices) == 1
+    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
+    assert len(stashDatas) == 1
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashDatas[0])
     findMenuAction(menu, "^pop").trigger()
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
+    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
     assert len(repo.listall_stashes()) == 0
-    assert len(stashIndices) == 0
+    assert [] == stashDatas
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
@@ -54,15 +52,15 @@ def testApplyStash(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
-    assert len(stashIndices) == 1
+    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
+    assert len(stashDatas) == 1
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashDatas[0])
     findMenuAction(menu, r"^apply").trigger()
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
+    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
     assert len(repo.listall_stashes()) == 1
-    assert len(stashIndices) == 1
+    assert len(stashDatas) == 1
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
@@ -74,17 +72,17 @@ def testDropStash(qtbot, tempDir, mainWindow):
 
     assert qlvGetRowData(rw.dirtyFiles) == []
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
-    assert len(stashIndices) == 1
+    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
+    assert len(stashDatas) == 1
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashIndices[0].data(Qt.UserRole))
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashDatas[0])
     findMenuAction(menu, "^delete").trigger()
 
     acceptQMessageBox(rw, "really delete.+stash")
 
-    stashIndices = rw.sidebar.indicesForItemType(EItem.Stash)
+    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
     assert len(repo.listall_stashes()) == 0
-    assert len(stashIndices) == 0
+    assert len(stashDatas) == 0
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
