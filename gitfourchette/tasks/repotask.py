@@ -92,6 +92,9 @@ class RepoTask(QObject):
         return self.rw.repo
 
     def cancel(self):
+        """
+        Call this to interrupt `preExecuteUiFlow`.
+        """
         self.aborted = True
 
     def preExecuteUiFlow(self) -> typing.Generator | None:
@@ -110,13 +113,28 @@ class RepoTask(QObject):
         """
         pass
 
-    def execute(self):
+    def execute(self) -> None:
+        """
+        The "meat" of the task.
+        Runs after preExecuteUiFlow.
+
+        This function may be scheduled to run on a separate thread so that the
+        UI stays responsive. Therefore, you may NOT interact with the UI here.
+
+        You may throw an exception.
+        """
         pass
 
-    def postExecute(self):
+    def postExecute(self, success: bool):
+        """
+        Runs on the UI thread, after execute() exits.
+        """
         pass
 
     def onError(self, exc):
+        """
+        Runs if preExecuteUiFlow() or execute() were interrupted by an error.
+        """
         if isinstance(exc, porcelain.ConflictError):
             showConflictErrorMessage(self.parent(), exc, self.name())
         else:
@@ -127,6 +145,9 @@ class RepoTask(QObject):
         return str(self)
 
     def refreshWhat(self) -> TaskAffectsWhat:
+        """
+        Returns which parts of the UI should be refreshed when this task is done.
+        """
         return TaskAffectsWhat.NOTHING
 
     def abortIfQuestionRejected(
@@ -135,6 +156,15 @@ class RepoTask(QObject):
             text: str = "",
             acceptButtonIcon: (QStyle.StandardPixmap | str | None) = None,
     ) -> TaskYieldTokenBase:
+        """
+        Asks the user to confirm the operation via a message box.
+        Interrupts preExecuteUiFlow if the user denies.
+
+        This function is only intended to be called during `preExecuteUiFlow`.
+        It returns a TaskYieldTokenBase which you should `yield`. For example:
+
+        >>> yield self.abortIfQuestionRejected("Question", "Really do this?")
+        """
 
         if not title:
             title = self.name()
@@ -161,44 +191,28 @@ class RepoTask(QObject):
 
 class _AsyncTaskRunner(QObject):
     """
-    Wraps RepoTask.execute() and dispatches the outcome as signals.
+    Wraps RepoTask.execute() and emits a signal when done.
     This enables execution to occur on a separate thread.
     """
 
-    error = Signal(object)
-    result = Signal(object)
-    finished = Signal()
-
-    task: RepoTask
-    taskName: str
-    isRunSerially: bool
-    qRunnable: QRunnable
+    finished = Signal(object)  # argument: exception (if failed) or None (if successful)
 
     def __init__(self, parent: QObject, task: RepoTask):
         QObject.__init__(self, parent)
+        self.setObjectName("AsyncTaskRunner")
 
         self.task = task
-        self.taskName = task.name()  # keep the name around for use in __del__
-        self.setObjectName("AsyncTaskExecutor")
         self.isRunSerially = False
         self.qRunnable = util.QRunnableFunctionWrapper(self._run)
-
-    def __del__(self):
-        log.info(TAG, F"AsyncTaskExecutor (QObject) destroyed: {self.taskName}")
 
     def _run(self):
         assert self.isRunSerially or not util.onAppThread()
         try:
-            #result = self.fn(*self.args, **self.kwargs)
-            #TODO: Mutex?
-            result = self.task.execute()
+            # TODO: Mutex to regulate access to repo from entire program?
+            self.task.execute()
+            self.finished.emit(None)
         except BaseException as exc:
-            self.error.emit(exc)
-        else:
-            self.result.emit(result)  # Return the result of the processing
-        finally:
-            self.finished.emit()
-            self.deleteLater()  # Tell Qt we're done with that QObject
+            self.finished.emit(exc)
 
 
 class RepoTaskRunner(QObject):
@@ -221,6 +235,7 @@ class RepoTaskRunner(QObject):
     def put(self, task: RepoTask):
         if self.currentTask is not None:
             log.warning(TAG, "**** A REPOTASK IS ALREADY RUNNING!!! ****")
+            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self.currentTask.name()})")
             return
 
         self.currentTask = task
@@ -266,26 +281,26 @@ class RepoTaskRunner(QObject):
             self._clearTask(task)
 
     def _clearTask(self, task):
-        #if self.currentTask:
-        #    try:
-        #        self.currentTask.continueUiFlow.disconnect()
-        #    except RuntimeError:
-        #        # It may throw if it's not bound
-        #        pass
-        #    #QObject.disconnect(self.currentTask)
         assert task == self.currentTask
         self.currentTask = None
 
     def _executeTask(self, task):
         assert task == self.currentTask
-        worker = _AsyncTaskRunner(self, self.currentTask)
-        worker.result.connect(self.currentTask.postExecute)
-        worker.error.connect(self.currentTask.onError)
-        worker.finished.connect(lambda: self.refreshPostTask.emit(task.refreshWhat()))
-        worker.finished.connect(lambda: self._clearTask(task))
+
+        wrapper = _AsyncTaskRunner(self, self.currentTask)
+        wrapper.finished.connect(lambda exc: self._onTaskFinished(task, wrapper, exc))
 
         if self.forceSerial:
-            worker.isRunSerially = True
-            worker.qRunnable.run()
+            wrapper.isRunSerially = True
+            wrapper.qRunnable.run()
         else:
-            self.threadpool.start(worker.qRunnable)
+            self.threadpool.start(wrapper.qRunnable)
+
+    def _onTaskFinished(self, task, wrapper, exc):
+        assert task == self.currentTask
+        wrapper.deleteLater()  # delete wrapper AFTER we've intercepted the finished signal
+        if exc:
+            self.currentTask.onError(exc)
+        self.currentTask.postExecute(not exc)
+        self.refreshPostTask.emit(task.refreshWhat())
+        self._clearTask(task)

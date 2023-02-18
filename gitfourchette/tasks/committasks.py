@@ -59,8 +59,9 @@ class NewCommitTask(RepoTask):
     def execute(self):
         porcelain.createCommit(self.repo, self.message, self.author, self.committer)
 
-    def postExecute(self):
-        self.setDraftMessage(None)  # Clear draft message
+    def postExecute(self, success: bool):
+        if success:
+            self.setDraftMessage(None)  # Clear draft message
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
@@ -113,8 +114,9 @@ class AmendCommitTask(RepoTask):
     def execute(self):
         porcelain.amendCommit(self.repo, self.message, self.author, self.committer)
 
-    def postExecute(self):
-        self.setDraftMessage(None)  # Clear draft message
+    def postExecute(self, success):
+        if success:
+            self.setDraftMessage(None)  # Clear draft message
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS

@@ -13,10 +13,6 @@ import pygit2
 
 
 class ActionFlows(QObject):
-    deleteRemoteBranch = Signal(str)
-    editRemote = Signal(str, str, str)  # oldName, newName, newURL
-    renameBranch = Signal(str, str)
-    renameRemoteBranch = Signal(str, str)
     pullBranch = Signal(str, str)  # local branch, remote ref to pull
     pushComplete = Signal()
 
@@ -24,30 +20,6 @@ class ActionFlows(QObject):
         super().__init__(parent)
         self.repo = repo
         self.parentWidget = parent
-
-    def confirmAction(
-            self,
-            title: str,
-            text: str,
-            acceptButtonIcon: (QStyle.StandardPixmap | str | None) = None
-    ) -> QMessageBox:
-
-        qmb = asyncMessageBox(
-            self.parentWidget,
-            'question',
-            title,
-            text,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-
-        # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
-        # so it connects to the "accepted" signal.
-        yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
-        if acceptButtonIcon:
-            yes.setIcon(stockIcon(acceptButtonIcon))
-        yes.setText(title)
-
-        qmb.show()
-        return qmb
 
     # -------------------------------------------------------------------------
     # Branch
@@ -123,32 +95,6 @@ class ActionFlows(QObject):
             trackingCandidates = [branch.upstream.shorthand]
         tip: pygit2.Oid = branch.target
         self._newBranchFlowInternal(tip, originalBranchName, trackingCandidates)
-
-    # -------------------------------------------------------------------------
-    # Remote
-
-    def renameRemoteBranchFlow(self, remoteBranchName: str):
-        def onAccept(newName):
-            self.renameRemoteBranch.emit(remoteBranchName, newName)
-
-        remoteName, branchName = porcelain.splitRemoteBranchShorthand(remoteBranchName)
-
-        return showTextInputDialog(
-            self.parentWidget,
-            self.tr("Rename remote branch “{0}”").format(escape(remoteBranchName)),
-            self.tr("Enter new name:"),
-            branchName,
-            onAccept,
-            okButtonText=self.tr("Rename on remote"))
-
-    def deleteRemoteBranchFlow(self, remoteBranchName: str):
-        text = (self.tr("Really delete branch <b>“{0}”</b> from the remote repository?").format(escape(remoteBranchName))
-                + "<br>" + translate("Global", "This cannot be undone!"))
-
-        qmb = self.confirmAction(self.tr("Delete Branch on Remote"), text,
-                                 QStyle.StandardPixmap.SP_DialogDiscardButton)
-        qmb.accepted.connect(lambda: self.deleteRemoteBranch.emit(remoteBranchName))
-        return qmb
 
     # -------------------------------------------------------------------------
     # Push

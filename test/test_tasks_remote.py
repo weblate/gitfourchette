@@ -7,6 +7,10 @@ from gitfourchette.widgets.sidebar import EItem
 from gitfourchette import porcelain
 import re
 
+"""
+Remote management tests.
+"""
+
 
 def testNewRemote(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)

@@ -1,3 +1,7 @@
+"""
+Remote management tasks.
+"""
+
 from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat, AbortIfDialogRejected

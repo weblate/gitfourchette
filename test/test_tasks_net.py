@@ -2,6 +2,13 @@ from .fixtures import *
 from .util import *
 from gitfourchette.widgets.sidebar import EItem
 
+"""
+Remote access tests.
+
+Note: these tests don't actually access the network.
+We use a bare repository on the local filesystem as a "remote server".
+"""
+
 
 def testFetchNewRemoteBranches(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)

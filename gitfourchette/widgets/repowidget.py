@@ -11,6 +11,7 @@ from gitfourchette.stagingstate import StagingState
 from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskAffectsWhat
 from gitfourchette.tasks.stagetasks import StageFilesTask, UnstageFilesTask, DiscardFilesTask
 from gitfourchette.tasks.committasks import NewCommitTask, AmendCommitTask
+from gitfourchette.tasks.nettasks import DeleteRemoteBranchTask, RenameRemoteBranchTask
 from gitfourchette.tasks.remotetasks import NewRemoteTask, EditRemoteTask, DeleteRemoteTask
 from gitfourchette.tasks.stashtasks import NewStashTask, ApplyStashTask, PopStashTask, DropStashTask
 from gitfourchette.tasks.branchtasks import SwitchBranchTask, RenameBranchTask, DeleteBranchTask, NewBranchTask, \
@@ -142,8 +143,8 @@ class RepoWidget(QWidget):
         self.sidebar.editRemote.connect(self.editRemoteAsync)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
-        self.sidebar.renameRemoteBranch.connect(self.actionFlows.renameRemoteBranchFlow)
-        self.sidebar.deleteRemoteBranch.connect(self.actionFlows.deleteRemoteBranchFlow)
+        self.sidebar.renameRemoteBranch.connect(self.renameRemoteBranchAsync)
+        self.sidebar.deleteRemoteBranch.connect(self.deleteRemoteBranchAsync)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
         self.sidebar.newBranch.connect(self.newBranchFromHeadAsync)
@@ -168,8 +169,6 @@ class RepoWidget(QWidget):
         # ----------------------------------
 
         flows = self.actionFlows
-        flows.deleteRemoteBranch.connect(self.deleteRemoteBranchAsync)
-        flows.renameRemoteBranch.connect(self.renameRemoteBranchAsync)
         flows.pullBranch.connect(self.pullBranchAsync)
         flows.pushComplete.connect(self.quickRefreshWithSidebar)
 
@@ -730,38 +729,12 @@ class RepoWidget(QWidget):
         self.repoTaskRunner.put(task)
 
     def deleteRemoteBranchAsync(self, remoteBranchName: str):
-        rlpd = RemoteLinkProgressDialog(self)
+        task = DeleteRemoteBranchTask(self, remoteBranchName)
+        self.repoTaskRunner.put(task)
 
-        def work():
-            return porcelain.deleteRemoteBranch(self.repo, remoteBranchName, rlpd.remoteLink)
-
-        def then(_):
-            rlpd.close()
-            self.quickRefreshWithSidebar()
-
-        def onError(exc):
-            rlpd.close()
-            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t delete remote branch “{0}”.").format(remoteBranchName))
-
-        opName = translate("Operation", "Delete remote branch “{0}”").format(remoteBranchName)
-        self.workQueue.put(work, then, opName, errorCallback=onError)
-
-    def renameRemoteBranchAsync(self, remoteBranchName: str, newName: str):
-        rlpd = RemoteLinkProgressDialog(self)
-
-        def work():
-            return porcelain.renameRemoteBranch(self.repo, remoteBranchName, newName, rlpd.remoteLink)
-
-        def then(_):
-            rlpd.close()
-            self.quickRefreshWithSidebar()
-
-        def onError(exc):
-            rlpd.close()
-            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t rename remote branch “{0}”.").format(remoteBranchName))
-
-        opName = translate("Operation", "Rename remote branch “{0}”").format(remoteBranchName)
-        self.workQueue.put(work, then, opName, errorCallback=onError)
+    def renameRemoteBranchAsync(self, remoteBranchName: str):
+        task = RenameRemoteBranchTask(self, remoteBranchName)
+        self.repoTaskRunner.put(task)
 
     def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
