@@ -1158,5 +1158,5 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, what: TaskAffectsWhat):
-        if 0 != (what & (TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS)):
+        if what != TaskAffectsWhat.NOTHING:
             self.quickRefreshWithSidebar()

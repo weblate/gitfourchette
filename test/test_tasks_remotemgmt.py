@@ -16,6 +16,8 @@ def testNewRemote(qtbot, tempDir, mainWindow):
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
+    assert "origin" in rw.sidebar.datasForItemType(EItem.Remote)
+    assert "otherremote" not in rw.sidebar.datasForItemType(EItem.Remote)
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemotesHeader)
 
@@ -29,6 +31,8 @@ def testNewRemote(qtbot, tempDir, mainWindow):
     assert len(repo.remotes) == 2
     assert repo.remotes[1].name == "otherremote"
     assert repo.remotes[1].url == "https://127.0.0.1/example-repo.git"
+    assert "origin" in rw.sidebar.datasForItemType(EItem.Remote)
+    assert "otherremote" in rw.sidebar.datasForItemType(EItem.Remote)
 
 
 def testEditRemote(qtbot, tempDir, mainWindow):
@@ -39,6 +43,7 @@ def testEditRemote(qtbot, tempDir, mainWindow):
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
+    assert any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
@@ -52,6 +57,8 @@ def testEditRemote(qtbot, tempDir, mainWindow):
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "mainremote"
     assert repo.remotes[0].url == "https://127.0.0.1/example-repo.git"
+    assert any(userData.startswith("mainremote/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert not any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
 
 
 def testDeleteRemote(qtbot, tempDir, mainWindow):
@@ -60,6 +67,7 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
     repo = rw.repo
 
     assert repo.remotes["origin"] is not None
+    assert any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
@@ -67,4 +75,5 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, "really delete remote")
 
     assert len(list(repo.remotes)) == 0
+    assert not any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
 

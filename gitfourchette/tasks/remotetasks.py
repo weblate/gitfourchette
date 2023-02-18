@@ -19,6 +19,9 @@ class NewRemoteTask(RepoTask):
     def name(self):
         return translate("Operation", "Add remote")
 
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.REMOTES
+
     def preExecuteUiFlow(self):
         dlg = RemoteDialog(False, "", "", self.parent())
         util.setWindowModal(dlg)
@@ -44,6 +47,9 @@ class EditRemoteTask(RepoTask):
     def name(self):
         return translate("Operation", "Edit remote")
 
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.REMOTES
+
     def preExecuteUiFlow(self):
         oldRemoteUrl = self.repo.remotes[self.oldRemoteName].url
 
@@ -68,6 +74,9 @@ class DeleteRemoteTask(RepoTask):
 
     def name(self):
         return translate("Operation", "Delete remote")
+
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.REMOTES
 
     def preExecuteUiFlow(self):
         yield self.abortIfQuestionRejected(
