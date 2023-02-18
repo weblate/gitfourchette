@@ -20,7 +20,7 @@ def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
     return path
 
 
-def makeBareCopy(path: str, addAsRemote: bool):
+def makeBareCopy(path: str, addAsRemote: str, preFetch: bool):
     basename = os.path.basename(os.path.normpath(path))  # normpath first, because basename may return an empty string if path ends with a slash
     barePath = os.path.normpath(F"{path}/../{basename}-bare.git")  # create bare repo besides real repo in temporary directory
     shutil.copytree(F"{path}/.git", barePath)
@@ -31,7 +31,11 @@ def makeBareCopy(path: str, addAsRemote: bool):
 
     if addAsRemote:
         repo = pygit2.Repository(path)
-        repo.remotes.create("localfs", barePath)  # TODO: Should we add file:// ?
+        remote = repo.remotes.create(addAsRemote, barePath)  # TODO: Should we add file:// ?
+
+        if preFetch:
+            remote.fetch()
+
         repo.free()  # necessary for correct test teardown on Windows
 
     return barePath
