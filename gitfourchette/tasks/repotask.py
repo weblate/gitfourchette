@@ -82,10 +82,31 @@ class AbortIfDialogRejected(TaskYieldTokenBase):
 
 
 class RepoTask(QObject):
+    """
+    Task that manipulates a repository.
+
+    First, `preExecuteUiFlow` may prompt the user for additional information
+    (e.g. via dialog screens) on the UI thread.
+
+    The actual operation is then carried out on a separate thread in `execute`.
+
+    Any cleanup then occurs in `postExecute` (whether `execute` succeeded or not),
+    back on the UI thread.
+    """
+
+    finished = Signal(object)
+    """Emitted by executeAndEmitFinishedSignal() when execute() has finished running,
+    (successfully or not). The sole argument is the exception that was raised during
+    execute() -- this is None if the task ran to completion."""
+
     def __init__(self, rw: 'RepoWidget'):
         super().__init__(rw)
         self.rw = rw
         self.aborted = False
+        self.setObjectName("RepoTask")
+
+    def name(self):
+        return str(self)
 
     @property
     def repo(self):
@@ -125,6 +146,17 @@ class RepoTask(QObject):
         """
         pass
 
+    def executeAndEmitFinishedSignal(self):
+        """
+        Do not override!
+        """
+        try:
+            # TODO: Mutex to regulate access to repo from entire program?
+            self.execute()
+            self.finished.emit(None)
+        except BaseException as exc:
+            self.finished.emit(exc)
+
     def postExecute(self, success: bool):
         """
         Runs on the UI thread, after execute() exits.
@@ -140,9 +172,6 @@ class RepoTask(QObject):
         else:
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
             util.excMessageBox(exc, title=self.name(), message=message, parent=self.parent())
-
-    def name(self):
-        return str(self)
 
     def refreshWhat(self) -> TaskAffectsWhat:
         """
@@ -189,42 +218,18 @@ class RepoTask(QObject):
         return AbortIfDialogRejected(qmb)
 
 
-class _AsyncTaskRunner(QObject):
-    """
-    Wraps RepoTask.execute() and emits a signal when done.
-    This enables execution to occur on a separate thread.
-    """
-
-    finished = Signal(object)  # argument: exception (if failed) or None (if successful)
-
-    def __init__(self, parent: QObject, task: RepoTask):
-        QObject.__init__(self, parent)
-        self.setObjectName("AsyncTaskRunner")
-
-        self.task = task
-        self.isRunSerially = False
-        self.qRunnable = util.QRunnableFunctionWrapper(self._run)
-
-    def _run(self):
-        assert self.isRunSerially or not util.onAppThread()
-        try:
-            # TODO: Mutex to regulate access to repo from entire program?
-            self.task.execute()
-            self.finished.emit(None)
-        except BaseException as exc:
-            self.finished.emit(exc)
-
-
 class RepoTaskRunner(QObject):
     refreshPostTask = Signal(TaskAffectsWhat)
 
     currentTask: RepoTask | None
+    currentTaskConnection: QMetaObject.Connection | None
     threadPool: QThreadPool
 
     def __init__(self, parent):
         super().__init__(parent)
         self.setObjectName("RepoTaskRunner")
         self.currentTask = None
+        self.currentTaskConnection = None
 
         from gitfourchette import settings
         self.forceSerial = bool(settings.TEST_MODE)
@@ -282,23 +287,27 @@ class RepoTaskRunner(QObject):
 
     def _clearTask(self, task):
         assert task == self.currentTask
+        self.currentTask.deleteLater()
         self.currentTask = None
 
     def _executeTask(self, task):
         assert task == self.currentTask
 
-        wrapper = _AsyncTaskRunner(self, self.currentTask)
-        wrapper.finished.connect(lambda exc: self._onTaskFinished(task, wrapper, exc))
+        self.currentTaskConnection = task.finished.connect(lambda exc: self._onTaskFinished(task, exc))
 
+        wrapper = util.QRunnableFunctionWrapper(task.executeAndEmitFinishedSignal)
         if self.forceSerial:
-            wrapper.isRunSerially = True
-            wrapper.qRunnable.run()
+            assert util.onAppThread()
+            wrapper.run()
         else:
-            self.threadpool.start(wrapper.qRunnable)
+            self.threadpool.start(wrapper)
 
-    def _onTaskFinished(self, task, wrapper, exc):
+    def _onTaskFinished(self, task, exc):
         assert task == self.currentTask
-        wrapper.deleteLater()  # delete wrapper AFTER we've intercepted the finished signal
+
+        self.disconnect(self.currentTaskConnection)
+        self.currentTaskConnection = None
+
         if exc:
             self.currentTask.onError(exc)
         self.currentTask.postExecute(not exc)
