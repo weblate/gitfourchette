@@ -38,7 +38,7 @@ class RemoteLinkTask(RepoTask):
         return self.rlpd.remoteLink
 
 
-class DeleteRemoteBranchTask(RemoteLinkTask):
+class DeleteRemoteBranch(RemoteLinkTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
         self.remoteBranchName = remoteBranchName
@@ -63,7 +63,7 @@ class DeleteRemoteBranchTask(RemoteLinkTask):
         porcelain.deleteRemoteBranch(self.repo, self.remoteBranchName, self.rlpd.remoteLink)
 
 
-class RenameRemoteBranchTask(RemoteLinkTask):
+class RenameRemoteBranch(RemoteLinkTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
 

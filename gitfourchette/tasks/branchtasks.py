@@ -12,7 +12,7 @@ import os
 import pygit2
 
 
-class SwitchBranchTask(RepoTask):
+class SwitchBranch(RepoTask):
     def __init__(self, rw, newBranch: str):
         super().__init__(rw)
         self.newBranch = newBranch
@@ -25,7 +25,7 @@ class SwitchBranchTask(RepoTask):
         porcelain.checkoutLocalBranch(self.repo, self.newBranch)
 
 
-class RenameBranchTask(RepoTask):
+class RenameBranch(RepoTask):
     def __init__(self, rw, oldBranchName: str):
         super().__init__(rw)
         self.oldBranchName = oldBranchName
@@ -54,7 +54,7 @@ class RenameBranchTask(RepoTask):
         return TaskAffectsWhat.LOCALREFS
 
 
-class DeleteBranchTask(RepoTask):
+class DeleteBranch(RepoTask):
     def __init__(self, rw, localBranchName: str):
         super().__init__(rw)
         self.localBranchName = localBranchName
@@ -77,7 +77,7 @@ class DeleteBranchTask(RepoTask):
         return TaskAffectsWhat.LOCALREFS
 
 
-class NewBranchTask(RepoTask):
+class NewBranch(RepoTask):
     def __init__(self, rw):
         super().__init__(rw)
 
@@ -159,7 +159,7 @@ class NewBranchTask(RepoTask):
         return TaskAffectsWhat.LOCALREFS
 
 
-class NewBranchFromBranchTask(RepoTask):
+class NewBranchFromBranch(RepoTask):
     def __init__(self, rw, originalBranchName: str):
         super().__init__(rw)
         self.originalBranchName = originalBranchName
@@ -169,7 +169,7 @@ class NewBranchFromBranchTask(RepoTask):
         return TaskAffectsWhat.LOCALREFS
 
 
-class NewTrackingBranchTask(RepoTask):
+class NewTrackingBranch(RepoTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
         self.remoteBranchName = remoteBranchName
@@ -203,7 +203,7 @@ class NewTrackingBranchTask(RepoTask):
         return TaskAffectsWhat.LOCALREFS
 
 
-class EditTrackedBranchTask(RepoTask):
+class EditTrackedBranch(RepoTask):
     def __init__(self, rw, localBranchName: str):
         super().__init__(rw)
         self.localBranchName = localBranchName

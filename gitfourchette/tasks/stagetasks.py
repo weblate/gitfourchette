@@ -17,7 +17,7 @@ class _BaseStagingTask(RepoTask):
         return TaskAffectsWhat.INDEX
 
 
-class StageFilesTask(_BaseStagingTask):
+class StageFiles(_BaseStagingTask):
     def name(self):
         numPatches = len(self.patches)
         return translate("Operation", "Stage %n file(s)", "", numPatches)
@@ -27,7 +27,7 @@ class StageFilesTask(_BaseStagingTask):
             porcelain.stageFiles(self.repo, self.patches)
 
 
-class DiscardFilesTask(_BaseStagingTask):
+class DiscardFiles(_BaseStagingTask):
     def name(self):
         numPatches = len(self.patches)
         return translate("Operation", "Discard %n file(s)", "", numPatches)
@@ -50,7 +50,7 @@ class DiscardFilesTask(_BaseStagingTask):
         porcelain.discardFiles(self.repo, paths)
 
 
-class UnstageFilesTask(_BaseStagingTask):
+class UnstageFiles(_BaseStagingTask):
     def name(self):
         numPatches = len(self.patches)
         return translate("Operation", "Unstage %n file(s)", "", numPatches)

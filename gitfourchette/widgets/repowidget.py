@@ -1,5 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette import settings
+from gitfourchette import tasks
 from gitfourchette.actionflows import ActionFlows
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
@@ -8,14 +9,6 @@ from gitfourchette.navhistory import NavHistory, NavPos
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
-from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskAffectsWhat
-from gitfourchette.tasks.stagetasks import StageFilesTask, UnstageFilesTask, DiscardFilesTask
-from gitfourchette.tasks.committasks import NewCommitTask, AmendCommitTask
-from gitfourchette.tasks.nettasks import DeleteRemoteBranchTask, RenameRemoteBranchTask
-from gitfourchette.tasks.remotetasks import NewRemoteTask, EditRemoteTask, DeleteRemoteTask
-from gitfourchette.tasks.stashtasks import NewStashTask, ApplyStashTask, PopStashTask, DropStashTask
-from gitfourchette.tasks.branchtasks import SwitchBranchTask, RenameBranchTask, DeleteBranchTask, NewBranchTask, \
-    NewTrackingBranchTask, EditTrackedBranchTask
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon)
@@ -33,6 +26,7 @@ from gitfourchette.workqueue import WorkQueue
 from html import escape
 import os
 import pygit2
+import typing
 
 
 def sanitizeSearchTerm(x):
@@ -81,7 +75,7 @@ class RepoWidget(QWidget):
         # Use workQueue to schedule operations on the repository
         # to run on a thread separate from the UI thread.
         self.workQueue = WorkQueue(self, maxThreadCount=1)   # TODO: Get rid of this, ultimately
-        self.repoTaskRunner = RepoTaskRunner(self)
+        self.repoTaskRunner = tasks.RepoTaskRunner(self)
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
 
         self.state = None
@@ -116,10 +110,6 @@ class RepoWidget(QWidget):
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
-        self.stagedFiles.unstageFiles.connect(self.unstageFilesAsync)
-        self.dirtyFiles.stageFiles.connect(self.stageFilesAsync)
-        self.dirtyFiles.discardFiles.connect(self.discardFilesAsync)
-
         for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
@@ -136,33 +126,15 @@ class RepoWidget(QWidget):
         self.graphView.checkoutCommit.connect(self.checkoutCommitAsync)
         self.graphView.revertCommit.connect(self.revertCommitAsync)
 
-        self.sidebar.commit.connect(self.newCommitAsync)
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
-        self.sidebar.deleteBranch.connect(self.deleteBranchAsync)
-        self.sidebar.deleteRemote.connect(self.deleteRemoteAsync)
-        self.sidebar.editRemote.connect(self.editRemoteAsync)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
         self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
-        self.sidebar.renameRemoteBranch.connect(self.renameRemoteBranchAsync)
-        self.sidebar.deleteRemoteBranch.connect(self.deleteRemoteBranchAsync)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
-        self.sidebar.newBranch.connect(self.newBranchFromHeadAsync)
         self.sidebar.newBranchFromBranch.connect(self.actionFlows.newBranchFromBranchFlow)
-        self.sidebar.newRemote.connect(self.newRemoteAsync)
-        self.sidebar.newTrackingBranch.connect(self.newTrackingBranchAsync)
-        self.sidebar.editTrackingBranch.connect(self.editTrackedBranchAsync)
         self.sidebar.refClicked.connect(self.selectRef)
-        self.sidebar.renameBranch.connect(self.renameBranchAsync)
-        self.sidebar.switchToBranch.connect(self.switchToBranchAsync)
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
-
-        self.sidebar.newStash.connect(self.newStashAsync)
-        self.sidebar.applyStash.connect(self.applyStashAsync)
-        self.sidebar.dropStash.connect(self.dropStashAsync)
-        self.sidebar.popStash.connect(self.popStashAsync)
-
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
@@ -198,8 +170,6 @@ class RepoWidget(QWidget):
         stageContainer.layout().addWidget(commitButtonsContainer)
         self.commitButton = QPushButton(self.tr("&Commit"))
         self.amendButton = QPushButton(self.tr("&Amend"))
-        self.commitButton.clicked.connect(self.newCommitAsync)
-        self.amendButton.clicked.connect(self.amendCommitAsync)
         commitButtonsContainer.layout().addWidget(self.commitButton)
         commitButtonsContainer.layout().addWidget(self.amendButton)
         self.stageSplitter = QSplitter(Qt.Orientation.Vertical)
@@ -252,7 +222,43 @@ class RepoWidget(QWidget):
         #    w.setFrameStyle(QFrame.Shape.NoFrame)
         self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
+        # ----------------------------------
+        # Connect signals to async tasks
+
+        self.connectTask(self.amendButton.clicked,              tasks.AmendCommit, argc=0)
+        self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
+        self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
+        self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
+        self.connectTask(self.sidebar.applyStash,               tasks.ApplyStash)
+        self.connectTask(self.sidebar.commit,                   tasks.NewCommit)
+        self.connectTask(self.sidebar.deleteBranch,             tasks.DeleteBranch)
+        self.connectTask(self.sidebar.deleteRemote,             tasks.DeleteRemote)
+        self.connectTask(self.sidebar.deleteRemoteBranch,       tasks.DeleteRemoteBranch)
+        self.connectTask(self.sidebar.dropStash,                tasks.DropStash)
+        self.connectTask(self.sidebar.editRemote,               tasks.EditRemote)
+        self.connectTask(self.sidebar.editTrackingBranch,       tasks.EditTrackedBranch)
+        self.connectTask(self.sidebar.newBranch,                tasks.NewBranch)
+        self.connectTask(self.sidebar.newRemote,                tasks.NewRemote)
+        self.connectTask(self.sidebar.newStash,                 tasks.NewStash)
+        self.connectTask(self.sidebar.newTrackingBranch,        tasks.NewTrackingBranch)
+        self.connectTask(self.sidebar.popStash,                 tasks.PopStash)
+        self.connectTask(self.sidebar.renameBranch,             tasks.RenameBranch)
+        self.connectTask(self.sidebar.renameRemoteBranch,       tasks.RenameRemoteBranch)
+        self.connectTask(self.sidebar.switchToBranch,           tasks.SwitchBranch)
+        self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
+
     # -------------------------------------------------------------------------
+
+    def runTask(self, taskClass: typing.Type[tasks.RepoTask], *args):
+        task = taskClass(self, *args)
+        self.repoTaskRunner.put(task)
+
+    def connectTask(self, signal: Signal, taskClass: typing.Type[tasks.RepoTask], argc: int = -1):
+        def createTask(*args):
+            if argc >= 0:
+                args = args[:argc]
+            self.runTask(taskClass, *args)
+        signal.connect(createTask)
 
     def setRepoState(self, state: RepoState):
         if state:
@@ -650,46 +656,6 @@ class RepoWidget(QWidget):
         opName = translate("Operation", "Load diff “{0}”").format(patch.delta.new_file.path)
         self.workQueue.put(work, then, opName, -500)
 
-    def newCommitAsync(self):
-        task = NewCommitTask(self)
-        self.repoTaskRunner.put(task)
-
-    def amendCommitAsync(self):
-        task = AmendCommitTask(self)
-        self.repoTaskRunner.put(task)
-
-    def switchToBranchAsync(self, newBranch: str):
-        task = SwitchBranchTask(self, newBranch)
-        self.repoTaskRunner.put(task)
-
-    def renameBranchAsync(self, oldName: str):
-        task = RenameBranchTask(self, oldName)
-        self.repoTaskRunner.put(task)
-
-    def deleteBranchAsync(self, localBranchName: str):
-        task = DeleteBranchTask(self, localBranchName)
-        self.repoTaskRunner.put(task)
-
-    def newBranchFromHeadAsync(self):
-        task = NewBranchTask(self)
-        self.repoTaskRunner.put(task)
-
-    def newTrackingBranchAsync(self, remoteBranchName: str):
-        task = NewTrackingBranchTask(self, remoteBranchName)
-        self.repoTaskRunner.put(task)
-
-    def editTrackedBranchAsync(self, localBranchName: str):
-        task = EditTrackedBranchTask(self, localBranchName)
-        self.repoTaskRunner.put(task)
-
-    def newRemoteAsync(self):
-        task = NewRemoteTask(self)
-        self.repoTaskRunner.put(task)
-
-    def editRemoteAsync(self, name: str):
-        task = EditRemoteTask(self, name)
-        self.repoTaskRunner.put(task)
-
     def fetchRemoteAsync(self, remoteName: str):
         rlpd = RemoteLinkProgressDialog(self)
 
@@ -724,18 +690,6 @@ class RepoWidget(QWidget):
         opName = translate("Operation", "Fetch remote branch “{0}”").format(remoteBranchName)
         self.workQueue.put(work, then, opName, errorCallback=onError)
 
-    def deleteRemoteAsync(self, remoteName: str):
-        task = DeleteRemoteTask(self, remoteName)
-        self.repoTaskRunner.put(task)
-
-    def deleteRemoteBranchAsync(self, remoteBranchName: str):
-        task = DeleteRemoteBranchTask(self, remoteBranchName)
-        self.repoTaskRunner.put(task)
-
-    def renameRemoteBranchAsync(self, remoteBranchName: str):
-        task = RenameRemoteBranchTask(self, remoteBranchName)
-        self.repoTaskRunner.put(task)
-
     def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
         def then(_):
@@ -744,34 +698,6 @@ class RepoWidget(QWidget):
 
         opName = translate("Operation", "Reset HEAD onto “{0}” ({1})").format(shortHash(onto), resetMode)
         self.workQueue.put(work, then, opName)
-
-    def stageFilesAsync(self, patches: list[pygit2.Patch]):
-        task = StageFilesTask(self, patches)
-        self.repoTaskRunner.put(task)
-
-    def discardFilesAsync(self, patches: list[pygit2.Patch]):
-        task = DiscardFilesTask(self, patches)
-        self.repoTaskRunner.put(task)
-
-    def unstageFilesAsync(self, patches: list[pygit2.Patch]):
-        task = UnstageFilesTask(self, patches)
-        self.repoTaskRunner.put(task)
-
-    def newStashAsync(self):
-        task = NewStashTask(self)
-        self.repoTaskRunner.put(task)
-
-    def applyStashAsync(self, commitId: pygit2.Oid):
-        task = ApplyStashTask(self, commitId)
-        self.repoTaskRunner.put(task)
-
-    def popStashAsync(self, commitId: pygit2.Oid):
-        task = PopStashTask(self, commitId)
-        self.repoTaskRunner.put(task)
-
-    def dropStashAsync(self, commitId: pygit2.Oid):
-        task = DropStashTask(self, commitId)
-        self.repoTaskRunner.put(task)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
@@ -1130,6 +1056,6 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def refreshPostTask(self, what: TaskAffectsWhat):
-        if what != TaskAffectsWhat.NOTHING:
+    def refreshPostTask(self, what: tasks.TaskAffectsWhat):
+        if what != tasks.TaskAffectsWhat.NOTHING:
             self.quickRefreshWithSidebar()

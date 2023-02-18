@@ -10,7 +10,7 @@ import os
 import pygit2
 
 
-class NewStashTask(RepoTask):
+class NewStash(RepoTask):
     def __init__(self, rw):
         super().__init__(rw)
         self.newRemoteName = ""
@@ -44,7 +44,7 @@ class NewStashTask(RepoTask):
             porcelain.newStash(self.repo, self.stashMessage, self.stashFlags)
 
 
-class ApplyStashTask(RepoTask):
+class ApplyStash(RepoTask):
     def __init__(self, rw, stashCommitId: pygit2.Oid):
         super().__init__(rw)
         self.stashCommitId = stashCommitId
@@ -59,7 +59,7 @@ class ApplyStashTask(RepoTask):
         porcelain.applyStash(self.repo, self.stashCommitId)
 
 
-class PopStashTask(ApplyStashTask):
+class PopStash(ApplyStash):
     def name(self):
         return translate("Operation", "Pop stash")
 
@@ -70,7 +70,7 @@ class PopStashTask(ApplyStashTask):
         porcelain.popStash(self.repo, self.stashCommitId)
 
 
-class DropStashTask(RepoTask):
+class DropStash(RepoTask):
     def __init__(self, rw, stashCommitId: pygit2.Oid):
         super().__init__(rw)
         self.stashCommitId = stashCommitId

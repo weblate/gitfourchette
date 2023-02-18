@@ -8,7 +8,7 @@ import os
 import pygit2
 
 
-class NewCommitTask(RepoTask):
+class NewCommit(RepoTask):
     def __init__(self, rw):
         super().__init__(rw)
         self.message = None
@@ -67,7 +67,7 @@ class NewCommitTask(RepoTask):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
 
 
-class AmendCommitTask(RepoTask):
+class AmendCommit(RepoTask):
     def __init__(self, rw):
         super().__init__(rw)
         self.message = None

@@ -1,6 +1,7 @@
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
+from gitfourchette import tasks
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
@@ -564,23 +565,23 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def commit(self, rw: RepoWidget):
-        rw.newCommitAsync()
+        rw.runTask(tasks.NewCommit)
 
     @needRepoWidget
     def amend(self, rw: RepoWidget):
-        rw.amendCommitAsync()
+        rw.runTask(tasks.AmendCommit)
 
     @needRepoWidget
     def newStash(self, rw: RepoWidget):
-        rw.actionFlows.newStashFlow()
+        rw.runTask(tasks.NewStash)
 
     @needRepoWidget
     def newBranch(self, rw: RepoWidget):
-        rw.newBranchFromHeadAsync()#actionFlows.newBranchFlow()
+        rw.runTask(tasks.NewBranch)
 
     @needRepoWidget
     def newRemote(self, rw: RepoWidget):
-        rw.newRemoteAsync()
+        rw.runTask(tasks.NewRemote)
 
     @needRepoWidget
     def renameRepo(self, rw: RepoWidget):

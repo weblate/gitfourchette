@@ -14,7 +14,7 @@ import os
 import pygit2
 
 
-class NewRemoteTask(RepoTask):
+class NewRemote(RepoTask):
     def __init__(self, rw):
         super().__init__(rw)
         self.newRemoteName = ""
@@ -41,7 +41,7 @@ class NewRemoteTask(RepoTask):
         porcelain.newRemote(self.repo, self.newRemoteName, self.newRemoteUrl)
 
 
-class EditRemoteTask(RepoTask):
+class EditRemote(RepoTask):
     def __init__(self, rw, remoteName):
         super().__init__(rw)
         self.oldRemoteName = remoteName
@@ -71,7 +71,7 @@ class EditRemoteTask(RepoTask):
         porcelain.editRemote(self.repo, self.oldRemoteName, self.newRemoteName, self.newRemoteUrl)
 
 
-class DeleteRemoteTask(RepoTask):
+class DeleteRemote(RepoTask):
     def __init__(self, rw, remoteName):
         super().__init__(rw)
         self.remoteName = remoteName
