@@ -2,6 +2,7 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 import pygit2
 
 
@@ -122,3 +123,47 @@ def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
     rejectQMessageBox(rw, "create an empty commit")
 
 
+def testResetHeadToCommit(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid1 = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+
+    assert rw.repo.head.target != oid1  # make sure we're not starting from this commit
+    assert rw.repo.branches.local['master'].target != oid1
+
+    rw.graphView.selectCommit(oid1)
+    rw.graphView.resetHeadFlow()
+
+    qd: ResetHeadDialog = findQDialog(rw, "reset head to 0966a4")
+    qd.modeButtons['hard'].click()
+    qd.accept()
+
+    assert rw.repo.head.target == oid1
+    assert rw.repo.branches.local['master'].target == oid1
+
+
+def testCheckoutCommit(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    oid = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    rw.graphView.selectCommit(oid)
+    rw.graphView.checkoutCommit.emit(oid)
+
+    assert repo.head_is_detached
+    assert repo.head.peel(pygit2.Commit).oid == oid
+
+
+def testRevertCommit(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = pygit2.Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    rw.graphView.selectCommit(oid)
+    rw.graphView.revertCommit.emit(oid)
+
+    rw.graphView.uncommittedChangesClicked.emit()
+    assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
+    assert rw.repo.status() == {"c/c2-2.txt": pygit2.GIT_STATUS_INDEX_NEW}

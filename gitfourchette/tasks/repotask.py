@@ -49,6 +49,7 @@ class TaskAffectsWhat(enum.IntFlag):
     INDEX = enum.auto()
     LOCALREFS = enum.auto()
     REMOTES = enum.auto()
+    HEAD = enum.auto()
 
 
 class TaskYieldTokenBase(QObject):

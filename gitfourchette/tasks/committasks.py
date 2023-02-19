@@ -120,3 +120,50 @@ class AmendCommit(RepoTask):
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
+
+
+class CheckoutCommit(RepoTask):
+    def __init__(self, rw, oid: pygit2.Oid):
+        super().__init__(rw)
+        self.oid = oid
+
+    def name(self):
+        return translate("Operation", "Checkout commit")
+
+    def execute(self):
+        porcelain.checkoutCommit(self.repo, self.oid)
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+
+
+class RevertCommit(RepoTask):
+    def __init__(self, rw, oid: pygit2.Oid):
+        super().__init__(rw)
+        self.oid = oid
+
+    def name(self):
+        return translate("Operation", "Revert commit")
+
+    def execute(self):
+        porcelain.revertCommit(self.repo, self.oid)
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.INDEX
+
+
+class ResetHead(RepoTask):
+    def __init__(self, rw, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
+        super().__init__(rw)
+        self.onto = onto
+        self.resetMode = resetMode
+        self.recurseSubmodules = recurseSubmodules
+
+    def name(self):
+        return translate("Operation", "Reset HEAD ({1})", self.resetMode)
+
+    def execute(self):
+        porcelain.resetHead(self.repo, self.onto, self.resetMode, self.recurseSubmodules)
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD

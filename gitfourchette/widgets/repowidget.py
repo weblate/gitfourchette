@@ -121,9 +121,6 @@ class RepoWidget(QWidget):
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
-        self.graphView.resetHead.connect(self.resetHeadAsync)
-        self.graphView.checkoutCommit.connect(self.checkoutCommitAsync)
-        self.graphView.revertCommit.connect(self.revertCommitAsync)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
@@ -227,7 +224,10 @@ class RepoWidget(QWidget):
         self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
+        self.connectTask(self.graphView.checkoutCommit,         tasks.CheckoutCommit)
         self.connectTask(self.graphView.newBranchFromCommit,    tasks.NewBranchFromCommit)
+        self.connectTask(self.graphView.resetHead,              tasks.ResetHead)
+        self.connectTask(self.graphView.revertCommit,           tasks.RevertCommit)
         self.connectTask(self.sidebar.applyStash,               tasks.ApplyStash)
         self.connectTask(self.sidebar.commit,                   tasks.NewCommit)
         self.connectTask(self.sidebar.deleteBranch,             tasks.DeleteBranch)
@@ -690,15 +690,6 @@ class RepoWidget(QWidget):
         opName = translate("Operation", "Fetch remote branch “{0}”").format(remoteBranchName)
         self.workQueue.put(work, then, opName, errorCallback=onError)
 
-    def resetHeadAsync(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
-        work = lambda: porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
-        def then(_):
-            self.quickRefreshWithSidebar()
-            self.graphView.selectCommit(onto)
-
-        opName = translate("Operation", "Reset HEAD onto “{0}” ({1})").format(shortHash(onto), resetMode)
-        self.workQueue.put(work, then, opName)
-
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
         self.window().openRepo(path)
@@ -708,6 +699,7 @@ class RepoWidget(QWidget):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
+    # TODO: Get rid of this, ultimately
     def _processCheckoutError(self, exc, opName="Operation"):
         if isinstance(exc, porcelain.ConflictError):
             maxConflicts = 10
@@ -740,32 +732,6 @@ class RepoWidget(QWidget):
                 qmb.setDetailedText("\n".join(exc.conflicts))
         else:
             raise exc
-
-    def checkoutCommitAsync(self, oid: pygit2.Oid):
-        oldCommit = self.state.activeCommitOid
-
-        def work():
-            porcelain.checkoutCommit(self.repo, oid)
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-            self.graphView.repaintCommit(oldCommit)
-            self.graphView.repaintCommit(oid)
-
-        opName = translate("Operation", "Check out commit “{0}”").format(shortHash(oid))
-        self.workQueue.put(work, then, opName,
-                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
-
-    def revertCommitAsync(self, oid: pygit2.Oid):
-        def work():
-            porcelain.revertCommit(self.repo, oid)
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Revert commit “{0}”").format(shortHash(oid))
-        self.workQueue.put(work, then, opName,
-                           errorCallback=lambda exc: self._processCheckoutError(exc, opName))
 
     # -------------------------------------------------------------------------
     # Pull

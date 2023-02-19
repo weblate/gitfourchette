@@ -78,14 +78,3 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
-def testCheckoutCommit(qtbot, tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
-    repo = rw.repo
-
-    oid = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
-    rw.graphView.selectCommit(oid)
-    rw.graphView.checkoutCommit.emit(oid)
-
-    assert repo.head_is_detached
-    assert repo.head.peel(pygit2.Commit).oid == oid
