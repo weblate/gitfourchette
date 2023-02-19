@@ -35,8 +35,6 @@ class TrackedBranchDialog(QDialog):
             if not remoteBranches:
                 continue
             comboBox.insertSeparator(comboBox.count())
-            #remotePrefix = F"refs/remotes/{remote.name}/"
-            #remoteRefNames = (n for n in repo.listall_references() if n.startswith(remotePrefix))
             for remoteBranch in remoteBranches:
                 addComboBoxItem(
                     comboBox,

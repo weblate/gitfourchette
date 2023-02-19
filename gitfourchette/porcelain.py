@@ -8,6 +8,10 @@ import re
 
 CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On [^\s:]+: (.+)")
 
+HEADS_PREFIX = "refs/heads/"
+REMOTES_PREFIX = "refs/remotes/"
+TAGS_PREFIX = "refs/tags/"
+
 
 class DivergentBranchesError(Exception):
     def __init__(self, localBranch: pygit2.Branch, remoteBranch: pygit2.Branch):
@@ -312,9 +316,9 @@ def generateUniqueBranchNameOnRemote(repo: pygit2.Repository, remoteName: str, s
 
 def getTagNames(repo: Repository) -> list[str]:
     return [
-        name.removeprefix("refs/tags/")
+        name.removeprefix(TAGS_PREFIX)
         for name in repo.listall_references()
-        if name.startswith("refs/tags/")
+        if name.startswith(TAGS_PREFIX)
     ]
 
 
@@ -345,7 +349,7 @@ def deleteRemote(repo: Repository, remoteName: str):
 def deleteRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks):
     remoteName, branchName = splitRemoteBranchShorthand(remoteBranchName)
 
-    refspec = f":refs/heads/{branchName}"
+    refspec = f":{HEADS_PREFIX}{branchName}"
     log.info("porcelain", f"Delete remote branch: refspec: \"{refspec}\"")
 
     remote = repo.remotes[remoteName]
@@ -359,10 +363,10 @@ def renameRemoteBranch(repo: Repository, oldRemoteBranchName: str, newBranchName
     remoteName, oldBranchName = splitRemoteBranchShorthand(oldRemoteBranchName)
 
     # First, make a new branch pointing to the same ref as the old one
-    refspec1 = f"refs/remotes/{oldRemoteBranchName}:refs/heads/{newBranchName}"
+    refspec1 = f"{REMOTES_PREFIX}{oldRemoteBranchName}:{HEADS_PREFIX}{newBranchName}"
 
     # Next, delete the old branch
-    refspec2 = f":refs/heads/{oldBranchName}"
+    refspec2 = f":{HEADS_PREFIX}{oldBranchName}"
 
     log.info("porcelain", f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
 
@@ -379,7 +383,7 @@ def deleteStaleRemoteHEADSymbolicRef(repo: Repository, remoteName: str):
     This bug may prevent fetching.
     """
 
-    HEADRefName = F"refs/remotes/{remoteName}/HEAD"
+    HEADRefName = F"{REMOTES_PREFIX}{remoteName}/HEAD"
     HEADRef = repo.references.get(HEADRefName)
 
     # Only risk deleting remote HEAD if it's symbolic
@@ -738,7 +742,7 @@ def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
     lb = repo.branches.local[localBranchName]
     rb = repo.branches.remote[remoteBranchName]
 
-    mergeAnalysis, mergePref = repo.merge_analysis(rb.target, "refs/heads/" + localBranchName)
+    mergeAnalysis, mergePref = repo.merge_analysis(rb.target, HEADS_PREFIX + localBranchName)
 
     mergePrefNames = {
         pygit2.GIT_MERGE_PREFERENCE_NONE: "none",
@@ -795,3 +799,11 @@ def getSuperproject(repo: pygit2.Repository):
 
     return None
 
+
+def refNameToBranch(repo: pygit2.Repository, refName: str) -> tuple[pygit2.Branch, bool]:
+    if refName.startswith(HEADS_PREFIX):
+        return repo.branches.local[refName.removeprefix(HEADS_PREFIX)], False
+    elif refName.startswith(REMOTES_PREFIX):
+        return repo.branches.remote[refName.removeprefix(REMOTES_PREFIX)], True
+    else:
+        assert False, f"refName must start with {HEADS_PREFIX} or {REMOTES_PREFIX}"

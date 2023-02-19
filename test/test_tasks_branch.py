@@ -2,6 +2,7 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette.widgets.sidebar import EItem
+from gitfourchette.widgets.newbranchdialog import NewBranchDialog
 import re
 
 
@@ -100,9 +101,10 @@ def testNewRemoteTrackingBranch(qtbot, tempDir, mainWindow):
 
     findMenuAction(menu, "new local branch tracking").trigger()
 
-    q = findQDialog(rw, "new branch tracking")
-    q.findChild(QLineEdit).setText("newmaster")
-    q.accept()
+    dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
+    dlg.ui.nameEdit.setText("newmaster")
+    dlg.ui.upstreamCheckBox.setChecked(True)
+    dlg.accept()
 
     assert repo.branches.local["newmaster"].upstream == repo.branches.remote["origin/master"]
 
@@ -114,7 +116,12 @@ def testNewRemoteTrackingBranch2(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/first-merge")
     findMenuAction(menu, "new .*branch .*tracking").trigger()
-    findQDialog(rw, "new .*branch .*tracking").accept()
+
+    dlg: NewBranchDialog = findQDialog(rw, "new .*branch")
+    assert dlg.ui.nameEdit.text() == "first-merge"
+    assert dlg.ui.upstreamCheckBox.isChecked()
+    assert dlg.ui.upstreamComboBox.currentText() == "origin/first-merge"
+    dlg.accept()
 
     localBranch = repo.branches.local['first-merge']
     assert localBranch
@@ -122,9 +129,53 @@ def testNewRemoteTrackingBranch2(qtbot, tempDir, mainWindow):
     assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"
 
 
+def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    localBranches = rw.repo.branches.local
+
+    assert "first-merge" not in localBranches
+    assert "first-merge" not in rw.sidebar.datasForItemType(EItem.LocalBranch)
+
+    oid1 = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+
+    rw.graphView.selectCommit(oid1)
+    rw.graphView.newBranchFromCommit.emit(rw.graphView.currentCommitOid)
+
+    dlg: NewBranchDialog = findQDialog(rw, "new branch")
+    assert dlg.ui.nameEdit.text() == "first-merge"  # nameEdit should be pre-filled with name of a (remote) branch pointing to this commit
+    dlg.ui.switchToBranchCheckBox.setChecked(True)
+    dlg.accept()
+
+    assert "first-merge" in localBranches
+    assert localBranches["first-merge"].target == oid1
+    assert localBranches["first-merge"].is_checked_out()
+    assert "first-merge" in rw.sidebar.datasForItemType(EItem.LocalBranch)
+
+
+def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    localBranches = rw.repo.branches.local
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
+    findMenuAction(menu, "new.+branch from here").trigger()
+
+    dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
+    assert dlg.ui.nameEdit.text() == "no-parent"
+    assert not dlg.acceptButton.isEnabled()  # can't accept because branch name "no-parent" is taken
+
+    dlg.ui.nameEdit.setText("no-parent-2")
+    assert dlg.acceptButton.isEnabled()  # "no-parent-2" isn't taken
+    dlg.accept()
+
+    assert "no-parent-2" in localBranches
+    assert localBranches["no-parent-2"].target == localBranches["no-parent"].target
+    assert "no-parent-2" in rw.sidebar.datasForItemType(EItem.LocalBranch)
+
+
 def testSwitchBranch(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
-
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
 
@@ -141,3 +192,5 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
     assert localBranches['no-parent'].is_checked_out()
     assert not os.path.isfile(f"{wd}/master.txt")  # this file doesn't exist on the no-parent branch
     assert os.path.isfile(f"{wd}/c/c1.txt")
+
+

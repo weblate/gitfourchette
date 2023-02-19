@@ -42,7 +42,7 @@ class DeleteRemoteBranch(RemoteLinkTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
         self.remoteBranchName = remoteBranchName
-        assert not remoteBranchName.startswith("refs/remotes/")
+        assert not remoteBranchName.startswith(porcelain.REMOTES_PREFIX)
 
     def name(self):
         return translate("Operation", "Delete branch on remote")
@@ -67,7 +67,7 @@ class RenameRemoteBranch(RemoteLinkTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
 
-        assert not remoteBranchName.startswith("refs/remotes/")
+        assert not remoteBranchName.startswith(porcelain.REMOTES_PREFIX)
         remoteName, branchName = porcelain.splitRemoteBranchShorthand(remoteBranchName)
         self.remoteBranchName = remoteBranchName
         self.newBranchName = branchName  # naked name, NOT prefixed with the name of the remote

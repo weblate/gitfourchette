@@ -392,7 +392,7 @@ class RepoState:
             return any(
                 refName for refName in self.commitsToRefs[oid]
                 if refName not in self.hiddenBranches
-                and not refName.startswith('refs/tags/'))
+                and not refName.startswith(porcelain.TAGS_PREFIX))
 
         hiddenBranches = self.hiddenBranches[:]
         for hiddenBranch in hiddenBranches:

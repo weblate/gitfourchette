@@ -96,9 +96,9 @@
     </widget>
    </item>
    <item row="3" column="1">
-    <layout class="QHBoxLayout" name="trackRemoteBranchLayout">
+    <layout class="QHBoxLayout" name="upstreamLayout">
      <item>
-      <widget class="QCheckBox" name="trackRemoteBranchCheckBox">
+      <widget class="QCheckBox" name="upstreamCheckBox">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -111,7 +111,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="trackRemoteBranchComboBox">
+      <widget class="QComboBox" name="upstreamComboBox">
        <property name="sizePolicy">
         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -130,8 +130,8 @@
  <tabstops>
   <tabstop>nameEdit</tabstop>
   <tabstop>switchToBranchCheckBox</tabstop>
-  <tabstop>trackRemoteBranchCheckBox</tabstop>
-  <tabstop>trackRemoteBranchComboBox</tabstop>
+  <tabstop>upstreamCheckBox</tabstop>
+  <tabstop>upstreamComboBox</tabstop>
  </tabstops>
  <resources/>
  <connections>
@@ -168,9 +168,9 @@
    </hints>
   </connection>
   <connection>
-   <sender>trackRemoteBranchCheckBox</sender>
+   <sender>upstreamCheckBox</sender>
    <signal>toggled(bool)</signal>
-   <receiver>trackRemoteBranchComboBox</receiver>
+   <receiver>upstreamComboBox</receiver>
    <slot>setEnabled(bool)</slot>
    <hints>
     <hint type="sourcelabel">

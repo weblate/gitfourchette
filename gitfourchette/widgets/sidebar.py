@@ -482,7 +482,7 @@ class Sidebar(QTreeView):
     commit = Signal()
 
     newBranch = Signal()
-    newBranchFromBranch = Signal(str)
+    newBranchFromLocalBranch = Signal(str)
     renameBranch = Signal(str)
     deleteBranch = Signal(str)
     switchToBranch = Signal(str)
@@ -568,7 +568,7 @@ class Sidebar(QTreeView):
             a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
 
             menu.addSeparator()
-            menu.addAction(self.tr("New branch from here..."), lambda: self.newBranchFromBranch.emit(data))
+            menu.addAction(self.tr("New branch from here..."), lambda: self.newBranchFromLocalBranch.emit(data))
 
             menu.addSeparator()
             a = menu.addAction(self.tr("&Hide in graph"), lambda: self.toggleHideBranch.emit("refs/heads/" + data))
@@ -666,11 +666,11 @@ class Sidebar(QTreeView):
         elif item == EItem.DetachedHead:
             self.refClicked.emit("HEAD")
         elif item == EItem.LocalBranch:
-            self.refClicked.emit(F"refs/heads/{data}")
+            self.refClicked.emit(porcelain.HEADS_PREFIX + data)
         elif item == EItem.RemoteBranch:
-            self.refClicked.emit(F"refs/remotes/{data}")
+            self.refClicked.emit(porcelain.REMOTES_PREFIX + data)
         elif item == EItem.Tag:
-            self.refClicked.emit(F"refs/tags/{data}")
+            self.refClicked.emit(porcelain.TAGS_PREFIX + data)
         elif item == EItem.Stash:
             self.commitClicked.emit(pygit2.Oid(hex=data))
         else:

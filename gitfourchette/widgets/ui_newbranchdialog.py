@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'newbranchdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.6
+## Created by: Qt User Interface Compiler version 5.15.8
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -68,43 +68,43 @@ class Ui_NewBranchDialog(object):
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.nameLabel)
 
-        self.trackRemoteBranchLayout = QHBoxLayout()
-        self.trackRemoteBranchLayout.setObjectName(u"trackRemoteBranchLayout")
-        self.trackRemoteBranchCheckBox = QCheckBox(NewBranchDialog)
-        self.trackRemoteBranchCheckBox.setObjectName(u"trackRemoteBranchCheckBox")
+        self.upstreamLayout = QHBoxLayout()
+        self.upstreamLayout.setObjectName(u"upstreamLayout")
+        self.upstreamCheckBox = QCheckBox(NewBranchDialog)
+        self.upstreamCheckBox.setObjectName(u"upstreamCheckBox")
         sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.trackRemoteBranchCheckBox.sizePolicy().hasHeightForWidth())
-        self.trackRemoteBranchCheckBox.setSizePolicy(sizePolicy1)
+        sizePolicy1.setHeightForWidth(self.upstreamCheckBox.sizePolicy().hasHeightForWidth())
+        self.upstreamCheckBox.setSizePolicy(sizePolicy1)
 
-        self.trackRemoteBranchLayout.addWidget(self.trackRemoteBranchCheckBox)
+        self.upstreamLayout.addWidget(self.upstreamCheckBox)
 
-        self.trackRemoteBranchComboBox = QComboBox(NewBranchDialog)
-        self.trackRemoteBranchComboBox.setObjectName(u"trackRemoteBranchComboBox")
+        self.upstreamComboBox = QComboBox(NewBranchDialog)
+        self.upstreamComboBox.setObjectName(u"upstreamComboBox")
         sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.trackRemoteBranchComboBox.sizePolicy().hasHeightForWidth())
-        self.trackRemoteBranchComboBox.setSizePolicy(sizePolicy2)
-        self.trackRemoteBranchComboBox.setInsertPolicy(QComboBox.NoInsert)
+        sizePolicy2.setHeightForWidth(self.upstreamComboBox.sizePolicy().hasHeightForWidth())
+        self.upstreamComboBox.setSizePolicy(sizePolicy2)
+        self.upstreamComboBox.setInsertPolicy(QComboBox.NoInsert)
 
-        self.trackRemoteBranchLayout.addWidget(self.trackRemoteBranchComboBox)
+        self.upstreamLayout.addWidget(self.upstreamComboBox)
 
 
-        self.formLayout.setLayout(3, QFormLayout.FieldRole, self.trackRemoteBranchLayout)
+        self.formLayout.setLayout(3, QFormLayout.FieldRole, self.upstreamLayout)
 
 #if QT_CONFIG(shortcut)
         self.nameLabel.setBuddy(self.nameEdit)
 #endif // QT_CONFIG(shortcut)
         QWidget.setTabOrder(self.nameEdit, self.switchToBranchCheckBox)
-        QWidget.setTabOrder(self.switchToBranchCheckBox, self.trackRemoteBranchCheckBox)
-        QWidget.setTabOrder(self.trackRemoteBranchCheckBox, self.trackRemoteBranchComboBox)
+        QWidget.setTabOrder(self.switchToBranchCheckBox, self.upstreamCheckBox)
+        QWidget.setTabOrder(self.upstreamCheckBox, self.upstreamComboBox)
 
         self.retranslateUi(NewBranchDialog)
         self.buttonBox.rejected.connect(NewBranchDialog.reject)
         self.buttonBox.accepted.connect(NewBranchDialog.accept)
-        self.trackRemoteBranchCheckBox.toggled.connect(self.trackRemoteBranchComboBox.setEnabled)
+        self.upstreamCheckBox.toggled.connect(self.upstreamComboBox.setEnabled)
 
         QMetaObject.connectSlotsByName(NewBranchDialog)
 
@@ -113,4 +113,4 @@ class Ui_NewBranchDialog(object):
         self.switchToBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"Switch to branch after creating", None))
         self.optionsLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Options", None))
         self.nameLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Name", None))
-        self.trackRemoteBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"&Track remote branch", None))
+        self.upstreamCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"&Track remote branch", None))

@@ -9,9 +9,9 @@ class NewBranchDialog(QDialog):
             self,
             initialName: str,
             target: str,
-            targetSubtitle: str = "",
-            trackingCandidates: list[str] = [],
-            forbiddenBranchNames: list[str] = [],
+            targetSubtitle: str,
+            upstreams: list[str],
+            forbiddenBranchNames: list[str],
             parent=None):
 
         super().__init__(parent)
@@ -24,16 +24,16 @@ class NewBranchDialog(QDialog):
         self.ui.nameEdit.textChanged.connect(self.onBranchNameChanged)
         self.ui.nameEdit.setText(initialName)
 
-        self.ui.trackRemoteBranchComboBox.addItems(trackingCandidates)
+        self.ui.upstreamComboBox.addItems(upstreams)
 
         # hack to trickle down initial 'toggled' signal to combobox
-        self.ui.trackRemoteBranchCheckBox.setChecked(True)
-        self.ui.trackRemoteBranchCheckBox.setChecked(False)
+        self.ui.upstreamCheckBox.setChecked(True)
+        self.ui.upstreamCheckBox.setChecked(False)
 
-        if not trackingCandidates:
-            self.ui.trackRemoteBranchCheckBox.setChecked(False)
-            self.ui.trackRemoteBranchCheckBox.setVisible(False)
-            self.ui.trackRemoteBranchComboBox.setVisible(False)
+        if not upstreams:
+            self.ui.upstreamCheckBox.setChecked(False)
+            self.ui.upstreamCheckBox.setVisible(False)
+            self.ui.upstreamComboBox.setVisible(False)
 
         convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
 
