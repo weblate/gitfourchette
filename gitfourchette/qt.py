@@ -2,18 +2,24 @@
 # Compatibility with additional Qt bindings is provided through qtpy.
 # You can force a specific binding with the QT_API environment variable.
 # Values recognized by QT_API:
-#       pyside6     (preferred)
-#       pyside2
-#       pyqt6
-#       pyqt5
+#       pyside6     (recommended, first-class support)
+#       pyqt6       (OK)
+#       pyqt5       (OK if you can't use Qt 6)
+#       pyside2     (avoid this one if possible)
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 
 import os
 import sys
 
-isPyInstallerBundle = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
+QT5 = False
+QT6 = False
+PYSIDE2 = False
+PYSIDE6 = False
+PYQT5 = False
+PYQT6 = False
+PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
 
-if isPyInstallerBundle or "pyside6" == os.environ.get("QT_API", "").lower():
+if PYINSTALLER_BUNDLE or "pyside6" == os.environ.get("QT_API", "").lower():
     # If we're making a PyInstaller build, qtpy will try to pull in QtOpenGL and other bloat.
     # So, bypass qtpy and import PySide6 manually.
     from PySide6.QtCore import *
@@ -21,12 +27,20 @@ if isPyInstallerBundle or "pyside6" == os.environ.get("QT_API", "").lower():
     from PySide6.QtGui import *
     from PySide6 import __version__ as qtBindingVersion
     qtBindingName = "PySide6"
+    QT6 = PYSIDE6 = True
 else:
     from qtpy.QtCore import *
     from qtpy.QtWidgets import *
     from qtpy.QtGui import *
     from qtpy import API_NAME as qtBindingName
     from qtpy.QtCore import __version__ as qtBindingVersion
+    from qtpy import QT5, QT6, PYSIDE2, PYSIDE6, PYQT5, PYQT6
+
+if PYSIDE2:  # Patch PySide2's exec_ functions
+    def qMenuExec(menu: QMenu, *args, **kwargs):
+        menu.exec_(*args, **kwargs)
+    QApplication.exec = QApplication.exec_
+    QMenu.exec = qMenuExec
 
 
 def tr(s, *args, **kwargs):
@@ -35,11 +49,3 @@ def tr(s, *args, **kwargs):
 
 def translate(context, s, *args, **kwargs):
     return QCoreApplication.translate(context, s, *args, **kwargs)
-
-
-# Patch PySide2's exec_ functions
-if qtBindingName == "PySide2":
-    def qMenuExec(menu: QMenu, *args, **kwargs):
-        menu.exec_(*args, **kwargs)
-    QApplication.exec = QApplication.exec_
-    QMenu.exec = qMenuExec

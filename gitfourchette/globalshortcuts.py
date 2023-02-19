@@ -16,7 +16,7 @@ def _makeShortcuts(*args) -> MultiShortcut:
             shortcuts.append(alt)
 
     # Ensure no duplicates (stable order since Python 3.7+)
-    if qtBindingName == "PySide2":  # QKeySequence isn't hashable in PySide2
+    if PYSIDE2:  # QKeySequence isn't hashable in PySide2
         shortcuts = list(dict((str(s), s) for s in shortcuts).values())
     else:
         shortcuts = list(dict.fromkeys(shortcuts))

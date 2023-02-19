@@ -238,7 +238,7 @@ class PrefsDialog(QDialog):
 
         def pickFont():
             result = QFontDialog.getFont(currentFont(), parent=self)
-            if qtBindingName.startswith("PyQt"):
+            if PYQT5 or PYQT6:
                 newFont, ok = result
             else:
                 ok, newFont = result

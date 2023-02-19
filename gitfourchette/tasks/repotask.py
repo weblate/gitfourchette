@@ -305,7 +305,14 @@ class RepoTaskRunner(QObject):
     def _onTaskFinished(self, task, exc):
         assert task == self.currentTask
 
-        self.disconnect(self.currentTaskConnection)
+        if not PYSIDE2:
+            assert isinstance(self.currentTaskConnection, QMetaObject.Connection)
+            self.disconnect(self.currentTaskConnection)
+        else:
+            # When connecting to a signal, PySide2 returns a bool, not a QMetaObject.Connection.
+            # Looks like it's a wontfix: https://bugreports.qt.io/browse/PYSIDE-1902
+            task.finished.disconnect()
+
         self.currentTaskConnection = None
 
         if exc:

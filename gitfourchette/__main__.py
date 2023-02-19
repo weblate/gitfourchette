@@ -80,7 +80,7 @@ def main():
     if appTranslator.load(f"assets:{settings.prefs.language}") or appTranslator.load("assets:en"):
         app.installTranslator(appTranslator)
 
-    if qtBindingName.endswith("6"):  # Do this on Qt 6 and up only
+    if not QT5:  # Do this on Qt 6 and up only
         with NonCriticalOperation("Load Qt base translation"):
             baseTranslator = QTranslator()
             if baseTranslator.load(QLocale(settings.prefs.language), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
