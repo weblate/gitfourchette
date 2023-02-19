@@ -3,7 +3,7 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import QSignalBlockerContext
-from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal
+from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from gitfourchette.workqueue import WorkQueue
@@ -19,6 +19,24 @@ class ERemoteItem(enum.Enum):
 
 class PushDialog(QDialog):
     pushSuccessful = Signal()
+
+    @staticmethod
+    def startPushFlow(parent, repo: pygit2.Repository, branchName: str = ""):
+        if not branchName:
+            branchName = porcelain.getActiveBranchShorthand(repo)
+
+        try:
+            branch = repo.branches.local[branchName]
+        except KeyError:
+            showWarning(parent, translate("PushDialog", "No branch to push"),
+                        translate("PushDialog", "To push, you must be on a local branch. Try switching to a local branch first."))
+            return
+
+        dlg = PushDialog(repo, branch, parent)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        #dlg.accepted.connect(self.pushComplete)
+        dlg.show()
+        return dlg
 
     def onPickLocalBranch(self, index: int):
         localBranch = self.currentLocalBranch

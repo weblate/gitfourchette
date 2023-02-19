@@ -592,7 +592,7 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def push(self, rw: RepoWidget):
-        rw.actionFlows.pushFlow()
+        rw.startPushFlow()
 
     @needRepoWidget
     def pull(self, rw: RepoWidget):

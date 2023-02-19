@@ -1,7 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
-from gitfourchette.actionflows import ActionFlows
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.globalstatus import globalstatus
@@ -18,6 +17,7 @@ from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConfl
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from gitfourchette.widgets.graphview import GraphView
+from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from gitfourchette.widgets.richdiffview import RichDiffView
@@ -39,7 +39,6 @@ class RepoWidget(QWidget):
     nameChange: Signal = Signal()
 
     state: RepoState
-    actionFlows: ActionFlows
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
 
     previouslySearchedTerm: str
@@ -79,7 +78,6 @@ class RepoWidget(QWidget):
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
 
         self.state = None
-        self.actionFlows = ActionFlows(None, self)  # TODO: Get rid of this, eventually
         self.pathPending = None
 
         self.scheduledRefresh = QTimer(self)
@@ -123,17 +121,12 @@ class RepoWidget(QWidget):
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
-        self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
+        self.sidebar.pushBranch.connect(self.startPushFlow)
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
-
-        # ----------------------------------
-
-        flows = self.actionFlows
-        flows.pushComplete.connect(self.quickRefreshWithSidebar)
 
         # ----------------------------------
 
@@ -265,10 +258,8 @@ class RepoWidget(QWidget):
             self.state.fileWatcher.setParent(self)
             self.state.fileWatcher.directoryChanged.connect(self.onDirectoryChange)
             self.state.fileWatcher.indexChanged.connect(self.onIndexChange)
-            self.actionFlows.repo = state.repo
         else:
             self.state = None
-            self.actionFlows.repo = None
 
     def installFileWatcher(self, intervalMS=100):
         self.state.fileWatcher.boot(intervalMS)
@@ -654,6 +645,10 @@ class RepoWidget(QWidget):
 
         opName = translate("Operation", "Load diff “{0}”").format(patch.delta.new_file.path)
         self.workQueue.put(work, then, opName, -500)
+
+    def startPushFlow(self, branchName: str = ""):
+        pushDialog = PushDialog.startPushFlow(self, self.repo, branchName)
+        pushDialog.pushSuccessful.connect(self.quickRefreshWithSidebar)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
