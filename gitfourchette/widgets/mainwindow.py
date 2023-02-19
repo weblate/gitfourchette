@@ -596,7 +596,7 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def pull(self, rw: RepoWidget):
-        rw.actionFlows.pullFlow()
+        rw.runTask(tasks.PullBranch)
 
     @needRepoWidget
     def openRescueFolder(self, rw: RepoWidget):

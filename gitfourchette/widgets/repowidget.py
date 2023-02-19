@@ -124,7 +124,6 @@ class RepoWidget(QWidget):
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
-        self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
         self.sidebar.refClicked.connect(self.selectRef)
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
@@ -134,7 +133,6 @@ class RepoWidget(QWidget):
         # ----------------------------------
 
         flows = self.actionFlows
-        flows.pullBranch.connect(self.pullBranchAsync)
         flows.pushComplete.connect(self.quickRefreshWithSidebar)
 
         # ----------------------------------
@@ -242,6 +240,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.newStash,                 tasks.NewStash)
         self.connectTask(self.sidebar.newTrackingBranch,        tasks.NewTrackingBranch)
         self.connectTask(self.sidebar.popStash,                 tasks.PopStash)
+        self.connectTask(self.sidebar.pullBranch,               tasks.PullBranch)
         self.connectTask(self.sidebar.renameBranch,             tasks.RenameBranch)
         self.connectTask(self.sidebar.renameRemoteBranch,       tasks.RenameRemoteBranch)
         self.connectTask(self.sidebar.switchToBranch,           tasks.SwitchBranch)
@@ -664,61 +663,6 @@ class RepoWidget(QWidget):
     def openSubmoduleFolder(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
-
-    # TODO: Get rid of this, ultimately
-    def _processCheckoutError(self, exc, opName="Operation"):
-        if isinstance(exc, porcelain.ConflictError):
-            maxConflicts = 10
-            numConflicts = len(exc.conflicts)
-
-            title = self.tr("%n conflicting file(s)", "", numConflicts)
-
-            if numConflicts > maxConflicts:
-                intro = self.tr("Showing the first {0} conflicting files out of {1} total below:").format(maxConflicts, numConflicts)
-            else:
-                intro = self.tr("%n conflicting file(s):", "", numConflicts)
-
-            if exc.description == "workdir":
-                message = self.tr("Operation <b>{0}</b> conflicts with the working directory.").format(opName)
-            elif exc.description == "HEAD":
-                message = self.tr("Operation <b>{0}</b> conflicts with the commit at HEAD.").format(opName)
-            else:
-                message = self.tr("Operation <b>{0}</b> caused a conflict ({1}).").format(opName, exc.description)
-
-            message += f"<br><br>{intro}<ul><li>"
-            message += "</li><li>".join(exc.conflicts[:maxConflicts])
-            if numConflicts > maxConflicts:
-                numHidden = numConflicts - maxConflicts
-                message += "</li><li><i>" + self.tr("... and %n more (click “Show Details” to view full list)", "", numHidden) + "</li>"
-            message += "</li></ul>"
-
-            qmb = showWarning(self, title, message)
-
-            if numConflicts > maxConflicts:
-                qmb.setDetailedText("\n".join(exc.conflicts))
-        else:
-            raise exc
-
-    # -------------------------------------------------------------------------
-    # Pull
-
-    def pullBranchAsync(self, localBranchName: str, remoteBranchName: str):
-        def work():
-            porcelain.pull(self.repo, localBranchName, remoteBranchName)
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Pull branch “{0}”").format(localBranchName)
-
-        def onError(exc):
-            if isinstance(exc, porcelain.DivergentBranchesError):
-                showWarning(self, opName,
-                            self.tr("Can’t fast-forward: You have divergent branches."))
-            else:
-                self._processCheckoutError(exc, opName)
-
-        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     # -------------------------------------------------------------------------
     # Conflicts

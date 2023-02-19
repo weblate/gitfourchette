@@ -233,3 +233,50 @@ class EditTrackedBranch(RepoTask):
 
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS
+
+
+# TODO: That's a confusing name because this task doesn't perform net access, unlike git's "pull" operation. We'll need to change porcelain.pull as well.
+class PullBranch(RepoTask):
+    def __init__(self, rw, localBranchName: str = ""):
+        super().__init__(rw)
+        self.localBranchName = localBranchName
+        self.remoteBranchName = ""
+
+    def name(self):
+        return translate("Operation", "Pull branch")
+
+    def preExecuteUiFlow(self):
+        if not self.localBranchName:
+            self.localBranchName = porcelain.getActiveBranchShorthand(self.repo)
+
+        try:
+            branch = self.repo.branches.local[self.localBranchName]
+        except KeyError:
+            util.showWarning(
+                self.parent(), self.tr("No branch to pull"),
+                self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
+            self.cancel()
+            return
+
+        bu: pygit2.Branch = branch.upstream
+        if not bu:
+            util.showWarning(
+                self.parent(), self.tr("No remote-tracking branch"),
+                self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(escape(branch.shorthand)))
+            self.cancel()
+            return
+
+        self.remoteBranchName = bu.upstream
+
+    def execute(self):
+        porcelain.pull(self.repo, self.localBranchName, self.remoteBranchName)
+
+    def onError(self, exc):
+        if isinstance(exc, porcelain.DivergentBranchesError):
+            util.showWarning(self.parent(), self.name(), self.tr("Can’t fast-forward: You have divergent branches."))
+        else:
+            super().onError(exc)
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+

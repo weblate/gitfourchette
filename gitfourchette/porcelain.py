@@ -738,6 +738,8 @@ def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str):
     return os.path.join(repo.workdir, submo.path)
 
 
+# TODO: That's a confusing name because this doesn't perform net access, unlike git's "pull" operation.
+# TODO: We're actually just doing a merge here. It doesn't matter that the second branch is remote.
 def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
     lb = repo.branches.local[localBranchName]
     rb = repo.branches.remote[remoteBranchName]
