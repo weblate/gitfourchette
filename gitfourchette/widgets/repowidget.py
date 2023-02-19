@@ -123,8 +123,6 @@ class RepoWidget(QWidget):
         self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
-        self.sidebar.fetchRemote.connect(self.fetchRemoteAsync)
-        self.sidebar.fetchRemoteBranch.connect(self.fetchRemoteBranchAsync)
         self.sidebar.pushBranch.connect(self.actionFlows.pushFlow)
         self.sidebar.pullBranch.connect(self.actionFlows.pullFlow)
         self.sidebar.refClicked.connect(self.selectRef)
@@ -236,6 +234,8 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.dropStash,                tasks.DropStash)
         self.connectTask(self.sidebar.editRemote,               tasks.EditRemote)
         self.connectTask(self.sidebar.editTrackingBranch,       tasks.EditTrackedBranch)
+        self.connectTask(self.sidebar.fetchRemote,              tasks.FetchRemote)
+        self.connectTask(self.sidebar.fetchRemoteBranch,        tasks.FetchRemoteBranch)
         self.connectTask(self.sidebar.newBranch,                tasks.NewBranch)
         self.connectTask(self.sidebar.newBranchFromLocalBranch, tasks.NewBranchFromLocalBranch)
         self.connectTask(self.sidebar.newRemote,                tasks.NewRemote)
@@ -655,40 +655,6 @@ class RepoWidget(QWidget):
 
         opName = translate("Operation", "Load diff “{0}”").format(patch.delta.new_file.path)
         self.workQueue.put(work, then, opName, -500)
-
-    def fetchRemoteAsync(self, remoteName: str):
-        rlpd = RemoteLinkProgressDialog(self)
-
-        def work():
-            return porcelain.fetchRemote(self.repo, remoteName, rlpd.remoteLink)
-
-        def then(_):
-            rlpd.close()
-            self.quickRefreshWithSidebar()
-
-        def onError(exc):
-            rlpd.close()
-            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t fetch remote “{0}”.").format(escape(remoteName)))
-
-        opName = translate("Operation", "Fetch remote “{0}”").format(remoteName)
-        self.workQueue.put(work, then, opName, errorCallback=onError)
-
-    def fetchRemoteBranchAsync(self, remoteBranchName: str):
-        rlpd = RemoteLinkProgressDialog(self)
-
-        def work():
-            return porcelain.fetchRemoteBranch(self.repo, remoteBranchName, rlpd.remoteLink)
-
-        def then(_):
-            rlpd.close()
-            self.quickRefreshWithSidebar()
-
-        def onError(exc):
-            rlpd.close()
-            excMessageBox(exc, parent=self, title=opName, message=self.tr("Couldn’t fetch remote branch “{0}”.").format(remoteBranchName))
-
-        opName = translate("Operation", "Fetch remote branch “{0}”").format(remoteBranchName)
-        self.workQueue.put(work, then, opName, errorCallback=onError)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)

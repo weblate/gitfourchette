@@ -15,17 +15,24 @@ import os
 import pygit2
 
 
-class RemoteLinkTask(RepoTask):
+class _BaseNetTask(RepoTask):
     rlpd: RemoteLinkProgressDialog | None
 
     def __init__(self, rw):
         super().__init__(rw)
         self.rlpd = None
 
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.REMOTES
+
     def showRemoteLinkDialog(self):
         assert not self.rlpd
         assert util.onAppThread()
         self.rlpd = RemoteLinkProgressDialog(self.rw)
+
+    def preExecuteUiFlow(self):
+        """ If you override this, make sure to call showRemoteLinkDialog! """
+        self.showRemoteLinkDialog()
 
     def postExecute(self, success: bool):
         if self.rlpd:
@@ -38,7 +45,7 @@ class RemoteLinkTask(RepoTask):
         return self.rlpd.remoteLink
 
 
-class DeleteRemoteBranch(RemoteLinkTask):
+class DeleteRemoteBranch(_BaseNetTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
         self.remoteBranchName = remoteBranchName
@@ -46,9 +53,6 @@ class DeleteRemoteBranch(RemoteLinkTask):
 
     def name(self):
         return translate("Operation", "Delete branch on remote")
-
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.REMOTES
 
     def preExecuteUiFlow(self):
         question = (
@@ -63,7 +67,7 @@ class DeleteRemoteBranch(RemoteLinkTask):
         porcelain.deleteRemoteBranch(self.repo, self.remoteBranchName, self.rlpd.remoteLink)
 
 
-class RenameRemoteBranch(RemoteLinkTask):
+class RenameRemoteBranch(_BaseNetTask):
     def __init__(self, rw, remoteBranchName: str):
         super().__init__(rw)
 
@@ -74,9 +78,6 @@ class RenameRemoteBranch(RemoteLinkTask):
 
     def name(self):
         return translate("Operation", "Rename branch on remote")
-
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.REMOTES
 
     def preExecuteUiFlow(self):
         dlg = showTextInputDialog(
@@ -96,3 +97,28 @@ class RenameRemoteBranch(RemoteLinkTask):
 
     def execute(self):
         porcelain.renameRemoteBranch(self.repo, self.remoteBranchName, self.newBranchName, self.remoteLink)
+
+
+class FetchRemote(_BaseNetTask):
+    def __init__(self, rw, remoteName: str):
+        super().__init__(rw)
+        self.remoteName = remoteName
+
+    def name(self):
+        return translate("Operation", "Fetch remote")
+
+    def execute(self):
+        porcelain.fetchRemote(self.repo, self.remoteName, self.remoteLink)
+
+
+class FetchRemoteBranch(_BaseNetTask):
+    def __init__(self, rw, remoteBranchName: str):
+        super().__init__(rw)
+        assert not remoteBranchName.startswith(porcelain.REMOTES_PREFIX)
+        self.remoteBranchName = remoteBranchName
+
+    def name(self):
+        return translate("Operation", "Fetch remote branch")
+
+    def execute(self):
+        porcelain.fetchRemoteBranch(self.repo, self.remoteBranchName, self.remoteLink)
