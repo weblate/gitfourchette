@@ -506,6 +506,7 @@ class MainWindow(QMainWindow):
             existingRW: RepoWidget = self.tabs.widget(i)
             if os.path.samefile(workdir, existingRW.workdir):
                 repo.free()
+                del repo
                 self.tabs.setCurrentIndex(i)
                 return existingRW
 
@@ -517,6 +518,8 @@ class MainWindow(QMainWindow):
                 return None  # don't create the tab if opening the repo failed
         else:
             newRW.setPendingWorkdir(workdir)
+            repo.free()
+            del repo
 
         tabIndex = self.tabs.addTab(newRW, newRW.getTitle())
         self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
@@ -826,13 +829,13 @@ class MainWindow(QMainWindow):
         with QSignalBlockerContext(self.tabs):
             # We might not be able to load all tabs, so we may have to adjust session.activeTabIndex.
             activeTab = -1
-            numSuccessfullyOpenedRepos = 0
+            successfulRepos = []
 
             # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
             for i, path in enumerate(session.tabs):
                 try:
-                    newRepoWidget = self._openRepo(path, foreground=False)
-                    numSuccessfullyOpenedRepos += 1
+                    newRepoWidget = self._openRepo(path, foreground=False, addToHistory=False)
+                    successfulRepos.append(path)
                 except (pygit2.GitError, NotImplementedError) as exc:
                     errors.append((path, exc))
                     continue
@@ -844,9 +847,14 @@ class MainWindow(QMainWindow):
             if errors:
                 self._reportSessionErrors(errors)
 
+            # Update history (don't write it yet - onTabChange will do it below)
+            for path in reversed(successfulRepos):
+                settings.history.addRepo(path)
+            self.fillRecentMenu()
+
             # Fall back to tab #0 if the previously active tab couldn't be restored
             # (Otherwise welcome page will stick around)
-            if activeTab < 0 and numSuccessfullyOpenedRepos > 0:
+            if activeTab < 0 and len(successfulRepos):
                 activeTab = 0
 
             # Set current tab and load its repo.
