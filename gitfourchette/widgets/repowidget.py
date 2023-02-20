@@ -104,7 +104,7 @@ class RepoWidget(QWidget):
         self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
 
         # Refresh file list views after applying a patch from the diff view (partial line patch)
-        self.diffView.patchApplied.connect(lambda: self.fillStageViewAsync(allowUpdateIndex=True))
+        self.diffView.patchApplied.connect(lambda: self.refreshWorkdirViewAsync(allowUpdateIndex=True))
         # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
         # which will trigger the diff view to be refreshed as well.
 
@@ -118,7 +118,7 @@ class RepoWidget(QWidget):
 
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
-        self.graphView.uncommittedChangesClicked.connect(self.fillStageViewAsync)
+        self.graphView.uncommittedChangesClicked.connect(self.refreshWorkdirViewAsync)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
@@ -132,8 +132,8 @@ class RepoWidget(QWidget):
 
         self.splitterStates = sharedSplitterStates or {}
 
-        self.dirtyLabel = QElidedLabel("Loading dirty files...")
-        self.stageLabel = QElidedLabel("Loading staged files...")
+        self.dirtyLabel = QElidedLabel(self.tr("Loading dirty files..."))
+        self.stageLabel = QElidedLabel(self.tr("Loading staged files..."))
 
         self.previouslySearchedTerm = None
         self.previouslySearchedTermInDiff = None
@@ -244,12 +244,13 @@ class RepoWidget(QWidget):
     def runTask(self, taskClass: typing.Type[tasks.RepoTask], *args):
         task = taskClass(self, *args)
         self.repoTaskRunner.put(task)
+        return task
 
     def connectTask(self, signal: Signal, taskClass: typing.Type[tasks.RepoTask], argc: int = -1):
         def createTask(*args):
             if argc >= 0:
                 args = args[:argc]
-            self.runTask(taskClass, *args)
+            return self.runTask(taskClass, *args)
         signal.connect(createTask)
 
     def setRepoState(self, state: RepoState):
@@ -493,158 +494,134 @@ class RepoWidget(QWidget):
 
         self.clearDiffView()
 
-    def fillStageViewAsync(self, forceSelectFile: NavPos = None, allowUpdateIndex: bool = False):
+    def refreshWorkdirViewAsync(self, forceSelectFile: NavPos = None, allowUpdateIndex: bool = False):
+        rw = self
+
+        class RefreshWorkdir(tasks.RepoTask):
+            def name(self):
+                return translate("Operation", "Refresh working directory")
+
+            def execute(self):
+                porcelain.refreshIndex(self.repo)
+                self.dirtyDiff = porcelain.diffWorkdirToIndex(self.repo, allowUpdateIndex)
+                self.stageDiff = porcelain.diffIndexToHead(self.repo)
+
+            def postExecute(self, success: bool):
+                if success:
+                    rw._fillWorkdirView(self.dirtyDiff, self.stageDiff, forceSelectFile)
+
+        return self.runTask(RefreshWorkdir)
+
+    def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, forceSelectFile: NavPos):
         """Fill Staged/Unstaged views with uncommitted changes"""
-
-        repo = self.state.repo
-
-        def work() -> tuple[pygit2.Diff, pygit2.Diff]:
-            porcelain.refreshIndex(repo)
-            dirtyDiff = porcelain.diffWorkdirToIndex(repo, allowUpdateIndex)
-            stageDiff = porcelain.diffIndexToHead(repo)
-            return dirtyDiff, stageDiff
-
-        def then(result: tuple[pygit2.Diff, pygit2.Diff]):
-            dirtyDiff, stageDiff = result
-
-            # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
-            with QSignalBlockerContext(self.dirtyFiles), QSignalBlockerContext(self.stagedFiles):
-                self.dirtyFiles.clear()
-                self.stagedFiles.clear()
-                self.dirtyFiles.setContents([dirtyDiff])
-                self.stagedFiles.setContents([stageDiff])
-
-            nDirty = self.dirtyFiles.model().rowCount()
-            nStaged = self.stagedFiles.model().rowCount()
-            self.dirtyLabel.setText(self.tr("%n dirty file(s):", "", nDirty))
-            self.stageLabel.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
-
-            # Switch to correct card in filesStack to show dirtyView and stageView
-            self.filesStack.setCurrentWidget(self.stageSplitter)
-
-            if forceSelectFile:  # for Revert Hunk from DiffView
-                self.navPos = forceSelectFile
-
-            # After patchApplied.emit has caused a refresh of the dirty/staged file views,
-            # restore selected row in appropriate file list view so the user can keep hitting
-            # enter (del) to stage (unstage) a series of files.
-            if not self.restoreSelectedFile():
-                if stagedESR >= 0:
-                    self.stagedFiles.selectRow(min(stagedESR, self.stagedFiles.model().rowCount()-1))
-                elif dirtyESR >= 0:
-                    self.dirtyFiles.selectRow(min(dirtyESR, self.dirtyFiles.model().rowCount()-1))
-
-            # If no file is selected in either FileListView, clear the diffView of any residual diff.
-            if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
-                self.clearDiffView()
-
-            self.navHistory.unlock()
 
         stagedESR = self.stagedFiles.earliestSelectedRow()
         dirtyESR = self.dirtyFiles.earliestSelectedRow()
-
         self.saveFilePositions()
 
-        opName = translate("Operation", "Refresh working directory")
-        self.workQueue.put(work, then, opName, -1000)
+        # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
+        with QSignalBlockerContext(self.dirtyFiles), QSignalBlockerContext(self.stagedFiles):
+            self.dirtyFiles.clear()
+            self.stagedFiles.clear()
+            self.dirtyFiles.setContents([dirtyDiff])
+            self.stagedFiles.setContents([stageDiff])
+
+        nDirty = self.dirtyFiles.model().rowCount()
+        nStaged = self.stagedFiles.model().rowCount()
+        self.dirtyLabel.setText(self.tr("%n dirty file(s):", "", nDirty))
+        self.stageLabel.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
+
+        # Switch to correct card in filesStack to show dirtyView and stageView
+        self.filesStack.setCurrentWidget(self.stageSplitter)
+
+        if forceSelectFile:  # for Revert Hunk from DiffView
+            self.navPos = forceSelectFile
+
+        # After patchApplied.emit has caused a refresh of the dirty/staged file views,
+        # restore selected row in appropriate file list view so the user can keep hitting
+        # enter (del) to stage (unstage) a series of files.
+        if not self.restoreSelectedFile():
+            if stagedESR >= 0:
+                self.stagedFiles.selectRow(min(stagedESR, self.stagedFiles.model().rowCount()-1))
+            elif dirtyESR >= 0:
+                self.dirtyFiles.selectRow(min(dirtyESR, self.dirtyFiles.model().rowCount()-1))
+
+        # If no file is selected in either FileListView, clear the diffView of any residual diff.
+        if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
+            self.clearDiffView()
+
+        self.navHistory.unlock()
 
     def loadCommitAsync(self, oid: pygit2.Oid):
+        task = tasks.LoadCommit(self, oid)
+        task.success.connect(lambda: self._loadCommit(oid, task.diffs))
+        self.repoTaskRunner.put(task)
+
+    def _loadCommit(self, oid: pygit2.Oid, parentDiffs: list[pygit2.Diff]):
         """Load commit details into Changed Files view"""
 
-        work = lambda: porcelain.loadCommitDiffs(self.repo, oid)
-
-        def then(parentDiffs: list[pygit2.Diff]):
-            #import time; time.sleep(1) #to debug out-of-order events
-
-            # Reset changed files view. Block its signals as we refill it to prevent updating the diff view.
-            with QSignalBlockerContext(self.committedFiles):
-                self.committedFiles.clear()
-                self.committedFiles.setCommit(oid)
-                self.committedFiles.setContents(parentDiffs)
-
-            self.navPos = self.navHistory.findContext(oid.hex)
-            if not self.navPos:
-                self.navPos = NavPos(context=oid.hex, file=self.committedFiles.getFirstPath())
-
-            # Show message if commit is empty
-            if self.committedFiles.flModel.rowCount() == 0:
-                self.diffStack.setCurrentWidget(self.richDiffView)
-                self.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
-
-            # Switch to correct card in filesStack to show changedFilesView
-            self.filesStack.setCurrentWidget(self.committedFiles)
-
-            self.restoreSelectedFile()
-
         self.saveFilePositions()
 
-        opName = translate("Operation", "Load commit “{0}”").format(shortHash(oid))
-        self.workQueue.put(work, then, opName, -1000)
+        # Reset committed files view.
+        # Block its signals as we refill it to prevent updating the diff.
+        with QSignalBlockerContext(self.committedFiles):
+            self.committedFiles.clear()
+            self.committedFiles.setCommit(oid)
+            self.committedFiles.setContents(parentDiffs)
+
+        self.navPos = self.navHistory.findContext(oid.hex)
+        if not self.navPos:
+            self.navPos = NavPos(context=oid.hex, file=self.committedFiles.getFirstPath())
+
+        # Show message if commit is empty
+        if self.committedFiles.flModel.rowCount() == 0:
+            self.diffStack.setCurrentWidget(self.richDiffView)
+            self.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
+
+        # Switch to correct card in filesStack to show changedFilesView
+        self.filesStack.setCurrentWidget(self.committedFiles)
+
+        # Select the best file in this commit - which may trigger loadPatchAsync
+        self.restoreSelectedFile()
 
     def loadPatchAsync(self, patch: pygit2.Patch, stagingState: StagingState):
-        """Load a file diff into the pygit2.Diff View"""
+        task = tasks.LoadPatch(self, patch, stagingState)
+        task.success.connect(lambda: self._loadPatch(patch, stagingState, task.result))
+        self.repoTaskRunner.put(task)
 
-        if not patch:
-            self.diffStack.setCurrentWidget(self.richDiffView)
-            self.richDiffView.displayDiffModelError(DiffModelError(
-                self.tr("Patch is invalid."),
-                self.tr("The patched file may have changed on disk since we last read it. Try refreshing the window."),
-                icon=QStyle.StandardPixmap.SP_MessageBoxWarning))
-            return
-
-        repo = self.state.repo
-
-        def work():
-            if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
-                ancestor, ours, theirs = repo.index.conflicts[patch.delta.new_file.path]
-                return DiffConflict(repo, ancestor, ours, theirs)
-
-            try:
-                dm = DiffModel.fromPatch(patch)
-                dm.document.moveToThread(QApplication.instance().thread())
-                return dm
-            except DiffModelError as dme:
-                return dme
-            except ShouldDisplayPatchAsImageDiff:
-                return DiffImagePair(self.repo, patch.delta, stagingState)
-            except BaseException as exc:
-                summary, details = excStrings(exc)
-                return DiffModelError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
-
-        def then(result: DiffModel | DiffModelError | DiffImagePair):
-            if stagingState == StagingState.COMMITTED:
-                assert len(self.navPos.context) == 40
-                posContext = self.navPos.context
-            else:
-                posContext = stagingState.name
-            posFile = patch.delta.new_file.path
-            self.navPos = self.navHistory.findFileInContext(posContext, posFile)
-            if not self.navPos:
-                self.navPos = NavPos(posContext, posFile)
-
-            if type(result) == DiffConflict:
-                self.diffStack.setCurrentWidget(self.conflictView)
-                self.conflictView.displayConflict(result)
-            elif type(result) == DiffModelError:
-                self.diffStack.setCurrentWidget(self.richDiffView)
-                self.richDiffView.displayDiffModelError(result)
-            elif type(result) == DiffModel:
-                self.diffStack.setCurrentWidget(self.diffView)
-                self.diffView.replaceDocument(repo, patch, stagingState, result)
-                self.restoreDiffPosition()  # restore position after we've replaced the document
-            elif type(result) == DiffImagePair:
-                self.diffStack.setCurrentWidget(self.richDiffView)
-                self.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
-            else:
-                self.diffStack.setCurrentWidget(self.richDiffView)
-                self.richDiffView.displayDiffModelError(DiffModelError(
-                    self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
-                    icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
+    def _loadPatch(self, patch, stagingState, result):
+        """Load a file diff into the Diff View"""
 
         self.saveFilePositions()
 
-        opName = translate("Operation", "Load diff “{0}”").format(patch.delta.new_file.path)
-        self.workQueue.put(work, then, opName, -500)
+        if stagingState == StagingState.COMMITTED:
+            assert len(self.navPos.context) == 40
+            posContext = self.navPos.context
+        else:
+            posContext = stagingState.name
+        posFile = patch.delta.new_file.path
+        self.navPos = self.navHistory.findFileInContext(posContext, posFile)
+        if not self.navPos:
+            self.navPos = NavPos(posContext, posFile)
+
+        if type(result) == DiffConflict:
+            self.diffStack.setCurrentWidget(self.conflictView)
+            self.conflictView.displayConflict(result)
+        elif type(result) == DiffModelError:
+            self.diffStack.setCurrentWidget(self.richDiffView)
+            self.richDiffView.displayDiffModelError(result)
+        elif type(result) == DiffModel:
+            self.diffStack.setCurrentWidget(self.diffView)
+            self.diffView.replaceDocument(self.repo, patch, stagingState, result)
+            self.restoreDiffPosition()  # restore position after we've replaced the document
+        elif type(result) == DiffImagePair:
+            self.diffStack.setCurrentWidget(self.richDiffView)
+            self.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
+        else:
+            self.diffStack.setCurrentWidget(self.richDiffView)
+            self.richDiffView.displayDiffModelError(DiffModelError(
+                self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
+                icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
     def startPushFlow(self, branchName: str = ""):
         pushDialog = PushDialog.startPushFlow(self, self.repo, branchName)
@@ -846,7 +823,7 @@ class RepoWidget(QWidget):
                 self.graphView.setCommitSequence(self.state.commitSequence)
 
         if self.isStageViewShown:
-            self.fillStageViewAsync()
+            self.refreshWorkdirViewAsync()
         globalstatus.clearProgress()
 
         self.refreshWindowTitle()

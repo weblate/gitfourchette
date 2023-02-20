@@ -5,6 +5,7 @@ from gitfourchette.tasks.branchtasks import NewBranch, SwitchBranch, RenameBranc
 from gitfourchette.tasks.branchtasks import NewBranchFromLocalBranch, NewBranchFromCommit
 from gitfourchette.tasks.branchtasks import PullBranch
 from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutCommit, RevertCommit, ResetHead
+from gitfourchette.tasks.loadtasks import LoadWorkdirDiffs, LoadCommit, LoadPatch
 from gitfourchette.tasks.nettasks import DeleteRemoteBranch, RenameRemoteBranch
 from gitfourchette.tasks.nettasks import FetchRemote, FetchRemoteBranch
 from gitfourchette.tasks.remotetasks import NewRemote, EditRemote, DeleteRemote

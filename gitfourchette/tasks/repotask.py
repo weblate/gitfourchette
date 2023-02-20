@@ -95,16 +95,23 @@ class RepoTask(QObject):
     back on the UI thread.
     """
 
+    success = Signal()
+    "Emitted by executeAndEmitSignals() when execute() has finished running sucessfully."
+
     finished = Signal(object)
-    """Emitted by executeAndEmitFinishedSignal() when execute() has finished running,
+    """Emitted by executeAndEmitSignals() when execute() has finished running,
     (successfully or not). The sole argument is the exception that was raised during
     execute() -- this is None if the task ran to completion."""
+
+    globalTaskID = 0
 
     def __init__(self, rw: 'RepoWidget'):
         super().__init__(rw)
         self.rw = rw
         self.aborted = False
         self.setObjectName("RepoTask")
+        self.taskID = RepoTask.globalTaskID
+        RepoTask.globalTaskID += 1
 
     def name(self):
         return str(self)
@@ -147,7 +154,7 @@ class RepoTask(QObject):
         """
         pass
 
-    def executeAndEmitFinishedSignal(self):
+    def executeAndEmitSignals(self):
         """
         Do not override!
         """
@@ -155,6 +162,7 @@ class RepoTask(QObject):
             # TODO: Mutex to regulate access to repo from entire program?
             self.execute()
             self.finished.emit(None)
+            self.success.emit()
         except BaseException as exc:
             self.finished.emit(exc)
 
@@ -239,9 +247,11 @@ class RepoTaskRunner(QObject):
         self.threadpool.setMaxThreadCount(1)
 
     def put(self, task: RepoTask):
+        log.info(TAG, f"Put task {task.taskID}: {task.name()}")
+
         if self.currentTask is not None:
-            log.warning(TAG, "**** A REPOTASK IS ALREADY RUNNING!!! ****")
-            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self.currentTask.name()})")
+            log.warning(TAG, f"A RepoTask is already running! ({self.currentTask.taskID}, {self.currentTask.name()})")
+            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self.currentTask.taskID}, {self.currentTask.name()})")
             return
 
         self.currentTask = task
@@ -263,7 +273,7 @@ class RepoTaskRunner(QObject):
             assert isinstance(continueToken, TaskYieldTokenBase), "You may only yield a subclass of TaskYieldTokenBase"
 
             # Bind signals from the token to resume the UI flow when the user is ready
-            continueToken.abortTask.connect(lambda: self._clearTask(task))
+            continueToken.abortTask.connect(lambda: self._releaseTask(task))
             continueToken.continueTask.connect(lambda: self._onContinueFlow(task, flow))
 
         except StopIteration:
@@ -272,7 +282,7 @@ class RepoTaskRunner(QObject):
 
             if task.aborted:
                 # The flow function may have aborted the task, in which case stop tracking it.
-                self._clearTask(task)
+                self._releaseTask(task)
             else:
                 # Execute the meat of the task
                 self._executeTask(task)
@@ -281,22 +291,18 @@ class RepoTaskRunner(QObject):
             # An exception was thrown during the UI flow
             assert self.currentTask == task
 
+            # Stop tracking this task
+            self._releaseTask(task)
+
+            # Run task's error callback
             task.onError(exc)
-
-            # Finally, stop tracking this task
-            self._clearTask(task)
-
-    def _clearTask(self, task):
-        assert task == self.currentTask
-        self.currentTask.deleteLater()
-        self.currentTask = None
 
     def _executeTask(self, task):
         assert task == self.currentTask
 
         self.currentTaskConnection = task.finished.connect(lambda exc: self._onTaskFinished(task, exc))
 
-        wrapper = util.QRunnableFunctionWrapper(task.executeAndEmitFinishedSignal)
+        wrapper = util.QRunnableFunctionWrapper(task.executeAndEmitSignals)
         if self.forceSerial:
             assert util.onAppThread()
             wrapper.run()
@@ -306,18 +312,29 @@ class RepoTaskRunner(QObject):
     def _onTaskFinished(self, task, exc):
         assert task == self.currentTask
 
-        if not PYSIDE2:
-            assert isinstance(self.currentTaskConnection, QMetaObject.Connection)
-            self.disconnect(self.currentTaskConnection)
-        else:
-            # When connecting to a signal, PySide2 returns a bool, not a QMetaObject.Connection.
-            # Looks like it's a wontfix: https://bugreports.qt.io/browse/PYSIDE-1902
-            task.finished.disconnect()
-
-        self.currentTaskConnection = None
+        self._releaseTask(task)
 
         if exc:
-            self.currentTask.onError(exc)
-        self.currentTask.postExecute(not exc)
+            task.onError(exc)
+        task.postExecute(not exc)
         self.refreshPostTask.emit(task.refreshWhat())
-        self._clearTask(task)
+
+    def _releaseTask(self, task):
+        log.info(TAG, f"Pop task {task.taskID}: {task.name()}")
+
+        assert util.onAppThread()
+        assert task == self.currentTask
+
+        if self.currentTaskConnection:
+            if not PYSIDE2:
+                assert isinstance(self.currentTaskConnection, QMetaObject.Connection)
+                self.disconnect(self.currentTaskConnection)
+            else:
+                # When connecting to a signal, PySide2 returns a bool, not a QMetaObject.Connection.
+                # Looks like it's a wontfix: https://bugreports.qt.io/browse/PYSIDE-1902
+                task.finished.disconnect()
+            self.currentTaskConnection = None
+
+        self.currentTask.setParent(None)  # de-parent the task so that it can be garbage-collected
+        self.currentTask = None
+
