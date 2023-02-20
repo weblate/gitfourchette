@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
         self.statusBar.addPermanentWidget(self.statusProgress)
         if settings.prefs.debug_showMemoryIndicator:
             self.memoryIndicator = QPushButton("Mem")
-            self.memoryIndicator.setMaximumHeight(16)
+            self.memoryIndicator.setStyleSheet("border: none;")  # don't let it thicken the status bar
             self.memoryIndicator.setMinimumWidth(128)
             self.memoryIndicator.clicked.connect(lambda e: self.onMemoryIndicatorClicked())
             self.memoryIndicator.setToolTip("Force GC")
