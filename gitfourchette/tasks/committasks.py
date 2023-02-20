@@ -1,22 +1,21 @@
 from gitfourchette import porcelain
-from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat, AbortIfDialogRejected, ReenterWhenDialogFinished
 from gitfourchette import util
+from gitfourchette.qt import *
+from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.commitdialog import CommitDialog
-from html import escape
-import os
 import pygit2
 
 
 class NewCommit(RepoTask):
-    def __init__(self, rw):
-        super().__init__(rw)
-        self.message = None
-        self.author = None
-        self.committer = None
-
     def name(self):
         return translate("Operation", "Commit")
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
+
+    @property
+    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
+        return self.parent()
 
     def getDraftMessage(self):
         return self.rw.state.getDraftCommitMessage()
@@ -24,9 +23,9 @@ class NewCommit(RepoTask):
     def setDraftMessage(self, newMessage):
         self.rw.state.setDraftCommitMessage(newMessage)
 
-    def preExecuteUiFlow(self):
+    def flow(self):
         if not porcelain.hasAnyStagedChanges(self.repo):
-            yield self.abortIfQuestionRejected(
+            yield from self._flowConfirm(
                 title=self.tr("Create empty commit"),
                 text=self.tr("No files are staged for commit.<br>Do you want to create an empty commit anyway?"))
 
@@ -43,7 +42,7 @@ class NewCommit(RepoTask):
         cd.show()
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
-        yield ReenterWhenDialogFinished(cd)
+        yield from self._flowDialog(cd, abortTaskIfRejected=False)
         cd.deleteLater()
 
         self.message = cd.getFullMessage()
@@ -55,27 +54,25 @@ class NewCommit(RepoTask):
 
         if cd.result() == QDialog.DialogCode.Rejected:
             self.cancel()
+            return
 
-    def execute(self):
+        yield from self._flowBeginWorkerThread()
         porcelain.createCommit(self.repo, self.message, self.author, self.committer)
 
-    def postExecute(self, success: bool):
-        if success:
-            self.setDraftMessage(None)  # Clear draft message
+        yield from self._flowExitWorkerThread()
+        self.setDraftMessage(None)  # Clear draft message
+
+
+class AmendCommit(RepoTask):
+    def name(self):
+        return translate("Operation", "Amend commit")
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
 
-
-class AmendCommit(RepoTask):
-    def __init__(self, rw):
-        super().__init__(rw)
-        self.message = None
-        self.author = None
-        self.committer = None
-
-    def name(self):
-        return translate("Operation", "Amend commit")
+    @property
+    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
+        return self.parent()
 
     def getDraftMessage(self):
         return self.rw.state.getDraftCommitMessage(forAmending=True)
@@ -83,7 +80,7 @@ class AmendCommit(RepoTask):
     def setDraftMessage(self, newMessage):
         self.rw.state.setDraftCommitMessage(newMessage, forAmending=True)
 
-    def preExecuteUiFlow(self):
+    def flow(self):
         headCommit = porcelain.getHeadCommit(self.repo)
 
         # TODO: Retrieve draft message
@@ -98,72 +95,58 @@ class AmendCommit(RepoTask):
         cd.show()
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
-        yield ReenterWhenDialogFinished(cd)
+        yield from self._flowDialog(cd, abortTaskIfRejected=False)
         cd.deleteLater()
 
-        self.message = cd.getFullMessage()
-        self.author = cd.getOverriddenAuthorSignature()
-        self.committer = cd.getOverriddenCommitterSignature()
+        message = cd.getFullMessage()
+        author = cd.getOverriddenAuthorSignature()
+        committer = cd.getOverriddenCommitterSignature()
 
         # Save amend message as draft now, so we don't lose it if the commit operation fails or is rejected.
-        self.setDraftMessage(self.message)
+        self.setDraftMessage(message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
             self.cancel()
+            return
 
-    def execute(self):
-        porcelain.amendCommit(self.repo, self.message, self.author, self.committer)
+        yield from self._flowBeginWorkerThread()
+        porcelain.amendCommit(self.repo, message, author, committer)
 
-    def postExecute(self, success):
-        if success:
-            self.setDraftMessage(None)  # Clear draft message
-
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
+        yield from self._flowExitWorkerThread()
+        self.setDraftMessage(None)  # Clear draft message
 
 
 class CheckoutCommit(RepoTask):
-    def __init__(self, rw, oid: pygit2.Oid):
-        super().__init__(rw)
-        self.oid = oid
-
     def name(self):
         return translate("Operation", "Checkout commit")
-
-    def execute(self):
-        porcelain.checkoutCommit(self.repo, self.oid)
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
 
+    def flow(self, oid: pygit2.Oid):
+        yield from self._flowBeginWorkerThread()
+        porcelain.checkoutCommit(self.repo, oid)
+
 
 class RevertCommit(RepoTask):
-    def __init__(self, rw, oid: pygit2.Oid):
-        super().__init__(rw)
-        self.oid = oid
-
     def name(self):
         return translate("Operation", "Revert commit")
-
-    def execute(self):
-        porcelain.revertCommit(self.repo, self.oid)
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX
 
+    def flow(self, oid: pygit2.Oid):
+        yield from self._flowBeginWorkerThread()
+        porcelain.revertCommit(self.repo, oid)
+
 
 class ResetHead(RepoTask):
-    def __init__(self, rw, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
-        super().__init__(rw)
-        self.onto = onto
-        self.resetMode = resetMode
-        self.recurseSubmodules = recurseSubmodules
-
     def name(self):
-        return translate("Operation", "Reset HEAD ({1})", self.resetMode)
-
-    def execute(self):
-        porcelain.resetHead(self.repo, self.onto, self.resetMode, self.recurseSubmodules)
+        return translate("Operation", "Reset HEAD")
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+
+    def flow(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
+        yield from self._flowBeginWorkerThread()
+        porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)

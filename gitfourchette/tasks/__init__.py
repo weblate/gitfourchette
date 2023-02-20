@@ -1,7 +1,7 @@
 from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskAffectsWhat
 
 from gitfourchette.tasks.branchtasks import NewTrackingBranch, EditTrackedBranch
-from gitfourchette.tasks.branchtasks import NewBranch, SwitchBranch, RenameBranch, DeleteBranch
+from gitfourchette.tasks.branchtasks import NewBranchFromHead, SwitchBranch, RenameBranch, DeleteBranch
 from gitfourchette.tasks.branchtasks import NewBranchFromLocalBranch, NewBranchFromCommit
 from gitfourchette.tasks.branchtasks import PullBranch
 from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutCommit, RevertCommit, ResetHead

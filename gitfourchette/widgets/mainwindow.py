@@ -580,7 +580,7 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def newBranch(self, rw: RepoWidget):
-        rw.runTask(tasks.NewBranch)
+        rw.runTask(tasks.NewBranchFromHead)
 
     @needRepoWidget
     def newRemote(self, rw: RepoWidget):

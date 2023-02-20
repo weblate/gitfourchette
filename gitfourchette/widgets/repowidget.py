@@ -225,7 +225,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.editTrackingBranch,       tasks.EditTrackedBranch)
         self.connectTask(self.sidebar.fetchRemote,              tasks.FetchRemote)
         self.connectTask(self.sidebar.fetchRemoteBranch,        tasks.FetchRemoteBranch)
-        self.connectTask(self.sidebar.newBranch,                tasks.NewBranch)
+        self.connectTask(self.sidebar.newBranch,                tasks.NewBranchFromHead)
         self.connectTask(self.sidebar.newBranchFromLocalBranch, tasks.NewBranchFromLocalBranch)
         self.connectTask(self.sidebar.newRemote,                tasks.NewRemote)
         self.connectTask(self.sidebar.newStash,                 tasks.NewStash)
@@ -240,8 +240,10 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def runTask(self, taskClass: typing.Type[tasks.RepoTask], *args):
-        task = taskClass(self, *args)
-        self.repoTaskRunner.put(task)
+        task = taskClass(self)
+        task.setRepo(self.repo)
+        #task.setArgs(*args)
+        self.repoTaskRunner.put(task, *args)
         return task
 
     def connectTask(self, signal: Signal, taskClass: typing.Type[tasks.RepoTask], argc: int = -1):
@@ -493,22 +495,10 @@ class RepoWidget(QWidget):
         self.clearDiffView()
 
     def refreshWorkdirViewAsync(self, forceSelectFile: NavPos = None, allowUpdateIndex: bool = False):
-        rw = self
-
-        class RefreshWorkdir(tasks.RepoTask):
-            def name(self):
-                return translate("Operation", "Refresh working directory")
-
-            def execute(self):
-                porcelain.refreshIndex(self.repo)
-                self.dirtyDiff = porcelain.diffWorkdirToIndex(self.repo, allowUpdateIndex)
-                self.stageDiff = porcelain.diffIndexToHead(self.repo)
-
-            def postExecute(self, success: bool):
-                if success:
-                    rw._fillWorkdirView(self.dirtyDiff, self.stageDiff, forceSelectFile)
-
-        return self.runTask(RefreshWorkdir)
+        task = tasks.LoadWorkdirDiffs(self)
+        task.setRepo(self.repo)
+        task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, forceSelectFile))
+        return self.repoTaskRunner.put(task, allowUpdateIndex)
 
     def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, forceSelectFile: NavPos):
         """Fill Staged/Unstaged views with uncommitted changes"""
@@ -551,9 +541,10 @@ class RepoWidget(QWidget):
         self.navHistory.unlock()
 
     def loadCommitAsync(self, oid: pygit2.Oid):
-        task = tasks.LoadCommit(self, oid)
+        task = tasks.LoadCommit(self)
+        task.setRepo(self.repo)
         task.success.connect(lambda: self._loadCommit(oid, task.diffs))
-        self.repoTaskRunner.put(task)
+        self.repoTaskRunner.put(task, oid)
 
     def _loadCommit(self, oid: pygit2.Oid, parentDiffs: list[pygit2.Diff]):
         """Load commit details into Changed Files view"""
@@ -583,9 +574,10 @@ class RepoWidget(QWidget):
         self.restoreSelectedFile()
 
     def loadPatchAsync(self, patch: pygit2.Patch, stagingState: StagingState):
-        task = tasks.LoadPatch(self, patch, stagingState)
+        task = tasks.LoadPatch(self)
+        task.setRepo(self.repo)
         task.success.connect(lambda: self._loadPatch(patch, stagingState, task.result))
-        self.repoTaskRunner.put(task)
+        self.repoTaskRunner.put(task, patch, stagingState)
 
     def _loadPatch(self, patch, stagingState, result):
         """Load a file diff into the Diff View"""

@@ -1,61 +1,43 @@
 from gitfourchette import porcelain
-from gitfourchette.stagingstate import StagingState
+from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat, AbortIfDialogRejected, ReenterWhenDialogFinished
+from gitfourchette.stagingstate import StagingState
+from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffModel, ShouldDisplayPatchAsImageDiff, \
     DiffImagePair
-from gitfourchette import util
-from html import escape
-import os
 import pygit2
 
 
 class LoadWorkdirDiffs(RepoTask):
-    def __init__(self, rw, allowUpdateIndex: bool):
-        super().__init__(rw)
-        self.dirtyDiff = None
-        self.stageDiff = None
-        self.allowUpdateIndex = allowUpdateIndex
-
     def name(self):
         return translate("Operation", "Refresh working directory")
 
-    def execute(self):
+    def flow(self, allowUpdateIndex: bool):
+        yield from self._flowBeginWorkerThread()
         porcelain.refreshIndex(self.repo)
-        self.dirtyDiff = porcelain.diffWorkdirToIndex(self.repo, self.allowUpdateIndex)
+        self.dirtyDiff = porcelain.diffWorkdirToIndex(self.repo, allowUpdateIndex)
         self.stageDiff = porcelain.diffIndexToHead(self.repo)
 
 
 class LoadCommit(RepoTask):
-    def __init__(self, rw, oid: pygit2.Oid):
-        super().__init__(rw)
-        self.oid = oid
-        self.diffs = None
-
     def name(self):
         return translate("Operation", "Load commit")
 
-    def execute(self):
+    def flow(self, oid: pygit2.Oid):
+        yield from self._flowBeginWorkerThread()
         # import time; time.sleep(1) #----------to debug out-of-order events
-        self.diffs = porcelain.loadCommitDiffs(self.repo, self.oid)
+        self.diffs = porcelain.loadCommitDiffs(self.repo, oid)
 
 
 class LoadPatch(RepoTask):
-    def __init__(self, rw, patch: pygit2.Patch, stagingState: StagingState):
-        super().__init__(rw)
-        self.patch = patch
-        self.stagingState = stagingState
-        self.result = None
-
     def refreshWhat(self) -> TaskAffectsWhat:
         return TaskAffectsWhat.NOTHING  # let custom callback in RepoWidget do it
 
     def name(self):
         return translate("Operation", "Load diff")
 
-    def _processPatch(self) -> DiffModel | DiffModelError | DiffConflict | DiffImagePair:
-        patch = self.patch
-
+    def _processPatch(self, patch: pygit2.Patch, stagingState: StagingState
+                      ) -> DiffModel | DiffModelError | DiffConflict | DiffImagePair:
         if not patch:
             return DiffModelError(
                 self.tr("Patch is invalid."),
@@ -73,10 +55,11 @@ class LoadPatch(RepoTask):
         except DiffModelError as dme:
             return dme
         except ShouldDisplayPatchAsImageDiff:
-            return DiffImagePair(self.repo, patch.delta, self.stagingState)
+            return DiffImagePair(self.repo, patch.delta, stagingState)
         except BaseException as exc:
             summary, details = util.excStrings(exc)
             return DiffModelError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
-    def execute(self):
-        self.result = self._processPatch()
+    def flow(self, patch: pygit2.Patch, stagingState: StagingState):
+        yield from self._flowBeginWorkerThread()
+        self.result = self._processPatch(patch, stagingState)

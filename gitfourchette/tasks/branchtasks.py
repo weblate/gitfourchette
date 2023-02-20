@@ -1,275 +1,236 @@
 from gitfourchette import porcelain
+from gitfourchette import util
 from gitfourchette.porcelain import HEADS_PREFIX, REMOTES_PREFIX
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat, ReenterWhenDialogFinished, AbortIfDialogRejected
-from gitfourchette.trash import Trash
-from gitfourchette import util
-from gitfourchette.widgets.stashdialog import StashDialog
+from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
 from html import escape
-import os
 import pygit2
 
 
 class SwitchBranch(RepoTask):
-    def __init__(self, rw, newBranch: str):
-        super().__init__(rw)
-        self.newBranch = newBranch
-        assert not self.newBranch.startswith(HEADS_PREFIX)
-
     def name(self):
         return translate("Operation", "Switch to branch")
 
-    def execute(self):
-        porcelain.checkoutLocalBranch(self.repo, self.newBranch)
+    def flow(self, newBranch: str):
+        assert not newBranch.startswith(HEADS_PREFIX)
+        yield from self._flowBeginWorkerThread()
+        porcelain.checkoutLocalBranch(self.repo, newBranch)
 
 
 class RenameBranch(RepoTask):
-    def __init__(self, rw, oldBranchName: str):
-        super().__init__(rw)
-        self.oldBranchName = oldBranchName
-        self.newBranchName = oldBranchName
-        assert not self.oldBranchName.startswith(HEADS_PREFIX)
-
     def name(self):
         return translate("Operation", "Rename local branch")
 
-    def preExecuteUiFlow(self):
+    def flow(self, oldBranchName: str):
+        assert not oldBranchName.startswith(HEADS_PREFIX)
+
         dlg = showTextInputDialog(
             self.parent(),
-            self.tr("Rename local branch “{0}”").format(escape(self.oldBranchName)),
+            self.tr("Rename local branch “{0}”").format(escape(oldBranchName)),
             self.tr("Enter new name:"),
-            self.newBranchName,
+            oldBranchName,
             okButtonText=self.tr("Rename"))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
-        yield AbortIfDialogRejected(dlg)
+        yield from self._flowDialog(dlg)
         dlg.deleteLater()
-        self.newBranchName = dlg.lineEdit.text()
+        newBranchName = dlg.lineEdit.text()
 
-    def execute(self):
-        porcelain.renameBranch(self.repo, self.oldBranchName, self.newBranchName)
+        yield from self._flowBeginWorkerThread()
+        porcelain.renameBranch(self.repo, oldBranchName, newBranchName)
 
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS
 
 
 class DeleteBranch(RepoTask):
-    def __init__(self, rw, localBranchName: str):
-        super().__init__(rw)
-        self.localBranchName = localBranchName
-        assert not localBranchName.startswith(HEADS_PREFIX)
-
     def name(self):
         return translate("Operation", "Delete local branch")
 
-    def preExecuteUiFlow(self):
+    def flow(self, localBranchName: str):
+        assert not localBranchName.startswith(HEADS_PREFIX)
+
         question = (
-                self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(self.localBranchName))
+                self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName))
                 + "<br>"
                 + translate("Global", "This cannot be undone!"))
-        yield self.abortIfQuestionRejected(text=question, acceptButtonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+        yield from self._flowConfirm(
+            text=question, acceptButtonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-    def execute(self):
-        porcelain.deleteBranch(self.repo, self.localBranchName)
+        yield from self._flowBeginWorkerThread()
+        porcelain.deleteBranch(self.repo, localBranchName)
 
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS
 
 
-class NewBranch(RepoTask):
-    def __init__(self, rw):
-        super().__init__(rw)
-        self.tip = None
-        self.localName = ""
-        self.switchTo = False
-        self.upstream = ""
-
+class _NewBranchBaseTask(RepoTask):
     def name(self):
         return translate("Operation", "New local branch")
 
-    def _initialBranchSettings(self, tip: pygit2.Oid):
-        upstreams = []
+    def _internalFlow(self, tip: pygit2.Oid, localName: str = "", switchTo: bool = False, upstream: str = ""):
+        repo = self.repo
 
         # If we're creating a branch at the tip of the current branch, default to its name
-        if (not self.localName
-                and not self.repo.head_is_unborn
-                and not self.repo.head_is_detached
-                and self.repo.head.target == tip):
-            self.localName = self.repo.head.shorthand
+        if (not localName
+                and not repo.head_is_unborn
+                and not repo.head_is_detached
+                and repo.head.target == tip):
+            localName = repo.head.shorthand
 
         # Collect upstream names and set initial localName (if we haven't been able to set it above).
-        refsPointingHere = porcelain.mapCommitsToReferences(self.repo)[tip]
-
+        refsPointingHere = porcelain.mapCommitsToReferences(repo)[tip]
+        upstreams = []
         for r in refsPointingHere:
             if r.startswith(HEADS_PREFIX):
                 branchName = r.removeprefix(HEADS_PREFIX)
-                if not self.localName:
-                    self.localName = branchName
-
-                branch = self.repo.branches[branchName]
-                if branch.upstream and branch.upstream.shorthand not in upstreams:
+                if not localName:
+                    localName = branchName
+                branch = repo.branches[branchName]
+                if branch.upstream:
                     upstreams.append(branch.upstream.shorthand)
 
             elif r.startswith(REMOTES_PREFIX):
                 shorthand = r.removeprefix(REMOTES_PREFIX)
-                if not self.localName:
-                    _, self.localName = porcelain.splitRemoteBranchShorthand(shorthand)
-                if shorthand not in upstreams:
-                    upstreams.append(shorthand)
+                if not localName:
+                    _, localName = porcelain.splitRemoteBranchShorthand(shorthand)
+                upstreams.append(shorthand)
 
-        if self.upstream not in upstreams:
-            self.upstream = ""
+        # Ensure no duplicates (stable order since Python 3.7+)
+        upstreams = list(dict.fromkeys(upstreams))
 
-        return upstreams
+        forbiddenBranchNames = [""] + repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
 
-    def preExecuteUiFlow(self):
-        if not self.tip:
-            self.tip = porcelain.getHeadCommit(self.repo).oid
-
-        upstreams = self._initialBranchSettings(self.tip)
-
-        forbiddenBranchNames = [""] + self.repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
-
-        commitMessage = porcelain.getCommitMessage(self.repo, self.tip)
+        commitMessage = porcelain.getCommitMessage(repo, tip)
         commitMessage, junk = util.messageSummary(commitMessage)
 
         dlg = NewBranchDialog(
-            initialName=self.localName,
-            target=util.shortHash(self.tip),
+            initialName=localName,
+            target=util.shortHash(tip),
             targetSubtitle=commitMessage,
             upstreams=upstreams,
             forbiddenBranchNames=forbiddenBranchNames,
             parent=self.parent())
 
-        if self.upstream:
-            i = dlg.ui.upstreamComboBox.findText(self.upstream)
+        if upstream:
+            i = dlg.ui.upstreamComboBox.findText(upstream)
             if i >= 0:
                 dlg.ui.upstreamComboBox.setCurrentIndex(i)
-                if self.switchTo:
+                if switchTo:
                     dlg.ui.upstreamCheckBox.setChecked(True)
 
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
-        yield AbortIfDialogRejected(dlg)
+        yield from self._flowDialog(dlg)
         dlg.deleteLater()
 
-        self.localName = dlg.ui.nameEdit.text()
-        self.upstream = ""
-        self.switchTo = dlg.ui.switchToBranchCheckBox.isChecked()
+        localName = dlg.ui.nameEdit.text()
+        upstream = ""
+        switchTo = dlg.ui.switchToBranchCheckBox.isChecked()
         if dlg.ui.upstreamCheckBox.isChecked():
-            self.upstream = dlg.ui.upstreamComboBox.currentText()
+            upstream = dlg.ui.upstreamComboBox.currentText()
 
-    def execute(self):
+        yield from self._flowBeginWorkerThread()
+
         # Create local branch
-        porcelain.newBranchFromCommit(self.repo, self.localName, self.tip, switchTo=False)
+        porcelain.newBranchFromCommit(repo, localName, tip, switchTo=False)
 
         # Optionally make it track a remote branch
-        if self.upstream:
-            porcelain.editTrackingBranch(self.repo, self.localName, self.upstream)
+        if upstream:
+            porcelain.editTrackingBranch(repo, localName, upstream)
 
         # Switch to it last (if user wants to)
-        if self.switchTo:
-            porcelain.checkoutLocalBranch(self.repo, self.localName)
+        if switchTo:
+            porcelain.checkoutLocalBranch(repo, localName)
 
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS
 
 
-class NewBranchFromCommit(NewBranch):
-    def __init__(self, rw, tip: pygit2.Oid):
-        super().__init__(rw)
-        self.tip = tip
+class NewBranchFromHead(_NewBranchBaseTask):
+    def flow(self):
+        tip = porcelain.getHeadCommit(self.repo).oid
+        yield from self._internalFlow(tip)
 
 
-class NewBranchFromLocalBranch(NewBranch):
-    def __init__(self, rw, localBranchName: str):
-        super().__init__(rw)
+class NewBranchFromCommit(_NewBranchBaseTask):
+    def flow(self, tip: pygit2.Oid):
+        yield from self._internalFlow(tip)
+
+
+class NewBranchFromLocalBranch(_NewBranchBaseTask):
+    def flow(self, localBranchName: str):
         assert not localBranchName.startswith(HEADS_PREFIX)
         branch = self.repo.branches.local[localBranchName]
-        self.tip = branch.target
-        self.localName = localBranchName
-        if branch.upstream:
-            self.upstream = branch.upstream.shorthand
+        tip = branch.target
+        localName = localBranchName
+        upstream = branch.upstream.shorthand if branch.upstream else ""
+        yield from self._internalFlow(tip, localName, False, upstream)
 
 
-class NewTrackingBranch(NewBranch):
-    def __init__(self, rw, remoteBranchName: str):
-        super().__init__(rw)
+class NewTrackingBranch(_NewBranchBaseTask):
+    def flow(self, remoteBranchName: str):
         assert not remoteBranchName.startswith(REMOTES_PREFIX)
         branch = self.repo.branches.remote[remoteBranchName]
-        self.tip = branch.target
-        self.localName = remoteBranchName.removeprefix(branch.remote_name + "/")
-        self.upstream = branch.shorthand
-        self.switchTo = True
+        tip = branch.target
+        localName = remoteBranchName.removeprefix(branch.remote_name + "/")
+        upstream = branch.shorthand
+        switchTo = True
+        yield from self._internalFlow(tip, localName, switchTo, upstream)
 
 
 class EditTrackedBranch(RepoTask):
-    def __init__(self, rw, localBranchName: str):
-        super().__init__(rw)
-        self.localBranchName = localBranchName
-        self.remoteBranchName = ""
-
     def name(self):
         return translate("Operation", "Change remote branch tracked by local branch")
 
-    def preExecuteUiFlow(self):
-        dlg = TrackedBranchDialog(self.repo, self.localBranchName, self.parent())
-        util.setWindowModal(dlg)
-        dlg.show()
-        yield AbortIfDialogRejected(dlg)
-
-        dlg.deleteLater()
-        self.remoteBranchName = dlg.newTrackedBranchName
-
-        # Bail if no-op
-        if self.remoteBranchName == self.repo.branches.local[self.localBranchName].upstream:
-            self.cancel()
-
-    def execute(self):
-        porcelain.editTrackingBranch(self.repo, self.localBranchName, self.remoteBranchName)
-
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS
+
+    def flow(self, localBranchName: str):
+        dlg = TrackedBranchDialog(self.repo, localBranchName, self.parent())
+        util.setWindowModal(dlg)
+        dlg.show()
+        yield from self._flowDialog(dlg)
+
+        remoteBranchName = dlg.newTrackedBranchName
+        dlg.deleteLater()
+
+        # Bail if no-op
+        if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
+            self.cancel()
+            return
+
+        yield from self._flowBeginWorkerThread()
+
+        porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
 
 
 # TODO: That's a confusing name because this task doesn't perform net access, unlike git's "pull" operation. We'll need to change porcelain.pull as well.
 class PullBranch(RepoTask):
-    def __init__(self, rw, localBranchName: str = ""):
-        super().__init__(rw)
-        self.localBranchName = localBranchName
-        self.remoteBranchName = ""
-
     def name(self):
         return translate("Operation", "Pull branch")
 
-    def preExecuteUiFlow(self):
-        if not self.localBranchName:
-            self.localBranchName = porcelain.getActiveBranchShorthand(self.repo)
+    def flow(self, localBranchName: str):
+        if not localBranchName:
+            localBranchName = porcelain.getActiveBranchShorthand(self.repo)
 
         try:
-            branch = self.repo.branches.local[self.localBranchName]
+            branch = self.repo.branches.local[localBranchName]
         except KeyError:
-            util.showWarning(
-                self.parent(), self.tr("No branch to pull"),
-                self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
-            self.cancel()
-            return
+            raise ValueError(self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
 
         bu: pygit2.Branch = branch.upstream
         if not bu:
-            util.showWarning(
-                self.parent(), self.tr("No remote-tracking branch"),
-                self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(escape(branch.shorthand)))
-            self.cancel()
-            return
+            raise ValueError(self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(escape(branch.shorthand)))
 
-        self.remoteBranchName = bu.upstream
+        remoteBranchName = bu.shorthand
 
-    def execute(self):
-        porcelain.pull(self.repo, self.localBranchName, self.remoteBranchName)
+        yield from self._flowBeginWorkerThread()
+
+        porcelain.pull(self.repo, localBranchName, remoteBranchName)
 
     def onError(self, exc):
         if isinstance(exc, porcelain.DivergentBranchesError):
