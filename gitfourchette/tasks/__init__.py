@@ -10,4 +10,5 @@ from gitfourchette.tasks.nettasks import DeleteRemoteBranch, RenameRemoteBranch
 from gitfourchette.tasks.nettasks import FetchRemote, FetchRemoteBranch
 from gitfourchette.tasks.remotetasks import NewRemote, EditRemote, DeleteRemote
 from gitfourchette.tasks.stagetasks import StageFiles, UnstageFiles, DiscardFiles
+from gitfourchette.tasks.stagetasks import HardSolveConflict, MarkConflictSolved
 from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, PopStash, DropStash

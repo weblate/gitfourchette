@@ -58,3 +58,58 @@ class UnstageFiles(_BaseStagingTask):
     def execute(self):
         with self.rw.fileWatcher.blockWatchingIndex():
             porcelain.unstageFiles(self.repo, self.patches)
+
+
+class HardSolveConflict(RepoTask):
+    def __init__(self, rw, path: str, keepOid: pygit2.Oid):
+        super().__init__(rw)
+        self.path = path
+        self.keepOid = keepOid
+
+    def name(self):
+        return translate("Operation", "Hard solve conflict")
+
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.INDEX
+
+    def execute(self):
+        repo = self.repo
+        path = self.path
+
+        porcelain.refreshIndex(repo)
+        assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
+
+        trash = Trash(repo)
+        trash.backupFile(path)
+
+        # TODO: we should probably set the modes correctly and stuff as well
+        blob: pygit2.Blob = repo[self.keepOid].peel(pygit2.Blob)
+        with open(os.path.join(repo.workdir, path), "wb") as f:
+            f.write(blob.data)
+
+        del repo.index.conflicts[path]
+        assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
+        repo.index.write()
+
+
+class MarkConflictSolved(RepoTask):
+    def __init__(self, rw, path: str):
+        super().__init__(rw)
+        self.path = path
+
+    def name(self):
+        return translate("Operation", "Mark conflict solved")
+
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.INDEX
+
+    def execute(self):
+        repo = self.repo
+        path = self.path
+
+        porcelain.refreshIndex(repo)
+        assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
+
+        del repo.index.conflicts[path]
+        assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
+        repo.index.write()

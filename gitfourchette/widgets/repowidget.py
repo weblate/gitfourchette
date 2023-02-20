@@ -22,7 +22,6 @@ from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.sidebar import Sidebar
-from gitfourchette.workqueue import WorkQueue
 from html import escape
 import os
 import pygit2
@@ -71,9 +70,8 @@ class RepoWidget(QWidget):
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
 
-        # Use workQueue to schedule operations on the repository
+        # Use RepoTaskRunner to schedule operations on the repository
         # to run on a thread separate from the UI thread.
-        self.workQueue = WorkQueue(self, maxThreadCount=1)   # TODO: Get rid of this, ultimately
         self.repoTaskRunner = tasks.RepoTaskRunner(self)
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
 
@@ -112,8 +110,6 @@ class RepoWidget(QWidget):
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
 
-        self.conflictView.hardSolve.connect(lambda path, oid: self.hardSolveConflictAsync(path, oid))
-        self.conflictView.markSolved.connect(lambda path: self.markConflictSolvedAsync(path))
         self.conflictView.openFile.connect(lambda path: self.openConflictFile(path))
 
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
@@ -211,6 +207,8 @@ class RepoWidget(QWidget):
 
         self.connectTask(self.amendButton.clicked,              tasks.AmendCommit, argc=0)
         self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
+        self.connectTask(self.conflictView.hardSolve,           tasks.HardSolveConflict)
+        self.connectTask(self.conflictView.markSolved,          tasks.MarkConflictSolved)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.graphView.checkoutCommit,         tasks.CheckoutCommit)
@@ -638,48 +636,6 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
     # Conflicts
-
-    def hardSolveConflictAsync(self, path: str, keepOid: pygit2.Oid):
-        repo = self.repo
-
-        def work():
-            porcelain.refreshIndex(repo)
-            assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
-
-            trash = Trash(repo)
-            trash.backupFile(path)
-
-            # TODO: we should probably set the modes correctly and stuff as well
-            blob: pygit2.Blob = repo[keepOid].peel(pygit2.Blob)
-            with open(os.path.join(repo.workdir, path), "wb") as f:
-                f.write(blob.data)
-
-            del repo.index.conflicts[path]
-            assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
-            repo.index.write()
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Hard solve conflict")
-        self.workQueue.put(work, then, opName)
-
-    def markConflictSolvedAsync(self, path: str):
-        repo = self.repo
-
-        def work():
-            porcelain.refreshIndex(repo)
-            assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
-
-            del repo.index.conflicts[path]
-            assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
-            repo.index.write()
-
-        def then(_):
-            self.quickRefreshWithSidebar()
-
-        opName = translate("Operation", "Mark conflict solved")
-        self.workQueue.put(work, then, opName)
 
     def openConflictFile(self, path: str):
         fullPath = os.path.join(self.repo.workdir, path)
