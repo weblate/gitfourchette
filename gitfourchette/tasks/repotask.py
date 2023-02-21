@@ -57,6 +57,9 @@ class YieldTokens:
     class BaseToken(QObject):
         pass
 
+    class AbortTask(BaseToken):
+        pass
+
     class EnterAsyncSection(BaseToken):
         pass
 
@@ -67,7 +70,7 @@ class YieldTokens:
         abortTask = Signal()
         continueTask = Signal()
 
-    class ReenterWhenDialogFinished(WaitForUser):
+    class ReenterAfterDialog(WaitForUser):
         """
         Re-enters the UI flow generator when the given QDialog is finished,
         regardless of its result.
@@ -76,19 +79,6 @@ class YieldTokens:
         def __init__(self, dlg: QDialog):
             super().__init__(dlg)
             dlg.finished.connect(self.continueTask)
-
-    class AbortIfDialogRejected(WaitForUser):
-        """
-        Pauses the UI flow generator until the given QDialog is either accepted or rejected.
-        - If the QDialog is rejected, the UI flow is aborted.
-        - If the QDialog is accepted, the UI flow is re-entered.
-        """
-
-        def __init__(self, dlg: QDialog):
-            super().__init__(dlg)
-            dlg.accepted.connect(self.continueTask)
-            dlg.rejected.connect(self.abortTask)
-            dlg.rejected.connect(dlg.deleteLater)
 
 
 class RepoTask(QObject):
@@ -179,6 +169,10 @@ class RepoTask(QObject):
         """
         return TaskAffectsWhat.NOTHING
 
+    def _flowAbort(self):
+        self.cancel()
+        yield YieldTokens.AbortTask(self)
+
     def _flowBeginWorkerThread(self):
         yield YieldTokens.EnterAsyncSection(self)
 
@@ -186,10 +180,11 @@ class RepoTask(QObject):
         yield YieldTokens.ExitAsyncSection(self)
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
-        if abortTaskIfRejected:
-            yield YieldTokens.AbortIfDialogRejected(dialog)
-        else:
-            yield YieldTokens.ReenterWhenDialogFinished(dialog)
+        yield YieldTokens.ReenterAfterDialog(dialog)
+
+        if abortTaskIfRejected and dialog.result() in [QDialog.DialogCode.Rejected, QMessageBox.StandardButton.Cancel]:
+            dialog.deleteLater()
+            yield from self._flowAbort()
 
     def _flowConfirm(
             self,
@@ -276,7 +271,9 @@ class RepoTaskRunner(QObject):
                 assert not isinstance(continueToken, typing.Generator), "You're trying to yield a nested generator. Did you mean 'yield from'?"
                 assert isinstance(continueToken, YieldTokens.BaseToken), "You may only yield a subclass of BaseToken"
 
-                if isinstance(continueToken, YieldTokens.EnterAsyncSection):
+                if isinstance(continueToken, YieldTokens.AbortTask):
+                    raise StopIteration()
+                elif isinstance(continueToken, YieldTokens.EnterAsyncSection):
                     # TODO: RUN ON OTHER THREAD!!!
                     againSynchronous = True
                 elif isinstance(continueToken, YieldTokens.ExitAsyncSection):

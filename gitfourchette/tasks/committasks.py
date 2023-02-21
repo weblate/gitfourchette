@@ -53,8 +53,7 @@ class NewCommit(RepoTask):
         self.setDraftMessage(self.message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
-            self.cancel()
-            return
+            yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
         porcelain.createCommit(self.repo, self.message, self.author, self.committer)
@@ -106,8 +105,7 @@ class AmendCommit(RepoTask):
         self.setDraftMessage(message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
-            self.cancel()
-            return
+            yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
         porcelain.amendCommit(self.repo, message, author, committer)

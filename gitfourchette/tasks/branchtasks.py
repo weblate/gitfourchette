@@ -200,8 +200,7 @@ class EditTrackedBranch(RepoTask):
 
         # Bail if no-op
         if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
-            self.cancel()
-            return
+            yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
 
