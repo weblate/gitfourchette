@@ -19,7 +19,6 @@ from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, Co
 from gitfourchette.widgets.graphview import GraphView
 from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
-from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.sidebar import Sidebar
 from html import escape
@@ -611,8 +610,7 @@ class RepoWidget(QWidget):
                 icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
     def startPushFlow(self, branchName: str = ""):
-        pushDialog = PushDialog.startPushFlow(self, self.repo, branchName)
-        pushDialog.pushSuccessful.connect(self.quickRefreshWithSidebar)
+        pushDialog = PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)

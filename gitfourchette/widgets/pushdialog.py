@@ -1,12 +1,12 @@
 from gitfourchette import log
 from gitfourchette import porcelain
+from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import QSignalBlockerContext
 from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
-from gitfourchette.workqueue import WorkQueue
 from html import escape
 import enum
 import pygit2
@@ -18,10 +18,8 @@ class ERemoteItem(enum.Enum):
 
 
 class PushDialog(QDialog):
-    pushSuccessful = Signal()
-
     @staticmethod
-    def startPushFlow(parent, repo: pygit2.Repository, branchName: str = ""):
+    def startPushFlow(parent, repo: pygit2.Repository, repoTaskRunner: tasks.RepoTaskRunner, branchName: str = ""):
         if not branchName:
             branchName = porcelain.getActiveBranchShorthand(repo)
 
@@ -32,7 +30,7 @@ class PushDialog(QDialog):
                         translate("PushDialog", "To push, you must be on a local branch. Try switching to a local branch first."))
             return
 
-        dlg = PushDialog(repo, branch, parent)
+        dlg = PushDialog(repo, repoTaskRunner, branch, parent)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         #dlg.accepted.connect(self.pushComplete)
         dlg.show()
@@ -198,9 +196,10 @@ class PushDialog(QDialog):
 
                 firstRemote = False
 
-    def __init__(self, repo: pygit2.Repository, branch: pygit2.Branch, parent: QWidget):
+    def __init__(self, repo: pygit2.Repository, repoTaskRunner: tasks.RepoTaskRunner, branch: pygit2.Branch, parent: QWidget):
         super().__init__(parent)
         self.repo = repo
+        self.repoTaskRunner = repoTaskRunner
 
         self.fallbackAutoNewIndex = 0
         self.trackedBranchIndex = -1
@@ -266,30 +265,35 @@ class PushDialog(QDialog):
         else:
             resetTrackingReference = None
 
-        def work():
-            remote.push([self.refspec], callbacks=link)
-            if resetTrackingReference:
-                porcelain.editTrackingBranch(self.repo, self.currentLocalBranchName, resetTrackingReference)
+        pushDialog = self
 
-        def then(_):
-            self.pushInProgress = False
-            self.pushSuccessful.emit()
-            self.accept()
-            pass
+        class PushTask(tasks.RepoTask):
+            def name(self):
+                return translate("Operation", "Push")
 
-        def onError(exc: BaseException):
-            QApplication.beep()
-            QApplication.alert(self, 500)
-            self.pushInProgress = False
-            self.enableInputs(True)
-            self.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
+            def refreshWhat(self) -> tasks.TaskAffectsWhat:
+                return tasks.TaskAffectsWhat.REMOTES
+
+            def flow(self):
+                yield from self._flowBeginWorkerThread()
+                remote.push([pushDialog.refspec], callbacks=link)
+                if resetTrackingReference:
+                    porcelain.editTrackingBranch(self.repo, pushDialog.currentLocalBranchName, resetTrackingReference)
+
+                yield from self._flowExitWorkerThread()
+                pushDialog.pushInProgress = False
+                pushDialog.accept()
+
+            def onError(self, exc: BaseException):
+                QApplication.beep()
+                QApplication.alert(pushDialog, 500)
+                pushDialog.pushInProgress = False
+                pushDialog.enableInputs(True)
+                pushDialog.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
 
         self.pushInProgress = True
         self.enableInputs(False)
-
-        # Create separate workqueue for pushing
-        wq = WorkQueue(self)
-        wq.put(work, then, translate("Operation", "Push"), errorCallback=onError)
+        self.repoTaskRunner.put(PushTask(self))
 
     def reject(self):
         if self.pushInProgress:

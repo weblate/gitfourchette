@@ -20,16 +20,13 @@ class GlobalStatusSignalContainer(QObject):
 
     def clearProgress(self):
         self.progressDisable.emit()
+        self.statusText.emit(None)
 
     def setIndeterminateProgressCaption(self, arg):
         self.progressMaximum.emit(0)
         self.progressValue.emit(0)
         self.statusText.emit(arg)
         log.info("status", arg)
-
-    def clearIndeterminateProgressCaption(self):
-        self.progressDisable.emit()
-        self.statusText.emit(None)
 
 
 globalstatus = GlobalStatusSignalContainer()
