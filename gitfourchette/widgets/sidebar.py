@@ -559,8 +559,13 @@ class Sidebar(QTreeView):
 
             menu.addSeparator()
             pushBranchAction = menu.addAction(stockIcon("vcs-push"), self.tr("&Push..."), lambda: self.pushBranch.emit(data))
+            fetchBranchAction = menu.addAction(self.tr("&Fetch..."), lambda: self.fetchRemoteBranch.emit(branch.upstream.shorthand))
             pullBranchAction = menu.addAction(stockIcon("vcs-pull"), self.tr("Pul&l..."), lambda: self.pullBranch.emit(data))
             menu.addAction(self.tr("Set &Tracked Branch..."), lambda: self.editTrackingBranch.emit(data))
+
+            hasUpstream = bool(branch.upstream)
+            pullBranchAction.setEnabled(hasUpstream)
+            fetchBranchAction.setEnabled(hasUpstream)
 
             menu.addSeparator()
             menu.addAction(self.tr("Re&name..."), lambda: self.renameBranch.emit(data))
