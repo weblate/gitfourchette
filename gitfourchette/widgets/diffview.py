@@ -27,10 +27,33 @@ def get1FileChangedByDiff(diff: Diff):
 
 
 @enum.unique
-class PatchPurpose(enum.IntEnum):
+class PatchPurpose(enum.IntFlag):
     STAGE = enum.auto()
     UNSTAGE = enum.auto()
     DISCARD = enum.auto()
+
+    LINES = enum.auto()
+    HUNK = enum.auto()
+    FILE = enum.auto()
+
+    @staticmethod
+    def getVerb(purpose: 'PatchPurpose'):
+        pp = PatchPurpose
+        dd = {
+            pp.STAGE: translate("PatchPurpose", "Stage"),
+            pp.UNSTAGE: translate("PatchPurpose", "Unstage"),
+            pp.DISCARD: translate("PatchPurpose", "Discard"),
+            pp.LINES | pp.STAGE: translate("PatchPurpose", "Stage lines"),
+            pp.LINES | pp.UNSTAGE: translate("PatchPurpose", "Unstage lines"),
+            pp.LINES | pp.DISCARD: translate("PatchPurpose", "Discard lines"),
+            pp.HUNK | pp.STAGE: translate("PatchPurpose", "Stage hunk"),
+            pp.HUNK | pp.UNSTAGE: translate("PatchPurpose", "Unstage hunk"),
+            pp.HUNK | pp.DISCARD: translate("PatchPurpose", "Discard hunk"),
+            pp.FILE | pp.STAGE: translate("PatchPurpose", "Stage file"),
+            pp.FILE | pp.UNSTAGE: translate("PatchPurpose", "Unstage file"),
+            pp.FILE | pp.DISCARD: translate("PatchPurpose", "Discard file"),
+        }
+        return dd.get(purpose, "???")
 
 
 class DiffGutter(QWidget):
@@ -68,7 +91,8 @@ class DiffGutter(QWidget):
 
 
 class DiffView(QPlainTextEdit):
-    patchApplied: Signal = Signal(NavPos)
+    applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
+    revertPatch = Signal(pygit2.Patch, bytes)
 
     lineData: list[LineData]
     lineCursorStartCache: list[int]
@@ -322,73 +346,6 @@ class DiffView(QPlainTextEdit):
             self.lineData[hunkLastLineIndex].hunkPos,
             reverse)
 
-    def applyEntirePatch(self, purpose: PatchPurpose):
-        # TODO: This should be a repo task!
-        if purpose == PatchPurpose.UNSTAGE:
-            porcelain.unstageFiles(self.repo, [self.currentPatch])
-        elif purpose == PatchPurpose.STAGE:
-            porcelain.stageFiles(self.repo, [self.currentPatch])
-        elif purpose == PatchPurpose.DISCARD:
-            porcelain.discardFiles(self.repo, [self.currentPatch.delta.new_file.path])
-        else:
-            raise KeyError(f"applyEntirePatch: unsupported purpose {purpose}")
-
-        self.patchApplied.emit(NavPos())
-
-    def getPatchPurposeVerb(self, purpose: PatchPurpose):
-        if purpose == PatchPurpose.STAGE:
-            return self.tr("Stage")
-        elif purpose == PatchPurpose.UNSTAGE:
-            return self.tr("Unstage")
-        elif purpose == PatchPurpose.DISCARD:
-            return self.tr("Discard")
-        else:
-            return "???"
-
-    def onWantToApplyEmptyPartialPatch(self, purpose: PatchPurpose):
-        verb = self.getPatchPurposeVerb(purpose)
-
-        qmb = asyncMessageBox(
-            self,
-            'information',
-            self.tr("Selection empty for partial patch"),
-            self.tr("You haven’t selected any red/green lines to {0}.").format(verb),
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Apply)
-
-        applyButton: QPushButton = qmb.button(QMessageBox.StandardButton.Apply)
-        applyButton.setText(self.tr("{0} entire &file").format(verb))
-        applyButton.setIcon(QIcon())
-        applyButton.clicked.connect(lambda: self.applyEntirePatch(purpose))
-
-        qmb.setEscapeButton(QMessageBox.StandardButton.Ok)
-        qmb.show()
-
-    def applyPartialPatch(self, patchData: bytes, purpose: PatchPurpose):
-        if not patchData:
-            self.onWantToApplyEmptyPartialPatch(purpose)
-            return
-
-        discard = purpose == PatchPurpose.DISCARD
-        if discard:
-            Trash(self.repo).backupPatch(patchData, self.currentPatch.delta.new_file.path)
-            applyLocation = pygit2.GIT_APPLY_LOCATION_WORKDIR
-        else:
-            applyLocation = pygit2.GIT_APPLY_LOCATION_INDEX
-
-        # TODO: This should be a repo task!
-        try:
-            diff = porcelain.applyPatch(self.repo, patchData, applyLocation)
-        except GitError as e:
-            verb = self.getPatchPurposeVerb(purpose)
-            excMessageBox(
-                e,
-                self.tr("Apply Patch to {0}").format(verb),
-                self.tr("Failed to apply patch for operation “{0}”.").format(verb),
-                parent=self)
-            return
-
-        self.patchApplied.emit(NavPos())
-
     def exportPatch(self, patchData: bytes, saveInto=""):
         if not patchData:
             QApplication.beep()
@@ -405,47 +362,29 @@ class DiffView(QPlainTextEdit):
             with open(savePath, "wb") as file:
                 file.write(patchData)
 
-    def revertPatch(self, patchData: bytes):
-        if not patchData:
-            QApplication.beep()
-            return
+    def fireRevert(self, patchData: bytes):
+        self.revertPatch.emit(self.currentPatch, patchData)
 
-        diff = porcelain.patchApplies(self.repo, patchData, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
-        if not diff:
-            showWarning(
-                self,
-                self.tr("Revert patch"),
-                self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
-        else:
-            # TODO: This should be a repo task!
-            diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
-            changedFile = get1FileChangedByDiff(diff)
-            self.patchApplied.emit(NavPos("UNSTAGED", changedFile))  # send a NavPos to have RepoWidget show the file in the unstaged list
-
-    def applySelection(self, purpose: PatchPurpose):
-        reverse = purpose != PatchPurpose.STAGE
+    def fireApplyLines(self, purpose: PatchPurpose):
+        purpose |= PatchPurpose.LINES
+        reverse = not (purpose & PatchPurpose.STAGE)
         patchData = self.extractSelection(reverse)
-        self.applyPartialPatch(patchData, purpose)
+        self.applyPatch.emit(self.currentPatch, patchData, purpose)
 
-    def applyHunk(self, hunkID: int, purpose: PatchPurpose):
-        reverse = purpose != PatchPurpose.STAGE
+    def fireApplyHunk(self, hunkID: int, purpose: PatchPurpose):
+        purpose |= PatchPurpose.HUNK
+        reverse = not (purpose & PatchPurpose.STAGE)
         patchData = self.extractHunk(hunkID, reverse)
-        self.applyPartialPatch(patchData, purpose)
+        self.applyPatch.emit(self.currentPatch, patchData, purpose)
 
     def stageSelection(self):
-        self.applySelection(PatchPurpose.STAGE)
+        self.fireApplyLines(PatchPurpose.STAGE)
 
     def unstageSelection(self):
-        self.applySelection(PatchPurpose.UNSTAGE)
+        self.fireApplyLines(PatchPurpose.UNSTAGE)
 
     def discardSelection(self):
-        askConfirmation(
-            parent=self,
-            title=self.tr("Discard lines"),
-            text=self.tr("Really discard the selected lines?") + "<br>" + translate("Global", "This cannot be undone!"),
-            okButtonText=self.tr("Discard lines"),
-            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
-            callback=lambda: self.applySelection(PatchPurpose.DISCARD))
+        self.fireApplyLines(PatchPurpose.DISCARD)
 
     def exportSelection(self, saveInto=""):
         patchData = self.extractSelection()
@@ -453,22 +392,16 @@ class DiffView(QPlainTextEdit):
 
     def revertSelection(self):
         patchData = self.extractSelection(reverse=True)
-        self.revertPatch(patchData)
+        self.fireRevert(patchData)
 
     def stageHunk(self, hunkID: int):
-        self.applyHunk(hunkID, PatchPurpose.STAGE)
+        self.fireApplyHunk(hunkID, PatchPurpose.STAGE)
 
     def unstageHunk(self, hunkID: int):
-        self.applyHunk(hunkID, PatchPurpose.UNSTAGE)
+        self.fireApplyHunk(hunkID, PatchPurpose.UNSTAGE)
 
     def discardHunk(self, hunkID: int):
-        askConfirmation(
-            parent=self,
-            title=self.tr("Discard hunk"),
-            text=self.tr("Really discard this hunk?") + "<br>" + translate("Global", "This cannot be undone!"),
-            okButtonText=self.tr("Discard hunk"),
-            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton),
-            callback=lambda: self.applyHunk(hunkID, PatchPurpose.DISCARD))
+        self.fireApplyHunk(hunkID, PatchPurpose.DISCARD)
 
     def exportHunk(self, hunkID: int, saveInto=""):
         patchData = self.extractHunk(hunkID)
@@ -476,7 +409,7 @@ class DiffView(QPlainTextEdit):
 
     def revertHunk(self, hunkID: int):
         patchData = self.extractHunk(hunkID, reverse=True)
-        self.revertPatch(patchData)
+        self.fireRevert(patchData)
 
     # ---------------------------------------------
     # Gutter (inspired by https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html)

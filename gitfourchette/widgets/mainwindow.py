@@ -217,7 +217,7 @@ class MainWindow(QMainWindow):
         a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
         a.setShortcuts(GlobalShortcuts.refresh)
 
-        a = repoMenu.addAction(self.tr("&Hard Refresh"), self.refresh)
+        a = repoMenu.addAction(self.tr("&Hard Refresh"), self.hardRefresh)
         a.setShortcut("Ctrl+F5")
 
         repoMenu.addSeparator()
@@ -552,10 +552,10 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def quickRefresh(self, rw: RepoWidget):
-        rw.quickRefreshWithSidebar()
+        rw.quickRefresh()
 
     @needRepoWidget
-    def refresh(self, rw: RepoWidget):
+    def hardRefresh(self, rw: RepoWidget):
         self._loadRepo(rw, rw.workdir)
 
     @needRepoWidget

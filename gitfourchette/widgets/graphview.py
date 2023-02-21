@@ -259,6 +259,7 @@ class GraphView(QListView):
         messageBox.show()
 
     def cherrypickCurrentCommit(self):
+        # TODO: This should totally be reworked
         oid = self.currentCommitOid
         if not oid:
             return

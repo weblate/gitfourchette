@@ -48,6 +48,7 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
 class TaskAffectsWhat(enum.IntFlag):
     NOTHING = 0
     INDEX = enum.auto()
+    INDEXWRITE = enum.auto()
     LOCALREFS = enum.auto()
     REMOTES = enum.auto()
     HEAD = enum.auto()
@@ -169,8 +170,13 @@ class RepoTask(QObject):
         """
         return TaskAffectsWhat.NOTHING
 
-    def _flowAbort(self):
+    def _flowAbort(self, warningText: str = ""):
         self.cancel()
+
+        if warningText:
+            assert util.onAppThread()
+            util.showWarning(self.parent(), self.name(), warningText)
+
         yield YieldTokens.AbortTask(self)
 
     def _flowBeginWorkerThread(self):
@@ -191,6 +197,7 @@ class RepoTask(QObject):
             title: str = "",
             text: str = "",
             acceptButtonIcon: (QStyle.StandardPixmap | str | None) = None,
+            acceptButtonText: str = "",
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -199,6 +206,9 @@ class RepoTask(QObject):
 
         if not title:
             title = self.name()
+
+        if not acceptButtonText:
+            acceptButtonText = title
 
         qmb = util.asyncMessageBox(
             self.parent(),
@@ -212,7 +222,7 @@ class RepoTask(QObject):
         yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
         if acceptButtonIcon:
             yes.setIcon(util.stockIcon(acceptButtonIcon))
-        yes.setText(title)
+        yes.setText(acceptButtonText)
 
         qmb.show()
 

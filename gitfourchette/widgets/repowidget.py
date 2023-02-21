@@ -101,11 +101,6 @@ class RepoWidget(QWidget):
         self.stagedFiles.entryClicked.connect(self.dirtyFiles.clearSelectionSilently)
         self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
 
-        # Refresh file list views after applying a patch from the diff view (partial line patch)
-        self.diffView.patchApplied.connect(lambda: self.refreshWorkdirViewAsync(allowUpdateIndex=True))
-        # Note that refreshing the file list views may, in turn, re-select a file from the appropriate file view,
-        # which will trigger the diff view to be refreshed as well.
-
         for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
@@ -209,6 +204,8 @@ class RepoWidget(QWidget):
         self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
         self.connectTask(self.conflictView.hardSolve,           tasks.HardSolveConflict)
         self.connectTask(self.conflictView.markSolved,          tasks.MarkConflictSolved)
+        self.connectTask(self.diffView.applyPatch,              tasks.ApplyPatch)
+        self.connectTask(self.diffView.revertPatch,             tasks.RevertPatch)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.graphView.checkoutCommit,         tasks.CheckoutCommit)
@@ -751,7 +748,7 @@ class RepoWidget(QWidget):
     def isStageViewShown(self):
         return self.filesStack.currentWidget() == self.stageSplitter
 
-    def quickRefresh(self):
+    def quickRefresh(self, allowUpdateIndex=False):
         self.scheduledRefresh.stop()
 
         with Benchmark("Refresh refs-by-commit cache"):
@@ -771,14 +768,14 @@ class RepoWidget(QWidget):
                 self.graphView.setCommitSequence(self.state.commitSequence)
 
         if self.isStageViewShown:
-            self.refreshWorkdirViewAsync()
-        globalstatus.clearProgress()
+            self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
+
+        with Benchmark("Refresh sidebar"):
+            self.sidebar.refresh(self.state)
 
         self.refreshWindowTitle()
 
-    def quickRefreshWithSidebar(self):
-        self.quickRefresh()
-        self.sidebar.refresh(self.state)
+        globalstatus.clearProgress()
 
     def refreshWindowTitle(self):
         shortname = self.state.shortName
@@ -854,4 +851,5 @@ class RepoWidget(QWidget):
 
     def refreshPostTask(self, what: tasks.TaskAffectsWhat):
         if what != tasks.TaskAffectsWhat.NOTHING:
-            self.quickRefreshWithSidebar()
+            allowUpdateIndex = bool(what & tasks.TaskAffectsWhat.INDEXWRITE)
+            self.quickRefresh(allowUpdateIndex=allowUpdateIndex)
