@@ -90,11 +90,6 @@ def main():
     from gitfourchette.globalshortcuts import GlobalShortcuts
     GlobalShortcuts.initialize()
 
-    # Initialize main window
-    from gitfourchette.widgets.mainwindow import MainWindow
-    window = MainWindow()
-    window.show()
-
     # Initialize session
     session = settings.Session()
     if not settings.TEST_MODE:
@@ -107,9 +102,14 @@ def main():
         session.tabs += [os.path.abspath(p) for p in pathList]
         session.activeTabIndex = len(session.tabs) - 1
 
-    # Restore session
-    with NonCriticalOperation("Restoring session"):
+    def bootMainWindow():
+        from gitfourchette.widgets.mainwindow import MainWindow
+        window = MainWindow()
+        window.show()
         window.restoreSession(session)
+
+    # Boot main window first thing when event loop starts
+    QTimer.singleShot(0, bootMainWindow)
 
     # Keep the app running
     app.exec()
