@@ -3,8 +3,8 @@ from gitfourchette import util
 from gitfourchette import log
 from gitfourchette import porcelain
 from html import escape
+from typing import Any, Generator
 import enum
-import typing
 import pygit2
 
 
@@ -56,62 +56,57 @@ class TaskAffectsWhat(enum.IntFlag):
 
 class YieldTokens:
     class BaseToken(QObject):
-        pass
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.setObjectName("continuation_token")
 
     class AbortTask(BaseToken):
         pass
 
-    class EnterAsyncSection(BaseToken):
+    class Dummy(BaseToken):  # Used to return to UI thread from worker thread
         pass
 
-    class ExitAsyncSection(BaseToken):
-        pass
+    class BeginWorkerThread(BaseToken):
+        ready = Signal(object)
 
     class WaitForUser(BaseToken):
-        abortTask = Signal()
-        continueTask = Signal()
+        ready = Signal()
 
-    class ReenterAfterDialog(WaitForUser):
-        """
-        Re-enters the UI flow generator when the given QDialog is finished,
-        regardless of its result.
-        """
 
-        def __init__(self, dlg: QDialog):
-            super().__init__(dlg)
-            dlg.finished.connect(self.continueTask)
+class ThreadableFlowIterator(QRunnable):
+    def __init__(self, task, flow, token: YieldTokens.BeginWorkerThread):
+        super().__init__()
+        self.task = task
+        self.flow = flow
+        self.token = token
+
+    def run(self):
+        try:
+            nextToken = next(self.flow)
+            self.token.ready.emit(nextToken)
+        except BaseException as exc:
+            self.token.ready.emit(exc)
 
 
 class RepoTask(QObject):
     """
     Task that manipulates a repository.
-
-    First, `preExecuteUiFlow` may prompt the user for additional information
-    (e.g. via dialog screens) on the UI thread.
-
-    The actual operation is then carried out on a separate thread in `execute`.
-
-    Any cleanup then occurs in `postExecute` (whether `execute` succeeded or not),
-    back on the UI thread.
     """
 
     success = Signal()
-    "Emitted by executeAndEmitSignals() when execute() has finished running sucessfully."
+    "Emitted when the task has successfully run to completion."
 
-    finished = Signal(object)
-    """Emitted by executeAndEmitSignals() when execute() has finished running,
-    (successfully or not). The sole argument is the exception that was raised during
-    execute() -- this is None if the task ran to completion."""
+    _globalTaskCounter = 0
 
-    globalTaskID = 0
+    repo: pygit2.Repository | None
+    taskID: int
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
-        self.repo = None
-        self.aborted = False
         self.setObjectName("RepoTask")
-        self.taskID = RepoTask.globalTaskID
-        RepoTask.globalTaskID += 1
+        self.repo = None
+        self.taskID = RepoTask._globalTaskCounter
+        RepoTask._globalTaskCounter += 1
 
     def setRepo(self, repo: pygit2.Repository):
         self.repo = repo
@@ -119,40 +114,28 @@ class RepoTask(QObject):
     def name(self):
         return str(self)
 
-    def cancel(self):
+    def flow(self, *args) -> Generator:
         """
-        Call this to interrupt `preExecuteUiFlow`.
-        """
-        self.aborted = True
+        Generator that performs the task. You can think of this as a coroutine.
 
-    def flow(self, *args) -> typing.Generator:
-        """
-        Generator that performs the task.
-        (In other words, this is a coroutine)
+        When then generator is exhausted, the `success` signal is emitted.
 
-        When then generator is exhausted, execute() is called,
-        unless `aborted` was set.
+        You can control the flow of the coroutine by yielding a subclass of `YieldToken.BaseToken`.
+        These tokens let you wait for you user input via dialog boxes, abort the task, or move long
+        computations to a separate thread.
 
-        Typically, you'll implement this function to ask the user for any data
-        that you need to carry out the task (via dialog boxes).
+        It is recommended to `yield from` one of the `_flowXXX` methods instead of instantiating
+        a BaseToken directly. For example::
 
-        You must `yield` a subclass of `TaskYieldTokenBase` to wait for user input
-        before continuing or aborting the UI flow (e.g. ReenterWhenDialogFinished,
-         AbortIfDialogRejected).
+            meaning = QInputDialog.getInt(self.parent(), "Hello",
+                                          "What's the meaning of life?")
+            yield from self._flowBeginWorkerThread()
+            expensiveComputationCorrect = meaning == 42
+            yield from self._flowExitWorkerThread()
+            if not expensiveComputationCorrect:
+                yield from self._flowAbort("Sorry, computer says no.")
         """
         pass
-
-    def executeAndEmitSignals(self):
-        """
-        Do not override!
-        """
-        try:
-            # TODO: Mutex to regulate access to repo from entire program?
-            self.execute()
-            self.finished.emit(None)
-            self.success.emit()
-        except BaseException as exc:
-            self.finished.emit(exc)
 
     def onError(self, exc):
         """
@@ -171,22 +154,36 @@ class RepoTask(QObject):
         return TaskAffectsWhat.NOTHING
 
     def _flowAbort(self, warningText: str = ""):
-        self.cancel()
-
+        """
+        Aborts the task.
+        The success signal will NOT be emitted.
+        """
         if warningText:
             assert util.onAppThread()
             util.showWarning(self.parent(), self.name(), warningText)
-
         yield YieldTokens.AbortTask(self)
 
     def _flowBeginWorkerThread(self):
-        yield YieldTokens.EnterAsyncSection(self)
+        """
+        Moves the task to a non-UI thread.
+        (Note that the flow always starts on the UI thread.)
+        """
+        yield YieldTokens.BeginWorkerThread(self)
 
     def _flowExitWorkerThread(self):
-        yield YieldTokens.ExitAsyncSection(self)
+        """
+        Returns the task to the UI thread.
+        """
+        yield YieldTokens.Dummy(self)
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
-        yield YieldTokens.ReenterAfterDialog(dialog)
+        """
+        Re-enters the flow when the QDialog is finished.
+        If abortTaskIfRejected is True, the task is aborted if the dialog was rejected.
+        """
+        token = YieldTokens.WaitForUser(self)
+        dialog.finished.connect(token.ready)
+        yield token
 
         if abortTaskIfRejected and dialog.result() in [QDialog.DialogCode.Rejected, QMessageBox.StandardButton.Cancel]:
             dialog.deleteLater()
@@ -233,124 +230,120 @@ class RepoTask(QObject):
 class RepoTaskRunner(QObject):
     refreshPostTask = Signal(TaskAffectsWhat)
 
-    currentTask: RepoTask | None
-    currentTaskConnection: QMetaObject.Connection | None
-    threadPool: QThreadPool
+    _threadPool: QThreadPool
+    _currentTask: RepoTask | None
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.setObjectName("RepoTaskRunner")
-        self.currentTask = None
-        self.currentTaskConnection = None
+        self._currentTask = None
 
         from gitfourchette import settings
         self.forceSerial = bool(settings.TEST_MODE)
 
-        self.threadpool = QThreadPool(parent)
-        self.threadpool.setMaxThreadCount(1)
+        self._threadPool = QThreadPool(parent)
+        self._threadPool.setMaxThreadCount(1)
 
     def put(self, task: RepoTask, *args):
         log.info(TAG, f"Put task {task.taskID}: {task.name()}")
 
-        if self.currentTask is not None:
-            log.warning(TAG, f"A RepoTask is already running! ({self.currentTask.taskID}, {self.currentTask.name()})")
-            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self.currentTask.taskID}, {self.currentTask.name()})")
+        if self._currentTask is not None:
+            log.warning(TAG, f"A RepoTask is already running! ({self._currentTask.taskID}, {self._currentTask.name()})")
+            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask.taskID}, {self._currentTask.name()})")
             return
 
-        self.currentTask = task
+        self._currentTask = task
 
-        # Get flow generator (i.e. start coroutine)
+        # Get flow generator
         flow = task.flow(*args)
-        assert isinstance(flow, typing.Generator)
+        assert isinstance(flow, Generator), "flow() must contain at least one yield statement"
 
-        # Prime the flow
-        self._consumeFlow(task, flow)
+        # Prime the flow (i.e. start coroutine)
+        self._resumeFlow(task, flow)
 
-    def _consumeFlow(self, task: RepoTask, flow: typing.Generator):
-        assert not task.aborted, "Task aborted on flow re-entry"
+    def _resumeFlow(self, task: RepoTask, flow: Generator, token: Any = None):
 
         try:
-            againSynchronous = True
+            again = True
+            while again:
+                assert util.onAppThread()
+                assert self._currentTask == task
+                # Consume coroutine until next yield statement
+                if not token:
+                    token = next(flow)
 
-            while againSynchronous:
-                againSynchronous = False
+                # Process continuation token
+                self._handleFlowToken(task, flow, token)
 
-                # TODO: ASYNC!!!
-                continueToken = next(flow)
-
-                assert not isinstance(continueToken, typing.Generator), "You're trying to yield a nested generator. Did you mean 'yield from'?"
-                assert isinstance(continueToken, YieldTokens.BaseToken), "You may only yield a subclass of BaseToken"
-
-                if isinstance(continueToken, YieldTokens.AbortTask):
-                    raise StopIteration()
-                elif isinstance(continueToken, YieldTokens.EnterAsyncSection):
-                    # TODO: RUN ON OTHER THREAD!!!
-                    againSynchronous = True
-                elif isinstance(continueToken, YieldTokens.ExitAsyncSection):
-                    againSynchronous = True
-                elif isinstance(continueToken, YieldTokens.WaitForUser):
-                    # Bind signals from the token to resume the flow when user is ready
-                    continueToken.abortTask.connect(lambda: self._releaseTask(task))
-                    continueToken.continueTask.connect(lambda: self._consumeFlow(task, flow))
-
-        except StopIteration:
-            # No more steps in the flow
-            assert self.currentTask == task
-
-            # Stop tracking it
-            self._releaseTask(task)
-
-            if not task.aborted:
-                task.success.emit()
-                self.refreshPostTask.emit(task.refreshWhat())
+                again = isinstance(token, YieldTokens.Dummy)
+                token = None
 
         except BaseException as exc:
-            # An exception was thrown during the UI flow
-            assert self.currentTask == task
+            self._handleFlowException(task, exc)
 
-            # Stop tracking this task
+    def _handleFlowToken(self, task: RepoTask, flow: Generator, token: Any):
+        assert util.onAppThread()
+        assert self._currentTask == task
+
+        assert (not isinstance(token, Generator),
+                "You're trying to yield a nested generator. Did you mean 'yield from'?")
+
+        assert (isinstance(token, YieldTokens.BaseToken),
+                "You may only yield a subclass of YieldTokens.BaseToken")
+
+        if isinstance(token, YieldTokens.Dummy):
+            pass
+
+        elif isinstance(token, YieldTokens.AbortTask):
             self._releaseTask(task)
 
+        elif isinstance(token, YieldTokens.BeginWorkerThread):
+            token: YieldTokens.BeginWorkerThread
+            token.ready.connect(lambda result: self._handleWorkerThreadResult(task, flow, result))
+            wrapper = ThreadableFlowIterator(task, flow, token)
+            if self.forceSerial:
+                wrapper.run()
+            else:
+                self._threadPool.start(wrapper)
+
+        elif isinstance(token, YieldTokens.WaitForUser):
+            # Resume flow when user is ready
+            token: YieldTokens.WaitForUser
+            token.ready.connect(lambda: self._resumeFlow(task, flow))
+
+        else:
+            raise ValueError("Unsupported yield token")
+
+    def _handleWorkerThreadResult(self, task: RepoTask, flow: Generator, result: Any):
+        assert util.onAppThread()
+        assert self._currentTask == task
+
+        if isinstance(result, BaseException):
+            self._handleFlowException(task, result)
+        else:
+            # It's probably a token
+            self._resumeFlow(task, flow, result)
+
+    def _handleFlowException(self, task: RepoTask, exc: BaseException):
+        assert util.onAppThread()
+        assert self._currentTask == task
+
+        # Stop tracking this task
+        self._releaseTask(task)
+
+        if isinstance(exc, StopIteration):
+            # No more steps in the flow
+            task.success.emit()
+            self.refreshPostTask.emit(task.refreshWhat())
+        else:
             # Run task's error callback
             task.onError(exc)
 
-    # def _executeTask(self, task):
-    #     assert task == self.currentTask
-    #
-    #     self.currentTaskConnection = task.finished.connect(lambda exc: self._onTaskFinished(task, exc))
-    #
-    #     wrapper = util.QRunnableFunctionWrapper(task.executeAndEmitSignals)
-    #     if self.forceSerial:
-    #         assert util.onAppThread()
-    #         wrapper.run()
-    #     else:
-    #         self.threadpool.start(wrapper)
-
-    # def _onTaskFinished(self, task, exc):
-    #     assert task == self.currentTask
-    #
-    #     self._releaseTask(task)
-    #
-    #     if exc:
-    #         task.onError(exc)
-    #     task.postExecute(not exc)
-    #     self.refreshPostTask.emit(task.refreshWhat())
-
-    def _releaseTask(self, task):
+    def _releaseTask(self, task: RepoTask):
         log.info(TAG, f"Pop task {task.taskID}: {task.name()}")
 
         assert util.onAppThread()
-        assert task == self.currentTask
+        assert task == self._currentTask
 
-        if self.currentTaskConnection:
-            if not PYSIDE2:
-                assert isinstance(self.currentTaskConnection, QMetaObject.Connection)
-                self.disconnect(self.currentTaskConnection)
-            else:
-                # When connecting to a signal, PySide2 returns a bool, not a QMetaObject.Connection.
-                # Looks like it's a wontfix: https://bugreports.qt.io/browse/PYSIDE-1902
-                task.finished.disconnect()
-            self.currentTaskConnection = None
-
-        self.currentTask.setParent(None)  # de-parent the task so that it can be garbage-collected
-        self.currentTask = None
+        self._currentTask.setParent(None)  # de-parent the task so that it can be garbage-collected
+        self._currentTask = None
