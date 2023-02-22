@@ -12,6 +12,9 @@ class LoadWorkdirDiffs(RepoTask):
     def name(self):
         return translate("Operation", "Refresh working directory")
 
+    def canKill(self, task: RepoTask):
+        return type(task) in [LoadCommit, LoadPatch]
+
     def flow(self, allowUpdateIndex: bool):
         yield from self._flowBeginWorkerThread()
         porcelain.refreshIndex(self.repo)
@@ -22,6 +25,9 @@ class LoadWorkdirDiffs(RepoTask):
 class LoadCommit(RepoTask):
     def name(self):
         return translate("Operation", "Load commit")
+
+    def canKill(self, task: RepoTask):
+        return type(task) in [LoadWorkdirDiffs, LoadCommit, LoadPatch]
 
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
@@ -35,6 +41,9 @@ class LoadPatch(RepoTask):
 
     def name(self):
         return translate("Operation", "Load diff")
+
+    def canKill(self, task: RepoTask):
+        return type(task) in [LoadPatch]
 
     def _processPatch(self, patch: pygit2.Patch, stagingState: StagingState
                       ) -> DiffModel | DiffModelError | DiffConflict | DiffImagePair:
@@ -62,4 +71,5 @@ class LoadPatch(RepoTask):
 
     def flow(self, patch: pygit2.Patch, stagingState: StagingState):
         yield from self._flowBeginWorkerThread()
+        # import time; time.sleep(1) #----------to debug out-of-order events
         self.result = self._processPatch(patch, stagingState)

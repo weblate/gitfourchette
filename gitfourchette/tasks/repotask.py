@@ -87,10 +87,15 @@ class RepoTask(QObject):
     repo: pygit2.Repository | None
     taskID: int
 
+    _currentFlow: Generator
+    _currentIteration: int
+
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.setObjectName("RepoTask")
         self.repo = None
+        self._currentFlow = None
+        self._currentIteration = 0
         self.taskID = RepoTask._globalTaskCounter
         RepoTask._globalTaskCounter += 1
 
@@ -99,6 +104,12 @@ class RepoTask(QObject):
 
     def name(self):
         return str(self)
+
+    def debugName(self):
+        return f"{self.taskID},{self.__class__.__name__}"
+
+    def canKill(self, task: 'RepoTask'):
+        return False
 
     def flow(self, *args) -> Generator:
         """
@@ -219,11 +230,13 @@ class RepoTaskRunner(QObject):
 
     _threadPool: QThreadPool
     _currentTask: RepoTask | None
+    _zombieTask: RepoTask | None
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.setObjectName("RepoTaskRunner")
         self._currentTask = None
+        self._zombieTask = None
 
         from gitfourchette import settings
         self.forceSerial = bool(settings.TEST_MODE)
@@ -231,32 +244,62 @@ class RepoTaskRunner(QObject):
         self._threadPool = QThreadPool(parent)
         self._threadPool.setMaxThreadCount(1)
 
+        self._pendingKiller = None
+        self._pendingKillerArgs = []
+
     def put(self, task: RepoTask, *args):
-        log.info(TAG, f"Put task {task.taskID}: {task.name()}")
+        # Get flow generator
+        task._currentFlow = task.flow(*args)
+        assert isinstance(task._currentFlow, Generator), "flow() must contain at least one yield statement"
 
-        if self._currentTask is not None:
-            log.warning(TAG, f"A RepoTask is already running! ({self._currentTask.taskID}, {self._currentTask.name()})")
-            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask.taskID}, {self._currentTask.name()})")
-            return
+        if not self._currentTask:
+            self._currentTask = task
+            self._startTask(task)
 
-        self._currentTask = task
+        elif task.canKill(self._currentTask):
+            log.info(TAG, f"Task {task.debugName()} killed task {self._currentTask.debugName()}")
+            if not self._zombieTask:
+                self._zombieTask = self._currentTask
+            else:
+                # Current task hasn't started yet, it's still waiting on the zombie to die.
+                # We can kill the current task, so just overwrite it, but leave the zombie alone.
+                assert self._currentTask._currentIteration == 0, "it's not supposed to have started yet!"
+                self._currentTask.deleteLater()
+            self._currentTask = task
+
+        else:
+            log.warning(TAG, f"A RepoTask is already running! ({self._currentTask.debugName()} cannot be interrupted by {task.debugName()})")
+            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask.debugName()} cannot be interrupted by {task.debugName()})")
+
+    def _startTask(self, task):
+        assert self._currentTask == task
+        assert task._currentFlow
+
+        log.info(TAG, f"Start task {task.debugName()}")
 
         # Prepare internal signal for coroutine continuation
-        self._continueFlow.connect(lambda result: self._iterateFlow(task, flow, result))
-
-        # Get flow generator
-        flow = task.flow(*args)
-        assert isinstance(flow, Generator), "flow() must contain at least one yield statement"
+        self._continueFlow.connect(lambda result: self._iterateFlow(task, result))
 
         # Prime the flow (i.e. start coroutine)
-        self._iterateFlow(task, flow, FlowControlToken(self))
+        self._iterateFlow(task, FlowControlToken(self))
 
-    def _iterateFlow(self, task: RepoTask, flow: Generator, result: FlowControlToken | BaseException):
+    def _iterateFlow(self, task: RepoTask, result: FlowControlToken | BaseException):
+        flow = task._currentFlow
+        task._currentIteration += 1
+        log.info(TAG, f"Iterate on task {task.debugName()} ({task._currentIteration})")
+
         assert util.onAppThread()
-        assert self._currentTask == task
 
         assert not isinstance(result, Generator), \
             "You're trying to yield a nested generator. Did you mean 'yield from'?"
+
+        if task is self._zombieTask:
+            assert task is not self._currentTask
+            self._releaseTask(task)
+            self._startTask(self._currentTask)
+            return
+
+        assert task is self._currentTask
 
         if isinstance(result, FlowControlToken):
             control = result.flowControl
@@ -268,7 +311,7 @@ class RepoTaskRunner(QObject):
 
             elif control == FlowControlToken.Kind.WAIT_READY:
                 # Re-enter when user is ready
-                result.ready.connect(lambda: self._iterateFlow(task, flow, FlowControlToken(self)))
+                result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken(self)))
 
             else:
                 # Wrapper around `next(flow)`.
@@ -296,6 +339,8 @@ class RepoTaskRunner(QObject):
                 # Run task's error callback
                 task.onError(exception)
 
+            task.deleteLater()  # TODO: is this safe to do here? no risk of some slot missing a signal elsewhere?
+
         else:
             assert False, f"You are only allowed to yield a FlowControlToken (you yielded: {type(result).__name__})"
 
@@ -307,13 +352,18 @@ class RepoTaskRunner(QObject):
             self._continueFlow.emit(exception)
 
     def _releaseTask(self, task: RepoTask):
-        log.info(TAG, f"Pop task {task.taskID}: {task.name()}")
+        log.info(TAG, f"End task {task.debugName()}")
 
         assert util.onAppThread()
-        assert task == self._currentTask
+        assert task is self._currentTask or task is self._zombieTask
 
         self._continueFlow.disconnect()
 
-        self._currentTask.setParent(None)  # de-parent the task so that it can be garbage-collected
-        self._currentTask = None
+        task.setParent(None)  # de-parent the task so that it can be garbage-collected
 
+        if task is self._currentTask:
+            self._currentTask = None
+        elif task is self._zombieTask:
+            self._zombieTask = None
+        else:
+            assert False
