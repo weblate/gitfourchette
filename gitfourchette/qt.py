@@ -42,6 +42,11 @@ if PYSIDE2:  # Patch PySide2's exec_ functions
     QApplication.exec = QApplication.exec_
     QMenu.exec = qMenuExec
 
+if PYSIDE6 and qtBindingVersion.startswith("6.4.0"):  # See PYSIDE-2104
+    QApplication()
+    QMessageBox.critical(None, "", "PySide6 6.4.0 isn't supported. Please upgrade to 6.4.1 or later.")
+    exit(1)
+
 
 def tr(s, *args, **kwargs):
     return QCoreApplication.translate("", s, *args, **kwargs)

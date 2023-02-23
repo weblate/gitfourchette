@@ -4,10 +4,7 @@ from gitfourchette.widgets.diffmodel import DiffModelError
 import html
 import pygit2
 
-if PYSIDE6 and qtBindingVersion.startswith("6.4.0"):
-    IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource.value
-else:
-    IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
+IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
 
 
 class RichDiffView(QTextBrowser):
