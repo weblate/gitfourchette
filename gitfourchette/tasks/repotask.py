@@ -66,8 +66,11 @@ class FlowControlToken(QObject):
     ready = Signal()
     flowControl: Kind
 
-    def __init__(self, parent: QObject, flowControl: Kind = Kind.CONTINUE_ON_UI_THREAD):
-        super().__init__(parent)
+    def __init__(self, flowControl: Kind = Kind.CONTINUE_ON_UI_THREAD):
+        # DON'T set a parent, because this can be instantiated on an arbitrary thread.
+        # (QObject: Cannot create children for a parent that is in a different thread.)
+        # Python's GC should take care of deleting the tokens when needed.
+        super().__init__(None)
         self.flowControl = flowControl
         self.setObjectName("FlowControlToken")
 
@@ -156,27 +159,27 @@ class RepoTask(QObject):
         if warningText:
             assert util.onAppThread()
             util.showWarning(self.parent(), self.name(), warningText)
-        yield FlowControlToken(self, FlowControlToken.Kind.ABORT_TASK)
+        yield FlowControlToken(FlowControlToken.Kind.ABORT_TASK)
 
     def _flowBeginWorkerThread(self):
         """
         Moves the task to a non-UI thread.
         (Note that the flow always starts on the UI thread.)
         """
-        yield FlowControlToken(self, FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD)
+        yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD)
 
     def _flowExitWorkerThread(self):
         """
         Returns the task to the UI thread.
         """
-        yield FlowControlToken(self, FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
+        yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """
         Re-enters the flow when the QDialog is finished.
         If abortTaskIfRejected is True, the task is aborted if the dialog was rejected.
         """
-        token = FlowControlToken(self, FlowControlToken.Kind.WAIT_READY)
+        token = FlowControlToken(FlowControlToken.Kind.WAIT_READY)
         dialog.finished.connect(token.ready)
         yield token
 
@@ -279,7 +282,7 @@ class RepoTaskRunner(QObject):
         self._continueFlow.connect(lambda result: self._iterateFlow(task, result))
 
         # Prime the flow (i.e. start coroutine)
-        self._iterateFlow(task, FlowControlToken(self))
+        self._iterateFlow(task, FlowControlToken())
 
     def _iterateFlow(self, task: RepoTask, result: FlowControlToken | BaseException):
         flow = task._currentFlow
@@ -307,11 +310,10 @@ class RepoTaskRunner(QObject):
                 # Stop here
                 self._releaseTask(task)
                 task.deleteLater()
-                result.deleteLater()
 
             elif control == FlowControlToken.Kind.WAIT_READY:
                 # Re-enter when user is ready
-                result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken(self)))
+                result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
 
             else:
                 # Wrapper around `next(flow)`.
@@ -322,8 +324,6 @@ class RepoTaskRunner(QObject):
                     self._threadPool.start(wrapper)
                 else:
                     wrapper.run()
-
-                result.deleteLater()
 
         elif isinstance(result, BaseException):
             exception: BaseException = result
