@@ -236,7 +236,10 @@ class PullBranch(RepoTask):
 
     def onError(self, exc):
         if isinstance(exc, porcelain.DivergentBranchesError):
-            util.showWarning(self.parent(), self.name(), self.tr("Can’t fast-forward: You have divergent branches."))
+            text = util.paragraphs(
+                self.tr("Can’t fast-forward “{0}” to “{1}”.").format(exc.localBranch.shorthand, exc.remoteBranch.shorthand),
+                self.tr("The branches are divergent."))
+            util.showWarning(self.parent(), self.name(), text)
         else:
             super().onError(exc)
 

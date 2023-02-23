@@ -75,7 +75,7 @@ class ApplyPatch(RepoTask):
             return
 
         if purpose & PatchPurpose.DISCARD:
-            title = PatchPurpose.getVerb(purpose)
+            title = PatchPurpose.getName(purpose)
             if purpose & PatchPurpose.HUNK:
                 really = self.tr("Really discard this hunk?")
             else:
@@ -96,26 +96,30 @@ class ApplyPatch(RepoTask):
         porcelain.applyPatch(self.repo, subPatch, applyLocation)
 
     def _applyFullPatch(self, fullPatch: pygit2.Patch, purpose: PatchPurpose):
-        verb = PatchPurpose.getVerb(purpose)
+        action = PatchPurpose.getName(purpose)
+        verb = PatchPurpose.getName(purpose, verbOnly=True).lower()
+        shortPath = os.path.basename(fullPatch.delta.new_file.path)
+
+        questionText = util.paragraphs(
+            self.tr("You are trying to {0} changes from the line-by-line editor, but you haven’t selected any red/green lines.").format(verb),
+            self.tr("Do you want to {0} this entire file <b>“{1}”</b>?").format(verb, escape(shortPath)))
 
         qmb = util.asyncMessageBox(
             self.parent(),
             'information',
-            self.tr("{0}: selection empty").format(verb),
-            self.tr("You haven’t selected any red/green lines for {0}.").format(verb),
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Apply)
+            self.tr("{0}: selection empty").format(action),
+            questionText,
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
-        applyButton: QPushButton = qmb.button(QMessageBox.StandardButton.Apply)
-        applyButton.setText(self.tr("{0} entire &file").format(PatchPurpose.getVerb(purpose & 0b111)))
+        applyButton: QPushButton = qmb.button(QMessageBox.StandardButton.Ok)
+        applyButton.setText(self.tr("{0} entire &file").format(verb.title()))
         applyButton.setIcon(QIcon())
 
-        qmb.setEscapeButton(QMessageBox.StandardButton.Ok)
+        # We want the user to pay attention here. Don't let them press enter to stage/unstage the entire file.
+        qmb.setDefaultButton(QMessageBox.StandardButton.Cancel)
         qmb.show()
         yield from self._flowDialog(qmb)
-
         qmb.deleteLater()
-        if qmb.result() != QMessageBox.StandardButton.Apply:
-            yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
         if purpose & PatchPurpose.UNSTAGE:
@@ -126,7 +130,7 @@ class ApplyPatch(RepoTask):
             Trash(self.repo).backupPatches([fullPatch])
             porcelain.discardFiles(self.repo, [fullPatch.delta.new_file.path])
         else:
-            raise KeyError(f"applyEntirePatch: unsupported purpose {purpose}")
+            raise KeyError(f"applyFullPatch: unsupported purpose {purpose}")
 
 
 class RevertPatch(RepoTask):

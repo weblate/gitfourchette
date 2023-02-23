@@ -3,7 +3,7 @@ from gitfourchette import porcelain
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
-from gitfourchette.util import QSignalBlockerContext
+from gitfourchette.util import paragraphs, QSignalBlockerContext
 from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
@@ -20,6 +20,13 @@ class ERemoteItem(enum.Enum):
 class PushDialog(QDialog):
     @staticmethod
     def startPushFlow(parent, repo: pygit2.Repository, repoTaskRunner: tasks.RepoTaskRunner, branchName: str = ""):
+        if len(repo.remotes) == 0:
+            text = paragraphs(
+                translate("PushDialog", "To push a local branch to a remote, you must first add a remote to your repo."),
+                translate("PushDialog", "You can do so via “Repo &rarr; Add Remote”."))
+            showWarning(parent, translate("PushDialog", "No remotes tracked by this repository"), text)
+            return
+
         if not branchName:
             branchName = porcelain.getActiveBranchShorthand(repo)
 

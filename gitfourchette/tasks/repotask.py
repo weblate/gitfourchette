@@ -17,25 +17,20 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
 
     title = translate("ConflictError", "%n conflicting file(s)", "", numConflicts)
 
-    if numConflicts > maxConflicts:
-        intro = translate("ConflictError", "Showing the first {0} conflicting files out of {1} total below:") \
-            .format(maxConflicts, numConflicts)
-    else:
-        intro = translate("ConflictError", "%n conflicting file(s):", "", numConflicts)
-
     if exc.description == "workdir":
-        message = translate("ConflictError", "Operation <b>{0}</b> conflicts with the working directory.").format(opName)
+        message = translate("ConflictError", "Operation <b>{0}</b> conflicts with <b>%n file(s)</b> in the working directory:", "", numConflicts).format(opName)
     elif exc.description == "HEAD":
-        message = translate("ConflictError", "Operation <b>{0}</b> conflicts with the commit at HEAD.").format(opName)
+        message = translate("ConflictError", "Operation <b>{0}</b> conflicts with <b>%n file(s)</b> in the commit at HEAD.", "", numConflicts).format(opName)
     else:
-        message = translate("ConflictError", "Operation <b>{0}</b> has caused a conflict ({1}).").format(opName, exc.description)
+        message = translate("ConflictError", "Operation <b>{0}</b> has caused a conflict with <b>%n file(s)</b> ({1}).").format(opName, exc.description)
 
-    message += f"<br><br>{intro}<ul><li>"
+    message += f"<ul><li>"
     message += "</li><li>".join(exc.conflicts[:maxConflicts])
     if numConflicts > maxConflicts:
         numHidden = numConflicts - maxConflicts
         message += "</li><li><i>"
-        message += translate("ConflictError", "...and %n more (click “Show Details” to view full list)", "", numHidden)
+        message += translate("ConflictError", "...and {0} more. Only the first {1} conflicts are shown above; click “Show Details” to view all {2} conflicts."
+                             ).format(numHidden, maxConflicts, numConflicts)
         message += "</li>"
     message += "</li></ul>"
 

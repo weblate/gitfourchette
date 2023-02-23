@@ -27,7 +27,9 @@ class NewCommit(RepoTask):
         if not porcelain.hasAnyStagedChanges(self.repo):
             yield from self._flowConfirm(
                 title=self.tr("Create empty commit"),
-                text=self.tr("No files are staged for commit.<br>Do you want to create an empty commit anyway?"))
+                text=util.paragraphs(
+                    self.tr("No files are staged for commit."),
+                    self.tr("Do you want to create an empty commit anyway?")))
 
         sig = self.repo.default_signature
 

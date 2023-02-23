@@ -65,6 +65,10 @@ def escamp(text: str) -> str:
     return text.replace('&', '&&')
 
 
+def paragraphs(*args) -> str:
+    return "<p>" + "</p><p>".join(args) + "</p>"
+
+
 def showInFolder(pathStr):
     """
     Show a file or folder with explorer/finder.

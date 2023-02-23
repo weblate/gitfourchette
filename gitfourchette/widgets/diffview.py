@@ -35,9 +35,13 @@ class PatchPurpose(enum.IntFlag):
     HUNK = enum.auto()
     FILE = enum.auto()
 
+    VERB_MASK = STAGE | UNSTAGE | DISCARD
+
     @staticmethod
-    def getVerb(purpose: 'PatchPurpose'):
+    def getName(purpose: 'PatchPurpose', verbOnly=False) -> str:
         pp = PatchPurpose
+        if verbOnly:
+            purpose &= pp.VERB_MASK
         dd = {
             pp.STAGE: translate("PatchPurpose", "Stage"),
             pp.UNSTAGE: translate("PatchPurpose", "Unstage"),
