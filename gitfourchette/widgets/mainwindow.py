@@ -60,6 +60,7 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(self.onTabChange)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
+        self.tabs.tabDoubleClicked.connect(self.onTabDoubleClicked)
 
         self.welcomeWidget = WelcomeWidget(self)
 
@@ -420,6 +421,13 @@ class MainWindow(QMainWindow):
 
         menu.exec(globalPoint)
         menu.deleteLater()
+
+    def onTabDoubleClicked(self, i: int):
+        if i < 0:
+            return
+        rw: RepoWidget = self.tabs.widget(i)
+        if settings.prefs.tabs_doubleClickOpensFolder:
+            self.openRepoFolder(rw)
 
     def _constructRepo(self, path: str):
         repo = pygit2.Repository(path)

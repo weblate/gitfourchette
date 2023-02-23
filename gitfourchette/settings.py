@@ -166,6 +166,7 @@ class Prefs(BasePrefs):
     tabs_closeButton            : bool          = True
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False
+    tabs_doubleClickOpensFolder : bool          = True
     graph_chronologicalOrder    : bool          = True
     graph_flattenLanes          : bool          = True
     trash_maxFiles              : int           = 250

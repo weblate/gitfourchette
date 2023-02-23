@@ -3,28 +3,59 @@ from gitfourchette import settings
 
 
 class CustomTabBar(QTabBar):
+    tabMiddleClicked = Signal(int)
+    tabDoubleClicked = Signal(int)
+
     def __init__(self, parent):
         super().__init__(parent)
         self.middleClickedIndex = -1
+        self.doubleClickedIndex = -1
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
             self.middleClickedIndex = self.tabAt(event.pos())
         else:
-            super().mousePressEvent(event)
+            self.middleClickedIndex = -1
+        super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.doubleClickedIndex = self.tabAt(event.pos())
+        else:
+            self.doubleClickedIndex = -1
+
+        super().mouseDoubleClickEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent):
+        # Block double-click signal if mouse moved before releasing button
+        self.doubleClickedIndex = -1
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.MiddleButton:
+        if event.buttons() != Qt.MouseButton.NoButton:
+            # Signals will only fire if clicking a single button at a time
+            pass
+
+        elif event.button() == Qt.MouseButton.MiddleButton:
             i = self.tabAt(event.pos())
             if i >= 0 and i == self.middleClickedIndex:
-                self.tabCloseRequested.emit(i)
-        else:
-            super().mouseReleaseEvent(event)
+                self.tabMiddleClicked.emit(i)
+
+        elif event.button() == Qt.MouseButton.LeftButton:
+            i = self.tabAt(event.pos())
+            if i >= 0 and i == self.doubleClickedIndex:
+                self.tabDoubleClicked.emit(i)
+
+        self.middleClickedIndex = -1
+        self.doubleClickedIndex = -1
+
+        super().mouseReleaseEvent(event)
 
 
 class CustomTabWidget(QWidget):
     currentChanged: Signal = Signal(int)
     tabCloseRequested: Signal = Signal(int)
+    tabDoubleClicked: Signal = Signal(int)
     tabContextMenuRequested: Signal = Signal(QPoint, int)
 
     def __init__(self, parent):
@@ -36,7 +67,8 @@ class CustomTabWidget(QWidget):
         self.tabs.tabMoved.connect(self.onTabMoved)
         self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
         self.tabs.currentChanged.connect(self.currentChanged)
-        self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
+        self.tabs.tabMiddleClicked.connect(self.tabCloseRequested)
+        self.tabs.tabDoubleClicked.connect(self.tabDoubleClicked)
         self.tabs.setMovable(True)
         self.tabs.setDocumentMode(True)  # dramatically improves the tabs' appearance on macOS
 

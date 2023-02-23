@@ -406,6 +406,7 @@ class PrefsDialog(QDialog):
             "tabs_closeButton": self.tr("Show tab close button"),
             "tabs_expanding": self.tr("Tab bar takes all available width"),
             "tabs_autoHide": self.tr("Auto-hide tab bar if there’s just 1 tab"),
+            "tabs_doubleClickOpensFolder": self.tr("Double-click a tab to open repo folder"),
 
             "graph_chronologicalOrder": self.tr("Commit order"),
             "graph_flattenLanes": self.tr("Flatten lanes"),
