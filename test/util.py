@@ -49,6 +49,9 @@ def touchFile(path):
 
 
 def writeFile(path, text):
+    # Prevent accidental littering of current working directory
+    assert os.path.isabs(path), "pass me an absolute path"
+
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as f:
         f.write(text.encode("utf-8"))

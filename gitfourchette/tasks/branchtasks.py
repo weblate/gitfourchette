@@ -14,6 +14,9 @@ class SwitchBranch(RepoTask):
     def name(self):
         return translate("Operation", "Switch to branch")
 
+    def refreshWhat(self):
+        return TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+
     def flow(self, newBranch: str):
         assert not newBranch.startswith(HEADS_PREFIX)
         yield from self._flowBeginWorkerThread()

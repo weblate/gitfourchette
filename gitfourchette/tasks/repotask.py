@@ -28,7 +28,7 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
     elif exc.description == "HEAD":
         message = translate("ConflictError", "Operation <b>{0}</b> conflicts with the commit at HEAD.").format(opName)
     else:
-        message = translate("ConflictError", "Operation <b>{0}</b> caused a conflict ({1}).").format(opName, exc.description)
+        message = translate("ConflictError", "Operation <b>{0}</b> has caused a conflict ({1}).").format(opName, exc.description)
 
     message += f"<br><br>{intro}<ul><li>"
     message += "</li><li>".join(exc.conflicts[:maxConflicts])
@@ -38,6 +38,9 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
         message += translate("ConflictError", "...and %n more (click “Show Details” to view full list)", "", numHidden)
         message += "</li>"
     message += "</li></ul>"
+
+    if exc.description == "workdir":
+        message += translate("ConflictError", "Before you try again, you should either commit, stash, or discard your changes.")
 
     qmb = util.showWarning(parent, title, message)
 
@@ -296,6 +299,7 @@ class RepoTaskRunner(QObject):
         if task is self._zombieTask:
             assert task is not self._currentTask
             self._releaseTask(task)
+            task.deleteLater()
             self._startTask(self._currentTask)
             return
 
@@ -307,6 +311,7 @@ class RepoTaskRunner(QObject):
             if control == FlowControlToken.Kind.ABORT_TASK:
                 # Stop here
                 self._releaseTask(task)
+                task.deleteLater()
                 result.deleteLater()
 
             elif control == FlowControlToken.Kind.WAIT_READY:
@@ -339,7 +344,7 @@ class RepoTaskRunner(QObject):
                 # Run task's error callback
                 task.onError(exception)
 
-            task.deleteLater()  # TODO: is this safe to do here? no risk of some slot missing a signal elsewhere?
+            task.deleteLater()
 
         else:
             assert False, f"You are only allowed to yield a FlowControlToken (you yielded: {type(result).__name__})"
@@ -358,8 +363,6 @@ class RepoTaskRunner(QObject):
         assert task is self._currentTask or task is self._zombieTask
 
         self._continueFlow.disconnect()
-
-        task.setParent(None)  # de-parent the task so that it can be garbage-collected
 
         if task is self._currentTask:
             self._currentTask = None

@@ -179,11 +179,17 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
 
+    def getActiveBranchTooltipText():
+        return next(tt for tt in rw.sidebar.datasForItemType(EItem.LocalBranch, Qt.ItemDataRole.ToolTipRole)
+                    if "active branch" in tt.lower())
+
     # make sure initial branch state is correct
     assert localBranches['master'].is_checked_out()
     assert not localBranches['no-parent'].is_checked_out()
     assert os.path.isfile(f"{wd}/master.txt")
     assert os.path.isfile(f"{wd}/c/c1.txt")
+    assert "master" in getActiveBranchTooltipText()
+    assert "no-parent" not in getActiveBranchTooltipText()
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
     findMenuAction(menu, "switch to").trigger()
@@ -192,5 +198,29 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
     assert localBranches['no-parent'].is_checked_out()
     assert not os.path.isfile(f"{wd}/master.txt")  # this file doesn't exist on the no-parent branch
     assert os.path.isfile(f"{wd}/c/c1.txt")
+
+    # Active branch change should be reflected in sidebar UI
+    assert "master" not in getActiveBranchTooltipText()
+    assert "no-parent" in getActiveBranchTooltipText()
+
+
+def testSwitchBranchWorkdirConflicts(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    writeFile(f"{wd}/c/c1.txt", "la menuiserie et toute la clique")
+
+    rw = mainWindow.openRepo(wd)
+    localBranches = rw.repo.branches.local
+
+    assert not localBranches['no-parent'].is_checked_out()
+    assert localBranches['master'].is_checked_out()
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
+    findMenuAction(menu, "switch to").trigger()
+
+    acceptQMessageBox(rw, "conflicting file")  # this will fail if the messagebox doesn't show up
+
+    assert not localBranches['no-parent'].is_checked_out()  # still not checked out
+    assert localBranches['master'].is_checked_out()
 
 
