@@ -120,7 +120,7 @@ class RepoState:
         # with the official installer, e.g. via scoop. If a repo was cloned with
         # autocrlf=true, GF's staging area would be unusable on Windows without
         # setting autocrlf=true in the config.
-        if QSysInfo.productType() == "windows" and "core.autocrlf" not in self.repo.config:
+        if WINDOWS and "core.autocrlf" not in self.repo.config:
             tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
             log.info("RepoState", "Forcing core.autocrlf=true in: " + tempConfigPath)
             tempConfig = pygit2.Config(tempConfigPath)

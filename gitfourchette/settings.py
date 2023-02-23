@@ -4,7 +4,6 @@ import dataclasses
 import enum
 import json
 import os
-import sys
 import time
 
 
@@ -289,6 +288,6 @@ def applyQtStylePref(forceApplyDefault: bool):
     elif forceApplyDefault:
         app.setStyle(app.PLATFORM_DEFAULT_STYLE_NAME)
 
-    if sys.platform == 'darwin':
+    if MACOS:
         isDefaultMacStyle = (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
         app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, isDefaultMacStyle)

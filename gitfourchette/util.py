@@ -71,15 +71,17 @@ def showInFolder(pathStr):
     Source: https://stackoverflow.com/a/46019091/3388962
     """
     path = os.path.abspath(pathStr)
-    product = QSysInfo.productType()
-    if product == 'windows':
-        if not os.path.isdir(path):  # If it's a file, select it within the folder.
+    isdir = os.path.isdir(path)
+
+    if WINDOWS:
+        if not isdir:  # If it's a file, select it within the folder.
             args = ['/select,', path]
         else:
             args = [path]  # If it's a folder, open it.
         if QProcess.startDetached('explorer', args):
             return
-    elif product == 'osx':  # TODO: "The returned string will be updated for Qt 6"
+
+    elif MACOS and not isdir:
         args = [
             '-e', 'tell application "Finder"',
             '-e', 'activate',
@@ -89,6 +91,7 @@ def showInFolder(pathStr):
         ]
         if not QProcess.execute('/usr/bin/osascript', args):
             return
+
     # Fallback.
     dirPath = path if os.path.isdir(path) else os.path.dirname(path)
     QDesktopServices.openUrl(QUrl.fromLocalFile(dirPath))
@@ -212,7 +215,7 @@ def asyncMessageBox(
     }
 
     # macOS doesn't have a titlebar for message boxes, so put the title in the text
-    if macShowTitle and sys.platform == 'darwin':
+    if macShowTitle and MACOS:
         text = "<p><b>" + title + "</b></p>" + text
 
     qmb = QMessageBox(
@@ -224,7 +227,7 @@ def asyncMessageBox(
     )
 
     # On macOS (since Big Sur?), all QMessageBox text is bold by default
-    if sys.platform == 'darwin':
+    if MACOS:
         qmb.setStyleSheet("QMessageBox QLabel { font-weight: normal; }")
 
     setWindowModal(qmb)

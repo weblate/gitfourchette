@@ -17,6 +17,8 @@ PYSIDE2 = False
 PYSIDE6 = False
 PYQT5 = False
 PYQT6 = False
+MACOS = False
+WINDOWS = False
 PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
 
 if PYINSTALLER_BUNDLE or "pyside6" == os.environ.get("QT_API", "").lower():
@@ -35,6 +37,9 @@ else:
     from qtpy import API_NAME as qtBindingName
     from qtpy.QtCore import __version__ as qtBindingVersion
     from qtpy import QT5, QT6, PYSIDE2, PYSIDE6, PYQT5, PYQT6
+
+MACOS = QSysInfo.productType() in ["osx", "macos"]  # "osx": Qt5 legacy
+WINDOWS = QSysInfo.productType() in ["windows"]
 
 if PYSIDE2:  # Patch PySide2's exec_ functions
     def qMenuExec(menu: QMenu, *args, **kwargs):

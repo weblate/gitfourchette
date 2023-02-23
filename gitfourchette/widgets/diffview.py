@@ -16,7 +16,6 @@ from pygit2 import GitError, Patch, Repository, Diff
 import enum
 import os
 import pygit2
-import sys
 
 
 def get1FileChangedByDiff(diff: Diff):
@@ -63,7 +62,7 @@ class DiffGutter(QWidget):
         super().__init__(parent)
         self.diffView = parent
 
-        if sys.platform in ['darwin', 'win32']:
+        if MACOS or WINDOWS:
             dpr = 4
         else:
             dpr = 1  # On Linux, Qt doesn't seem to support cursors at non-1 DPR
