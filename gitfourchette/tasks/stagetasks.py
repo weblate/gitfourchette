@@ -23,6 +23,10 @@ class StageFiles(_BaseStagingTask):
         return translate("Operation", "Stage files")
 
     def flow(self, patches: list[pygit2.Patch]):
+        if not patches:  # Nothing to stage (may happen if user keeps pressing Enter in file list view)
+            QApplication.beep()
+            yield from self._flowAbort()
+
         yield from self._flowBeginWorkerThread()
         with self.rw.fileWatcher.blockWatchingIndex():  # TODO: Also block FSW from watching ALL changes
             porcelain.stageFiles(self.repo, patches)
@@ -36,7 +40,10 @@ class DiscardFiles(_BaseStagingTask):
         return TaskAffectsWhat.INDEX
 
     def flow(self, patches: list[pygit2.Patch]):
-        if len(patches) == 1:
+        if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
+            QApplication.beep()
+            yield from self._flowAbort()
+        elif len(patches) == 1:
             path = patches[0].delta.new_file.path
             text = self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path))
         else:
@@ -57,6 +64,10 @@ class UnstageFiles(_BaseStagingTask):
         return translate("Operation", "Unstage files")
 
     def flow(self, patches: list[pygit2.Patch]):
+        if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
+            QApplication.beep()
+            yield from self._flowAbort()
+
         yield from self._flowBeginWorkerThread()
         with self.rw.fileWatcher.blockWatchingIndex():
             porcelain.unstageFiles(self.repo, patches)
