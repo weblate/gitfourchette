@@ -73,6 +73,7 @@ class RepoWidget(QWidget):
         # to run on a thread separate from the UI thread.
         self.repoTaskRunner = tasks.RepoTaskRunner(self)
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
+        self.repoTaskRunner.progress.connect(self.onRepoTaskProgress)
 
         self.state = None
         self.pathPending = None
@@ -773,8 +774,6 @@ class RepoWidget(QWidget):
 
         self.refreshWindowTitle()
 
-        globalstatus.clearProgress()
-
     def refreshWindowTitle(self):
         shortname = self.state.shortName
         repo = self.repo
@@ -851,3 +850,17 @@ class RepoWidget(QWidget):
         if what != tasks.TaskAffectsWhat.NOTHING:
             allowUpdateIndex = bool(what & tasks.TaskAffectsWhat.INDEXWRITE)
             self.quickRefresh(allowUpdateIndex=allowUpdateIndex)
+
+    def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
+        if progressText:
+            # If this RW isn't the current tab, prefix message with repo name
+            if not self.isVisible():
+                progressText = "[" + self.getTitle() + "] " + progressText
+
+            if withSpinner:
+                globalstatus.setIndeterminateProgressCaption(progressText)
+            else:
+                globalstatus.clearProgress()
+                globalstatus.setText(progressText)
+        else:
+            globalstatus.clearProgress()

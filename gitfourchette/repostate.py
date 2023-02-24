@@ -283,12 +283,7 @@ class RepoState:
         return commitSequence
 
     def loadTaintedCommitsOnly(self):
-        globalstatus.setText(tr("{0}: Checking for new commits...").format(self.shortName))
-
         self.currentBatchID += 1
-
-        globalstatus.setProgressMaximum(5)
-        globalstatus.setProgressValue(1)
 
         newCommitSequence = []
 
@@ -300,8 +295,6 @@ class RepoState:
             walker = self.initializeWalker(newHeads)
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
-
-        globalstatus.setProgressValue(2)
 
         i = 0
         while graphSplicer.keepGoing:
@@ -331,8 +324,6 @@ class RepoState:
             nRemoved = -1  # We could use len(self.commitSequence), but -1 will force quickRefresh to replace the model wholesale
             nAdded = len(newCommitSequence)
 
-        globalstatus.setProgressValue(3)
-
         with Benchmark("Nuke unreachable commits from cache"):
             for trashedCommit in (graphSplicer.oldCommitsSeen - graphSplicer.newCommitsSeen):
                 del self.commitPositions[trashedCommit]
@@ -358,8 +349,6 @@ class RepoState:
             hiddenCommitSolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
         self.foreignCommits = foreignCommitSolver.foreignCommits
         self.hiddenCommits = hiddenCommitSolver.hiddenCommits
-
-        globalstatus.setProgressValue(4)
 
         self.updateActiveCommitOid()
 

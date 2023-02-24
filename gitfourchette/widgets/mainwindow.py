@@ -151,8 +151,6 @@ class MainWindow(QMainWindow):
 
     def updateStatusMessage(self, message):
         self.statusBar.showMessage(message)
-        #QCoreApplication.processEvents() # bad idea -- this may cause a tower of nested calls
-        # where loadCommitAsync -> loadDiffAsync -> loadCommitAsync -> loadDiffAsync...
 
     def paintEvent(self, event:QPaintEvent):
         if self.memoryIndicator:

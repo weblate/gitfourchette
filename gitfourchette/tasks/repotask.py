@@ -1,3 +1,4 @@
+from gitfourchette.benchmark import Benchmark
 from gitfourchette.qt import *
 from gitfourchette import util
 from gitfourchette import log
@@ -227,17 +228,20 @@ class RepoTask(QObject):
 
 class RepoTaskRunner(QObject):
     refreshPostTask = Signal(TaskAffectsWhat)
+    progress = Signal(str, bool)
     _continueFlow = Signal(object)
 
     _threadPool: QThreadPool
     _currentTask: RepoTask | None
     _zombieTask: RepoTask | None
+    _currentTaskBenchmark = Benchmark | None
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.setObjectName("RepoTaskRunner")
         self._currentTask = None
         self._zombieTask = None
+        self._currentTaskBenchmark = None
 
         from gitfourchette import settings
         self.forceSerial = bool(settings.TEST_MODE)
@@ -278,6 +282,9 @@ class RepoTaskRunner(QObject):
 
         log.info(TAG, f"Start task {task.debugName()}")
 
+        self._currentTaskBenchmark = Benchmark(task.debugName())
+        self._currentTaskBenchmark.__enter__()
+
         # Prepare internal signal for coroutine continuation
         self._continueFlow.connect(lambda result: self._iterateFlow(task, result))
 
@@ -287,7 +294,7 @@ class RepoTaskRunner(QObject):
     def _iterateFlow(self, task: RepoTask, result: FlowControlToken | BaseException):
         flow = task._currentFlow
         task._currentIteration += 1
-        log.info(TAG, f"Iterate on task {task.debugName()} ({task._currentIteration})")
+        # log.info(TAG, f"Iterate on task {task.debugName()} ({task._currentIteration})")
 
         assert util.onAppThread()
 
@@ -312,10 +319,14 @@ class RepoTaskRunner(QObject):
                 task.deleteLater()
 
             elif control == FlowControlToken.Kind.WAIT_READY:
+                self.progress.emit(self.tr("Awaiting your input to resume {0}").format(task.name()), False)
+
                 # Re-enter when user is ready
                 result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
 
             else:
+                self.progress.emit(self.tr("In progress: {0}...").format(task.name()), True)
+
                 # Wrapper around `next(flow)`.
                 # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
                 wrapper = util.QRunnableFunctionWrapper(lambda: self._wrapNext(flow))
@@ -353,6 +364,8 @@ class RepoTaskRunner(QObject):
 
     def _releaseTask(self, task: RepoTask):
         log.info(TAG, f"End task {task.debugName()}")
+        self.progress.emit("", False)
+        self._currentTaskBenchmark.__exit__(None, None, None)
 
         assert util.onAppThread()
         assert task is self._currentTask or task is self._zombieTask
