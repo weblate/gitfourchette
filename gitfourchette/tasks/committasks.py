@@ -32,9 +32,10 @@ class NewCommit(RepoTask):
                     self.tr("Do you want to create an empty commit anyway?")))
 
         sig = self.repo.default_signature
+        initialMessage = self.getDraftMessage()
 
         cd = CommitDialog(
-            initialText=self.getDraftMessage(),
+            initialText=initialMessage,
             authorSignature=sig,
             committerSignature=sig,
             isAmend=False,
@@ -52,7 +53,8 @@ class NewCommit(RepoTask):
         self.committer = cd.getOverriddenCommitterSignature()
 
         # Save commit message as draft now, so we don't lose it if the commit operation fails or is rejected.
-        self.setDraftMessage(self.message)
+        if self.message != initialMessage:
+            self.setDraftMessage(self.message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
             yield from self._flowAbort()
