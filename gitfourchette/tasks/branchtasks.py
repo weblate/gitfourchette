@@ -4,7 +4,7 @@ from gitfourchette.porcelain import HEADS_PREFIX, REMOTES_PREFIX
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.newbranchdialog import NewBranchDialog
+from gitfourchette.widgets.newbranchdialog import NewBranchDialog, validateLocalBranchName
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
 from html import escape
 import pygit2
@@ -30,12 +30,17 @@ class RenameBranch(RepoTask):
     def flow(self, oldBranchName: str):
         assert not oldBranchName.startswith(HEADS_PREFIX)
 
+        forbiddenBranchNames = self.repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
+        forbiddenBranchNames.remove(oldBranchName)
+
         dlg = showTextInputDialog(
             self.parent(),
             self.tr("Rename local branch “{0}”").format(escape(oldBranchName)),
             self.tr("Enter new name:"),
             oldBranchName,
-            okButtonText=self.tr("Rename"))
+            okButtonText=self.tr("Rename"),
+            validatorFunc=lambda name: validateLocalBranchName(name, forbiddenBranchNames))
+
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         yield from self._flowDialog(dlg)
         dlg.deleteLater()
@@ -104,7 +109,7 @@ class _NewBranchBaseTask(RepoTask):
         # Ensure no duplicates (stable order since Python 3.7+)
         upstreams = list(dict.fromkeys(upstreams))
 
-        forbiddenBranchNames = [""] + repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
+        forbiddenBranchNames = repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
 
         commitMessage = porcelain.getCommitMessage(repo, tip)
         commitMessage, junk = util.messageSummary(commitMessage)

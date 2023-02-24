@@ -61,15 +61,33 @@ def testRenameBranch(qtbot, tempDir, mainWindow):
     repo = rw.repo
 
     assert 'master' in repo.branches.local
+    assert 'no-parent' in repo.branches.local
     assert 'mainbranch' not in repo.branches.local
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
     findMenuAction(menu, "rename").trigger()
 
-    q = findQDialog(rw, "rename.+branch")
-    q.findChild(QLineEdit).setText("mainbranch")
-    q.accept()
+    dlg = findQDialog(rw, "rename.+branch")
+    nameEdit: QLineEdit = dlg.findChild(QLineEdit)
+    okButton: QPushButton = dlg.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok)
+
+    assert okButton
+    assert okButton.isEnabled()
+
+    nameEdit.setText("this-wont-pass-validation.lock")  # illegal suffix
+    assert not okButton.isEnabled()
+
+    nameEdit.setText("no-parent")  # already taken by another local branch
+    assert not okButton.isEnabled()
+
+    nameEdit.setText("")  # cannot be empty
+    assert not okButton.isEnabled()
+
+    nameEdit.setText("mainbranch")
+    assert okButton.isEnabled()
+
+    dlg.accept()
 
     assert 'master' not in repo.branches.local
     assert 'mainbranch' in repo.branches.local

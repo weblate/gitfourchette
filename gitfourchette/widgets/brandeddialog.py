@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.util import tweakWidgetFont, setWindowModal
+from gitfourchette.util import tweakWidgetFont, setWindowModal, installLineEditCustomValidator
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
@@ -59,7 +59,8 @@ def showTextInputDialog(
         detailedPrompt: str,
         text: str,
         onAccept: Callable[[str], None] = None,
-        okButtonText: str = None
+        okButtonText: str = None,
+        validatorFunc: Callable[[str], str] = None,
 ) -> QDialog:
 
     dlg = QDialog(parent)
@@ -75,11 +76,20 @@ def showTextInputDialog(
     buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=dlg)
 
     layout = QVBoxLayout()
+
     if detailedPrompt:
         detailedPromptLabel = QLabel(detailedPrompt, parent=dlg)
         detailedPromptLabel.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(detailedPromptLabel)
+
     layout.addWidget(lineEdit)
+
+    validatorErrorLabel = None
+    if validatorFunc:
+        validatorErrorLabel = QLabel("-validator-")
+        validatorErrorLabel.setEnabled(False)
+        layout.addWidget(validatorErrorLabel)
+
     layout.addWidget(buttonBox)
 
     buttonBox.accepted.connect(dlg.accepted)
@@ -92,6 +102,13 @@ def showTextInputDialog(
 
     if okButtonText:
         buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
+
+    if validatorFunc:
+        installLineEditCustomValidator(
+            lineEdit=lineEdit,
+            validatorFunc=validatorFunc,
+            errorLabel=validatorErrorLabel,
+            gatedWidgets=[buttonBox.button(QDialogButtonBox.StandardButton.Ok)])
 
     makeBrandedDialog(dlg, layout, title)
 

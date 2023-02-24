@@ -2,6 +2,33 @@ from gitfourchette.qt import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_newbranchdialog import Ui_NewBranchDialog
 from gitfourchette import porcelain
+from gitfourchette import util
+import typing
+
+
+def translateBranchNameValidationError(e: porcelain.BranchNameValidationError):
+    E = porcelain.BranchNameValidationError
+    errorDescriptions = {
+        E.ILLEGAL_NAME: translate("BranchNameValidation", "Illegal name."),
+        E.ILLEGAL_SUFFIX: translate("BranchNameValidation", "Illegal suffix."),
+        E.ILLEGAL_PREFIX: translate("BranchNameValidation", "Illegal prefix."),
+        E.CONTAINS_ILLEGAL_SEQ: translate("BranchNameValidation", "Contains illegal character sequence."),
+        E.CONTAINS_ILLEGAL_CHAR: translate("BranchNameValidation", "Contains illegal character."),
+        E.CANNOT_BE_EMPTY: translate("BranchNameValidation", "Cannot be empty."),
+    }
+    return errorDescriptions.get(e.code, "Branch name validation error {0}".format(e.code))
+
+
+def validateLocalBranchName(newBranchName: str, forbiddenBranchNames: list[str]) -> str:
+    try:
+        porcelain.validateBranchName(newBranchName)
+    except porcelain.BranchNameValidationError as exc:
+        return translateBranchNameValidationError(exc)
+
+    if newBranchName in forbiddenBranchNames:
+        return translate("BranchNameValidation", "Name already taken by another local branch.")
+
+    return ""  # validation passed, no error
 
 
 class NewBranchDialog(QDialog):
@@ -16,12 +43,9 @@ class NewBranchDialog(QDialog):
 
         super().__init__(parent)
 
-        self.forbiddenBranchNames = forbiddenBranchNames
-
         self.ui = Ui_NewBranchDialog()
         self.ui.setupUi(self)
 
-        self.ui.nameEdit.textChanged.connect(self.onBranchNameChanged)
         self.ui.nameEdit.setText(initialName)
 
         self.ui.upstreamComboBox.addItems(upstreams)
@@ -35,9 +59,13 @@ class NewBranchDialog(QDialog):
             self.ui.upstreamCheckBox.setVisible(False)
             self.ui.upstreamComboBox.setVisible(False)
 
-        convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
+        util.installLineEditCustomValidator(
+            validatorFunc=lambda name: validateLocalBranchName(name, forbiddenBranchNames),
+            errorLabel=self.ui.nameValidationText,
+            lineEdit=self.ui.nameEdit,
+            gatedWidgets=[self.acceptButton])
 
-        self.onBranchNameChanged()  # do initial validation
+        convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
 
         self.ui.nameEdit.setFocus()
         self.ui.nameEdit.selectAll()
@@ -45,29 +73,3 @@ class NewBranchDialog(QDialog):
     @property
     def acceptButton(self):
         return self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-
-    def onBranchNameChanged(self):
-        newBranchName = self.ui.nameEdit.text()
-        error = ""
-
-        try:
-            porcelain.validateBranchName(newBranchName)
-            if newBranchName in self.forbiddenBranchNames:
-                error = self.tr("Already taken by another local branch.")
-        except porcelain.BranchNameValidationError as exc:
-            E = porcelain.BranchNameValidationError
-            errorDescriptions = {
-                E.ILLEGAL_NAME: self.tr("Illegal name."),
-                E.ILLEGAL_SUFFIX: self.tr("Illegal suffix."),
-                E.ILLEGAL_PREFIX: self.tr("Illegal prefix."),
-                E.CONTAINS_ILLEGAL_SEQ: self.tr("Contains illegal character sequence."),
-                E.CONTAINS_ILLEGAL_CHAR: self.tr("Contains illegal character."),
-                E.CANNOT_BE_EMPTY: self.tr("Cannot be empty."),
-            }
-            if exc.code in errorDescriptions:
-                error = errorDescriptions[exc.code]
-            else:
-                error = str(exc)
-
-        self.ui.nameValidationText.setText(error)
-        self.acceptButton.setEnabled(error == "")
