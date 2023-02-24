@@ -504,7 +504,7 @@ class Sidebar(QTreeView):
 
     newStash = Signal()
     popStash = Signal(pygit2.Oid)
-    applyStash = Signal(pygit2.Oid)
+    applyStash = Signal(pygit2.Oid, bool)  # bool: ask for confirmation before applying
     dropStash = Signal(pygit2.Oid)
 
     openSubmoduleRepo = Signal(str)
@@ -639,7 +639,7 @@ class Sidebar(QTreeView):
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
             menu.addAction(self.tr("&Pop (apply and delete)"), lambda: self.popStash.emit(oid))
-            menu.addAction(self.tr("&Apply"), lambda: self.applyStash.emit(oid))
+            menu.addAction(self.tr("&Apply"), lambda: self.applyStash.emit(oid, False))  # False: don't ask for confirmation
             menu.addSeparator()
             menu.addAction(stockIcon(QStyle.StandardPixmap.SP_TrashIcon), self.tr("&Delete"), lambda: self.dropStash.emit(oid))
 
@@ -696,6 +696,9 @@ class Sidebar(QTreeView):
             self.openSubmoduleRepo.emit(data)
         elif item == EItem.StashesHeader:
             self.newStash.emit()
+        elif item == EItem.Stash:
+            oid = pygit2.Oid(hex=data)
+            self.applyStash.emit(oid, True)  # ask for confirmation
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)

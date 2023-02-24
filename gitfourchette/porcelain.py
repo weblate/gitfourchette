@@ -659,9 +659,12 @@ def findStashIndex(repo: Repository, commitOid: pygit2.Oid):
     an operation on the stash. This way, we'll always manipulate the stash
     intended by the user, even if the indices change outside our control.
     """
-    return next(i
-                for i, stash in enumerate(repo.listall_stashes())
-                if stash.commit_id == commitOid)
+    try:
+        return next(i
+                    for i, stash in enumerate(repo.listall_stashes())
+                    if stash.commit_id == commitOid)
+    except StopIteration:
+        raise KeyError(f"Stash not found: {commitOid.hex}")
 
 
 def applyStash(repo: Repository, commitId: pygit2.Oid):
