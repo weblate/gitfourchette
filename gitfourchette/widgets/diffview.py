@@ -16,6 +16,7 @@ from pygit2 import GitError, Patch, Repository, Diff
 import enum
 import os
 import pygit2
+import re
 
 
 def get1FileChangedByDiff(diff: Diff):
@@ -117,7 +118,7 @@ class DiffView(QPlainTextEdit):
         self.lineData = []
         self.lineCursorStartCache = []
         self.lineHunkIDCache = []
-        self.currentStagingState = None
+        self.currentStagingState = StagingState.UNKNOWN
         self.currentPatch = None
         self.repo = None
 
@@ -183,10 +184,14 @@ class DiffView(QPlainTextEdit):
 
         # Find hunk at click position
         clickedHunkID = self.findHunkIDAt(clickedPosition)
+        shortHunkHeader = ""
+        if clickedHunkID >= 0:
+            hunk: pygit2.DiffHunk = self.currentPatch.hunks[clickedHunkID]
+            shortHunkHeader = re.sub(r"@@ (.+) @@.*", r"(\1)", hunk.header)
 
         actions = []
 
-        if self.currentStagingState == None:
+        if self.currentStagingState == StagingState.UNKNOWN:
             actions = []
 
         elif self.currentStagingState == StagingState.COMMITTED:
@@ -197,7 +202,7 @@ class DiffView(QPlainTextEdit):
                 ]
             else:
                 actions = [
-                    ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
+                    ActionDef(self.tr("Export Hunk {0} as Patch...").format(shortHunkHeader), lambda: self.exportHunk(clickedHunkID)),
                     ActionDef(self.tr("Revert Hunk..."), lambda: self.revertHunk(clickedHunkID)),
                 ]
 
@@ -233,14 +238,12 @@ class DiffView(QPlainTextEdit):
             else:
                 actions = [
                     ActionDef(
-                        self.tr("Stage Hunk {0}").format(clickedHunkID),
+                        self.tr("Stage Hunk {0}").format(shortHunkHeader),
                         lambda: self.stageHunk(clickedHunkID),
-                        shortcuts=GlobalShortcuts.stageHotkeys,
                     ),
                     ActionDef(
-                        self.tr("Discard Hunk {0}").format(clickedHunkID),
+                        self.tr("Discard Hunk"),
                         lambda: self.discardHunk(clickedHunkID),
-                        shortcuts=GlobalShortcuts.discardHotkeys,
                     ),
                     ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
@@ -261,9 +264,8 @@ class DiffView(QPlainTextEdit):
             else:
                 actions = [
                     ActionDef(
-                        self.tr("Unstage Hunk {0}").format(clickedHunkID),
+                        self.tr("Unstage Hunk {0}").format(shortHunkHeader),
                         lambda: self.unstageHunk(clickedHunkID),
-                        shortcuts=GlobalShortcuts.stageHotkeys,
                     ),
                     ActionDef(
                         self.tr("Export Hunk as Patch..."),
