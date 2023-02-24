@@ -75,6 +75,9 @@ class DiffGutter(QWidget):
         flippedCursor = QCursor(pix, hotX=19, hotY=5)
         self.setCursor(flippedCursor)
 
+        # Enable customContextMenuRequested signal
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
     def sizeHint(self) -> QSize:
         return QSize(self.diffView.gutterWidth(), 0)
 
@@ -123,6 +126,7 @@ class DiffView(QPlainTextEdit):
         self.gutter = DiffGutter(self)
         self.updateRequest.connect(self.updateGutter)
         self.blockCountChanged.connect(self.updateGutterWidth)
+        self.gutter.customContextMenuRequested.connect(lambda p: self.doContextMenu(self.gutter.mapToGlobal(p)))
         # self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateGutterWidth(0)
 
@@ -168,8 +172,11 @@ class DiffView(QPlainTextEdit):
             self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
+        self.doContextMenu(event.globalPos())
+
+    def doContextMenu(self, globalPos: QPoint):
         # Get position of click in document
-        clickedPosition = self.cursorForPosition(event.pos()).position()
+        clickedPosition = self.cursorForPosition(self.mapFromGlobal(globalPos)).position()
 
         cursor: QTextCursor = self.textCursor()
         hasSelection = cursor.hasSelection()
@@ -277,7 +284,7 @@ class DiffView(QPlainTextEdit):
         menu = ActionDef.makeQMenu(self, actions, bottom)
         bottom.deleteLater()  # don't need this menu anymore
         menu.setObjectName("DiffViewContextMenu")
-        menu.exec(event.globalPos())
+        menu.exec(globalPos)
         menu.deleteLater()
 
     def toggleWordWrap(self):
