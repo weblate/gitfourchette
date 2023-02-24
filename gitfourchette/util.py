@@ -118,7 +118,7 @@ def onAppThread():
     return appInstance and appInstance.thread() is QThread.currentThread()
 
 
-def setWindowModal(widget: QWidget):
+def setWindowModal(widget: QWidget, modality: Qt.WindowModality = Qt.WindowModality.WindowModal):
     """
     Sets the WindowModal modality on a widget unless we're in test mode.
     (On macOS, window-modal dialogs trigger an unskippable animation
@@ -127,7 +127,7 @@ def setWindowModal(widget: QWidget):
 
     from gitfourchette.settings import TEST_MODE
     if not TEST_MODE:
-        widget.setWindowModality(Qt.WindowModality.WindowModal)
+        widget.setWindowModality(modality)
 
 
 def excMessageBox(

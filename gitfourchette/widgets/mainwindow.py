@@ -458,13 +458,18 @@ class MainWindow(QMainWindow):
         assert repo is not None
 
         shortname = settings.history.getRepoNickname(path)
+
         progress = QProgressDialog(self.tr("Opening repository..."), self.tr("Abort"), 0, 0, self)
-        setWindowModal(progress)
         progress.setWindowTitle(shortname)
-        progress.setWindowFlags(Qt.WindowType.Dialog)
+        progress.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)  # hide close button
         progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
-        QCoreApplication.processEvents()
         progress.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+
+        # On macOS, WindowModal triggers a slow animation that makes loading a repo feel gratuitously sluggish.
+        # ApplicationModal isn't as bad.
+        modality = Qt.WindowModality.ApplicationModal if MACOS else Qt.WindowModality.WindowModal
+        setWindowModal(progress, modality)
+
         if not settings.TEST_MODE:
             progress.show()
         QCoreApplication.processEvents()
