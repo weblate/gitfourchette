@@ -568,18 +568,51 @@ def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str
         refKey = ref.name
 
         if type(ref.target) != pygit2.Oid:
-            log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
+            # Symbolic reference
+            # log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
             continue
 
         assert refKey.startswith("refs/")
+
         if refKey == "refs/stash":
+            # Stashes must be dealt with separately
             continue
+
         commit2refs[ref.target].append(refKey)
 
     for stashIndex, stash in enumerate(repo.listall_stashes()):
         commit2refs[stash.commit_id].append(F"stash@{{{stashIndex}}}")
 
     return commit2refs
+
+
+def refsPointingAtCommit(repo: pygit2.Repository, oid: pygit2.Oid):
+    refs = []
+
+    for ref in repo.references.objects:
+        refKey = ref.name
+
+        if type(ref.target) != pygit2.Oid:
+            # Symbolic reference
+            # log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
+            continue
+
+        if ref.target != oid:
+            continue
+
+        assert refKey.startswith("refs/")
+
+        if refKey == "refs/stash":
+            # Stashes must be dealt with separately
+            continue
+
+        refs.append(refKey)
+
+    for stashIndex, stash in enumerate(repo.listall_stashes()):
+        if stash.commit_id == oid:
+            refs.append(F"stash@{{{stashIndex}}}")
+
+    return refs
 
 
 def stageFiles(repo: Repository, patches: list[pygit2.Patch]):

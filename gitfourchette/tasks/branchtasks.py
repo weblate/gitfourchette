@@ -96,7 +96,7 @@ class _NewBranchBaseTask(RepoTask):
             localName = repo.head.shorthand
 
         # Collect upstream names and set initial localName (if we haven't been able to set it above).
-        refsPointingHere = porcelain.mapCommitsToReferences(repo)[tip]
+        refsPointingHere = porcelain.refsPointingAtCommit(repo, tip)
         upstreams = []
         for r in refsPointingHere:
             if r.startswith(HEADS_PREFIX):

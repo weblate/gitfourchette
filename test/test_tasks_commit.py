@@ -152,6 +152,10 @@ def testCheckoutCommit(qtbot, tempDir, mainWindow):
     rw.graphView.selectCommit(oid)
     rw.graphView.checkoutCommit.emit(oid)
 
+    dlg = findQDialog(rw, "check.?out commit")
+    dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)
+    dlg.accept()
+
     assert repo.head_is_detached
     assert repo.head.peel(pygit2.Commit).oid == oid
 

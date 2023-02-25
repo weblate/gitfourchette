@@ -2,7 +2,9 @@ from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.widgets.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 import pygit2
 
 
@@ -120,14 +122,55 @@ class AmendCommit(RepoTask):
 
 class CheckoutCommit(RepoTask):
     def name(self):
-        return translate("Operation", "Checkout commit")
+        return translate("Operation", "Check out commit")
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
 
     def flow(self, oid: pygit2.Oid):
-        yield from self._flowBeginWorkerThread()
-        porcelain.checkoutCommit(self.repo, oid)
+        refs = porcelain.refsPointingAtCommit(self.repo, oid)
+        refs = [r.removeprefix(porcelain.HEADS_PREFIX) for r in refs if r.startswith(porcelain.HEADS_PREFIX)]
+
+        commitMessage = porcelain.getCommitMessage(self.repo, oid)
+        commitMessage, junk = util.messageSummary(commitMessage)
+
+        dlg = QDialog(self.parent())
+
+        ui = Ui_CheckoutCommitDialog()
+        ui.setupUi(dlg)
+        if refs:
+            ui.switchToLocalBranchComboBox.addItems(refs)
+            ui.switchToLocalBranchRadioButton.setChecked(True)
+        else:
+            ui.detachedHeadRadioButton.setChecked(True)
+            ui.switchToLocalBranchComboBox.setVisible(False)
+            ui.switchToLocalBranchRadioButton.setVisible(False)
+
+        dlg.setWindowTitle(self.tr("Check out commit {0}").format(util.shortHash(oid)))
+        convertToBrandedDialog(dlg, subtitleText=f"“{commitMessage}”")
+        dlg.show()
+        yield from self._flowDialog(dlg)
+
+        # Make sure to copy user input from dialog UI *before* starting worker thread
+        dlg.deleteLater()
+
+        if ui.detachedHeadRadioButton.isChecked():
+            yield from self._flowBeginWorkerThread()
+            porcelain.checkoutCommit(self.repo, oid)
+
+        elif ui.switchToLocalBranchRadioButton.isChecked():
+            branchName = ui.switchToLocalBranchComboBox.currentText()
+            yield from self._flowBeginWorkerThread()
+            porcelain.checkoutLocalBranch(self.repo, branchName)
+
+        elif ui.createBranchRadioButton.isChecked():
+            from gitfourchette.tasks.branchtasks import NewBranchFromCommit
+            newBranchTask = NewBranchFromCommit(self.parent())
+            newBranchTask.setRepo(self.repo)
+            yield from newBranchTask.flow(oid)
+
+        else:
+            raise NotImplementedError("Unsupported CheckoutCommitDialog outcome")
 
 
 class RevertCommit(RepoTask):
