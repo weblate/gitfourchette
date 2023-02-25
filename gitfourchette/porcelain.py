@@ -6,7 +6,7 @@ import os
 import re
 
 
-CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On [^\s:]+: (.+)")
+CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 
 HEADS_PREFIX = "refs/heads/"
 REMOTES_PREFIX = "refs/remotes/"
@@ -684,7 +684,7 @@ def dropStash(repo: Repository, commitId: pygit2.Oid):
 def getCoreStashMessage(stashMessage: str) -> str:
     m = CORE_STASH_MESSAGE_PATTERN.match(stashMessage)
     if m:
-        return m.group(1)
+        return m.group(2)
     else:
         return stashMessage
 
