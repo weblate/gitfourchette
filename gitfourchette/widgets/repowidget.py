@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
@@ -750,6 +751,12 @@ class RepoWidget(QWidget):
     def quickRefresh(self, allowUpdateIndex=False):
         self.scheduledRefresh.stop()
 
+        if self.repoTaskRunner.isBusy():
+            # Prevent disastrous multithreaded accesses to the same repo.
+            # TODO: We should really make most of this a task, and queue the tasks in the RepoTask.
+            log.warning("RepoWidget", "Can't refresh while task runner is busy!")
+            return
+
         with Benchmark("Refresh refs-by-commit cache"):
             self.state.refreshRefsByCommitCache()
 
@@ -766,13 +773,15 @@ class RepoWidget(QWidget):
             else:
                 self.graphView.setCommitSequence(self.state.commitSequence)
 
-        if self.isStageViewShown:
-            self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
-
         with Benchmark("Refresh sidebar"):
             self.sidebar.refresh(self.state)
 
         self.refreshWindowTitle()
+
+        # Refresh workdir view on separate thread AFTER all the processing above
+        # (All the above accesses the repository on the UI thread)
+        if self.isStageViewShown:
+            self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
 
     def refreshWindowTitle(self):
         shortname = self.state.shortName

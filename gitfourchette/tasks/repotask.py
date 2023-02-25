@@ -252,6 +252,9 @@ class RepoTaskRunner(QObject):
         self._pendingKiller = None
         self._pendingKillerArgs = []
 
+    def isBusy(self):
+        return self._currentTask is not None or self._zombieTask is not None
+
     def put(self, task: RepoTask, *args):
         # Get flow generator
         task._currentFlow = task.flow(*args)
