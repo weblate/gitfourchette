@@ -16,27 +16,35 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
     maxConflicts = 10
     numConflicts = len(exc.conflicts)
 
-    title = translate("ConflictError", "%n conflicting file(s)", "", numConflicts)
+    # lupdate doesn't pick up the plural form with translate("Context", "%n", "", numConflicts)
+    title = tr("%n conflicting file(s)", "", numConflicts)
+    nFilesSubmessage = tr("<b>%n file(s)</b>", "", numConflicts)
 
     if exc.description == "workdir":
-        message = translate("ConflictError", "Operation <b>{0}</b> conflicts with <b>%n file(s)</b> in the working directory:", "", numConflicts).format(opName)
+        message = translate("Conflict", "Operation <b>{0}</b> conflicts with {1} in the working directory:"
+                            ).format(opName, nFilesSubmessage)
     elif exc.description == "HEAD":
-        message = translate("ConflictError", "Operation <b>{0}</b> conflicts with <b>%n file(s)</b> in the commit at HEAD.", "", numConflicts).format(opName)
+        message = translate("Conflict", "Operation <b>{0}</b> conflicts with {1} in the commit at HEAD:"
+                            ).format(opName, nFilesSubmessage)
     else:
-        message = translate("ConflictError", "Operation <b>{0}</b> has caused a conflict with <b>%n file(s)</b> ({1}).").format(opName, exc.description)
+        message = translate("Conflict", "Operation <b>{0}</b> has caused a conflict with {1} ({2}):"
+                            ).format(opName, nFilesSubmessage, exc.description)
 
     message += f"<ul><li>"
     message += "</li><li>".join(exc.conflicts[:maxConflicts])
     if numConflicts > maxConflicts:
         numHidden = numConflicts - maxConflicts
         message += "</li><li><i>"
-        message += translate("ConflictError", "...and {0} more. Only the first {1} conflicts are shown above; click “Show Details” to view all {2} conflicts."
+        message += translate("Conflict",
+                             "...and {0} more. Only the first {1} conflicts are shown above; "
+                             "click “Show Details” to view all {2} conflicts."
                              ).format(numHidden, maxConflicts, numConflicts)
         message += "</li>"
     message += "</li></ul>"
 
     if exc.description == "workdir":
-        message += translate("ConflictError", "Before you try again, you should either commit, stash, or discard your changes.")
+        message += translate("Conflict", "Before you try again, you should either "
+                                         "commit, stash, or discard your changes.")
 
     qmb = util.showWarning(parent, title, message)
 
@@ -192,8 +200,8 @@ class RepoTask(QObject):
             self,
             title: str = "",
             text: str = "",
-            acceptButtonIcon: (QStyle.StandardPixmap | str | None) = None,
-            acceptButtonText: str = "",
+            buttonIcon: (QStyle.StandardPixmap | str | None) = None,
+            verb: str = "",
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -203,8 +211,8 @@ class RepoTask(QObject):
         if not title:
             title = self.name()
 
-        if not acceptButtonText:
-            acceptButtonText = title
+        if not verb:
+            verb = title
 
         qmb = util.asyncMessageBox(
             self.parent(),
@@ -216,9 +224,9 @@ class RepoTask(QObject):
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
         # so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
-        if acceptButtonIcon:
-            yes.setIcon(util.stockIcon(acceptButtonIcon))
-        yes.setText(acceptButtonText)
+        if buttonIcon:
+            yes.setIcon(util.stockIcon(buttonIcon))
+        yes.setText(verb)
 
         qmb.show()
 

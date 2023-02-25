@@ -54,7 +54,7 @@ class ApplyStash(RepoTask):
             stashMessage = porcelain.getCoreStashMessage(stashCommit.message)
             question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
                                ).format(escape(stashMessage))
-            yield from self._flowConfirm(text=question)
+            yield from self._flowConfirm(text=question, verb=self.tr("Apply stash", "Button label"))
 
         yield from self._flowBeginWorkerThread()
         porcelain.applyStash(self.repo, stashCommitId)
@@ -82,8 +82,10 @@ class DropStash(RepoTask):
     def flow(self, stashCommitId: pygit2.Oid):
         stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)
         stashMessage = porcelain.getCoreStashMessage(stashCommit.message)
-        question = self.tr("Really delete stash <b>“{0}”</b>?").format(stashMessage)
-        yield from self._flowConfirm(text=question)
+        yield from self._flowConfirm(
+            text=self.tr("Really delete stash <b>“{0}”</b>?").format(stashMessage),
+            verb=self.tr("Delete stash"),
+            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()
         porcelain.dropStash(self.repo, stashCommitId)

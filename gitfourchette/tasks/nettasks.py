@@ -46,19 +46,23 @@ class DeleteRemoteBranch(_BaseNetTask):
     def name(self):
         return translate("Operation", "Delete branch on remote")
 
-    def flow(self, remoteBranchName: str):
-        assert not remoteBranchName.startswith(porcelain.REMOTES_PREFIX)
+    def flow(self, remoteBranchShorthand: str):
+        assert not remoteBranchShorthand.startswith(porcelain.REMOTES_PREFIX)
 
-        question = (
-                self.tr("Really delete branch <b>“{0}”</b> from the remote repository?").format(escape(remoteBranchName))
-                + "<br>"
-                + translate("Global", "This cannot be undone!"))
-        yield from self._flowConfirm(text=question, acceptButtonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+        remoteName, _ = porcelain.splitRemoteBranchShorthand(remoteBranchShorthand)
+
+        text = util.paragraphs(
+            self.tr("Really delete branch <b>“{0}”</b> "
+                    "from the remote repository?").format(escape(remoteBranchShorthand)),
+            self.tr("The remote branch will disappear for all users of remote “{0}”.").format(escape(remoteName))
+            + " " + translate("Global", "This cannot be undone!"))
+        verb = self.tr("Delete on remote")
+        yield from self._flowConfirm(text=text, verb=verb, buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         self._showRemoteLinkDialog()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.deleteRemoteBranch(self.repo, remoteBranchName, self.remoteLink)
+        porcelain.deleteRemoteBranch(self.repo, remoteBranchShorthand, self.remoteLink)
 
         yield from self._flowExitWorkerThread()
         self._closeRemoteLinkDialog()

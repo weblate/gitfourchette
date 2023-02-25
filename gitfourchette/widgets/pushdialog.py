@@ -23,7 +23,7 @@ class PushDialog(QDialog):
         if len(repo.remotes) == 0:
             text = paragraphs(
                 translate("PushDialog", "To push a local branch to a remote, you must first add a remote to your repo."),
-                translate("PushDialog", "You can do so via “Repo &rarr; Add Remote”."))
+                translate("PushDialog", "You can do so via <i>“Repo &rarr; Add Remote”</i>."))
             showWarning(parent, translate("PushDialog", "No remotes tracked by this repository"), text)
             return
 

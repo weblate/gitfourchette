@@ -304,11 +304,12 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return branchName
             elif toolTipRole:
-                text = self.tr("Local branch “{0}”").format(branchName)
+                text = self.tr("Local branch “{0}”").format(escape(branchName))
                 if branchName == self._checkedOut:
                     text += "\n" + ACTIVE_BULLET + self.tr("Active branch")
                 if self._tracking[branchNo]:
-                    text += "\n" + self.tr("Tracking remote branch “{0}”").format(self._tracking[branchNo])
+                    text += "\n" + self.tr("Tracking remote branch “{0}”").format(escape(self._tracking[branchNo]))
+                text += "<i/>"  # Force HTML
                 return text
             elif hiddenRole:
                 return F"refs/heads/{branchName}" in self._hiddenBranches
@@ -330,7 +331,7 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.DetachedHead:
             if displayRole:
-                return ACTIVE_BULLET + self.tr("[detached head]")
+                return ACTIVE_BULLET + self.tr("[detached HEAD]")
             elif userRole:
                 return self._detachedHead
             elif toolTipRole:
@@ -626,7 +627,7 @@ class Sidebar(QTreeView):
 
             menu.addSeparator()
 
-            a = menu.addAction(self.tr("&Delete Remote"), lambda: self.deleteRemote.emit(data))
+            a = menu.addAction(self.tr("&Remove Remote..."), lambda: self.deleteRemote.emit(data))
             a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
 
         elif item == EItem.RemotesHeader:

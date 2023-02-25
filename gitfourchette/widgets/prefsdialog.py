@@ -120,6 +120,8 @@ class PrefsDialog(QDialog):
         pCategory = "~~~dummy~~~"
         form: QFormLayout = None
 
+        categoryForms = {}
+
         for prefKey in prefs.__dict__:
             prefValue = prefs.__dict__[prefKey]
             category, caption = splitSettingKey(prefKey)
@@ -131,6 +133,7 @@ class PrefsDialog(QDialog):
                 form.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
                 formContainer.setLayout(form)
                 tabWidget.addTab(formContainer, self.translateSetting(category) or self.tr("General"))
+                categoryForms[category] = form
                 pCategory = category
 
             if caption:
@@ -182,6 +185,16 @@ class PrefsDialog(QDialog):
                 form.addRow(caption, control)
             else:
                 form.addRow(control)
+
+        explainer = QLabel(
+            self.tr("When you discard changes from the working directory, "
+                    "{0} keeps a temporary copy in a hidden “trash” folder. "
+                    "This gives you a last resort to rescue changes that you have discarded by mistake. "
+                    "You can look around this trash folder via <i>“Repo &rarr; Rescue Discarded Changes”</i>."
+                    ).format(QApplication.instance().applicationName()))
+        explainer.setTextFormat(Qt.TextFormat.RichText)
+        explainer.setWordWrap(True)
+        categoryForms["trash"].insertRow(0, explainer)
 
         layout = QVBoxLayout()
         layout.addWidget(tabWidget)
@@ -413,6 +426,10 @@ class PrefsDialog(QDialog):
 
             "trash_maxFiles": (self.tr("Max discarded patches in the trash"), self.tr("files")),
             "trash_maxFileSizeKB": (self.tr("Don’t salvage patches bigger than"), self.tr("KB")),
+
+            "debug_showMemoryIndicator": self.tr("Show memory indicator in status bar"),
+            "debug_showPID": self.tr("Show technical info in title bar"),
+            "debug_verbosity": self.tr("Logging verbosity"),
 
             "FULL_PATHS": self.tr("Full paths"),
             "ABBREVIATE_DIRECTORIES": self.tr("Abbreviate directories"),

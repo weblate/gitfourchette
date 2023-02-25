@@ -58,15 +58,19 @@ class EditRemote(RepoTask):
 
 class DeleteRemote(RepoTask):
     def name(self):
-        return translate("Operation", "Delete remote")
+        return translate("Operation", "Remove remote")
 
     def refreshWhat(self) -> TaskAffectsWhat:
         return TaskAffectsWhat.REMOTES
 
     def flow(self, remoteName: str):
         yield from self._flowConfirm(
-            text=self.tr("Really delete remote <b>“{0}”</b>?").format(escape(remoteName)),
-            acceptButtonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            text=util.paragraphs(
+                self.tr("Really remove remote <b>“{0}”</b>?").format(escape(remoteName)),
+                self.tr("This will merely detach the remote from your local repository. "
+                        "The remote server itself will not be affected.")),
+            verb=self.tr("Remove remote", "Button label"),
+            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()
         porcelain.deleteRemote(self.repo, remoteName)

@@ -19,6 +19,7 @@ class SwitchBranch(RepoTask):
 
     def flow(self, newBranch: str):
         assert not newBranch.startswith(HEADS_PREFIX)
+
         yield from self._flowBeginWorkerThread()
         porcelain.checkoutLocalBranch(self.repo, newBranch)
 
@@ -60,12 +61,13 @@ class DeleteBranch(RepoTask):
     def flow(self, localBranchName: str):
         assert not localBranchName.startswith(HEADS_PREFIX)
 
-        question = (
-                self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName))
-                + "<br>"
-                + translate("Global", "This cannot be undone!"))
+        text = util.paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
+                               translate("Global", "This cannot be undone!"))
+
         yield from self._flowConfirm(
-            text=question, acceptButtonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            text=text,
+            verb=self.tr("Delete branch", "Button label"),
+            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()
         porcelain.deleteBranch(self.repo, localBranchName)

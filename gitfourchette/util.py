@@ -66,6 +66,15 @@ def escamp(text: str) -> str:
 
 
 def paragraphs(*args) -> str:
+    """
+    Surrounds each argument string with an HTML "P" tag
+    and returns the concatenated P tags.
+    """
+
+    # If passed an actual list object, use that as the argument list.
+    if len(args) == 1 and type(args[0]) == list:
+        args = args[0]
+
     return "<p>" + "</p><p>".join(args) + "</p>"
 
 

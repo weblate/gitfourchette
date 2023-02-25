@@ -40,17 +40,22 @@ class DiscardFiles(_BaseStagingTask):
         return TaskAffectsWhat.INDEX
 
     def flow(self, patches: list[pygit2.Patch]):
+        textPara = []
+
         if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
             yield from self._flowAbort()
         elif len(patches) == 1:
             path = patches[0].delta.new_file.path
-            text = self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path))
+            textPara.append(self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path)))
         else:
-            text = self.tr("Really discard changes to <b>%n files</b>?", "", len(patches))
-        text += "<br>" + translate("Global", "This cannot be undone!")
+            textPara.append(self.tr("Really discard changes to <b>%n files</b>?", "", len(patches)))
+        textPara.append(translate("Global", "This cannot be undone!"))
 
-        yield from self._flowConfirm(self.tr("Discard changes"), text, QStyle.StandardPixmap.SP_DialogDiscardButton)
+        yield from self._flowConfirm(
+            text=util.paragraphs(textPara),
+            verb=self.tr("Discard changes", "Button label"),
+            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
@@ -87,16 +92,17 @@ class ApplyPatch(RepoTask):
 
         if purpose & PatchPurpose.DISCARD:
             title = PatchPurpose.getName(purpose)
+            textPara = []
             if purpose & PatchPurpose.HUNK:
-                really = self.tr("Really discard this hunk?")
+                textPara.append(self.tr("Really discard this hunk?"))
             else:
-                really = self.tr("Really discard the selected lines?")
-            really += "<br>" + translate("Global", "This cannot be undone!")
+                textPara.append(self.tr("Really discard the selected lines?"))
+            textPara.append(translate("Global", "This cannot be undone!"))
             yield from self._flowConfirm(
                 title,
-                really,
-                acceptButtonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton,
-                acceptButtonText=title)
+                text=util.paragraphs(textPara),
+                verb=self.tr("Discard lines", "Button label"),
+                buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
             Trash(self.repo).backupPatch(subPatch, fullPatch.delta.new_file.path)
             applyLocation = pygit2.GIT_APPLY_LOCATION_WORKDIR

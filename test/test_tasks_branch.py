@@ -236,7 +236,7 @@ def testSwitchBranchWorkdirConflicts(qtbot, tempDir, mainWindow):
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
     findMenuAction(menu, "switch to").trigger()
 
-    acceptQMessageBox(rw, "conflicting file")  # this will fail if the messagebox doesn't show up
+    acceptQMessageBox(rw, "conflict.+with.+file")  # this will fail if the messagebox doesn't show up
 
     assert not localBranches['no-parent'].is_checked_out()  # still not checked out
     assert localBranches['master'].is_checked_out()

@@ -75,8 +75,8 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
 
-    findMenuAction(menu, "delete remote").trigger()
-    acceptQMessageBox(rw, "really delete remote")
+    findMenuAction(menu, "remove remote").trigger()
+    acceptQMessageBox(rw, "really remove remote")
 
     assert len(list(repo.remotes)) == 0
     assert not any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
