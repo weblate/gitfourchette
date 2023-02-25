@@ -14,7 +14,7 @@ class CommitDialog(QDialog):
             initialText: str,
             authorSignature: Signature,
             committerSignature: Signature,
-            isAmend: bool,
+            amendingCommitHash: str,
             detachedHead: bool,
             parent):
         super().__init__(parent)
@@ -25,10 +25,10 @@ class CommitDialog(QDialog):
         # Make summary text edit font larger
         tweakWidgetFont(self.ui.summaryEditor, 150)
 
-        if isAmend:
+        if amendingCommitHash:
             prompt = self.tr("Amend commit message")
             buttonCaption = self.tr("&Amend")
-            self.setWindowTitle(self.tr("Amend Commit"))
+            self.setWindowTitle(self.tr("Amend Commit {0}").format(amendingCommitHash))
         else:
             prompt = self.tr("Enter commit summary")
             buttonCaption = self.tr("&Commit")

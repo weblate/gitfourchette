@@ -40,7 +40,7 @@ class NewCommit(RepoTask):
             initialText=initialMessage,
             authorSignature=sig,
             committerSignature=sig,
-            isAmend=False,
+            amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
             parent=self.parent())
 
@@ -94,7 +94,7 @@ class AmendCommit(RepoTask):
             initialText=headCommit.message,
             authorSignature=headCommit.author,
             committerSignature=self.repo.default_signature,
-            isAmend=True,
+            amendingCommitHash=util.shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
             parent=self.parent())
 
