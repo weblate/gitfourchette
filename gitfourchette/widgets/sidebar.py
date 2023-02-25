@@ -285,6 +285,7 @@ class SidebarModel(QAbstractItemModel):
         sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
         hiddenRole = role == ROLE_ISHIDDEN
         fontRole = role == Qt.ItemDataRole.FontRole
+        decorationRole = role == Qt.ItemDataRole.DecorationRole
 
         if item == EItem.Spacer:
             if sizeHintRole:
@@ -338,6 +339,11 @@ class SidebarModel(QAbstractItemModel):
                 return self.tr("Detached HEAD") + " @ " + self._detachedHead
             elif hiddenRole:
                 return False
+            elif role == decorationRole:
+                if MACOS or WINDOWS:
+                    return stockIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
+                else:
+                    return QIcon("assets:achtung.svg")
 
         elif item == EItem.Remote:
             if displayRole or userRole:
