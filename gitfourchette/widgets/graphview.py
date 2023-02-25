@@ -33,11 +33,13 @@ class CommitLogModel(QAbstractListModel):
 
         # DON'T interleave beginRemoveRows/beginInsertRows!
         # It'll crash with QSortFilterProxyModel!
-        self.beginRemoveRows(parent, 1, nRemovedRows)
-        self.endRemoveRows()
+        if nRemovedRows != 0:
+            self.beginRemoveRows(parent, 1, nRemovedRows)
+            self.endRemoveRows()
 
-        self.beginInsertRows(parent, 1, nAddedRows)
-        self.endInsertRows()
+        if nAddedRows != 0:
+            self.beginInsertRows(parent, 1, nAddedRows)
+            self.endInsertRows()
 
     def rowCount(self, *args, **kwargs) -> int:
         if not self.isValid:
