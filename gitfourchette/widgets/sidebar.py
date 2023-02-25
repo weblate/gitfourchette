@@ -700,6 +700,8 @@ class Sidebar(QTreeView):
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
             self.applyStash.emit(oid, True)  # ask for confirmation
+        elif item == EItem.RemoteBranch:
+            self.newTrackingBranch.emit(data)
 
     def currentChanged(self, current: QModelIndex, previous: QModelIndex):
         super().currentChanged(current, previous)
