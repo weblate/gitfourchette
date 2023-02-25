@@ -80,6 +80,21 @@
     </widget>
    </item>
    <item>
+    <widget class="QLabel" name="detachedHeadWarning">
+     <property name="font">
+      <font>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string>Warning: You are not in any branch (detached HEAD). You should create a branch to ensure your commit won’t be lost inadvertently.</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

@@ -15,6 +15,7 @@ class CommitDialog(QDialog):
             authorSignature: Signature,
             committerSignature: Signature,
             isAmend: bool,
+            detachedHead: bool,
             parent):
         super().__init__(parent)
 
@@ -32,6 +33,8 @@ class CommitDialog(QDialog):
             prompt = self.tr("Enter commit summary")
             buttonCaption = self.tr("&Commit")
             self.setWindowTitle(self.tr("Commit"))
+
+        self.ui.detachedHeadWarning.setVisible(detachedHead)
 
         self.ui.authorSignature.setSignature(authorSignature)
 

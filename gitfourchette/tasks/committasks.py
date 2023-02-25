@@ -41,6 +41,7 @@ class NewCommit(RepoTask):
             authorSignature=sig,
             committerSignature=sig,
             isAmend=False,
+            detachedHead=self.repo.head_is_detached,
             parent=self.parent())
 
         util.setWindowModal(cd)
@@ -94,6 +95,7 @@ class AmendCommit(RepoTask):
             authorSignature=headCommit.author,
             committerSignature=self.repo.default_signature,
             isAmend=True,
+            detachedHead=self.repo.head_is_detached,
             parent=self.parent())
 
         util.setWindowModal(cd)

@@ -63,6 +63,15 @@ class Ui_CommitDialog(object):
 
         self.verticalLayout.addWidget(self.authorGroupBox)
 
+        self.detachedHeadWarning = QLabel(CommitDialog)
+        self.detachedHeadWarning.setObjectName(u"detachedHeadWarning")
+        font = QFont()
+        font.setBold(True)
+        self.detachedHeadWarning.setFont(font)
+        self.detachedHeadWarning.setWordWrap(True)
+
+        self.verticalLayout.addWidget(self.detachedHeadWarning)
+
         self.buttonBox = QDialogButtonBox(CommitDialog)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
@@ -86,3 +95,4 @@ class Ui_CommitDialog(object):
         self.descriptionEditor.setPlaceholderText(QCoreApplication.translate("CommitDialog", u"Long-form description (optional)", None))
         self.revealAuthor.setText(QCoreApplication.translate("CommitDialog", u"&Edit author", None))
         self.authorGroupBox.setTitle("")
+        self.detachedHeadWarning.setText(QCoreApplication.translate("CommitDialog", u"Warning: You are not in any branch (detached HEAD). You should create a branch to ensure your commit won\u2019t be lost inadvertently.", None))
