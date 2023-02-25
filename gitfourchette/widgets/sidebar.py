@@ -486,7 +486,7 @@ class Sidebar(QTreeView):
     newBranchFromLocalBranch = Signal(str)
     renameBranch = Signal(str)
     deleteBranch = Signal(str)
-    switchToBranch = Signal(str)
+    switchToBranch = Signal(str, bool)  # bool: ask for confirmation before switching
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
@@ -584,7 +584,7 @@ class Sidebar(QTreeView):
                 a.setChecked(isBranchHidden)
 
             if not isCurrentBranch:
-                switchAction.triggered.connect(lambda: self.switchToBranch.emit(data))
+                switchAction.triggered.connect(lambda: self.switchToBranch.emit(data, False))  # False: don't ask for confirmation (context menu)
                 switchAction.setEnabled(True)
 
                 pushBranchAction.setShortcuts(GlobalShortcuts.pushBranch)
@@ -684,7 +684,7 @@ class Sidebar(QTreeView):
 
     def onEntryDoubleClicked(self, item: EItem, data: str):
         if item == EItem.LocalBranch:
-            self.switchToBranch.emit(data)
+            self.switchToBranch.emit(data, True)  # ask for confirmation
         elif item == EItem.Remote:
             self.editRemote.emit(data)
         elif item == EItem.RemotesHeader:

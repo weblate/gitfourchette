@@ -17,8 +17,13 @@ class SwitchBranch(RepoTask):
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
 
-    def flow(self, newBranch: str):
+    def flow(self, newBranch: str, askForConfirmation: bool):
         assert not newBranch.startswith(HEADS_PREFIX)
+
+        if askForConfirmation:
+            text = self.tr("Do you want to switch to branch <b>“{0}”</b>?").format(escape(newBranch))
+            verb = self.tr("Switch")
+            yield from self._flowConfirm(text=text, verb=verb)
 
         yield from self._flowBeginWorkerThread()
         porcelain.checkoutLocalBranch(self.repo, newBranch)
