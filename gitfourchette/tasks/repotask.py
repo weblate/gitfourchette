@@ -4,7 +4,7 @@ from gitfourchette import util
 from gitfourchette import log
 from gitfourchette import porcelain
 from html import escape
-from typing import Any, Generator
+from typing import Any, Generator, Literal, Type
 import enum
 import pygit2
 
@@ -160,14 +160,21 @@ class RepoTask(QObject):
         """
         return TaskAffectsWhat.NOTHING
 
-    def _flowAbort(self, warningText: str = ""):
+    def _flowAbort(
+            self,
+            warningText: str = "",
+            warningTextIcon: Literal['warning', 'information', 'critical'] = "warning"
+    ):
         """
-        Aborts the task.
+        Aborts the task with an optional error message.
         The success signal will NOT be emitted.
         """
+
         if warningText:
             assert util.onAppThread()
-            util.showWarning(self.parent(), self.name(), warningText)
+            qmb = util.asyncMessageBox(self.parent(), warningTextIcon, self.name(), warningText)
+            qmb.show()
+
         yield FlowControlToken(FlowControlToken.Kind.ABORT_TASK)
 
     def _flowBeginWorkerThread(self):
@@ -182,6 +189,15 @@ class RepoTask(QObject):
         Returns the task to the UI thread.
         """
         yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
+
+    def _flowSubtask(self, subtaskClass: Type['RepoTask'], *args):
+        """
+        Runs a subtask's flow() method as if it were part of this task.
+        Note that if the subtask raises an exception, the root task's flow will be stopped as well.
+        """
+        subtask = subtaskClass(self.parent())
+        subtask.setRepo(self.repo)
+        yield from subtask.flow(*args)
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """

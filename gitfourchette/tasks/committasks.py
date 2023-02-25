@@ -162,14 +162,12 @@ class CheckoutCommit(RepoTask):
 
         elif ui.switchToLocalBranchRadioButton.isChecked():
             branchName = ui.switchToLocalBranchComboBox.currentText()
-            yield from self._flowBeginWorkerThread()
-            porcelain.checkoutLocalBranch(self.repo, branchName)
+            from gitfourchette.tasks.branchtasks import SwitchBranch
+            yield from self._flowSubtask(SwitchBranch, branchName, False)
 
         elif ui.createBranchRadioButton.isChecked():
             from gitfourchette.tasks.branchtasks import NewBranchFromCommit
-            newBranchTask = NewBranchFromCommit(self.parent())
-            newBranchTask.setRepo(self.repo)
-            yield from newBranchTask.flow(oid)
+            yield from self._flowSubtask(NewBranchFromCommit, oid)
 
         else:
             raise NotImplementedError("Unsupported CheckoutCommitDialog outcome")

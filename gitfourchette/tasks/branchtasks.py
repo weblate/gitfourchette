@@ -20,6 +20,11 @@ class SwitchBranch(RepoTask):
     def flow(self, newBranch: str, askForConfirmation: bool):
         assert not newBranch.startswith(HEADS_PREFIX)
 
+        if self.repo.branches.local[newBranch].is_checked_out():
+            yield from self._flowAbort(
+                self.tr("Branch <b>“{0}”</b> is already checked out.").format(escape((newBranch))),
+                'information')
+
         if askForConfirmation:
             text = self.tr("Do you want to switch to branch <b>“{0}”</b>?").format(escape(newBranch))
             verb = self.tr("Switch")
