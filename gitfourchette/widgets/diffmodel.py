@@ -107,17 +107,6 @@ class DiffStyle:
         self.warningCF1.setForeground(QColor(200, 30, 0))
 
 
-def createDocument():
-    monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
-    if settings.prefs.diff_font:
-        monoFont.fromString(settings.prefs.diff_font)
-
-    document = QTextDocument()  # recreating a document is faster than clearing the existing one
-    document.setDocumentLayout(QPlainTextDocumentLayout(document))
-    document.setDefaultFont(monoFont)
-    return document
-
-
 def noChange(delta: pygit2.DiffDelta):
     message = translate("DiffModel", "File contents didn’t change.")
     details = []
@@ -186,7 +175,10 @@ class DiffModel:
             raise noChange(patch.delta)
 
         style = DiffStyle()
-        document = createDocument()  # recreating a document is faster than clearing the existing one
+
+        document = QTextDocument()  # recreating a document is faster than clearing the existing one
+        document.setDocumentLayout(QPlainTextDocumentLayout(document))
+
         cursor: QTextCursor = QTextCursor(document)
 
         defaultBF = cursor.blockFormat()

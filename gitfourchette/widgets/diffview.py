@@ -150,12 +150,8 @@ class DiffView(QPlainTextEdit):
         self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
         self.lineHunkIDCache = [ld.hunkPos.hunkID for ld in self.lineData]
 
-        tabWidth = settings.prefs.diff_tabSpaces
-
         # now reset defaults that are lost when changing documents
-        self.setTabStopDistance(QFontMetricsF(dm.document.defaultFont()).horizontalAdvance(' ' * tabWidth))
-        self.refreshWordWrap()
-        self.setCursorWidth(2)
+        self.refreshPrefs()
 
         if self.currentPatch and len(self.currentPatch.hunks) > 0:
             lastHunk = self.currentPatch.hunks[-1]
@@ -165,6 +161,16 @@ class DiffView(QPlainTextEdit):
         else:
             self.gutterMaxDigits = 0
         self.updateGutterWidth(0)
+
+    def refreshPrefs(self):
+        monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+        if settings.prefs.diff_font:
+            monoFont.fromString(settings.prefs.diff_font)
+        self.setFont(monoFont)
+        tabWidth = settings.prefs.diff_tabSpaces
+        self.setTabStopDistance(QFontMetricsF(monoFont).horizontalAdvance(' ' * tabWidth))
+        self.refreshWordWrap()
+        self.setCursorWidth(2)
 
     def refreshWordWrap(self):
         if settings.prefs.diff_wordWrap:

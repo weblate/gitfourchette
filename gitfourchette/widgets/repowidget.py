@@ -864,3 +864,6 @@ class RepoWidget(QWidget):
                 globalstatus.setText(progressText)
         else:
             globalstatus.clearProgress()
+
+    def refreshPrefs(self):
+        self.diffView.refreshPrefs()

@@ -72,19 +72,8 @@ def main():
     log.setVerbosity(settings.prefs.debug_verbosity.value)
 
     # Set language
-    if settings.prefs.language:
-        defaultLocale = QLocale(settings.prefs.language)
-        QLocale.setDefault(defaultLocale)
-
-    appTranslator = QTranslator()
-    if appTranslator.load(f"assets:{settings.prefs.language}") or appTranslator.load("assets:en"):
-        app.installTranslator(appTranslator)
-
-    if not QT5:  # Do this on Qt 6 and up only
-        with NonCriticalOperation("Load Qt base translation"):
-            baseTranslator = QTranslator()
-            if baseTranslator.load(QLocale(settings.prefs.language), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
-                app.installTranslator(baseTranslator)
+    with NonCriticalOperation("Loading language"):
+        settings.applyLanguagePref()
 
     # Initialize global shortcuts
     from gitfourchette.globalshortcuts import GlobalShortcuts

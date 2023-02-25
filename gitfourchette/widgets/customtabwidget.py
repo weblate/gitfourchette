@@ -136,3 +136,7 @@ class CustomTabWidget(QWidget):
         # because removing the tab may send a tab change event
         self.stacked.removeWidget(widget)
         self.tabs.removeTab(i)
+
+    def widgets(self):
+        for i in range(self.stacked.count()):
+            yield self.stacked.widget(i)

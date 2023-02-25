@@ -278,7 +278,7 @@ class Session(BasePrefs):
 # The app should load the user's prefs with prefs.load() and history.load().
 prefs = Prefs()
 history = History()
-
+installedTranslators = []
 
 
 def applyQtStylePref(forceApplyDefault: bool):
@@ -292,3 +292,30 @@ def applyQtStylePref(forceApplyDefault: bool):
     if MACOS:
         isDefaultMacStyle = (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
         app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, isDefaultMacStyle)
+
+
+def applyLanguagePref():
+    app = QCoreApplication.instance()
+
+    if prefs.language:
+        defaultLocale = QLocale(prefs.language)
+        QLocale.setDefault(defaultLocale)
+
+    # Flush old translators
+    while installedTranslators:
+        app.removeTranslator(installedTranslators.pop())
+
+    newTranslator = QTranslator()
+    if newTranslator.load(f"assets:{prefs.language}") or newTranslator.load("assets:en"):
+        app.installTranslator(newTranslator)
+        installedTranslators.append(newTranslator)
+
+    # Load Qt base translation
+    if not QT5:  # Do this on Qt 6 and up only
+        try:
+            baseTranslator = QTranslator()
+            if baseTranslator.load(QLocale(prefs.language), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
+                app.installTranslator(baseTranslator)
+                installedTranslators.append(baseTranslator)
+        except BaseException:
+            print("Failed to load Qt base translation for language", prefs.language)

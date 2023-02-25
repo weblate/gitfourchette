@@ -8,7 +8,8 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
-                                PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation)
+                                PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation,
+                                paragraphs)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
     tabs: CustomTabWidget
     recentMenu: QMenu
     repoMenu: QMenu
+    memoryIndicator: QPushButton | None
 
     def __init__(self):
         super().__init__()
@@ -86,22 +88,13 @@ class MainWindow(QMainWindow):
         self.statusBar = QStatusBar()
         self.statusBar.setSizeGripEnabled(False)
         self.statusBar.addPermanentWidget(self.statusProgress)
-        if settings.prefs.debug_showMemoryIndicator:
-            self.memoryIndicator = QPushButton("Mem")
-            self.memoryIndicator.setStyleSheet("border: none;")  # don't let it thicken the status bar
-            self.memoryIndicator.setMinimumWidth(128)
-            self.memoryIndicator.clicked.connect(lambda e: self.onMemoryIndicatorClicked())
-            self.memoryIndicator.setToolTip("Force GC")
-            self.memoryIndicator.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            self.statusBar.addPermanentWidget(self.memoryIndicator)
-        else:
-            self.memoryIndicator = None
-        if settings.prefs.showStatusBar:
-            self.setStatusBar(self.statusBar)
+        self.setStatusBar(self.statusBar)
+        self.memoryIndicator = None
 
         self.setAcceptDrops(True)
 
         QApplication.instance().installEventFilter(self)
+        self.refreshPrefs()
 
     def eventFilter(self, watched, event: QEvent):
         isPress = event.type() == QEvent.Type.MouseButtonPress
@@ -338,14 +331,17 @@ class MainWindow(QMainWindow):
         if 'debug_verbosity' in dlg.prefDiff:
             log.setVerbosity(settings.prefs.debug_verbosity)
 
-        # Notify widgets
-        self.tabs.refreshPrefs()
-        self.autoHideMenuBar.refreshPrefs()
+        settings.applyLanguagePref()
 
-        showInformation(
-            self,
-            self.tr("Apply Settings"),
-            self.tr("Some changes may require restarting {0} to take effect.").format(QApplication.applicationDisplayName()))
+        # Notify widgets
+        self.refreshPrefs()
+
+        info = self.tr("Some changes may require restarting {0} to take effect.").format(QApplication.applicationDisplayName())
+
+        if "language" in dlg.prefDiff:
+            info += "\n\n" + self.tr("In particular, some menus and buttons will remain untranslated until you restart the application.")
+
+        showInformation(self, self.tr("Apply Settings"), info)
 
     def openSettings(self):
         dlg = PrefsDialog(self)
@@ -627,7 +623,9 @@ class MainWindow(QMainWindow):
             askConfirmation(
                 self,
                 self.tr("Open “{0}”").format(basename),
-                self.tr("There’s no file at this location:<br>{0}<br><br>Do you want to create it?").format(escape(fullPath)),
+                paragraphs(
+                    self.tr("There’s no file at this location:") + "<br>" + escape(fullPath),
+                    self.tr("Do you want to create it?")),
                 okButtonText=self.tr("Create “{0}”").format(basename),
                 callback=createAndOpen)
         else:
@@ -946,3 +944,30 @@ class MainWindow(QMainWindow):
             self.cloneDialog(data)
         elif action == "open":
             self.openRepo(data)
+
+    # -------------------------------------------------------------------------
+    # Refresh prefs
+
+    def refreshPrefs(self):
+        if settings.prefs.showStatusBar:
+            self.statusBar.show()
+        else:
+            self.statusBar.hide()
+
+        if self.memoryIndicator:
+            self.memoryIndicator.deleteLater()
+            self.memoryIndicator = None
+
+        if settings.prefs.debug_showMemoryIndicator:
+            self.memoryIndicator = QPushButton("Mem")
+            self.memoryIndicator.setStyleSheet("border: none;")  # don't let it thicken the status bar
+            self.memoryIndicator.setMinimumWidth(128)
+            self.memoryIndicator.clicked.connect(lambda e: self.onMemoryIndicatorClicked())
+            self.memoryIndicator.setToolTip("Force GC")
+            self.memoryIndicator.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self.statusBar.addPermanentWidget(self.memoryIndicator)
+
+        self.tabs.refreshPrefs()
+        self.autoHideMenuBar.refreshPrefs()
+        for rw in self.tabs.widgets():
+            rw.refreshPrefs()
