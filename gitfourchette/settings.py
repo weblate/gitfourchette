@@ -297,24 +297,30 @@ def applyQtStylePref(forceApplyDefault: bool):
 def applyLanguagePref():
     app = QCoreApplication.instance()
 
-    if prefs.language:
-        defaultLocale = QLocale(prefs.language)
-        QLocale.setDefault(defaultLocale)
-
     # Flush old translators
     while installedTranslators:
         app.removeTranslator(installedTranslators.pop())
 
+    if prefs.language:
+        locale = QLocale(prefs.language)
+        QLocale.setDefault(locale)
+    else:
+        # "Automatic" setting: Get system locale
+        locale = QLocale.system()
+        QLocale.setDefault(locale)
+
     newTranslator = QTranslator()
-    if newTranslator.load(f"assets:{prefs.language}") or newTranslator.load("assets:en"):
+    if newTranslator.load(locale, "gitfourchette", "_", "assets:", ".qm"):
         app.installTranslator(newTranslator)
         installedTranslators.append(newTranslator)
+    else:
+        print("Failed to load translator.")
 
     # Load Qt base translation
     if not QT5:  # Do this on Qt 6 and up only
         try:
             baseTranslator = QTranslator()
-            if baseTranslator.load(QLocale(prefs.language), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
+            if baseTranslator.load(locale, "qtbase", "_", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 app.installTranslator(baseTranslator)
                 installedTranslators.append(baseTranslator)
         except BaseException:
