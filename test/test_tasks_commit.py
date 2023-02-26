@@ -1,6 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
+from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 import pygit2
@@ -58,7 +59,7 @@ def testCommitUntrackedFileInEmptyRepo(qtbot, tempDir, mainWindow):
     QTest.keyClicks(dialog.ui.summaryEditor, "Initial commit")
     dialog.accept()
 
-    rows = qlvGetRowData(rw.graphView)
+    rows = qlvGetRowData(rw.graphView, CommitLogModel.CommitRole)
     commit: pygit2.Commit = rows[-1].peel(pygit2.Commit)
     assert commit.message == "Initial commit"
 

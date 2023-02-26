@@ -1,5 +1,6 @@
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.graphpaint import paintGraphFrame
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
@@ -116,7 +117,7 @@ class GraphDelegate(QStyledItemDelegate):
             self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
 
         if index.row() > 0:
-            commit: pygit2.Commit = index.data()
+            commit: pygit2.Commit = index.data(CommitLogModel.CommitRole)
             # TODO: If is stash, getCoreStashMessage
             summaryText, contd = messageSummary(commit.message)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]

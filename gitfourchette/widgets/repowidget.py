@@ -17,7 +17,7 @@ from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
-from gitfourchette.widgets.graphview import GraphView
+from gitfourchette.widgets.graphview import GraphView, CommitLogModel
 from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.richdiffview import RichDiffView
@@ -657,7 +657,7 @@ class RepoWidget(QWidget):
 
         for i in searchRange:
             modelIndex = model.index(i, 0)
-            meta = model.data(modelIndex)
+            meta = model.data(modelIndex, CommitLogModel.CommitRole)
             if meta is None:
                 continue
             if (message in meta.message.lower()) or (likelyHash and message in meta.oid.hex):

@@ -1,69 +1,12 @@
 from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.qt import *
 from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox
 from gitfourchette.widgets.graphdelegate import GraphDelegate
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from html import escape
 import pygit2
-
-
-class CommitLogModel(QAbstractListModel):
-    _commitSequence: list[pygit2.Commit] | None
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self._commitSequence = None
-
-    @property
-    def isValid(self):
-        return self._commitSequence is not None
-
-    def clear(self):
-        self.setCommitSequence(None)
-
-    def setCommitSequence(self, newCommitSequence: list[pygit2.Commit] | None):
-        self.beginResetModel()
-        self._commitSequence = newCommitSequence
-        self.endResetModel()
-
-    def refreshTopOfCommitSequence(self, nRemovedRows, nAddedRows, newCommitSequence: list[pygit2.Commit]):
-        parent = QModelIndex()  # it's not a tree model so there's no parent
-
-        self._commitSequence = newCommitSequence
-
-        # DON'T interleave beginRemoveRows/beginInsertRows!
-        # It'll crash with QSortFilterProxyModel!
-        if nRemovedRows != 0:
-            self.beginRemoveRows(parent, 1, nRemovedRows)
-            self.endRemoveRows()
-
-        if nAddedRows != 0:
-            self.beginInsertRows(parent, 1, nAddedRows)
-            self.endInsertRows()
-
-    def rowCount(self, *args, **kwargs) -> int:
-        if not self.isValid:
-            return 0
-        else:
-            return 1 + len(self._commitSequence)
-
-    def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole):
-        if not self.isValid:
-            return None
-
-        if index.row() == 0:
-            return None
-
-        if role == Qt.ItemDataRole.DisplayRole:
-            return self._commitSequence[index.row() - 1]  # TODO: this shouldn't be DisplayRole!
-        elif role == Qt.ItemDataRole.UserRole:
-            return self._commitSequence[index.row()]
-        elif role == Qt.ItemDataRole.SizeHintRole:
-            parentWidget: QWidget = self.parent()
-            return QSize(-1, parentWidget.fontMetrics().height())
-        else:
-            return None
 
 
 class CommitFilter(QSortFilterProxyModel):
@@ -182,10 +125,10 @@ class GraphView(QListView):
     def currentCommitOid(self) -> pygit2.Oid | None:
         if not self.currentIndex().isValid():
             return
-        data: pygit2.Commit = self.currentIndex().data()
-        if not data:  # Uncommitted Changes has no bound data
+        commit: pygit2.Commit = self.currentIndex().data(CommitLogModel.CommitRole)
+        if not commit:  # Uncommitted Changes has no bound data
             return
-        return data.oid
+        return commit.oid
 
     def getInfoOnCurrentCommit(self):
         oid = self.currentCommitOid
@@ -201,7 +144,7 @@ class GraphView(QListView):
 
         # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
 
-        commit: pygit2.Commit = self.currentIndex().data()
+        commit: pygit2.Commit = self.currentIndex().data(CommitLogModel.CommitRole)
 
         summary, contd = messageSummary(commit.message)
 
@@ -319,13 +262,14 @@ class GraphView(QListView):
         else:
             self.onSetCurrent(selected.indexes()[0])
 
-    def onSetCurrent(self, current=None):
+    def onSetCurrent(self, current: QModelIndex = None):
         if current is None or not current.isValid():
             self.emptyClicked.emit()
         elif current.row() == 0:  # uncommitted changes
             self.uncommittedChangesClicked.emit()
         else:
-            self.commitClicked.emit(current.data().oid)
+            oid = current.data(CommitLogModel.CommitRole).oid
+            self.commitClicked.emit(oid)
 
     def selectUncommittedChanges(self):
         self.setCurrentIndex(self.model().index(0, 0))
