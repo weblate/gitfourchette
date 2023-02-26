@@ -263,3 +263,44 @@ class PullBranch(RepoTask):
     def refreshWhat(self):
         return TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
 
+
+class RecallCommit(RepoTask):
+    def name(self):
+        return translate("Operation", "Recall lost commit")
+
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.LOCALREFS
+
+    def flow(self):
+        dlg = showTextInputDialog(
+            self.parent(),
+            self.tr("Recall lost commit"),
+            self.tr("If you know the hash of a commit that isn’t part of any branches,<br>"
+                    "{0} will try to recall it for you.").format(QApplication.applicationDisplayName()),
+            "",
+            okButtonText=self.tr("Recall"))
+
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+        yield from self._flowDialog(dlg)
+        dlg.deleteLater()
+
+        # Naked name, NOT prefixed with the name of the remote
+        needle = dlg.lineEdit.text()
+
+        yield from self._flowBeginWorkerThread()
+
+        obj = self.repo[needle]
+        commit: pygit2.Commit = obj.peel(pygit2.Commit)
+
+        branchName = f"recall-{commit.hex}"
+        porcelain.newBranchFromCommit(self.repo, branchName, commit.oid, False)
+
+        yield from self._flowExitWorkerThread()
+
+        util.showInformation(
+            self.parent(),
+            self.tr("Recall lost commit"),
+            util.paragraphs(
+                self.tr("Hurray, the commit was found! Find it on this branch:"),
+                "<b>{0}</b>".format(escape(branchName))
+            ))

@@ -257,6 +257,7 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
         repoMenu.addAction(self.tr("Resc&ue Discarded Changes..."), self.openRescueFolder)
         repoMenu.addAction(self.tr("Clear Discarded Changes..."), self.clearRescueFolder)
+        repoMenu.addAction(self.tr("Recall Lost Commit..."), self.recallCommit)
 
         configFilesMenu.addAction(".gitignore", self.openGitignore)
         configFilesMenu.addAction("config", self.openLocalConfig)
@@ -619,6 +620,10 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def clearRescueFolder(self, rw: RepoWidget):
         rw.clearRescueFolder()
+
+    @needRepoWidget
+    def recallCommit(self, rw: RepoWidget):
+        rw.recallCommit()
 
     def _openLocalConfigFile(self, fullPath: str):
         def createAndOpen():

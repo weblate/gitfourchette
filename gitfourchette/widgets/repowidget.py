@@ -864,6 +864,9 @@ class RepoWidget(QWidget):
             okButtonText=self.tr("Delete permanently"),
             okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
 
+    def recallCommit(self):
+        self.runTask(tasks.RecallCommit)
+
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, what: tasks.TaskAffectsWhat):
