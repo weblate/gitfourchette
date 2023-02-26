@@ -2,7 +2,7 @@
 
 set -ex
 
-pyinstaller packaging/gitfourchette-macos.spec --noconfirm
+QT_API=pyside6 python3.11 -m PyInstaller packaging/gitfourchette-macos.spec --noconfirm
 
 APP=dist/GitFourchette.app
 
@@ -13,8 +13,7 @@ APP=dist/GitFourchette.app
 # are in English.
 touch $APP/Contents/Resources/empty.lproj
 
-rm -v $APP/Contents/MacOS/QtDataVisualization
-rm -v $APP/Contents/MacOS/QtOpenGL{,Widgets}
-rm -v $APP/Contents/MacOS/QtQml{,Models}
-rm -v $APP/Contents/MacOS/QtQuick
-mv -v $APP/Contents/MacOS/libgit2.1.5{.0,}.dylib
+rm -fv $APP/Contents/MacOS/QtDataVisualization
+rm -fv $APP/Contents/MacOS/QtOpenGL{,Widgets}
+rm -fv $APP/Contents/MacOS/QtQml{,Models}
+rm -fv $APP/Contents/MacOS/QtQuick
