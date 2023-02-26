@@ -188,8 +188,10 @@ def excMessageBox(
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
 
+        # Keep user from triggering more exceptions by clicking on stuff in the background
+        qmb.setWindowModality(Qt.WindowModality.ApplicationModal)
+
         if parent is not None:
-            setWindowModal(qmb)
             qmb.show()
         else:  # without a parent, .show() won't work
             qmb.exec()

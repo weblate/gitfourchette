@@ -24,6 +24,7 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     # inject our own exception hook to show an error dialog in case of unhandled exceptions
+    # (note that this may get overridden when running under a debugger)
     sys.excepthook = excepthook
 
     # initialize Qt before importing app modules so fonts are loaded correctly
