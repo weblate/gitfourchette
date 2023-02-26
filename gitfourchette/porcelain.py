@@ -538,6 +538,16 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
     the oids are sorted by descending commit time.
     """
     tips = []
+
+    # Detached HEAD doesn't appear in repo.listall_reference_objects, so it must be processed separately
+    if repo.head_is_detached:
+        try:
+            commit: Commit = repo.head.peel(Commit)
+            tips.append(commit)
+        except pygit2.InvalidSpecError as e:
+            log.info("porcelain", F"{e} - Skipping detached HEAD")
+            pass
+
     for ref in repo.listall_reference_objects():
         if type(ref.target) != Oid:
             # Skip symbolic reference

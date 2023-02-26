@@ -1,6 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
+from gitfourchette import porcelain
 from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
@@ -121,7 +122,7 @@ def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     rw.commitButton.click()
-    rejectQMessageBox(rw, "create an empty commit")
+    rejectQMessageBox(rw, "create.+empty commit")
 
 
 def testResetHeadToCommit(qtbot, tempDir, mainWindow):
@@ -159,6 +160,40 @@ def testCheckoutCommit(qtbot, tempDir, mainWindow):
 
     assert repo.head_is_detached
     assert repo.head.peel(pygit2.Commit).oid == oid
+
+
+def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    oid = pygit2.Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
+
+    repo = pygit2.Repository(wd)
+    porcelain.checkoutCommit(repo, oid)
+    repo.free()  # necessary for correct test teardown on Windows
+    del repo
+
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.repo.head_is_detached
+    assert rw.repo.head.target == oid
+
+    displayedCommits = qlvGetRowData(rw.graphView, Qt.ItemDataRole.UserRole)
+    assert rw.repo.head.peel(pygit2.Commit) in displayedCommits
+
+    rw.commitButton.click()
+    acceptQMessageBox(rw, "create.+empty commit")
+    commitDialog: CommitDialog = findQDialog(rw, "commit")
+    commitDialog.ui.summaryEditor.setText("les chenilles et les chevaux")
+    commitDialog.accept()
+
+    assert rw.repo.head_is_detached
+    assert rw.repo.head.target != oid  # detached HEAD should no longer point to initial commit
+
+    newHeadCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
+    assert newHeadCommit.message == "les chenilles et les chevaux"
+
+    displayedCommits = qlvGetRowData(rw.graphView, Qt.ItemDataRole.UserRole)
+    assert newHeadCommit in displayedCommits
 
 
 def testRevertCommit(qtbot, tempDir, mainWindow):
