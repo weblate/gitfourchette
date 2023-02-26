@@ -205,6 +205,21 @@ class FileList(QListView):
     def createContextMenuActions(self, count) -> list[ActionDef]:
         return []
 
+    def pathDisplayStyleSubmenu(self):
+        def pdsAction(name: str, pds: settings.PathDisplayStyle):
+            def setIt():
+                settings.prefs.pathDisplayStyle = pds
+            isCurrent = settings.prefs.pathDisplayStyle == pds
+            return ActionDef(name, setIt, checkState=isCurrent)
+
+        return ActionDef(
+            translate("Prefs", "Path Display Style"),
+            submenu=[
+                pdsAction(translate("Prefs", "Full paths"), settings.PathDisplayStyle.FULL_PATHS),
+                pdsAction(translate("Prefs", "Abbreviate directories"), settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES),
+                pdsAction(translate("Prefs", "Show filename only"), settings.PathDisplayStyle.SHOW_FILENAME_ONLY),
+            ])
+
     def confirmBatch(self, callback, title: str, prompt: str, threshold: int = 3):
         entries = list(self.selectedEntries())
 
@@ -430,14 +445,16 @@ class DirtyFiles(FileList):
                 QStyle.StandardPixmap.SP_TrashIcon,
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
+            ActionDef.SEPARATOR,
+            self.pathDisplayStyleSubmenu()
         ]
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -472,14 +489,16 @@ class StagedFiles(FileList):
                 QStyle.StandardPixmap.SP_ArrowUp,
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
+            ActionDef.SEPARATOR,
+            self.pathDisplayStyleSubmenu()
         ] + super().createContextMenuActions(n)
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -506,7 +525,7 @@ class CommittedFiles(FileList):
                 [
                     ActionDef(self.tr("&At Commit"), self.openNewRevision),
                     ActionDef(self.tr("&Before Commit"), self.openOldRevision),
-                    None,
+                    ActionDef.SEPARATOR,
                     ActionDef(self.tr("&Current (working directory)"), self.openHeadRevision),
                 ]),
                 ActionDef(self.tr("&Save Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
@@ -516,10 +535,12 @@ class CommittedFiles(FileList):
                 ]),
                 #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
                 ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
-                None,
+                ActionDef.SEPARATOR,
                 ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
                 ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
-                ]
+                ActionDef.SEPARATOR,
+                self.pathDisplayStyleSubmenu()
+        ]
 
     def clear(self):
         super().clear()

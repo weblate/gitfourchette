@@ -182,6 +182,10 @@ class DiffView(QPlainTextEdit):
         self.doContextMenu(event.globalPos())
 
     def doContextMenu(self, globalPos: QPoint):
+        # Don't show the context menu if we're empty
+        if self.document().isEmpty():
+            return
+
         # Get position of click in document
         clickedPosition = self.cursorForPosition(self.mapFromGlobal(globalPos)).position()
 
@@ -193,7 +197,8 @@ class DiffView(QPlainTextEdit):
         shortHunkHeader = ""
         if clickedHunkID >= 0:
             hunk: pygit2.DiffHunk = self.currentPatch.hunks[clickedHunkID]
-            shortHunkHeader = re.sub(r"@@ (.+) @@.*", r"(\1)", hunk.header)
+            headerMatch = re.match(r"@@ ([^@]+) @@.*", hunk.header)
+            shortHunkHeader = headerMatch.group(1) if headerMatch else f"#{clickedHunkID}"
 
         actions = []
 
@@ -284,7 +289,7 @@ class DiffView(QPlainTextEdit):
             return
 
         actions += [
-            None,
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("&Word wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
         ]
 

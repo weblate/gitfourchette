@@ -222,10 +222,10 @@ class MainWindow(QMainWindow):
         repoMenu.addSeparator()
 
         a = repoMenu.addAction(self.tr("&Commit..."), self.commit)
-        a.setShortcut("Ctrl+K")
+        a.setShortcuts(GlobalShortcuts.commit)
 
         a = repoMenu.addAction(self.tr("&Amend Last Commit..."), self.amend)
-        a.setShortcut("Ctrl+Shift+K")
+        a.setShortcuts(GlobalShortcuts.amendCommit)
 
         a = repoMenu.addAction(self.tr("Stash Changes..."), self.newStash)
         a.setShortcuts(GlobalShortcuts.newStash)

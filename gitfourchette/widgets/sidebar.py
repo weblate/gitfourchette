@@ -1,4 +1,5 @@
 from gitfourchette import porcelain
+from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
@@ -486,7 +487,6 @@ class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
     commitClicked = Signal(pygit2.Oid)
-    commit = Signal()
 
     newBranch = Signal()
     newBranchFromLocalBranch = Signal(str)
@@ -503,6 +503,8 @@ class Sidebar(QTreeView):
     renameRemoteBranch = Signal(str)
     deleteRemoteBranch = Signal(str)
     editTrackingBranch = Signal(str)
+    commitChanges = Signal()
+    amendChanges = Signal()
 
     newRemote = Signal()
     fetchRemote = Signal(str)
@@ -542,9 +544,18 @@ class Sidebar(QTreeView):
             menu = QMenu(self)
             menu.setObjectName("SidebarContextMenu")
 
-        if item == EItem.LocalBranchesHeader:
-            newBranchAction = menu.addAction(self.tr("&New Branch..."), lambda: self.newBranch.emit())
-            newBranchAction.setShortcuts(GlobalShortcuts.newBranch)
+        actions = []
+
+        if item == EItem.UncommittedChanges:
+            actions += [
+                ActionDef(self.tr("Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
+                ActionDef(self.tr("Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+            ]
+
+        elif item == EItem.LocalBranchesHeader:
+            actions += [
+                ActionDef(self.tr("&New Branch..."), lambda: self.newBranch.emit(), shortcuts=GlobalShortcuts.newBranch),
+            ]
 
         elif item == EItem.LocalBranch:
             model: SidebarModel = self.model()
@@ -553,106 +564,160 @@ class Sidebar(QTreeView):
 
             activeBranchName = porcelain.getActiveBranchShorthand(repo)
             isCurrentBranch = branch and branch.is_checked_out()
-
-            switchAction: QAction = menu.addAction(self.tr("&Switch to “{0}”").format(escamp(data)))
-            menu.addSeparator()
-            mergeAction: QAction = menu.addAction(self.tr("&Merge “{0}” into “{1}”...").format(escamp(data), escamp(activeBranchName)))
-            rebaseAction: QAction = menu.addAction(self.tr("&Rebase “{0}” onto “{1}”...").format(escamp(activeBranchName), escamp(data)))
-
-            switchAction.setIcon(QIcon.fromTheme("document-swap"))
-
-            for action in switchAction, mergeAction, rebaseAction:
-                action.setEnabled(False)
-
-            menu.addSeparator()
-            pushBranchAction = menu.addAction(stockIcon("vcs-push"), self.tr("&Push..."), lambda: self.pushBranch.emit(data))
-            fetchBranchAction = menu.addAction(self.tr("&Fetch..."), lambda: self.fetchRemoteBranch.emit(branch.upstream.shorthand))
-            pullBranchAction = menu.addAction(stockIcon("vcs-pull"), self.tr("Pul&l..."), lambda: self.pullBranch.emit(data))
-            menu.addAction(self.tr("Set &Tracked Branch..."), lambda: self.editTrackingBranch.emit(data))
-
             hasUpstream = bool(branch.upstream)
-            pullBranchAction.setEnabled(hasUpstream)
-            fetchBranchAction.setEnabled(hasUpstream)
 
-            menu.addSeparator()
-            menu.addAction(self.tr("Re&name..."), lambda: self.renameBranch.emit(data))
-            a = menu.addAction(self.tr("&Delete..."), lambda: self.deleteBranch.emit(data))
-            a.setIcon(QIcon.fromTheme("vcs-branch-delete"))
-
-            menu.addSeparator()
-            menu.addAction(self.tr("New branch from here..."), lambda: self.newBranchFromLocalBranch.emit(data))
-
-            menu.addSeparator()
-            a = menu.addAction(self.tr("&Hide in graph"), lambda: self.toggleHideBranch.emit("refs/heads/" + data))
-            a.setCheckable(True)
+            isBranchHidden = False
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
-                a.setChecked(isBranchHidden)
 
-            if not isCurrentBranch:
-                switchAction.triggered.connect(lambda: self.switchToBranch.emit(data, False))  # False: don't ask for confirmation (context menu)
-                switchAction.setEnabled(True)
+            actions += [
+                ActionDef(self.tr("&Switch to “{0}”").format(escamp(data)),
+                          lambda: self.switchToBranch.emit(data, False),  # False: don't ask for confirmation
+                          "document-swap",
+                          enabled=not isCurrentBranch),
 
-                pushBranchAction.setShortcuts(GlobalShortcuts.pushBranch)
-                pullBranchAction.setShortcuts(GlobalShortcuts.pullBranch)
+                ActionDef.SEPARATOR,
 
-                if activeBranchName:
-                    mergeAction.triggered.connect(lambda: self.mergeBranchIntoActive.emit(data))
-                    rebaseAction.triggered.connect(lambda: self.rebaseActiveOntoBranch.emit(data))
+                ActionDef(self.tr("&Merge “{0}” into “{1}”...").format(escamp(data), escamp(activeBranchName)),
+                          lambda: self.mergeBranchIntoActive.emit(data),
+                          enabled=not isCurrentBranch and activeBranchName),
 
-                    mergeAction.setEnabled(True)
-                    rebaseAction.setEnabled(True)
+                ActionDef(self.tr("&Rebase “{0}” onto “{1}”...").format(escamp(activeBranchName), escamp(data)),
+                          lambda: self.rebaseActiveOntoBranch.emit(data),
+                          enabled=not isCurrentBranch and activeBranchName),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("&Push..."),
+                          lambda: self.pushBranch.emit(data),
+                          "vcs-push",
+                          shortcuts=GlobalShortcuts.pushBranch),
+
+                ActionDef(self.tr("&Fetch..."),
+                          lambda: self.fetchRemoteBranch.emit(branch.upstream.shorthand),
+                          QStyle.StandardPixmap.SP_BrowserReload,
+                          enabled=hasUpstream),
+
+                ActionDef(self.tr("Pul&l..."),
+                          lambda: self.pullBranch.emit(data),
+                          "vcs-pull",
+                          enabled=hasUpstream,
+                          shortcuts=GlobalShortcuts.pullBranch),
+
+                ActionDef(self.tr("Set &Tracked Branch..."),
+                          lambda: self.editTrackingBranch.emit(data)),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("Re&name..."),
+                          lambda: self.renameBranch.emit(data)),
+
+                ActionDef(self.tr("&Delete..."),
+                          lambda: self.deleteBranch.emit(data),
+                          "vcs-branch-delete"),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("New Branch from Here..."),
+                          lambda: self.newBranchFromLocalBranch.emit(data),
+                          "vcs-branch"),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("&Hide in graph"),
+                          lambda: self.toggleHideBranch.emit("refs/heads/" + data),
+                          checkState=1 if isBranchHidden else -1),
+            ]
 
         elif item == EItem.RemoteBranch:
-            menu.addAction(self.tr("New local branch tracking {0}...").format(escamp(data)),
-                           lambda: self.newTrackingBranch.emit(data))
-
-            a = menu.addAction(self.tr("Fetch this remote branch..."), lambda: self.fetchRemoteBranch.emit(data))
-            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
-
-            menu.addSeparator()
-
-            a = menu.addAction(self.tr("Rename branch on remote..."), lambda: self.renameRemoteBranch.emit(data))
-
-            a = menu.addAction(self.tr("Delete branch on remote..."), lambda: self.deleteRemoteBranch.emit(data))
-            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
-
-            menu.addSeparator()
-            a = menu.addAction(self.tr("&Hide in graph"), lambda: self.toggleHideBranch.emit("refs/remotes/" + data))
-            a.setCheckable(True)
+            isBranchHidden = False
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
-                a.setChecked(isBranchHidden)
+
+            actions += [
+                ActionDef(self.tr("New local branch tracking {0}...").format(escamp(data)),
+                          lambda: self.newTrackingBranch.emit(data),
+                          "vcs-branch"),
+
+                ActionDef(self.tr("Fetch this remote branch..."),
+                          lambda: self.fetchRemoteBranch.emit(data),
+                          QStyle.StandardPixmap.SP_BrowserReload),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("Rename branch on remote..."),
+                          lambda: self.renameRemoteBranch.emit(data)),
+
+                ActionDef(self.tr("Delete branch on remote..."),
+                          lambda: self.deleteRemoteBranch.emit(data),
+                          QStyle.StandardPixmap.SP_TrashIcon),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("&Hide in graph"),
+                          lambda: self.toggleHideBranch.emit("refs/remotes/" + data),
+                          checkState=1 if isBranchHidden else -1),
+            ]
 
         elif item == EItem.Remote:
-            a = menu.addAction(self.tr("&Edit Remote..."), lambda: self.editRemote.emit(data))
-            a.setIcon(QIcon.fromTheme("document-edit"))
+            actions += [
+                ActionDef(self.tr("&Edit Remote..."),
+                          lambda: self.editRemote.emit(data),
+                          "document-edit"),
 
-            a = menu.addAction(self.tr("&Fetch all branches on this remote..."), lambda: self.fetchRemote.emit(data))
-            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
+                ActionDef(self.tr("&Fetch all branches on this remote..."),
+                          lambda: self.fetchRemote.emit(data),
+                          QStyle.StandardPixmap.SP_BrowserReload),
 
-            menu.addSeparator()
+                ActionDef.SEPARATOR,
 
-            a = menu.addAction(self.tr("&Remove Remote..."), lambda: self.deleteRemote.emit(data))
-            a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
+                ActionDef(self.tr("&Remove Remote..."),
+                          lambda: self.deleteRemote.emit(data),
+                          QStyle.StandardPixmap.SP_TrashIcon),
+            ]
 
         elif item == EItem.RemotesHeader:
-            menu.addAction(self.tr("&Add Remote..."), lambda: self.newRemote.emit())
+            actions += [
+                ActionDef(self.tr("&Add Remote..."),
+                          self.newRemote),
+            ]
 
         elif item == EItem.StashesHeader:
-            newStashAction = menu.addAction(self.tr("&New Stash..."), lambda: self.newStash.emit())
-            newStashAction.setShortcuts(GlobalShortcuts.newStash)
+            actions += [
+                ActionDef(self.tr("&New Stash..."),
+                          self.newStash,
+                          shortcuts=GlobalShortcuts.newStash),
+            ]
 
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
-            menu.addAction(self.tr("&Pop (apply and delete)"), lambda: self.popStash.emit(oid))
-            menu.addAction(self.tr("&Apply"), lambda: self.applyStash.emit(oid, False))  # False: don't ask for confirmation
-            menu.addSeparator()
-            menu.addAction(stockIcon(QStyle.StandardPixmap.SP_TrashIcon), self.tr("&Delete"), lambda: self.dropStash.emit(oid))
+
+            actions += [
+                ActionDef(self.tr("&Pop (apply and delete)"),
+                          lambda: self.popStash.emit(oid)),
+
+                ActionDef(self.tr("&Apply"),
+                          lambda: self.applyStash.emit(oid, False)),  # False: don't ask for confirmation
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("&Delete"),
+                          lambda: self.dropStash.emit(oid),
+                          QStyle.StandardPixmap.SP_TrashIcon),
+            ]
 
         elif item == EItem.Submodule:
-            menu.addAction(self.tr("&Open submodule in {0}").format(QApplication.applicationDisplayName()), lambda: self.openSubmoduleRepo.emit(data))
-            menu.addAction(self.tr("Open submodule &folder"), lambda: self.openSubmoduleFolder.emit(data))
+            actions += [
+                ActionDef(self.tr("&Open submodule in {0}").format(QApplication.applicationDisplayName()),
+                          lambda: self.openSubmoduleRepo.emit(data)),
+
+                ActionDef(self.tr("Open submodule &folder"),
+                          lambda: self.openSubmoduleFolder.emit(data)),
+            ]
+
+        # --------------------
+
+        ActionDef.addToQMenu(menu, actions)
 
         return menu
 
@@ -698,7 +763,7 @@ class Sidebar(QTreeView):
         elif item == EItem.LocalBranchesHeader:
             self.newBranch.emit()
         elif item == EItem.UncommittedChanges:
-            self.commit.emit()
+            self.commitChanges.emit()
         elif item == EItem.Submodule:
             self.openSubmoduleRepo.emit(data)
         elif item == EItem.StashesHeader:

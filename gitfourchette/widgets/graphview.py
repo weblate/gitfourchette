@@ -1,3 +1,4 @@
+from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox
@@ -96,6 +97,8 @@ class GraphView(QListView):
     newBranchFromCommit = Signal(pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
     revertCommit = Signal(pygit2.Oid)
+    commitChanges = Signal()
+    amendChanges = Signal()
 
     clModel: CommitLogModel
     clFilter: CommitFilter
@@ -114,29 +117,38 @@ class GraphView(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevents double-clicking to edit row text
         self.setItemDelegate(GraphDelegate(parent, parent=self))
 
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
-        getInfoAction = QAction(self.tr("Get &Info..."), self)
-        getInfoAction.setIcon(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation))
-        getInfoAction.triggered.connect(self.getInfoOnCurrentCommit)
-        self.addAction(getInfoAction)
-        checkoutAction = QAction(self.tr("&Check Out..."), self)
-        checkoutAction.triggered.connect(lambda: self.checkoutCommit.emit(self.currentCommitOid))
-        self.addAction(checkoutAction)
-        cherrypickAction = QAction(self.tr("Cherry &Pick..."), self)
-        cherrypickAction.triggered.connect(self.cherrypickCurrentCommit)
-        self.addAction(cherrypickAction)
-        revertAction = QAction(self.tr("Re&vert..."), self)
-        revertAction.triggered.connect(lambda: self.revertCommit.emit(self.currentCommitOid))
-        self.addAction(revertAction)
-        branchAction = QAction(self.tr("Start &Branch from Here..."), self)
-        branchAction.triggered.connect(lambda: self.newBranchFromCommit.emit(self.currentCommitOid))
-        self.addAction(branchAction)
-        resetAction = QAction(self.tr("&Reset HEAD to Here..."), self)
-        resetAction.triggered.connect(self.resetHeadFlow)
-        self.addAction(resetAction)
-        copyHashAction = QAction(self.tr("Copy Commit &Hash"), self)
-        copyHashAction.triggered.connect(self.copyCommitHashToClipboard)
-        self.addAction(copyHashAction)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.onContextMenuRequested)
+
+    def onContextMenuRequested(self, point: QPoint):
+        globalPoint = self.mapToGlobal(point)
+
+        oid = self.currentCommitOid
+
+        if not oid:
+            actions = [
+                ActionDef(self.tr("Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
+                ActionDef(self.tr("Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+            ]
+        else:
+            actions = [
+                ActionDef(self.tr("&Check Out..."), lambda: self.checkoutCommit.emit(oid)),
+                ActionDef(self.tr("Start &Branch from Here..."), lambda: self.newBranchFromCommit.emit(oid), "vcs-branch"),
+                ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("Cherry &Pick..."), self.cherrypickCurrentCommit),
+                ActionDef(self.tr("Re&vert..."), lambda: self.revertCommit.emit(oid)),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard),
+                ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation),
+            ]
+
+        menu = ActionDef.makeQMenu(self, actions)
+        menu.setObjectName("GraphViewCM")
+
+        menu.exec(globalPoint)
+
+        menu.deleteLater()
 
     def clear(self):
         self.setCommitSequence(None)
@@ -167,7 +179,7 @@ class GraphView(QListView):
         return self.repoWidget.state.repo
 
     @property
-    def currentCommitOid(self) -> pygit2.Oid:
+    def currentCommitOid(self) -> pygit2.Oid | None:
         if not self.currentIndex().isValid():
             return
         data: pygit2.Commit = self.currentIndex().data()

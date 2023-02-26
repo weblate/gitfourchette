@@ -10,10 +10,13 @@ class ActionDef:
     Build QMenus quickly with a list of ActionDefs.
     """
 
+    SEPARATOR: typing.ClassVar[None] = None
+
     caption: str = ""
-    callback: typing.Callable = None
-    icon: QStyle.StandardPixmap = None
+    callback: Signal | typing.Callable | None = None
+    icon: str | QStyle.StandardPixmap = ""
     checkState: int = 0
+    enabled: bool = True
     submenu: list['ActionDef'] = field(default_factory=list)
     shortcuts: QKeySequence | list[QKeySequence] = field(default_factory=list)
 
@@ -30,6 +33,8 @@ class ActionDef:
         if self.checkState != 0:
             action.setCheckable(True)
             action.setChecked(self.checkState == 1)
+
+        action.setEnabled(bool(self.enabled))
 
         if self.shortcuts:
             action.setShortcuts(self.shortcuts)
@@ -48,15 +53,7 @@ class ActionDef:
         return submenu
 
     @staticmethod
-    def makeQMenu(
-            parent: QWidget,
-            actionDefs: list['ActionDef'],
-            bottomEntries: QMenu | None = None
-    ) -> QMenu:
-
-        menu = QMenu(parent)
-        menu.setObjectName("ActionDefMenu")
-
+    def addToQMenu(menu: QMenu, actionDefs: list['ActionDef']):
         for actionDef in actionDefs:
             if not actionDef:
                 menu.addSeparator()
@@ -66,6 +63,18 @@ class ActionDef:
             else:
                 action = actionDef.toQAction(parent=menu)
                 menu.addAction(action)
+
+    @staticmethod
+    def makeQMenu(
+            parent: QWidget,
+            actionDefs: list['ActionDef'],
+            bottomEntries: QMenu | None = None
+    ) -> QMenu:
+
+        menu = QMenu(parent)
+        menu.setObjectName("ActionDefMenu")
+
+        ActionDef.addToQMenu(menu, actionDefs)
 
         if bottomEntries:
             menu.addSeparator()

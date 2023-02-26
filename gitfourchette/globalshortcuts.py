@@ -34,6 +34,8 @@ class GlobalShortcuts:
     closeTab: MultiShortcut = NO_SHORTCUT
     openRepoFolder: MultiShortcut = NO_SHORTCUT
     newStash: MultiShortcut = NO_SHORTCUT
+    commit: MultiShortcut = NO_SHORTCUT
+    amendCommit: MultiShortcut = NO_SHORTCUT
 
     stageHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
     discardHotkeys = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
@@ -48,3 +50,5 @@ class GlobalShortcuts:
         cls.closeTab = _makeShortcuts(QKeySequence.StandardKey.Close)
         cls.openRepoFolder = _makeShortcuts("Ctrl+Shift+O")
         cls.newStash = _makeShortcuts(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S")
+        cls.commit = _makeShortcuts("Ctrl+K")
+        cls.amendCommit = _makeShortcuts("Ctrl+Shift+K")
