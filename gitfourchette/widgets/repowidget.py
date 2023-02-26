@@ -585,15 +585,17 @@ class RepoWidget(QWidget):
 
         self.saveFilePositions()
 
-        if stagingState == StagingState.COMMITTED:
-            assert len(self.navPos.context) == 40
-            posContext = self.navPos.context
-        else:
-            posContext = stagingState.name
-        posFile = patch.delta.new_file.path
-        self.navPos = self.navHistory.findFileInContext(posContext, posFile)
-        if not self.navPos:
-            self.navPos = NavPos(posContext, posFile)
+        if patch and patch.delta:  # patch (or delta) may be None with DiffModelError
+            if stagingState == StagingState.COMMITTED:
+                assert len(self.navPos.context) == 40
+                posContext = self.navPos.context
+            else:
+                posContext = stagingState.name
+            posFile = patch.delta.new_file.path
+            self.navPos = self.navHistory.findFileInContext(posContext, posFile)
+
+            if not self.navPos:
+                self.navPos = NavPos(posContext, posFile)
 
         if type(result) == DiffConflict:
             self.diffStack.setCurrentWidget(self.conflictView)

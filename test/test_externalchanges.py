@@ -77,6 +77,26 @@ def testStayOnFileAfterPartialPatchDespiteExternalChange(qtbot, tempDir, mainWin
     assert qlvGetSelection(rw.dirtyFiles) == ["b/b2.txt"]
 
 
+def testPatchBecameInvalid(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    writeFile(f"{wd}/a/a2.txt", "change a\nchange b\nchange c\n")
+    writeFile(f"{wd}/b/b2.txt", "change a\nchange b\nchange c\n")
+
+    rw = mainWindow.openRepo(wd)
+
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt", "b/b2.txt"]
+
+    writeFile(f"{wd}/b/b2.txt", "pulled the rug out from under the cached patch")
+    qlvClickNthRow(rw.dirtyFiles, 1)  # Select b/b2.txt
+
+    assert not rw.diffView.isVisibleTo(rw)
+    assert rw.richDiffView.isVisibleTo(rw)
+    doc = rw.richDiffView.document()
+    text = doc.toRawText()
+    assert "file may have changed on disk" in text.lower()
+
+
 def testFSWDetectsNewFile(qtbot, mainWindow, tempDir):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
