@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
-<TS version="2.1" language="en" sourcelanguage="en">
+<TS version="2.1" language="en_US" sourcelanguage="en_US">
 <context>
-    <name>ActionFlows</name>
+    <name></name>
     <message numerus="yes">
-        <source>Really discard changes to &lt;b&gt;%n files&lt;/b&gt;?</source>
+        <source>%n conflicting file(s)</source>
         <translation>
-            <numerusform>Really discard changes to &lt;b&gt;%n file&lt;/b&gt;?</numerusform>
-            <numerusform>Really discard changes to &lt;b&gt;%n files&lt;/b&gt;?</numerusform>
+            <numerusform>%n conflicting file</numerusform>
+            <numerusform>%n conflicting files</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>&lt;b&gt;%n file(s)&lt;/b&gt;</source>
+        <translation>
+            <numerusform>&lt;b&gt;%n file&lt;/b&gt;</numerusform>
+            <numerusform>&lt;b&gt;%n files&lt;/b&gt;</numerusform>
         </translation>
     </message>
 </context>
@@ -28,10 +35,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open Containing &amp;Folders</source>
+        <source>Open &amp;Path(s)</source>
         <translation>
-            <numerusform>Open Containing &amp;Folder</numerusform>
-            <numerusform>Open Containing &amp;Folders</numerusform>
+            <numerusform>Open &amp;Path</numerusform>
+            <numerusform>Open &amp;Paths</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -66,10 +73,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open Containing Folder(s)</source>
+        <source>Open &amp;Path(s)</source>
         <translation>
-            <numerusform>&amp;Open Containing Folder</numerusform>
-            <numerusform>&amp;Open Containing Folders</numerusform>
+            <numerusform>Open &amp;Path</numerusform>
+            <numerusform>Open &amp;Paths</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -84,6 +91,16 @@
         <translation>
             <numerusform>Open Unmodified &amp;Revision in External Editor</numerusform>
             <numerusform>Open Unmodified &amp;Revisions in External Editor</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>DiscardFiles</name>
+    <message numerus="yes">
+        <source>Really discard changes to &lt;b&gt;%n files&lt;/b&gt;?</source>
+        <translation>
+            <numerusform>Really discard changes to &lt;b&gt;%n file&lt;/b&gt;?</numerusform>
+            <numerusform>Really discard changes to &lt;b&gt;%n files&lt;/b&gt;?</numerusform>
         </translation>
     </message>
 </context>
@@ -131,20 +148,6 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n conflicting file(s)</source>
-        <translation>
-            <numerusform>%n conflicting file</numerusform>
-            <numerusform>%n conflicting files</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>... and %n more</source>
-        <translation>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch(es)?</source>
         <translation>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch?</numerusform>
@@ -157,8 +160,8 @@
     <message numerus="yes">
         <source>&amp;Unstage %n File(s)</source>
         <translation>
-            <numerusform>Unstage File</numerusform>
-            <numerusform>Unstage %n Files</numerusform>
+            <numerusform>&amp;Unstage File</numerusform>
+            <numerusform>&amp;Unstage %n Files</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -169,10 +172,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open Containing &amp;Folder(s)</source>
+        <source>Open &amp;Path(s)</source>
         <translation>
-            <numerusform>Open Containing &amp;Folder</numerusform>
-            <numerusform>Open Containing &amp;Folders</numerusform>
+            <numerusform>Open &amp;Path</numerusform>
+            <numerusform>Open &amp;Paths</numerusform>
         </translation>
     </message>
     <message numerus="yes">
