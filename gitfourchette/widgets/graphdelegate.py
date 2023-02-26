@@ -22,6 +22,9 @@ CALLOUTS = {
     "refs/tags/": RefCallout(QColor(Qt.GlobalColor.darkYellow)),
     "refs/heads/": RefCallout(QColor(Qt.GlobalColor.darkMagenta)),
     "stash@{": RefCallout(QColor(Qt.GlobalColor.darkGreen), keepPrefix=True),
+
+    # detached HEAD as returned by porcelain.mapCommitsToReferences/getOidsForAllReferences
+    "HEAD": RefCallout(QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
 }
 
 
@@ -170,6 +173,9 @@ class GraphDelegate(QStyledItemDelegate):
                             calloutText = refName.removeprefix(prefix)
                         calloutColor = calloutDef.color
                         break
+
+                if refName == 'HEAD':
+                    calloutText = self.tr("detached HEAD")
 
                 painter.save()
                 painter.setFont(self.smallFont)

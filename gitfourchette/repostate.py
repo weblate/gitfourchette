@@ -40,7 +40,7 @@ class ForeignCommitSolver:
         self._nextLocal = set()
         self.foreignCommits = set()
         for commitOid, refList in commitsToRefs.items():
-            if any(name.startswith("refs/heads/") for name in refList):
+            if any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList):
                 self._nextLocal.add(commitOid)
 
     def feed(self, commit: pygit2.Commit):

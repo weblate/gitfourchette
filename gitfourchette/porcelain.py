@@ -577,6 +577,10 @@ def getOidsForAllReferences(repo: Repository) -> list[Oid]:
 def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str]]:
     commit2refs = defaultdict(list)
 
+    # Detached HEAD isn't in repo.references
+    if repo.head_is_detached and type(repo.head.target) == pygit2.Oid:
+        commit2refs[repo.head.target].append('HEAD')
+
     for ref in repo.references.objects:
         refKey = ref.name
 
@@ -601,6 +605,10 @@ def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str
 
 def refsPointingAtCommit(repo: pygit2.Repository, oid: pygit2.Oid):
     refs = []
+
+    # Detached HEAD isn't in repo.references
+    if repo.head_is_detached and type(repo.head.target) == pygit2.Oid and repo.head.target == oid:
+        refs.append('HEAD')
 
     for ref in repo.references.objects:
         refKey = ref.name
