@@ -96,6 +96,13 @@ class MainWindow(QMainWindow):
         QApplication.instance().installEventFilter(self)
         self.refreshPrefs()
 
+    def close(self) -> bool:
+        globalstatus.statusText.disconnect()
+        globalstatus.progressMaximum.disconnect()
+        globalstatus.progressValue.disconnect()
+        globalstatus.progressDisable.disconnect()
+        return super().close()
+
     def eventFilter(self, watched, event: QEvent):
         isPress = event.type() == QEvent.Type.MouseButtonPress
         isDblClick = event.type() == QEvent.Type.MouseButtonDblClick
