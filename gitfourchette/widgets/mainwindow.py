@@ -862,7 +862,10 @@ class MainWindow(QMainWindow):
                 try:
                     newRepoWidget = self._openRepo(path, foreground=False, addToHistory=False)
                     successfulRepos.append(path)
-                except (pygit2.GitError, NotImplementedError) as exc:
+                except (pygit2.GitError, OSError, NotImplementedError) as exc:
+                    # GitError: most errors thrown by pygit2
+                    # OSError: e.g. permission denied
+                    # NotImplementedError: e.g. shallow/bare repos
                     errors.append((path, exc))
                     continue
 
