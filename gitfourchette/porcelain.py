@@ -462,10 +462,13 @@ def createCommit(
         overrideAuthor: Signature | None = None,
         overrideCommitter: Signature | None = None
 ) -> Oid:
-    # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
-    # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
-    # so we should always have a ref name, even though it might not point to anything.
-    refName = repo.lookup_reference("HEAD").target
+    if repo.head_is_detached:
+        refToUpdate = "HEAD"
+    else:
+        # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
+        # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
+        # so we should always have a ref name, even though it might not point to anything.
+        refToUpdate = repo.lookup_reference("HEAD").target
 
     if repo.head_is_unborn:
         parents = []
@@ -476,7 +479,7 @@ def createCommit(
     fallbackSignature = repo.default_signature
 
     newCommitOid = repo.create_commit(
-        refName,
+        refToUpdate,
         overrideAuthor or fallbackSignature,
         overrideCommitter or fallbackSignature,
         message,
