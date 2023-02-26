@@ -754,6 +754,8 @@ class RepoWidget(QWidget):
         return self.filesStack.currentWidget() == self.stageSplitter
 
     def quickRefresh(self, allowUpdateIndex=False):
+        oldActiveCommit = self.state.activeCommitOid
+
         self.scheduledRefresh.stop()
 
         if self.repoTaskRunner.isBusy():
@@ -777,6 +779,10 @@ class RepoWidget(QWidget):
                 self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
             else:
                 self.graphView.setCommitSequence(self.state.commitSequence)
+
+        if oldActiveCommit != self.state.activeCommitOid:
+            self.graphView.repaintCommit(oldActiveCommit)
+            self.graphView.repaintCommit(self.state.activeCommitOid)
 
         with Benchmark("Refresh sidebar"):
             self.sidebar.refresh(self.state)
