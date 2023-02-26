@@ -655,9 +655,19 @@ class MainWindow(QMainWindow):
 
     def newRepo(self):
         path, _ = PersistentFileDialog.getSaveFileName(self, self.tr("New repository"))
-        if path:
+        if not path:
+            return
+        try:
             pygit2.init_repository(path)
-            self.openRepo(path)
+        except BaseException as exc:
+            excMessageBox(
+                exc,
+                self.tr("New repository"),
+                self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path)),
+                parent=self,
+                icon='warning')
+            return
+        self.openRepo(path)
 
     def cloneDialog(self, initialUrl: str = ""):
         dlg = CloneDialog(initialUrl, self)
