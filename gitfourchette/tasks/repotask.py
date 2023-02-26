@@ -201,14 +201,23 @@ class RepoTask(QObject):
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """
-        Re-enters the flow when the QDialog is finished.
+        Re-enters the flow when the QDialog is accepted or rejected.
         If abortTaskIfRejected is True, the task is aborted if the dialog was rejected.
         """
-        token = FlowControlToken(FlowControlToken.Kind.WAIT_READY)
-        dialog.finished.connect(token.ready)
-        yield token
+        waitToken = FlowControlToken(FlowControlToken.Kind.WAIT_READY)
+        didReject = False
 
-        if abortTaskIfRejected and dialog.result() in [QDialog.DialogCode.Rejected, QMessageBox.StandardButton.Cancel]:
+        def onReject():
+            nonlocal didReject
+            didReject = True
+
+        dialog.rejected.connect(onReject)
+        dialog.rejected.connect(waitToken.ready)
+        dialog.accepted.connect(waitToken.ready)
+
+        yield waitToken
+
+        if abortTaskIfRejected and didReject:
             dialog.deleteLater()
             yield from self._flowAbort()
 

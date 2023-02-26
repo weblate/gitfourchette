@@ -73,7 +73,8 @@ def showTextInputDialog(
         lineEdit.setText(text)
         lineEdit.selectAll()
 
-    buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=dlg)
+    buttonBox = QDialogButtonBox(dlg)
+    buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 
     layout = QVBoxLayout()
 
@@ -92,13 +93,11 @@ def showTextInputDialog(
 
     layout.addWidget(buttonBox)
 
-    buttonBox.accepted.connect(dlg.accepted)
-    buttonBox.rejected.connect(dlg.rejected)
+    buttonBox.accepted.connect(dlg.accept)
+    buttonBox.rejected.connect(dlg.reject)
 
     if onAccept:
         dlg.accepted.connect(lambda: onAccept(lineEdit.text()))
-        dlg.accepted.connect(dlg.close)
-    dlg.rejected.connect(dlg.close)
 
     if okButtonText:
         buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
