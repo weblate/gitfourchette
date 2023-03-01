@@ -430,6 +430,7 @@ class PrefsDialog(QDialog):
             "debug_showMemoryIndicator": translate("Prefs", "Show memory indicator in status bar"),
             "debug_showPID": translate("Prefs", "Show technical info in title bar"),
             "debug_verbosity": translate("Prefs", "Logging verbosity"),
+            "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
 
             "FULL_PATHS": translate("PathDisplayStyle", "Full paths"),
             "ABBREVIATE_DIRECTORIES": translate("PathDisplayStyle", "Abbreviate directories"),

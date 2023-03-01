@@ -173,6 +173,7 @@ class Prefs(BasePrefs):
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True
     debug_showPID               : bool          = True
+    debug_fixU2029InClipboard   : bool          = False
     debug_verbosity             : Verbosity     = Verbosity.VERBOSE
 
 

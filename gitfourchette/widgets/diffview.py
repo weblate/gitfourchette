@@ -567,7 +567,7 @@ class DiffView(QPlainTextEdit):
         self.replaceCursor(cursor)
 
     def onCopyAvailable(self, yes: bool):
-        if QSysInfo.productType() != "windows":
+        if not WINDOWS and settings.prefs.debug_fixU2029InClipboard:
             if yes:
                 QApplication.clipboard().changed.connect(self.fixU2029InClipboard)
             else:
@@ -590,6 +590,10 @@ class DiffView(QPlainTextEdit):
             return
 
         clipboard = QApplication.clipboard()
+
+        if __debug__ and "\u2029" not in clipboard.text(mode):
+            log.info("DiffView", F"Scrubbing U+2029 would be useless in this buffer!")
+            return
 
         # Even if we have focus, another process might have modified the clipboard in the background.
         # So, make sure our application owns the data in the clipboard.
