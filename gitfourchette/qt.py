@@ -59,6 +59,11 @@ if PYSIDE6 and qtBindingVersion.startswith("6.4.0"):  # See PYSIDE-2104
     exit(1)
 
 
+# Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
+if QT5:
+    QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
+
+
 def tr(s, *args, **kwargs):
     return QCoreApplication.translate("", s, *args, **kwargs)
 
