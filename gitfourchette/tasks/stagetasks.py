@@ -1,4 +1,5 @@
 from gitfourchette import porcelain
+from gitfourchette import reverseunidiff
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
@@ -219,3 +220,46 @@ class MarkConflictSolved(RepoTask):
         del repo.index.conflicts[path]
         assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
         repo.index.write()
+
+
+class ApplyPatchFile(RepoTask):
+    def name(self):
+        return translate("Operation", "Apply patch file")
+
+    def refreshWhat(self) -> TaskAffectsWhat:
+        return TaskAffectsWhat.INDEX  # TODO: not really... more like the workdir
+
+    def flow(self, reverse: bool):
+        if reverse:
+            title = self.tr("Import patch file (to apply in reverse)")
+        else:
+            title = self.tr("Import patch file")
+
+        patchFileCaption = self.tr("Patch file")
+        allFilesCaption = self.tr("All files")
+
+        path, _ = util.PersistentFileDialog.getOpenFileName(
+            self.parent(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
+
+        if not path:
+            yield from self._flowAbort()
+
+        yield from self._flowBeginWorkerThread()
+
+        with open(path, 'rt', encoding='utf-8') as patchFile:
+            patchData = patchFile.read()
+
+        # May raise: IOError, GitError,
+        # UnicodeDecodeError (if passing in a random binary file), KeyError ('no patch found')
+        loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
+
+        # Reverse the patch if user wants to.
+        if reverse:
+            patchData = reverseunidiff.reverseUnidiff(loadedDiff.patch)
+            loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
+
+        # Do a dry run first so we don't litter the workdir with a patch that failed halfway through.
+        # If the patch doesn't apply, this raises a MultiFileError.
+        porcelain.patchApplies(self.repo, patchData)
+
+        porcelain.applyPatch(self.repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)

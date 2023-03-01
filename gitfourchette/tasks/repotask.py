@@ -150,6 +150,12 @@ class RepoTask(QObject):
         """
         if isinstance(exc, porcelain.ConflictError):
             showConflictErrorMessage(self.parent(), exc, self.name())
+        elif isinstance(exc, porcelain.MultiFileError):
+            # Patch doesn't apply
+            message = self.tr("Operation failed: {0}.").format(escape(self.name()))
+            for filePath, fileException in exc.fileExceptions.items():
+                message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
+            util.showWarning(self.parent(), self.name(), message)
         else:
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
             util.excMessageBox(exc, title=self.name(), message=message, parent=self.parent())
@@ -289,6 +295,8 @@ class RepoTaskRunner(QObject):
         return self._currentTask is not None or self._zombieTask is not None
 
     def put(self, task: RepoTask, *args):
+        assert util.onAppThread()
+
         # Get flow generator
         task._currentFlow = task.flow(*args)
         assert isinstance(task._currentFlow, Generator), "flow() must contain at least one yield statement"

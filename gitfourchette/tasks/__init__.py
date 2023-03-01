@@ -13,4 +13,5 @@ from gitfourchette.tasks.remotetasks import NewRemote, EditRemote, DeleteRemote
 from gitfourchette.tasks.stagetasks import StageFiles, UnstageFiles, DiscardFiles
 from gitfourchette.tasks.stagetasks import ApplyPatch, RevertPatch
 from gitfourchette.tasks.stagetasks import HardSolveConflict, MarkConflictSolved
+from gitfourchette.tasks.stagetasks import ApplyPatchFile
 from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, PopStash, DropStash

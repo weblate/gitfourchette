@@ -192,7 +192,7 @@ class MainWindow(QMainWindow):
         a = fileMenu.addAction(self.tr("Apply Patch..."), self.importPatch)
         a.setShortcut("Ctrl+I")
 
-        fileMenu.addAction(self.tr("Reverse Patch..."), lambda: self.importPatch(reverse=True))
+        fileMenu.addAction(self.tr("Reverse Patch..."), self.importPatchReverse)
 
         fileMenu.addSeparator()
 
@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
 
             excMessageBox(
                 exc,
-                message=self.tr("An exception was thrown while opening “{0}”").format(escape(path)),
+                message=self.tr("An exception was raised while opening “{0}”").format(escape(path)),
                 parent=self)
             return False
 
@@ -562,7 +562,8 @@ class MainWindow(QMainWindow):
             if rw:
                 callback(self, rw)
             else:
-                QApplication.beep()
+                showInformation(self, self.tr("No repository"),
+                                self.tr("Please open a repository before triggering this operation."))
         return wrapper
 
     @needRepoWidget
@@ -703,57 +704,13 @@ class MainWindow(QMainWindow):
         self.saveSession()
         return rw
 
-    def importPatch(self, reverse=False):
-        if not self.currentRepoWidget() or not self.currentRepoWidget().repo:
-            showWarning(self, self.tr("Import patch"), self.tr("Please open a repository before importing a patch."))
-            return
+    @needRepoWidget
+    def importPatch(self, rw: RepoWidget):
+        rw.runTask(tasks.ApplyPatchFile, False)
 
-        if reverse:
-            title = self.tr("Import patch (reverse)")
-        else:
-            title = self.tr("Import patch")
-
-        patchFileCaption = self.tr("Patch file")
-        allFilesCaption = self.tr("All files")
-
-        path, _ = PersistentFileDialog.getOpenFileName(self, "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
-        if not path:
-            return
-
-        try:
-            with open(path, 'rt', encoding='utf-8') as patchFile:
-                patchData = patchFile.read()
-            loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
-        except (IOError,
-                UnicodeDecodeError,  # if passing in a random binary file
-                KeyError,  # 'no patch found'
-                pygit2.GitError) as loadError:
-            excMessageBox(loadError, title, self.tr("Can’t load this patch."), parent=self, icon='warning')
-            return
-
-        if reverse:
-            try:
-                patchData = reverseUnidiff(loadedDiff.patch)
-                loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
-            except Exception as reverseError:
-                excMessageBox(reverseError, title, self.tr("Can’t reverse this patch."), parent=self, icon='warning')
-                return
-
-        repo = self.currentRepoWidget().repo
-
-        try:
-            porcelain.patchApplies(repo, patchData)
-        except porcelain.MultiFileError as multiFileError:
-            message = self.tr("This patch doesn’t apply.")
-            for filePath, fileException in multiFileError.fileExceptions.items():
-                message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
-            showWarning(self, title, message)
-            return
-
-        try:
-            porcelain.applyPatch(repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)
-        except pygit2.GitError as applyError:
-            excMessageBox(applyError, title, self.tr("An error occurred while applying this patch."), parent=self, icon='warning')
+    @needRepoWidget
+    def importPatchReverse(self, rw: RepoWidget):
+        rw.runTask(tasks.ApplyPatchFile, True)
 
     # -------------------------------------------------------------------------
     # Tab management
