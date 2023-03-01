@@ -708,7 +708,7 @@ class Sidebar(QTreeView):
 
         elif item == EItem.Submodule:
             actions += [
-                ActionDef(self.tr("&Open submodule in {0}").format(QApplication.applicationDisplayName()),
+                ActionDef(self.tr("&Open submodule in {0}").format(qAppName()),
                           lambda: self.openSubmoduleRepo.emit(data)),
 
                 ActionDef(self.tr("Open submodule &folder"),

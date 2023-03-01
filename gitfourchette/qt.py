@@ -59,3 +59,8 @@ def tr(s, *args, **kwargs):
 
 def translate(context, s, *args, **kwargs):
     return QCoreApplication.translate(context, s, *args, **kwargs)
+
+
+def qAppName():
+    """ User-facing application name. Shorthand for QApplication.applicationDisplayName(). """
+    return QApplication.applicationDisplayName()

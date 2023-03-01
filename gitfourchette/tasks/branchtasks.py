@@ -276,7 +276,7 @@ class RecallCommit(RepoTask):
             self.parent(),
             self.tr("Recall lost commit"),
             self.tr("If you know the hash of a commit that isn’t part of any branches,<br>"
-                    "{0} will try to recall it for you.").format(QApplication.applicationDisplayName()),
+                    "{0} will try to recall it for you.").format(qAppName()),
             "",
             okButtonText=self.tr("Recall"))
 

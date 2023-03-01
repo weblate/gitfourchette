@@ -104,7 +104,7 @@ class PrefsDialog(QDialog):
 
         self.setObjectName("PrefsDialog")
 
-        self.setWindowTitle(self.tr("{0} Preferences", "{0} = GitFourchette").format(QApplication.applicationDisplayName()))
+        self.setWindowTitle(self.tr("{0} Preferences", "{0} = GitFourchette").format(qAppName()))
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -191,7 +191,7 @@ class PrefsDialog(QDialog):
                     "{0} keeps a temporary copy in a hidden “trash” folder. "
                     "This gives you a last resort to rescue changes that you have discarded by mistake. "
                     "You can look around this trash folder via <i>“Repo &rarr; Rescue Discarded Changes”</i>."
-                    ).format(QApplication.instance().applicationName()))
+                    ).format(qAppName()))
         explainer.setTextFormat(Qt.TextFormat.RichText)
         explainer.setWordWrap(True)
         categoryForms["trash"].insertRow(0, explainer)

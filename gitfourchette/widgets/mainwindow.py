@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
 
         self.sharedSplitterStates = {}
 
-        self.setWindowTitle(QApplication.applicationDisplayName())
+        self.setWindowTitle(qAppName())
         self.resize(QSize(800, 600))
         self.move(QPoint(50, 50))
 
@@ -313,7 +313,7 @@ class MainWindow(QMainWindow):
         helpMenu = menubar.addMenu(self.tr("&Help"))
         helpMenu.setObjectName("MWHelpMenu")
 
-        a = helpMenu.addAction(self.tr("&About {0}").format(QApplication.applicationDisplayName()), lambda: showAboutDialog(self))
+        a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
         a.setMenuRole(QAction.AboutRole)
 
         # -------------------------------------------------------------
@@ -344,7 +344,7 @@ class MainWindow(QMainWindow):
         # Notify widgets
         self.refreshPrefs()
 
-        info = self.tr("Some changes may require restarting {0} to take effect.").format(QApplication.applicationDisplayName())
+        info = self.tr("Some changes may require restarting {0} to take effect.").format(qAppName())
 
         if "language" in dlg.prefDiff:
             info += "\n\n" + self.tr("In particular, some menus and buttons will remain untranslated until you restart the application.")
@@ -374,7 +374,7 @@ class MainWindow(QMainWindow):
 
     def onTabChange(self, i):
         if i < 0:
-            self.setWindowTitle(QApplication.applicationDisplayName())
+            self.setWindowTitle(qAppName())
             return
 
         # Get out of welcome widget

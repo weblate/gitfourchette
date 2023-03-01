@@ -808,7 +808,7 @@ class RepoWidget(QWidget):
         else:
             inBrackets = porcelain.getActiveBranchShorthand(repo)
 
-        suffix = QApplication.applicationDisplayName()
+        suffix = qAppName()
         if settings.prefs.debug_showPID:
             suffix += F" (PID {os.getpid()}, {qtBindingName})"
 
@@ -836,7 +836,7 @@ class RepoWidget(QWidget):
             showInformation(
                 self,
                 self.tr("Open Rescue Folder"),
-                self.tr("There’s no rescue folder for this repository. Perhaps you haven’t discarded a change with {0} yet.").format(QApplication.applicationDisplayName()))
+                self.tr("There’s no rescue folder for this repository. Perhaps you haven’t discarded a change with {0} yet.").format(qAppName()))
 
     def clearRescueFolder(self):
         trash = Trash(self.repo)

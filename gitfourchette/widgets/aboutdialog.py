@@ -24,7 +24,7 @@ def showAboutDialog(parent: QWidget):
     except ImportError:
         buildDateLine = ""
 
-    appName = QApplication.applicationDisplayName()
+    appName = qAppName()
     appVersion = QApplication.applicationVersion()
 
     tagLine = translate("AboutDialog", "The comfy Git UI for Linux.")
