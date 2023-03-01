@@ -844,19 +844,26 @@ def getSuperproject(repo: pygit2.Repository):
     """
 
     repoPath = repo.path  # e.g. "/home/user/superproj/.git/modules/src/extern/subproj/"
-    gitModules = "/.git/modules/"
+    gitModules = "/.git/"
     gitModulesPos = repoPath.rfind(gitModules)
 
-    if gitModulesPos >= 0:
-        superWD = repoPath[:gitModulesPos]  # e.g. "/home/user/superproj"
-        subWDRelative = repoPath[gitModulesPos + len(gitModules):]  # e.g. "src/extern/subproj/"
+    if gitModulesPos < 0:
+        return ""
 
-        # Recompose full path to submodule workdir to ensure we are indeed a submodule of the tentative superproject
-        subWD = superWD + "/" + subWDRelative  # e.g. "/home/user/superproj/src/extern/subproj/"
-        if subWD == repo.workdir:
+    superWD = repoPath[:gitModulesPos]  # e.g. "/home/user/superproj"
+
+    try:
+        tentativeWorktree = repo.config['core.worktree']
+        if not os.path.isabs(tentativeWorktree):
+            tentativeWorktree = repoPath + "/" + tentativeWorktree
+        tentativeWorktree = os.path.normpath(tentativeWorktree)
+        realWorktree = os.path.normpath(repo.workdir)
+        if realWorktree == tentativeWorktree:
             return superWD
+    except KeyError:
+        pass
 
-    return None
+    return ""
 
 
 def refNameToBranch(repo: pygit2.Repository, refName: str) -> tuple[pygit2.Branch, bool]:
