@@ -38,6 +38,12 @@ else:
     from qtpy.QtCore import __version__ as qtBindingVersion
     from qtpy import QT5, QT6, PYSIDE2, PYSIDE6, PYQT5, PYQT6
 
+    if PYSIDE2 or PYSIDE6:
+        from qtpy import PYSIDE_VERSION as qtBindingVersion
+    else:
+        from qtpy import PYQT_VERSION as qtBindingVersion
+
+
 MACOS = QSysInfo.productType() in ["osx", "macos"]  # "osx": Qt5 legacy
 WINDOWS = QSysInfo.productType() in ["windows"]
 
