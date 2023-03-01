@@ -659,7 +659,7 @@ class MainWindow(QMainWindow):
     # File menu callbacks
 
     def newRepo(self):
-        path, _ = PersistentFileDialog.getSaveFileName(self, self.tr("New repository"))
+        path, _ = PersistentFileDialog.getSaveFileName(self, "NewRepo", self.tr("New repository"))
         if not path:
             return
         try:
@@ -684,7 +684,7 @@ class MainWindow(QMainWindow):
         dlg.show()
 
     def openDialog(self):
-        path = PersistentFileDialog.getExistingDirectory(self, self.tr("Open repository"))
+        path = PersistentFileDialog.getExistingDirectory(self, "NewRepo", self.tr("Open repository"))
         if path:
             self.openRepo(path)
 
@@ -716,7 +716,7 @@ class MainWindow(QMainWindow):
         patchFileCaption = self.tr("Patch file")
         allFilesCaption = self.tr("All files")
 
-        path, _ = PersistentFileDialog.getOpenFileName(self, title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
+        path, _ = PersistentFileDialog.getOpenFileName(self, "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
         if not path:
             return
 

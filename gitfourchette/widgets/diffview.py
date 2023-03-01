@@ -379,7 +379,8 @@ class DiffView(QPlainTextEdit):
         if saveInto:
             savePath = os.path.join(saveInto, name)
         else:
-            savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Export selected lines"), name)
+            savePath, _ = PersistentFileDialog.getSaveFileName(self, "SaveFile",
+                                                               self.tr("Export selected lines"), name)
 
         if savePath:
             with open(savePath, "wb") as file:

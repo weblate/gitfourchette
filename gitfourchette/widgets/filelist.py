@@ -374,7 +374,7 @@ class FileList(QListView):
         if saveInto:
             savePath = os.path.join(saveInto, name)
         else:
-            savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Save patch file"), name)
+            savePath, _ = PersistentFileDialog.getSaveFileName(self, "SaveFile", self.tr("Save patch file"), name)
 
         if not savePath:
             return
@@ -593,7 +593,8 @@ class CommittedFiles(FileList):
             if saveInto:
                 savePath = os.path.join(saveInto, name)
             else:
-                savePath, _ = PersistentFileDialog.getSaveFileName(self, self.tr("Save file revision as"), name)
+                savePath, _ = PersistentFileDialog.getSaveFileName(self, "SaveFile",
+                                                                   self.tr("Save file revision as"), name)
 
             if savePath:
                 with open(savePath, "wb") as f:

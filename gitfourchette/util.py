@@ -426,9 +426,7 @@ class PersistentFileDialog:
             settings.history.write()
 
     @staticmethod
-    def getSaveFileName(parent, caption: str, initialFilename="", filter="", selectedFilter=""):
-        key = caption
-
+    def getSaveFileName(parent, key: str, caption: str, initialFilename="", filter="", selectedFilter=""):
         previousSavePath = PersistentFileDialog.getPath(key)
         if not previousSavePath:
             initialPath = initialFilename
@@ -441,16 +439,14 @@ class PersistentFileDialog:
         return path, selectedFilter
 
     @staticmethod
-    def getOpenFileName(parent, caption: str, filter="", selectedFilter=""):
-        key = caption
+    def getOpenFileName(parent, key: str, caption: str, filter="", selectedFilter=""):
         initialDir = PersistentFileDialog.getPath(key)
         path, selectedFilter = QFileDialog.getOpenFileName(parent, caption, initialDir, filter, selectedFilter)
         PersistentFileDialog.savePath(key, path)
         return path, selectedFilter
 
     @staticmethod
-    def getExistingDirectory(parent, caption: str, options=QFileDialog.Option.ShowDirsOnly):
-        key = caption
+    def getExistingDirectory(parent, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly):
         initialDir = PersistentFileDialog.getPath(key)
         path = QFileDialog.getExistingDirectory(parent, caption, initialDir, options)
         PersistentFileDialog.savePath(key, path)
