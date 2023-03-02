@@ -118,8 +118,20 @@ class GraphView(QListView):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
-        if k in GlobalShortcuts.stageHotkeys:
-            self.getInfoOnCurrentCommit()
+        oid = self.currentCommitOid
+
+        if k in GlobalShortcuts.getCommitInfoHotkeys:
+            if oid:
+                self.getInfoOnCurrentCommit()
+            else:
+                QApplication.beep()
+
+        elif k in GlobalShortcuts.checkoutCommitFromGraphHotkeys:
+            if oid:
+                self.checkoutCommit.emit(self.currentCommitOid)
+            else:
+                self.commitChanges.emit()
+
         else:
             super().keyPressEvent(event)
 

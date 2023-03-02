@@ -39,6 +39,8 @@ class GlobalShortcuts:
 
     stageHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
     discardHotkeys = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
+    checkoutCommitFromGraphHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]
+    getCommitInfoHotkeys = [Qt.Key.Key_Space]
 
     @classmethod
     def initialize(cls):
