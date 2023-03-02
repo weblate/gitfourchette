@@ -146,7 +146,7 @@ class GraphView(QListView):
             return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
                    + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat))
 
-        # TODO: we should probably run this as a worker; simply adding "with self.repoWidget.state.mutexLocker()" blocks the UI thread ... which also blocks the worker in the background! Is the qthreadpool given "time to breathe" by the GUI thread?
+        # TODO: we should probably run this as a task
 
         commit: pygit2.Commit = self.currentIndex().data(CommitLogModel.CommitRole)
 
@@ -154,10 +154,6 @@ class GraphView(QListView):
 
         postSummary = ""
         nLines = len(commit.message.rstrip().split('\n'))
-        if contd:
-            showDetailsText = self.tr("click “Show Details” to reveal full message")
-            lineCountText = self.tr("(%n line(s))", "", nLines)
-            postSummary = F"<br>\u25bc <i>{showDetailsText} {lineCountText}</i>"
 
         parentHashes = [shortHash(p) for p in commit.parent_ids]
         parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
@@ -191,16 +187,11 @@ class GraphView(QListView):
         markup = F"""<big>{summary}</big>{postSummary}
             <br>
             <table>
-            <tr><td><b>{hashTitle} </b></td><td>{commit.oid.hex}</td></tr>
-            <tr><td><b>{parentTitle} </b></td><td>{parentValueMarkup}</td></tr>
-            <tr><td><b>{authorTitle} </b></td><td>{authorMarkup}</td></tr>
-            <tr><td><b>{committerTitle} </b></td><td>{committerMarkup}</td></tr>
+            <tr><td><b>{hashTitle}&nbsp;</b></td><td>{commit.oid.hex}</td></tr>
+            <tr><td><b>{parentTitle}&nbsp;</b></td><td>{parentValueMarkup}</td></tr>
+            <tr><td><b>{authorTitle}&nbsp;</b></td><td>{authorMarkup}</td></tr>
+            <tr><td><b>{committerTitle}&nbsp;</b></td><td>{committerMarkup}</td></tr>
             </table>"""
-            # <tr><td><b>Debug</b></td><td>
-            #     batch {data.batchID},
-            #     offset {self.repoWidget.state.batchOffsets[data.batchID]+data.offsetInBatch}
-            #     ({self.repoWidget.state.getCommitSequentialIndex(data.hexsha)})
-            #     </td></tr>
 
         if debugInfoRequested:
             state = self.repoWidget.state
@@ -215,8 +206,20 @@ class GraphView(QListView):
 
         details = commit.message if contd else None
 
-        messageBox = asyncMessageBox(self, 'information', title, markup, macShowTitle=False)
-        messageBox.setDetailedText(details)
+        messageBox = asyncMessageBox(self, 'information', title, markup, macShowTitle=False,
+                                     buttons=QMessageBox.StandardButton.Ok)
+
+        if details:
+            messageBox.setDetailedText(details)
+
+            # Pre-click "Show Details" button
+            for button in messageBox.buttons():
+                role = messageBox.buttonRole(button)
+                if role == QMessageBox.ButtonRole.ActionRole:
+                    button.click()
+                elif role == QMessageBox.ButtonRole.AcceptRole:
+                    messageBox.setDefaultButton(button)
+
         messageBox.show()
 
     def cherrypickCurrentCommit(self):
