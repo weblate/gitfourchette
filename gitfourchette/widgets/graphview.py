@@ -40,6 +40,7 @@ class GraphView(QListView):
     newBranchFromCommit = Signal(pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
     revertCommit = Signal(pygit2.Oid)
+    exportCommitAsPatch = Signal(pygit2.Oid)
     commitChanges = Signal()
     amendChanges = Signal()
 
@@ -81,6 +82,7 @@ class GraphView(QListView):
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Cherry &Pick..."), self.cherrypickCurrentCommit),
                 ActionDef(self.tr("Re&vert..."), lambda: self.revertCommit.emit(oid)),
+                ActionDef(self.tr("E&xport As Patch..."), lambda: self.exportCommitAsPatch.emit(oid)),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard),
                 ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation),
