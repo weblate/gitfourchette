@@ -1,3 +1,4 @@
+from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.qt import *
@@ -7,12 +8,17 @@ from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffMo
     DiffImagePair
 import pygit2
 
+TAG = "LoadTasks"
+
 
 class LoadWorkdirDiffs(RepoTask):
     def name(self):
         return translate("Operation", "Refresh working directory")
 
     def canKill(self, task: RepoTask):
+        if type(task) is LoadWorkdirDiffs:
+            log.warning(TAG, "LoadWorkdirDiffs is killing another LoadWorkdirDiffs. This is inefficient!")
+            return True
         return type(task) in [LoadCommit, LoadPatch]
 
     def flow(self, allowUpdateIndex: bool):

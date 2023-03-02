@@ -145,21 +145,25 @@ def testResetHeadToCommit(qtbot, tempDir, mainWindow):
     assert rw.repo.branches.local['master'].target == oid1
 
 
-def testCheckoutCommit(qtbot, tempDir, mainWindow):
+def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    oid = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
-    rw.graphView.selectCommit(oid)
-    rw.graphView.checkoutCommit.emit(oid)
+    for oid in [pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6"),
+                pygit2.Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4"),
+                ]:
+        rw.graphView.selectCommit(oid)
+        rw.graphView.checkoutCommit.emit(oid)
 
-    dlg = findQDialog(rw, "check.?out commit")
-    dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)
-    dlg.accept()
+        dlg = findQDialog(rw, "check.?out commit")
+        dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)
+        dlg.accept()
 
-    assert repo.head_is_detached
-    assert repo.head.peel(pygit2.Commit).oid == oid
+        assert repo.head_is_detached
+        assert repo.head.peel(pygit2.Commit).oid == oid
+
+        assert rw.graphView.currentCommitOid == oid, "graphview's selected commit has jumped around"
 
 
 def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
