@@ -21,6 +21,9 @@ class NavPos:
     def copy(self):
         return copy(self)
 
+    def isWorkdir(self):
+        return self.context in ["UNSTAGED", "UNTRACKED", "STAGED"]
+
 
 class NavHistory:
     history: list[NavPos]

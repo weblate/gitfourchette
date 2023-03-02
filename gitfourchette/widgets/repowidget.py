@@ -358,6 +358,7 @@ class RepoWidget(QWidget):
             if self.graphView.currentCommitOid != oid:
                 success = self.graphView.selectCommit(oid)
             else:
+                self.graphView.scrollToCommit(oid)
                 success = self.restoreSelectedFile()
                 self.navHistory.unlock()
 
@@ -771,24 +772,38 @@ class RepoWidget(QWidget):
         with Benchmark("Load tainted commits only"):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
 
+        initialNavPos = self.navPos.copy()
+        initialGraphScroll = self.graphView.verticalScrollBar().value()
+
         with Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
             # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
             # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-            self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
-            if nRemovedRows >= 0:
-                self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
-            else:
-                self.graphView.setCommitSequence(self.state.commitSequence)
+            with QSignalBlockerContext(self.graphView):
+                self.graphView.setHiddenCommits(self.state.hiddenCommits)
+                if nRemovedRows >= 0:
+                    self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
+                else:
+                    self.graphView.setCommitSequence(self.state.commitSequence)
+
 
         if oldActiveCommit != self.state.activeCommitOid:
             self.graphView.repaintCommit(oldActiveCommit)
             self.graphView.repaintCommit(self.state.activeCommitOid)
 
-        with Benchmark("Refresh sidebar"):
+        with QSignalBlockerContext(self.sidebar), Benchmark("Refresh sidebar"):
             self.sidebar.refresh(self.state)
 
         self.refreshWindowTitle()
+
+        assert self.navPos == initialNavPos, "navPos has changed"
+
+        # The graph may have jumped around if we changed rows in the model,
+        # so try to restore the initial navpos to ensure the previously
+        # selected commit stays selected.
+        if initialNavPos and not initialNavPos.isWorkdir():
+            self.graphView.verticalScrollBar().setValue(initialGraphScroll)
+            self.navigateTo(initialNavPos)
 
         # Refresh workdir view on separate thread AFTER all the processing above
         # (All the above accesses the repository on the UI thread)

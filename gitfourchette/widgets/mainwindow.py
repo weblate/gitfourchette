@@ -484,7 +484,8 @@ class MainWindow(QMainWindow):
 
             rw.graphView.setHiddenCommits(newState.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
-            rw.sidebar.refresh(newState)
+            with QSignalBlockerContext(rw.sidebar):
+                rw.sidebar.refresh(newState)
 
             self.refreshTabText(rw)
 
@@ -505,6 +506,8 @@ class MainWindow(QMainWindow):
         settings.history.setRepoNumCommits(repo.workdir, len(commitSequence))
 
         rw.graphView.selectUncommittedChanges()
+        if newState.activeCommitOid:
+            rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
         return True
 
     def _openRepo(self, path: str, foreground=True, addToHistory=True) -> RepoWidget | None:

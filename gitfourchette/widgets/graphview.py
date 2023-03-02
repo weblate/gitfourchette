@@ -314,8 +314,15 @@ class GraphView(QListView):
             return False
 
         if self.currentIndex().row() != newFilterIndex.row():
+            self.scrollTo(newFilterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
             self.setCurrentIndex(newFilterIndex)
         return True
+
+    def scrollToCommit(self, oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
+        newFilterIndex = self.getFilterIndexForCommit(oid)
+        if not newFilterIndex:
+            return
+        self.scrollTo(newFilterIndex, scrollHint)
 
     def repaintCommit(self, oid: pygit2.Oid):
         newFilterIndex = self.getFilterIndexForCommit(oid)
