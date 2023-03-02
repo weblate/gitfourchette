@@ -80,7 +80,8 @@ def showTextInputDialog(
 
     if detailedPrompt:
         detailedPromptLabel = QLabel(detailedPrompt, parent=dlg)
-        detailedPromptLabel.setTextFormat(Qt.TextFormat.RichText)
+        detailedPromptLabel.setTextFormat(Qt.TextFormat.AutoText)
+        detailedPromptLabel.setWordWrap(True)
         layout.addWidget(detailedPromptLabel)
 
     layout.addWidget(lineEdit)
@@ -112,12 +113,12 @@ def showTextInputDialog(
     makeBrandedDialog(dlg, layout, title)
 
     # This size isn't guaranteed. But it'll expand the dialog horizontally if the label is shorter.
-    dlg.resize(512, 128)
-    dlg.setMaximumHeight(dlg.height())
+    dlg.setMinimumWidth(512)
 
     dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
     setWindowModal(dlg)
 
     dlg.show()
+    dlg.setMinimumHeight(dlg.height())
     dlg.setMaximumHeight(dlg.height())
     return dlg
