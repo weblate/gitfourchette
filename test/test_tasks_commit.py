@@ -110,12 +110,36 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     dialog.ui.revealAuthor.setChecked(True)
     dialog.ui.authorSignature.ui.nameEdit.setText(newAuthorName)
     dialog.ui.authorSignature.ui.emailEdit.setText(newAuthorEmail)
-    dialog.accept()
+    with qtbot.waitSignal(dialog.destroyed):  # upon exiting context, wait for dialog to be gone
+        dialog.accept()
 
     headCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
     assert headCommit.message == newMessage
     assert headCommit.author.name == newAuthorName
     assert headCommit.author.email == newAuthorEmail
+
+    # Ensure no error dialog boxes after operation
+    assert not rw.findChildren(QDialog)
+
+
+def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stagedNewEmptyFile(wd)
+    rw = mainWindow.openRepo(wd)
+
+    headOid = porcelain.getHeadCommitOid(rw.repo)
+    rw.graphView.selectCommit(headOid)
+
+    # Kick off amend dialog
+    mainWindow.amend()
+
+    # Amend HEAD commit without any changes, i.e. just change the timestamp.
+    dialog: CommitDialog = findQDialog(rw, "amend")
+    with qtbot.waitSignal(dialog.destroyed):  # upon exiting context, wait for dialog to be gone
+        dialog.accept()
+
+    # Ensure no errors dialog boxes after operation (e.g. "commit not found")
+    assert not rw.findChildren(QDialog)
 
 
 def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
