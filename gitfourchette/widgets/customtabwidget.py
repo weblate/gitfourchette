@@ -105,6 +105,12 @@ class CustomTabWidget(QWidget):
         assert i1 == i2
         return i1
 
+    def insertTab(self, index: int, w: QWidget, name: str) -> int:
+        i1 = self.stacked.insertWidget(index, w)
+        i2 = self.tabs.insertTab(index, name)
+        assert i1 == i2
+        return i1
+
     def setCurrentIndex(self, i: int):
         self.tabs.setCurrentIndex(i)
         self.stacked.setCurrentIndex(i)

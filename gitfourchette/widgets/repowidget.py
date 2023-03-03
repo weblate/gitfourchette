@@ -36,6 +36,7 @@ def sanitizeSearchTerm(x):
 
 class RepoWidget(QWidget):
     nameChange: Signal = Signal()
+    openRepo = Signal(str)
 
     state: RepoState
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
@@ -623,8 +624,7 @@ class RepoWidget(QWidget):
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
-        self.window().openRepo(path)
-        self.window().saveSession()
+        self.openRepo.emit(path)
 
     def openSubmoduleFolder(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)

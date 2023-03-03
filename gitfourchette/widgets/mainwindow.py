@@ -510,7 +510,8 @@ class MainWindow(QMainWindow):
             rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
         return True
 
-    def _openRepo(self, path: str, foreground=True, addToHistory=True) -> RepoWidget | None:
+    def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1
+                  ) -> RepoWidget | None:
         # Construct a pygit2.Repository so we can get the workdir
         repo = self._constructRepo(path)
 
@@ -539,13 +540,14 @@ class MainWindow(QMainWindow):
             repo.free()
             del repo
 
-        tabIndex = self.tabs.addTab(newRW, newRW.getTitle())
+        tabIndex = self.tabs.insertTab(tabIndex, newRW, newRW.getTitle())
         self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
 
         if foreground:
             self.tabs.setCurrentIndex(tabIndex)
 
         newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
+        newRW.openRepo.connect(lambda path: self.openRepoNextTo(newRW, path))
 
         if addToHistory:
             settings.history.addRepo(workdir)
@@ -771,6 +773,12 @@ class MainWindow(QMainWindow):
     def loadTab(self, index: int):
         rw : RepoWidget = self.tabs.widget(index)
         self._loadRepo(rw, rw.workdir)
+
+    def openRepoNextTo(self, rw, path: str):
+        index = self.tabs.indexOf(rw)
+        if index >= 0:
+            index += 1
+        return self._openRepo(path, tabIndex=index)
 
     def nextTab(self):
         if self.tabs.count() == 0:
