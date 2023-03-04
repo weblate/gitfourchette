@@ -56,8 +56,5 @@ class CommitLogModel(QAbstractListModel):
             return None
         elif role == CommitLogModel.CommitRole:
             return self._commitSequence[index.row() - 1]
-        elif role == Qt.ItemDataRole.SizeHintRole:
-            parentWidget: QWidget = self.parent()
-            return QSize(-1, parentWidget.fontMetrics().height())
         else:
             return None

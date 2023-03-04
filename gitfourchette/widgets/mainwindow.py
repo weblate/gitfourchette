@@ -344,12 +344,12 @@ class MainWindow(QMainWindow):
         # Notify widgets
         self.refreshPrefs()
 
-        info = self.tr("Some changes may require restarting {0} to take effect.").format(qAppName())
+        info = [self.tr("Some changes may require restarting {0} to take effect.").format(qAppName())]
 
         if "language" in dlg.prefDiff:
-            info += "\n\n" + self.tr("In particular, some menus and buttons will remain untranslated until you restart the application.")
+            info.append(self.tr("In particular, some menus and buttons will remain untranslated until you restart the application."))
 
-        showInformation(self, self.tr("Apply Settings"), info)
+        showInformation(self, self.tr("Apply Settings"), paragraphs(info))
 
     def openSettings(self):
         dlg = PrefsDialog(self)

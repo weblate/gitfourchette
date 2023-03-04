@@ -909,3 +909,4 @@ class RepoWidget(QWidget):
 
     def refreshPrefs(self):
         self.diffView.refreshPrefs()
+        self.graphView.refreshPrefs()

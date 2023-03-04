@@ -433,6 +433,7 @@ class PrefsDialog(QDialog):
 
             "graph_chronologicalOrder": translate("Prefs", "Commit order"),
             "graph_flattenLanes": translate("Prefs", "Flatten lanes"),
+            "graph_rowHeight": translate("Prefs", "Row spacing"),
 
             "trash_maxFiles": (translate("Prefs", "Max discarded patches in the trash"), translate("Prefs", "files")),
             "trash_maxFileSizeKB": (translate("Prefs", "Don’t salvage patches bigger than"), translate("Prefs", "KB")),
@@ -452,5 +453,11 @@ class PrefsDialog(QDialog):
             "INITIALS": translate("Prefs", "Initials"),
             "FULL_EMAIL": translate("Prefs", "Full email"),
             "ABBREVIATED_EMAIL": translate("Prefs", "Abbreviated email"),
+
+            "CRAMPED": translate("Prefs", "Cramped"),
+            "TIGHT": translate("Prefs", "Tight (default)"),
+            "RELAXED": translate("Prefs", "Relaxed"),
+            "ROOMY": translate("Prefs", "Roomy"),
+            "SPACIOUS": translate("Prefs", "Spacious"),
         }
 

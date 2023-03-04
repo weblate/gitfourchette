@@ -136,6 +136,14 @@ class AuthorDisplayStyle(enum.IntEnum):
     ABBREVIATED_EMAIL = 6
 
 
+class GraphRowHeight(enum.IntEnum):
+    CRAMPED = 80
+    TIGHT = 100
+    RELAXED = 130
+    ROOMY = 150
+    SPACIOUS = 175
+
+
 class Verbosity(enum.IntEnum):
     QUIET = 0
     VERBOSE = 1
@@ -169,6 +177,7 @@ class Prefs(BasePrefs):
     tabs_doubleClickOpensFolder : bool          = True
     graph_chronologicalOrder    : bool          = True
     graph_flattenLanes          : bool          = True
+    graph_rowHeight             : GraphRowHeight = GraphRowHeight.TIGHT
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True

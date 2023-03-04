@@ -329,3 +329,7 @@ class GraphView(QListView):
         newFilterIndex = self.getFilterIndexForCommit(oid)
         if newFilterIndex:
             self.update(newFilterIndex)
+
+    def refreshPrefs(self):
+        self.model().beginResetModel()
+        self.model().endResetModel()
