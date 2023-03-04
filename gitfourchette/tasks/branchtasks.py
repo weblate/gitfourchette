@@ -232,7 +232,7 @@ class PullBranch(RepoTask):
     def name(self):
         return translate("Operation", "Pull branch")
 
-    def flow(self, localBranchName: str):
+    def flow(self, localBranchName: str = ""):
         if not localBranchName:
             localBranchName = porcelain.getActiveBranchShorthand(self.repo)
 
