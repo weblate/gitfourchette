@@ -9,6 +9,7 @@ from gitfourchette.navhistory import NavHistory, NavPos
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.stagingstate import StagingState
+from gitfourchette.tasks import TaskAffectsWhat
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon)
@@ -755,7 +756,10 @@ class RepoWidget(QWidget):
     def isStageViewShown(self):
         return self.filesStack.currentWidget() == self.stageSplitter
 
-    def quickRefresh(self, allowUpdateIndex=False):
+    def quickRefresh(self, flags: TaskAffectsWhat = TaskAffectsWhat.DEFAULT):
+        if flags == TaskAffectsWhat.NOTHING:
+            return
+
         oldActiveCommit = self.state.activeCommitOid
 
         self.scheduledRefresh.stop()
@@ -808,6 +812,7 @@ class RepoWidget(QWidget):
         # Refresh workdir view on separate thread AFTER all the processing above
         # (All the above accesses the repository on the UI thread)
         if self.isStageViewShown:
+            allowUpdateIndex = bool(flags & TaskAffectsWhat.INDEXWRITE)
             self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
 
     def refreshWindowTitle(self):
@@ -885,10 +890,8 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def refreshPostTask(self, what: tasks.TaskAffectsWhat):
-        if what != tasks.TaskAffectsWhat.NOTHING:
-            allowUpdateIndex = bool(what & tasks.TaskAffectsWhat.INDEXWRITE)
-            self.quickRefresh(allowUpdateIndex=allowUpdateIndex)
+    def refreshPostTask(self, task: tasks.RepoTask):
+        self.quickRefresh(task.refreshWhat())
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
         if progressText:

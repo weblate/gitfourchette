@@ -59,6 +59,7 @@ class TaskAffectsWhat(enum.IntFlag):
     LOCALREFS = enum.auto()
     REMOTES = enum.auto()
     HEAD = enum.auto()
+    DEFAULT = INDEX | LOCALREFS | REMOTES
 
 
 class FlowControlToken(QObject):
@@ -82,6 +83,9 @@ class FlowControlToken(QObject):
         super().__init__(None)
         self.flowControl = flowControl
         self.setObjectName("FlowControlToken")
+
+    def __str__(self):
+        return F"FlowControlToken({self.flowControl.name})"
 
 
 class RepoTask(QObject):
@@ -115,8 +119,8 @@ class RepoTask(QObject):
     def name(self):
         return str(self)
 
-    def debugName(self):
-        return f"{self.taskID},{self.__class__.__name__}"
+    def __str__(self):
+        return f"{self.__class__.__name__}#{self.taskID}"
 
     def canKill(self, task: 'RepoTask'):
         return False
@@ -266,9 +270,11 @@ class RepoTask(QObject):
 
 
 class RepoTaskRunner(QObject):
-    refreshPostTask = Signal(TaskAffectsWhat)
+    refreshPostTask = Signal(RepoTask)
     progress = Signal(str, bool)
+
     _continueFlow = Signal(object)
+    "Connected to _iterateFlow"
 
     _threadPool: QThreadPool
     _currentTask: RepoTask | None
@@ -292,7 +298,7 @@ class RepoTaskRunner(QObject):
         self._pendingKillerArgs = []
 
     def isBusy(self):
-        return self._currentTask is not None or self._zombieTask is not None
+        return self._currentTask is not None or self._zombieTask is not None or self._threadPool.activeThreadCount() > 0
 
     def put(self, task: RepoTask, *args):
         assert util.onAppThread()
@@ -306,7 +312,7 @@ class RepoTaskRunner(QObject):
             self._startTask(task)
 
         elif task.canKill(self._currentTask):
-            log.info(TAG, f"Task {task.debugName()} killed task {self._currentTask.debugName()}")
+            log.info(TAG, f"Task {task} killed task {self._currentTask}")
             if not self._zombieTask:
                 self._zombieTask = self._currentTask
             else:
@@ -317,15 +323,15 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            util.showWarning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask.debugName()} cannot be interrupted by {task.debugName()})")
+            util.showWarning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask} cannot be interrupted by {task})")
 
     def _startTask(self, task):
         assert self._currentTask == task
         assert task._currentFlow
 
-        log.info(TAG, f"Start task {task.debugName()}")
+        log.info(TAG, f"Start task {task}")
 
-        self._currentTaskBenchmark = Benchmark(task.debugName())
+        self._currentTaskBenchmark = Benchmark(str(task))
         self._currentTaskBenchmark.__enter__()
 
         # Prepare internal signal for coroutine continuation
@@ -337,7 +343,7 @@ class RepoTaskRunner(QObject):
     def _iterateFlow(self, task: RepoTask, result: FlowControlToken | BaseException):
         flow = task._currentFlow
         task._currentIteration += 1
-        # log.info(TAG, f"Iterate on task {task.debugName()} ({task._currentIteration})")
+        # log.info(TAG, f"Iterate on task {task} ({task._currentIteration}) ({result})")
 
         assert util.onAppThread()
 
@@ -358,6 +364,7 @@ class RepoTaskRunner(QObject):
 
             if control == FlowControlToken.Kind.ABORT_TASK:
                 # Stop here
+                log.info(TAG, f"Task aborted: {task}")
                 self._releaseTask(task)
                 task.deleteLater()
 
@@ -387,8 +394,9 @@ class RepoTaskRunner(QObject):
 
             if isinstance(exception, StopIteration):
                 # No more steps in the flow
+                log.info(TAG, f"Task successful: {task}")
                 task.success.emit()
-                self.refreshPostTask.emit(task.refreshWhat())
+                self.refreshPostTask.emit(task)
             else:
                 # Run task's error callback
                 task.onError(exception)
@@ -406,7 +414,7 @@ class RepoTaskRunner(QObject):
             self._continueFlow.emit(exception)
 
     def _releaseTask(self, task: RepoTask):
-        log.info(TAG, f"End task {task.debugName()}")
+        log.info(TAG, f"End task {task}")
         self.progress.emit("", False)
         self._currentTaskBenchmark.__exit__(None, None, None)
 
