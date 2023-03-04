@@ -305,12 +305,13 @@ class GraphView(QListView):
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)
         return newFilterIndex
 
-    def selectCommit(self, oid: pygit2.Oid):
+    def selectCommit(self, oid: pygit2.Oid, silent=False):
         newFilterIndex = self.getFilterIndexForCommit(oid)
 
         if not newFilterIndex:
-            showWarning(self, self.tr("Commit not found"),
-                        self.tr("Commit not found or not loaded:") + f"<br>{oid.hex}")
+            if not silent:
+                showWarning(self, self.tr("Commit not found"),
+                            self.tr("Commit not found or not loaded:") + f"<br>{oid.hex}")
             return False
 
         if self.currentIndex().row() != newFilterIndex.row():

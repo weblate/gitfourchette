@@ -119,7 +119,12 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     assert headCommit.author.email == newAuthorEmail
 
     # Ensure no error dialog boxes after operation
-    assert not rw.findChildren(QDialog)
+    assert not mainWindow.findChildren(QDialog)
+
+    assert not rw.graphView.currentCommitOid  # "uncommitted changes" should still be selected
+    assert rw.stagedFiles.isVisibleTo(rw)
+    assert rw.dirtyFiles.isVisibleTo(rw)
+    assert not rw.committedFiles.isVisibleTo(rw)
 
 
 def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
@@ -139,7 +144,7 @@ def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
         dialog.accept()
 
     # Ensure no errors dialog boxes after operation (e.g. "commit not found")
-    assert not rw.findChildren(QDialog)
+    assert not mainWindow.findChildren(QDialog)
 
 
 def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):

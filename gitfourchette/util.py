@@ -389,16 +389,14 @@ class QSignalBlockerContext:
     """
     Context manager wrapper around QSignalBlocker.
     """
-    def __init__(self, objectToBlock: QObject):
+    def __init__(self, objectToBlock: QObject | QWidget):
         self.objectToBlock = objectToBlock
 
     def __enter__(self):
-        self.blocker = QSignalBlocker(self.objectToBlock)
+        self.objectToBlock.blockSignals(True)
 
     def __exit__(self, excType, excValue, excTraceback):
-        if self.blocker:
-            self.blocker.unblock()
-            self.blocker = None
+        self.objectToBlock.blockSignals(False)
 
 
 class DisableWidgetContext:

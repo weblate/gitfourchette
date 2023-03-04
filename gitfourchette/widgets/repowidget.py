@@ -285,7 +285,7 @@ class RepoWidget(QWidget):
             self.scheduledRefresh.start()
 
     def onIndexChange(self):
-        if self.isStageViewShown:
+        if self.isWorkdirShown:
             self.quickRefresh()
 
     # -------------------------------------------------------------------------
@@ -358,7 +358,7 @@ class RepoWidget(QWidget):
         else:
             oid = pygit2.Oid(hex=self.navPos.context)
             if self.graphView.currentCommitOid != oid:
-                success = self.graphView.selectCommit(oid)
+                success = self.graphView.selectCommit(oid, silent=True)
             else:
                 self.graphView.scrollToCommit(oid)
                 success = self.restoreSelectedFile()
@@ -753,7 +753,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     @property
-    def isStageViewShown(self):
+    def isWorkdirShown(self):
         return self.filesStack.currentWidget() == self.stageSplitter
 
     def quickRefresh(self, flags: TaskAffectsWhat = TaskAffectsWhat.DEFAULT):
@@ -779,17 +779,14 @@ class RepoWidget(QWidget):
         initialNavPos = self.navPos.copy()
         initialGraphScroll = self.graphView.verticalScrollBar().value()
 
-        with Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
+        with QSignalBlockerContext(self.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
             # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
             # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-
-            with QSignalBlockerContext(self.graphView):
-                self.graphView.setHiddenCommits(self.state.hiddenCommits)
-                if nRemovedRows >= 0:
-                    self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
-                else:
-                    self.graphView.setCommitSequence(self.state.commitSequence)
-
+            self.graphView.setHiddenCommits(self.state.hiddenCommits)
+            if nRemovedRows >= 0:
+                self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
+            else:
+                self.graphView.setCommitSequence(self.state.commitSequence)
 
         if oldActiveCommit != self.state.activeCommitOid:
             self.graphView.repaintCommit(oldActiveCommit)
@@ -802,16 +799,19 @@ class RepoWidget(QWidget):
 
         assert self.navPos == initialNavPos, "navPos has changed"
 
-        # The graph may have jumped around if we changed rows in the model,
-        # so try to restore the initial navpos to ensure the previously
-        # selected commit stays selected.
         if initialNavPos and not initialNavPos.isWorkdir():
+            # The graph may have jumped around if we changed rows in the model,
+            # so try to restore the initial navpos to ensure the previously
+            # selected commit stays selected.
             self.graphView.verticalScrollBar().setValue(initialGraphScroll)
-            self.navigateTo(initialNavPos)
-
-        # Refresh workdir view on separate thread AFTER all the processing above
-        # (All the above accesses the repository on the UI thread)
-        if self.isStageViewShown:
+            oldNavPosOid = pygit2.Oid(hex=initialNavPos.context)
+            if oldNavPosOid in self.state.commitPositions:
+                self.navigateTo(initialNavPos)
+            else:
+                self.graphView.selectCommit(self.state.activeCommitOid)
+        elif self.isWorkdirShown:
+            # Refresh workdir view on separate thread AFTER all the processing above
+            # (All the above accesses the repository on the UI thread)
             allowUpdateIndex = bool(flags & TaskAffectsWhat.INDEXWRITE)
             self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
 

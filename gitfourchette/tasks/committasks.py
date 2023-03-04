@@ -13,7 +13,7 @@ class NewCommit(RepoTask):
         return translate("Operation", "Commit")
 
     def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
+        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
 
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
@@ -74,7 +74,7 @@ class AmendCommit(RepoTask):
         return translate("Operation", "Amend commit")
 
     def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
+        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
 
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
