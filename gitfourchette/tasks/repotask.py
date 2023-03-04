@@ -169,7 +169,7 @@ class RepoTask(QObject):
     def _flowAbort(
             self,
             warningText: str = "",
-            warningTextIcon: Literal['warning', 'information', 'critical'] = "warning"
+            warningTextIcon: util.MessageBoxIconName = "warning"
     ):
         """
         Aborts the task with an optional error message.
@@ -317,8 +317,7 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            log.warning(TAG, f"A RepoTask is already running! ({self._currentTask.debugName()} cannot be interrupted by {task.debugName()})")
-            QMessageBox.warning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask.debugName()} cannot be interrupted by {task.debugName()})")
+            util.showWarning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask.debugName()} cannot be interrupted by {task.debugName()})")
 
     def _startTask(self, task):
         assert self._currentTask == task

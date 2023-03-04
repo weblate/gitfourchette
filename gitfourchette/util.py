@@ -11,6 +11,7 @@ import typing
 
 HOME = os.path.abspath(os.path.expanduser('~'))
 
+MessageBoxIconName = typing.Literal['warning', 'information', 'question', 'critical']
 
 _supportedImageFormats = None
 
@@ -146,11 +147,18 @@ def excMessageBox(
         parent=None,
         printExc=True,
         showExcSummary=True,
-        icon: str = 'critical'
+        icon: MessageBoxIconName = 'critical'
 ):
     try:
         if printExc:
             traceback.print_exception(exc.__class__, exc, exc.__traceback__)
+
+        # Without a parent, show() won't work. Try to find a QMainWindow to use as the parent.
+        if not parent:
+            for tlw in QApplication.topLevelWidgets():
+                if isinstance(tlw, QMainWindow):
+                    parent = tlw
+                    break
 
         # bail out if we're not running on Qt's application thread
         if not onAppThread():
@@ -191,9 +199,11 @@ def excMessageBox(
         # Keep user from triggering more exceptions by clicking on stuff in the background
         qmb.setWindowModality(Qt.WindowModality.ApplicationModal)
 
-        if parent is not None:
+        if parent:
             qmb.show()
-        else:  # without a parent, .show() won't work
+        else:
+            # Without a parent, show() won't work. So, use exec() as the very last resort.
+            # (Calling exec() may crash on macOS if another modal dialog is active.)
             qmb.exec()
 
     except BaseException as excMessageBoxError:
@@ -215,12 +225,20 @@ def excStrings(exc):
 
 def asyncMessageBox(
         parent: QWidget,
-        icon: typing.Literal['warning', 'information', 'question', 'critical'],
+        icon: MessageBoxIconName,
         title: str,
         text: str,
         buttons=QMessageBox.StandardButton.NoButton,
         macShowTitle=True
 ) -> QMessageBox:
+
+    from gitfourchette import log
+
+    loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
+    if icon in ['information', 'question']:
+        log.info("MessageBox", loggedMessage)
+    else:
+        log.warning("MessageBox", loggedMessage)
 
     icons = {
         'warning': QMessageBox.Icon.Warning,
@@ -245,19 +263,27 @@ def asyncMessageBox(
     if MACOS:
         qmb.setStyleSheet("QMessageBox QLabel { font-weight: normal; }")
 
-    setWindowModal(qmb)
+    if parent:
+        setWindowModal(qmb)
+
     qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
     return qmb
 
 
 def showWarning(parent: QWidget, title: str, text: str) -> QMessageBox:
+    """
+    Shows a warning message box asynchronously.
+    """
     qmb = asyncMessageBox(parent, 'warning', title, text)
     qmb.show()
     return qmb
 
 
 def showInformation(parent: QWidget, title: str, text: str) -> QMessageBox:
+    """
+    Shows an information message box asynchronously.
+    """
     qmb = asyncMessageBox(parent, 'information', title, text)
     qmb.show()
     return qmb
@@ -273,9 +299,13 @@ def askConfirmation(
         okButtonIcon: QIcon | None = None,
         show=True
 ) -> QMessageBox:
+    """
+    Shows a confirmation message box asynchronously.
 
-    # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
-    # so it connects to the "accepted" signal.
+    If you override `buttons`, be careful with your choice of StandardButton values;
+    some of them won't emit the `accepted` signal which is connected to the callback.
+    """
+
     qmb = asyncMessageBox(parent, 'question', title, text, buttons)
 
     okButton = qmb.button(QMessageBox.StandardButton.Ok)
