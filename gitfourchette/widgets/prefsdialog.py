@@ -96,6 +96,12 @@ class DatePresetDelegate(QStyledItemDelegate):
 
 
 class PrefsDialog(QDialog):
+    lastOpenTab = 0
+
+    @staticmethod
+    def saveLastOpenTab(i):
+        PrefsDialog.lastOpenTab = i
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -200,6 +206,10 @@ class PrefsDialog(QDialog):
         layout.addWidget(tabWidget)
         layout.addWidget(buttonBox)
         self.setLayout(layout)
+
+        # Restore last open tab
+        tabWidget.setCurrentIndex(PrefsDialog.lastOpenTab)
+        tabWidget.currentChanged.connect(PrefsDialog.saveLastOpenTab)
 
         self.setModal(True)
 
