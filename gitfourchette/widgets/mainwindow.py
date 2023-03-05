@@ -941,8 +941,10 @@ class MainWindow(QMainWindow):
     def dropEvent(self, event: QDropEvent):
         action, data = self.getDropOutcomeFromMimeData(event.mimeData())
         if action == "clone":
+            event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
             self.cloneDialog(data)
         elif action == "open":
+            event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
             self.openRepo(data)
 
     # -------------------------------------------------------------------------
