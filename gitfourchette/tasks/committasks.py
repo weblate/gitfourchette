@@ -47,7 +47,6 @@ class NewCommit(RepoTask):
             parent=self.parent())
 
         util.setWindowModal(cd)
-        cd.show()
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self._flowDialog(cd, abortTaskIfRejected=False)
@@ -102,7 +101,6 @@ class AmendCommit(RepoTask):
             parent=self.parent())
 
         util.setWindowModal(cd)
-        cd.show()
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self._flowDialog(cd, abortTaskIfRejected=False)
@@ -186,7 +184,6 @@ class SetUpIdentity(RepoTask):
         convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
 
         util.setWindowModal(dlg)
-        dlg.show()
         yield from self._flowDialog(dlg)
 
         name = ui.nameEdit.text()
@@ -231,7 +228,6 @@ class CheckoutCommit(RepoTask):
 
         dlg.setWindowTitle(self.tr("Check out commit {0}").format(util.shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=f"“{commitMessage}”")
-        dlg.show()
         yield from self._flowDialog(dlg)
 
         # Make sure to copy user input from dialog UI *before* starting worker thread

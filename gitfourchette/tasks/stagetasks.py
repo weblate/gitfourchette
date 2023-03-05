@@ -135,7 +135,6 @@ class ApplyPatch(RepoTask):
 
         # We want the user to pay attention here. Don't let them press enter to stage/unstage the entire file.
         qmb.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        qmb.show()
         yield from self._flowDialog(qmb)
         qmb.deleteLater()
 

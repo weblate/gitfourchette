@@ -231,6 +231,8 @@ class RepoTask(QObject):
         dialog.rejected.connect(waitToken.ready)
         dialog.accepted.connect(waitToken.ready)
 
+        dialog.show()
+
         yield waitToken
 
         if abortTaskIfRejected and didReject:
@@ -268,8 +270,6 @@ class RepoTask(QObject):
         if buttonIcon:
             yes.setIcon(util.stockIcon(buttonIcon))
         yes.setText(verb)
-
-        qmb.show()
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self._flowDialog(qmb)

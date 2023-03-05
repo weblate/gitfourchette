@@ -212,7 +212,6 @@ class EditTrackedBranch(RepoTask):
     def flow(self, localBranchName: str):
         dlg = TrackedBranchDialog(self.repo, localBranchName, self.parent())
         util.setWindowModal(dlg)
-        dlg.show()
         yield from self._flowDialog(dlg)
 
         remoteBranchName = dlg.newTrackedBranchName
