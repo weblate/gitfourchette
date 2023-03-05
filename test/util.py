@@ -6,7 +6,12 @@ import tarfile
 import shutil
 
 
-def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
+def unpackRepo(
+        tempDir,
+        testRepoName="TestGitRepository",
+        userName="Rascar Capac",
+        userEmail="rascarcapac@example.com",
+) -> str:
     testPath = os.path.realpath(__file__)
     testPath = os.path.dirname(testPath)
 
@@ -16,6 +21,12 @@ def unpackRepo(tempDir, testRepoName="TestGitRepository") -> str:
     path = F"{tempDir.name}/{testRepoName}"
     path = os.path.realpath(path)
     path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
+
+    with open(F"{path}/.git/config", "at") as configFile:
+        configFile.write(
+            "\n[user]\n"
+            F"name = {userName}\n"
+            F"email = {userEmail}\n")
 
     return path
 
