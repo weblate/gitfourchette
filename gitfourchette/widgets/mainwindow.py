@@ -9,7 +9,7 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
                                 PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation,
-                                paragraphs)
+                                paragraphs, NonCriticalOperation)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -23,7 +23,6 @@ import gc
 import os
 import pygit2
 import re
-
 
 
 try:
@@ -40,6 +39,8 @@ class Session:
 
 
 class MainWindow(QMainWindow):
+    styleSheetReloadScheduled = False
+
     welcomeStack: QStackedWidget
     welcomeWidget: WelcomeWidget
     tabs: CustomTabWidget
@@ -92,8 +93,9 @@ class MainWindow(QMainWindow):
         self.memoryIndicator = None
 
         self.setAcceptDrops(True)
-
+        self.styleSheetReloadScheduled = False
         QApplication.instance().installEventFilter(self)
+
         self.refreshPrefs()
 
     def close(self) -> bool:
@@ -103,11 +105,32 @@ class MainWindow(QMainWindow):
         globalstatus.progressDisable.disconnect()
         return super().close()
 
+    @staticmethod
+    def reloadStyleSheet():
+        log.info("MainWindow", "Reloading QSS")
+        with NonCriticalOperation("Reload application-wide stylesheet"):
+            MainWindow.styleSheetReloadScheduled = False
+            styleSheetFile = QFile("assets:style.qss")
+            if not styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
+                return
+            styleSheet = styleSheetFile.readAll().data().decode("utf-8")
+            QApplication.instance().setStyleSheet(styleSheet)
+            styleSheetFile.close()
+
     def eventFilter(self, watched, event: QEvent):
         isPress = event.type() == QEvent.Type.MouseButtonPress
         isDblClick = event.type() == QEvent.Type.MouseButtonDblClick
 
-        if (isPress or isDblClick) and self.isActiveWindow():
+        if event.type() == QEvent.Type.ThemeChange:
+            # Reload QSS when the theme changes (e.g. switching between dark/light modes).
+            # Delay the reload to next event loop so that it doesn't occur during the fade animation on macOS.
+            # We may receive several ThemeChange events during a single theme change, so only schedule one reload.
+            if not MainWindow.styleSheetReloadScheduled:
+                MainWindow.styleSheetReloadScheduled = True
+                QTimer.singleShot(0, MainWindow.reloadStyleSheet)
+                return True
+
+        elif (isPress or isDblClick) and self.isActiveWindow():
             mouseEvent: QMouseEvent = event
 
             isBack = mouseEvent.button() == Qt.MouseButton.BackButton

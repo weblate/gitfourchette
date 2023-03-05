@@ -58,6 +58,9 @@ if PYSIDE6 and qtBindingVersion.startswith("6.4.0"):  # See PYSIDE-2104
     QMessageBox.critical(None, "", "PySide6 6.4.0 isn't supported. Please upgrade to 6.4.1 or later.")
     exit(1)
 
+# QEvent::ThemeChange is still undocumented. It only seems to work in Qt 6.
+if PYQT5 or PYQT6:
+    QEvent.Type.ThemeChange = 0xD2
 
 # Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
 if QT5:

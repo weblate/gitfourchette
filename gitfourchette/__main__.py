@@ -49,14 +49,6 @@ def main():
     with NonCriticalOperation("Get system default style name"):
         app.PLATFORM_DEFAULT_STYLE_NAME = app.style().objectName()
 
-    # Apply application-wide stylesheet
-    with NonCriticalOperation("Apply application-wide stylesheet"):
-        styleSheetFile = QFile("assets:style.qss")
-        if styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
-            styleSheet = styleSheetFile.readAll().data().decode("utf-8")
-            app.setStyleSheet(styleSheet)
-            styleSheetFile.close()
-
     # Initialize settings
     if commandLine.isSet("test-mode"):
         settings.TEST_MODE = True
@@ -94,6 +86,7 @@ def main():
 
     def bootMainWindow():
         from gitfourchette.widgets.mainwindow import MainWindow
+        MainWindow.reloadStyleSheet()
         window = MainWindow()
         window.show()
         window.restoreSession(session)
