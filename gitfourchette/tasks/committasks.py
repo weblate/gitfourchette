@@ -388,9 +388,14 @@ class ExportCommitAsPatch(RepoTask):
         diffs = porcelain.loadCommitDiffs(self.repo, oid)
 
         for d in diffs:
-            composed += d.patch
-            assert composed.endswith("\n")
+            diffPatch = d.patch
+            if diffPatch:
+                composed += d.patch
+                assert composed.endswith("\n")
         yield from self._flowExitWorkerThread()
+
+        if not composed:
+            yield from self._flowAbort(self.tr("Nothing to export. The patch is empty."), warningTextIcon="information")
 
         repoName = porcelain.repoName(self.repo)
         initialName = f"{repoName} {util.shortHash(oid)} - {summary}.patch"
