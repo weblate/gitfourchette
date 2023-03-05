@@ -1,2 +1,9 @@
 #!/usr/bin/env bash
-PYTHONPATH="$(dirname "$0")" python3 -m gitfourchette "$@"
+
+set -e
+
+PYTHON=${PYTHON:-python3}
+export PYTHONPATH="$(dirname "$0")"
+export QT_API=${QT_API:-pyside6}
+
+$PYTHON -m gitfourchette "$@"
