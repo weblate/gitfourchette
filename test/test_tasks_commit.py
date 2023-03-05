@@ -5,7 +5,7 @@ from gitfourchette import porcelain
 from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
-from gitfourchette.widgets.ui_identitydialog import Ui_IdentityDialog
+from gitfourchette.widgets.ui_identitydialog1 import Ui_IdentityDialog1
 import pygit2
 
 
@@ -165,9 +165,8 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
     rw.commitButton.click()
 
     identityDialog = findQDialog(rw, "identity")
-    assert isinstance(identityDialog.ui, Ui_IdentityDialog)
+    assert isinstance(identityDialog.ui, Ui_IdentityDialog1)
     identityOK = identityDialog.ui.buttonBox.button(QDialogButtonBox.Ok)
-    assert not identityOK.isEnabled()  # can't click OK until fields filled out
     identityDialog.ui.nameEdit.setText("Archibald Haddock")
     identityDialog.ui.emailEdit.setText("1e15sabords@example.com")
     identityDialog.ui.setLocalIdentity.setChecked(True)

@@ -200,6 +200,9 @@ class MainWindow(QMainWindow):
         a.setMenuRole(QAction.MenuRole.PreferencesRole)
         a.setShortcuts(QKeySequence.StandardKey.Preferences)
 
+        a = fileMenu.addAction(self.tr("Set Up Git &Identity..."), self.setUpIdentity)
+        a.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
+
         fileMenu.addSeparator()
 
         a = fileMenu.addAction(self.tr("&Quit"), self.close)
@@ -630,6 +633,10 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def recallCommit(self, rw: RepoWidget):
         rw.recallCommit()
+
+    @needRepoWidget
+    def setUpIdentity(self, rw: RepoWidget):
+        rw.setUpRepoIdentity()
 
     def _openLocalConfigFile(self, fullPath: str):
         def createAndOpen():

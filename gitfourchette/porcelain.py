@@ -1,6 +1,7 @@
 from collections import defaultdict
 from gitfourchette import log
 from pygit2 import Commit, Diff, Oid, Repository, Signature
+import contextlib
 import pygit2
 import os
 import re
@@ -873,3 +874,55 @@ def refNameToBranch(repo: pygit2.Repository, refName: str) -> tuple[pygit2.Branc
         return repo.branches.remote[refName.removeprefix(REMOTES_PREFIX)], True
     else:
         assert False, f"refName must start with {HEADS_PREFIX} or {REMOTES_PREFIX}"
+
+
+def repoName(repo: pygit2.Repository):
+    return os.path.basename(os.path.normpath(repo.workdir))
+
+
+def getGlobalIdentity():
+    """
+    Returns the name and email set in the global `.gitconfig` file.
+    If the global identity isn't set, this function returns blank strings.
+    """
+
+    name = ""
+    email = ""
+
+    try:
+        globalConfig = pygit2.Config.get_global_config()
+    except OSError:
+        # "The global file '.gitconfig' doesn't exist: No such file or directory
+        return name, email
+
+    with contextlib.suppress(KeyError):
+        name = globalConfig["user.name"]
+
+    with contextlib.suppress(KeyError):
+        email = globalConfig["user.email"]
+
+    return name, email
+
+
+def getLocalIdentity(repo: pygit2.Repository):
+    """
+    Returns the name and email set in the repository's `.git/config` file.
+    If an identity isn't set specifically for this repo, this function returns blank strings.
+    """
+
+    # Don't use repo.config because it merges global and local configs
+    localConfigPath = os.path.join(repo.path, "config")
+
+    name = ""
+    email = ""
+
+    if os.path.isfile(localConfigPath):
+        localConfig = pygit2.Config(localConfigPath)
+
+        with contextlib.suppress(KeyError):
+            name = localConfig["user.name"]
+
+        with contextlib.suppress(KeyError):
+            email = localConfig["user.email"]
+
+    return name, email

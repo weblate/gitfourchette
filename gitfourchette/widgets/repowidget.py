@@ -890,6 +890,11 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
+    def setUpRepoIdentity(self):
+        self.runTask(tasks.SetUpRepoIdentity)
+
+    # -------------------------------------------------------------------------
+
     def refreshPostTask(self, task: tasks.RepoTask):
         self.quickRefresh(task.refreshWhat())
 

@@ -5,7 +5,10 @@ from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
-from gitfourchette.widgets.ui_identitydialog import Ui_IdentityDialog
+from gitfourchette.widgets.ui_identitydialog1 import Ui_IdentityDialog1
+from gitfourchette.widgets.ui_identitydialog2 import Ui_IdentityDialog2
+import contextlib
+import html
 import pygit2
 
 
@@ -27,7 +30,7 @@ class NewCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage)
 
     def flow(self):
-        yield from self._flowSubtask(SetUpIdentity, translate("IdentityDialog", "Proceed to Commit"))
+        yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
         if not porcelain.hasAnyStagedChanges(self.repo):
             yield from self._flowConfirm(
                 title=self.tr("Create empty commit"),
@@ -88,7 +91,7 @@ class AmendCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage, forAmending=True)
 
     def flow(self):
-        yield from self._flowSubtask(SetUpIdentity, translate("IdentityDialog", "Proceed to Amend Commit"))
+        yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = porcelain.getHeadCommit(self.repo)
 
         # TODO: Retrieve draft message
@@ -123,7 +126,7 @@ class AmendCommit(RepoTask):
         self.setDraftMessage(None)  # Clear draft message
 
 
-class SetUpIdentity(RepoTask):
+class SetUpIdentityFirstRun(RepoTask):
     def name(self):
         return translate("Operation", "Set up identity")
 
@@ -148,29 +151,32 @@ class SetUpIdentity(RepoTask):
 
         for item in name, email:
             if "<" in item or ">" in item:
-                return translate("IdentityDialog", "Angle bracket characters are not allowed.")
+                return translate("IdentityDialog1", "Angle bracket characters are not allowed.")
             elif not extractTrimmed(item):
-                return translate("IdentityDialog", "Please fill out both fields.")
+                return translate("IdentityDialog1", "Please fill out both fields.")
 
         return ""
 
     def flow(self, okButtonText=""):
         # Getting the default signature will fail if the user's identity is missing or incorrectly set
-        try:
+        with contextlib.suppress(KeyError, ValueError):
             sig = self.repo.default_signature
             return
-        except (KeyError, ValueError):
-            pass
 
         dlg = QDialog(self.parent())
 
-        ui = Ui_IdentityDialog()
+        ui = Ui_IdentityDialog1()
         ui.setupUi(dlg)
         dlg.ui = ui  # for easier access in unit testing
 
+        # Initialize with global identity values (if any)
+        initialName, initialEmail = porcelain.getGlobalIdentity()
+        ui.nameEdit.setText(initialName)
+        ui.emailEdit.setText(initialEmail)
+
         util.installLineEditCustomValidator(
             lineEdits=[ui.nameEdit, ui.emailEdit],
-            validatorFunc=SetUpIdentity.validateInput,
+            validatorFunc=SetUpIdentityFirstRun.validateInput,
             errorLabel=ui.validatorLabel,
             gatedWidgets=[ui.buttonBox.button(QDialogButtonBox.Ok)])
 
@@ -178,7 +184,7 @@ class SetUpIdentity(RepoTask):
             ui.buttonBox.button(QDialogButtonBox.Ok).setText(okButtonText)
 
         subtitle = translate(
-            "IdentityDialog",
+            "IdentityDialog1",
             "Before you start creating commits, please set up your identity for Git. "
             "This information will be baked into every commit that you author.")
         convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
@@ -198,6 +204,95 @@ class SetUpIdentity(RepoTask):
             configObject = self.repo.config
         configObject['user.name'] = name
         configObject['user.email'] = email
+
+
+class SetUpRepoIdentity(RepoTask):
+    def name(self):
+        return translate("Operation", "Set up identity")
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.NOTHING
+
+    def flow(self):
+        repoName = porcelain.repoName(self.repo)
+
+        localName, localEmail = porcelain.getLocalIdentity(self.repo)
+        useLocalIdentity = bool(localName or localEmail)
+
+        dlg = QDialog(self.parent())
+
+        ui = Ui_IdentityDialog2()
+        ui.setupUi(dlg)
+        dlg.ui = ui  # for easier access in unit testing
+
+        ui.localIdentityCheckBox.setText(ui.localIdentityCheckBox.text().format(html.escape(repoName)))
+        ui.localIdentityCheckBox.setChecked(useLocalIdentity)
+
+        def onLocalIdentityCheckBoxChanged(newState):
+            if newState:
+                try:
+                    sig: pygit2.Signature = self.repo.default_signature
+                    initialName = sig.name
+                    initialEmail = sig.email
+                except (KeyError, ValueError):
+                    initialName = ""
+                    initialEmail = ""
+
+                ui.nameEdit.setPlaceholderText("")
+                ui.emailEdit.setPlaceholderText("")
+
+                groupBoxTitle = translate("IdentityDialog2", "Custom identity for “{0}”").format(html.escape(repoName))
+                okButtonText = translate("IdentityDialog2", "Set custom identity")
+            else:
+                initialName, initialEmail = porcelain.getGlobalIdentity()
+
+                groupBoxTitle = translate("IdentityDialog2", "Global identity (for “{0}” and other repos)").format(html.escape(repoName))
+                okButtonText = translate("IdentityDialog2", "Set global identity")
+
+            ui.nameEdit.setText(initialName)
+            ui.emailEdit.setText(initialEmail)
+            ui.identityGroupBox.setTitle(groupBoxTitle)
+            ui.buttonBox.button(QDialogButtonBox.Ok).setText(okButtonText)
+
+        ui.localIdentityCheckBox.stateChanged.connect(onLocalIdentityCheckBoxChanged)
+
+        util.installLineEditCustomValidator(
+            lineEdits=[ui.nameEdit, ui.emailEdit],
+            validatorFunc=SetUpIdentityFirstRun.validateInput,
+            errorLabel=ui.validatorLabel,
+            gatedWidgets=[ui.buttonBox.button(QDialogButtonBox.Ok)])
+
+        onLocalIdentityCheckBoxChanged(useLocalIdentity)
+
+        convertToBrandedDialog(dlg)
+        util.setWindowModal(dlg)
+        yield from self._flowDialog(dlg)
+
+        name = ui.nameEdit.text()
+        email = ui.emailEdit.text()
+        setGlobally = not ui.localIdentityCheckBox.isChecked()
+        dlg.deleteLater()
+
+        yield from self._flowBeginWorkerThread()
+
+        if setGlobally:
+            try:
+                configObject = pygit2.Config.get_global_config()
+            except OSError:
+                # Last resort, create file
+                # TODO: pygit2 should expose git_config_global or git_config_open_global to python code
+                configObject = pygit2.Config(os.path.expanduser("~/.gitconfig"))
+
+            # Nuke repo-specific identity
+            with contextlib.suppress(KeyError):
+                del self.repo.config["user.name"]
+            with contextlib.suppress(KeyError):
+                del self.repo.config["user.email"]
+        else:
+            configObject = self.repo.config
+
+        configObject["user.name"] = name
+        configObject["user.email"] = email
 
 
 class CheckoutCommit(RepoTask):
@@ -297,7 +392,7 @@ class ExportCommitAsPatch(RepoTask):
             assert composed.endswith("\n")
         yield from self._flowExitWorkerThread()
 
-        repoName = os.path.basename(os.path.normpath(self.repo.workdir))
+        repoName = porcelain.repoName(self.repo)
         initialName = f"{repoName} {util.shortHash(oid)} - {summary}.patch"
 
         savePath, _ = util.PersistentFileDialog.getSaveFileName(
