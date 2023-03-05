@@ -103,6 +103,25 @@
     </message>
 </context>
 <context>
+    <name>ApplyPatchFile</name>
+    <message>
+        <source>Import patch file (to apply in reverse)</source>
+        <translation>Importer fichier correctif (pour application inversée)</translation>
+    </message>
+    <message>
+        <source>Import patch file</source>
+        <translation>Importer un fichier correctif</translation>
+    </message>
+    <message>
+        <source>Patch file</source>
+        <translation>Fichier correctif</translation>
+    </message>
+    <message>
+        <source>All files</source>
+        <translation>Tous les fichiers</translation>
+    </message>
+</context>
+<context>
     <name>ApplyStash</name>
     <message>
         <source>Do you want to apply the changes stashed in &lt;b&gt;“{0}”&lt;/b&gt; to your working directory?</source>
@@ -591,8 +610,8 @@
     <message numerus="yes">
         <source>Open Unmodified &amp;Revision(s) in External Editor</source>
         <translation>
-            <numerusform>Ouvrir la révision non-modifiée dans un éditeur externe</numerusform>
-            <numerusform>Ouvrir les révisions non-modifiées dans un éditeur externe</numerusform>
+            <numerusform>Ouvrir version intacte dans éditeur externe</numerusform>
+            <numerusform>Ouvrir version intactes dans éditeur externe</numerusform>
         </translation>
     </message>
 </context>
@@ -624,6 +643,17 @@
     <message>
         <source>Delete stash</source>
         <translation>Supprimer la remise</translation>
+    </message>
+</context>
+<context>
+    <name>ExportCommitAsPatch</name>
+    <message>
+        <source>Nothing to export. The patch is empty.</source>
+        <translation>Rien à exporter. Le correctif est vide.</translation>
+    </message>
+    <message>
+        <source>Save commit as patch file</source>
+        <translation>Enregistrer un fichier correctif de ce commit</translation>
     </message>
 </context>
 <context>
@@ -727,16 +757,16 @@
         <source>This cannot be undone!</source>
         <translation>Vous ne pourrez pas annuler cette action&#xa0;!</translation>
     </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Annuler</translation>
-    </message>
 </context>
 <context>
     <name>GraphDelegate</name>
     <message>
         <source>[Uncommitted Changes]</source>
         <translation>[Modifications non-committées]</translation>
+    </message>
+    <message>
+        <source>detached HEAD</source>
+        <translation>HEAD détachée</translation>
     </message>
 </context>
 <context>
@@ -768,17 +798,6 @@
     <message>
         <source>Copy Commit &amp;Hash</source>
         <translation>Copier le &amp;hachage du commit</translation>
-    </message>
-    <message>
-        <source>click “Show Details” to reveal full message</source>
-        <translation>cliquez sur “Montrer les détails” pour révéler le message complet</translation>
-    </message>
-    <message numerus="yes">
-        <source>(%n line(s))</source>
-        <translation>
-            <numerusform>(%n ligne)</numerusform>
-            <numerusform>(%n lignes)</numerusform>
-        </translation>
     </message>
     <message numerus="yes">
         <source>%n parent(s)</source>
@@ -814,6 +833,107 @@
     <message>
         <source>Commit info: {0}</source>
         <translation>Infos sur le commit&#xa0;: {0}</translation>
+    </message>
+    <message>
+        <source>Commit Staged Changes...</source>
+        <translation>Committer les modifs indexées...</translation>
+    </message>
+    <message>
+        <source>Amend Last Commit...</source>
+        <translation>Rectifier le dernier commit...</translation>
+    </message>
+    <message>
+        <source>E&amp;xport As Patch...</source>
+        <translation>E&amp;xporter correctif...</translation>
+    </message>
+</context>
+<context>
+    <name>IdentityDialog</name>
+    <message>
+        <source>Proceed to Commit</source>
+        <translation>Procéder au commit</translation>
+    </message>
+    <message>
+        <source>Proceed to Amend Commit</source>
+        <translation>Procéder à la rectification du commit</translation>
+    </message>
+</context>
+<context>
+    <name>IdentityDialog1</name>
+    <message>
+        <source>Set up your Git identity</source>
+        <translation>Renseignez votre identité Git</translation>
+    </message>
+    <message>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom:</translation>
+    </message>
+    <message>
+        <source>&amp;Email:</source>
+        <translation>&amp;Courriel:</translation>
+    </message>
+    <message>
+        <source>Set &amp;global identity</source>
+        <translation>Enregistrer comme identité &amp;globale</translation>
+    </message>
+    <message>
+        <source>Will apply to all repositories on this computer.</source>
+        <translation>S’appliquera à tous les dépôts sur cet ordinateur.</translation>
+    </message>
+    <message>
+        <source>Set identity for this &amp;repository only</source>
+        <translation>Enregistrer l‘identité pour ce &amp;dépôt uniquement</translation>
+    </message>
+    <message>
+        <source>You will be prompted to set up an identity for other repositories.</source>
+        <translation>Vous serez invité à renseigner une identité pour d’autres dépôts.</translation>
+    </message>
+    <message>
+        <source>Angle bracket characters are not allowed.</source>
+        <translation>Les chevrons ne sont pas des caractères permis.</translation>
+    </message>
+    <message>
+        <source>Please fill out both fields.</source>
+        <translation>Veuillez remplir les deux champs.</translation>
+    </message>
+    <message>
+        <source>Before you start creating commits, please set up your identity for Git. This information will be baked into every commit that you author.</source>
+        <translation>Avant de commencer à créer des commits, veuillez renseigner votre identité pour Git. Ces informations seront intégrées à tous les commits que vous créerez.</translation>
+    </message>
+</context>
+<context>
+    <name>IdentityDialog2</name>
+    <message>
+        <source>Set up your Git identity</source>
+        <translation>Renseignez votre identité Git</translation>
+    </message>
+    <message>
+        <source>Custom identity for “{0}”</source>
+        <translation>Identité spécifique à “{0}”</translation>
+    </message>
+    <message>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom:</translation>
+    </message>
+    <message>
+        <source>&amp;Email:</source>
+        <translation>&amp;Courriel:</translation>
+    </message>
+    <message>
+        <source>&amp;Use a custom identity in repository “{0}”</source>
+        <translation>Établir une identité spécifique au &amp;dépôt “{0}”</translation>
+    </message>
+    <message>
+        <source>Set custom identity</source>
+        <translation>Établir identité spécifique</translation>
+    </message>
+    <message>
+        <source>Global identity (for “{0}” and other repos)</source>
+        <translation>Identité globale (pour “{0}” et d’autres dépôts)</translation>
+    </message>
+    <message>
+        <source>Set global identity</source>
+        <translation>Établir identité globale</translation>
     </message>
 </context>
 <context>
@@ -1060,10 +1180,6 @@
         <translation>Arrêter</translation>
     </message>
     <message>
-        <source>An exception was thrown while opening “{0}”</source>
-        <translation>Une exception a été levée lors de l’ouverture de “{0}”</translation>
-    </message>
-    <message>
         <source>Open “{0}”</source>
         <translation>Ouvrir “{0}”</translation>
     </message>
@@ -1074,34 +1190,6 @@
     <message>
         <source>Couldn’t open the repository at “{0}”.</source>
         <translation>Impossible d’ouvrir le dépôt situé dans “{0}”.</translation>
-    </message>
-    <message>
-        <source>Import patch</source>
-        <translation>Importer un correctif</translation>
-    </message>
-    <message>
-        <source>Please open a repository before importing a patch.</source>
-        <translation>Veuillez ouvrir un dépôt avant d’importer un correctif.</translation>
-    </message>
-    <message>
-        <source>Import patch (reverse)</source>
-        <translation>Importer un correctif à inverser</translation>
-    </message>
-    <message>
-        <source>Can’t load this patch.</source>
-        <translation>Impossible de charger ce correctif.</translation>
-    </message>
-    <message>
-        <source>Can’t reverse this patch.</source>
-        <translation>Impossible d’inverser ce correctif.</translation>
-    </message>
-    <message>
-        <source>This patch doesn’t apply.</source>
-        <translation>Impossible d’appliquer ce correctif.</translation>
-    </message>
-    <message>
-        <source>An error occurred while applying this patch.</source>
-        <translation>Une erreur est survenue lors de l’application de ce correctif.</translation>
     </message>
     <message>
         <source>&amp;Diff</source>
@@ -1124,16 +1212,32 @@
         <translation>Nouveau dépôt</translation>
     </message>
     <message>
-        <source>Patch file</source>
-        <translation>Fichier correctif</translation>
-    </message>
-    <message>
-        <source>All files</source>
-        <translation>Tous les fichiers</translation>
-    </message>
-    <message>
         <source>Add Re&amp;mote...</source>
         <translation>Ajouter un &amp;serveur...</translation>
+    </message>
+    <message>
+        <source>Recall Lost Commit...</source>
+        <translation>Récupérer commit perdu...</translation>
+    </message>
+    <message>
+        <source>An exception was raised while opening “{0}”</source>
+        <translation>Une exception fut levée en ouvrant “{0}”</translation>
+    </message>
+    <message>
+        <source>No repository</source>
+        <translation>Pas de dépôt</translation>
+    </message>
+    <message>
+        <source>Please open a repository before triggering this operation.</source>
+        <translation>Veuillez ouvrir un dépôt avant de lancer cette opération.</translation>
+    </message>
+    <message>
+        <source>Couldn’t create an empty repository in “{0}”.</source>
+        <translation>Impossible de créer un dépôt dans “{0}”.</translation>
+    </message>
+    <message>
+        <source>Set Up Git &amp;Identity...</source>
+        <translation>Configurer identité Git...</translation>
     </message>
 </context>
 <context>
@@ -1316,6 +1420,22 @@
         <source>Check out commit</source>
         <translation>Basculement dans le commit</translation>
     </message>
+    <message>
+        <source>Recall lost commit</source>
+        <translation>Récupérer commit perdu</translation>
+    </message>
+    <message>
+        <source>Export commit as patch file</source>
+        <translation>Exporter un correctif de ce commit</translation>
+    </message>
+    <message>
+        <source>Apply patch file</source>
+        <translation>Appliquer le fichier de correctif</translation>
+    </message>
+    <message>
+        <source>Set up identity</source>
+        <translation>Configuration de l’identité</translation>
+    </message>
 </context>
 <context>
     <name>PatchPurpose</name>
@@ -1369,22 +1489,41 @@
     </message>
 </context>
 <context>
-    <name>PrefsDialog</name>
+    <name>PathDisplayStyle</name>
     <message>
-        <source>System default</source>
-        <translation>Automatique</translation>
+        <source>Full paths</source>
+        <translation>Chemins complets</translation>
     </message>
     <message>
-        <source>Font</source>
-        <translation>Police</translation>
+        <source>Abbreviate directories</source>
+        <translation>Abréger répertoires</translation>
+    </message>
+    <message>
+        <source>Show filename only</source>
+        <translation>Nom de fichier seulement</translation>
+    </message>
+</context>
+<context>
+    <name>Prefs</name>
+    <message>
+        <source>Path Display Style</source>
+        <translation>Affichage des chemins</translation>
+    </message>
+    <message>
+        <source>Full paths</source>
+        <translation>Chemins complets</translation>
+    </message>
+    <message>
+        <source>Abbreviate directories</source>
+        <translation>Abréger répertoires</translation>
+    </message>
+    <message>
+        <source>Show filename only</source>
+        <translation>Noms de fichiers seulement</translation>
     </message>
     <message>
         <source>General</source>
         <translation>Général</translation>
-    </message>
-    <message>
-        <source>When you discard changes from the working directory, {0} keeps a temporary copy in a hidden “trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. You can look around this trash folder via &lt;i&gt;“Repo &amp;rarr; Rescue Discarded Changes”&lt;/i&gt;.</source>
-        <translation>Lorsque vous jetez des modifications dans le répertoire de travail, {0} en conserve une copie temporaire dans un dossier caché “poubelle”. Cela vous offre un ultime recours pour récupérer des modifs que vous avez jetées par erreur. Vous pouvez examiner ce dossier poubelle via &lt;i&gt;“Dépôt &amp;rarr; Ouvrir la poubelle à modifs”&lt;/i&gt;.</translation>
     </message>
     <message>
         <source>Diff</source>
@@ -1404,7 +1543,7 @@
     </message>
     <message>
         <source>Debug</source>
-        <translation></translation>
+        <translation>Debug</translation>
     </message>
     <message>
         <source>Language</source>
@@ -1417,6 +1556,14 @@
     <message>
         <source>File watcher</source>
         <translation>Réagir aux modifications externes sur le système de fichiers</translation>
+    </message>
+    <message>
+        <source>Shorten hashes to</source>
+        <translation>Abréger hachages à</translation>
+    </message>
+    <message>
+        <source>characters</source>
+        <translation>caractères</translation>
     </message>
     <message>
         <source>Short time format</source>
@@ -1439,58 +1586,12 @@
         <translation>Afficher la barre d’état</translation>
     </message>
     <message>
-        <source>Word wrap</source>
-        <translation>Retour à la ligne automatique</translation>
-    </message>
-    <message>
         <source>Toggle menu bar visibility with Alt key</source>
         <translation>Alterner l’affichage de la barre des menus via la touche Alt</translation>
     </message>
     <message>
-        <source>Highlight stray “CR” characters</source>
-        <translation>Mettre en évidence les caractères “CR” errants</translation>
-    </message>
-    <message>
-        <source>Colorblind-friendly color scheme</source>
-        <translation>Couleurs adaptées aux daltoniens (rouge-vert)</translation>
-    </message>
-    <message>
-        <source>Tab bar takes all available width</source>
-        <translation>Étaler les onglets sur la largeur de la fenêtre</translation>
-    </message>
-    <message>
-        <source>Auto-hide tab bar if there’s just 1 tab</source>
-        <translation>Masquer les onglets s’il n’y en a qu’un</translation>
-    </message>
-    <message>
-        <source>Commit order</source>
-        <translation>Ordre d’affichage des commits</translation>
-    </message>
-    <message>
-        <source>Flatten lanes</source>
-        <translation>Aplatir les bandes</translation>
-    </message>
-    <message>
-        <source>Max discarded patches in the trash</source>
-        <translation>Capacité max. de la poubelle</translation>
-    </message>
-    <message>
-        <source>Shorten hashes to</source>
-        <translation>Abréger hachages à</translation>
-    </message>
-    <message>
-        <source>{0} Preferences</source>
-        <comment>{0} = GitFourchette</comment>
-        <translation>Préférences de {0}</translation>
-    </message>
-    <message>
-        <source>Default</source>
-        <comment>as in Default Font</comment>
-        <translation>Par défaut</translation>
-    </message>
-    <message>
-        <source>characters</source>
-        <translation>caractères</translation>
+        <source>Font</source>
+        <translation>Police</translation>
     </message>
     <message>
         <source>One tab is</source>
@@ -1513,12 +1614,48 @@
         <translation>Taille max. d’une image</translation>
     </message>
     <message>
+        <source>Word wrap</source>
+        <translation>Retour à la ligne automatique</translation>
+    </message>
+    <message>
+        <source>Highlight stray “CR” characters</source>
+        <translation>Mettre en évidence les caractères “CR” errants</translation>
+    </message>
+    <message>
+        <source>Colorblind-friendly color scheme</source>
+        <translation>Couleurs adaptées aux daltoniens (rouge-vert)</translation>
+    </message>
+    <message>
         <source>Show tab close button</source>
         <translation>Orner les onglets d’un bouton de fermeture</translation>
     </message>
     <message>
+        <source>Tab bar takes all available width</source>
+        <translation>Étaler les onglets sur la largeur de la fenêtre</translation>
+    </message>
+    <message>
+        <source>Auto-hide tab bar if there’s just 1 tab</source>
+        <translation>Masquer les onglets s’il n’y en a qu’un</translation>
+    </message>
+    <message>
         <source>Double-click a tab to open repo folder</source>
         <translation>Double-cliquer un onglet pour ouvrir le dossier du dépôt</translation>
+    </message>
+    <message>
+        <source>Commit order</source>
+        <translation>Ordre d’affichage des commits</translation>
+    </message>
+    <message>
+        <source>Flatten lanes</source>
+        <translation>Aplatir les bandes</translation>
+    </message>
+    <message>
+        <source>Row spacing</source>
+        <translation>Espacement des lignes</translation>
+    </message>
+    <message>
+        <source>Max discarded patches in the trash</source>
+        <translation>Capacité max. de la poubelle</translation>
     </message>
     <message>
         <source>files</source>
@@ -1541,16 +1678,8 @@
         <translation>Verbosité du journal</translation>
     </message>
     <message>
-        <source>Full paths</source>
-        <translation>Chemin complet</translation>
-    </message>
-    <message>
-        <source>Abbreviate directories</source>
-        <translation>Abréger répertoires</translation>
-    </message>
-    <message>
-        <source>Show filename only</source>
-        <translation>Nom de fichier seulement</translation>
+        <source>Fix U+2029 in text copied from diff editor</source>
+        <translation>Nettoyer les caractères U+2029 du texte copié depuis l’éditeur</translation>
     </message>
     <message>
         <source>Full name</source>
@@ -1575,6 +1704,55 @@
     <message>
         <source>Abbreviated email</source>
         <translation>Courriel abrégé</translation>
+    </message>
+    <message>
+        <source>Cramped</source>
+        <translation>Exigu</translation>
+    </message>
+    <message>
+        <source>Tight (default)</source>
+        <translation>Serré (par défaut)</translation>
+    </message>
+    <message>
+        <source>Relaxed</source>
+        <translation>Détendu</translation>
+    </message>
+    <message>
+        <source>Roomy</source>
+        <translation>Ample</translation>
+    </message>
+    <message>
+        <source>Spacious</source>
+        <translation>Spacieux</translation>
+    </message>
+</context>
+<context>
+    <name>PrefsDialog</name>
+    <message>
+        <source>System default</source>
+        <translation>Automatique</translation>
+    </message>
+    <message>
+        <source>Font</source>
+        <translation>Police</translation>
+    </message>
+    <message>
+        <source>General</source>
+        <translation>Général</translation>
+    </message>
+    <message>
+        <source>When you discard changes from the working directory, {0} keeps a temporary copy in a hidden “trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. You can look around this trash folder via &lt;i&gt;“Repo &amp;rarr; Rescue Discarded Changes”&lt;/i&gt;.</source>
+        <translation>Lorsque vous jetez des modifications dans le répertoire de travail, {0} en conserve une copie temporaire dans un dossier caché “poubelle”. Cela vous offre un ultime recours pour récupérer des modifs que vous avez jetées par erreur. Vous pouvez examiner ce dossier poubelle via &lt;i&gt;“Dépôt &amp;rarr; Ouvrir la poubelle à modifs”&lt;/i&gt;.</translation>
+    </message>
+    <message>
+        <source>{0} Preferences</source>
+        <comment>{0} = GitFourchette</comment>
+        <translation>Préférences de {0}</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <comment>as in Default Font</comment>
+        <translation>Par défaut</translation>
     </message>
     <message>
         <source>Chronological</source>
@@ -1695,6 +1873,25 @@ instead of “{2}”</source>
     <message>
         <source>Contacting remote host...</source>
         <translation>Connexion au serveur...</translation>
+    </message>
+</context>
+<context>
+    <name>RecallCommit</name>
+    <message>
+        <source>Recall lost commit</source>
+        <translation>Récupérer commit perdu</translation>
+    </message>
+    <message>
+        <source>If you know the hash of a commit that isn’t part of any branches,&lt;br&gt;{0} will try to recall it for you.</source>
+        <translation>Si vous connaissez le hachage d’un commit qui ne fait plus partie&lt;br&gt;d’aucune branche, {0} tentera de le récupérer pour vous.</translation>
+    </message>
+    <message>
+        <source>Recall</source>
+        <translation>Récupérer</translation>
+    </message>
+    <message>
+        <source>Hurray, the commit was found! Find it on this branch:</source>
+        <translation>Youpi, le commit a été retrouvé&#xa0;! Consultez-le sur cette branche :</translation>
     </message>
 </context>
 <context>
@@ -2054,10 +2251,6 @@ ou un message de commit&#xa0;:</translation>
         <translation>&amp;Supprimer...</translation>
     </message>
     <message>
-        <source>New branch from here...</source>
-        <translation>Nouvelle branche à partir d’ici...</translation>
-    </message>
-    <message>
         <source>&amp;Hide in graph</source>
         <translation>&amp;Masquer dans le graphe</translation>
     </message>
@@ -2116,6 +2309,18 @@ ou un message de commit&#xa0;:</translation>
     <message>
         <source>&amp;Add Remote...</source>
         <translation>&amp;Ajouter un serveur...</translation>
+    </message>
+    <message>
+        <source>Commit Staged Changes...</source>
+        <translation>Committer les modifs indexées...</translation>
+    </message>
+    <message>
+        <source>Amend Last Commit...</source>
+        <translation>Rectifier le dernier commit...</translation>
+    </message>
+    <message>
+        <source>New Branch from Here...</source>
+        <translation>Nouvelle &amp;branche à partir d’ici...</translation>
     </message>
 </context>
 <context>

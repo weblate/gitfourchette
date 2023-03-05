@@ -107,13 +107,6 @@
 <context>
     <name>GraphView</name>
     <message numerus="yes">
-        <source>(%n line(s))</source>
-        <translation>
-            <numerusform>(%n line)</numerusform>
-            <numerusform>(%n lines)</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <source>%n parent(s)</source>
         <translation>
             <numerusform>Parent</numerusform>
