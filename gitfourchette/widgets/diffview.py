@@ -452,46 +452,55 @@ class DiffView(QPlainTextEdit):
         self.setViewportMargins(self.gutterWidth(), 0, 0, 0)
 
     def gutterPaintEvent(self, event: QPaintEvent):
-        palette: QPalette = self.palette()
-
         painter = QPainter(self.gutter)
         painter.setFont(self.font())
 
-        FH = self.fontMetrics().height()
-        er = event.rect()
-        gr = self.gutter.rect()
+        # Set up colors
+        palette = self.palette()
+        themeBG = palette.color(QPalette.ColorRole.Base)  # standard theme background color
+        themeFG = palette.color(QPalette.ColorRole.Text)  # standard theme foreground color
+        if themeBG.value() > themeFG.value():
+            gutterColor = themeBG.darker(105)  # light theme
+        else:
+            gutterColor = themeBG.lighter(140)  # dark theme
+        lineColor = QColor(*themeFG.getRgb()[:3], 80)
+        textColor = QColor(*themeFG.getRgb()[:3], 128)
 
-        # Background
-        painter.fillRect(er, palette.color(QPalette.ColorRole.AlternateBase))
+        # Gather some metrics
+        paintRect = event.rect()
+        gutterRect = self.gutter.rect()
+        fontHeight = self.fontMetrics().height()
 
-        # Draw separator
-        gutterSepColor = palette.color(QPalette.ColorRole.PlaceholderText)
-        gutterSepColor.setAlpha(80)
-        painter.fillRect(gr.x() + gr.width() - 1, er.y(), 1, er.height(), gutterSepColor)
+        # Draw background
+        painter.fillRect(paintRect, gutterColor)
+
+        # Draw vertical separator line
+        painter.fillRect(gutterRect.x() + gutterRect.width() - 1, paintRect.y(), 1, paintRect.height(), lineColor)
 
         block: QTextBlock = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
         top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
         bottom = top + round(self.blockBoundingRect(block).height())
 
-        painter.setPen(palette.color(QPalette.ColorRole.PlaceholderText))
-        while block.isValid() and top <= er.bottom():
+        # Draw line numbers and hunk separator lines
+        painter.setPen(textColor)
+        while block.isValid() and top <= paintRect.bottom():
             if blockNumber >= len(self.lineData):
                 break
 
             ld = self.lineData[blockNumber]
-            if block.isVisible() and bottom >= er.top():
+            if block.isVisible() and bottom >= paintRect.top():
                 if ld.diffLine:
                     # Draw line numbers
                     old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else "·"
                     new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
 
-                    colW = (gr.width() - 4) // 2
-                    painter.drawText(0, top, colW, FH, Qt.AlignmentFlag.AlignRight, old)
-                    painter.drawText(colW, top, colW, FH, Qt.AlignmentFlag.AlignRight, new)
+                    colW = (gutterRect.width() - 4) // 2
+                    painter.drawText(0, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, old)
+                    painter.drawText(colW, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, new)
                 else:
                     # Draw hunk separator horizontal line
-                    painter.fillRect(0, round((top+bottom)/2), gr.width(), 1, gutterSepColor)
+                    painter.fillRect(0, round((top+bottom)/2), gutterRect.width()-1, 1, lineColor)
 
             block = block.next()
             top = bottom
