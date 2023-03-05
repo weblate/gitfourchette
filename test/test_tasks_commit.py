@@ -5,6 +5,7 @@ from gitfourchette import porcelain
 from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
+from gitfourchette.widgets.ui_identitydialog import Ui_IdentityDialog
 import pygit2
 
 
@@ -152,6 +153,37 @@ def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     rw.commitButton.click()
     rejectQMessageBox(rw, "create.+empty commit")
+
+
+def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir, userName="", userEmail="")
+    rw = mainWindow.openRepo(wd)
+
+    assert not rw.repo.config['user.name']
+    assert not rw.repo.config['user.email']
+
+    rw.commitButton.click()
+
+    identityDialog = findQDialog(rw, "identity")
+    assert isinstance(identityDialog.ui, Ui_IdentityDialog)
+    identityOK = identityDialog.ui.buttonBox.button(QDialogButtonBox.Ok)
+    assert not identityOK.isEnabled()  # can't click OK until fields filled out
+    identityDialog.ui.nameEdit.setText("Archibald Haddock")
+    identityDialog.ui.emailEdit.setText("1e15sabords@example.com")
+    identityDialog.ui.setLocalIdentity.setChecked(True)
+    identityOK.click()
+
+    acceptQMessageBox(rw, "create.+empty commit")
+
+    commitDialog = findQDialog(rw, "commit")
+    assert isinstance(commitDialog, CommitDialog)
+    commitDialog.ui.summaryEditor.setText("ca geht's mol?")
+    commitDialog.accept()
+
+    headCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
+    assert headCommit.message == "ca geht's mol?"
+    assert headCommit.author.name == "Archibald Haddock"
+    assert headCommit.author.email == "1e15sabords@example.com"
 
 
 def testResetHeadToCommit(qtbot, tempDir, mainWindow):

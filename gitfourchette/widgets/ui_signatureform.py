@@ -1,13 +1,12 @@
 ################################################################################
 ## Form generated from reading UI file 'signatureform.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.6
+## Created by: Qt User Interface Compiler version 6.4.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from gitfourchette.qt import *
-
 
 class Ui_SignatureForm(object):
     def setupUi(self, SignatureForm):
@@ -16,6 +15,7 @@ class Ui_SignatureForm(object):
         SignatureForm.resize(311, 213)
         self.formLayout = QFormLayout(SignatureForm)
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
         self.formLayout.setContentsMargins(0, 0, 0, 0)
         self.nameLabel = QLabel(SignatureForm)
         self.nameLabel.setObjectName(u"nameLabel")

@@ -205,9 +205,15 @@ class RepoTask(QObject):
         Runs a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
         """
+        assert util.onAppThread(), "Subtask must start on UI thread"
+
         subtask = subtaskClass(self.parent())
         subtask.setRepo(self.repo)
         yield from subtask.flow(*args)
+
+        # Make sure we're back on the UI thread before re-entering the root task
+        if not util.onAppThread():
+            yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """

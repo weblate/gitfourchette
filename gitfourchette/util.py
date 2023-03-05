@@ -368,19 +368,20 @@ def tweakWidgetFont(widget: QWidget, relativeSize: int = 100, bold: bool = False
 
 
 def installLineEditCustomValidator(
-        lineEdit: QLineEdit,
-        validatorFunc: typing.Callable[[str], str],
-        errorLabel: QLabel,
+        lineEdits: list[QLineEdit],
+        validatorFunc: typing.Callable[..., str],
+        errorLabel: QLabel | None,
         gatedWidgets: list[QWidget]
 ):
     def onTextChange():
-        newText = lineEdit.text()
-        error = validatorFunc(newText)
-        errorLabel.setText(error)
+        error = validatorFunc(*(w.text() for w in lineEdits))
+        if errorLabel:
+            errorLabel.setText(error)
         for w in gatedWidgets:
             w.setEnabled(error == "")
 
-    lineEdit.textChanged.connect(onTextChange)
+    for lineEdit in lineEdits:
+        lineEdit.textChanged.connect(onTextChange)
 
     onTextChange()  # Run initial validation
 

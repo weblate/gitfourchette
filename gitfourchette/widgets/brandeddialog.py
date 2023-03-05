@@ -4,7 +4,12 @@ from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
 
-def makeBrandedDialogLayout(dialog, titleText, subtitleText=""):
+def makeBrandedDialogLayout(
+        dialog: QDialog,
+        titleText: str,
+        subtitleText: str = "",
+        multilineSubtitle: bool = False
+):
     gridLayout = QGridLayout(dialog)
 
     iconLabel = QLabel(dialog)
@@ -24,7 +29,11 @@ def makeBrandedDialogLayout(dialog, titleText, subtitleText=""):
     titleLayout.addWidget(title)
 
     if subtitleText:
-        subtitle = QElidedLabel(subtitleText, dialog)
+        if multilineSubtitle:
+            subtitle = QLabel(subtitleText)
+            subtitle.setWordWrap(True)
+        else:
+            subtitle = QElidedLabel(subtitleText, dialog)
         tweakWidgetFont(subtitle, relativeSize=90)
         titleLayout.addWidget(subtitle)
         title.setAlignment(Qt.AlignmentFlag.AlignBottom)
@@ -42,14 +51,19 @@ def makeBrandedDialog(dialog, innerLayout, promptText, subtitleText: str = ""):
     gridLayout.addLayout(innerLayout, 2, 3, 1, 1)
 
 
-def convertToBrandedDialog(dialog: QDialog, promptText: str = "", subtitleText: str = ""):
+def convertToBrandedDialog(
+        dialog: QDialog,
+        promptText: str = "",
+        subtitleText: str = "",
+        multilineSubtitle: bool = False,
+):
     if not promptText:
         promptText = dialog.windowTitle()
 
     innerContent = QWidget(dialog)
     innerContent.setLayout(dialog.layout())
 
-    gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText)
+    gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText, multilineSubtitle)
     gridLayout.addWidget(innerContent, 2, 3, 1, 1)
 
 
@@ -105,7 +119,7 @@ def showTextInputDialog(
 
     if validatorFunc:
         installLineEditCustomValidator(
-            lineEdit=lineEdit,
+            lineEdits=[lineEdit],
             validatorFunc=validatorFunc,
             errorLabel=validatorErrorLabel,
             gatedWidgets=[buttonBox.button(QDialogButtonBox.StandardButton.Ok)])

@@ -62,7 +62,7 @@ class NewBranchDialog(QDialog):
         util.installLineEditCustomValidator(
             validatorFunc=lambda name: validateLocalBranchName(name, forbiddenBranchNames),
             errorLabel=self.ui.nameValidationText,
-            lineEdit=self.ui.nameEdit,
+            lineEdits=[self.ui.nameEdit],
             gatedWidgets=[self.acceptButton])
 
         convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")

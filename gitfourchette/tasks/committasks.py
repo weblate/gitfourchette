@@ -5,6 +5,7 @@ from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
+from gitfourchette.widgets.ui_identitydialog import Ui_IdentityDialog
 import pygit2
 
 
@@ -26,6 +27,7 @@ class NewCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage)
 
     def flow(self):
+        yield from self._flowSubtask(SetUpIdentity, translate("IdentityDialog", "Proceed to Commit"))
         if not porcelain.hasAnyStagedChanges(self.repo):
             yield from self._flowConfirm(
                 title=self.tr("Create empty commit"),
@@ -87,6 +89,7 @@ class AmendCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage, forAmending=True)
 
     def flow(self):
+        yield from self._flowSubtask(SetUpIdentity, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = porcelain.getHeadCommit(self.repo)
 
         # TODO: Retrieve draft message
@@ -120,6 +123,84 @@ class AmendCommit(RepoTask):
 
         yield from self._flowExitWorkerThread()
         self.setDraftMessage(None)  # Clear draft message
+
+
+class SetUpIdentity(RepoTask):
+    def name(self):
+        return translate("Operation", "Set up identity")
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.NOTHING
+
+    @staticmethod
+    def validateInput(name: str, email: str):
+        """ See libgit2/signature.c """
+
+        def isCrud(c: str):
+            return ord(c) <= 32 or c in ".,:;<>\"\\'"
+
+        def extractTrimmed(s: str):
+            start = 0
+            end = len(s)
+            while end > 0 and isCrud(s[end-1]):
+                end -= 1
+            while start < end and isCrud(s[start]):
+                start += 1
+            return s[start:end]
+
+        for item in name, email:
+            if "<" in item or ">" in item:
+                return translate("IdentityDialog", "Angle bracket characters are not allowed.")
+            elif not extractTrimmed(item):
+                return translate("IdentityDialog", "Please fill out both fields.")
+
+        return ""
+
+    def flow(self, okButtonText=""):
+        # Getting the default signature will fail if the user's identity is missing or incorrectly set
+        try:
+            sig = self.repo.default_signature
+            return
+        except (KeyError, ValueError):
+            pass
+
+        dlg = QDialog(self.parent())
+
+        ui = Ui_IdentityDialog()
+        ui.setupUi(dlg)
+        dlg.ui = ui  # for easier access in unit testing
+
+        util.installLineEditCustomValidator(
+            lineEdits=[ui.nameEdit, ui.emailEdit],
+            validatorFunc=SetUpIdentity.validateInput,
+            errorLabel=ui.validatorLabel,
+            gatedWidgets=[ui.buttonBox.button(QDialogButtonBox.Ok)])
+
+        if okButtonText:
+            ui.buttonBox.button(QDialogButtonBox.Ok).setText(okButtonText)
+
+        subtitle = translate(
+            "IdentityDialog",
+            "Before you start creating commits, please set up your identity for Git. "
+            "This information will be baked into every commit that you author.")
+        convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
+
+        util.setWindowModal(dlg)
+        dlg.show()
+        yield from self._flowDialog(dlg)
+
+        name = ui.nameEdit.text()
+        email = ui.emailEdit.text()
+        setGlobally = ui.setGlobalIdentity.isChecked()
+        dlg.deleteLater()
+
+        yield from self._flowBeginWorkerThread()
+        if setGlobally:
+            configObject = pygit2.config.Config.get_global_config()
+        else:
+            configObject = self.repo.config
+        configObject['user.name'] = name
+        configObject['user.email'] = email
 
 
 class CheckoutCommit(RepoTask):
