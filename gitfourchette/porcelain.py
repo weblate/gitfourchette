@@ -799,6 +799,11 @@ def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str):
 # TODO: That's a confusing name because this doesn't perform net access, unlike git's "pull" operation.
 # TODO: We're actually just doing a merge here. It doesn't matter that the second branch is remote.
 def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
+    """
+    Fast-forwards a local branch to a remote branch.
+    Returns True if the local branch was up-to-date.
+    Raises DivergentBranchesError if fast-forwarding is impossible.
+    """
     lb = repo.branches.local[localBranchName]
     rb = repo.branches.remote[remoteBranchName]
 
@@ -813,7 +818,7 @@ def pull(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
 
     if mergeAnalysis & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
         # Local branch is up to date with remote branch, nothing to do.
-        return
+        return True
 
     elif mergeAnalysis == (pygit2.GIT_MERGE_ANALYSIS_NORMAL | pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD):
         # Go ahead and fast-forward.

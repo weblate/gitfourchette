@@ -240,15 +240,31 @@ class PullBranch(RepoTask):
         except KeyError:
             raise ValueError(self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
 
-        bu: pygit2.Branch = branch.upstream
-        if not bu:
+        upstream: pygit2.Branch = branch.upstream
+        if not upstream:
             raise ValueError(self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(escape(branch.shorthand)))
 
-        remoteBranchName = bu.shorthand
+        remoteBranchName = upstream.shorthand
 
         yield from self._flowBeginWorkerThread()
 
-        porcelain.pull(self.repo, localBranchName, remoteBranchName)
+        upToDate = porcelain.pull(self.repo, localBranchName, remoteBranchName)
+
+        ahead = False
+        if upToDate:
+            ahead = upstream.target != branch.target
+
+        yield from self._flowExitWorkerThread()
+
+        if upToDate:
+            message = [self.tr("No fast-forwarding necessary.")]
+            if ahead:
+                message.append(self.tr("Your local branch “{0}” is ahead of “{1}”.").format(
+                    escape(localBranchName), escape(remoteBranchName)))
+            else:
+                message.append(self.tr("Your local branch “{0}” is already up-to-date with “{1}”.").format(
+                    escape(localBranchName), escape(remoteBranchName)))
+            util.showInformation(self.parent(), self.name(), util.paragraphs(message))
 
     def onError(self, exc):
         if isinstance(exc, porcelain.DivergentBranchesError):
