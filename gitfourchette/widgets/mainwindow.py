@@ -234,6 +234,20 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
+        editMenu: QMenu = menubar.addMenu(self.tr("&Edit"))
+        editMenu.setObjectName("MWEditMenu")
+
+        a = editMenu.addAction(self.tr("&Find..."), lambda: self.currentRepoWidget().findFlow("find"))
+        a.setShortcuts(QKeySequence.StandardKey.Find)
+
+        a = editMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().findFlow("next"))
+        a.setShortcuts(QKeySequence.StandardKey.FindNext)
+
+        a = editMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().findFlow("previous"))
+        a.setShortcuts(QKeySequence.StandardKey.FindPrevious)
+
+        # -------------------------------------------------------------
+
         repoMenu: QMenu = menubar.addMenu(self.tr("&Repo"))
         repoMenu.setObjectName("MWRepoMenu")
         repoMenu.setEnabled(False)
@@ -262,16 +276,6 @@ class MainWindow(QMainWindow):
 
         repoMenu.addSeparator()
 
-        a = repoMenu.addAction(self.tr("&Find Commit..."), lambda: self.currentRepoWidget().findFlow())
-        a.setShortcuts(QKeySequence.StandardKey.Find)
-
-        a = repoMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().findNext())
-        a.setShortcuts(QKeySequence.StandardKey.FindNext)
-
-        a = repoMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().findPrevious())
-        a.setShortcuts(QKeySequence.StandardKey.FindPrevious)
-
-        repoMenu.addSeparator()
 
         configFilesMenu = repoMenu.addMenu(self.tr("&Local Config Files"))
 
@@ -302,13 +306,6 @@ class MainWindow(QMainWindow):
 
         a = branchMenu.addAction(self.tr("&Fast-Forward to Remote Branch..."), self.fastForward)
         # a.setShortcuts(GlobalShortcuts.pullBranch)
-
-        # -------------------------------------------------------------
-
-        patchMenu = menubar.addMenu(self.tr("&Diff"))
-        patchMenu.setObjectName("MWDiffMenu")
-        a = patchMenu.addAction(self.tr("&Find in Diff..."), lambda: self.currentRepoWidget().findInDiffFlow())
-        a.setShortcut("Ctrl+Alt+F")
 
         # -------------------------------------------------------------
 

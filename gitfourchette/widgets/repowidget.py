@@ -639,6 +639,23 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
     # Find, find next
 
+    def findFlow(self, op: typing.Literal["find", "next", "previous"]):
+        if self.diffView.hasFocus():
+            if op == "find":
+                self._findInDiffFlow()
+            elif op == "next":
+                self._findInDiffNextOrPrevious(True)
+            elif op == "previous":
+                self._findInDiffNextOrPrevious(False)
+        else:
+            if op == "find":
+                self._findCommitFlow()
+            elif op == "next":
+                self._findCommitNextOrPrevious(True)
+            elif op == "previous":
+                self._findCommitNextOrPrevious(False)
+            # showInformation(self, self.tr("Find"), self.tr("Please select the commit log or the diff editor before invoking Find."))
+
     def _search(self, searchRange):
         message = self.state.processedCommitSearchTerm
         if not message:
@@ -664,9 +681,9 @@ class RepoWidget(QWidget):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
-        showInformation(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}”.").format(escape(message)))
+        showInformation(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}” in the commit log.").format(escape(message)))
 
-    def findFlow(self):
+    def _findCommitFlow(self):
         def onAccept(verbatimTerm):
             self.state.rawCommitSearchTerm = verbatimTerm
             self.state.processedCommitSearchTerm = sanitizeSearchTerm(verbatimTerm)
@@ -678,10 +695,9 @@ class RepoWidget(QWidget):
             self.state.rawCommitSearchTerm,
             onAccept)
 
-    def _findNextOrPrevious(self, findNext):
+    def _findCommitNextOrPrevious(self, findNext):
         if not self.state.processedCommitSearchTerm:
-            showWarning(self, self.tr("Find Commit"), self.tr("Please use “Find” to specify a search term before using “Find Next” or “Find Previous”."))
-            return
+            return self._findCommitFlow()
         if len(self.graphView.selectedIndexes()) == 0:
             showWarning(self, self.tr("Find Commit"), self.tr("Please select a commit from whence to resume the search."))
             return
@@ -692,10 +708,10 @@ class RepoWidget(QWidget):
             self._search(range(start - 1, -1, -1))
 
     def findNext(self):
-        self._findNextOrPrevious(True)
+        self._findCommitNextOrPrevious(True)
 
     def findPrevious(self):
-        self._findNextOrPrevious(False)
+        self._findCommitNextOrPrevious(False)
 
     # -------------------------------------------------------------------------
     # Find in diff, find next in diff
@@ -713,9 +729,9 @@ class RepoWidget(QWidget):
             self.diffView.setTextCursor(newCursor)
             return
 
-        showInformation(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}”.").format(escape(message)))
+        showInformation(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}” in this diff.").format(escape(message)))
 
-    def findInDiffFlow(self):
+    def _findInDiffFlow(self):
         def onAccept(verbatimTerm):
             self.previouslySearchedTermInDiff = verbatimTerm
             self._searchDiff()
@@ -728,18 +744,8 @@ class RepoWidget(QWidget):
 
     def _findInDiffNextOrPrevious(self, findNext):
         if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):
-            showWarning(
-                self,
-                self.tr("Find in Diff"),
-                self.tr("Please use “Find in Diff” to specify a search term before using “Find Next” or “Find Previous”."))
-            return
-        self._searchInDiff(findNext)
-
-    def findInDiffNext(self):
-        self._findNextOrPrevious(True)
-
-    def findInDiffPrevious(self):
-        self._findNextOrPrevious(False)
+            return self._findInDiffFlow()
+        self._searchDiff(findNext)
 
     # -------------------------------------------------------------------------
 
