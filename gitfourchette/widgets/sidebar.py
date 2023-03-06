@@ -496,7 +496,7 @@ class Sidebar(QTreeView):
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
-    pullBranch = Signal(str)
+    fastForwardBranch = Signal(str)
     toggleHideBranch = Signal(str)
     newTrackingBranch = Signal(str)
     fetchRemoteBranch = Signal(str)
@@ -565,6 +565,9 @@ class Sidebar(QTreeView):
             activeBranchName = porcelain.getActiveBranchShorthand(repo)
             isCurrentBranch = branch and branch.is_checked_out()
             hasUpstream = bool(branch.upstream)
+            upstreamBranchName = ""
+            if branch.upstream:
+                upstreamBranchName = branch.upstream.shorthand
 
             isBranchHidden = False
             if index:  # in test mode, we may not have an index
@@ -598,8 +601,9 @@ class Sidebar(QTreeView):
                           QStyle.StandardPixmap.SP_BrowserReload,
                           enabled=hasUpstream),
 
-                ActionDef(self.tr("Pul&l..."),
-                          lambda: self.pullBranch.emit(data),
+                ActionDef(self.tr("Fast-Forward to “{0}”...").format(escamp(upstreamBranchName))
+                          if upstreamBranchName else self.tr("Fast-Forward..."),
+                          lambda: self.fastForwardBranch.emit(data),
                           "vcs-pull",
                           enabled=hasUpstream,
                           shortcuts=GlobalShortcuts.pullBranch),
@@ -635,7 +639,7 @@ class Sidebar(QTreeView):
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
             actions += [
-                ActionDef(self.tr("New local branch tracking {0}...").format(escamp(data)),
+                ActionDef(self.tr("New local branch tracking “{0}”...").format(escamp(data)),
                           lambda: self.newTrackingBranch.emit(data),
                           "vcs-branch"),
 

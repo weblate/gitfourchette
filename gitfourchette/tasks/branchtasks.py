@@ -226,10 +226,9 @@ class EditTrackedBranch(RepoTask):
         porcelain.editTrackingBranch(self.repo, localBranchName, remoteBranchName)
 
 
-# TODO: That's a confusing name because this task doesn't perform net access, unlike git's "pull" operation. We'll need to change porcelain.pull as well.
-class PullBranch(RepoTask):
+class FastForwardBranch(RepoTask):
     def name(self):
-        return translate("Operation", "Pull branch")
+        return translate("Operation", "Fast-forward branch")
 
     def flow(self, localBranchName: str = ""):
         if not localBranchName:
@@ -238,17 +237,19 @@ class PullBranch(RepoTask):
         try:
             branch = self.repo.branches.local[localBranchName]
         except KeyError:
-            raise ValueError(self.tr("To pull, you must be on a local branch. Try switching to a local branch first."))
+            yield from self._flowAbort(self.tr("To fast-forward a branch, a local branch must be checked out. "
+                                               "Try switching to a local branch before fast-forwarding it."))
 
         upstream: pygit2.Branch = branch.upstream
         if not upstream:
-            raise ValueError(self.tr("Can’t pull because “{0}” isn’t tracking a remote branch.").format(escape(branch.shorthand)))
+            yield from self._flowAbort(self.tr("Can’t fast-forward “{0}” because it isn’t tracking a remote branch."
+                                               ).format(escape(branch.shorthand)))
 
         remoteBranchName = upstream.shorthand
 
         yield from self._flowBeginWorkerThread()
 
-        upToDate = porcelain.pull(self.repo, localBranchName, remoteBranchName)
+        upToDate = porcelain.fastForwardBranch(self.repo, localBranchName, remoteBranchName)
 
         ahead = False
         if upToDate:

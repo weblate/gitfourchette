@@ -300,8 +300,8 @@ class MainWindow(QMainWindow):
         a = branchMenu.addAction(self.tr("&Push Branch..."), self.push)
         a.setShortcuts(GlobalShortcuts.pushBranch)
 
-        a = branchMenu.addAction(self.tr("Pul&l Branch..."), self.pull)
-        a.setShortcuts(GlobalShortcuts.pullBranch)
+        a = branchMenu.addAction(self.tr("&Fast-Forward to Remote Branch..."), self.fastForward)
+        # a.setShortcuts(GlobalShortcuts.pullBranch)
 
         # -------------------------------------------------------------
 
@@ -642,8 +642,8 @@ class MainWindow(QMainWindow):
         rw.startPushFlow()
 
     @needRepoWidget
-    def pull(self, rw: RepoWidget):
-        rw.runTask(tasks.PullBranch)
+    def fastForward(self, rw: RepoWidget):
+        rw.runTask(tasks.FastForwardBranch)
 
     @needRepoWidget
     def openRescueFolder(self, rw: RepoWidget):
