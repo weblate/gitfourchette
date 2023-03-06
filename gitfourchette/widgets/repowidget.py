@@ -42,7 +42,6 @@ class RepoWidget(QWidget):
     state: RepoState
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
 
-    previouslySearchedTerm: str
     previouslySearchedTermInDiff: str
 
     navPos: NavPos
@@ -129,7 +128,6 @@ class RepoWidget(QWidget):
         self.dirtyLabel = QElidedLabel(self.tr("Loading dirty files..."))
         self.stageLabel = QElidedLabel(self.tr("Loading staged files..."))
 
-        self.previouslySearchedTerm = None
         self.previouslySearchedTermInDiff = None
 
         dirtyContainer = QWidget()
@@ -642,8 +640,7 @@ class RepoWidget(QWidget):
     # Find, find next
 
     def _search(self, searchRange):
-        message = self.previouslySearchedTerm
-        message = sanitizeSearchTerm(message)
+        message = self.state.processedCommitSearchTerm
         if not message:
             showWarning(self, self.tr("Find Commit"), self.tr("Invalid search term."))
             return
@@ -671,17 +668,18 @@ class RepoWidget(QWidget):
 
     def findFlow(self):
         def onAccept(verbatimTerm):
-            self.previouslySearchedTerm = verbatimTerm
+            self.state.rawCommitSearchTerm = verbatimTerm
+            self.state.processedCommitSearchTerm = sanitizeSearchTerm(verbatimTerm)
             self._search(range(0, self.graphView.model().rowCount()))
         showTextInputDialog(
             self,
             self.tr("Find Commit"),
             self.tr("Search for partial commit hash or message:"),
-            self.previouslySearchedTerm,
+            self.state.rawCommitSearchTerm,
             onAccept)
 
     def _findNextOrPrevious(self, findNext):
-        if not sanitizeSearchTerm(self.previouslySearchedTerm):
+        if not self.state.processedCommitSearchTerm:
             showWarning(self, self.tr("Find Commit"), self.tr("Please use “Find” to specify a search term before using “Find Next” or “Find Previous”."))
             return
         if len(self.graphView.selectedIndexes()) == 0:

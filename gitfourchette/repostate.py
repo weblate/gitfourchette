@@ -108,6 +108,9 @@ class RepoState:
 
     uiPrefs: RepoPrefs
 
+    rawCommitSearchTerm: str
+    processedCommitSearchTerm: str
+
     def __init__(self, repo: pygit2.Repository):
         self.repo = repo
 
@@ -149,6 +152,9 @@ class RepoState:
         self.resolveHiddenCommits()
 
         self.fileWatcher = FileWatcher(None, self.repo)
+
+        self.rawCommitSearchTerm = ""
+        self.processedCommitSearchTerm = ""
 
     @property
     def hiddenBranches(self):

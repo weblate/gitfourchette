@@ -31,6 +31,10 @@ CALLOUTS = {
 INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
 
 
+ELISION = " […]"
+ELISION_LENGTH = len(ELISION)
+
+
 def abbreviatePerson(sig: pygit2.Signature, style: settings.AuthorDisplayStyle = settings.AuthorDisplayStyle.FULL_NAME):
     if style == settings.AuthorDisplayStyle.FULL_NAME:
         return sig.name
@@ -73,7 +77,7 @@ class GraphDelegate(QStyledItemDelegate):
     def state(self) -> RepoState:
         return self.repoWidget.state
 
-    def paint(self, painter, option, index):
+    def paint(self, painter: QPainter, option, index):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
 
@@ -122,7 +126,7 @@ class GraphDelegate(QStyledItemDelegate):
         if index.row() > 0:
             commit: pygit2.Commit = index.data(CommitLogModel.CommitRole)
             # TODO: If is stash, getCoreStashMessage
-            summaryText, contd = messageSummary(commit.message)
+            summaryText, contd = messageSummary(commit.message, ELISION)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
             authorText = abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle)
             dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
@@ -142,7 +146,7 @@ class GraphDelegate(QStyledItemDelegate):
 
         # Get metrics now so the message gets elided according to the custom font style
         # that may have been just set for this commit.
-        metrics = painter.fontMetrics()
+        metrics: QFontMetrics = painter.fontMetrics()
 
         # ------ Hash
         rect.setWidth(ColW_Hash * self.hashCharWidth)
@@ -189,12 +193,29 @@ class GraphDelegate(QStyledItemDelegate):
         def elide(text):
             return metrics.elidedText(text, Qt.TextElideMode.ElideRight, rect.width())
 
-        # ------ message
+        # ------ Message
         # use muted color for foreign commit messages if not selected
         if not isSelected and commit and commit.oid in self.state.foreignCommits:
-             painter.setPen(Qt.GlobalColor.gray)
+            painter.setPen(Qt.GlobalColor.gray)
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
+
+        # ------ Highlight search term
+        needle = self.state.processedCommitSearchTerm
+        if needle and commit and needle in commit.message.lower():
+            needleIndex = summaryText.lower().find(needle)
+            if needleIndex < 0:
+                needleIndex = len(summaryText) - ELISION_LENGTH
+                needleLength = ELISION_LENGTH
+            else:
+                needleLength = len(needle)
+            x1 = metrics.horizontalAdvance(summaryText, needleIndex)
+            x2 = metrics.horizontalAdvance(summaryText, needleIndex + needleLength)
+            if isSelected:
+                painter.drawRect(rect.left()+x1, rect.top()+1, x2-x1, rect.height()-2)
+            else:
+                painter.fillRect(rect.left()+x1, rect.top(), x2-x1, rect.height(), Qt.GlobalColor.yellow)
+
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(summaryText))
 
         # ------ Author

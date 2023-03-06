@@ -111,7 +111,7 @@ def showInFolder(pathStr):
     QDesktopServices.openUrl(QUrl.fromLocalFile(dirPath))
 
 
-def messageSummary(body: str, elision=" [...]"):
+def messageSummary(body: str, elision=" […]"):
     messageContinued = False
     message: str = body.strip()
     newline = message.find('\n')
