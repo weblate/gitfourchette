@@ -12,7 +12,8 @@ from gitfourchette.stagingstate import StagingState
 from gitfourchette.tasks import TaskAffectsWhat
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
-                                showWarning, showInformation, askConfirmation, stockIcon)
+                                showWarning, showInformation, askConfirmation, stockIcon,
+                                paragraphs)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -22,17 +23,12 @@ from gitfourchette.widgets.graphview import GraphView, CommitLogModel
 from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.richdiffview import RichDiffView
+from gitfourchette.widgets.searchwidget import SearchWidget
 from gitfourchette.widgets.sidebar import Sidebar
 from html import escape
+from typing import Generator, Literal, Type
 import os
 import pygit2
-import typing
-
-
-def sanitizeSearchTerm(x):
-    if not x:
-        return None
-    return x.strip().lower()
 
 
 class RepoWidget(QWidget):
@@ -41,8 +37,6 @@ class RepoWidget(QWidget):
 
     state: RepoState
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
-
-    previouslySearchedTermInDiff: str
 
     navPos: NavPos
     navHistory: NavHistory
@@ -122,13 +116,28 @@ class RepoWidget(QWidget):
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
         # ----------------------------------
+        # Search boxes
+
+        self.commitSearch = SearchWidget(self.graphView, self.tr("Find Commit"))
+        self.commitSearch.textChanged.connect(self.onCommitSearchTextChanged)
+        self.commitSearch.searchNext.connect(lambda: self.searchCommit(True))
+        self.commitSearch.searchPrevious.connect(lambda: self.searchCommit(False))
+        self.commitSearch.hide()
+        self.graphView.widgetMoved.connect(self.commitSearch.snapToParent)
+
+        self.diffSearch = SearchWidget(self.diffView, self.tr("Find in Diff"))
+        self.diffSearch.textChanged.connect(self.onDiffSearchTextChanged)
+        self.diffSearch.searchNext.connect(lambda: self.searchDiff(True))
+        self.diffSearch.searchPrevious.connect(lambda: self.searchDiff(False))
+        self.diffSearch.hide()
+        self.diffView.widgetMoved.connect(self.diffSearch.snapToParent)
+
+        # ----------------------------------
 
         self.splitterStates = sharedSplitterStates or {}
 
         self.dirtyLabel = QElidedLabel(self.tr("Loading dirty files..."))
         self.stageLabel = QElidedLabel(self.tr("Loading staged files..."))
-
-        self.previouslySearchedTermInDiff = None
 
         dirtyContainer = QWidget()
         dirtyContainer.setLayout(QVBoxLayout())
@@ -241,14 +250,14 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
-    def runTask(self, taskClass: typing.Type[tasks.RepoTask], *args):
+    def runTask(self, taskClass: Type[tasks.RepoTask], *args):
         task = taskClass(self)
         task.setRepo(self.repo)
         #task.setArgs(*args)
         self.repoTaskRunner.put(task, *args)
         return task
 
-    def connectTask(self, signal: Signal, taskClass: typing.Type[tasks.RepoTask], argc: int = -1):
+    def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1):
         def createTask(*args):
             if argc >= 0:
                 args = args[:argc]
@@ -637,27 +646,31 @@ class RepoWidget(QWidget):
         QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
 
     # -------------------------------------------------------------------------
-    # Find, find next
+    # Entry point for generic "Find" command
 
-    def findFlow(self, op: typing.Literal["find", "next", "previous"]):
-        if self.diffView.hasFocus():
-            if op == "find":
-                self._findInDiffFlow()
+    def genericFind(self, op: Literal["start", "next", "previous"]):
+        diffSearchWidgets = (self.diffView, self.dirtyFiles, self.stagedFiles, self.committedFiles, self.diffSearch.ui.lineEdit)
+
+        if self.diffView.isVisibleTo(self) and any(w.hasFocus() for w in diffSearchWidgets):
+            if op == "start":
+                self.diffSearch.popUp(forceSelectAll=True)
             elif op == "next":
-                self._findInDiffNextOrPrevious(True)
+                self.searchDiff(True)
             elif op == "previous":
-                self._findInDiffNextOrPrevious(False)
+                self.searchDiff(False)
         else:
-            if op == "find":
-                self._findCommitFlow()
+            if op == "start":
+                self.commitSearch.popUp(forceSelectAll=True)
             elif op == "next":
-                self._findCommitNextOrPrevious(True)
+                self.searchCommit(True)
             elif op == "previous":
-                self._findCommitNextOrPrevious(False)
-            # showInformation(self, self.tr("Find"), self.tr("Please select the commit log or the diff editor before invoking Find."))
+                self.searchCommit(False)
 
-    def _search(self, searchRange):
-        message = self.state.processedCommitSearchTerm
+    # -------------------------------------------------------------------------
+    # Find text in commit message or hash
+
+    def searchCommitInRange(self, searchRange: range):
+        message = self.state.sanitizedCommitSearchTerm
         if not message:
             showWarning(self, self.tr("Find Commit"), self.tr("Invalid search term."))
             return
@@ -681,71 +694,83 @@ class RepoWidget(QWidget):
                 self.graphView.setCurrentIndex(modelIndex)
                 return
 
-        showInformation(self, self.tr("Find Commit"), self.tr("No more occurrences of “{0}” in the commit log.").format(escape(message)))
+        forward = searchRange.step > 0
 
-    def _findCommitFlow(self):
-        def onAccept(verbatimTerm):
-            self.state.rawCommitSearchTerm = verbatimTerm
-            self.state.processedCommitSearchTerm = sanitizeSearchTerm(verbatimTerm)
-            self._search(range(0, self.graphView.model().rowCount()))
-        showTextInputDialog(
-            self,
-            self.tr("Find Commit"),
-            self.tr("Search for partial commit hash or message:"),
-            self.state.rawCommitSearchTerm,
-            onAccept)
+        def wrapAround():
+            if forward:
+                newRange = range(0, self.graphView.model().rowCount())
+            else:
+                newRange = range(self.graphView.model().rowCount() - 1, 0, -1)
+            self.searchCommitInRange(newRange)
 
-    def _findCommitNextOrPrevious(self, findNext):
-        if not self.state.processedCommitSearchTerm:
-            return self._findCommitFlow()
-        if len(self.graphView.selectedIndexes()) == 0:
-            showWarning(self, self.tr("Find Commit"), self.tr("Please select a commit from whence to resume the search."))
+        prompt = [
+            self.tr("End of commit log reached.") if forward else self.tr("Top of commit log reached."),
+            self.tr("No more occurrences of “{0}” found.").format(escape(message))
+        ]
+        askConfirmation(self, self.tr("Find Commit"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
+                        messageBoxIcon="information", callback=wrapAround)
+
+    def searchCommit(self, forward: bool):
+        self.commitSearch.popUp()
+
+        if not self.state.sanitizedCommitSearchTerm:
+            QApplication.beep()
             return
-        start = self.graphView.currentIndex().row()
-        if findNext:
-            self._search(range(1 + start, self.graphView.model().rowCount()))
+
+        if len(self.graphView.selectedIndexes()) != 0:
+            start = self.graphView.currentIndex().row()
+        elif forward:
+            start = 0
         else:
-            self._search(range(start - 1, -1, -1))
+            start = self.graphView.model().rowCount()
 
-    def findNext(self):
-        self._findCommitNextOrPrevious(True)
+        if forward:
+            self.searchCommitInRange(range(1 + start, self.graphView.model().rowCount()))
+        else:
+            self.searchCommitInRange(range(start - 1, -1, -1))
 
-    def findPrevious(self):
-        self._findCommitNextOrPrevious(False)
+    def onCommitSearchTextChanged(self, text: str):
+        self.state.setCommitSearchTerm(text)
+        self.graphView.setDirtyRegion(self.graphView.rect())  # Redraw graph view
 
     # -------------------------------------------------------------------------
-    # Find in diff, find next in diff
+    # Find text in diff
 
-    def _searchDiff(self, forward=True):
-        message = self.previouslySearchedTermInDiff
-        message = sanitizeSearchTerm(message)
+    def onDiffSearchTextChanged(self, text: str):
+        self.state.setDiffSearchTerm(text)
+
+    def searchDiff(self, forward: bool):
+        message = self.state.sanitizedDiffSearchTerm
         if not message:
-            showWarning(self, self.tr("Find in Diff"), self.tr("Invalid search term."))
+            QApplication.beep()
             return
 
         doc: QTextDocument = self.diffView.document()
-        newCursor = doc.find(message, self.diffView.textCursor())
+
+        if forward:
+            newCursor = doc.find(message, self.diffView.textCursor())
+        else:
+            newCursor = doc.find(message, self.diffView.textCursor(), QTextDocument.FindFlag.FindBackward)
+
         if newCursor:
             self.diffView.setTextCursor(newCursor)
             return
 
-        showInformation(self, self.tr("Find in Diff"), self.tr("No more occurrences of “{0}” in this diff.").format(escape(message)))
+        def wrapAround():
+            tc = self.diffView.textCursor()
+            if forward:
+                tc.movePosition(QTextCursor.MoveOperation.Start)
+            else:
+                tc.movePosition(QTextCursor.MoveOperation.End)
+            self.diffView.setTextCursor(tc)
+            self.searchDiff(forward)
 
-    def _findInDiffFlow(self):
-        def onAccept(verbatimTerm):
-            self.previouslySearchedTermInDiff = verbatimTerm
-            self._searchDiff()
-        showTextInputDialog(
-            self,
-            self.tr("Find in Diff"),
-            self.tr("Search for text in current diff:"),
-            self.previouslySearchedTermInDiff,
-            onAccept)
-
-    def _findInDiffNextOrPrevious(self, findNext):
-        if not sanitizeSearchTerm(self.previouslySearchedTermInDiff):
-            return self._findInDiffFlow()
-        self._searchDiff(findNext)
+        prompt = [
+            self.tr("End of diff reached.") if forward else self.tr("Top of diff reached."),
+            self.tr("No more occurrences of “{0}” found.").format(escape(message))
+        ]
+        askConfirmation(self, self.tr("Find in Diff"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
+                        messageBoxIcon="information", callback=wrapAround)
 
     # -------------------------------------------------------------------------
 

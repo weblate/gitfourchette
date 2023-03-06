@@ -43,6 +43,7 @@ class GraphView(QListView):
     exportCommitAsPatch = Signal(pygit2.Oid)
     commitChanges = Signal()
     amendChanges = Signal()
+    widgetMoved = Signal()
 
     clModel: CommitLogModel
     clFilter: CommitFilter
@@ -63,6 +64,9 @@ class GraphView(QListView):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
+
+    def moveEvent(self, event: QMoveEvent):
+        self.widgetMoved.emit()
 
     def onContextMenuRequested(self, point: QPoint):
         globalPoint = self.mapToGlobal(point)

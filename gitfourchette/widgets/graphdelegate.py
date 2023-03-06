@@ -201,7 +201,7 @@ class GraphDelegate(QStyledItemDelegate):
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
 
         # ------ Highlight search term
-        needle = self.state.processedCommitSearchTerm
+        needle = self.state.sanitizedCommitSearchTerm
         if needle and commit and needle in commit.message.lower():
             needleIndex = summaryText.lower().find(needle)
             if needleIndex < 0:
@@ -214,7 +214,7 @@ class GraphDelegate(QStyledItemDelegate):
             if isSelected:
                 painter.drawRect(rect.left()+x1, rect.top()+1, x2-x1, rect.height()-2)
             else:
-                painter.fillRect(rect.left()+x1, rect.top(), x2-x1, rect.height(), Qt.GlobalColor.yellow)
+                painter.fillRect(rect.left()+x1, rect.top(), x2-x1, rect.height(), colors.yellow)
 
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(summaryText))
 

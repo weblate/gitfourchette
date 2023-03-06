@@ -237,13 +237,13 @@ class MainWindow(QMainWindow):
         editMenu: QMenu = menubar.addMenu(self.tr("&Edit"))
         editMenu.setObjectName("MWEditMenu")
 
-        a = editMenu.addAction(self.tr("&Find..."), lambda: self.currentRepoWidget().findFlow("find"))
+        a = editMenu.addAction(self.tr("&Find..."), lambda: self.currentRepoWidget().genericFind("start"))
         a.setShortcuts(QKeySequence.StandardKey.Find)
 
-        a = editMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().findFlow("next"))
+        a = editMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().genericFind("next"))
         a.setShortcuts(QKeySequence.StandardKey.FindNext)
 
-        a = editMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().findFlow("previous"))
+        a = editMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().genericFind("previous"))
         a.setShortcuts(QKeySequence.StandardKey.FindPrevious)
 
         # -------------------------------------------------------------

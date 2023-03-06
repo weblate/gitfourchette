@@ -297,7 +297,8 @@ def askConfirmation(
         buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
         okButtonText: str = "",
         okButtonIcon: QIcon | None = None,
-        show=True
+        show=True,
+        messageBoxIcon: MessageBoxIconName = "question",
 ) -> QMessageBox:
     """
     Shows a confirmation message box asynchronously.
@@ -306,7 +307,7 @@ def askConfirmation(
     some of them won't emit the `accepted` signal which is connected to the callback.
     """
 
-    qmb = asyncMessageBox(parent, 'question', title, text, buttons)
+    qmb = asyncMessageBox(parent, messageBoxIcon, title, text, buttons)
 
     okButton = qmb.button(QMessageBox.StandardButton.Ok)
     if okButton:

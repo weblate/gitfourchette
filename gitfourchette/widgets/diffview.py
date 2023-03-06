@@ -100,6 +100,7 @@ class DiffGutter(QWidget):
 class DiffView(QPlainTextEdit):
     applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
     revertPatch = Signal(pygit2.Patch, bytes)
+    widgetMoved = Signal()
 
     lineData: list[LineData]
     lineCursorStartCache: list[int]
@@ -133,6 +134,9 @@ class DiffView(QPlainTextEdit):
 
         # Work around control characters inserted by Qt 6 when copying text
         self.copyAvailable.connect(self.onCopyAvailable)
+
+    def moveEvent(self, event: QMoveEvent):
+        self.widgetMoved.emit()
 
     def replaceDocument(self, repo: Repository, patch: Patch, stagingState: StagingState, dm: DiffModel):
         oldDocument = self.document()

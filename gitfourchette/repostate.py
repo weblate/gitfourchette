@@ -108,8 +108,10 @@ class RepoState:
 
     uiPrefs: RepoPrefs
 
-    rawCommitSearchTerm: str
-    processedCommitSearchTerm: str
+    commitSearchTerm: str
+    sanitizedCommitSearchTerm: str
+    diffSearchTerm: str
+    sanitizedDiffSearchTerm: str
 
     def __init__(self, repo: pygit2.Repository):
         self.repo = repo
@@ -153,8 +155,10 @@ class RepoState:
 
         self.fileWatcher = FileWatcher(None, self.repo)
 
-        self.rawCommitSearchTerm = ""
-        self.processedCommitSearchTerm = ""
+        self.commitSearchTerm = ""
+        self.sanitizedCommitSearchTerm = ""
+        self.diffSearchTerm = ""
+        self.sanitizedDiffSearchTerm = ""
 
     @property
     def hiddenBranches(self):
@@ -423,3 +427,18 @@ class RepoState:
             if solver.done:
                 break
         self.hiddenCommits = solver.hiddenCommits
+
+    @staticmethod
+    def sanitizeSearchTerm(term: str) -> str:
+        if not term:
+            return ""
+        return term.strip().lower()
+
+    def setCommitSearchTerm(self, term: str):
+        self.commitSearchTerm = term
+        self.sanitizedCommitSearchTerm = RepoState.sanitizeSearchTerm(term)
+
+    def setDiffSearchTerm(self, term: str):
+        self.diffSearchTerm = term
+        self.sanitizedDiffSearchTerm = RepoState.sanitizeSearchTerm(term)
+
