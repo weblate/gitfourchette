@@ -16,10 +16,6 @@ class RichDiffView(QTextBrowser):
         self.clearHistory()
 
         self.setOpenLinks(False)
-        self.anchorClicked.connect(self.onAnchorClicked)
-
-    def onAnchorClicked(self, link: QUrl):
-        log.info("RichDiffView", F"Anchor clicked: {link}")
 
     def displayDiffModelError(self, dme: DiffModelError):
         document = QTextDocument()

@@ -56,8 +56,9 @@ class LoadPatch(RepoTask):
         if not patch:
             return DiffModelError(
                 self.tr("Patch is invalid."),
-                self.tr("The patched file may have changed on disk since we last read it. Try refreshing the window."),
-                icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+                self.tr("The patched file may have changed on disk since we cached it. "
+                        "Try [refreshing] the window.").replace("[", "<a href='gitfourchette://refresh'>").replace("]", "</a>"),
+            icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
             ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]

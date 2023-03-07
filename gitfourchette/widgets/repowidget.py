@@ -93,6 +93,9 @@ class RepoWidget(QWidget):
         self.richDiffView = RichDiffView(self)
         self.conflictView = ConflictView(self)
 
+        self.richDiffView.anchorClicked.connect(self.processInternalLink)
+        self.graphView.linkActivated.connect(self.processInternalLink)
+
         # The staged files and unstaged files view are mutually exclusive.
         self.stagedFiles.entryClicked.connect(self.dirtyFiles.clearSelectionSilently)
         self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
@@ -944,3 +947,21 @@ class RepoWidget(QWidget):
     def refreshPrefs(self):
         self.diffView.refreshPrefs()
         self.graphView.refreshPrefs()
+
+    # -------------------------------------------------------------------------
+
+    def processInternalLink(self, url: QUrl | str):
+        if not isinstance(url, QUrl):
+            url = QUrl(url)
+
+        if url.scheme() != "gitfourchette":
+            log.warning("RepoWidget", "Unsupported scheme in internal link: ", url)
+            return
+
+        if url.authority() == "commit":
+            oid = pygit2.Oid(hex=url.fragment())
+            self.graphView.selectCommit(oid)
+        elif url.authority() == "refresh":
+            self.quickRefresh()
+        else:
+            log.warning("RepoWidget", "Unsupported authority in internal link: ", url)

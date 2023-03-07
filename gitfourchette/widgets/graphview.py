@@ -44,6 +44,7 @@ class GraphView(QListView):
     commitChanges = Signal()
     amendChanges = Signal()
     widgetMoved = Signal()
+    linkActivated = Signal(str)
 
     clModel: CommitLogModel
     clFilter: CommitFilter
@@ -173,7 +174,7 @@ class GraphView(QListView):
         postSummary = ""
         nLines = len(commit.message.rstrip().split('\n'))
 
-        parentHashes = [F"<a href=\"{p}\">{shortHash(p)}</a>" for p in commit.parent_ids]
+        parentHashes = [F"<a href=\"gitfourchette://commit#{p}\">{shortHash(p)}</a>" for p in commit.parent_ids]
         parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
@@ -240,11 +241,9 @@ class GraphView(QListView):
 
         label: QLabel = messageBox.findChild(QLabel, "qt_msgbox_label")
         assert label
-        def processLink(link: str):
-            messageBox.close()
-            self.selectCommit(pygit2.Oid(hex=link))
         label.setOpenExternalLinks(False)
-        label.linkActivated.connect(processLink)
+        label.linkActivated.connect(lambda: messageBox.close())
+        label.linkActivated.connect(self.linkActivated)
 
         messageBox.show()
 
