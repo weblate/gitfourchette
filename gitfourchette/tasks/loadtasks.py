@@ -24,8 +24,8 @@ class LoadWorkdirDiffs(RepoTask):
     def flow(self, allowUpdateIndex: bool):
         yield from self._flowBeginWorkerThread()
         porcelain.refreshIndex(self.repo)
-        self.dirtyDiff = porcelain.diffWorkdirToIndex(self.repo, allowUpdateIndex)
-        self.stageDiff = porcelain.diffIndexToHead(self.repo)
+        self.dirtyDiff = porcelain.getUnstagedChanges(self.repo, allowUpdateIndex)
+        self.stageDiff = porcelain.getStagedChanges(self.repo)
 
 
 class LoadCommit(RepoTask):

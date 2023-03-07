@@ -41,6 +41,7 @@ class GraphView(QListView):
     checkoutCommit = Signal(pygit2.Oid)
     revertCommit = Signal(pygit2.Oid)
     exportCommitAsPatch = Signal(pygit2.Oid)
+    exportWorkdirAsPatch = Signal()
     commitChanges = Signal()
     amendChanges = Signal()
     widgetMoved = Signal()
@@ -76,8 +77,10 @@ class GraphView(QListView):
 
         if not oid:
             actions = [
-                ActionDef(self.tr("Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
-                ActionDef(self.tr("Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+                ActionDef(self.tr("&Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
+                ActionDef(self.tr("&Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("E&xport Uncommitted Changes As Patch..."), self.exportWorkdirAsPatch),
             ]
         else:
             actions = [

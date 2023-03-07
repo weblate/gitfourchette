@@ -505,6 +505,7 @@ class Sidebar(QTreeView):
     editTrackingBranch = Signal(str)
     commitChanges = Signal()
     amendChanges = Signal()
+    exportWorkdirAsPatch = Signal()
 
     newRemote = Signal()
     fetchRemote = Signal(str)
@@ -514,6 +515,7 @@ class Sidebar(QTreeView):
     newStash = Signal()
     popStash = Signal(pygit2.Oid)
     applyStash = Signal(pygit2.Oid, bool)  # bool: ask for confirmation before applying
+    exportStashAsPatch = Signal(pygit2.Oid)
     dropStash = Signal(pygit2.Oid)
 
     openSubmoduleRepo = Signal(str)
@@ -548,8 +550,10 @@ class Sidebar(QTreeView):
 
         if item == EItem.UncommittedChanges:
             actions += [
-                ActionDef(self.tr("Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
-                ActionDef(self.tr("Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+                ActionDef(self.tr("&Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
+                ActionDef(self.tr("&Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("E&xport Uncommitted Changes As Patch..."), self.exportWorkdirAsPatch),
             ]
 
         elif item == EItem.LocalBranchesHeader:
@@ -702,6 +706,11 @@ class Sidebar(QTreeView):
 
                 ActionDef(self.tr("&Apply"),
                           lambda: self.applyStash.emit(oid, False)),  # False: don't ask for confirmation
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("E&xport As Patch..."),
+                          lambda: self.exportStashAsPatch.emit(oid)),
 
                 ActionDef.SEPARATOR,
 

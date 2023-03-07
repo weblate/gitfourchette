@@ -91,7 +91,34 @@ def refreshIndex(repo: Repository):
     repo.index.read()
 
 
-def diffWorkdirToIndex(repo: Repository, updateIndex: bool) -> Diff:
+def getWorkdirChanges(repo: Repository, showBinary: bool = False) -> Diff:
+    """
+    Get a Diff of all uncommitted changes in the working directory,
+    compared to the commit at HEAD.
+
+    In other words, this function compares the workdir to HEAD.
+    """
+
+    flags = (pygit2.GIT_DIFF_INCLUDE_UNTRACKED
+             | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
+             | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT
+             )
+
+    if showBinary:
+        flags |= pygit2.GIT_DIFF_SHOW_BINARY
+
+    dirtyDiff = repo.diff('HEAD', None, cached=False, flags=flags)
+    dirtyDiff.find_similar()
+    return dirtyDiff
+
+
+def getUnstagedChanges(repo: Repository, updateIndex: bool = False, showBinary: bool = False) -> Diff:
+    """
+    Get a Diff of unstaged changes in the working directory.
+
+    In other words, this function compares the workdir to the index.
+    """
+
     flags = (pygit2.GIT_DIFF_INCLUDE_UNTRACKED
              | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
              | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT
@@ -103,25 +130,39 @@ def diffWorkdirToIndex(repo: Repository, updateIndex: bool) -> Diff:
         log.info("porcelain", "GIT_DIFF_UPDATE_INDEX")
         flags |= pygit2.GIT_DIFF_UPDATE_INDEX
 
+    if showBinary:
+        flags |= pygit2.GIT_DIFF_SHOW_BINARY
+
     dirtyDiff = repo.diff(None, None, flags=flags)
     dirtyDiff.find_similar()
     return dirtyDiff
 
 
-def diffIndexToHead(repo: Repository, fast=False) -> Diff:
+def getStagedChanges(repo: Repository, fast: bool = False, showBinary: bool = False) -> Diff:
+    """
+    Get a Diff of staged changes.
+
+    In other words, this function compares the index to HEAD.
+    """
+
+    flags = pygit2.GIT_DIFF_NORMAL
+
+    if showBinary:
+        flags |= pygit2.GIT_DIFF_SHOW_BINARY
+
     if repo.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
         indexTreeOid = repo.index.write_tree()
         tree: pygit2.Tree = repo[indexTreeOid].peel(pygit2.Tree)
-        return tree.diff_to_tree(swap=True)
+        return tree.diff_to_tree(swap=True, flags=flags)
     else:
-        stageDiff: Diff = repo.diff('HEAD', None, cached=True)  # compare HEAD to index
+        stageDiff: Diff = repo.diff('HEAD', None, cached=True, flags=flags)  # compare HEAD to index
         if not fast:
             stageDiff.find_similar()
         return stageDiff
 
 
 def hasAnyStagedChanges(repo: Repository) -> bool:
-    return 0 != len(diffIndexToHead(repo, fast=True))
+    return 0 != len(getStagedChanges(repo, fast=True))
     """
     # This also works, but it's kinda slow...
     status = repo.status(untracked_files="no")
@@ -134,21 +175,29 @@ def hasAnyStagedChanges(repo: Repository) -> bool:
     """
 
 
-def loadCommitDiffs(repo: Repository, oid: Oid) -> list[Diff]:
+def loadCommitDiffs(repo: Repository, oid: Oid, showBinary: bool = False) -> list[Diff]:
+    """
+    Get a list of Diffs of a commit compared to all of its parents.
+    """
+    flags = pygit2.GIT_DIFF_NORMAL
+
+    if showBinary:
+        flags |= pygit2.GIT_DIFF_SHOW_BINARY
+
     commit: pygit2.Commit = repo.get(oid)
     #import time; time.sleep(1) #to debug out-of-order events
 
     if commit.parents:
         allDiffs = []
         for parent in commit.parents:
-            diff = repo.diff(parent, commit)
+            diff = repo.diff(parent, commit, flags=flags)
             diff.find_similar()
             allDiffs.append(diff)
         return allDiffs
 
     else:  # parentless commit
         tree: pygit2.Tree = commit.peel(pygit2.Tree)
-        diff = tree.diff_to_tree(swap=True)
+        diff = tree.diff_to_tree(swap=True, flags=flags)
         return [diff]
 
 
