@@ -57,22 +57,34 @@
    </item>
    <item row="1" column="1">
     <widget class="QCheckBox" name="keepIndexCheckBox">
+     <property name="toolTip">
+      <string>Tick this to leave all staged changes (already added to the index) intact in the working directory after stashing. They will be saved in the stash regardless.</string>
+     </property>
      <property name="text">
-      <string>&amp;Keep index</string>
+      <string>&amp;Keep staged files in the working directory</string>
      </property>
     </widget>
    </item>
    <item row="2" column="1">
     <widget class="QCheckBox" name="includeUntrackedCheckBox">
+     <property name="toolTip">
+      <string>All untracked files will also be stashed and then cleaned up from the working directory.</string>
+     </property>
      <property name="text">
-      <string>Include &amp;untracked</string>
+      <string>Save &amp;untracked files in the stash (new files that you haven’t staged yet)</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
      </property>
     </widget>
    </item>
    <item row="3" column="1">
     <widget class="QCheckBox" name="includeIgnoredCheckBox">
+     <property name="toolTip">
+      <string>All ignored files will also be stashed and then cleaned up from the working directory.</string>
+     </property>
      <property name="text">
-      <string>Include &amp;ignored</string>
+      <string>Save &amp;ignored files in the stash</string>
      </property>
     </widget>
    </item>

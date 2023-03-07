@@ -1,13 +1,12 @@
 ################################################################################
 ## Form generated from reading UI file 'stashdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.6
+## Created by: Qt User Interface Compiler version 6.4.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from gitfourchette.qt import *
-
 
 class Ui_StashDialog(object):
     def setupUi(self, StashDialog):
@@ -48,6 +47,7 @@ class Ui_StashDialog(object):
 
         self.includeUntrackedCheckBox = QCheckBox(StashDialog)
         self.includeUntrackedCheckBox.setObjectName(u"includeUntrackedCheckBox")
+        self.includeUntrackedCheckBox.setChecked(True)
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.includeUntrackedCheckBox)
 
@@ -78,6 +78,15 @@ class Ui_StashDialog(object):
         StashDialog.setWindowTitle(QCoreApplication.translate("StashDialog", u"New stash", None))
         self.messageLabel.setText(QCoreApplication.translate("StashDialog", u"&Description", None))
         self.optionsLabel.setText(QCoreApplication.translate("StashDialog", u"Options", None))
-        self.keepIndexCheckBox.setText(QCoreApplication.translate("StashDialog", u"&Keep index", None))
-        self.includeUntrackedCheckBox.setText(QCoreApplication.translate("StashDialog", u"Include &untracked", None))
-        self.includeIgnoredCheckBox.setText(QCoreApplication.translate("StashDialog", u"Include &ignored", None))
+#if QT_CONFIG(tooltip)
+        self.keepIndexCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"Tick this to leave all staged changes (already added to the index) intact in the working directory after stashing. They will be saved in the stash regardless.", None))
+#endif // QT_CONFIG(tooltip)
+        self.keepIndexCheckBox.setText(QCoreApplication.translate("StashDialog", u"&Keep staged files in the working directory", None))
+#if QT_CONFIG(tooltip)
+        self.includeUntrackedCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"All untracked files will also be stashed and then cleaned up from the working directory.", None))
+#endif // QT_CONFIG(tooltip)
+        self.includeUntrackedCheckBox.setText(QCoreApplication.translate("StashDialog", u"Save &untracked files in the stash (new files that you haven\u2019t staged yet)", None))
+#if QT_CONFIG(tooltip)
+        self.includeIgnoredCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"All ignored files will also be stashed and then cleaned up from the working directory.", None))
+#endif // QT_CONFIG(tooltip)
+        self.includeIgnoredCheckBox.setText(QCoreApplication.translate("StashDialog", u"Save &ignored files in the stash", None))
