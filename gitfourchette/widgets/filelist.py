@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.actiondef import ActionDef
@@ -8,7 +7,8 @@ from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBlockerContext,
-                                shortHash, PersistentFileDialog, showWarning, askConfirmation)
+                                shortHash, PersistentFileDialog, showWarning, showInformation, askConfirmation,
+                                paragraphs)
 from pathlib import Path
 from typing import Generator, Any
 import errno
@@ -351,22 +351,40 @@ class FileList(QListView):
             return -1
 
     def savePatchAs(self, saveInto=None):
+        def warnBinary(affectedPaths):
+            showWarning(
+                self,
+                self.tr("Save patch file"),
+                paragraphs(
+                    self.tr("For the time being, {0} is unable to export binary patches "
+                            "from a selection of files.").format(qAppName()),
+                    self.tr("The following binary files were skipped in the patch:"),
+                    "<br>".join(html.escape(f) for f in affectedPaths)))
+
         entries = list(self.selectedEntries())
 
         names = set()
 
+        skippedBinaryFiles = []
+
         bigpatch = b""
-        for diff in entries:
-            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
-                diffFile = diff.delta.old_file
+        for patch in entries:
+            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+                diffFile = patch.delta.old_file
             else:
-                diffFile = diff.delta.new_file
-            if diff.data:
-                bigpatch += diff.data
+                diffFile = patch.delta.new_file
+            if patch.delta.is_binary:
+                skippedBinaryFiles.append(diffFile.path)
+                continue
+            if patch.data:
+                bigpatch += patch.data
                 names.add(Path(diffFile.path).stem)
 
         if not bigpatch:
-            QApplication.beep()
+            if skippedBinaryFiles:
+                warnBinary(skippedBinaryFiles)
+            else:
+                showInformation(self, self.tr("Save patch file"), self.tr("The patch is empty."))
             return
 
         name = ", ".join(sorted(names)) + ".patch"
@@ -381,6 +399,9 @@ class FileList(QListView):
 
         with open(savePath, "wb") as f:
             f.write(bigpatch)
+
+        if skippedBinaryFiles:
+            warnBinary(skippedBinaryFiles)
 
     def getFirstPath(self) -> str:
         model: FileListModel = self.model()
