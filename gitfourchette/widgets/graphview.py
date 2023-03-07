@@ -162,7 +162,7 @@ class GraphView(QListView):
         def formatSignature(sig: pygit2.Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
             return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
-                   + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat))
+                   + "<small>" + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat)) + "</small>"
 
         # TODO: we should probably run this as a task
 
@@ -173,9 +173,9 @@ class GraphView(QListView):
         postSummary = ""
         nLines = len(commit.message.rstrip().split('\n'))
 
-        parentHashes = [shortHash(p) for p in commit.parent_ids]
+        parentHashes = [F"<a href=\"{p}\">{shortHash(p)}</a>" for p in commit.parent_ids]
         parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
-        parentValueMarkup = escape(', '.join(parentHashes))
+        parentValueMarkup = ', '.join(parentHashes)
 
         #childHashes = [shortHash(c) for c in commit.children]
         #childLabelMarkup = escape(fplural('# Child^ren', len(childHashes)))
@@ -237,6 +237,14 @@ class GraphView(QListView):
                     button.click()
                 elif role == QMessageBox.ButtonRole.AcceptRole:
                     messageBox.setDefaultButton(button)
+
+        label: QLabel = messageBox.findChild(QLabel, "qt_msgbox_label")
+        assert label
+        def processLink(link: str):
+            messageBox.close()
+            self.selectCommit(pygit2.Oid(hex=link))
+        label.setOpenExternalLinks(False)
+        label.linkActivated.connect(processLink)
 
         messageBox.show()
 
@@ -316,6 +324,11 @@ class GraphView(QListView):
             if not silent:
                 showWarning(self, self.tr("Commit not found"),
                             self.tr("Commit not found or not loaded:") + f"<br>{oid.hex}")
+            return False
+        elif newFilterIndex.row() < 0:
+            if not silent:
+                showWarning(self, self.tr("Hidden commit"),
+                            self.tr("This commit is hidden from the log:") + f"<br>{oid.hex}")
             return False
 
         if self.currentIndex().row() != newFilterIndex.row():
