@@ -180,7 +180,10 @@ def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
     findMenuAction(menu, "new.+branch from here").trigger()
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
-    assert dlg.ui.nameEdit.text() == "no-parent"
+    assert dlg.ui.nameEdit.text() == "no-parent-2"
+    assert dlg.acceptButton.isEnabled()  # "no-parent-2" isn't taken
+
+    dlg.ui.nameEdit.setText("no-parent")  # try to set a name that's taken
     assert not dlg.acceptButton.isEnabled()  # can't accept because branch name "no-parent" is taken
 
     dlg.ui.nameEdit.setText("no-parent-2")

@@ -19,14 +19,14 @@ def translateBranchNameValidationError(e: porcelain.BranchNameValidationError):
     return errorDescriptions.get(e.code, "Branch name validation error {0}".format(e.code))
 
 
-def validateLocalBranchName(newBranchName: str, forbiddenBranchNames: list[str]) -> str:
+def validateBranchName(newBranchName: str, reservedNames: list[str], nameInUseMessage: str) -> str:
     try:
         porcelain.validateBranchName(newBranchName)
     except porcelain.BranchNameValidationError as exc:
         return translateBranchNameValidationError(exc)
 
-    if newBranchName in forbiddenBranchNames:
-        return translate("BranchNameValidation", "Name already taken by another local branch.")
+    if newBranchName in reservedNames:
+        return nameInUseMessage
 
     return ""  # validation passed, no error
 
@@ -38,7 +38,7 @@ class NewBranchDialog(QDialog):
             target: str,
             targetSubtitle: str,
             upstreams: list[str],
-            forbiddenBranchNames: list[str],
+            reservedNames: list[str],
             parent=None):
 
         super().__init__(parent)
@@ -59,11 +59,15 @@ class NewBranchDialog(QDialog):
             self.ui.upstreamCheckBox.setVisible(False)
             self.ui.upstreamComboBox.setVisible(False)
 
-        util.installLineEditCustomValidator(
-            validatorFunc=lambda name: validateLocalBranchName(name, forbiddenBranchNames),
-            errorLabel=self.ui.nameValidationText,
-            lineEdits=[self.ui.nameEdit],
-            gatedWidgets=[self.acceptButton])
+        reservedMessage = self.tr("Name already taken by another local branch.")
+
+        def validateNewBranchName(name: str):
+            return validateBranchName(name, reservedNames, reservedMessage)
+
+        validator = util.GatekeepingValidator(self)
+        validator.setGatedWidgets(self.acceptButton)
+        validator.connectInput(self.ui.nameEdit, self.ui.nameValidation, validateNewBranchName)
+        validator.run()
 
         convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
 

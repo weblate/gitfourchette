@@ -1,15 +1,18 @@
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import tasks
+from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.util import paragraphs, QSignalBlockerContext
 from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
+from gitfourchette.widgets.newbranchdialog import validateBranchName
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from html import escape
 import enum
 import pygit2
+import traceback
 
 
 class ERemoteItem(enum.Enum):
@@ -59,20 +62,26 @@ class PushDialog(QDialog):
 
         self.updateTrackCheckBox()
 
+        self.remoteBranchNameValidator.run()
+
     def onPickRemoteBranch(self, index: int):
         localBranch = self.currentLocalBranch
 
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
 
         if remoteItem != ERemoteItem.ExistingRef:
+            self.ui.remoteNameLabel.setText(remoteData + "/")
             newRBN = porcelain.generateUniqueBranchNameOnRemote(self.repo, remoteData, localBranch.branch_name)
-            self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.remoteBranchOptionsNameEditPage)
-            self.ui.customRemoteBranchNameEdit.setText(newRBN)
-            self.ui.customRemoteBranchNameEdit.setFocus(Qt.TabFocusReason)
+            self.ui.newRemoteBranchGroupBox.setVisible(True)
+            self.ui.newRemoteBranchNameEdit.setText(newRBN)
+            self.ui.newRemoteBranchNameEdit.setFocus(Qt.FocusReason.TabFocusReason)
         else:
-            self.ui.remoteBranchOptionsStack.setCurrentWidget(self.ui.remoteBranchOptionsBlankPage)
+            self.ui.newRemoteBranchGroupBox.setVisible(False)
+            pass
 
         self.updateTrackCheckBox()
+
+        self.remoteBranchNameValidator.run()
 
     def updateTrackCheckBox(self, resetCheckedState=True):
         localBranch = self.currentLocalBranch
@@ -80,20 +89,34 @@ class PushDialog(QDialog):
         remoteName = self.currentRemoteBranchFullName
         lbUpstream = localBranch.upstream.shorthand if localBranch.upstream else "???"
 
+        metrics = self.ui.trackingLabel.fontMetrics()
+
+        localName = escape(metrics.elidedText(localName, Qt.TextElideMode.ElideMiddle, 150))
+        remoteName = escape(metrics.elidedText(remoteName, Qt.TextElideMode.ElideMiddle, 150))
+        lbUpstream = escape(metrics.elidedText(lbUpstream, Qt.TextElideMode.ElideMiddle, 150))
+
         if not localBranch.upstream:
-            text = self.tr("Make “{0}” trac&k “{1}” from now on").format(escamp(localName), escamp(remoteName))
+            if self.ui.trackCheckBox.isChecked():
+                text = self.tr("“{0}” will track “{1}”.").format(localName, remoteName)
+            else:
+                text = self.tr("“{0}” currently does not track any remote branch.").format(localName)
             checked = False
             enabled = True
         elif localBranch.upstream.shorthand == self.currentRemoteBranchFullName:
-            text = self.tr("“{0}” already trac&ks “{1}”").format(escamp(localName), escamp(lbUpstream))
+            text = self.tr("“{0}” already tracks remote branch “{1}”.").format(localName, lbUpstream)
             checked = True
             enabled = False
         else:
-            text = self.tr("Make “{0}” trac&k “{1}” from now on,\ninstead of “{2}”").format(escamp(localName), escamp(remoteName), escamp(lbUpstream))
+            if self.ui.trackCheckBox.isChecked():
+                text = self.tr("“{0}” will track “{1}” instead of “{2}”.").format(localName, remoteName, lbUpstream)
+            else:
+                text = self.tr("“{0}” currently tracks “{1}”.").format(localName, lbUpstream)
             checked = False
             enabled = True
 
-        self.ui.trackCheckBox.setText(text)
+        self.ui.trackingLabel.setText(text)
+        self.ui.trackingLabel.setContentsMargins(20, 0, 0, 0)
+        self.ui.trackingLabel.setEnabled(enabled)
         self.ui.trackCheckBox.setEnabled(enabled)
         if resetCheckedState:
             self.ui.trackCheckBox.setChecked(checked)
@@ -134,7 +157,7 @@ class PushDialog(QDialog):
             rbr: pygit2.Branch = remoteData
             return rbr.shorthand.removeprefix(rbr.remote_name + "/")
         elif remoteItem == ERemoteItem.NewRef:
-            return self.ui.customRemoteBranchNameEdit.text()
+            return self.ui.newRemoteBranchNameEdit.text()
         else:
             raise NotImplementedError()
 
@@ -149,7 +172,7 @@ class PushDialog(QDialog):
             rbr: pygit2.Branch = remoteData
             return rbr.shorthand
         elif remoteItem == ERemoteItem.NewRef:
-            return remoteData + "/" + self.ui.customRemoteBranchNameEdit.text()
+            return remoteData + "/" + self.ui.newRemoteBranchNameEdit.text()
         else:
             raise NotImplementedError()
 
@@ -179,7 +202,7 @@ class PushDialog(QDialog):
                     if br == self.currentLocalBranch.upstream:
                         caption = F"{identifier} " + self.tr("[tracked]")
                         self.trackedBranchIndex = comboBox.count()
-                        icon = stockIcon(QStyle.StandardPixmap.SP_DirHomeIcon)
+                        icon = stockIcon("vcs-branch")  # stockIcon(QStyle.StandardPixmap.SP_DirHomeIcon)
                         font = QFont()
                         font.setBold(True)
                     else:
@@ -198,7 +221,7 @@ class PushDialog(QDialog):
                     self.fallbackAutoNewIndex = comboBox.count()
                 comboBox.addItem(
                     stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder),
-                    self.tr("New remote branch:") + F" {remoteName}/...",
+                    self.tr("New remote branch on {0}").format(escamp(remoteName)),
                     (ERemoteItem.NewRef, remoteName))
 
                 firstRemote = False
@@ -207,6 +230,7 @@ class PushDialog(QDialog):
         super().__init__(parent)
         self.repo = repo
         self.repoTaskRunner = repoTaskRunner
+        self.reservedRemoteBranchNames = porcelain.getRemoteBranchNames(self.repo)
 
         self.fallbackAutoNewIndex = 0
         self.trackedBranchIndex = -1
@@ -214,6 +238,7 @@ class PushDialog(QDialog):
 
         self.ui = Ui_PushDialog()
         self.ui.setupUi(self)
+        util.tweakWidgetFont(self.ui.trackingLabel, 90)
 
         self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.startOperationButton.setText(self.tr("&Push"))
@@ -231,19 +256,45 @@ class PushDialog(QDialog):
         self.ui.localBranchEdit.activated.connect(self.fillRemoteComboBox)
         self.ui.localBranchEdit.activated.connect(self.onPickLocalBranch)
         self.ui.remoteBranchEdit.activated.connect(self.onPickRemoteBranch)
-        self.ui.customRemoteBranchNameEdit.textEdited.connect(lambda text: self.updateTrackCheckBox(False))
+        self.ui.newRemoteBranchNameEdit.textEdited.connect(lambda text: self.updateTrackCheckBox(False))
+        self.ui.trackCheckBox.toggled.connect(lambda: self.updateTrackCheckBox(False))
+
+        self.remoteBranchNameValidator = util.GatekeepingValidator(self)
+        self.remoteBranchNameValidator.setGatedWidgets(self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
+        self.remoteBranchNameValidator.connectInput(
+            self.ui.newRemoteBranchNameEdit, self.ui.newRemoteBranchNameValidation, self.validateCustomRemoteBranchName)
+        # don't prime the validator!
 
         # Fire initial activated signal to set up comboboxes
         self.ui.localBranchEdit.activated.emit(pickBranchIndex)
+
+        self.ui.forcePushCheckBox.clicked.connect(self.setOkButtonText)
+        self.setOkButtonText()
 
         convertToBrandedDialog(self)
 
         setWindowModal(self)
 
+    def setOkButtonText(self):
+        okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        if self.ui.forcePushCheckBox.isChecked():
+            okButton.setText(self.tr("Force &Push"))
+        else:
+            okButton.setText(self.tr("&Push"))
+
+    def validateCustomRemoteBranchName(self, name: str):
+        if not self.ui.newRemoteBranchNameEdit.isVisibleTo(self):
+            return ""
+
+        reservedNames = self.reservedRemoteBranchNames.get(self.currentRemoteName, [])
+
+        return validateBranchName(name, reservedNames,
+                                  self.tr("Name already taken by another branch on this remote."))
+
     def enableInputs(self, on: bool):
         widgets = [self.ui.remoteBranchEdit,
                    self.ui.localBranchEdit,
-                   self.ui.customRemoteBranchNameEdit,
+                   self.ui.newRemoteBranchNameEdit,
                    self.ui.forcePushCheckBox,
                    self.ui.trackCheckBox,
                    self.startOperationButton]
@@ -292,6 +343,7 @@ class PushDialog(QDialog):
                 pushDialog.accept()
 
             def onError(self, exc: BaseException):
+                traceback.print_exception(exc)
                 QApplication.beep()
                 QApplication.alert(pushDialog, 500)
                 pushDialog.pushInProgress = False
@@ -300,7 +352,10 @@ class PushDialog(QDialog):
 
         self.pushInProgress = True
         self.enableInputs(False)
-        self.repoTaskRunner.put(PushTask(self))
+
+        task = PushTask(self)
+        task.setRepo(self.repo)
+        self.repoTaskRunner.put(task)
 
     def reject(self):
         if self.pushInProgress:

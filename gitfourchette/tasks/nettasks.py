@@ -7,8 +7,10 @@ from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
+from gitfourchette.widgets.newbranchdialog import validateBranchName
 from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from html import escape
+import contextlib
 
 
 class _BaseNetTask(RepoTask):
@@ -77,12 +79,21 @@ class RenameRemoteBranch(_BaseNetTask):
         remoteName, branchName = porcelain.splitRemoteBranchShorthand(remoteBranchName)
         newBranchName = branchName  # naked name, NOT prefixed with the name of the remote
 
+        reservedNames = porcelain.getRemoteBranchNames(self.repo).get(remoteName, [])
+        with contextlib.suppress(ValueError):
+            reservedNames.remove(branchName)
+        reservedMessage = self.tr("Name already taken by another branch on this remote.")
+
+        def validateNewRemoteBranchName(name: str):
+            return validateBranchName(name, reservedNames, reservedMessage)
+
         dlg = showTextInputDialog(
             self.parent(),
             self.tr("Rename remote branch “{0}”").format(escape(remoteBranchName)),
             self.tr("Enter new name:"),
             newBranchName,
-            okButtonText=self.tr("Rename on remote"))
+            okButtonText=self.tr("Rename on remote"),
+            validate=validateNewRemoteBranchName)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         yield from self._flowDialog(dlg)
         dlg.deleteLater()

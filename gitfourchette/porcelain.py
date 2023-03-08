@@ -350,6 +350,20 @@ def validateBranchName(newBranchName: str):
         raise E(E.ILLEGAL_SUFFIX)
 
 
+def generateUniqueLocalBranchName(repo: pygit2.Repository, seedBranchName: str):
+    """ Generate a name that doesn't clash with any existing branches on the remote """
+
+    i = 1
+    newBranchName = seedBranchName
+    allLocalBranches = list(repo.branches.local)
+
+    while newBranchName in allLocalBranches:
+        i += 1
+        newBranchName = F"{seedBranchName}-{i}"
+
+    return newBranchName
+
+
 def generateUniqueBranchNameOnRemote(repo: pygit2.Repository, remoteName: str, seedBranchName: str):
     """ Generate a name that doesn't clash with any existing branches on the remote """
 

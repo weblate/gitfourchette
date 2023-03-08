@@ -4,7 +4,7 @@ from gitfourchette.porcelain import HEADS_PREFIX, REMOTES_PREFIX
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.newbranchdialog import NewBranchDialog, validateLocalBranchName
+from gitfourchette.widgets.newbranchdialog import NewBranchDialog, validateBranchName
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
 from html import escape
 import pygit2
@@ -50,7 +50,7 @@ class RenameBranch(RepoTask):
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),
-            validatorFunc=lambda name: validateLocalBranchName(name, forbiddenBranchNames))
+            validate=lambda name: validateBranchName(name, forbiddenBranchNames, self.tr("Name taken by another local branch.")))
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         yield from self._flowDialog(dlg)
@@ -118,7 +118,10 @@ class _NewBranchBaseTask(RepoTask):
                     _, localName = porcelain.splitRemoteBranchShorthand(shorthand)
                 upstreams.append(shorthand)
 
-        # Ensure no duplicates (stable order since Python 3.7+)
+        # Start with a unique name so the branch validator doesn't shout at us
+        localName = porcelain.generateUniqueLocalBranchName(repo, localName)
+
+        # Ensure no duplicate upstreams (stable order since Python 3.7+)
         upstreams = list(dict.fromkeys(upstreams))
 
         forbiddenBranchNames = repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
@@ -131,7 +134,7 @@ class _NewBranchBaseTask(RepoTask):
             target=util.shortHash(tip),
             targetSubtitle=commitMessage,
             upstreams=upstreams,
-            forbiddenBranchNames=forbiddenBranchNames,
+            reservedNames=forbiddenBranchNames,
             parent=self.parent())
 
         if upstream:

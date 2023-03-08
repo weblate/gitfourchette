@@ -1,5 +1,5 @@
+from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.util import tweakWidgetFont, setWindowModal, installLineEditCustomValidator
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
@@ -25,7 +25,7 @@ def makeBrandedDialogLayout(
     titleLayout.setContentsMargins(0, 0, 0, 0)
     title = QLabel(titleText, dialog)
     title.setTextFormat(Qt.TextFormat.RichText)
-    tweakWidgetFont(title, 150, bold=True)
+    util.tweakWidgetFont(title, 150, bold=True)
     titleLayout.addWidget(title)
 
     if subtitleText:
@@ -34,7 +34,7 @@ def makeBrandedDialogLayout(
             subtitle.setWordWrap(True)
         else:
             subtitle = QElidedLabel(subtitleText, dialog)
-        tweakWidgetFont(subtitle, relativeSize=90)
+        util.tweakWidgetFont(subtitle, relativeSize=90)
         titleLayout.addWidget(subtitle)
         title.setAlignment(Qt.AlignmentFlag.AlignBottom)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -74,7 +74,7 @@ def showTextInputDialog(
         text: str,
         onAccept: Callable[[str], None] = None,
         okButtonText: str = None,
-        validatorFunc: Callable[[str], str] = None,
+        validate: Callable[[str], str] = None,
 ) -> QDialog:
 
     dlg = QDialog(parent)
@@ -90,23 +90,22 @@ def showTextInputDialog(
     buttonBox = QDialogButtonBox(dlg)
     buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 
-    layout = QVBoxLayout()
+    layout = QGridLayout()
 
     if detailedPrompt:
         detailedPromptLabel = QLabel(detailedPrompt, parent=dlg)
         detailedPromptLabel.setTextFormat(Qt.TextFormat.AutoText)
         detailedPromptLabel.setWordWrap(True)
-        layout.addWidget(detailedPromptLabel)
+        layout.addWidget(detailedPromptLabel, 0, 0)
 
-    layout.addWidget(lineEdit)
+    layout.addWidget(lineEdit, 1, 0)
 
-    validatorErrorLabel = None
-    if validatorFunc:
-        validatorErrorLabel = QLabel("-validator-")
-        validatorErrorLabel.setEnabled(False)
-        layout.addWidget(validatorErrorLabel)
+    validationLabel = None
+    if validate:
+        validationLabel = QLabel("-validator-")
+        layout.addWidget(validationLabel, 1, 1)
 
-    layout.addWidget(buttonBox)
+    layout.addWidget(buttonBox, 2, 0, 1, -1)
 
     buttonBox.accepted.connect(dlg.accept)
     buttonBox.rejected.connect(dlg.reject)
@@ -117,12 +116,11 @@ def showTextInputDialog(
     if okButtonText:
         buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
 
-    if validatorFunc:
-        installLineEditCustomValidator(
-            lineEdits=[lineEdit],
-            validatorFunc=validatorFunc,
-            errorLabel=validatorErrorLabel,
-            gatedWidgets=[buttonBox.button(QDialogButtonBox.StandardButton.Ok)])
+    if validate:
+        validator = util.GatekeepingValidator(dlg)
+        validator.setGatedWidgets(buttonBox.button(QDialogButtonBox.StandardButton.Ok))
+        validator.connectInput(lineEdit, validationLabel, validate)
+        validator.run()
 
     makeBrandedDialog(dlg, layout, title)
 
@@ -130,7 +128,7 @@ def showTextInputDialog(
     dlg.setMinimumWidth(512)
 
     dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-    setWindowModal(dlg)
+    util.setWindowModal(dlg)
 
     dlg.show()
     dlg.setMinimumHeight(dlg.height())

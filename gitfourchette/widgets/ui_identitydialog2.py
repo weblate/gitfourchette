@@ -24,27 +24,32 @@ class Ui_IdentityDialog2(object):
 
         self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
 
-        self.nameEdit = QLineEdit(self.identityGroupBox)
-        self.nameEdit.setObjectName(u"nameEdit")
-
-        self.gridLayout_2.addWidget(self.nameEdit, 0, 1, 1, 1)
-
         self.label_2 = QLabel(self.identityGroupBox)
         self.label_2.setObjectName(u"label_2")
 
         self.gridLayout_2.addWidget(self.label_2, 1, 0, 1, 1)
+
+        self.nameEdit = QLineEdit(self.identityGroupBox)
+        self.nameEdit.setObjectName(u"nameEdit")
+
+        self.gridLayout_2.addWidget(self.nameEdit, 0, 1, 1, 1)
 
         self.emailEdit = QLineEdit(self.identityGroupBox)
         self.emailEdit.setObjectName(u"emailEdit")
 
         self.gridLayout_2.addWidget(self.emailEdit, 1, 1, 1, 1)
 
-        self.validatorLabel = QLabel(self.identityGroupBox)
-        self.validatorLabel.setObjectName(u"validatorLabel")
-        self.validatorLabel.setEnabled(False)
-        self.validatorLabel.setText(u"-validator output text goes here-")
+        self.emailValidation = QLabel(self.identityGroupBox)
+        self.emailValidation.setObjectName(u"emailValidation")
+        self.emailValidation.setText(u"VAL")
 
-        self.gridLayout_2.addWidget(self.validatorLabel, 2, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.emailValidation, 1, 2, 1, 1)
+
+        self.nameValidation = QLabel(self.identityGroupBox)
+        self.nameValidation.setObjectName(u"nameValidation")
+        self.nameValidation.setText(u"VAL")
+
+        self.gridLayout_2.addWidget(self.nameValidation, 0, 2, 1, 1)
 
 
         self.gridLayout.addWidget(self.identityGroupBox, 3, 0, 1, 1)

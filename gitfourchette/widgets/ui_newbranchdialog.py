@@ -1,13 +1,12 @@
 ################################################################################
 ## Form generated from reading UI file 'newbranchdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.8
+## Created by: Qt User Interface Compiler version 6.4.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from gitfourchette.qt import *
-
 
 class Ui_NewBranchDialog(object):
     def setupUi(self, NewBranchDialog):
@@ -26,31 +25,31 @@ class Ui_NewBranchDialog(object):
         self.formLayout = QFormLayout(NewBranchDialog)
         self.formLayout.setObjectName(u"formLayout")
         self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.buttonBox = QDialogButtonBox(NewBranchDialog)
-        self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.buttonBox.setCenterButtons(False)
+        self.nameLabel = QLabel(NewBranchDialog)
+        self.nameLabel.setObjectName(u"nameLabel")
 
-        self.formLayout.setWidget(6, QFormLayout.FieldRole, self.buttonBox)
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.nameLabel)
 
-        self.nameLayout = QVBoxLayout()
-        self.nameLayout.setSpacing(0)
-        self.nameLayout.setObjectName(u"nameLayout")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.nameEdit = QLineEdit(NewBranchDialog)
         self.nameEdit.setObjectName(u"nameEdit")
 
-        self.nameLayout.addWidget(self.nameEdit)
+        self.horizontalLayout.addWidget(self.nameEdit)
 
-        self.nameValidationText = QLabel(NewBranchDialog)
-        self.nameValidationText.setObjectName(u"nameValidationText")
-        self.nameValidationText.setEnabled(False)
-        self.nameValidationText.setText(u"Validation")
+        self.nameValidation = QLabel(NewBranchDialog)
+        self.nameValidation.setObjectName(u"nameValidation")
+        self.nameValidation.setText(u"VAL")
 
-        self.nameLayout.addWidget(self.nameValidationText)
+        self.horizontalLayout.addWidget(self.nameValidation)
 
 
-        self.formLayout.setLayout(0, QFormLayout.FieldRole, self.nameLayout)
+        self.formLayout.setLayout(0, QFormLayout.FieldRole, self.horizontalLayout)
+
+        self.optionsLabel = QLabel(NewBranchDialog)
+        self.optionsLabel.setObjectName(u"optionsLabel")
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.optionsLabel)
 
         self.switchToBranchCheckBox = QCheckBox(NewBranchDialog)
         self.switchToBranchCheckBox.setObjectName(u"switchToBranchCheckBox")
@@ -58,15 +57,13 @@ class Ui_NewBranchDialog(object):
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.switchToBranchCheckBox)
 
-        self.optionsLabel = QLabel(NewBranchDialog)
-        self.optionsLabel.setObjectName(u"optionsLabel")
+        self.buttonBox = QDialogButtonBox(NewBranchDialog)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setCenterButtons(False)
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.optionsLabel)
-
-        self.nameLabel = QLabel(NewBranchDialog)
-        self.nameLabel.setObjectName(u"nameLabel")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.nameLabel)
+        self.formLayout.setWidget(6, QFormLayout.FieldRole, self.buttonBox)
 
         self.upstreamLayout = QHBoxLayout()
         self.upstreamLayout.setObjectName(u"upstreamLayout")
@@ -110,7 +107,7 @@ class Ui_NewBranchDialog(object):
 
     def retranslateUi(self, NewBranchDialog):
         NewBranchDialog.setWindowTitle(QCoreApplication.translate("NewBranchDialog", u"New branch", None))
-        self.switchToBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"Switch to branch after creating", None))
-        self.optionsLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Options", None))
         self.nameLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Name", None))
+        self.optionsLabel.setText(QCoreApplication.translate("NewBranchDialog", u"Options", None))
+        self.switchToBranchCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"Switch to branch after creating", None))
         self.upstreamCheckBox.setText(QCoreApplication.translate("NewBranchDialog", u"&Track remote branch", None))

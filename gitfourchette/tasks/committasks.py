@@ -134,7 +134,7 @@ class SetUpIdentityFirstRun(RepoTask):
         return TaskAffectsWhat.NOTHING
 
     @staticmethod
-    def validateInput(name: str, email: str):
+    def validateInput(item: str):
         """ See libgit2/signature.c """
 
         def isCrud(c: str):
@@ -149,13 +149,12 @@ class SetUpIdentityFirstRun(RepoTask):
                 start += 1
             return s[start:end]
 
-        for item in name, email:
-            if "<" in item or ">" in item:
-                return translate("IdentityDialog1", "Angle bracket characters are not allowed.")
-            elif not extractTrimmed(item):
-                return translate("IdentityDialog1", "Please fill out both fields.")
-
-        return ""
+        if "<" in item or ">" in item:
+            return translate("IdentityDialog1", "Angle bracket characters are not allowed.")
+        elif not extractTrimmed(item):
+            return translate("IdentityDialog1", "Cannot be empty.")
+        else:
+            return ""
 
     def flow(self, okButtonText=""):
         # Getting the default signature will fail if the user's identity is missing or incorrectly set
@@ -174,14 +173,14 @@ class SetUpIdentityFirstRun(RepoTask):
         ui.nameEdit.setText(initialName)
         ui.emailEdit.setText(initialEmail)
 
-        util.installLineEditCustomValidator(
-            lineEdits=[ui.nameEdit, ui.emailEdit],
-            validatorFunc=SetUpIdentityFirstRun.validateInput,
-            errorLabel=ui.validatorLabel,
-            gatedWidgets=[ui.buttonBox.button(QDialogButtonBox.Ok)])
+        validator = util.GatekeepingValidator(dlg)
+        validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
+        validator.connectInput(ui.nameEdit, ui.nameValidation, SetUpIdentityFirstRun.validateInput)
+        validator.connectInput(ui.emailEdit, ui.emailValidation, SetUpIdentityFirstRun.validateInput)
+        validator.run()
 
         if okButtonText:
-            ui.buttonBox.button(QDialogButtonBox.Ok).setText(okButtonText)
+            ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
 
         subtitle = translate(
             "IdentityDialog1",
@@ -252,15 +251,15 @@ class SetUpRepoIdentity(RepoTask):
             ui.nameEdit.setText(initialName)
             ui.emailEdit.setText(initialEmail)
             ui.identityGroupBox.setTitle(groupBoxTitle)
-            ui.buttonBox.button(QDialogButtonBox.Ok).setText(okButtonText)
+            ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
+            validator.run()
 
         ui.localIdentityCheckBox.stateChanged.connect(onLocalIdentityCheckBoxChanged)
 
-        util.installLineEditCustomValidator(
-            lineEdits=[ui.nameEdit, ui.emailEdit],
-            validatorFunc=SetUpIdentityFirstRun.validateInput,
-            errorLabel=ui.validatorLabel,
-            gatedWidgets=[ui.buttonBox.button(QDialogButtonBox.Ok)])
+        validator = util.GatekeepingValidator(dlg)
+        validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
+        validator.connectInput(ui.nameEdit, ui.nameValidation, SetUpIdentityFirstRun.validateInput)
+        validator.connectInput(ui.emailEdit, ui.emailValidation, SetUpIdentityFirstRun.validateInput)
 
         onLocalIdentityCheckBoxChanged(useLocalIdentity)
 
