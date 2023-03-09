@@ -19,14 +19,18 @@ setup(
     },
     python_requires='>=3',
     install_requires=[
-        'qtpy',
         'pygit2>=1.11.0',
+        'PySide6>=6.4.1',
     ],
     extras_require={
+        'pyqt6': ['qtpy', 'pyqt6'],
+        'pyqt5': ['qtpy', 'pyqt5'],
+        'pyside2': ['qtpy', 'PySide2'],
         'memory-indicator': ['psutil'],
     },
     tests_require=[
         'pytest',
         'pytest-qt',
+        'qtpy',
     ],
 )
