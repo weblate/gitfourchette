@@ -306,7 +306,8 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return branchName
             elif toolTipRole:
-                text = self.tr("Local branch “{0}”").format(escape(branchName))
+                text = "<p style='white-space: pre'>"
+                text += self.tr("Local branch <b>“{0}”</b>").format(escape(branchName))
                 if branchName == self._checkedOut:
                     text += "\n" + ACTIVE_BULLET + self.tr("Active branch")
                 if self._tracking[branchNo]:

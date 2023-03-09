@@ -146,9 +146,10 @@ class FileListModel(QAbstractListModel):
                     opCap = ''
 
                 return (
-                    F"<b>{fromText} </b> {html.escape(delta.old_file.path)} ({delta.old_file.mode:o})"
-                    F"<br><b>{toText} </b> {html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
-                    F"<br><b>{opText} </b> {delta.status_char()} {opCap}"
+                    "<p style='white-space: pre'>"
+                    F"<b>{opText} </b> {delta.status_char()} {opCap}"
+                    F"\n<b>{fromText} </b> {html.escape(delta.old_file.path)} ({delta.old_file.mode:o})"
+                    F"\n<b>{toText} </b> {html.escape(delta.new_file.path)} ({delta.new_file.mode:o})"
                 )
 
         elif role == Qt.ItemDataRole.SizeHintRole:
