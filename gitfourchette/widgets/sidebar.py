@@ -459,6 +459,10 @@ class SidebarDelegate(QStyledItemDelegate):
         view: QTreeView = option.widget
         item = SidebarModel.unpackItem(index)
 
+        # Don't draw spacers at all (Windows theme has mouse hover effect by default)
+        if item == EItem.Spacer:
+            return
+
         opt = QStyleOptionViewItem(option)
 
         if item in UNINDENT_ITEMS:
@@ -537,6 +541,8 @@ class Sidebar(QTreeView):
         self.setItemDelegate(SidebarDelegate(self))
 
         self.setModel(SidebarModel(self))
+
+        self.setAnimated(True)
 
     def updateHiddenBranches(self, hiddenBranches: list[str]):
         self.model().updateHiddenBranches(hiddenBranches)
