@@ -334,6 +334,7 @@ class PushDialog(QDialog):
 
             def flow(self):
                 yield from self._flowBeginWorkerThread()
+                link.discoverKeyFiles(remote)
                 remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
                     porcelain.editTrackingBranch(self.repo, pushDialog.currentLocalBranchName, resetTrackingReference)
@@ -348,7 +349,7 @@ class PushDialog(QDialog):
                 QApplication.alert(pushDialog, 500)
                 pushDialog.pushInProgress = False
                 pushDialog.enableInputs(True)
-                pushDialog.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
+                pushDialog.ui.statusForm.setBlurb(F"<b>{util.translateExceptionName(exc)}:</b> {escape(str(exc))}")
 
         self.pushInProgress = True
         self.enableInputs(False)

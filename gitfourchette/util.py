@@ -142,6 +142,15 @@ def setWindowModal(widget: QWidget, modality: Qt.WindowModality = Qt.WindowModal
         widget.setWindowModality(modality)
 
 
+def translateExceptionName(exc: BaseException):
+    d = {
+        "ConnectionRefusedError": translate("Exception", "Connection refused"),
+        "FileNotFoundError": translate("Exception", "File not found"),
+    }
+    name = type(exc).__name__
+    return d.get(name, name)
+
+
 def excMessageBox(
         exc,
         title="",
@@ -483,13 +492,12 @@ class QRunnableFunctionWrapper(QRunnable):
 
 
 class PersistentFileDialog:
+    # TODO: Make async version
+
     @staticmethod
-    def getPath(key):
+    def getPath(key: str, fallbackPath: str = ""):
         from gitfourchette import settings
-        try:
-            return settings.history.fileDialogPaths[key]
-        except KeyError:
-            return ""
+        return settings.history.fileDialogPaths.get(key, fallbackPath)
 
     @staticmethod
     def savePath(key, path):
@@ -512,8 +520,8 @@ class PersistentFileDialog:
         return path, selectedFilter
 
     @staticmethod
-    def getOpenFileName(parent, key: str, caption: str, filter="", selectedFilter=""):
-        initialDir = PersistentFileDialog.getPath(key)
+    def getOpenFileName(parent, key: str, caption: str, filter="", selectedFilter="", fallbackPath=""):
+        initialDir = PersistentFileDialog.getPath(key, fallbackPath)
         path, selectedFilter = QFileDialog.getOpenFileName(parent, caption, initialDir, filter, selectedFilter)
         PersistentFileDialog.savePath(key, path)
         return path, selectedFilter

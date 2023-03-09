@@ -3,6 +3,7 @@ Remote management tasks.
 """
 
 from gitfourchette import porcelain
+from gitfourchette import repoconfig
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
@@ -18,7 +19,7 @@ class NewRemote(RepoTask):
         return TaskAffectsWhat.REMOTES
 
     def flow(self):
-        dlg = RemoteDialog(False, "", "", self.parent())
+        dlg = RemoteDialog(False, "", "", "", self.parent())
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
@@ -42,7 +43,7 @@ class EditRemote(RepoTask):
     def flow(self, oldRemoteName: str):
         oldRemoteUrl = self.repo.remotes[oldRemoteName].url
 
-        dlg = RemoteDialog(True, oldRemoteName, oldRemoteUrl, self.parent())
+        dlg = RemoteDialog(True, oldRemoteName, oldRemoteUrl, repoconfig.getRemoteKeyFile(self.repo, oldRemoteName), self.parent())
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
@@ -50,10 +51,12 @@ class EditRemote(RepoTask):
 
         newRemoteName = dlg.ui.nameEdit.text()
         newRemoteUrl = dlg.ui.urlEdit.text()
+        newRemoteKeyfile = dlg.privateKeyFilePath
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
         porcelain.editRemote(self.repo, oldRemoteName, newRemoteName, newRemoteUrl)
+        repoconfig.setRemoteKeyFile(self.repo, newRemoteName, newRemoteKeyfile)
 
 
 class DeleteRemote(RepoTask):

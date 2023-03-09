@@ -1,4 +1,5 @@
 from gitfourchette import log
+from gitfourchette import repoconfig
 from gitfourchette.qt import *
 from gitfourchette.util import compactPath
 import os.path
@@ -54,17 +55,9 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
         self.setObjectName("RemoteLink")
 
         self.attempts = 0
-        #self.signals = RemoteLinkSignals()
 
         self.keypairFiles = []
-        sshDirectory = QStandardPaths.locate(QStandardPaths.HomeLocation, ".ssh", QStandardPaths.LocateDirectory)
-        if sshDirectory:
-            for file in PRIVATE_KEY_FILES:
-                privkey = os.path.join(sshDirectory, file)
-                pubkey = privkey + ".pub"
-                if os.path.isfile(privkey) and os.path.isfile(pubkey):
-                    log.info("RemoteLink", "Discovered key pair", privkey)
-                    self.keypairFiles.append((pubkey, privkey))
+        self.usingCustomKeyFile = ""
 
         self.downloadRateTimer = QElapsedTimer()
         self.downloadRate = 0
@@ -74,6 +67,33 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
 
         self._aborting = False
         self._sidebandProgressBuffer = ""
+
+    def discoverKeyFiles(self, remote: pygit2.Remote | None = None):
+        if remote:
+            privkey = repoconfig.getRemoteKeyFile(remote._repo, remote.name)
+            self.usingCustomKeyFile = privkey
+            if privkey:
+                pubkey = privkey + ".pub"
+                self.keypairFiles.append((pubkey, privkey))
+
+                if not os.path.isfile(pubkey):
+                    raise FileNotFoundError(self.tr("Remote-specific public key file not found:") + " " + compactPath(pubkey))
+
+                if not os.path.isfile(privkey):
+                    raise FileNotFoundError(self.tr("Remote-specific private key file not found:") + " " + compactPath(privkey))
+
+                log.info("RemoteLink", "Using remote-specific key pair", privkey)
+                self.keypairFiles.append((pubkey, privkey))
+
+        if not self.usingCustomKeyFile:
+            sshDirectory = QStandardPaths.locate(QStandardPaths.HomeLocation, ".ssh", QStandardPaths.LocateDirectory)
+            if sshDirectory:
+                for file in PRIVATE_KEY_FILES:
+                    privkey = os.path.join(sshDirectory, file)
+                    pubkey = privkey + ".pub"
+                    if os.path.isfile(privkey) and os.path.isfile(pubkey):
+                        log.info("RemoteLink", "Discovered key pair", privkey)
+                        self.keypairFiles.append((pubkey, privkey))
 
     def isAborting(self):
         return self._aborting
@@ -121,14 +141,26 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
         if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
             log.info("RemoteLink", "Attempting login with:", compactPath(pubkey))
-            self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
+
+            if self.usingCustomKeyFile:
+                self.message.emit(self.tr("Logging in with remote-specific key...") + "\n" + compactPath(pubkey))
+            else:
+                self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
+
             return pygit2.Keypair(username_from_url, pubkey, privkey, "")
             # return pygit2.KeypairFromAgent(username_from_url)
         else:
             if self.attempts > 1:
-                raise ConnectionRefusedError(
-                    self.tr("Credentials rejected by remote.") + " " +
-                    self.tr("The remote claims to accept: {0}.").format(getAuthNamesFromFlags(allowed_types)))
+                if self.usingCustomKeyFile:
+                    text = self.tr("The remote has rejected your custom key file ({0}). "
+                                   "To change key file settings for this remote, "
+                                   "right-click on the remote in the sidebar and pick “Edit Remote”."
+                                   ).format(compactPath(self.usingCustomKeyFile))
+                else:
+                    text = (self.tr("Credentials rejected by remote.") + " " +
+                            self.tr("The remote claims to accept: {0}.").format(getAuthNamesFromFlags(allowed_types)))
+                # Don't HTML escape this - PushDialog does it already
+                raise ConnectionRefusedError(text)
             else:
                 raise NotImplementedError(
                     self.tr("Unsupported auth type.") + " " +

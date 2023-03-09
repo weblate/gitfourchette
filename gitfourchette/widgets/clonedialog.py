@@ -117,6 +117,7 @@ class CloneDialog(QDialog):
 
             def flow(self):
                 yield from self._flowBeginWorkerThread()
+                link.discoverKeyFiles()
                 pygit2.clone_repository(url, path, callbacks=link)
 
                 yield from self._flowExitWorkerThread()
