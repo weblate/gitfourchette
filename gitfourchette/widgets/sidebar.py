@@ -559,6 +559,7 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("&Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
                 ActionDef(self.tr("&Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
                 ActionDef.SEPARATOR,
+                ActionDef(self.tr("&Stash Uncommitted Changes..."), self.newStash, shortcuts=GlobalShortcuts.newStash),
                 ActionDef(self.tr("E&xport Uncommitted Changes As Patch..."), self.exportWorkdirAsPatch),
             ]
 
@@ -632,7 +633,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("New Branch from Here..."),
+                ActionDef(self.tr("New &Branch from Here..."),
                           lambda: self.newBranchFromLocalBranch.emit(data),
                           "vcs-branch"),
 
@@ -641,6 +642,14 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("&Hide in graph"),
                           lambda: self.toggleHideBranch.emit("refs/heads/" + data),
                           checkState=1 if isBranchHidden else -1),
+            ]
+
+        elif item == EItem.DetachedHead:
+            actions += [
+                ActionDef(self.tr("New &Branch from Here..."),
+                          lambda: self.newBranch.emit(),
+                          "vcs-branch",
+                          shortcuts=GlobalShortcuts.newBranch),
             ]
 
         elif item == EItem.RemoteBranch:

@@ -44,6 +44,7 @@ class GraphView(QListView):
     exportWorkdirAsPatch = Signal()
     commitChanges = Signal()
     amendChanges = Signal()
+    newStash = Signal()
     widgetMoved = Signal()
     linkActivated = Signal(str)
 
@@ -80,6 +81,7 @@ class GraphView(QListView):
                 ActionDef(self.tr("&Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
                 ActionDef(self.tr("&Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
                 ActionDef.SEPARATOR,
+                ActionDef(self.tr("&Stash Uncommitted Changes..."), self.newStash, shortcuts=GlobalShortcuts.newStash),
                 ActionDef(self.tr("E&xport Uncommitted Changes As Patch..."), self.exportWorkdirAsPatch),
             ]
         else:
