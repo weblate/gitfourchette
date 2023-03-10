@@ -1,4 +1,5 @@
 from gitfourchette import porcelain
+from gitfourchette import trash
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
@@ -6,6 +7,26 @@ from gitfourchette.widgets.stashdialog import StashDialog
 from html import escape
 import os
 import pygit2
+
+
+def backupStash(repo: pygit2.Repository, stashCommitId: pygit2.Oid):
+    repoTrash = trash.Trash(repo)
+    trashFile = repoTrash.newFile(ext=".txt", originalPath="DELETED_STASH")
+
+    text = F"""\
+To recover this stash, paste the hash below into "Repo > Recall Lost Commit" in {qAppName()}:
+
+{stashCommitId.hex}
+
+----------------------------------------
+
+Original stash message below:
+
+{repo[stashCommitId].peel(pygit2.Commit).message}
+"""
+
+    with open(trashFile, 'wt', encoding="utf-8") as f:
+        f.write(text)
 
 
 class NewStash(RepoTask):
@@ -69,6 +90,7 @@ class PopStash(RepoTask):
 
     def flow(self, stashCommitId: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
+        backupStash(self.repo, stashCommitId)
         porcelain.popStash(self.repo, stashCommitId)
 
 
@@ -88,4 +110,5 @@ class DropStash(RepoTask):
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()
+        backupStash(self.repo, stashCommitId)
         porcelain.dropStash(self.repo, stashCommitId)
