@@ -189,15 +189,29 @@ def loadCommitDiffs(repo: Repository, oid: Oid, showBinary: bool = False) -> lis
 
     if commit.parents:
         allDiffs = []
-        for parent in commit.parents:
-            diff = repo.diff(parent, commit, flags=flags)
-            diff.find_similar()
-            allDiffs.append(diff)
+
+        parent: pygit2.Commit
+        for i, parent in enumerate(commit.parents):
+            if i == 0:
+                diff = repo.diff(parent, commit, flags=flags)
+                diff.find_similar()
+                allDiffs.append(diff)
+            elif not parent.parents:
+                # This parent is parentless: assume merging in new files from this parent
+                # (e.g. "untracked files on ..." parents of stash commits)
+                tree: pygit2.Tree = parent.peel(pygit2.Tree)
+                diff = tree.diff_to_tree(swap=True, flags=flags)
+                allDiffs.append(diff)
+            else:
+                # Skip non-parentless parent in merge commits
+                pass
+
         return allDiffs
 
-    else:  # parentless commit
-        tree: pygit2.Tree = commit.peel(pygit2.Tree)
-        diff = tree.diff_to_tree(swap=True, flags=flags)
+    else:
+        # Parentless commit: diff with empty tree
+        # (no tree passed to diff_to_tree == force diff against empty tree)
+        diff = commit.tree.diff_to_tree(swap=True, flags=flags)
         return [diff]
 
 

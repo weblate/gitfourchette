@@ -411,12 +411,13 @@ class RepoState:
         for hiddenBranchTip in self.getHiddenBranchOids():
             solver.hideCommit(hiddenBranchTip)
 
-        for stash in self.repo.listall_stashes():
-            stashCommit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
-            if len(stashCommit.parents) == 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):
-                solver.hideCommit(stashCommit.parents[1].id, force=True)
-            else:
-                log.warning("RepoState", f"stash has abnormal parents: {stash.commit_id}")
+        if settings.prefs.debug_hideStashJunkParents:
+            for stash in self.repo.listall_stashes():
+                stashCommit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
+                if len(stashCommit.parents) >= 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):
+                    solver.hideCommit(stashCommit.parents[1].id, force=True)
+                if len(stashCommit.parents) >= 3 and stashCommit.parents[2].raw_message.startswith(b"untracked files on "):
+                    solver.hideCommit(stashCommit.parents[2].id, force=True)
 
         return solver
 

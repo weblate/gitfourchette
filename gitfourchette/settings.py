@@ -183,6 +183,7 @@ class Prefs(BasePrefs):
     debug_showMemoryIndicator   : bool          = True
     debug_showPID               : bool          = True
     debug_fixU2029InClipboard   : bool          = False
+    debug_hideStashJunkParents  : bool          = True
     debug_verbosity             : Verbosity     = Verbosity.VERBOSE
 
 

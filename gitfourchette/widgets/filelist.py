@@ -51,9 +51,6 @@ class FileListModel(QAbstractListModel):
     def setDiffs(self, diffs: list[pygit2.Diff]):
         for diff in diffs:
             for patchNo, delta in enumerate(diff.deltas):
-                # In merge commits, the same file may appear in several diffs
-                if delta.new_file.path in self.fileRows:
-                    continue
                 self.fileRows[delta.new_file.path] = len(self.entries)
                 self.entries.append(FileListModel.Entry(delta, diff, patchNo))
 
