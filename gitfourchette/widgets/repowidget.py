@@ -318,11 +318,15 @@ class RepoWidget(QWidget):
 
     def saveFilePositions(self):
         if self.diffStack.currentWidget() == self.diffView:
-            self.navPos.diffScroll = self.diffView.verticalScrollBar().value()
-            self.navPos.diffCursor = self.diffView.textCursor().position()
+            self.navPos = NavPos(
+                context=self.navPos.context,
+                file=self.navPos.file,
+                diffCursor=self.diffView.textCursor().position(),
+                diffScroll=self.diffView.verticalScrollBar().value())
         else:
-            self.navPos.diffScroll = 0
-            self.navPos.diffCursor = 0
+            self.navPos = NavPos(
+                context=self.navPos.context,
+                file=self.navPos.file)
         self.navHistory.push(self.navPos)
 
     def restoreSelectedFile(self):
@@ -358,7 +362,7 @@ class RepoWidget(QWidget):
 
         self.navPos = pos
 
-        self.navHistory.setRecent(pos)
+        self.navHistory.bump(pos)
 
         self.navHistory.lock()
 
@@ -384,7 +388,7 @@ class RepoWidget(QWidget):
         if self.navHistory.isAtTopOfStack:
             self.saveFilePositions()
 
-        startPos = self.navPos.copy()
+        startPos = self.navPos
 
         while not self.navHistory.isAtBottomOfStack:
             pos = self.navHistory.navigateBack()
@@ -394,7 +398,7 @@ class RepoWidget(QWidget):
                 break
 
     def navigateForward(self):
-        startPos = self.navPos.copy()
+        startPos = self.navPos
 
         while not self.navHistory.isAtTopOfStack:
             pos = self.navHistory.navigateForward()
@@ -543,6 +547,10 @@ class RepoWidget(QWidget):
 
         if forceSelectFile:  # for Revert Hunk from DiffView
             self.navPos = forceSelectFile
+        else:
+            # Try to recall where we were last time we looked at the workdir.
+            # If that fails ("or" clause), make a dummy NavPos so the history knows we're looking at the workdir now.
+            self.navPos = self.navHistory.recall("UNSTAGED", "UNTRACKED", "STAGED") or NavPos("UNSTAGED")
 
         # After patchApplied.emit has caused a refresh of the dirty/staged file views,
         # restore selected row in appropriate file list view so the user can keep hitting
@@ -577,9 +585,9 @@ class RepoWidget(QWidget):
             self.committedFiles.setCommit(oid)
             self.committedFiles.setContents(parentDiffs)
 
-        self.navPos = self.navHistory.findContext(oid.hex)
+        self.navPos = self.navHistory.recall(oid.hex)
         if not self.navPos:
-            self.navPos = NavPos(context=oid.hex, file=self.committedFiles.getFirstPath())
+            self.navPos = NavPos(oid.hex, file=self.committedFiles.getFirstPath())
 
         # Show message if commit is empty
         if self.committedFiles.flModel.rowCount() == 0:
@@ -610,7 +618,7 @@ class RepoWidget(QWidget):
             else:
                 posContext = stagingState.name
             posFile = patch.delta.new_file.path
-            self.navPos = self.navHistory.findFileInContext(posContext, posFile)
+            self.navPos = self.navHistory.recallFileInContext(posContext, posFile)
 
             if not self.navPos:
                 self.navPos = NavPos(posContext, posFile)
@@ -812,7 +820,7 @@ class RepoWidget(QWidget):
         with Benchmark("Load tainted commits only"):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
 
-        initialNavPos = self.navPos.copy()
+        initialNavPos = self.navPos
         initialGraphScroll = self.graphView.verticalScrollBar().value()
 
         with QSignalBlockerContext(self.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):

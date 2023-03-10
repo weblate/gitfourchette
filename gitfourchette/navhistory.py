@@ -1,9 +1,8 @@
-from copy import copy
 from dataclasses import dataclass
 from gitfourchette import log
 
 
-@dataclass
+@dataclass(frozen=True)
 class NavPos:
     context: str = ""  # UNSTAGED, UNTRACKED, STAGED or a commit hex oid
     file: str = ""
@@ -18,25 +17,38 @@ class NavPos:
     def __repr__(self) -> str:
         return F"NavPos({self.context[:10]} {self.file} {self.diffScroll} {self.diffCursor})"
 
-    def copy(self):
-        return copy(self)
-
     def isWorkdir(self):
         return self.context in ["UNSTAGED", "UNTRACKED", "STAGED"]
 
+    @property
+    def fileKey(self):
+        """ For NavHistory.recallFileInContext(). """
+        return f"{self.context}:{self.file}"
+
 
 class NavHistory:
+    """
+    History of the files that the user has viewed in a repository's commit log and workdir.
+    """
+
     history: list[NavPos]
-    recent: dict[str, NavPos]
+    "Stack of position snapshots."
+
     current: int
+    "Current position in the history stack. Hitting next/forward moves this index."
+
+    recent: dict[str, tuple[NavPos, int]]
+    "Most recent NavPos and 'timestamp' by context (commit oid/UNSTAGED/UNTRACKED/STAGED)."
 
     def __init__(self):
         self.history = []
         self.recent = {}
         self.current = 0
         self.locked = False
+        self.counter = 0
 
     def lock(self):
+        """All push calls are ignored while the history is locked."""
         self.locked = True
 
     def unlock(self):
@@ -50,30 +62,34 @@ class NavHistory:
             log.info("nav", "ignoring:", pos)
             return
 
-        if len(self.history) == 0 or self.history[self.current] != pos:
-            pos = pos.copy()
-            self.recent[pos.context] = pos
-            self.recent[F"{pos.context}:{pos.file}"] = pos
-
-            if self.current < len(self.history) - 1:
-                self.trim()
-
-            log.info("nav", F"pushing #{len(self.history)}:", pos)
-            self.history.append(pos)
-            self.current = len(self.history) - 1
-        else:
+        if len(self.history) > 0 and self.history[self.current] == pos:
             log.info("nav", "discarding:", pos)
+            return
+
+        self.counter += 1
+
+        self.recent[pos.context] = (pos, self.counter)
+        self.recent[pos.fileKey] = (pos, self.counter)
+
+        if self.current < len(self.history) - 1:
+            self.trim()
+
+        log.info("nav", F"pushing #{self.counter}:", pos)
+        self.history.append(pos)
+        self.current = len(self.history) - 1
 
     def trim(self):
         log.info("nav", F"trimming: {self.current}")
         self.history = self.history[: self.current + 1]
         assert self.isAtTopOfStack
 
-    def setRecent(self, pos):
-        log.info("nav", "setRecent", pos)
-        pos = copy(pos)
-        self.recent[pos.context] = pos
-        self.recent[F"{pos.context}:{pos.file}"] = pos
+    def bump(self, pos: NavPos):
+        log.info("nav", "bump", pos)
+
+        self.counter += 1
+
+        self.recent[pos.context] = (pos, self.counter)
+        self.recent[pos.fileKey] = (pos, self.counter)
     
     @property
     def isAtTopOfStack(self):
@@ -83,13 +99,14 @@ class NavHistory:
     def isAtBottomOfStack(self):
         return self.current == 0
 
-    def findContext(self, context: str) -> NavPos:
-        pos = self.recent.get(context, None)
-        return copy(pos) if pos else None
+    def recall(self, *contexts: str) -> NavPos | None:
+        """ Recalls the most recent NavPos matching any of the given contexts. """
+        recents = (self.recent.get(c, (None, -1)) for c in contexts)
+        return max(recents, key=lambda x: x[1])[0]
 
-    def findFileInContext(self, context: str, file: str) -> NavPos:
-        pos = self.recent.get(F"{context}:{file}", None)
-        return copy(pos) if pos else None
+    def recallFileInContext(self, context: str, file: str) -> NavPos:
+        pos = self.recent.get(F"{context}:{file}", (None, -1))
+        return pos[0]
 
     def navigateBack(self):
         if self.current > 0:
