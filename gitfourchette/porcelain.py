@@ -661,20 +661,19 @@ def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str
         commit2refs[repo.head.target].append('HEAD')
 
     for ref in repo.references.objects:
-        refKey = ref.name
-
-        if type(ref.target) != pygit2.Oid:
-            # Symbolic reference
-            # log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
+        try:
+            commit: pygit2.Commit = repo[ref.target].peel(pygit2.Commit)
+        except (KeyError, ValueError) as exc:
+            # Might be a symbolic reference or some other junk
             continue
 
+        refKey = ref.name
         assert refKey.startswith("refs/")
-
         if refKey == "refs/stash":
             # Stashes must be dealt with separately
             continue
 
-        commit2refs[ref.target].append(refKey)
+        commit2refs[commit.oid].append(refKey)
 
     for stashIndex, stash in enumerate(repo.listall_stashes()):
         commit2refs[stash.commit_id].append(F"stash@{{{stashIndex}}}")
