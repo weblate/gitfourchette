@@ -1,6 +1,7 @@
 from collections import defaultdict
 from gitfourchette import log
 from pygit2 import Commit, Diff, Oid, Repository, Signature
+from typing import Iterable, Literal
 import contextlib
 import pygit2
 import os
@@ -773,9 +774,15 @@ def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
     index.write()
 
 
-def newStash(repo: Repository, message: str, flags: str) -> pygit2.Oid:
+def newStash(repo: Repository, message: str, flags: Iterable[Literal["k", "u", "i"]]) -> pygit2.Oid:
+    try:
+        signature = repo.default_signature
+    except ValueError:
+        # Allow creating a stash if the identity isn't set
+        signature = Signature(name="UNKNOWN", email="UNKNOWN")
+
     oid = repo.stash(
-        stasher=repo.default_signature,
+        stasher=signature,
         message=message,
         keep_index='k' in flags,
         include_untracked='u' in flags,

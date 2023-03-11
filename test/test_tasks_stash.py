@@ -58,6 +58,26 @@ def testNewStashWithUntrackedFiles(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["a/untracked.txt"]
 
 
+def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir, userName="", userEmail="")
+    writeFile(F"{wd}/a/untracked.txt", "this file is untracked\n")  # unstaged change
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
+    findMenuAction(menu, "new stash").trigger()
+
+    dlg: StashDialog = findQDialog(rw, "new stash")
+    dlg.ui.messageEdit.setText("helloworld")
+    dlg.ui.includeUntrackedCheckBox.setChecked(True)
+    dlg.accept()
+
+    assert not os.path.isfile(f"{wd}/a/untracked.txt")
+    assert len(repo.listall_stashes()) == 1
+    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)]
+    assert qlvGetRowData(rw.dirtyFiles) == []
+
+
 def testPopStash(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
