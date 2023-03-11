@@ -514,6 +514,9 @@ class RepoWidget(QWidget):
         self.clearDiffView()
 
     def refreshWorkdirViewAsync(self, forceSelectFile: NavPos = None, allowUpdateIndex: bool = False):
+        with QSignalBlockerContext(self.sidebar):
+            self.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
+
         task = tasks.LoadWorkdirDiffs(self)
         task.setRepo(self.repo)
         task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, forceSelectFile))
@@ -564,6 +567,10 @@ class RepoWidget(QWidget):
         self.navHistory.unlock()
 
     def loadCommitAsync(self, oid: pygit2.Oid):
+        # Attempt to select matching ref in sidebar
+        with QSignalBlockerContext(self.sidebar):
+            self.sidebar.selectAnyRef(*self.state.commitsToRefs.get(oid, []))
+
         task = tasks.LoadCommit(self)
         task.setRepo(self.repo)
         task.success.connect(lambda: self._loadCommit(oid, task.diffs))

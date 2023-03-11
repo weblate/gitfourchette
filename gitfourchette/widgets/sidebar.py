@@ -6,12 +6,14 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.util import escamp, stockIcon
 from html import escape
 from typing import Any
+import contextlib
 import enum
 import pygit2
 
 ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
 ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
+ROLE_REF = Qt.ItemDataRole.UserRole + 3
 
 ACTIVE_BULLET = "★ "
 
@@ -281,12 +283,13 @@ class SidebarModel(QAbstractItemModel):
             return item.value
 
         displayRole = role == Qt.ItemDataRole.DisplayRole
-        userRole = role == ROLE_USERDATA
         toolTipRole = role == Qt.ItemDataRole.ToolTipRole
         sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
-        hiddenRole = role == ROLE_ISHIDDEN
         fontRole = role == Qt.ItemDataRole.FontRole
         decorationRole = role == Qt.ItemDataRole.DecorationRole
+        userRole = role == ROLE_USERDATA
+        hiddenRole = role == ROLE_ISHIDDEN
+        refRole = role == ROLE_REF
 
         if item == EItem.Spacer:
             if sizeHintRole:
@@ -305,6 +308,8 @@ class SidebarModel(QAbstractItemModel):
                     return branchName
             elif userRole:
                 return branchName
+            elif refRole:
+                return F"refs/heads/{branchName}"
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
                 text += self.tr("Local branch <b>“{0}”</b>").format(escape(branchName))
@@ -361,6 +366,8 @@ class SidebarModel(QAbstractItemModel):
             branchName = self._remoteBranchesDict[remoteName][row]
             if displayRole:
                 return branchName
+            elif refRole:
+                return F"refs/remotes/{remoteName}/{branchName}"
             elif userRole:
                 return F"{remoteName}/{branchName}"
             elif toolTipRole:
@@ -376,6 +383,8 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.Tag:
             if displayRole or userRole:
                 return self._tags[row]
+            elif refRole:
+                return F"refs/tags/{self._tags[row]}"
             elif hiddenRole:
                 return False
 
@@ -383,6 +392,8 @@ class SidebarModel(QAbstractItemModel):
             stash = self._stashes[row]
             if displayRole:
                 return porcelain.getCoreStashMessage(stash.message)
+            elif refRole:
+                return F"stash@{{{row}}}"
             elif toolTipRole:
                 return F"<b>stash@{{{row}}}</b>:<br/>{escape(stash.message)}"
             elif userRole:
@@ -397,6 +408,19 @@ class SidebarModel(QAbstractItemModel):
                 return self._submodules[row]
             elif userRole:
                 return self._submodules[row]
+            elif hiddenRole:
+                return False
+
+        elif item == EItem.UncommittedChanges:
+            if displayRole:
+                return self.tr("Changes")
+            elif refRole:
+                # Return fake ref so we can select Uncommitted Changes from elsewhere
+                return "UNCOMMITTED_CHANGES"
+            elif fontRole:
+                font = self._parentWidget.font()
+                font.setBold(True)
+                return font
             elif hiddenRole:
                 return False
 
@@ -420,6 +444,8 @@ class SidebarModel(QAbstractItemModel):
                     EItem.Spacer: "---",
                 }
                 return ITEM_NAMES[item]
+            elif refRole:
+                return ""
             elif fontRole:
                 font = self._parentWidget.font()
                 font.setBold(True)
@@ -820,3 +846,32 @@ class Sidebar(QTreeView):
         model: QAbstractItemModel = self.model()
         indices = self.indicesForItemType(item)
         return [model.data(index, role) for index in indices]
+
+    def indexForRef(self, ref: str) -> QModelIndex | None:
+        model: QAbstractItemModel = self.model()
+
+        index = model.match(model.index(0, 0), ROLE_REF, ref, hits=1,
+                            flags=Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive)
+
+        if index:
+            return index[0]
+        else:
+            return None
+
+    def selectAnyRef(self, *refCandidates: str) -> QModelIndex | None:
+        # Early out if any candidate ref is already selected
+        with contextlib.suppress(IndexError):
+            currentIndex = self.selectedIndexes()[0]
+            if currentIndex and currentIndex.data(ROLE_REF) in refCandidates:
+                return currentIndex
+
+        # Find an index that matches any of the candidates
+        for ref in refCandidates:
+            index = self.indexForRef(ref)
+            if index:
+                self.setCurrentIndex(index)
+                return index
+
+        # There are no indices that match the candidates, so select nothing
+        self.clearSelection()
+        return None
