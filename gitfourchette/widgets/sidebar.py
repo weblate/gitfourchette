@@ -518,8 +518,7 @@ class Sidebar(QTreeView):
     deleteRemote = Signal(str)
 
     newStash = Signal()
-    popStash = Signal(pygit2.Oid)
-    applyStash = Signal(pygit2.Oid, bool)  # bool: ask for confirmation before applying
+    applyStash = Signal(pygit2.Oid)
     exportStashAsPatch = Signal(pygit2.Oid)
     dropStash = Signal(pygit2.Oid)
 
@@ -717,13 +716,8 @@ class Sidebar(QTreeView):
             oid = pygit2.Oid(hex=data)
 
             actions += [
-                ActionDef(self.tr("&Pop (apply and delete)"),
-                          lambda: self.popStash.emit(oid)),
-
                 ActionDef(self.tr("&Apply"),
-                          lambda: self.applyStash.emit(oid, False)),  # False: don't ask for confirmation
-
-                ActionDef.SEPARATOR,
+                          lambda: self.applyStash.emit(oid)),
 
                 ActionDef(self.tr("E&xport As Patch..."),
                           lambda: self.exportStashAsPatch.emit(oid)),
@@ -799,7 +793,7 @@ class Sidebar(QTreeView):
             self.newStash.emit()
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
-            self.applyStash.emit(oid, True)  # ask for confirmation
+            self.applyStash.emit(oid)
         elif item == EItem.RemoteBranch:
             self.newTrackingBranch.emit(data)
 

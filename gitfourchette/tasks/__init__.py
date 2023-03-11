@@ -16,4 +16,4 @@ from gitfourchette.tasks.stagetasks import StageFiles, UnstageFiles, DiscardFile
 from gitfourchette.tasks.stagetasks import ApplyPatch, RevertPatch
 from gitfourchette.tasks.stagetasks import HardSolveConflict, MarkConflictSolved
 from gitfourchette.tasks.stagetasks import ApplyPatchFile
-from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, PopStash, DropStash
+from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, DropStash

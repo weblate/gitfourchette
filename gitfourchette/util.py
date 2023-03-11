@@ -240,7 +240,8 @@ def asyncMessageBox(
         title: str,
         text: str,
         buttons=QMessageBox.StandardButton.NoButton,
-        macShowTitle=True
+        macShowTitle=True,
+        deleteOnClose=True,
 ) -> QMessageBox:
 
     from gitfourchette import log
@@ -277,7 +278,8 @@ def asyncMessageBox(
     if parent:
         setWindowModal(qmb)
 
-    qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+    if deleteOnClose:
+        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
     return qmb
 

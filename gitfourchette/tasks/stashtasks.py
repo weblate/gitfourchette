@@ -67,31 +67,39 @@ class ApplyStash(RepoTask):
         return translate("Operation", "Apply stash")
 
     def refreshWhat(self):
-        return TaskAffectsWhat.INDEX
+        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS  # LOCALREFS only changes if the stash is deleted
 
-    def flow(self, stashCommitId: pygit2.Oid, confirmFirst=False):
-        if confirmFirst:
-            stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)
-            stashMessage = porcelain.getCoreStashMessage(stashCommit.message)
-            question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
-                               ).format(escape(stashMessage))
-            yield from self._flowConfirm(text=question, verb=self.tr("Apply stash", "Button label"))
+    def flow(self, stashCommitId: pygit2.Oid, tickDelete=True):
+        stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)
+        stashMessage = porcelain.getCoreStashMessage(stashCommit.message)
+
+        question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
+                           ).format(escape(stashMessage))
+
+        qmb = util.asyncMessageBox(self.parent(), 'question', self.name(), question,
+                                   QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                                   deleteOnClose=False)
+
+        def updateButtonText(ticked: bool):
+            okButton = qmb.button(QMessageBox.StandardButton.Ok)
+            okButton.setText(self.tr("&Apply && Delete") if ticked else self.tr("&Apply && Keep"))
+
+        deleteCheckBox = QCheckBox(self.tr("&Delete the stash if it applies cleanly"), qmb)
+        deleteCheckBox.clicked.connect(updateButtonText)
+        deleteCheckBox.setChecked(tickDelete)
+        qmb.setCheckBox(deleteCheckBox)
+        updateButtonText(tickDelete)
+        yield from self._flowDialog(qmb)
+
+        deleteAfterApply = deleteCheckBox.isChecked()
+        qmb.deleteLater()
 
         yield from self._flowBeginWorkerThread()
         porcelain.applyStash(self.repo, stashCommitId)
 
-
-class PopStash(RepoTask):
-    def name(self):
-        return translate("Operation", "Pop stash")
-
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
-
-    def flow(self, stashCommitId: pygit2.Oid):
-        yield from self._flowBeginWorkerThread()
-        backupStash(self.repo, stashCommitId)
-        porcelain.popStash(self.repo, stashCommitId)
+        if deleteAfterApply:
+            backupStash(self.repo, stashCommitId)
+            porcelain.dropStash(self.repo, stashCommitId)
 
 
 class DropStash(RepoTask):
