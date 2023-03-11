@@ -123,3 +123,16 @@ class NavHistory:
             return self.history[self.current]
         else:
             return None
+
+    def getTextLog(self):
+        s = "------------ NAV LOG ------------"
+        i = len(self.history) - 1
+        for h in reversed(self.history):
+            s += "\n"
+            if i == self.current:
+                s += "---> "
+            else:
+                s += "     "
+            s += f"{h.context[:7]} {h.file:32} {h.diffScroll} {h.diffCursor}"
+            i -= 1
+        return s

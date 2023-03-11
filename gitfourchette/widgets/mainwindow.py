@@ -105,6 +105,16 @@ class MainWindow(QMainWindow):
         globalstatus.progressDisable.disconnect()
         return super().close()
 
+    def goBack(self):
+        rw = self.currentRepoWidget()
+        if rw:
+            rw.navigateBack()
+
+    def goForward(self):
+        rw = self.currentRepoWidget()
+        if rw:
+            rw.navigateForward()
+
     @staticmethod
     def reloadStyleSheet():
         log.info("MainWindow", "Reloading QSS")
@@ -331,6 +341,18 @@ class MainWindow(QMainWindow):
         a = goMenu.addAction(self.tr("Previous File"), self.previousFile)
         a.setShortcut("Ctrl+[")
 
+        goMenu.addSeparator()
+
+        a = goMenu.addAction(self.tr("Navigate Back"), self.goBack)
+        a.setShortcuts(GlobalShortcuts.navBack)
+
+        a = goMenu.addAction(self.tr("Navigate Forward"), self.goForward)
+        a.setShortcuts(GlobalShortcuts.navForward)
+
+        if __debug__:
+            a = goMenu.addAction(self.tr("Navigation Log"), lambda: print(self.currentRepoWidget().navHistory.getTextLog()))
+            a.setShortcut("Alt+Down")
+
         # -------------------------------------------------------------
 
         helpMenu = menubar.addMenu(self.tr("&Help"))
@@ -531,6 +553,7 @@ class MainWindow(QMainWindow):
         rw.graphView.selectUncommittedChanges()
         if newState.activeCommitOid:
             rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
+        # rw.saveFilePositions()
         return True
 
     def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1

@@ -36,6 +36,8 @@ class GlobalShortcuts:
     newStash: MultiShortcut = NO_SHORTCUT
     commit: MultiShortcut = NO_SHORTCUT
     amendCommit: MultiShortcut = NO_SHORTCUT
+    navBack: MultiShortcut = NO_SHORTCUT
+    navForward: MultiShortcut = NO_SHORTCUT
 
     stageHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
     discardHotkeys = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
@@ -54,3 +56,10 @@ class GlobalShortcuts:
         cls.newStash = _makeShortcuts(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S")
         cls.commit = _makeShortcuts("Ctrl+K")
         cls.amendCommit = _makeShortcuts("Ctrl+Shift+K")
+
+        if MACOS:
+            cls.navBack = _makeShortcuts("Ctrl+Left")
+            cls.navForward = _makeShortcuts("Ctrl+Right")
+        else:
+            cls.navBack = _makeShortcuts("Alt+Left")
+            cls.navForward = _makeShortcuts("Alt+Right")

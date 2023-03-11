@@ -360,9 +360,7 @@ class RepoWidget(QWidget):
             return False
 
         self.navPos = pos
-
         self.navHistory.bump(pos)
-
         self.navHistory.lock()
 
         if self.navPos.context in ["UNSTAGED", "STAGED", "UNTRACKED"]:
@@ -371,7 +369,6 @@ class RepoWidget(QWidget):
                 success = True
             else:
                 success = self.restoreSelectedFile()
-                self.navHistory.unlock()
         else:
             oid = pygit2.Oid(hex=self.navPos.context)
             if self.graphView.currentCommitOid != oid:
@@ -379,8 +376,8 @@ class RepoWidget(QWidget):
             else:
                 self.graphView.scrollToCommit(oid)
                 success = self.restoreSelectedFile()
-                self.navHistory.unlock()
 
+        self.navHistory.unlock()
         return success
 
     def navigateBack(self):
