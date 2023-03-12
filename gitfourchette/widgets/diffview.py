@@ -1,3 +1,4 @@
+from gitfourchette import colors
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
@@ -101,6 +102,32 @@ class DiffGutter(QWidget):
             self.diffView.selectWholeLinesTo(event.pos())
 
 
+class DiffSearchHighlighter(QSyntaxHighlighter):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.highlightFormat = QTextCharFormat()
+        self.highlightFormat.setBackground(colors.yellow)
+        self.highlightFormat.setFontWeight(QFont.Weight.Bold)
+
+    def highlightBlock(self, text: str):
+        term = self.parent().searchBar.sanitizedSearchTerm
+        if not term:
+            return
+        termLength = len(term)
+
+        text = text.lower()
+        textLength = len(text)
+
+        index = 0
+        while index < textLength:
+            index = text.find(term, index)
+            if index < 0:
+                break
+            self.setFormat(index, termLength, self.highlightFormat)
+            index += termLength
+
+
 class DiffView(QPlainTextEdit):
     applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
     revertPatch = Signal(pygit2.Patch, bytes)
@@ -127,6 +154,9 @@ class DiffView(QPlainTextEdit):
         self.currentPatch = None
         self.repo = None
 
+        # Highlighter for search terms
+        self.highlighter = DiffSearchHighlighter(self)
+
         self.gutterMaxDigits = 0
 
         self.gutter = DiffGutter(self)
@@ -141,6 +171,7 @@ class DiffView(QPlainTextEdit):
 
         self.searchBar = SearchBar(self, self.tr("Find in Diff"))
         # self.searchBar.textChanged.connect(self.onSearchTextChanged)
+        self.searchBar.textChanged.connect(self.highlighter.rehighlight)
         self.searchBar.searchNext.connect(lambda: self.search("next"))
         self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
         self.searchBar.hide()
@@ -160,6 +191,7 @@ class DiffView(QPlainTextEdit):
 
         self.setFont(dm.document.defaultFont())
         self.setDocument(dm.document)
+        self.highlighter.setDocument(dm.document)
 
         self.lineData = dm.lineData
         self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
