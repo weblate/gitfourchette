@@ -14,6 +14,7 @@ from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
 from gitfourchette.widgets.customtabwidget import CustomTabWidget
+from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.prefsdialog import PrefsDialog
 from gitfourchette.widgets.repowidget import RepoWidget
 from gitfourchette.widgets.welcomewidget import WelcomeWidget
@@ -217,7 +218,7 @@ class MainWindow(QMainWindow):
         self.recentMenu = fileMenu.addMenu(self.tr("Open &Recent"))
         self.recentMenu.setObjectName("RecentMenu")
 
-        a = fileMenu.addAction(self.tr("&Close Tab"), self.closeCurrentTab)
+        a = fileMenu.addAction(self.tr("&Close Tab"), self.dispatchCloseCommand)
         a.setShortcuts(GlobalShortcuts.closeTab)
 
         fileMenu.addSeparator()
@@ -247,13 +248,13 @@ class MainWindow(QMainWindow):
         editMenu: QMenu = menubar.addMenu(self.tr("&Edit"))
         editMenu.setObjectName("MWEditMenu")
 
-        a = editMenu.addAction(self.tr("&Find..."), lambda: self.currentRepoWidget().genericFind("start"))
+        a = editMenu.addAction(self.tr("&Find..."), lambda: self.dispatchSearchCommand("start"))
         a.setShortcuts(QKeySequence.StandardKey.Find)
 
-        a = editMenu.addAction(self.tr("Find Next"), lambda: self.currentRepoWidget().genericFind("next"))
+        a = editMenu.addAction(self.tr("Find Next"), lambda: self.dispatchSearchCommand("next"))
         a.setShortcuts(QKeySequence.StandardKey.FindNext)
 
-        a = editMenu.addAction(self.tr("Find Previous"), lambda: self.currentRepoWidget().genericFind("previous"))
+        a = editMenu.addAction(self.tr("Find Previous"), lambda: self.dispatchSearchCommand("previous"))
         a.setShortcuts(QKeySequence.StandardKey.FindPrevious)
 
         # -------------------------------------------------------------
@@ -770,6 +771,12 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Tab management
 
+    def dispatchCloseCommand(self):
+        if self.isActiveWindow():
+            self.closeCurrentTab()
+        elif isinstance(QApplication.activeWindow(), DiffView):
+            QApplication.activeWindow().close()
+
     def closeCurrentTab(self):
         if self.tabs.count() == 0:  # don't attempt to close if no tabs are open
             QApplication.beep()
@@ -1016,3 +1023,15 @@ class MainWindow(QMainWindow):
         self.autoHideMenuBar.refreshPrefs()
         for rw in self.tabs.widgets():
             rw.refreshPrefs()
+
+    # -------------------------------------------------------------------------
+    # Find
+
+    def dispatchSearchCommand(self, op: Literal["start", "next", "previous"]):
+        activeWindow = QApplication.activeWindow()
+        if activeWindow is self and self.currentRepoWidget():
+            self.currentRepoWidget().dispatchSearchCommand(op)
+        elif isinstance(activeWindow, DiffView):
+            activeWindow.search(op)
+        else:
+            QApplication.beep()

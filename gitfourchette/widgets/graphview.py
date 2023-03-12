@@ -2,10 +2,13 @@ from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.qt import *
-from gitfourchette.util import messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox
+from gitfourchette.util import (messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox,
+                                askConfirmation, paragraphs)
 from gitfourchette.widgets.graphdelegate import GraphDelegate
+from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from html import escape
+from typing import Literal
 import pygit2
 
 
@@ -67,6 +70,13 @@ class GraphView(QListView):
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
+
+        self.searchBar = SearchBar(self, self.tr("Find Commit"))
+        self.searchBar.textChanged.connect(lambda: self.model().layoutChanged.emit())  # Redraw graph view (is this efficient?)
+        self.searchBar.searchNext.connect(lambda: self.search("next"))
+        self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
+        self.widgetMoved.connect(self.searchBar.snapToParent)
+        self.searchBar.hide()
 
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
@@ -354,3 +364,71 @@ class GraphView(QListView):
     def refreshPrefs(self):
         self.model().beginResetModel()
         self.model().endResetModel()
+
+    # -------------------------------------------------------------------------
+    # Find text in commit message or hash
+
+    def search(self, op: Literal["start", "next", "previous"]):
+        self.searchBar.popUp(forceSelectAll=op == "start")
+
+        if op == "start":
+            return
+
+        forward = op != "previous"
+
+        if not self.searchBar.sanitizedSearchTerm:
+            QApplication.beep()
+            return
+
+        if len(self.selectedIndexes()) != 0:
+            start = self.currentIndex().row()
+        elif forward:
+            start = 0
+        else:
+            start = self.model().rowCount()
+
+        if forward:
+            self.searchCommitInRange(range(1 + start, self.model().rowCount()))
+        else:
+            self.searchCommitInRange(range(start - 1, -1, -1))
+
+    def searchCommitInRange(self, searchRange: range):
+        message = self.searchBar.sanitizedSearchTerm
+        if not message:
+            QApplication.beep()
+            return
+
+        likelyHash = False
+        if len(message) <= 40:
+            try:
+                int(message, 16)
+                likelyHash = True
+            except ValueError:
+                pass
+
+        model = self.model()
+
+        for i in searchRange:
+            modelIndex = model.index(i, 0)
+            meta = model.data(modelIndex, CommitLogModel.CommitRole)
+            if meta is None:
+                continue
+            if (message in meta.message.lower()) or (likelyHash and message in meta.oid.hex):
+                self.setCurrentIndex(modelIndex)
+                return
+
+        forward = searchRange.step > 0
+
+        def wrapAround():
+            if forward:
+                newRange = range(0, self.model().rowCount())
+            else:
+                newRange = range(self.model().rowCount() - 1, 0, -1)
+            self.searchCommitInRange(newRange)
+
+        prompt = [
+            self.tr("End of commit log reached.") if forward else self.tr("Top of commit log reached."),
+            self.tr("No more occurrences of “{0}” found.").format(escape(message))
+        ]
+        askConfirmation(self, self.tr("Find Commit"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
+                        messageBoxIcon="information", callback=wrapAround)

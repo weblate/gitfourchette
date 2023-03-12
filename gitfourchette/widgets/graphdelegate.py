@@ -201,7 +201,7 @@ class GraphDelegate(QStyledItemDelegate):
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
 
         # ------ Highlight search term
-        needle = self.state.sanitizedCommitSearchTerm
+        needle = self.parent().searchBar.sanitizedSearchTerm
         if needle and commit and needle in commit.message.lower():
             needleIndex = summaryText.lower().find(needle)
             if needleIndex < 0:

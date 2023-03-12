@@ -10,7 +10,7 @@ from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBl
                                 shortHash, PersistentFileDialog, showWarning, showInformation, askConfirmation,
                                 paragraphs)
 from pathlib import Path
-from typing import Generator, Any
+from typing import Any, Callable, Generator
 import errno
 import html
 import os
@@ -162,6 +162,7 @@ class FileListModel(QAbstractListModel):
 class FileList(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(pygit2.Patch, StagingState)
+    openDiffInNewWindow = Signal(pygit2.Patch)
 
     stagingState: StagingState
 
@@ -218,7 +219,7 @@ class FileList(QListView):
                 pdsAction(translate("Prefs", "Show filename only"), settings.PathDisplayStyle.SHOW_FILENAME_ONLY),
             ])
 
-    def confirmBatch(self, callback, title: str, prompt: str, threshold: int = 3):
+    def confirmBatch(self, callback: Callable[[pygit2.Patch], None], title: str, prompt: str, threshold: int = 3):
         entries = list(self.selectedEntries())
 
         def runBatch():
@@ -540,25 +541,26 @@ class CommittedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-                ActionDef(self.tr("&Open Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
-                [
-                    ActionDef(self.tr("&At Commit"), self.openNewRevision),
-                    ActionDef(self.tr("&Before Commit"), self.openOldRevision),
-                    ActionDef.SEPARATOR,
-                    ActionDef(self.tr("&Current (working directory)"), self.openHeadRevision),
-                ]),
-                ActionDef(self.tr("&Save Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
-                [
-                    ActionDef(self.tr("&At Commit"), self.saveNewRevision),
-                    ActionDef(self.tr("&Before Commit"), self.saveOldRevision),
-                ]),
-                #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
-                ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
+            ActionDef(self.tr("Open Diff in New &Window"), self.wantOpenDiffInNewWindow),
+            ActionDef(self.tr("&Open Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
+            [
+                ActionDef(self.tr("&At Commit"), self.openNewRevision),
+                ActionDef(self.tr("&Before Commit"), self.openOldRevision),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
-                ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
-                ActionDef.SEPARATOR,
-                self.pathDisplayStyleSubmenu()
+                ActionDef(self.tr("&Current (working directory)"), self.openHeadRevision),
+            ]),
+            ActionDef(self.tr("&Save Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
+            [
+                ActionDef(self.tr("&At Commit"), self.saveNewRevision),
+                ActionDef(self.tr("&Before Commit"), self.saveOldRevision),
+            ]),
+            #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
+            ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
+            ActionDef.SEPARATOR,
+            ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
+            ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
+            ActionDef.SEPARATOR,
+            self.pathDisplayStyleSubmenu()
         ]
 
     def clear(self):
@@ -658,3 +660,10 @@ class CommittedFiles(FileList):
                 raise SelectedFileBatchError(self.tr("{0}: There’s no file at this path on HEAD.").format(diffFile.path))
 
         self.confirmBatch(run, self.tr("Open revision at HEAD"), self.tr("Really open <b>{0} files</b>?"))
+
+    def wantOpenDiffInNewWindow(self):
+        def run(patch):
+            if patch:
+                self.openDiffInNewWindow.emit(patch)
+
+        self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} files</b>?"))

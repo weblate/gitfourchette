@@ -2,7 +2,7 @@ from gitfourchette.qt import *
 from gitfourchette.widgets.ui_searchwidget import Ui_SearchWidget
 
 
-class SearchWidget(QWidget):
+class SearchBar(QWidget):
     searchNext = Signal()
     searchPrevious = Signal()
 
@@ -18,6 +18,10 @@ class SearchWidget(QWidget):
 
         self.ui.forwardButton.clicked.connect(self.searchNext)
         self.ui.backwardButton.clicked.connect(self.searchPrevious)
+
+        self.ui.lineEdit.textChanged.connect(self.onSearchTextChanged)
+
+        self.sanitizedSearchTerm = ""
 
     @property
     def textChanged(self):
@@ -61,3 +65,6 @@ class SearchWidget(QWidget):
     def bail(self):
         self.parentWidget().setFocus(Qt.FocusReason.PopupFocusReason)
         self.hide()
+
+    def onSearchTextChanged(self, text: str):
+        self.sanitizedSearchTerm = text.strip().lower()

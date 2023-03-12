@@ -9,10 +9,14 @@ from gitfourchette.stagingstate import StagingState
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.trash import Trash
 from gitfourchette.util import (PersistentFileDialog, excMessageBox, QSignalBlockerContext,
-                                showWarning, askConfirmation, asyncMessageBox, stockIcon)
+                                showWarning, askConfirmation, asyncMessageBox, stockIcon,
+                                paragraphs)
 from gitfourchette.widgets.diffmodel import DiffModel, LineData
+from gitfourchette.widgets.searchbar import SearchBar
 from bisect import bisect_left, bisect_right
+from html import escape
 from pygit2 import GitError, Patch, Repository, Diff
+from typing import Literal
 import enum
 import os
 import pygit2
@@ -134,6 +138,13 @@ class DiffView(QPlainTextEdit):
 
         # Work around control characters inserted by Qt 6 when copying text
         self.copyAvailable.connect(self.onCopyAvailable)
+
+        self.searchBar = SearchBar(self, self.tr("Find in Diff"))
+        # self.searchBar.textChanged.connect(self.onSearchTextChanged)
+        self.searchBar.searchNext.connect(lambda: self.search("next"))
+        self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
+        self.searchBar.hide()
+        self.widgetMoved.connect(self.searchBar.snapToParent)
 
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
@@ -522,6 +533,9 @@ class DiffView(QPlainTextEdit):
         if rect.contains(self.viewport().rect()):
             self.updateGutterWidth(0)
 
+    # ---------------------------------------------
+    # Cursor/selection
+
     def getAnchorHomeLinePosition(self):
         cursor: QTextCursor = self.textCursor()
 
@@ -580,6 +594,9 @@ class DiffView(QPlainTextEdit):
 
         self.replaceCursor(cursor)
 
+    # ---------------------------------------------
+    # Clipboard
+
     def onCopyAvailable(self, yes: bool):
         if not WINDOWS and settings.prefs.debug_fixU2029InClipboard:
             if yes:
@@ -621,3 +638,47 @@ class DiffView(QPlainTextEdit):
         text = clipboard.text(mode).replace("\u2029", "\n")
         with QSignalBlockerContext(clipboard):
             clipboard.setText(text, mode)
+
+    # ---------------------------------------------
+    # Search
+
+    def search(self, op: Literal["start", "next", "previous"]):
+        self.searchBar.popUp(forceSelectAll=op == "start")
+
+        if op == "start":
+            return
+
+        forward = op != "previous"
+
+        message = self.searchBar.sanitizedSearchTerm
+        if not message:
+            QApplication.beep()
+            return
+
+        doc: QTextDocument = self.document()
+
+        if forward:
+            newCursor = doc.find(message, self.textCursor())
+        else:
+            newCursor = doc.find(message, self.textCursor(), QTextDocument.FindFlag.FindBackward)
+
+        if newCursor:
+            self.setTextCursor(newCursor)
+            return
+
+        def wrapAround():
+            tc = self.textCursor()
+            if forward:
+                tc.movePosition(QTextCursor.MoveOperation.Start)
+            else:
+                tc.movePosition(QTextCursor.MoveOperation.End)
+            self.setTextCursor(tc)
+            self.search(op)
+
+        prompt = [
+            self.tr("End of diff reached.") if forward else self.tr("Top of diff reached."),
+            self.tr("No more occurrences of “{0}” found.").format(escape(message))
+        ]
+        askConfirmation(self, self.tr("Find in Diff"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
+                        messageBoxIcon="information", callback=wrapAround)
+
