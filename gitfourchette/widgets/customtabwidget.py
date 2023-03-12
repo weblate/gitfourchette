@@ -67,6 +67,7 @@ class CustomTabWidget(QWidget):
         self.tabs.tabMoved.connect(self.onTabMoved)
         self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
         self.tabs.currentChanged.connect(self.currentChanged)
+        self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
         self.tabs.tabMiddleClicked.connect(self.tabCloseRequested)
         self.tabs.tabDoubleClicked.connect(self.tabDoubleClicked)
         self.tabs.setMovable(True)
