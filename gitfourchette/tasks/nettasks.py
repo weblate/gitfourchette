@@ -64,6 +64,7 @@ class DeleteRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self._flowBeginWorkerThread()
+        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.deleteRemoteBranch(self.repo, remoteBranchShorthand, self.remoteLink)
 
         yield from self._flowExitWorkerThread()
@@ -104,6 +105,7 @@ class RenameRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self._flowBeginWorkerThread()
+        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.renameRemoteBranch(self.repo, remoteBranchName, newBranchName, self.remoteLink)
 
         yield from self._flowExitWorkerThread()
@@ -118,6 +120,7 @@ class FetchRemote(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self._flowBeginWorkerThread()
+        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.fetchRemote(self.repo, remoteName, self.remoteLink)
 
         yield from self._flowExitWorkerThread()
@@ -132,6 +135,9 @@ class FetchRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self._flowBeginWorkerThread()
+
+        remoteName, _ = porcelain.splitRemoteBranchShorthand(remoteBranchName)
+        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.fetchRemoteBranch(self.repo, remoteBranchName, self.remoteLink)
 
         yield from self._flowExitWorkerThread()
