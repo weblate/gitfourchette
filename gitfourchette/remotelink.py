@@ -175,6 +175,9 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
             self.downloadRate = (stats.received_bytes - self.receivedBytesOnTimerStart) * 1000 // DLRATE_REFRESH_INTERVAL
             self.downloadRateTimer.restart()
             self.receivedBytesOnTimerStart = stats.received_bytes
+        else:
+            # Don't update UI too frequently (ease CPU load)
+            return
 
         obj = min(stats.indexed_objects, stats.total_objects)
         if obj == stats.total_objects:
