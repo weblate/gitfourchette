@@ -60,6 +60,10 @@ class LoadPatch(RepoTask):
                         "Try [refreshing] the window.").replace("[", "<a href='gitfourchette://refresh'>").replace("]", "</a>"),
             icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
+        if not patch.delta:
+            # Rare libgit2 bug, should be fixed in 1.6.0
+            return DiffModelError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+
         if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
             ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]
             return DiffConflict(self.repo, ancestor, ours, theirs)
