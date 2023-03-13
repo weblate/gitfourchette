@@ -1,4 +1,3 @@
-import util
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
@@ -14,7 +13,7 @@ from gitfourchette.tasks import TaskAffectsWhat
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon,
-                                paragraphs)
+                                paragraphs, NonCriticalOperation)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -555,7 +554,7 @@ class RepoWidget(QWidget):
     def loadCommitAsync(self, oid: pygit2.Oid):
         # Attempt to select matching ref in sidebar
         with QSignalBlockerContext(self.sidebar):
-            self.sidebar.selectAnyRef(*self.state.commitsToRefs.get(oid, []))
+            self.sidebar.selectAnyRef(*self.state.reverseRefCache.get(oid, []))
 
         task = tasks.LoadCommit(self)
         task.setRepo(self.repo)
@@ -596,12 +595,13 @@ class RepoWidget(QWidget):
         self.repoTaskRunner.put(task, patch, stagingState)
 
     def loadPatchInNewWindow(self, patch: pygit2.Patch, stagingState=StagingState.COMMITTED, commitOid: pygit2.Oid=None):
-        with util.NonCriticalOperation(self.tr("Load diff in new window")):
+        with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
             diffWindow.replaceDocument(self.repo, patch, stagingState, DiffModel.fromPatch(patch))
             diffWindow.resize(550, 700)
-            diffWindow.setWindowTitle(F"{os.path.basename(patch.delta.new_file.path)} @ {util.shortHash(commitOid)}")
+            diffWindow.setWindowTitle(F"{os.path.basename(patch.delta.new_file.path)} @ {shortHash(commitOid)}")
             diffWindow.setWindowFlag(Qt.WindowType.Window, True)
+            diffWindow.setFrameStyle(QFrame.Shape.NoFrame)
             diffWindow.show()
 
     def _loadPatch(self, patch, stagingState, result):
@@ -697,11 +697,12 @@ class RepoWidget(QWidget):
             log.warning("RepoWidget", "Can't refresh while task runner is busy!")
             return
 
-        with Benchmark("Refresh refs-by-commit cache"):
-            self.state.refreshRefsByCommitCache()
+        with Benchmark("Refresh ref cache"):
+            oldRefCache = self.state.refCache
+            self.state.refreshRefCache()
 
         with Benchmark("Load tainted commits only"):
-            nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly()
+            nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly(oldRefCache)
 
         initialNavPos = self.navPos
         initialGraphScroll = self.graphView.verticalScrollBar().value()
@@ -709,7 +710,8 @@ class RepoWidget(QWidget):
         with QSignalBlockerContext(self.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
             # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
             # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-            self.graphView.setHiddenCommits(self.state.hiddenCommits)
+            with Benchmark("Set hidden commits"):
+                self.graphView.setHiddenCommits(self.state.hiddenCommits)
             if nRemovedRows >= 0:
                 self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
             else:

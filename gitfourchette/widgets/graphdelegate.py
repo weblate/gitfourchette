@@ -165,8 +165,8 @@ class GraphDelegate(QStyledItemDelegate):
             paintGraphFrame(self.state, commit, painter, rect, outlineColor)
 
         # ------ Callouts
-        if commit is not None and commit.oid in self.state.commitsToRefs:
-            for refName in self.state.commitsToRefs[commit.oid]:
+        if commit is not None and commit.oid in self.state.reverseRefCache:
+            for refName in self.state.reverseRefCache[commit.oid]:
                 calloutText = refName
                 calloutColor = Qt.GlobalColor.darkMagenta
 

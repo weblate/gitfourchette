@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from gitfourchette import log
 from gitfourchette import porcelain, tempdir
@@ -9,6 +10,7 @@ from gitfourchette.globalstatus import globalstatus
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
 from gitfourchette.qt import *
 from gitfourchette.settings import BasePrefs
+from typing import Iterable
 import os
 import pygit2
 
@@ -76,15 +78,16 @@ class RepoState:
     commitSequence: list[pygit2.Commit]
     # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
 
-    commitPositions: dict[pygit2.Oid, BatchedOffset]
-
     graph: Graph | None
 
-    # Set of head commits for every ref (required to refresh the commit graph)
-    currentRefs: list[pygit2.Oid]
+    refCache: dict[str, pygit2.Oid]
+    "Maps reference names to commit oids"
+
+    reverseRefCache: dict[pygit2.Oid, list[str]]
+    "Maps commit oids to reference names pointing to this commit"
 
     # path of superproject if this is a submodule
-    superproject: str | None
+    superproject: str
 
     # oid of the active commit (to make it bold)
     activeCommitOid: pygit2.Oid | None
@@ -95,12 +98,11 @@ class RepoState:
     # we keep track of the general offset of every batch of rows created by every refresh.
     batchOffsets: list[int]
 
+    commitPositions: dict[pygit2.Oid, BatchedOffset]
+
     currentBatchID: int
 
     mutex: QMutex
-
-    # commit oid --> list of reference names
-    commitsToRefs: dict[pygit2.Oid, list[str]]
 
     foreignCommits: set[pygit2.Oid]
 
@@ -136,13 +138,13 @@ class RepoState:
         self.commitPositions = {}
         self.graph = None
 
-        self.refreshRefsByCommitCache()
+        self.refCache = {}
+        self.reverseRefCache = {}
+        self.refreshRefCache()
 
         self.superproject = porcelain.getSuperproject(self.repo)
 
         self.activeCommitOid = None
-
-        self.currentRefs = []
 
         self.uiPrefs.load()
 
@@ -175,8 +177,12 @@ class RepoState:
             self.uiPrefs.draftCommitMessage = newMessage
         self.uiPrefs.write()
 
-    def refreshRefsByCommitCache(self):
-        self.commitsToRefs = porcelain.mapCommitsToReferences(self.repo)
+    def refreshRefCache(self):
+        self.refCache = porcelain.mapRefsToOids(self.repo)
+
+        self.reverseRefCache = defaultdict(list)
+        for k, v in self.refCache.items():
+            self.reverseRefCache[v].append(k)
 
     @property
     def shortName(self) -> str:
@@ -192,7 +198,7 @@ class RepoState:
         assert position.batch < len(self.batchOffsets)
         return self.batchOffsets[position.batch] + position.offsetInBatch
 
-    def initializeWalker(self, tipOids: list[pygit2.Oid]) -> pygit2.Walker:
+    def initializeWalker(self, tipOids: Iterable[pygit2.Oid]) -> pygit2.Walker:
         sorting = pygit2.GIT_SORT_TOPOLOGICAL
 
         if settings.prefs.graph_chronologicalOrder:
@@ -219,12 +225,10 @@ class RepoState:
             self.activeCommitOid = None
 
     def loadCommitSequence(self, progress: QProgressDialog):
-        progress.setLabelText(tr("Gathering refs..."))
+        progress.setLabelText(tr("Processing commit log..."))
         QCoreApplication.processEvents()
 
-        self.currentRefs = porcelain.getOidsForAllReferences(self.repo)
-
-        walker = self.initializeWalker(self.currentRefs)
+        walker = self.initializeWalker(self.refCache.values())
 
         self.updateActiveCommitOid()
 
@@ -233,8 +237,6 @@ class RepoState:
         commitSequence: list[pygit2.Commit] = []
         graph = Graph()
 
-        progress.setLabelText(tr("Processing commit log..."))
-
         # Retrieve the number of commits that we loaded last time we opened this repo
         # so we can estimate how long it'll take to load it again
         numCommitsBallpark = settings.history.getRepoNumCommits(self.repo.workdir)
@@ -242,7 +244,7 @@ class RepoState:
             progress.setMinimum(0)
             progress.setMaximum(2 * numCommitsBallpark)  # reserve second half of progress bar for graph progress
 
-        foreignCommitSolver = ForeignCommitSolver(self.commitsToRefs)
+        foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
         hiddenCommitSolver = self.newHiddenCommitSolver()
         try:
             for offsetFromTop, commit in enumerate(walker):
@@ -282,14 +284,13 @@ class RepoState:
 
         return commitSequence
 
-    def loadTaintedCommitsOnly(self):
+    def loadTaintedCommitsOnly(self, oldRefCache: dict[str, pygit2.Oid]):
         self.currentBatchID += 1
 
         newCommitSequence = []
 
-        oldHeads = self.currentRefs
-        with Benchmark("Get new heads"):
-            newHeads = porcelain.getOidsForAllReferences(self.repo)
+        oldHeads = oldRefCache.values()
+        newHeads = self.refCache.values()
 
         with Benchmark("Init walker"):
             walker = self.initializeWalker(newHeads)
@@ -329,11 +330,15 @@ class RepoState:
                 del self.commitPositions[trashedCommit]
 
         # Piece correct commit sequence back together
-        if graphSplicer.foundEquilibrium:
-            self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
-        else:
-            self.commitSequence = newCommitSequence
-        self.currentRefs = newHeads
+        with Benchmark("Reassemble commit sequence"):
+            if not graphSplicer.foundEquilibrium:
+                self.commitSequence = newCommitSequence
+            elif nAdded == 0 and nRemoved == 0:
+                pass
+            elif nRemoved == 0:
+                self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence
+            else:
+                self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
         # Compute new batch offset
         assert self.currentBatchID == len(self.batchOffsets)
@@ -342,13 +347,14 @@ class RepoState:
 
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
-        foreignCommitSolver = ForeignCommitSolver(self.commitsToRefs)
-        hiddenCommitSolver = self.newHiddenCommitSolver()
-        for commit in self.commitSequence:
-            foreignCommitSolver.feed(commit)
-            hiddenCommitSolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
-        self.foreignCommits = foreignCommitSolver.foreignCommits
-        self.hiddenCommits = hiddenCommitSolver.hiddenCommits
+        with Benchmark("Resolve foreign/hidden commits"):
+            foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
+            hiddenCommitSolver = self.newHiddenCommitSolver()
+            for commit in self.commitSequence:
+                foreignCommitSolver.feed(commit)
+                hiddenCommitSolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
+            self.foreignCommits = foreignCommitSolver.foreignCommits
+            self.hiddenCommits = hiddenCommitSolver.hiddenCommits
 
         self.updateActiveCommitOid()
 
@@ -379,16 +385,16 @@ class RepoState:
 
         def isSharedByVisibleBranch(oid):
             return any(
-                refName for refName in self.commitsToRefs[oid]
+                refName for refName in self.reverseRefCache[oid]
                 if refName not in self.hiddenBranches
                 and not refName.startswith(porcelain.TAGS_PREFIX))
 
         hiddenBranches = self.hiddenBranches[:]
         for hiddenBranch in hiddenBranches:
             try:
-                commit: pygit2.Commit = self.repo.lookup_reference(hiddenBranch).peel(pygit2.Commit)
-                if not isSharedByVisibleBranch(commit.oid):
-                    seeds.add(commit.oid)
+                oid = self.refCache[hiddenBranch]
+                if not isSharedByVisibleBranch(oid):
+                    seeds.add(oid)
             except (KeyError, pygit2.InvalidSpecError):
                 log.info("RepoState", "Skipping missing hidden branch: " + hiddenBranch)
                 self.uiPrefs.hiddenBranches.remove(hiddenBranch)  # Remove it from prefs

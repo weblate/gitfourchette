@@ -1,4 +1,3 @@
-from collections import defaultdict
 from gitfourchette import log
 from pygit2 import Commit, Diff, Oid, Repository, Signature
 from typing import Iterable, Literal
@@ -284,10 +283,17 @@ def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid, 
 
 
 def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
-    nameDict = defaultdict(list)
+    nameDict = {}
 
-    for name in repo.branches.remote:
-        if name.endswith("/HEAD"):
+    # Create empty lists for all remotes (including branchless remotes)
+    for remote in repo.remotes:
+        nameDict[remote.name] = []
+
+    for refName in repo.listall_references():
+        if not refName.startswith(REMOTES_PREFIX):
+            continue
+
+        if refName.endswith("/HEAD"):
             # Skip refs/remotes/*/HEAD (the remote's default branch).
             # The ref file (.git/refs/remotes/*/HEAD) is created ONCE when first cloning the repository,
             # and it's never updated again automatically, even if the default branch has changed on the remote.
@@ -296,19 +302,9 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
             # See: https://stackoverflow.com/questions/8839958
             continue
 
-        try:
-            remoteBranch = repo.branches.remote[name]
-            remoteName = remoteBranch.remote_name
-            strippedBranchName = name.removeprefix(remoteName + "/")
-            nameDict[remoteName].append(strippedBranchName)
-        except (KeyError, ValueError) as exc:
-            # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
-            log.warning("porcelain", exc)
-
-    # Add empty lists for branchless remotes
-    for remote in repo.remotes:
-        if remote.name not in nameDict:
-            nameDict[remote.name] = []
+        shorthand = refName.removeprefix(REMOTES_PREFIX)
+        remoteName, branchName = splitRemoteBranchShorthand(shorthand)
+        nameDict[remoteName].append(branchName)
 
     return nameDict
 
@@ -485,13 +481,26 @@ def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.Remot
     return transfer
 
 
-def splitRemoteBranchShorthand(remoteBranchName: str):
+def splitRemoteBranchShorthand(remoteBranchName: str) -> tuple[str, str]:
+    """
+    Extract the remote name and branch name from a remote branch shorthand
+    string such as "origin/master".
+
+    The input string must not start with "refs/remotes/".
+
+    Note: results can be flaky if the remote contains a slash in its name.
+    """
+
     if remoteBranchName.startswith("refs/"):
         raise ValueError("splitRemoteBranchName: remote branch shorthand name mustn't start with refs/")
 
     # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
-    remoteName, branchName = remoteBranchName.split("/", 1)
-    return remoteName, branchName
+    try:
+        remoteName, branchName = remoteBranchName.split("/", 1)
+        return remoteName, branchName
+    except ValueError:
+        # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
+        return remoteBranchName, ""
 
 
 def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
@@ -609,76 +618,48 @@ def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
     # return tag.commit.hexsha
 
 
-def getOidsForAllReferences(repo: Repository) -> list[Oid]:
+def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
     """
     Return commit oids at the tip of all branches, tags, etc. in the repository.
 
     To ensure a consistent outcome across multiple walks of the same commit graph,
     the oids are sorted by descending commit time.
     """
-    tips = []
+
+    tips: list[tuple[str, Commit]] = []
 
     # Detached HEAD doesn't appear in repo.listall_reference_objects, so it must be processed separately
     if repo.head_is_detached:
         try:
             commit: Commit = repo.head.peel(Commit)
-            tips.append(commit)
+            tips.append(("HEAD", commit))
         except pygit2.InvalidSpecError as e:
             log.info("porcelain", F"{e} - Skipping detached HEAD")
             pass
 
     for ref in repo.listall_reference_objects():
-        if type(ref.target) != Oid:
-            # Skip symbolic reference
+        if (ref.type != pygit2.GIT_REF_OID  # Skip symbolic references
+                or ref.name == "refs/stash"):  # Stashes are dealt with separately
             continue
-        if ref.name == "refs/stash":
-            continue
+
         try:
             commit: Commit = ref.peel(Commit)
-            tips.append(commit)
+            tips.append((ref.name, commit))
         except pygit2.InvalidSpecError as e:
             # Some refs might not be committish, e.g. in linux's source repo
             log.info("porcelain", F"{e} - Skipping ref '{ref.name}'")
             pass
 
-    for stash in repo.listall_stashes():
+    for i, stash in enumerate(repo.listall_stashes()):
         try:
             commit: Commit = repo[stash.commit_id].peel(pygit2.Commit)
-            tips.append(commit)
+            tips.append((f"stash@{{{i}}}", commit))
         except pygit2.InvalidSpecError as e:
             log.info("porcelain", F"{e} - Skipping stash '{stash.message}'")
             pass
 
-    tips = sorted(tips, key=lambda commit: commit.commit_time, reverse=True)
-    return [commit.oid for commit in tips]
-
-
-def mapCommitsToReferences(repo: pygit2.Repository) -> dict[pygit2.Oid, list[str]]:
-    commit2refs = defaultdict(list)
-
-    # Detached HEAD isn't in repo.references
-    if repo.head_is_detached and type(repo.head.target) == pygit2.Oid:
-        commit2refs[repo.head.target].append('HEAD')
-
-    for ref in repo.references.objects:
-        try:
-            commit: pygit2.Commit = repo[ref.target].peel(pygit2.Commit)
-        except (KeyError, ValueError) as exc:
-            # Might be a symbolic reference or some other junk
-            continue
-
-        refKey = ref.name
-        assert refKey.startswith("refs/")
-        if refKey == "refs/stash":
-            # Stashes must be dealt with separately
-            continue
-
-        commit2refs[commit.oid].append(refKey)
-
-    for stashIndex, stash in enumerate(repo.listall_stashes()):
-        commit2refs[stash.commit_id].append(F"stash@{{{stashIndex}}}")
-
-    return commit2refs
+    tips = sorted(tips, key=lambda item: item[1].commit_time, reverse=True)
+    return dict((ref, commit.oid) for ref, commit in tips)
 
 
 def refsPointingAtCommit(repo: pygit2.Repository, oid: pygit2.Oid):

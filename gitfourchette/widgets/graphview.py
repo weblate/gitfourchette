@@ -119,6 +119,10 @@ class GraphView(QListView):
         self.setCommitSequence(None)
 
     def setHiddenCommits(self, hiddenCommits: set[pygit2.Oid]):
+        # Invalidating the filter can be costly, so avoid if possible
+        if self.clFilter.hiddenOids == hiddenCommits:
+            return
+
         self.clFilter.setHiddenCommits(hiddenCommits)  # update filter BEFORE updating model
         self.clFilter.invalidateFilter()
 

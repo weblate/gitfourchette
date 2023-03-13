@@ -1,11 +1,12 @@
 from gitfourchette import porcelain
 from gitfourchette.actiondef import ActionDef
+from gitfourchette.benchmark import Benchmark
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.util import escamp, stockIcon
 from html import escape
-from typing import Any
+from typing import Any, Iterable
 import contextlib
 import enum
 import pygit2
@@ -111,42 +112,69 @@ class SidebarModel(QAbstractItemModel):
         super().__init__(parent)
         self.repo = None
 
-    def refreshCache(self, repo: pygit2.Repository, hiddenBranches: list[str]):
+    def refreshCache(self, repo: pygit2.Repository, hiddenBranches: list[str], refCache: Iterable[str]):
         self.beginResetModel()
 
         self.repo = repo
 
-        self._localBranches = [b for b in repo.branches.local]
-
+        self._localBranches = []
         self._tracking = []
-        for branchName in self._localBranches:
-            upstream = self.repo.branches.local[branchName].upstream
-            if not upstream:
-                self._tracking.append("")
+        self._tags = []
+        self._remotes = []
+        self._remoteURLs = []
+        self._remoteBranchesDict = {}
+
+        # Remote list
+        with Benchmark("Sidebar/Remotes"):
+            for r in repo.remotes:
+                self._remotes.append(r.name)
+                self._remoteURLs.append(r.url)
+                self._remoteBranchesDict[r.name] = []
+
+        # Refs
+        with Benchmark("Sidebar/Refs"):
+            for name in refCache:
+                if name.startswith(porcelain.HEADS_PREFIX):
+                    name = name.removeprefix(porcelain.HEADS_PREFIX)
+                    self._localBranches.append(name)
+                    upstream = repo.branches.local[name].upstream
+                    if not upstream:
+                        self._tracking.append("")
+                    else:
+                        self._tracking.append(upstream.shorthand)
+                elif name.startswith(porcelain.REMOTES_PREFIX):
+                    name = name.removeprefix(porcelain.REMOTES_PREFIX)
+                    remote, name = porcelain.splitRemoteBranchShorthand(name)
+                    self._remoteBranchesDict[remote].append(name)
+                elif name.startswith(porcelain.TAGS_PREFIX):
+                    name = name.removeprefix(porcelain.TAGS_PREFIX)
+                    self._tags.append(name)
+
+            # Sort remote branches
+            for remote in self._remoteBranchesDict:
+                self._remoteBranchesDict[remote] = sorted(self._remoteBranchesDict[remote])
+
+        # HEAD
+        with Benchmark("Sidebar/HEAD"):
+            self._unbornHead = ""
+            self._detachedHead = ""
+            self._checkedOut = ""
+            if repo.head_is_unborn:
+                target: str = repo.lookup_reference("HEAD").target
+                target = target.removeprefix("refs/heads/")
+                self._unbornHead = target
+            elif repo.head_is_detached:
+                self._detachedHead = repo.head.target.hex
             else:
-                self._tracking.append(upstream.shorthand)
+                self._checkedOut = repo.head.shorthand
 
-        self._unbornHead = ""
-        self._detachedHead = ""
-        self._checkedOut = ""
-        if repo.head_is_unborn:
-            target: str = repo.lookup_reference("HEAD").target
-            target = target.removeprefix("refs/heads/")
-            self._unbornHead = target
-        elif repo.head_is_detached:
-            self._detachedHead = repo.head.target.hex
-        else:
-            self._checkedOut = repo.head.shorthand
+        # Stashes
+        with Benchmark("Sidebar/Stashes"):
+            self._stashes = repo.listall_stashes()
 
-        self._stashes = repo.listall_stashes()
-
-        self._remotes = [r.name for r in repo.remotes]
-        self._remoteURLs = [repo.remotes[r].url for r in self._remotes]
-        self._remoteBranchesDict = porcelain.getRemoteBranchNames(repo)
-
-        self._tags = sorted(porcelain.getTagNames(repo))
-
-        self._submodules = repo.listall_submodules()
+        # Submodules
+        with Benchmark("Sidebar/Submodules"):
+            self._submodules = repo.listall_submodules()
 
         self._hiddenBranches = hiddenBranches
 
@@ -781,7 +809,8 @@ class Sidebar(QTreeView):
 
     def refresh(self, repoState: RepoState):
         sidebarModel: SidebarModel = self.model()
-        sidebarModel.refreshCache(repoState.repo, repoState.hiddenBranches)
+        with Benchmark("Refresh sidebar cache"):
+            sidebarModel.refreshCache(repoState.repo, repoState.hiddenBranches, repoState.refCache)
         self.expandAll()
 
     def onEntryClicked(self, item: EItem, data: str):
