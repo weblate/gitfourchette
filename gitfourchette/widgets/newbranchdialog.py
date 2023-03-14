@@ -1,4 +1,5 @@
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_newbranchdialog import Ui_NewBranchDialog
 from gitfourchette import porcelain
@@ -6,24 +7,11 @@ from gitfourchette import util
 import typing
 
 
-def translateBranchNameValidationError(e: porcelain.BranchNameValidationError):
-    E = porcelain.BranchNameValidationError
-    errorDescriptions = {
-        E.ILLEGAL_NAME: translate("BranchNameValidation", "Illegal name."),
-        E.ILLEGAL_SUFFIX: translate("BranchNameValidation", "Illegal suffix."),
-        E.ILLEGAL_PREFIX: translate("BranchNameValidation", "Illegal prefix."),
-        E.CONTAINS_ILLEGAL_SEQ: translate("BranchNameValidation", "Contains illegal character sequence."),
-        E.CONTAINS_ILLEGAL_CHAR: translate("BranchNameValidation", "Contains illegal character."),
-        E.CANNOT_BE_EMPTY: translate("BranchNameValidation", "Cannot be empty."),
-    }
-    return errorDescriptions.get(e.code, "Branch name validation error {0}".format(e.code))
-
-
 def validateBranchName(newBranchName: str, reservedNames: list[str], nameInUseMessage: str) -> str:
     try:
         porcelain.validateBranchName(newBranchName)
-    except porcelain.BranchNameValidationError as exc:
-        return translateBranchNameValidationError(exc)
+    except porcelain.NameValidationError as exc:
+        return util.translateNameValidationError(exc)
 
     if newBranchName in reservedNames:
         return nameInUseMessage
@@ -64,9 +52,9 @@ class NewBranchDialog(QDialog):
         def validateNewBranchName(name: str):
             return validateBranchName(name, reservedNames, reservedMessage)
 
-        validator = util.GatekeepingValidator(self)
+        validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(self.acceptButton)
-        validator.connectInput(self.ui.nameEdit, self.ui.nameValidation, validateNewBranchName)
+        validator.connectInput(self.ui.nameEdit, validateNewBranchName)
         validator.run()
 
         convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")

@@ -1,4 +1,5 @@
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.util import tweakWidgetFont
 from gitfourchette.widgets.ui_commitdialog import Ui_CommitDialog
 from pygit2 import Signature
@@ -45,10 +46,13 @@ class CommitDialog(QDialog):
         self.ui.counterLabel.setMinimumWidth(self.ui.counterLabel.fontMetrics().horizontalAdvance('000'))
         self.ui.counterLabel.setMaximumWidth(self.ui.counterLabel.minimumWidth())
 
+        self.validator = ValidatorMultiplexer(self)
+        self.validator.setGatedWidgets(self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
+        self.validator.connectInput(self.ui.summaryEditor, self.hasNonBlankSummary, showWarning=False)
+        self.ui.authorSignature.installValidator(self.validator)
+
         self.ui.summaryEditor.textChanged.connect(self.updateCounterLabel)
-        self.ui.summaryEditor.textChanged.connect(self.updateAcceptButton)
-        self.ui.revealAuthor.stateChanged.connect(self.updateAcceptButton)
-        self.ui.authorSignature.signatureChanged.connect(self.updateAcceptButton)
+        self.ui.revealAuthor.stateChanged.connect(self.validator.run)
 
         split = initialText.split('\n', 1)
         if len(split) >= 1:
@@ -56,27 +60,21 @@ class CommitDialog(QDialog):
         if len(split) >= 2:
             self.ui.descriptionEditor.setPlainText(split[1].strip())
 
-        self.updateCounterLabel()
-        self.updateAcceptButton()
-
         self.ui.revealAuthor.setChecked(False)
         self.ui.authorGroupBox.setVisible(False)
+
+        self.updateCounterLabel()
+        self.validator.run()
 
     def updateCounterLabel(self):
         text = self.ui.summaryEditor.text()
         self.ui.counterLabel.setText(str(len(text)))
 
-    def updateAcceptButton(self):
-        self.acceptButton.setEnabled(self.canProceed())
-
-    def canProceed(self):
-        text = self.ui.summaryEditor.text()
-        hasAnyText = bool(text.strip())
-        signatureValid = not self.ui.revealAuthor.isChecked() or self.ui.authorSignature.isValid()
-        return hasAnyText and signatureValid
-
-    def hasNonBlankSummary(self):
-        return bool(self.ui.summaryEditor.text().strip())
+    def hasNonBlankSummary(self, text):
+        if bool(text.strip()):
+            return ""
+        else:
+            return self.tr("Cannot be empty.")
 
     def getFullMessage(self):
         summary = self.ui.summaryEditor.text()

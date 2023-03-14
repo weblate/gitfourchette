@@ -4,6 +4,7 @@ from gitfourchette import tasks
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
+from gitfourchette.toolbox import *
 from gitfourchette.util import paragraphs, QSignalBlockerContext
 from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
@@ -259,7 +260,7 @@ class PushDialog(QDialog):
         self.ui.newRemoteBranchNameEdit.textEdited.connect(lambda text: self.updateTrackCheckBox(False))
         self.ui.trackCheckBox.toggled.connect(lambda: self.updateTrackCheckBox(False))
 
-        self.remoteBranchNameValidator = util.GatekeepingValidator(self)
+        self.remoteBranchNameValidator = ValidatorMultiplexer(self)
         self.remoteBranchNameValidator.setGatedWidgets(self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
         self.remoteBranchNameValidator.connectInput(
             self.ui.newRemoteBranchNameEdit, self.ui.newRemoteBranchNameValidation, self.validateCustomRemoteBranchName)

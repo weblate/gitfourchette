@@ -1,10 +1,21 @@
+from gitfourchette import porcelain
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
+from gitfourchette.util import translateNameValidationError
 from gitfourchette.widgets.ui_signatureform import Ui_SignatureForm
 from pygit2 import Signature
 
 
 class SignatureForm(QWidget):
     signatureChanged = Signal()
+
+    @staticmethod
+    def validateInput(item: str) -> str:
+        try:
+            porcelain.validateSignatureItem(item)
+            return ""
+        except porcelain.NameValidationError as exc:
+            return translateNameValidationError(exc)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -21,11 +32,9 @@ class SignatureForm(QWidget):
         self.ui.emailEdit.setText(signature.email)
         self.ui.timeEdit.setDateTime(qdt)
 
-    def isValid(self) -> bool:
-        # pygit2 will raise GitError if either the author or the email is empty or whitespace-only
-        hasAuthor = bool(self.ui.nameEdit.text().strip())
-        hasEmail = bool(self.ui.emailEdit.text().strip())
-        return hasAuthor and hasEmail
+    def installValidator(self, validator: ValidatorMultiplexer):
+        validator.connectInput(self.ui.nameEdit, SignatureForm.validateInput)
+        validator.connectInput(self.ui.emailEdit, SignatureForm.validateInput)
 
     def getSignature(self) -> Signature:
         qdt = self.ui.timeEdit.dateTime()

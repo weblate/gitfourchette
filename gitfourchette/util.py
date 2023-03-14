@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from gitfourchette.porcelain import NameValidationError
 from gitfourchette.qt import *
 from gitfourchette.settings import PathDisplayStyle
 from pygit2 import Oid
@@ -381,64 +382,17 @@ def tweakWidgetFont(widget: QWidget, relativeSize: int = 100, bold: bool = False
     return font
 
 
-class GatekeepingValidator(QObject):
-    @dataclass
-    class LineEditValidatorTuple:
-        edit: QLineEdit
-        label: QLabel
-        validate: typing.Callable[[str], str]
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.gatedWidgets = []
-        self.tuples = []
-        self.timer = QTimer(self)
-        self.timer.setSingleShot(True)
-        self.timer.setInterval(500)
-
-    def setGatedWidgets(self, *args: QWidget):
-        self.gatedWidgets = args
-
-    def connectInput(self, edit: QLineEdit, label: QLabel, validate: typing.Callable[[str], str]):
-        assert isinstance(edit, QLineEdit)
-        assert isinstance(label, QLabel)
-        self.tuples.append(GatekeepingValidator.LineEditValidatorTuple(edit, label, validate))
-        label.setEnabled(True)
-        label.setCursor(Qt.CursorShape.WhatsThisCursor)
-        edit.textChanged.connect(self.run)
-
-    def run(self):
-        errors = [t.validate(t.edit.text()) for t in self.tuples]
-        success = all(not e for e in errors)
-
-        for w in self.gatedWidgets:
-            w.setEnabled(success)
-
-        if success:
-            with contextlib.suppress(BaseException):
-                self.timer.timeout.disconnect()
-            self.timer.stop()
-            QToolTip.hideText()
-
-        for t, err in zip(self.tuples, errors):
-            if not t.label:
-                pass
-            elif err:
-                # t.label.setVisible(True)
-                t.label.setText(chr(0x1F6D1))  # stop sign
-                t.label.setToolTip(err)
-
-                if t.edit.hasFocus():
-                    with contextlib.suppress(BaseException):
-                        self.timer.timeout.disconnect()
-                    self.timer.stop()
-                    self.timer.timeout.connect(
-                        lambda t=t, err=err: QToolTip.showText(t.edit.mapToGlobal(QPoint(0, 0)), err, t.edit))
-                    self.timer.start()
-            else:
-                # t.label.setVisible(False)
-                t.label.setText(chr(0x2705))  # green tick
-                t.label.setToolTip(translate("Global", "Valid format"))
+def translateNameValidationError(e: NameValidationError):
+    E = NameValidationError
+    errorDescriptions = {
+        E.ILLEGAL_NAME: translate("NameValidationError", "Illegal name."),
+        E.ILLEGAL_SUFFIX: translate("NameValidationError", "Illegal suffix."),
+        E.ILLEGAL_PREFIX: translate("NameValidationError", "Illegal prefix."),
+        E.CONTAINS_ILLEGAL_SEQ: translate("NameValidationError", "Contains illegal character sequence."),
+        E.CONTAINS_ILLEGAL_CHAR: translate("NameValidationError", "Contains illegal character."),
+        E.CANNOT_BE_EMPTY: translate("NameValidationError", "Cannot be empty."),
+    }
+    return errorDescriptions.get(e.code, "Name validation error {0}".format(e.code))
 
 
 class QSignalBlockerContext:

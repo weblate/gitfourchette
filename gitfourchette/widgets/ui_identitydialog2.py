@@ -17,39 +17,28 @@ class Ui_IdentityDialog2(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.identityGroupBox = QGroupBox(IdentityDialog2)
         self.identityGroupBox.setObjectName(u"identityGroupBox")
-        self.gridLayout_2 = QGridLayout(self.identityGroupBox)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.formLayout = QFormLayout(self.identityGroupBox)
+        self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
         self.label = QLabel(self.identityGroupBox)
         self.label.setObjectName(u"label")
 
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
-
-        self.label_2 = QLabel(self.identityGroupBox)
-        self.label_2.setObjectName(u"label_2")
-
-        self.gridLayout_2.addWidget(self.label_2, 1, 0, 1, 1)
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label)
 
         self.nameEdit = QLineEdit(self.identityGroupBox)
         self.nameEdit.setObjectName(u"nameEdit")
 
-        self.gridLayout_2.addWidget(self.nameEdit, 0, 1, 1, 1)
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.nameEdit)
+
+        self.label_2 = QLabel(self.identityGroupBox)
+        self.label_2.setObjectName(u"label_2")
+
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_2)
 
         self.emailEdit = QLineEdit(self.identityGroupBox)
         self.emailEdit.setObjectName(u"emailEdit")
 
-        self.gridLayout_2.addWidget(self.emailEdit, 1, 1, 1, 1)
-
-        self.emailValidation = QLabel(self.identityGroupBox)
-        self.emailValidation.setObjectName(u"emailValidation")
-        self.emailValidation.setText(u"VAL")
-
-        self.gridLayout_2.addWidget(self.emailValidation, 1, 2, 1, 1)
-
-        self.nameValidation = QLabel(self.identityGroupBox)
-        self.nameValidation.setObjectName(u"nameValidation")
-        self.nameValidation.setText(u"VAL")
-
-        self.gridLayout_2.addWidget(self.nameValidation, 0, 2, 1, 1)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.emailEdit)
 
 
         self.gridLayout.addWidget(self.identityGroupBox, 3, 0, 1, 1)

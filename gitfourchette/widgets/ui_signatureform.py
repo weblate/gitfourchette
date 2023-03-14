@@ -12,11 +12,11 @@ class Ui_SignatureForm(object):
     def setupUi(self, SignatureForm):
         if not SignatureForm.objectName():
             SignatureForm.setObjectName(u"SignatureForm")
-        SignatureForm.resize(311, 213)
+        SignatureForm.resize(340, 96)
+        SignatureForm.setLayoutDirection(Qt.LeftToRight)
         self.formLayout = QFormLayout(SignatureForm)
         self.formLayout.setObjectName(u"formLayout")
         self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-        self.formLayout.setContentsMargins(0, 0, 0, 0)
         self.nameLabel = QLabel(SignatureForm)
         self.nameLabel.setObjectName(u"nameLabel")
 
@@ -51,6 +51,13 @@ class Ui_SignatureForm(object):
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.timeEdit)
 
+#if QT_CONFIG(shortcut)
+        self.nameLabel.setBuddy(self.nameEdit)
+        self.emailLabel.setBuddy(self.emailEdit)
+        self.timeLabel.setBuddy(self.timeEdit)
+#endif // QT_CONFIG(shortcut)
+        QWidget.setTabOrder(self.nameEdit, self.emailEdit)
+        QWidget.setTabOrder(self.emailEdit, self.timeEdit)
 
         self.retranslateUi(SignatureForm)
 
@@ -58,6 +65,6 @@ class Ui_SignatureForm(object):
 
     def retranslateUi(self, SignatureForm):
         SignatureForm.setWindowTitle(QCoreApplication.translate("SignatureForm", u"Signature", None))
-        self.nameLabel.setText(QCoreApplication.translate("SignatureForm", u"Name", None))
-        self.emailLabel.setText(QCoreApplication.translate("SignatureForm", u"Email", None))
-        self.timeLabel.setText(QCoreApplication.translate("SignatureForm", u"Time", None))
+        self.nameLabel.setText(QCoreApplication.translate("SignatureForm", u"&Name:", None))
+        self.emailLabel.setText(QCoreApplication.translate("SignatureForm", u"&Email:", None))
+        self.timeLabel.setText(QCoreApplication.translate("SignatureForm", u"&Time:", None))

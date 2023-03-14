@@ -1,5 +1,6 @@
 from gitfourchette import util
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.util import PersistentFileDialog
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_remotedialog import Ui_RemoteDialog
@@ -39,9 +40,8 @@ class RemoteDialog(QDialog):
         self.ui.keyFileGroupBox.toggled.emit(hasCustomKeyFile)  # fire signal once to enable/disable fields appropriately
         self.ui.keyFileGroupBox.toggled.connect(self.autoBrowseKeyFile)
 
-        validator = util.GatekeepingValidator(self)
-        validator.connectInput(self.ui.keyFilePathEdit, self.ui.keyFileValidation, self.validateKeyFileInput)
-        self.ui.keyFileValidation.setText("")
+        validator = ValidatorMultiplexer(self)
+        validator.connectInput(self.ui.keyFilePathEdit, self.validateKeyFileInput)
 
         if edit:
             title = self.tr("Edit remote “{0}”").format(escape(remoteName))

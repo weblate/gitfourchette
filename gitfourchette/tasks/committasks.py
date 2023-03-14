@@ -2,8 +2,10 @@ from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
-from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
+from gitfourchette.toolbox import *
+from gitfourchette.widgets.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.widgets.signatureform import SignatureForm
 from gitfourchette.widgets.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 from gitfourchette.widgets.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.widgets.ui_identitydialog2 import Ui_IdentityDialog2
@@ -133,29 +135,6 @@ class SetUpIdentityFirstRun(RepoTask):
     def refreshWhat(self):
         return TaskAffectsWhat.NOTHING
 
-    @staticmethod
-    def validateInput(item: str):
-        """ See libgit2/signature.c """
-
-        def isCrud(c: str):
-            return ord(c) <= 32 or c in ".,:;<>\"\\'"
-
-        def extractTrimmed(s: str):
-            start = 0
-            end = len(s)
-            while end > 0 and isCrud(s[end-1]):
-                end -= 1
-            while start < end and isCrud(s[start]):
-                start += 1
-            return s[start:end]
-
-        if "<" in item or ">" in item:
-            return translate("IdentityDialog1", "Angle bracket characters are not allowed.")
-        elif not extractTrimmed(item):
-            return translate("IdentityDialog1", "Cannot be empty.")
-        else:
-            return ""
-
     def flow(self, okButtonText=""):
         # Getting the default signature will fail if the user's identity is missing or incorrectly set
         with contextlib.suppress(KeyError, ValueError):
@@ -173,10 +152,10 @@ class SetUpIdentityFirstRun(RepoTask):
         ui.nameEdit.setText(initialName)
         ui.emailEdit.setText(initialEmail)
 
-        validator = util.GatekeepingValidator(dlg)
+        validator = ValidatorMultiplexer(dlg)
         validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        validator.connectInput(ui.nameEdit, ui.nameValidation, SetUpIdentityFirstRun.validateInput)
-        validator.connectInput(ui.emailEdit, ui.emailValidation, SetUpIdentityFirstRun.validateInput)
+        validator.connectInput(ui.nameEdit, SignatureForm.validateInput)
+        validator.connectInput(ui.emailEdit, SignatureForm.validateInput)
         validator.run()
 
         if okButtonText:
@@ -260,10 +239,10 @@ class SetUpRepoIdentity(RepoTask):
 
         ui.localIdentityCheckBox.stateChanged.connect(onLocalIdentityCheckBoxChanged)
 
-        validator = util.GatekeepingValidator(dlg)
+        validator = ValidatorMultiplexer(dlg)
         validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        validator.connectInput(ui.nameEdit, ui.nameValidation, SetUpIdentityFirstRun.validateInput)
-        validator.connectInput(ui.emailEdit, ui.emailValidation, SetUpIdentityFirstRun.validateInput)
+        validator.connectInput(ui.nameEdit, SignatureForm.validateInput)
+        validator.connectInput(ui.emailEdit, SignatureForm.validateInput)
 
         onLocalIdentityCheckBoxChanged(useLocalIdentity)
 

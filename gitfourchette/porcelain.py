@@ -14,6 +14,19 @@ REMOTES_PREFIX = "refs/remotes/"
 TAGS_PREFIX = "refs/tags/"
 
 
+class NameValidationError(ValueError):
+    CANNOT_BE_EMPTY = 0
+    ILLEGAL_NAME = 1
+    ILLEGAL_PREFIX = 2
+    ILLEGAL_SUFFIX = 3
+    CONTAINS_ILLEGAL_CHAR = 4
+    CONTAINS_ILLEGAL_SEQ = 5
+
+    def __init__(self, code: int):
+        super().__init__(F"Name validation failed ({code})")
+        self.code = code
+
+
 class DivergentBranchesError(Exception):
     def __init__(self, localBranch: pygit2.Branch, remoteBranch: pygit2.Branch):
         super().__init__()
@@ -309,26 +322,15 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     return nameDict
 
 
-class BranchNameValidationError(ValueError):
-    CANNOT_BE_EMPTY = 0
-    ILLEGAL_NAME = 1
-    ILLEGAL_PREFIX = 2
-    ILLEGAL_SUFFIX = 3
-    CONTAINS_ILLEGAL_CHAR = 4
-    CONTAINS_ILLEGAL_SEQ = 5
-
-    def __init__(self, code: int):
-        super().__init__(F"Branch name validation failed ({code})")
-        self.code = code
-
-
 def validateBranchName(newBranchName: str):
     """
     Checks the validity of a branch name according to `man git-check-ref-format`.
+    Raises NameValidationError if the name is incorrect.
     """
 
-    E = BranchNameValidationError
+    E = NameValidationError
 
+    # Can't be empty
     if not newBranchName:
         raise E(E.CANNOT_BE_EMPTY)
 
@@ -359,6 +361,35 @@ def validateBranchName(newBranchName: str):
     # Rule 7: can't end with dot
     elif newBranchName.endswith((".lock", "/", ".")):
         raise E(E.ILLEGAL_SUFFIX)
+
+
+def validateSignatureItem(s: str):
+    """
+    Checks the validity of the name or email in a signature according to `libgit2/signature.c`.
+    Raises NameValidationError if the item is incorrect.
+    """
+
+    E = NameValidationError
+
+    # Angle bracket characters are not allowed
+    if "<" in s or ">" in s:
+        raise E(E.CONTAINS_ILLEGAL_CHAR)
+
+    # Trim crud from name
+    def isCrud(c: str):
+        return ord(c) <= 32 or c in ".,:;<>\"\\'"
+
+    start = 0
+    end = len(s)
+    while end > 0 and isCrud(s[end-1]):
+        end -= 1
+    while start < end and isCrud(s[start]):
+        start += 1
+    trimmed = s[start:end]
+
+    # Cannot be empty after trimming
+    if not trimmed:
+        raise E(E.CANNOT_BE_EMPTY)
 
 
 def generateUniqueLocalBranchName(repo: pygit2.Repository, seedBranchName: str):

@@ -30,22 +30,6 @@ class Ui_NewBranchDialog(object):
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.nameLabel)
 
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.nameEdit = QLineEdit(NewBranchDialog)
-        self.nameEdit.setObjectName(u"nameEdit")
-
-        self.horizontalLayout.addWidget(self.nameEdit)
-
-        self.nameValidation = QLabel(NewBranchDialog)
-        self.nameValidation.setObjectName(u"nameValidation")
-        self.nameValidation.setText(u"VAL")
-
-        self.horizontalLayout.addWidget(self.nameValidation)
-
-
-        self.formLayout.setLayout(0, QFormLayout.FieldRole, self.horizontalLayout)
-
         self.optionsLabel = QLabel(NewBranchDialog)
         self.optionsLabel.setObjectName(u"optionsLabel")
 
@@ -56,14 +40,6 @@ class Ui_NewBranchDialog(object):
         self.switchToBranchCheckBox.setChecked(True)
 
         self.formLayout.setWidget(2, QFormLayout.FieldRole, self.switchToBranchCheckBox)
-
-        self.buttonBox = QDialogButtonBox(NewBranchDialog)
-        self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.buttonBox.setCenterButtons(False)
-
-        self.formLayout.setWidget(6, QFormLayout.FieldRole, self.buttonBox)
 
         self.upstreamLayout = QHBoxLayout()
         self.upstreamLayout.setObjectName(u"upstreamLayout")
@@ -91,10 +67,22 @@ class Ui_NewBranchDialog(object):
 
         self.formLayout.setLayout(3, QFormLayout.FieldRole, self.upstreamLayout)
 
+        self.buttonBox = QDialogButtonBox(NewBranchDialog)
+        self.buttonBox.setObjectName(u"buttonBox")
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setCenterButtons(False)
+
+        self.formLayout.setWidget(6, QFormLayout.FieldRole, self.buttonBox)
+
+        self.nameEdit = QLineEdit(NewBranchDialog)
+        self.nameEdit.setObjectName(u"nameEdit")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.nameEdit)
+
 #if QT_CONFIG(shortcut)
         self.nameLabel.setBuddy(self.nameEdit)
 #endif // QT_CONFIG(shortcut)
-        QWidget.setTabOrder(self.nameEdit, self.switchToBranchCheckBox)
         QWidget.setTabOrder(self.switchToBranchCheckBox, self.upstreamCheckBox)
         QWidget.setTabOrder(self.upstreamCheckBox, self.upstreamComboBox)
 

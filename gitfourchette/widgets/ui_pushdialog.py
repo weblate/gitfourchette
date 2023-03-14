@@ -86,13 +86,6 @@ class Ui_PushDialog(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setHorizontalSpacing(-1)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.newRemoteBranchNameValidation = QLabel(self.newRemoteBranchGroupBox)
-        self.newRemoteBranchNameValidation.setObjectName(u"newRemoteBranchNameValidation")
-        self.newRemoteBranchNameValidation.setCursor(QCursor(Qt.WhatsThisCursor))
-        self.newRemoteBranchNameValidation.setText(u"VAL")
-
-        self.gridLayout.addWidget(self.newRemoteBranchNameValidation, 0, 2, 1, 1)
-
         self.remoteNameLabel = QLabel(self.newRemoteBranchGroupBox)
         self.remoteNameLabel.setObjectName(u"remoteNameLabel")
         self.remoteNameLabel.setText(u"REMOTE/")

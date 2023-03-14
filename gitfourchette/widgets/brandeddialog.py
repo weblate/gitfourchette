@@ -1,5 +1,6 @@
 from gitfourchette import util
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
@@ -101,11 +102,6 @@ def showTextInputDialog(
 
     layout.addWidget(lineEdit, 1, 0)
 
-    validationLabel = None
-    if validate:
-        validationLabel = QLabel("-validator-")
-        layout.addWidget(validationLabel, 1, 1)
-
     layout.addWidget(buttonBox, 2, 0, 1, -1)
 
     buttonBox.accepted.connect(dlg.accept)
@@ -118,9 +114,9 @@ def showTextInputDialog(
         buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
 
     if validate:
-        validator = util.GatekeepingValidator(dlg)
+        validator = ValidatorMultiplexer(dlg)
         validator.setGatedWidgets(buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        validator.connectInput(lineEdit, validationLabel, validate)
+        validator.connectInput(lineEdit, validate)
         validator.run()
 
     makeBrandedDialog(dlg, layout, title)

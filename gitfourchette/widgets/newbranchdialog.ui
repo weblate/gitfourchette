@@ -45,20 +45,6 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLineEdit" name="nameEdit"/>
-     </item>
-     <item>
-      <widget class="QLabel" name="nameValidation">
-       <property name="text">
-        <string notr="true">VAL</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
    <item row="2" column="0">
     <widget class="QLabel" name="optionsLabel">
      <property name="text">
@@ -73,19 +59,6 @@
      </property>
      <property name="checked">
       <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-     <property name="centerButtons">
-      <bool>false</bool>
      </property>
     </widget>
    </item>
@@ -119,10 +92,25 @@
      </item>
     </layout>
    </item>
+   <item row="6" column="1">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="nameEdit"/>
+   </item>
   </layout>
  </widget>
  <tabstops>
-  <tabstop>nameEdit</tabstop>
   <tabstop>switchToBranchCheckBox</tabstop>
   <tabstop>upstreamCheckBox</tabstop>
   <tabstop>upstreamComboBox</tabstop>
