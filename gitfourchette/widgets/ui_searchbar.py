@@ -1,5 +1,5 @@
 ################################################################################
-## Form generated from reading UI file 'searchwidget.ui'
+## Form generated from reading UI file 'searchbar.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.4.2
 ##
@@ -8,57 +8,58 @@
 
 from gitfourchette.qt import *
 
-class Ui_SearchWidget(object):
-    def setupUi(self, SearchWidget):
-        if not SearchWidget.objectName():
-            SearchWidget.setObjectName(u"SearchWidget")
-        SearchWidget.resize(329, 26)
+class Ui_SearchBar(object):
+    def setupUi(self, SearchBar):
+        if not SearchBar.objectName():
+            SearchBar.setObjectName(u"SearchBar")
+        SearchBar.resize(329, 26)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(SearchWidget.sizePolicy().hasHeightForWidth())
-        SearchWidget.setSizePolicy(sizePolicy)
-        SearchWidget.setAutoFillBackground(True)
-        self.horizontalLayout = QHBoxLayout(SearchWidget)
+        sizePolicy.setHeightForWidth(SearchBar.sizePolicy().hasHeightForWidth())
+        SearchBar.setSizePolicy(sizePolicy)
+        SearchBar.setAutoFillBackground(True)
+        self.horizontalLayout = QHBoxLayout(SearchBar)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(2, 2, 2, 2)
-        self.lineEdit = QLineEdit(SearchWidget)
+        self.lineEdit = QLineEdit(SearchBar)
         self.lineEdit.setObjectName(u"lineEdit")
+        self.lineEdit.setClearButtonEnabled(True)
 
         self.horizontalLayout.addWidget(self.lineEdit)
 
-        self.forwardButton = QToolButton(SearchWidget)
+        self.forwardButton = QToolButton(SearchBar)
         self.forwardButton.setObjectName(u"forwardButton")
         self.forwardButton.setText(u"\u2193")
 
         self.horizontalLayout.addWidget(self.forwardButton)
 
-        self.backwardButton = QToolButton(SearchWidget)
+        self.backwardButton = QToolButton(SearchBar)
         self.backwardButton.setObjectName(u"backwardButton")
         self.backwardButton.setText(u"\u2191")
 
         self.horizontalLayout.addWidget(self.backwardButton)
 
-        self.closeButton = QToolButton(SearchWidget)
+        self.closeButton = QToolButton(SearchBar)
         self.closeButton.setObjectName(u"closeButton")
         self.closeButton.setText(u"\u2573")
 
         self.horizontalLayout.addWidget(self.closeButton)
 
 
-        self.retranslateUi(SearchWidget)
+        self.retranslateUi(SearchBar)
 
-        QMetaObject.connectSlotsByName(SearchWidget)
+        QMetaObject.connectSlotsByName(SearchBar)
 
-    def retranslateUi(self, SearchWidget):
-        SearchWidget.setWindowTitle(QCoreApplication.translate("SearchWidget", u"Form", None))
-        self.lineEdit.setPlaceholderText(QCoreApplication.translate("SearchWidget", u"Find Commit", None))
+    def retranslateUi(self, SearchBar):
+        SearchBar.setWindowTitle(QCoreApplication.translate("SearchBar", u"Form", None))
+        self.lineEdit.setPlaceholderText(QCoreApplication.translate("SearchBar", u"Find Commit", None))
 #if QT_CONFIG(tooltip)
-        self.forwardButton.setToolTip(QCoreApplication.translate("SearchWidget", u"Next Occurrence", None))
+        self.forwardButton.setToolTip(QCoreApplication.translate("SearchBar", u"Next Occurrence", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.backwardButton.setToolTip(QCoreApplication.translate("SearchWidget", u"Previous Occurrence", None))
+        self.backwardButton.setToolTip(QCoreApplication.translate("SearchBar", u"Previous Occurrence", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.closeButton.setToolTip(QCoreApplication.translate("SearchWidget", u"Close Search Bar", None))
+        self.closeButton.setToolTip(QCoreApplication.translate("SearchBar", u"Close Search Bar", None))
 #endif // QT_CONFIG(tooltip)

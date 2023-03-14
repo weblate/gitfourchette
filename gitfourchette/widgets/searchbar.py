@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.widgets.ui_searchwidget import Ui_SearchWidget
+from gitfourchette.widgets.ui_searchbar import Ui_SearchBar
 
 
 class SearchBar(QWidget):
@@ -9,7 +9,7 @@ class SearchBar(QWidget):
     def __init__(self, parent: QWidget, help: str):
         super().__init__(parent)
 
-        self.ui = Ui_SearchWidget()
+        self.ui = Ui_SearchBar()
         self.ui.setupUi(self)
 
         self.ui.lineEdit.setStyleSheet("border: 1px solid gray; border-radius: 5px;")
