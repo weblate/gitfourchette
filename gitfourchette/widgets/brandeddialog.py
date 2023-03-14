@@ -71,10 +71,11 @@ def showTextInputDialog(
         parent: QWidget,
         title: str,
         detailedPrompt: str,
-        text: str,
+        text: str = "",
         onAccept: Callable[[str], None] = None,
         okButtonText: str = None,
         validate: Callable[[str], str] = None,
+        deleteOnClose: bool = True,
 ) -> QDialog:
 
     dlg = QDialog(parent)
@@ -127,7 +128,9 @@ def showTextInputDialog(
     # This size isn't guaranteed. But it'll expand the dialog horizontally if the label is shorter.
     dlg.setMinimumWidth(512)
 
-    dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+    if deleteOnClose:
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
     util.setWindowModal(dlg)
 
     dlg.show()

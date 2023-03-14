@@ -50,9 +50,9 @@ class RenameBranch(RepoTask):
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),
-            validate=lambda name: validateBranchName(name, forbiddenBranchNames, self.tr("Name taken by another local branch.")))
+            validate=lambda name: validateBranchName(name, forbiddenBranchNames, self.tr("Name taken by another local branch.")),
+            deleteOnClose=False)
 
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         yield from self._flowDialog(dlg)
         dlg.deleteLater()
         newBranchName = dlg.lineEdit.text()
@@ -296,10 +296,9 @@ class RecallCommit(RepoTask):
             self.tr("Recall lost commit"),
             self.tr("If you know the hash of a commit that isn’t part of any branches,<br>"
                     "{0} will try to recall it for you.").format(qAppName()),
-            "",
-            okButtonText=self.tr("Recall"))
+            okButtonText=self.tr("Recall"),
+            deleteOnClose=False)
 
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         yield from self._flowDialog(dlg)
         dlg.deleteLater()
 

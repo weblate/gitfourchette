@@ -94,8 +94,9 @@ class RenameRemoteBranch(_BaseNetTask):
             self.tr("Enter new name:"),
             newBranchName,
             okButtonText=self.tr("Rename on remote"),
-            validate=validateNewRemoteBranchName)
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+            validate=validateNewRemoteBranchName,
+            deleteOnClose=False)
+
         yield from self._flowDialog(dlg)
         dlg.deleteLater()
 
