@@ -240,6 +240,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.graphView.exportWorkdirAsPatch,   tasks.ExportWorkdirAsPatch)
         self.connectTask(self.graphView.newBranchFromCommit,    tasks.NewBranchFromCommit)
         self.connectTask(self.graphView.newStash,               tasks.NewStash)
+        self.connectTask(self.graphView.newTagOnCommit,         tasks.NewTag)
         self.connectTask(self.graphView.resetHead,              tasks.ResetHead)
         self.connectTask(self.graphView.revertCommit,           tasks.RevertCommit)
         self.connectTask(self.sidebar.amendChanges,             tasks.AmendCommit)

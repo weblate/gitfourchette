@@ -349,3 +349,33 @@ class ResetHead(RepoTask):
     def flow(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         yield from self._flowBeginWorkerThread()
         porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
+
+
+class NewTag(RepoTask):
+    def name(self):
+        return translate("Operation", "New tag")
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.LOCALREFS
+
+    def flow(self, oid: pygit2.Oid):
+        yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
+
+        dlg = showTextInputDialog(
+            self.parent(),
+            self.tr("New tag on commit “{0}”").format(util.shortHash(oid)),
+            self.tr("Enter tag name:"),
+            okButtonText=self.tr("Create Tag"),
+            deleteOnClose=False)
+        yield from self._flowDialog(dlg)
+
+        dlg.deleteLater()
+        tagName = dlg.lineEdit.text()
+
+        yield from self._flowBeginWorkerThread()
+        self.repo.create_tag(
+            tagName,
+            oid,
+            pygit2.GIT_OBJ_COMMIT,
+            self.repo.default_signature,
+            "empty tag message")

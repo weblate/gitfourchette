@@ -41,6 +41,7 @@ class GraphView(QListView):
     commitClicked = Signal(pygit2.Oid)
     resetHead = Signal(pygit2.Oid, str, bool)
     newBranchFromCommit = Signal(pygit2.Oid)
+    newTagOnCommit = Signal(pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
     revertCommit = Signal(pygit2.Oid)
     exportCommitAsPatch = Signal(pygit2.Oid)
@@ -96,8 +97,10 @@ class GraphView(QListView):
             ]
         else:
             actions = [
-                ActionDef(self.tr("&Check Out..."), lambda: self.checkoutCommit.emit(oid)),
                 ActionDef(self.tr("Start &Branch from Here..."), lambda: self.newBranchFromCommit.emit(oid), "vcs-branch"),
+                ActionDef(self.tr("&Tag This Commit..."), lambda: self.newTagOnCommit.emit(oid), "tag-new"),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("&Check Out..."), lambda: self.checkoutCommit.emit(oid)),
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Cherry &Pick..."), self.cherrypickCurrentCommit),
