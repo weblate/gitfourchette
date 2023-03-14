@@ -39,6 +39,7 @@ class LoadCommit(RepoTask):
         yield from self._flowBeginWorkerThread()
         # import time; time.sleep(1) #----------to debug out-of-order events
         self.diffs = porcelain.loadCommitDiffs(self.repo, oid)
+        self.message = porcelain.getCommitMessage(self.repo, oid)
 
 
 class LoadPatch(RepoTask):

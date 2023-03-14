@@ -48,7 +48,7 @@ def testNavigation(qtbot, tempDir, mainWindow):
             assert qlvGetSelection(rw.dirtyFiles) == []
         else:
             assert rw.graphView.currentCommitOid == context
-            assert rw.filesStack.currentWidget() == rw.committedFiles
+            assert rw.filesStack.currentWidget() == rw.committedFilesContainer
             assert qlvGetSelection(rw.committedFiles) == [selectedFile]
 
     assertHistoryMatches(history[-1])

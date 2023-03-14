@@ -13,7 +13,7 @@ from gitfourchette.tasks import TaskAffectsWhat
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon,
-                                paragraphs, NonCriticalOperation)
+                                paragraphs, NonCriticalOperation, tweakWidgetFont)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -101,6 +101,7 @@ class RepoWidget(QWidget):
         self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
 
         for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
+            v.nothingClicked.connect(lambda: self.diffHeader.setText(" "))
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
 
@@ -124,18 +125,27 @@ class RepoWidget(QWidget):
 
         self.splitterStates = sharedSplitterStates or {}
 
-        self.dirtyLabel = QElidedLabel(self.tr("Loading dirty files..."))
-        self.stageLabel = QElidedLabel(self.tr("Loading staged files..."))
+        self.dirtyHeader = QElidedLabel(self.tr("Loading dirty files..."))
+        self.stagedHeader = QElidedLabel(self.tr("Loading staged files..."))
+        self.committedHeader = QElidedLabel(" ")
+        self.diffHeader = QElidedLabel(" ")
+        self.diffHeader.setElideMode(Qt.TextElideMode.ElideMiddle)
+        self.diffHeader.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        for headerLabel in self.dirtyHeader, self.stagedHeader, self.diffHeader, self.committedHeader:
+            tweakWidgetFont(headerLabel, 90)
 
         dirtyContainer = QWidget()
         dirtyContainer.setLayout(QVBoxLayout())
+        dirtyContainer.layout().setSpacing(1)
         dirtyContainer.layout().setContentsMargins(0, 0, 0, 0)
-        dirtyContainer.layout().addWidget(self.dirtyLabel)
+        dirtyContainer.layout().addWidget(self.dirtyHeader)
         dirtyContainer.layout().addWidget(self.dirtyFiles)
         stageContainer = QWidget()
         stageContainer.setLayout(QVBoxLayout())
         stageContainer.layout().setContentsMargins(0, 0, 0, 0)
-        stageContainer.layout().addWidget(self.stageLabel)
+        stageContainer.layout().setSpacing(1)
+        stageContainer.layout().addWidget(self.stagedHeader)
         stageContainer.layout().addWidget(self.stagedFiles)
         commitButtonsContainer = QWidget()
         commitButtonsContainer.setLayout(QHBoxLayout())
@@ -149,18 +159,35 @@ class RepoWidget(QWidget):
         self.stageSplitter.addWidget(dirtyContainer)
         self.stageSplitter.addWidget(stageContainer)
 
-        self.filesStack.addWidget(self.committedFiles)
+        self.dirtyHeader.setBuddy(self.dirtyFiles)
+        self.stagedHeader.setBuddy(self.stagedFiles)
+
+        self.committedFilesContainer = QWidget()
+        self.committedFilesContainer.setLayout(QVBoxLayout())
+        self.committedFilesContainer.layout().setContentsMargins(0,0,0,0)
+        self.committedFilesContainer.layout().setSpacing(1)
+        self.committedFilesContainer.layout().addWidget(self.committedHeader)
+        self.committedFilesContainer.layout().addWidget(self.committedFiles)
+
+        self.filesStack.addWidget(self.committedFilesContainer)
         self.filesStack.addWidget(self.stageSplitter)
-        self.filesStack.setCurrentWidget(self.committedFiles)
+        self.filesStack.setCurrentWidget(self.committedFilesContainer)
 
         self.diffStack.addWidget(self.diffView)
         self.diffStack.addWidget(self.richDiffView)
         self.diffStack.addWidget(self.conflictView)
         self.diffStack.setCurrentWidget(self.diffView)
 
+        diffViewContainer = QWidget()
+        diffViewContainer.setLayout(QVBoxLayout())
+        diffViewContainer.layout().setContentsMargins(0,0,0,0)
+        diffViewContainer.layout().setSpacing(1)
+        diffViewContainer.layout().addWidget(self.diffHeader)
+        diffViewContainer.layout().addWidget(self.diffStack)
+
         bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
         bottomSplitter.addWidget(self.filesStack)
-        bottomSplitter.addWidget(self.diffStack)
+        bottomSplitter.addWidget(diffViewContainer)
         bottomSplitter.setSizes([100, 300])
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical)
@@ -391,7 +418,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def selectNextFile(self, down=True):
-        if self.filesStack.currentWidget() == self.committedFiles:
+        if self.filesStack.currentWidget() == self.committedFilesContainer:
             widgets = [self.committedFiles]
         elif self.filesStack.currentWidget() == self.stageSplitter:
             widgets = [self.dirtyFiles, self.stagedFiles]
@@ -523,8 +550,8 @@ class RepoWidget(QWidget):
 
         nDirty = self.dirtyFiles.model().rowCount()
         nStaged = self.stagedFiles.model().rowCount()
-        self.dirtyLabel.setText(self.tr("%n dirty file(s):", "", nDirty))
-        self.stageLabel.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
+        self.dirtyHeader.setText(self.tr("%n dirty file(s):", "", nDirty))
+        self.stagedHeader.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
 
         # Switch to correct card in filesStack to show dirtyView and stageView
         self.filesStack.setCurrentWidget(self.stageSplitter)
@@ -558,10 +585,10 @@ class RepoWidget(QWidget):
 
         task = tasks.LoadCommit(self)
         task.setRepo(self.repo)
-        task.success.connect(lambda: self._loadCommit(oid, task.diffs))
+        task.success.connect(lambda: self._loadCommit(oid, task.diffs, task.message))
         self.repoTaskRunner.put(task, oid)
 
-    def _loadCommit(self, oid: pygit2.Oid, parentDiffs: list[pygit2.Diff]):
+    def _loadCommit(self, oid: pygit2.Oid, parentDiffs: list[pygit2.Diff], summary: str):
         """Load commit details into Changed Files view"""
 
         self.saveFilePositions()
@@ -582,8 +609,12 @@ class RepoWidget(QWidget):
             self.diffStack.setCurrentWidget(self.richDiffView)
             self.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
 
-        # Switch to correct card in filesStack to show changedFilesView
-        self.filesStack.setCurrentWidget(self.committedFiles)
+        # Switch to correct card in filesStack
+        self.filesStack.setCurrentWidget(self.committedFilesContainer)
+
+        # Set header text
+        self.committedHeader.setText(self.tr("Changes in {0}:").format(shortHash(oid))) #f"{shortHash(oid)} “{summary2}”")
+        self.committedHeader.setToolTip("<p>" + escape(summary.strip()).replace("\n", "<br>"))
 
         # Select the best file in this commit - which may trigger loadPatchAsync
         self.restoreSelectedFile()
@@ -609,7 +640,11 @@ class RepoWidget(QWidget):
 
         self.saveFilePositions()
 
+        header = "???"
+
         if patch and patch.delta:  # patch (or delta) may be None with DiffModelError
+            header = patch.delta.new_file.path
+
             if stagingState == StagingState.COMMITTED:
                 assert len(self.navPos.context) == 40
                 posContext = self.navPos.context
@@ -620,6 +655,14 @@ class RepoWidget(QWidget):
 
             if not self.navPos:
                 self.navPos = NavPos(posContext, posFile)
+
+        if stagingState == StagingState.STAGED:
+            header += " " + self.tr("[Staged]")
+        elif stagingState == StagingState.UNSTAGED:
+            header += " " + self.tr("[Unstaged]")
+        else:
+            header += " @ " + shortHash(self.graphView.currentCommitOid)
+        self.diffHeader.setText(header)
 
         if type(result) == DiffConflict:
             self.diffStack.setCurrentWidget(self.conflictView)
