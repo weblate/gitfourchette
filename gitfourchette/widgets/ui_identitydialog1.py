@@ -39,15 +39,12 @@ class Ui_IdentityDialog1(object):
 
         self.gridLayout.addItem(self.verticalSpacer_2, 4, 0, 1, 1)
 
-        self.label_4 = QLabel(IdentityDialog1)
-        self.label_4.setObjectName(u"label_4")
-        self.label_4.setEnabled(False)
-        font = QFont()
-        font.setPointSize(11)
-        self.label_4.setFont(font)
-        self.label_4.setWordWrap(True)
+        self.help1 = QLabel(IdentityDialog1)
+        self.help1.setObjectName(u"help1")
+        self.help1.setEnabled(False)
+        self.help1.setWordWrap(True)
 
-        self.gridLayout.addWidget(self.label_4, 6, 1, 1, 2)
+        self.gridLayout.addWidget(self.help1, 6, 1, 1, 2)
 
         self.label_3 = QLabel(IdentityDialog1)
         self.label_3.setObjectName(u"label_3")
@@ -63,13 +60,12 @@ class Ui_IdentityDialog1(object):
 
         self.gridLayout.addItem(self.verticalSpacer, 0, 0, 1, 1)
 
-        self.label_5 = QLabel(IdentityDialog1)
-        self.label_5.setObjectName(u"label_5")
-        self.label_5.setEnabled(False)
-        self.label_5.setFont(font)
-        self.label_5.setWordWrap(True)
+        self.help2 = QLabel(IdentityDialog1)
+        self.help2.setObjectName(u"help2")
+        self.help2.setEnabled(False)
+        self.help2.setWordWrap(True)
 
-        self.gridLayout.addWidget(self.label_5, 8, 1, 1, 2)
+        self.gridLayout.addWidget(self.help2, 8, 1, 1, 2)
 
         self.horizontalSpacer_2 = QSpacerItem(13, 13, QSizePolicy.Fixed, QSizePolicy.Minimum)
 
@@ -108,6 +104,9 @@ class Ui_IdentityDialog1(object):
         self.label_3.setBuddy(self.emailEdit)
         self.label_2.setBuddy(self.nameEdit)
 #endif // QT_CONFIG(shortcut)
+        QWidget.setTabOrder(self.nameEdit, self.emailEdit)
+        QWidget.setTabOrder(self.emailEdit, self.setGlobalIdentity)
+        QWidget.setTabOrder(self.setGlobalIdentity, self.setLocalIdentity)
 
         self.retranslateUi(IdentityDialog1)
         self.buttonBox.accepted.connect(IdentityDialog1.accept)
@@ -118,8 +117,8 @@ class Ui_IdentityDialog1(object):
     def retranslateUi(self, IdentityDialog1):
         IdentityDialog1.setWindowTitle(QCoreApplication.translate("IdentityDialog1", u"Set up your Git identity", None))
         self.setGlobalIdentity.setText(QCoreApplication.translate("IdentityDialog1", u"Set &global identity", None))
-        self.label_4.setText(QCoreApplication.translate("IdentityDialog1", u"Will apply to all repositories on this computer.", None))
+        self.help1.setText(QCoreApplication.translate("IdentityDialog1", u"Will apply to all repositories on this computer.", None))
         self.label_3.setText(QCoreApplication.translate("IdentityDialog1", u"&Email:", None))
         self.label_2.setText(QCoreApplication.translate("IdentityDialog1", u"&Name:", None))
-        self.label_5.setText(QCoreApplication.translate("IdentityDialog1", u"You will be prompted to set up an identity for other repositories.", None))
+        self.help2.setText(QCoreApplication.translate("IdentityDialog1", u"You will be prompted to set up an identity for other repositories.", None))
         self.setLocalIdentity.setText(QCoreApplication.translate("IdentityDialog1", u"Set identity for this &repository only", None))

@@ -63,14 +63,9 @@
     </spacer>
    </item>
    <item row="6" column="1" colspan="2">
-    <widget class="QLabel" name="label_4">
+    <widget class="QLabel" name="help1">
      <property name="enabled">
       <bool>false</bool>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>Will apply to all repositories on this computer.</string>
@@ -114,14 +109,9 @@
     </spacer>
    </item>
    <item row="8" column="1" colspan="2">
-    <widget class="QLabel" name="label_5">
+    <widget class="QLabel" name="help2">
      <property name="enabled">
       <bool>false</bool>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>11</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>You will be prompted to set up an identity for other repositories.</string>
@@ -196,6 +186,12 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>nameEdit</tabstop>
+  <tabstop>emailEdit</tabstop>
+  <tabstop>setGlobalIdentity</tabstop>
+  <tabstop>setLocalIdentity</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

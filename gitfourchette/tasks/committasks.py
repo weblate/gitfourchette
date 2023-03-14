@@ -184,8 +184,12 @@ class SetUpIdentityFirstRun(RepoTask):
 
         subtitle = translate(
             "IdentityDialog1",
-            "Before you start creating commits, please set up your identity for Git. "
-            "This information will be baked into every commit that you author.")
+            "Before editing this repository, please set up your identity for Git. "
+            "This information will be embedded into the commits and tags that you author.")
+
+        util.tweakWidgetFont(dlg.ui.help1, 90)
+        util.tweakWidgetFont(dlg.ui.help2, 90)
+
         convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
 
         util.setWindowModal(dlg)
