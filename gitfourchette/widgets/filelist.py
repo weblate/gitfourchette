@@ -299,8 +299,19 @@ class FileList(QListView):
 
         indexes = list(selected.indexes())
         if len(indexes) == 0:
-            self.nothingClicked.emit()
-            return
+            # Deselecting (e.g. with shift/ctrl) doesn't necessarily mean that the selection has been emptied.
+            # Find an index that is still selected to keep the DiffView in sync with the selection.
+            currentIndex = self.currentIndex()
+            selectedIndexes = self.selectedIndexes()
+
+            if currentIndex.isValid() and selectedIndexes:
+                # currentIndex may be outside the selection, find the selected index that is closest to currentIndex.
+                currentIndex = min(selectedIndexes, key=lambda index: abs(index.row() - currentIndex.row()))
+                self.entryClicked.emit(currentIndex.data(Qt.ItemDataRole.UserRole), self.stagingState)
+                return
+            else:
+                self.nothingClicked.emit()
+                return
 
         current: QModelIndex = selected.indexes()[0]
         if current.isValid():
