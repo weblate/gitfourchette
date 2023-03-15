@@ -329,7 +329,9 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            util.showWarning(self.parent(), TAG, f"A RepoTask is already running! ({self._currentTask} cannot be interrupted by {task})")
+            util.showInformation(self.parent(), self.tr("Operation in progress"),
+                                 self.tr("Please wait for the current operation to complete. "
+                                         "({0} cannot be interrupted by {1})").format(self._currentTask, task))
 
     def _startTask(self, task):
         assert self._currentTask == task
