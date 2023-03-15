@@ -421,17 +421,20 @@ class DiffView(QPlainTextEdit):
             QApplication.beep()
             return
 
+        def dump(path: str):
+            with open(path, "wb") as file:
+                file.write(patchData)
+
         name = os.path.basename(self.currentPatch.delta.new_file.path) + "[partial].patch"
 
         if saveInto:
             savePath = os.path.join(saveInto, name)
+            dump(savePath)
         else:
-            savePath, _ = PersistentFileDialog.getSaveFileName(self, "SaveFile",
-                                                               self.tr("Export selected lines"), name)
-
-        if savePath:
-            with open(savePath, "wb") as file:
-                file.write(patchData)
+            qfd = PersistentFileDialog.saveFile(
+                self, "SaveFile", self.tr("Export selected lines"), name)
+            qfd.fileSelected.connect(dump)
+            qfd.show()
 
     def fireRevert(self, patchData: bytes):
         self.revertPatch.emit(self.currentPatch, patchData)

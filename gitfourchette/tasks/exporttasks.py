@@ -33,10 +33,9 @@ class ComposePatch(RepoTask):
         if not composed:
             yield from self._flowAbort(self.tr("Nothing to export. The patch is empty."), warningTextIcon="information")
 
-        savePath, _ = util.PersistentFileDialog.getSaveFileName(
-            self.parent(), "SaveFile", self.name(), fileName)
-        if not savePath:
-            yield from self._flowAbort()
+        qfd = util.PersistentFileDialog.saveFile(self.parent(), "SaveFile", self.name(), fileName)
+        yield from self._flowDialog(qfd)
+        savePath = qfd.selectedFiles()[0]
 
         yield from self._flowBeginWorkerThread()
         with open(savePath, "wb") as f:

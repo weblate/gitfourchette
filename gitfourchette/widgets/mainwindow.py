@@ -716,20 +716,21 @@ class MainWindow(QMainWindow):
     # File menu callbacks
 
     def newRepo(self):
-        path, _ = PersistentFileDialog.getSaveFileName(self, "NewRepo", self.tr("New repository"))
-        if not path:
-            return
-        try:
-            pygit2.init_repository(path)
-        except BaseException as exc:
-            excMessageBox(
-                exc,
-                self.tr("New repository"),
-                self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path)),
-                parent=self,
-                icon='warning')
-            return
-        self.openRepo(path)
+        def proceed(path: str):
+            try:
+                pygit2.init_repository(path)
+                self.openRepo(path)
+            except BaseException as exc:
+                excMessageBox(
+                    exc,
+                    self.tr("New repository"),
+                    self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path)),
+                    parent=self,
+                    icon='warning')
+
+        qfd = PersistentFileDialog.saveFile(self, "NewRepo", self.tr("New repository"))
+        qfd.fileSelected.connect(proceed)
+        qfd.show()
 
     def cloneDialog(self, initialUrl: str = ""):
         dlg = CloneDialog(initialUrl, self)
@@ -741,9 +742,10 @@ class MainWindow(QMainWindow):
         dlg.show()
 
     def openDialog(self):
-        path = PersistentFileDialog.getExistingDirectory(self, "NewRepo", self.tr("Open repository"))
-        if path:
-            self.openRepo(path)
+        qfd = PersistentFileDialog.openDirectory(self, "NewRepo", self.tr("Open repository"))
+        qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        qfd.fileSelected.connect(self.openRepo)
+        qfd.show()
 
     def openRepo(self, path):
         try:

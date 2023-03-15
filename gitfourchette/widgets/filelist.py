@@ -399,19 +399,19 @@ class FileList(QListView):
 
         name = ", ".join(sorted(names)) + ".patch"
 
+        def dump(path):
+            with open(path, "wb") as f:
+                f.write(bigpatch)
+            if skippedBinaryFiles:
+                warnBinary(skippedBinaryFiles)
+
         if saveInto:
             savePath = os.path.join(saveInto, name)
+            dump(savePath)
         else:
-            savePath, _ = PersistentFileDialog.getSaveFileName(self, "SaveFile", self.tr("Save patch file"), name)
-
-        if not savePath:
-            return
-
-        with open(savePath, "wb") as f:
-            f.write(bigpatch)
-
-        if skippedBinaryFiles:
-            warnBinary(skippedBinaryFiles)
+            qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Save patch file"), name)
+            qfd.fileSelected.connect(dump)
+            qfd.show()
 
     def getFirstPath(self) -> str:
         model: FileListModel = self.model()
@@ -616,6 +616,11 @@ class CommittedFiles(FileList):
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
     def saveRevisionAs(self, beforeCommit: bool = False, saveInto=None):
+        def dump(path: str, mode: int, data: bytes):
+            with open(path, "wb") as f:
+                f.write(data)
+            os.chmod(path, mode)
+
         def run(diff):
             try:
                 name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
@@ -623,15 +628,13 @@ class CommittedFiles(FileList):
                 raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
             if saveInto:
-                savePath = os.path.join(saveInto, name)
+                path = os.path.join(saveInto, name)
+                dump(path, diffFile.mode, blob.data)
             else:
-                savePath, _ = PersistentFileDialog.getSaveFileName(self, "SaveFile",
-                                                                   self.tr("Save file revision as"), name)
-
-            if savePath:
-                with open(savePath, "wb") as f:
-                    f.write(blob.data)
-                os.chmod(savePath, diffFile.mode)
+                qfd = PersistentFileDialog.saveFile(
+                    self, "SaveFile", self.tr("Save file revision as"), name)
+                qfd.fileSelected.connect(lambda path: dump(path, diffFile.mode, blob.data))
+                qfd.show()
 
         if beforeCommit:
             title = self.tr("Save revision before commit")

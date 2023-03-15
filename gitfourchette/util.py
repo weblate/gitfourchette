@@ -470,8 +470,6 @@ class QRunnableFunctionWrapper(QRunnable):
 
 
 class PersistentFileDialog:
-    # TODO: Make async version
-
     @staticmethod
     def getPath(key: str, fallbackPath: str = ""):
         from gitfourchette import settings
@@ -485,7 +483,7 @@ class PersistentFileDialog:
             settings.history.write()
 
     @staticmethod
-    def getSaveFileName(parent, key: str, caption: str, initialFilename="", filter="", selectedFilter=""):
+    def saveFile(parent: QWidget, key: str, caption: str, initialFilename="", filter="", selectedFilter="", deleteOnClose=True):
         previousSavePath = PersistentFileDialog.getPath(key)
         if not previousSavePath:
             initialPath = initialFilename
@@ -493,20 +491,51 @@ class PersistentFileDialog:
             previousSaveDir = os.path.dirname(previousSavePath)
             initialPath = os.path.join(previousSaveDir, initialFilename)
 
-        path, selectedFilter = QFileDialog.getSaveFileName(parent, caption, initialPath, filter, selectedFilter)
-        PersistentFileDialog.savePath(key, path)
-        return path, selectedFilter
+        qfd = QFileDialog(parent, caption, initialPath, filter)
+        qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        qfd.setFileMode(QFileDialog.FileMode.AnyFile)
+        if selectedFilter:
+            qfd.selectNameFilter(selectedFilter)
+
+        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
+
+        if deleteOnClose:
+            qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        setWindowModal(qfd)
+        return qfd
 
     @staticmethod
-    def getOpenFileName(parent, key: str, caption: str, filter="", selectedFilter="", fallbackPath=""):
+    def openFile(parent: QWidget, key: str, caption: str, filter="", selectedFilter="", fallbackPath="", deleteOnClose=True):
         initialDir = PersistentFileDialog.getPath(key, fallbackPath)
-        path, selectedFilter = QFileDialog.getOpenFileName(parent, caption, initialDir, filter, selectedFilter)
-        PersistentFileDialog.savePath(key, path)
-        return path, selectedFilter
+
+        qfd = QFileDialog(parent, caption, initialDir, filter)
+        qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        qfd.setFileMode(QFileDialog.FileMode.AnyFile)
+        if selectedFilter:
+            qfd.selectNameFilter(selectedFilter)
+
+        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
+
+        if deleteOnClose:
+            qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        setWindowModal(qfd)
+        return qfd
 
     @staticmethod
-    def getExistingDirectory(parent, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly):
+    def openDirectory(parent: QWidget, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly, deleteOnClose=True):
         initialDir = PersistentFileDialog.getPath(key)
-        path = QFileDialog.getExistingDirectory(parent, caption, initialDir, options)
-        PersistentFileDialog.savePath(key, path)
-        return path
+
+        qfd = QFileDialog(parent, caption, initialDir)
+        qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        qfd.setFileMode(QFileDialog.FileMode.Directory)
+        qfd.setOptions(options)
+
+        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
+
+        if deleteOnClose:
+            qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+
+        setWindowModal(qfd)
+        return qfd

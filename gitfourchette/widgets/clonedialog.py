@@ -82,10 +82,11 @@ class CloneDialog(QDialog):
     def browse(self):
         projectName = self.url.rsplit("/", 1)[-1].removesuffix(".git")
 
-        path, _ = PersistentFileDialog.getSaveFileName(self, "NewRepo",
-                                                       self.tr("Clone repository into"), projectName)
-        if path:
-            self.ui.pathEdit.setText(path)
+        qfd = PersistentFileDialog.saveFile(
+            self, "NewRepo", self.tr("Clone repository into"), projectName)
+
+        qfd.fileSelected.connect(self.ui.pathEdit.setText)
+        qfd.show()
 
     def enableInputs(self, enable):
         for widget in [self.ui.urlLabel, self.ui.urlEdit,

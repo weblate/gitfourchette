@@ -237,11 +237,12 @@ class ApplyPatchFile(RepoTask):
         patchFileCaption = self.tr("Patch file")
         allFilesCaption = self.tr("All files")
 
-        path, _ = util.PersistentFileDialog.getOpenFileName(
+        qfd = util.PersistentFileDialog.openFile(
             self.parent(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
 
-        if not path:
-            yield from self._flowAbort()
+        yield from self._flowDialog(qfd)
+
+        path = qfd.selectedFiles()[0]
 
         yield from self._flowBeginWorkerThread()
 

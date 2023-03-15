@@ -98,12 +98,16 @@ class RemoteDialog(QDialog):
         if not os.path.exists(sshDir):
             sshDir = ""
 
-        path, _ = PersistentFileDialog.getOpenFileName(
+        qfd = PersistentFileDialog.openFile(
             self, "KeyFile", self.tr("Select public key file for remote “{0}”").format(self.ui.nameEdit.text()),
             filter=self.tr("Public key file") + " (*.pub)",
             fallbackPath=sshDir)
 
-        if path:
-            self.ui.keyFilePathEdit.setText(path)
-        elif not self.ui.keyFilePathEdit.text().strip():  # file browser canceled and lineedit empty, untick checkbox
-            self.ui.keyFileGroupBox.setChecked(False)
+        def onReject():
+            # File browser canceled and lineedit empty, untick checkbox
+            if not self.ui.keyFilePathEdit.text().strip():
+                self.ui.keyFileGroupBox.setChecked(False)
+
+        qfd.fileSelected.connect(self.ui.keyFilePathEdit.setText)
+        qfd.rejected.connect(onReject)
+        qfd.show()
