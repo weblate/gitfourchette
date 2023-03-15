@@ -1,6 +1,7 @@
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import util
+from gitfourchette.benchmark import Benchmark
 from gitfourchette.qt import *
 from gitfourchette.stagingstate import StagingState
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
@@ -11,21 +12,29 @@ import pygit2
 TAG = "LoadTasks"
 
 
-class LoadWorkdirDiffs(RepoTask):
+class LoadWorkdir(RepoTask):
     def name(self):
         return translate("Operation", "Refresh working directory")
 
     def canKill(self, task: RepoTask):
-        if type(task) is LoadWorkdirDiffs:
-            log.warning(TAG, "LoadWorkdirDiffs is killing another LoadWorkdirDiffs. This is inefficient!")
+        if type(task) is LoadWorkdir:
+            log.warning(TAG, "LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
             return True
         return type(task) in [LoadCommit, LoadPatch]
 
     def flow(self, allowUpdateIndex: bool):
         yield from self._flowBeginWorkerThread()
-        porcelain.refreshIndex(self.repo)
-        self.dirtyDiff = porcelain.getUnstagedChanges(self.repo, allowUpdateIndex)
-        self.stageDiff = porcelain.getStagedChanges(self.repo)
+
+        with Benchmark("LoadWorkdir/Index"):
+            porcelain.refreshIndex(self.repo, force=allowUpdateIndex)
+
+        yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
+        with Benchmark("LoadWorkdir/Staged"):
+            self.stageDiff = porcelain.getStagedChanges(self.repo)
+
+        yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
+        with Benchmark("LoadWorkdir/Unstaged"):
+            self.dirtyDiff = porcelain.getUnstagedChanges(self.repo, allowUpdateIndex)
 
 
 class LoadCommit(RepoTask):
@@ -33,7 +42,7 @@ class LoadCommit(RepoTask):
         return translate("Operation", "Load commit")
 
     def canKill(self, task: RepoTask):
-        return type(task) in [LoadWorkdirDiffs, LoadCommit, LoadPatch]
+        return type(task) in [LoadWorkdir, LoadCommit, LoadPatch]
 
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()

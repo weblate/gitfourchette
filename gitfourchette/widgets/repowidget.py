@@ -530,7 +530,7 @@ class RepoWidget(QWidget):
         with QSignalBlockerContext(self.sidebar):
             self.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
-        task = tasks.LoadWorkdirDiffs(self)
+        task = tasks.LoadWorkdir(self)
         task.setRepo(self.repo)
         task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, forceSelectFile))
         return self.repoTaskRunner.put(task, allowUpdateIndex)

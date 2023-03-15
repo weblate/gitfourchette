@@ -9,7 +9,7 @@ from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutComm
 from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIdentity
 from gitfourchette.tasks.committasks import NewTag
 from gitfourchette.tasks.exporttasks import ExportCommitAsPatch, ExportStashAsPatch, ExportWorkdirAsPatch
-from gitfourchette.tasks.loadtasks import LoadWorkdirDiffs, LoadCommit, LoadPatch
+from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch
 from gitfourchette.tasks.nettasks import DeleteRemoteBranch, RenameRemoteBranch
 from gitfourchette.tasks.nettasks import FetchRemote, FetchRemoteBranch
 from gitfourchette.tasks.remotetasks import NewRemote, EditRemote, DeleteRemote
