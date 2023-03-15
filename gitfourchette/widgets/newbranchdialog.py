@@ -1,22 +1,8 @@
+from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_newbranchdialog import Ui_NewBranchDialog
-from gitfourchette import porcelain
-from gitfourchette import util
-import typing
-
-
-def validateBranchName(newBranchName: str, reservedNames: list[str], nameInUseMessage: str) -> str:
-    try:
-        porcelain.validateBranchName(newBranchName)
-    except porcelain.NameValidationError as exc:
-        return util.translateNameValidationError(exc)
-
-    if newBranchName in reservedNames:
-        return nameInUseMessage
-
-    return ""  # validation passed, no error
 
 
 class NewBranchDialog(QDialog):
@@ -36,6 +22,8 @@ class NewBranchDialog(QDialog):
 
         self.ui.nameEdit.setText(initialName)
 
+        self.acceptButton.setText(self.tr("Create branch"))
+
         self.ui.upstreamComboBox.addItems(upstreams)
 
         # hack to trickle down initial 'toggled' signal to combobox
@@ -47,17 +35,14 @@ class NewBranchDialog(QDialog):
             self.ui.upstreamCheckBox.setVisible(False)
             self.ui.upstreamComboBox.setVisible(False)
 
-        reservedMessage = self.tr("Name already taken by another local branch.")
-
-        def validateNewBranchName(name: str):
-            return validateBranchName(name, reservedNames, reservedMessage)
-
+        nameTaken = self.tr("This name is already taken by another local branch.")
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(self.acceptButton)
-        validator.connectInput(self.ui.nameEdit, validateNewBranchName)
+        validator.connectInput(self.ui.nameEdit, lambda name: util.validateRefName(name, reservedNames, nameTaken))
         validator.run()
 
-        convertToBrandedDialog(self, self.tr("New branch"), self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
+        convertToBrandedDialog(self, self.tr("New branch"),
+                               self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
 
         self.ui.nameEdit.setFocus()
         self.ui.nameEdit.selectAll()

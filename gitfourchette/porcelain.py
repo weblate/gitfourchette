@@ -8,6 +8,7 @@ import re
 
 
 CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
+WINDOWS_RESERVED_FILENAMES_PATTERN = re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", re.IGNORECASE)
 
 HEADS_PREFIX = "refs/heads/"
 REMOTES_PREFIX = "refs/remotes/"
@@ -21,6 +22,7 @@ class NameValidationError(ValueError):
     ILLEGAL_SUFFIX = 3
     CONTAINS_ILLEGAL_CHAR = 4
     CONTAINS_ILLEGAL_SEQ = 5
+    NOT_WINDOWS_FRIENDLY = 6
 
     def __init__(self, code: int):
         super().__init__(F"Name validation failed ({code})")
@@ -322,45 +324,49 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     return nameDict
 
 
-def validateBranchName(newBranchName: str):
+def validateRefName(name: str):
     """
-    Checks the validity of a branch name according to `man git-check-ref-format`.
+    Checks the validity of a ref name according to `man git-check-ref-format`.
     Raises NameValidationError if the name is incorrect.
     """
 
     E = NameValidationError
 
     # Can't be empty
-    if not newBranchName:
+    if not name:
         raise E(E.CANNOT_BE_EMPTY)
 
     # Rule 9: can't be single character '@'
-    elif newBranchName == '@':
+    elif name == '@':
         raise E(E.ILLEGAL_NAME)
 
     # Rule 4: forbid space, tilde, caret, colon
     # Rule 5: forbid question mark, asterisk, open bracket
     # Rule 10: forbid backslash
-    elif any(c in " ~^:[?*\\" for c in newBranchName):
+    elif any(c in " ~^:[?*\\" for c in name):
         raise E(E.CONTAINS_ILLEGAL_CHAR)
 
     # Rule 1: slash-separated components can't start with dot or end with .lock
     # Rule 3: forbid consecutive dots
     # Rule 6: forbid consecutive slashes
     # Rule 8: forbid '@{'
-    elif any(seq in newBranchName for seq in ["/.", ".lock/", "..", "//", "@{"]):
+    elif any(seq in name for seq in ["/.", ".lock/", "..", "//", "@{"]):
         raise E(E.CONTAINS_ILLEGAL_SEQ)
 
     # Rule 1: can't start with dot
     # Rule 6: can't start with slash
-    elif newBranchName.startswith((".", "/")):
+    elif name.startswith((".", "/")):
         raise E(E.ILLEGAL_PREFIX)
 
     # Rule 1: can't end with .lock
     # Rule 6: can't end with slash
     # Rule 7: can't end with dot
-    elif newBranchName.endswith((".lock", "/", ".")):
+    elif name.endswith((".lock", "/", ".")):
         raise E(E.ILLEGAL_SUFFIX)
+
+    # Prevent filenames that are reserved on Windows
+    elif WINDOWS_RESERVED_FILENAMES_PATTERN.match(name):
+        raise E(E.NOT_WINDOWS_FRIENDLY)
 
 
 def validateSignatureItem(s: str):

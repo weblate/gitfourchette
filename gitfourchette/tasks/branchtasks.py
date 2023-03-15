@@ -4,7 +4,7 @@ from gitfourchette.porcelain import HEADS_PREFIX, REMOTES_PREFIX
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.newbranchdialog import NewBranchDialog, validateBranchName
+from gitfourchette.widgets.newbranchdialog import NewBranchDialog
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
 from html import escape
 import pygit2
@@ -50,7 +50,7 @@ class RenameBranch(RepoTask):
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),
-            validate=lambda name: validateBranchName(name, forbiddenBranchNames, self.tr("Name taken by another local branch.")),
+            validate=lambda name: util.validateRefName(name, forbiddenBranchNames, self.tr("This name is already taken by another local branch.")),
             deleteOnClose=False)
 
         yield from self._flowDialog(dlg)

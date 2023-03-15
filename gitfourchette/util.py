@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from gitfourchette.porcelain import NameValidationError
+from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.settings import PathDisplayStyle
 from pygit2 import Oid
@@ -382,8 +382,8 @@ def tweakWidgetFont(widget: QWidget, relativeSize: int = 100, bold: bool = False
     return font
 
 
-def translateNameValidationError(e: NameValidationError):
-    E = NameValidationError
+def translateNameValidationError(e: porcelain.NameValidationError):
+    E = porcelain.NameValidationError
     errorDescriptions = {
         E.ILLEGAL_NAME: translate("NameValidationError", "Illegal name."),
         E.ILLEGAL_SUFFIX: translate("NameValidationError", "Illegal suffix."),
@@ -391,8 +391,23 @@ def translateNameValidationError(e: NameValidationError):
         E.CONTAINS_ILLEGAL_SEQ: translate("NameValidationError", "Contains illegal character sequence."),
         E.CONTAINS_ILLEGAL_CHAR: translate("NameValidationError", "Contains illegal character."),
         E.CANNOT_BE_EMPTY: translate("NameValidationError", "Cannot be empty."),
+        E.NOT_WINDOWS_FRIENDLY: translate("NameValidationError", "This name is discouraged for compatibility with Windows."),
     }
     return errorDescriptions.get(e.code, "Name validation error {0}".format(e.code))
+
+
+def validateRefName(name: str, reservedNames: list[str], nameTakenMessage: str = "") -> str:
+    try:
+        porcelain.validateRefName(name)
+    except porcelain.NameValidationError as exc:
+        return translateNameValidationError(exc)
+
+    if name.lower() in (n.lower() for n in reservedNames):
+        if not nameTakenMessage:
+            nameTakenMessage = translate("NameValidationError", "This name is already taken.")
+        return nameTakenMessage
+
+    return ""  # validation passed, no error
 
 
 class QSignalBlockerContext:

@@ -32,6 +32,7 @@ class ValidatorMultiplexer(QObject):
         edit: QLineEdit
         validate: Callable[[str], str]
         showWarning: bool
+        mustBeValid: bool
         inEditIcon: Optional[QAction] = None
 
     gatedWidgets: list[QWidget]
@@ -49,24 +50,30 @@ class ValidatorMultiplexer(QObject):
     def setGatedWidgets(self, *args: QWidget):
         self.gatedWidgets = list(args)
 
-    def connectInput(self, edit: QLineEdit, validate: Callable[[str], str], showWarning: bool = True):
+    def connectInput(
+            self,
+            edit: QLineEdit,
+            validate: Callable[[str], str],
+            showWarning: bool = True,
+            mustBeValid: bool = True):
         assert isinstance(edit, QLineEdit)
         assert isinstance(validate, Callable)
-        newInput = ValidatorMultiplexer.Input(edit, validate, showWarning)
+        newInput = ValidatorMultiplexer.Input(edit, validate, showWarning, mustBeValid)
         self.inputs.append(newInput)
         edit.textChanged.connect(self.run)
 
     def run(self):
         # Run validator on inputs
+        success = True
         errors: list[str] = []
         for input in self.inputs:
-            if not input.edit.isVisibleTo(self.parent()) or not input.edit.isEnabledTo(self.parent()):
-                # Don't validate disabled/hidden inputs
+            if not input.edit.isEnabled():  # Skip disabled inputs
                 errors.append("")
             else:
-                errors.append(input.validate(input.edit.text()))
-
-        success = all(not e for e in errors)
+                newError = input.validate(input.edit.text())
+                errors.append(newError)
+                if newError and input.mustBeValid:
+                    success = False
 
         # Enable/disable gated widgets
         for w in self.gatedWidgets:
@@ -97,7 +104,7 @@ class ValidatorMultiplexer(QObject):
                         self.timer.timeout.disconnect()
                     self.timer.stop()
                     self.timer.timeout.connect(
-                        lambda t=input, err=err: QToolTip.showText(t.edit.mapToGlobal(QPoint(0, 0)), err, t.edit))
+                        lambda t=input, err=err: QToolTip.showText(t.edit.mapToGlobal(QPoint(0, t.edit.height()//2)), err, t.edit))
                     self.timer.start()
 
             elif not err and input.inEditIcon:

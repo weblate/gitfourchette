@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'commitdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.6
+## Created by: Qt User Interface Compiler version 6.4.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -9,7 +9,6 @@
 from gitfourchette.qt import *
 
 from gitfourchette.widgets.signatureform import SignatureForm
-
 
 class Ui_CommitDialog(object):
     def setupUi(self, CommitDialog):
@@ -86,6 +85,7 @@ class Ui_CommitDialog(object):
         self.buttonBox.accepted.connect(CommitDialog.accept)
         self.buttonBox.rejected.connect(CommitDialog.reject)
         self.revealAuthor.toggled.connect(self.authorGroupBox.setVisible)
+        self.revealAuthor.toggled.connect(self.authorGroupBox.setEnabled)
 
         QMetaObject.connectSlotsByName(CommitDialog)
 

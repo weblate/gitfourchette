@@ -7,6 +7,7 @@ from gitfourchette import repoconfig
 from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.remotedialog import RemoteDialog
 from html import escape
 
@@ -19,7 +20,16 @@ class NewRemote(RepoTask):
         return TaskAffectsWhat.REMOTES
 
     def flow(self):
-        dlg = RemoteDialog(False, "", "", "", self.parent())
+        existingRemotes = [r.name for r in self.repo.remotes]
+
+        dlg = RemoteDialog(
+            edit=False,
+            remoteName="",
+            remoteURL="",
+            customKeyFile="",
+            existingRemotes=existingRemotes,
+            parent=self.parent())
+
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
@@ -43,7 +53,17 @@ class EditRemote(RepoTask):
     def flow(self, oldRemoteName: str):
         oldRemoteUrl = self.repo.remotes[oldRemoteName].url
 
-        dlg = RemoteDialog(True, oldRemoteName, oldRemoteUrl, repoconfig.getRemoteKeyFile(self.repo, oldRemoteName), self.parent())
+        existingRemotes = [r.name for r in self.repo.remotes]
+        existingRemotes.remove(oldRemoteName)
+
+        dlg = RemoteDialog(
+            edit=True,
+            remoteName=oldRemoteName,
+            remoteURL=oldRemoteUrl,
+            customKeyFile=repoconfig.getRemoteKeyFile(self.repo, oldRemoteName),
+            existingRemotes=existingRemotes,
+            parent=self.parent())
+
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())

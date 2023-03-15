@@ -8,7 +8,6 @@ from gitfourchette.toolbox import *
 from gitfourchette.util import paragraphs, QSignalBlockerContext
 from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
-from gitfourchette.widgets.newbranchdialog import validateBranchName
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
 from html import escape
 import enum
@@ -262,8 +261,7 @@ class PushDialog(QDialog):
 
         self.remoteBranchNameValidator = ValidatorMultiplexer(self)
         self.remoteBranchNameValidator.setGatedWidgets(self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        self.remoteBranchNameValidator.connectInput(
-            self.ui.newRemoteBranchNameEdit, self.ui.newRemoteBranchNameValidation, self.validateCustomRemoteBranchName)
+        self.remoteBranchNameValidator.connectInput(self.ui.newRemoteBranchNameEdit, self.validateCustomRemoteBranchName)
         # don't prime the validator!
 
         # Fire initial activated signal to set up comboboxes
@@ -289,8 +287,8 @@ class PushDialog(QDialog):
 
         reservedNames = self.reservedRemoteBranchNames.get(self.currentRemoteName, [])
 
-        return validateBranchName(name, reservedNames,
-                                  self.tr("Name already taken by another branch on this remote."))
+        return util.validateRefName(name, reservedNames,
+                                    self.tr("This name is already taken by another branch on this remote."))
 
     def enableInputs(self, on: bool):
         widgets = [self.ui.remoteBranchEdit,

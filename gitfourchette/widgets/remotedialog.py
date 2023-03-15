@@ -15,12 +15,15 @@ class RemoteDialog(QDialog):
             remoteName: str,
             remoteURL: str,
             customKeyFile: str,
-            parent):
+            existingRemotes: list[str],
+            parent: QWidget):
 
         super().__init__(parent)
 
         self.ui = Ui_RemoteDialog()
         self.ui.setupUi(self)
+
+        okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
         self.ui.nameEdit.setText(remoteName)
         self.ui.urlEdit.setText(remoteURL)
@@ -40,16 +43,27 @@ class RemoteDialog(QDialog):
         self.ui.keyFileGroupBox.toggled.emit(hasCustomKeyFile)  # fire signal once to enable/disable fields appropriately
         self.ui.keyFileGroupBox.toggled.connect(self.autoBrowseKeyFile)
 
+        nameTaken = translate("NameValidationError", "This name is already taken by another remote.")
+        cannotBeEmpty = translate("NameValidationError", "Cannot be empty.")
+
         validator = ValidatorMultiplexer(self)
-        validator.connectInput(self.ui.keyFilePathEdit, self.validateKeyFileInput)
+        validator.setGatedWidgets(okButton)
+        validator.connectInput(self.ui.nameEdit, lambda s: util.validateRefName(s, existingRemotes, nameTaken))
+        validator.connectInput(self.ui.urlEdit, lambda s: cannotBeEmpty if not s.strip() else "")
+        validator.connectInput(self.ui.keyFilePathEdit, self.validateKeyFileInput, mustBeValid=False)
 
         if edit:
             title = self.tr("Edit remote “{0}”").format(escape(remoteName))
             self.setWindowTitle(self.tr("Edit remote"))
+            okButton.setText(self.tr("Save changes"))
         else:
             title = self.tr("Add remote")
             self.setWindowTitle(self.tr("Add remote"))
+            okButton.setText(self.tr("Add remote"))
+
         convertToBrandedDialog(self, title)
+
+        validator.run()
 
     @property
     def privateKeyFilePath(self):
