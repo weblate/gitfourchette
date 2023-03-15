@@ -1,10 +1,22 @@
+import enum
+
+
 class Logger:
+    class Verbosity(enum.IntEnum):
+        QUIET = 0
+        NORMAL = 1
+        BENCHMARK = 2
+        VERBOSE = 3
+
     def __init__(self):
-        self.verboseTags = {"nav", "status", "benchmark", "workqueue"}
-        self.verbosity = 1
+        self.verbosity = Logger.Verbosity.NORMAL
+
+        self.excludeTags = {Logger.Verbosity.BENCHMARK: {"nav", "status", "repotaskrunner"},
+                            Logger.Verbosity.NORMAL: {"nav", "status", "repotaskrunner", "benchmark"},
+                            Logger.Verbosity.VERBOSE: {}}
 
     def info(self, tag, *args):
-        if self.verbosity == 0 or (self.verbosity == 1 and tag in self.verboseTags):
+        if self.verbosity == Logger.Verbosity.QUIET or tag.lower() in self.excludeTags[self.verbosity]:
             return
         print(F"[{tag}]", *args)
 

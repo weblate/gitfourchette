@@ -144,12 +144,6 @@ class GraphRowHeight(enum.IntEnum):
     SPACIOUS = 175
 
 
-class Verbosity(enum.IntEnum):
-    QUIET = 0
-    VERBOSE = 1
-    VERY_VERBOSE = 2
-
-
 @dataclasses.dataclass
 class Prefs(BasePrefs):
     filename = "prefs.json"
@@ -184,7 +178,7 @@ class Prefs(BasePrefs):
     debug_showPID               : bool          = True
     debug_fixU2029InClipboard   : bool          = False
     debug_hideStashJunkParents  : bool          = True
-    debug_verbosity             : Verbosity     = Verbosity.VERBOSE
+    debug_verbosity             : log.Logger.Verbosity = log.Logger.Verbosity.QUIET
 
 
 @dataclasses.dataclass
