@@ -55,21 +55,23 @@ class NewCommit(RepoTask):
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self._flowDialog(cd, abortTaskIfRejected=False)
-        cd.deleteLater()
 
-        self.message = cd.getFullMessage()
-        self.author = cd.getOverriddenAuthorSignature()
-        self.committer = cd.getOverriddenCommitterSignature()
+        message = cd.getFullMessage()
 
         # Save commit message as draft now, so we don't lose it if the commit operation fails or is rejected.
-        if self.message != initialMessage:
-            self.setDraftMessage(self.message)
+        if message != initialMessage:
+            self.setDraftMessage(message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
+            cd.deleteLater()
             yield from self._flowAbort()
 
+        author = cd.getOverriddenAuthorSignature()
+        committer = cd.getOverriddenCommitterSignature()
+        cd.deleteLater()
+
         yield from self._flowBeginWorkerThread()
-        porcelain.createCommit(self.repo, self.message, self.author, self.committer)
+        porcelain.createCommit(self.repo, message, author, committer)
 
         yield from self._flowExitWorkerThread()
         self.setDraftMessage(None)  # Clear draft message
@@ -112,14 +114,17 @@ class AmendCommit(RepoTask):
         cd.deleteLater()
 
         message = cd.getFullMessage()
-        author = cd.getOverriddenAuthorSignature()
-        committer = cd.getOverriddenCommitterSignature()
 
         # Save amend message as draft now, so we don't lose it if the commit operation fails or is rejected.
         self.setDraftMessage(message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
+            cd.deleteLater()
             yield from self._flowAbort()
+
+        author = cd.getOverriddenAuthorSignature()
+        committer = cd.getOverriddenCommitterSignature()
+        cd.deleteLater()
 
         yield from self._flowBeginWorkerThread()
         porcelain.amendCommit(self.repo, message, author, committer)
