@@ -1,6 +1,6 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import escamp, addComboBoxItem, tweakWidgetFont
+from gitfourchette.util import elide, escamp, addComboBoxItem, tweakWidgetFont
 from gitfourchette.widgets.brandeddialog import makeBrandedDialog
 from html import escape
 import pygit2
@@ -66,7 +66,7 @@ class TrackedBranchDialog(QDialog):
         layout.addWidget(hintLabel)
         layout.addWidget(buttonBox)
 
-        makeBrandedDialog(self, layout, self.tr("Set branch tracked by “{0}”").format(escape(localBranch.shorthand)))
+        makeBrandedDialog(self, layout, self.tr("Set branch tracked by “{0}”").format(escape(elide(localBranch.shorthand))))
 
         self.setModal(True)
         self.resize(512, 128)

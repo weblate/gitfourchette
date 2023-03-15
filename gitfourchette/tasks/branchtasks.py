@@ -46,7 +46,7 @@ class RenameBranch(RepoTask):
 
         dlg = showTextInputDialog(
             self.parent(),
-            self.tr("Rename local branch “{0}”").format(escape(oldBranchName)),
+            self.tr("Rename local branch “{0}”").format(escape(util.elide(oldBranchName))),
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),

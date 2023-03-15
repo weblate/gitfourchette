@@ -53,7 +53,7 @@ class RemoteDialog(QDialog):
         validator.connectInput(self.ui.keyFilePathEdit, self.validateKeyFileInput, mustBeValid=False)
 
         if edit:
-            title = self.tr("Edit remote “{0}”").format(escape(remoteName))
+            title = self.tr("Edit remote “{0}”").format(escape(util.elide(remoteName)))
             self.setWindowTitle(self.tr("Edit remote"))
             okButton.setText(self.tr("Save changes"))
         else:

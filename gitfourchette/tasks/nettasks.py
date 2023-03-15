@@ -90,7 +90,7 @@ class RenameRemoteBranch(_BaseNetTask):
             self.tr("Enter new name:"),
             newBranchName,
             okButtonText=self.tr("Rename on remote"),
-            validate=lambda name: validateRefName(name, reservedNames, nameTaken),
+            validate=lambda name: util.validateRefName(name, reservedNames, nameTaken),
             deleteOnClose=False)
 
         yield from self._flowDialog(dlg)

@@ -4,7 +4,7 @@ from gitfourchette.benchmark import Benchmark
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.util import escamp, stockIcon
+from gitfourchette.util import elide, escamp, stockIcon
 from html import escape
 from typing import Any, Iterable
 import contextlib
@@ -623,6 +623,8 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.LocalBranch:
+            fontMetrics = menu.fontMetrics()
+
             model: SidebarModel = self.model()
             repo = model.repo
             branch = repo.branches.local[data]
@@ -638,19 +640,23 @@ class Sidebar(QTreeView):
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
+            thisBranchDisplay = elide(data)
+            activeBranchDisplay = elide(activeBranchName)
+            upstreamBranchDisplay = elide(upstreamBranchName)
+
             actions += [
-                ActionDef(self.tr("&Switch to “{0}”").format(escamp(data)),
+                ActionDef(self.tr("&Switch to “{0}”").format(thisBranchDisplay),
                           lambda: self.switchToBranch.emit(data, False),  # False: don't ask for confirmation
                           "document-swap",
                           enabled=not isCurrentBranch),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Merge “{0}” into “{1}”...").format(escamp(data), escamp(activeBranchName)),
+                ActionDef(self.tr("&Merge “{0}” into “{1}”...").format(thisBranchDisplay, activeBranchDisplay),
                           lambda: self.mergeBranchIntoActive.emit(data),
                           enabled=not isCurrentBranch and activeBranchName),
 
-                ActionDef(self.tr("&Rebase “{0}” onto “{1}”...").format(escamp(activeBranchName), escamp(data)),
+                ActionDef(self.tr("&Rebase “{0}” onto “{1}”...").format(activeBranchDisplay, thisBranchDisplay),
                           lambda: self.rebaseActiveOntoBranch.emit(data),
                           enabled=not isCurrentBranch and activeBranchName),
 
@@ -666,7 +672,7 @@ class Sidebar(QTreeView):
                           QStyle.StandardPixmap.SP_BrowserReload,
                           enabled=hasUpstream),
 
-                ActionDef(self.tr("Fast-Forward to “{0}”...").format(escamp(upstreamBranchName))
+                ActionDef(self.tr("Fast-Forward to “{0}”...").format(upstreamBranchDisplay)
                           if upstreamBranchName else self.tr("Fast-Forward..."),
                           lambda: self.fastForwardBranch.emit(data),
                           "vcs-pull",
@@ -712,7 +718,7 @@ class Sidebar(QTreeView):
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
             actions += [
-                ActionDef(self.tr("New local branch tracking “{0}”...").format(escamp(data)),
+                ActionDef(self.tr("New local branch tracking “{0}”...").format(escamp(elide(data))),
                           lambda: self.newTrackingBranch.emit(data),
                           "vcs-branch"),
 

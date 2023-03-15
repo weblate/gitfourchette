@@ -18,6 +18,8 @@ MessageBoxIconName = typing.Literal['warning', 'information', 'question', 'criti
 
 _supportedImageFormats = None
 
+_generalFontMetrics = QFontMetrics(QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont))
+
 
 def sign(x):
     if x < 0:
@@ -408,6 +410,11 @@ def validateRefName(name: str, reservedNames: list[str], nameTakenMessage: str =
         return nameTakenMessage
 
     return ""  # validation passed, no error
+
+
+def elide(text: str, ems: int = 20):
+    maxWidth = _generalFontMetrics.horizontalAdvance(ems * 'M')
+    return _generalFontMetrics.elidedText(text, Qt.TextElideMode.ElideMiddle, maxWidth)
 
 
 class QSignalBlockerContext:
