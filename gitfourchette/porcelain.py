@@ -96,14 +96,15 @@ class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallback
         log.info("porcelain", f"stash apply progress: {pr}")
 
 
-def refreshIndex(repo: Repository):
+def refreshIndex(repo: Repository, force: bool = False):
     """
     Reload the index. Call this before manipulating the staging area
     to ensure any external modifications are taken into account.
 
-    This is a fairly cheap operation if the index hasn't changed on disk.
+    This is a fairly cheap operation if the index hasn't changed on disk,
+    unless you pass force=True.
     """
-    repo.index.read()
+    repo.index.read(force)
 
 
 def getWorkdirChanges(repo: Repository, showBinary: bool = False) -> Diff:
@@ -753,7 +754,7 @@ def discardFiles(repo: Repository, paths: list[str]):
                 | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 
     # refresh index before getting indexTree in case an external program modified the staging area
-    repo.index.read()
+    repo.index.read(force=False)
 
     # get tree with staged changes
     indexTreeId = repo.index.write_tree()
