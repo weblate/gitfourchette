@@ -18,8 +18,11 @@ DEAD_VALUE = "!DEAD"
 class ArcJunction:
     """ Represents the merging of an Arc into another Arc. """
 
-    joinedAt: int  # Row number in which this junction occurs
-    joinedBy: Oid  # Hash of the joining arc's opening commit
+    joinedAt: int
+    "Row number in which this junction occurs"
+
+    joinedBy: Oid
+    "Hash of the joining arc's opening commit"
 
     def __lt__(self, other):
         """
@@ -43,20 +46,34 @@ class Arc:
     Other arcs may merge into an open arc via an ArcJunction.
     """
 
-    openedAt: int  # Row number in which this arc was opened
-    closedAt: int  # Row number in which this arc was closed
-    lane: int  # Lane assigned to this arc
-    openedBy: Oid  # Hash of the opening commit (in git parlance, the child commit)
-    closedBy: Oid  # Hash of the closing commit (in git parlance, the parent commit)
-    junctions: list[ArcJunction]  # Other arcs merging into this arc
-    nextArc: Arc | None = None  # Next node in the arc linked list
+    openedAt: int
+    "Row number in which this arc was opened"
+
+    closedAt: int
+    "Row number in which this arc was closed"
+
+    lane: int
+    "Lane assigned to this arc"
+
+    openedBy: Oid
+    "Hash of the opening commit (in git parlance, the child commit)"
+
+    closedBy: Oid
+    "Hash of the closing commit (in git parlance, the parent commit)"
+
+    junctions: list[ArcJunction]
+    "Other arcs merging into this arc"
+
+    chainID: int
+    "Row number of the tip of the arc chain (topmost commit in branch)"
+
+    nextArc: Arc | None = None
+    "Next node in the arc linked list"
 
     def __repr__(self):
-        s = F"{str(self.openedBy)[:5]}->{str(self.closedBy)[:5]}"
+        s = F"{self.chainID}/{self.openedAt}:{str(self.openedBy)[:5]}\u2192{self.closedAt}:{str(self.closedBy)[:5]}"
         if self.closedAt < 0:
             s += "?"
-        else:
-            s += "."
         return s
 
     def length(self):
@@ -193,46 +210,76 @@ class Frame:
     def flattenLanes(self, hiddenCommits: set[Oid]) -> tuple[list[tuple[int, int]], int]:
         """Flatten the lanes so there are no unused columns in-between the lanes."""
 
-        columnAbove, columnBelow = -1, -1
-        laneRemap = []
+        row = self.row
 
-        solvedArc: Arc
-        openArc: Arc
-        for solvedArc, openArc in itertools.zip_longest(self.solvedArcs, self.openArcs):
-            if openArc and not openArc.connectsHiddenCommit(hiddenCommits):
-                columnBelow += 1
-                if openArc.openedAt < self.row:
-                    columnAbove += 1
-            if solvedArc and not solvedArc.connectsHiddenCommit(hiddenCommits):
-                columnAbove += 1
-            laneRemap.append( (columnAbove, columnBelow) )
+        # Filter arcs
 
-        numFlattenedLanes = max(columnAbove, columnBelow)
+        def keepArc(a: Arc):
+            return a and not a.connectsHiddenCommit(hiddenCommits)
 
-        return laneRemap, numFlattenedLanes
+        arcsAbove = itertools.chain(filter(keepArc, self.solvedArcs),
+                                    (a for a in self.openArcs if keepArc(a) and a.openedAt < row))
+        arcsBelow = filter(keepArc, self.openArcs)
+
+        # Sort arcs by Chain Birth Row
+
+        def sortArc(a: Arc):
+            return a.chainID * 1000 + a.lane
+
+        arcsAbove = sorted(arcsAbove, key=sortArc, reverse=True)
+        arcsBelow = sorted(arcsBelow, key=sortArc, reverse=True)
+
+        # Assign columns to all lanes used by arcs above and below
+
+        N = max(len(self.solvedArcs), len(self.openArcs))
+        mapAbove = [-1] * N
+        mapBelow = [-1] * N
+
+        column = -1
+        while arcsAbove or arcsBelow:
+            column += 1
+
+            if arcsAbove:
+                a = arcsAbove.pop()
+                mapAbove[a.lane] = column
+
+            if arcsBelow:
+                a = arcsBelow.pop()
+                mapBelow[a.lane] = column
+
+        return list(zip(mapAbove, mapBelow)), column
 
 
 class GeneratorState(Frame):
     freeLanes: list[int]
     parentLookup: defaultdict[Oid, list[Arc]]  # all lanes
+    peakArcCount: int
 
     def __init__(self, startArcSentinel: Arc):
         super().__init__(-1, "", [], [], lastArc=startArcSentinel)
         self.freeLanes = []
         self.parentLookup = defaultdict(list)
+        self.peakArcCount = 0
 
-    def createArcsForNewCommit(self, me: Oid, myParents: list[Oid], allocLanesInGaps: bool):
+    def createArcsForNewCommit(self, me: Oid, myParents: list[Oid]):
         self.row += 1
         self.commit = me
 
         hasParents = len(myParents) > 0
 
-        # Close arcs that my child commits opened higher up in the graph, waiting for me to appear in the commit sequence
+        # Resolve arcs that my child commits have opened higher up in the graph,
+        # waiting for me to appear in the commit sequence so I can close them.
         myOpenArcs = self.parentLookup.get(me)
         myHomeLane = -1
         handOffHomeLane = False
-        if myOpenArcs is not None:
-            myHomeLane = sorted(myOpenArcs, key=lambda arc: arc.lane)[0].lane
+        myHomeChain = -1
+        if not myOpenArcs:
+            # Nobody was looking for me, so I'm the tip of a new branch
+            myHomeChain = self.row
+        else:
+            myMainOpenArc = sorted(myOpenArcs, key=lambda arc: arc.lane)[0]
+            myHomeLane = myMainOpenArc.lane
+            myHomeChain = myMainOpenArc.chainID
             for arc in myOpenArcs:
                 assert arc.closedBy == me
                 assert arc.closedAt == -1
@@ -241,10 +288,11 @@ class GeneratorState(Frame):
                 self.openArcs[arc.lane] = None  # Free up the lane below
                 if hasParents and arc.lane == myHomeLane:
                     handOffHomeLane = True
-                elif allocLanesInGaps:
+                else:
                     bisect.insort(self.freeLanes, arc.lane)
             del self.parentLookup[me]
 
+            """ 
             # Compact null arcs at right of graph
             if not allocLanesInGaps:
                 for _ in range(len(self.openArcs)-1, myHomeLane, -1):
@@ -252,11 +300,13 @@ class GeneratorState(Frame):
                         break
                     self.openArcs.pop()
                     self.solvedArcs.pop()
+            """
 
-        firstParentFound = False
+        sawFirstParent = False
         for parent in myParents:
-            # See if there's already an arc for my parent
-            if firstParentFound:
+            # See if there's already an arc that is looking for any of my parents BEYOND PARENT ZERO.
+            # If so, make a junction on that arc.
+            if sawFirstParent:
                 arcsOfParent = self.parentLookup.get(parent)
                 if arcsOfParent:
                     arcsOfParent = sorted(arcsOfParent, key=lambda arc: arc.lane)
@@ -266,8 +316,9 @@ class GeneratorState(Frame):
                     arc.junctions.append(ArcJunction(joinedAt=self.row, joinedBy=me))
                     continue
 
-            # Get a free lane
-            if not firstParentFound and myHomeLane >= 0:
+            # We didn't make a junction, so open up a new arc on a free lane.
+            # Get a free lane.
+            if not sawFirstParent and myHomeLane >= 0:
                 assert handOffHomeLane
                 freeLane = myHomeLane
                 handOffHomeLane = False
@@ -280,19 +331,20 @@ class GeneratorState(Frame):
                 # Pick leftmost free lane
                 freeLane = self.freeLanes.pop(0)
 
-            newArc = Arc(self.row, -1, freeLane, me, parent, [], None)
+            newArc = Arc(self.row, -1, freeLane, me, parent, [],
+                         myHomeChain if not sawFirstParent else self.row, None)
             self.openArcs[freeLane] = newArc
             self.parentLookup[parent].append(newArc)
             self.lastArc.nextArc = newArc
             self.lastArc = newArc
 
-            firstParentFound = True
+            sawFirstParent = True
 
         # Parentless commit: we'll insert a bogus arc so playback doesn't need the commit sequence.
         # This is just to keep the big linked list of arcs flowing.
         # Do NOT put it in solved or open arcs! This would interfere with detection of arcs that the commit
         # actually closes or opens.
-        if not firstParentFound:
+        if not sawFirstParent:
             if myHomeLane < 0:
                 # Edge case: the commit is BOTH childless AND parentless.
                 # Put the commit in a free lane, but do NOT reserve the lane.
@@ -300,12 +352,15 @@ class GeneratorState(Frame):
                     myHomeLane = len(self.openArcs)
                 else:
                     myHomeLane = self.freeLanes[0]  # PEEK only! do not pop!
-            newArc = Arc(self.row, self.row, myHomeLane, me, me, [], None)
+            newArc = Arc(self.row, self.row, myHomeLane, me, me, [], myHomeChain, None)
             self.lastArc.nextArc = newArc
             self.lastArc = newArc
 
         assert not handOffHomeLane
+        assert myHomeChain >= 0
         assert len(self.openArcs) == len(self.solvedArcs)
+
+        self.peakArcCount = max(self.peakArcCount, len(self.openArcs))
 
 
 class PlaybackState(Frame):
@@ -408,11 +463,11 @@ class Graph:
     def isEmpty(self):
         return self.startArc.nextArc is None
 
-    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]], allocLanesInGaps: bool):
+    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]]):
         cacher = GeneratorState(self.startArc)
 
         for me in sequence:
-            cacher.createArcsForNewCommit(me, parentsOf[me], allocLanesInGaps)
+            cacher.createArcsForNewCommit(me, parentsOf[me])
             if cacher.row % KF_INTERVAL == 0:
                 self.saveKeyframe(cacher)
 
@@ -655,11 +710,11 @@ class GraphSplicer:
         """
         self.finish()
 
-    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], newCommitWasKnown: bool, allocLanesInGaps: bool):
+    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], newCommitWasKnown: bool):
         self.newCommitsSeen.add(newCommit)
 
         # Generate arcs for new frame.
-        self.newGenerator.createArcsForNewCommit(newCommit, parentsOfNewCommit, allocLanesInGaps)
+        self.newGenerator.createArcsForNewCommit(newCommit, parentsOfNewCommit)
 
         # Save keyframe in new context.
         if self.newGenerator.row % KF_INTERVAL == 0:
