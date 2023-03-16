@@ -90,7 +90,7 @@ def paintGraphFrame(
     middle = (top + bottom) // 2
 
     # Get graph frame for this row
-    frame = state.graph.startPlayback(myRow).copyCleanFrame()
+    frame = state.graph.getFrame(myRow)
 
     # Get the commit's lane ID
     commitLane = frame.getHomeLaneForCommit()

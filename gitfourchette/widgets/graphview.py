@@ -237,10 +237,12 @@ class GraphView(QListView):
         if debugInfoRequested:
             state = self.repoWidget.state
             seqIndex = state.getCommitSequentialIndex(oid)
+            frame = state.graph.getFrame(seqIndex)
             markup += f"""<hr><b>Top secret debug info</b><br>
                 GraphView row: {self.currentIndex().row()}<br>
                 Commit sequence index: {seqIndex}<br>
-                {state.graph.startPlayback(seqIndex).copyCleanFrame()}
+                arcs: {len(frame.openArcs)} open, {len(frame.solvedArcs)} solved<br>
+                {frame}
             """
 
         title = self.tr("Commit info: {0}").format(shortHash(commit.oid))

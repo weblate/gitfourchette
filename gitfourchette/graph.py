@@ -485,6 +485,19 @@ class Graph:
 
         return player
 
+    def getFrame(self, row: int = 0) -> Frame:
+        kfID = self.getBestKeyframeID(row)
+
+        if kfID >= 0 and self.keyframes[kfID].row == row:
+            # Cache hit
+            frame = self.keyframes[kfID]
+        else:
+            # Cache miss
+            frame = self.startPlayback(row).copyCleanFrame()
+
+        assert frame.row == row
+        return frame
+
     def startSplicing(self, oldHeads: set[Oid], newHeads: set[Oid]) -> GraphSplicer:
         return GraphSplicer(self, oldHeads, newHeads)
 
