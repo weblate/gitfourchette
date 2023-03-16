@@ -53,8 +53,7 @@ class Ui_SearchBar(object):
 
     def retranslateUi(self, SearchBar):
         SearchBar.setWindowTitle(QCoreApplication.translate("SearchBar", u"Form", None))
-        self.lineEdit.setText(QCoreApplication.translate("SearchBar", u"Search...", None))
-        self.lineEdit.setPlaceholderText(QCoreApplication.translate("SearchBar", u"Find Commit", None))
+        self.lineEdit.setPlaceholderText(QCoreApplication.translate("SearchBar", u"Search...", None))
 #if QT_CONFIG(tooltip)
         self.forwardButton.setToolTip(QCoreApplication.translate("SearchBar", u"Next Occurrence", None))
 #endif // QT_CONFIG(tooltip)

@@ -37,11 +37,8 @@
    </property>
    <item>
     <widget class="QLineEdit" name="lineEdit">
-     <property name="text">
-      <string>Search...</string>
-     </property>
      <property name="placeholderText">
-      <string>Find Commit</string>
+      <string>Search...</string>
      </property>
      <property name="clearButtonEnabled">
       <bool>true</bool>
