@@ -2,8 +2,8 @@ from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.benchmark import Benchmark
+from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
-from gitfourchette.stagingstate import StagingState
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffModel, ShouldDisplayPatchAsImageDiff, \
     DiffImagePair
@@ -61,7 +61,7 @@ class LoadPatch(RepoTask):
     def canKill(self, task: RepoTask):
         return type(task) in [LoadPatch]
 
-    def _processPatch(self, patch: pygit2.Patch, stagingState: StagingState
+    def _processPatch(self, patch: pygit2.Patch, locator: NavLocator
                       ) -> DiffModel | DiffModelError | DiffConflict | DiffImagePair:
         if not patch:
             return DiffModelError(
@@ -85,12 +85,12 @@ class LoadPatch(RepoTask):
         except DiffModelError as dme:
             return dme
         except ShouldDisplayPatchAsImageDiff:
-            return DiffImagePair(self.repo, patch.delta, stagingState)
+            return DiffImagePair(self.repo, patch.delta, locator)
         except BaseException as exc:
             summary, details = util.excStrings(exc)
             return DiffModelError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
-    def flow(self, patch: pygit2.Patch, stagingState: StagingState):
+    def flow(self, patch: pygit2.Patch, locator: NavLocator):
         yield from self._flowBeginWorkerThread()
         # import time; time.sleep(1) #----------to debug out-of-order events
-        self.result = self._processPatch(patch, stagingState)
+        self.result = self._processPatch(patch, locator)

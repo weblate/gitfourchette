@@ -4,9 +4,8 @@ from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.navhistory import NavPos
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
-from gitfourchette.stagingstate import StagingState
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.trash import Trash
 from gitfourchette.util import (PersistentFileDialog, excMessageBox, QSignalBlockerContext,
@@ -136,7 +135,7 @@ class DiffView(QPlainTextEdit):
     lineData: list[LineData]
     lineCursorStartCache: list[int]
     lineHunkIDCache: list[int]
-    currentStagingState: StagingState
+    currentLocator: NavLocator
     currentPatch: Patch
     repo: Repository
 
@@ -150,7 +149,7 @@ class DiffView(QPlainTextEdit):
         self.lineData = []
         self.lineCursorStartCache = []
         self.lineHunkIDCache = []
-        self.currentStagingState = StagingState.UNKNOWN
+        self.currentLocator = NavLocator()
         self.currentPatch = None
         self.repo = None
 
@@ -180,14 +179,14 @@ class DiffView(QPlainTextEdit):
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
 
-    def replaceDocument(self, repo: Repository, patch: Patch, stagingState: StagingState, dm: DiffModel):
+    def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, dm: DiffModel):
         oldDocument = self.document()
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
 
-        self.currentStagingState = stagingState
         self.repo = repo
         self.currentPatch = patch
+        self.currentLocator = locator
 
         self.setFont(dm.document.defaultFont())
         self.setDocument(dm.document)
@@ -249,10 +248,9 @@ class DiffView(QPlainTextEdit):
 
         actions = []
 
-        if self.currentStagingState == StagingState.UNKNOWN:
-            actions = []
+        navContext = self.currentLocator.context
 
-        elif self.currentStagingState == StagingState.COMMITTED:
+        if navContext == NavContext.COMMITTED:
             if hasSelection:
                 actions = [
                     ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
@@ -264,7 +262,7 @@ class DiffView(QPlainTextEdit):
                     ActionDef(self.tr("Revert Hunk..."), lambda: self.revertHunk(clickedHunkID)),
                 ]
 
-        elif self.currentStagingState == StagingState.UNTRACKED:
+        elif navContext == NavContext.UNTRACKED:
             if hasSelection:
                 actions = [
                     ActionDef(self.tr("Export Lines as Patch..."), self.exportSelection),
@@ -274,7 +272,7 @@ class DiffView(QPlainTextEdit):
                     ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
-        elif self.currentStagingState == StagingState.UNSTAGED:
+        elif navContext == NavContext.UNSTAGED:
             if hasSelection:
                 actions = [
                     ActionDef(
@@ -306,7 +304,7 @@ class DiffView(QPlainTextEdit):
                     ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
 
-        elif self.currentStagingState == StagingState.STAGED:
+        elif navContext == NavContext.STAGED:
             if hasSelection:
                 actions = [
                     ActionDef(
@@ -331,10 +329,6 @@ class DiffView(QPlainTextEdit):
                     ),
                 ]
 
-        else:
-            showWarning(self, "DiffView", F"Unknown staging state: {self.currentStagingState}")
-            return
-
         actions += [
             ActionDef.SEPARATOR,
             ActionDef(self.tr("&Word wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
@@ -354,15 +348,16 @@ class DiffView(QPlainTextEdit):
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
+        navContext = self.currentLocator.context
         if k in GlobalShortcuts.stageHotkeys:
-            if self.currentStagingState == StagingState.UNSTAGED:
+            if navContext == NavContext.UNSTAGED:
                 self.stageSelection()
             else:
                 QApplication.beep()
         elif k in GlobalShortcuts.discardHotkeys:
-            if self.currentStagingState == StagingState.STAGED:
+            if navContext == NavContext.STAGED:
                 self.unstageSelection()
-            elif self.currentStagingState == StagingState.UNSTAGED:
+            elif navContext == NavContext.UNSTAGED:
                 self.discardSelection()
             else:
                 QApplication.beep()

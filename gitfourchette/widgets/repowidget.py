@@ -5,10 +5,9 @@ from gitfourchette import tasks
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.globalstatus import globalstatus
-from gitfourchette.navhistory import NavHistory, NavPos
+from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.stagingstate import StagingState
 from gitfourchette.tasks import TaskAffectsWhat
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
@@ -38,7 +37,7 @@ class RepoWidget(QWidget):
     state: RepoState
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
 
-    navPos: NavPos
+    navLocator: NavLocator
     navHistory: NavHistory
 
     scheduledRefresh: QTimer
@@ -79,7 +78,7 @@ class RepoWidget(QWidget):
         self.scheduledRefresh.setInterval(1000)
         self.scheduledRefresh.timeout.connect(self.quickRefresh)
 
-        self.navPos = NavPos()
+        self.navLocator = NavLocator()
         self.navHistory = NavHistory()
 
         self.sidebar = Sidebar(self)
@@ -105,7 +104,7 @@ class RepoWidget(QWidget):
             v.nothingClicked.connect(self.diffView.clear)
             v.entryClicked.connect(self.loadPatchAsync)
 
-        self.committedFiles.openDiffInNewWindow.connect(lambda patch: self.loadPatchInNewWindow(patch, StagingState.COMMITTED, self.committedFiles.commitOid))
+        self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
         self.conflictView.openFile.connect(lambda path: self.openConflictFile(path))
 
@@ -329,37 +328,38 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def saveFilePositions(self):
+        dc = 0
+        ds = 0
         if self.diffStack.currentWidget() == self.diffView:
-            self.navPos = NavPos(
-                context=self.navPos.context,
-                file=self.navPos.file,
-                diffCursor=self.diffView.textCursor().position(),
-                diffScroll=self.diffView.verticalScrollBar().value())
-        else:
-            self.navPos = NavPos(
-                context=self.navPos.context,
-                file=self.navPos.file)
-        self.navHistory.push(self.navPos)
+            dc = self.diffView.textCursor().position()
+            ds = self.diffView.verticalScrollBar().value()
+
+        self.navLocator = NavLocator(
+            context=self.navLocator.context,
+            commit=self.navLocator.commit,
+            path=self.navLocator.path,
+            diffCursor=dc,
+            diffScroll=ds)
+
+        self.navHistory.push(self.navLocator)
 
     def restoreSelectedFile(self):
-        pos = self.navPos
+        pos = self.navLocator
 
-        if not pos or not pos.context:
+        if pos.context.isDirty():
+            fl = self.dirtyFiles
+        elif pos.context == NavContext.STAGED:
+            fl = self.stagedFiles
+        elif pos.context == NavContext.COMMITTED:
+            fl = self.committedFiles
+        else:
             return False
 
-        if pos.context in ["UNSTAGED", "UNTRACKED"]:
-            fl = self.dirtyFiles
-        elif pos.context == "STAGED":
-            fl = self.stagedFiles
-        else:
-            assert len(pos.context) == 40, "expecting an OID here"
-            fl = self.committedFiles
-
-        return fl.selectFile(pos.file)
+        return fl.selectFile(pos.path)
 
     def restoreDiffPosition(self):
-        cursorPosition = self.navPos.diffCursor
-        scrollPosition = self.navPos.diffScroll
+        cursorPosition = self.navLocator.diffCursor
+        scrollPosition = self.navLocator.diffScroll
 
         newTextCursor = QTextCursor(self.diffView.textCursor())
         newTextCursor.setPosition(cursorPosition)
@@ -367,23 +367,23 @@ class RepoWidget(QWidget):
 
         self.diffView.verticalScrollBar().setValue(scrollPosition)
 
-    def navigateTo(self, pos: NavPos):
-        if not pos or not pos.context:
+    def navigateTo(self, locator: NavLocator):
+        if not locator:
             QApplication.beep()
             return False
 
-        self.navPos = pos
-        self.navHistory.bump(pos)
+        self.navLocator = locator
+        self.navHistory.bump(locator)
         self.navHistory.lock()
 
-        if self.navPos.context in ["UNSTAGED", "STAGED", "UNTRACKED"]:
+        if self.navLocator.context.isWorkdir():
             if self.graphView.currentCommitOid is not None:
                 self.graphView.selectUncommittedChanges()
                 success = True
             else:
                 success = self.restoreSelectedFile()
         else:
-            oid = pygit2.Oid(hex=self.navPos.context)
+            oid = self.navLocator.commit
             if self.graphView.currentCommitOid != oid:
                 success = self.graphView.selectCommit(oid, silent=True)
             else:
@@ -397,7 +397,7 @@ class RepoWidget(QWidget):
         if self.navHistory.isAtTopOfStack:
             self.saveFilePositions()
 
-        startPos = self.navPos
+        startPos = self.navLocator
 
         while not self.navHistory.isAtBottomOfStack:
             pos = self.navHistory.navigateBack()
@@ -407,7 +407,7 @@ class RepoWidget(QWidget):
                 break
 
     def navigateForward(self):
-        startPos = self.navPos
+        startPos = self.navLocator
 
         while not self.navHistory.isAtTopOfStack:
             pos = self.navHistory.navigateForward()
@@ -519,14 +519,14 @@ class RepoWidget(QWidget):
 
     def setNoCommitSelected(self):
         self.saveFilePositions()
-        self.navPos = NavPos()
+        self.navLocator = NavLocator()
 
         self.filesStack.setCurrentWidget(self.stageSplitter)
         self.committedFiles.clear()
 
         self.clearDiffView()
 
-    def refreshWorkdirViewAsync(self, forceSelectFile: NavPos = None, allowUpdateIndex: bool = False):
+    def refreshWorkdirViewAsync(self, forceSelectFile: NavLocator = None, allowUpdateIndex: bool = False):
         with QSignalBlockerContext(self.sidebar):
             self.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
@@ -535,7 +535,7 @@ class RepoWidget(QWidget):
         task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, forceSelectFile))
         return self.repoTaskRunner.put(task, allowUpdateIndex)
 
-    def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, forceSelectFile: NavPos):
+    def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, forceSelectFile: NavLocator):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
         stagedESR = self.stagedFiles.earliestSelectedRow()
@@ -558,11 +558,11 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentWidget(self.stageSplitter)
 
         if forceSelectFile:  # for Revert Hunk from DiffView
-            self.navPos = forceSelectFile
+            self.navLocator = forceSelectFile
         else:
             # Try to recall where we were last time we looked at the workdir.
             # If that fails ("or" clause), make a dummy NavPos so the history knows we're looking at the workdir now.
-            self.navPos = self.navHistory.recall("UNSTAGED", "UNTRACKED", "STAGED") or NavPos("UNSTAGED")
+            self.navLocator = self.navHistory.recallWorkdir() or NavLocator(NavContext.UNSTAGED)
 
         # After patchApplied.emit has caused a refresh of the dirty/staged file views,
         # restore selected row in appropriate file list view so the user can keep hitting
@@ -601,9 +601,9 @@ class RepoWidget(QWidget):
             self.committedFiles.setCommit(oid)
             self.committedFiles.setContents(parentDiffs)
 
-        self.navPos = self.navHistory.recall(oid.hex)
-        if not self.navPos:
-            self.navPos = NavPos(oid.hex, file=self.committedFiles.getFirstPath())
+        self.navLocator = self.navHistory.recallCommit(oid)
+        if not self.navLocator:
+            self.navLocator = NavLocator(NavContext.COMMITTED, oid, path=self.committedFiles.getFirstPath())
 
         # Show message if commit is empty
         if self.committedFiles.flModel.rowCount() == 0:
@@ -614,56 +614,34 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentWidget(self.committedFilesContainer)
 
         # Set header text
-        self.committedHeader.setText(self.tr("Changes in {0}:").format(shortHash(oid))) #f"{shortHash(oid)} “{summary2}”")
+        self.committedHeader.setText(self.tr("Changes in {0}:").format(shortHash(oid)))
         self.committedHeader.setToolTip("<p>" + escape(summary.strip()).replace("\n", "<br>"))
 
         # Select the best file in this commit - which may trigger loadPatchAsync
         self.restoreSelectedFile()
 
-    def loadPatchAsync(self, patch: pygit2.Patch, stagingState: StagingState):
+    def loadPatchAsync(self, patch: pygit2.Patch, locator: NavLocator):
         task = tasks.LoadPatch(self)
         task.setRepo(self.repo)
-        task.success.connect(lambda: self._loadPatch(patch, stagingState, task.result))
-        self.repoTaskRunner.put(task, patch, stagingState)
+        task.success.connect(lambda: self._loadPatch(patch, locator, task.result))
+        self.repoTaskRunner.put(task, patch, locator)
 
-    def loadPatchInNewWindow(self, patch: pygit2.Patch, stagingState=StagingState.COMMITTED, commitOid: pygit2.Oid=None):
+    def loadPatchInNewWindow(self, patch: pygit2.Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
-            diffWindow.replaceDocument(self.repo, patch, stagingState, DiffModel.fromPatch(patch))
+            diffWindow.replaceDocument(self.repo, patch, locator, DiffModel.fromPatch(patch))
             diffWindow.resize(550, 700)
-            diffWindow.setWindowTitle(F"{os.path.basename(patch.delta.new_file.path)} @ {shortHash(commitOid)}")
+            diffWindow.setWindowTitle(locator.asTitle())
             diffWindow.setWindowFlag(Qt.WindowType.Window, True)
             diffWindow.setFrameStyle(QFrame.Shape.NoFrame)
             diffWindow.show()
 
-    def _loadPatch(self, patch, stagingState, result):
+    def _loadPatch(self, patch: pygit2.Patch, locator: NavLocator, result):
         """Load a file diff into the Diff View"""
 
         self.saveFilePositions()
-
-        header = "???"
-
-        if patch and patch.delta:  # patch (or delta) may be None with DiffModelError
-            header = patch.delta.new_file.path
-
-            if stagingState == StagingState.COMMITTED:
-                assert len(self.navPos.context) == 40
-                posContext = self.navPos.context
-            else:
-                posContext = stagingState.name
-            posFile = patch.delta.new_file.path
-            self.navPos = self.navHistory.recallFileInContext(posContext, posFile)
-
-            if not self.navPos:
-                self.navPos = NavPos(posContext, posFile)
-
-        if stagingState == StagingState.STAGED:
-            header += " " + self.tr("[Staged]")
-        elif stagingState == StagingState.UNSTAGED:
-            header += " " + self.tr("[Unstaged]")
-        else:
-            header += " @ " + shortHash(self.graphView.currentCommitOid)
-        self.diffHeader.setText(header)
+        self.navLocator = self.navHistory.recallFileInSameContext(locator) or locator
+        self.diffHeader.setText(locator.asTitle())
 
         if type(result) == DiffConflict:
             self.diffStack.setCurrentWidget(self.conflictView)
@@ -673,7 +651,7 @@ class RepoWidget(QWidget):
             self.richDiffView.displayDiffModelError(result)
         elif type(result) == DiffModel:
             self.diffStack.setCurrentWidget(self.diffView)
-            self.diffView.replaceDocument(self.repo, patch, stagingState, result)
+            self.diffView.replaceDocument(self.repo, patch, locator, result)
             self.restoreDiffPosition()  # restore position after we've replaced the document
         elif type(result) == DiffImagePair:
             self.diffStack.setCurrentWidget(self.richDiffView)
@@ -748,7 +726,7 @@ class RepoWidget(QWidget):
         with Benchmark("Load tainted commits only"):
             nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly(oldRefCache)
 
-        initialNavPos = self.navPos
+        initialLocator = self.navLocator
         initialGraphScroll = self.graphView.verticalScrollBar().value()
 
         with QSignalBlockerContext(self.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
@@ -770,16 +748,16 @@ class RepoWidget(QWidget):
 
         self.refreshWindowTitle()
 
-        assert self.navPos == initialNavPos, "navPos has changed"
+        assert self.navLocator == initialLocator, "locator has changed"
 
-        if initialNavPos and not initialNavPos.isWorkdir():
-            # The graph may have jumped around if we changed rows in the model,
-            # so try to restore the initial navpos to ensure the previously
-            # selected commit stays selected.
+        if initialLocator and initialLocator.context == NavContext.COMMITTED:
+            # After inserting/deleting rows in the commit log model,
+            # the selected row may jump around. Try to restore the initial
+            # locator to ensure the previously selected commit stays selected.
             self.graphView.verticalScrollBar().setValue(initialGraphScroll)
-            oldNavPosOid = pygit2.Oid(hex=initialNavPos.context)
-            if oldNavPosOid in self.state.commitPositions:
-                self.navigateTo(initialNavPos)
+            oldLocatorCommit = initialLocator.commit
+            if oldLocatorCommit in self.state.commitPositions:
+                self.navigateTo(initialLocator)
             else:
                 self.graphView.selectCommit(self.state.activeCommitOid)
         elif self.isWorkdirShown:

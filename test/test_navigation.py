@@ -1,3 +1,4 @@
+from gitfourchette.nav import NavContext
 from . import reposcenario
 from .fixtures import *
 from .util import *
@@ -183,3 +184,69 @@ def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow
 
     rw.navigateBack()
     assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
+
+
+def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1", "blah blah a1")
+    writeFile(F"{wd}/a/a1.txt", "blah blah a1.txt")
+    writeFile(F"{wd}/b/b1.txt", "blah blah b1")
+    writeFile(F"{wd}/c/c1.txt", "blah blah c1")
+    writeFile(F"{wd}/c/c2.txt", "blah blah c2")
+    rw = mainWindow.openRepo(wd)
+
+    # Stage c1 and c2
+    qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()
+    qlvClickNthRow(rw.dirtyFiles, 4); rw.dirtyFiles.stage()
+
+    # Select b1.txt in UNSTAGED context
+    qlvClickNthRow(rw.dirtyFiles, 2)
+    assert rw.navLocator.context == NavContext.UNSTAGED
+    assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
+
+    # Select c2.txt in STAGED context
+    qlvClickNthRow(rw.stagedFiles, 1)
+    assert rw.navLocator.context == NavContext.STAGED
+    assert qlvGetSelection(rw.stagedFiles) == ["c/c2.txt"]
+
+    # Select a2.txt in COMMITTED context (83834a7)
+    rw.graphView.selectCommit(pygit2.Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664"))
+    qlvClickNthRow(rw.committedFiles, 1)
+    assert qlvGetSelection(rw.committedFiles) == ["a/a2.txt"]
+    assert rw.navLocator.context == NavContext.COMMITTED
+
+    # Select b2.txt in COMMITTED context (6e14752)
+    rw.graphView.selectCommit(pygit2.Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322"))
+    qlvClickNthRow(rw.committedFiles, 1)
+    assert qlvGetSelection(rw.committedFiles) == ["b/b2.txt"]
+    assert rw.navLocator.context == NavContext.COMMITTED
+
+    # Rewind
+    rw.navigateBack()  # back to first file in 6e14752
+    rw.navigateBack()  # back to a2.txt in 83834a7
+    rw.navigateBack()  # back to first file in 83834a7
+    rw.navigateBack()  # back to STAGED
+    rw.navigateBack()  # back to UNSTAGED
+
+    # Back to UNSTAGED context
+    assert rw.navLocator.context == NavContext.UNSTAGED
+    assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
+    assert qlvGetSelection(rw.stagedFiles) == []
+
+    # Advance to STAGED context
+    rw.navigateForward()
+    assert rw.navLocator.context == NavContext.STAGED
+    assert qlvGetSelection(rw.dirtyFiles) == []
+    assert qlvGetSelection(rw.stagedFiles) == ["c/c2.txt"]
+
+    # Advance to COMMITTED context (83834a7)
+    rw.navigateForward()  # skip automatically selected file in 83834a7
+    rw.navigateForward()
+    assert rw.navLocator.context == NavContext.COMMITTED
+    assert qlvGetSelection(rw.committedFiles) == ["a/a2.txt"]
+
+    # Advance to COMMITTED context (6e14752)
+    rw.navigateForward()  # skip automatically selected file in 6e14752
+    rw.navigateForward()
+    assert rw.navLocator.context == NavContext.COMMITTED
+    assert qlvGetSelection(rw.committedFiles) == ["b/b2.txt"]

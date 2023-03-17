@@ -3,8 +3,8 @@ from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
-from gitfourchette.stagingstate import StagingState
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBlockerContext,
                                 shortHash, PersistentFileDialog, showWarning, showInformation, askConfirmation,
@@ -23,6 +23,11 @@ for status in "ACDMRTUX":
     STATUS_ICONS[status] = QIcon(F"assets:status_{status.lower()}.svg")
 
 FALLBACK_STATUS_ICON = QIcon("assets:status_fallback.svg")
+
+PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
+FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
+
+BLANK_OID = pygit2.Oid(raw=b'')
 
 
 class SelectedFileBatchError(Exception):
@@ -78,16 +83,20 @@ class FileListModel(QAbstractListModel):
         return self.entries[index.row()].delta
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
-        if role == Qt.ItemDataRole.UserRole:
+        if role == PATCH_ROLE:
             return self.getPatchAt(index)
 
-        elif role == Qt.ItemDataRole.DisplayRole:
+        elif role == FILEPATH_ROLE or role == Qt.ItemDataRole.DisplayRole:
             delta = self.getDeltaAt(index)
             if not delta:
                 return "<NO DELTA>"
 
             path: str = self.getDeltaAt(index).new_file.path
-            return abbreviatePath(path, settings.prefs.pathDisplayStyle)
+
+            if role == Qt.ItemDataRole.DisplayRole:
+                path = abbreviatePath(path, settings.prefs.pathDisplayStyle)
+
+            return path
 
         elif role == Qt.ItemDataRole.DecorationRole:
             delta = self.getDeltaAt(index)
@@ -161,15 +170,17 @@ class FileListModel(QAbstractListModel):
 
 class FileList(QListView):
     nothingClicked = Signal()
-    entryClicked = Signal(pygit2.Patch, StagingState)
-    openDiffInNewWindow = Signal(pygit2.Patch)
+    entryClicked = Signal(pygit2.Patch, NavLocator)
+    openDiffInNewWindow = Signal(pygit2.Patch, NavLocator)
 
-    stagingState: StagingState
+    navContext: NavContext
+    commitOid: pygit2.Oid
 
-    def __init__(self, parent: QWidget, stagingState: StagingState):
+    def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
+        self.navContext = navContext
+        self.commitOid = BLANK_OID
         self.setModel(FileListModel(self))
-        self.stagingState = stagingState
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
@@ -186,6 +197,7 @@ class FileList(QListView):
 
     def clear(self):
         self.flModel.clear()
+        self.commitOid = BLANK_OID
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         numIndexes = len(self.selectedIndexes())
@@ -299,26 +311,30 @@ class FileList(QListView):
         super().selectionChanged(selected, deselected)
 
         indexes = list(selected.indexes())
-        if len(indexes) == 0:
+        if indexes:
+            current = indexes[0]
+        else:
             # Deselecting (e.g. with shift/ctrl) doesn't necessarily mean that the selection has been emptied.
             # Find an index that is still selected to keep the DiffView in sync with the selection.
-            currentIndex = self.currentIndex()
+            current = self.currentIndex()
             selectedIndexes = self.selectedIndexes()
 
-            if currentIndex.isValid() and selectedIndexes:
+            if current.isValid() and selectedIndexes:
                 # currentIndex may be outside the selection, find the selected index that is closest to currentIndex.
-                currentIndex = min(selectedIndexes, key=lambda index: abs(index.row() - currentIndex.row()))
-                self.entryClicked.emit(currentIndex.data(Qt.ItemDataRole.UserRole), self.stagingState)
-                return
+                current = min(selectedIndexes, key=lambda index: abs(index.row() - current.row()))
             else:
-                self.nothingClicked.emit()
-                return
+                current = None
 
-        current: QModelIndex = selected.indexes()[0]
-        if current.isValid():
-            self.entryClicked.emit(current.data(Qt.ItemDataRole.UserRole), self.stagingState)
+        if current and current.isValid():
+            patch = current.data(PATCH_ROLE)
+            locator = self.getNavLocatorForIndex(current)
+            self.entryClicked.emit(patch, locator)
         else:
             self.nothingClicked.emit()
+
+    def getNavLocatorForIndex(self, index: QModelIndex):
+        filePath = index.data(FILEPATH_ROLE)
+        return NavLocator(self.navContext, self.commitOid, filePath)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """
@@ -459,7 +475,7 @@ class DirtyFiles(FileList):
     discardFiles = Signal(list)
 
     def __init__(self, parent):
-        super().__init__(parent, StagingState.UNSTAGED)
+        super().__init__(parent, NavContext.UNSTAGED)
 
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
@@ -509,7 +525,7 @@ class StagedFiles(FileList):
     unstageFiles: Signal = Signal(list)
 
     def __init__(self, parent):
-        super().__init__(parent, StagingState.STAGED)
+        super().__init__(parent, NavContext.STAGED)
 
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
@@ -545,11 +561,8 @@ class StagedFiles(FileList):
 
 
 class CommittedFiles(FileList):
-    commitOid: pygit2.Oid | None
-
     def __init__(self, parent: QWidget):
-        super().__init__(parent, StagingState.COMMITTED)
-        self.commitOid = None
+        super().__init__(parent, NavContext.COMMITTED)
 
     def createContextMenuActions(self, n):
         return [
@@ -574,10 +587,6 @@ class CommittedFiles(FileList):
             ActionDef.SEPARATOR,
             self.pathDisplayStyleSubmenu()
         ]
-
-    def clear(self):
-        super().clear()
-        self.commitOid = None
 
     def setCommit(self, oid: pygit2.Oid):
         self.commitOid = oid
@@ -678,7 +687,7 @@ class CommittedFiles(FileList):
 
     def wantOpenDiffInNewWindow(self):
         def run(patch):
-            if patch:
-                self.openDiffInNewWindow.emit(patch)
+            if patch and patch.delta:
+                self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitOid, patch.delta.new_file.path))
 
         self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} files</b>?"))
