@@ -23,7 +23,7 @@ class RichDiffView(QTextBrowser):
         pixmap = QApplication.style().standardIcon(dme.icon).pixmap(48, 48)
         document.addResource(IMAGE_RESOURCE_TYPE, QUrl("icon"), pixmap)
 
-        html = (
+        markup = (
             "<table width='100%'>"
             "<tr>"
             "<td><img src='icon'/></td>"
@@ -33,11 +33,11 @@ class RichDiffView(QTextBrowser):
             "</table>")
 
         if dme.preformatted:
-            html += F"<pre>{html.escape(dme.preformatted)}</pre>"
+            markup += F"<pre>{html.escape(dme.preformatted)}</pre>"
 
-        html += dme.longform
+        markup += dme.longform
 
-        document.setHtml(html)
+        document.setHtml(markup)
         self.replaceDocument(document)
 
     def displayImageDiff(self, delta: pygit2.DiffDelta, imageA: QImage, imageB: QImage):
