@@ -618,7 +618,7 @@ class Graph:
         self.startArc.nextArc =\
             next((arc for arc in self.startArc if arc.openedAt >= row), None)
 
-    def shiftRows(self, rowOffset: int):
+    def shiftRows(self, rowOffset: int, remapChains: dict[int, int]):
         """
         Apply an offset to all rows referenced by arcs and keyframes.
         """
@@ -632,6 +632,7 @@ class Graph:
 
         # Shift rows in remaining arcs
         for arc in self.startArc:
+            arc.chainID = remapChains.get(arc.chainID, arc.chainID)
             if arc.openedAt >= 0:
                 arc.openedAt += rowOffset
             if arc.closedAt >= 0:
@@ -640,7 +641,7 @@ class Graph:
                 for junction in arc.junctions:
                     junction.joinedAt += rowOffset
 
-    def insertFront(self, frontGraph, numRowsToInsert):
+    def insertFront(self, frontGraph: Graph, numRowsToInsert: int):
         """
         Inserts contents of frontGraph at the beginning of this graph.
         Does not offset row indices!
@@ -781,6 +782,9 @@ class GraphSplicer:
         equilibriumOldOpenArcs = list(filter(None, self.oldPlayer.copyCleanFrame().openArcs))
         assert len(equilibriumOldOpenArcs) == len(equilibriumNewOpenArcs)
 
+        # map old chain IDs to new chain IDs after splicing
+        remapChainIDs = {}
+
         for oldOpenArc, newOpenArc in zip(equilibriumOldOpenArcs, equilibriumNewOpenArcs):
             assert newOpenArc.openedBy == oldOpenArc.openedBy
             # Find out where open arc ends.
@@ -788,6 +792,9 @@ class GraphSplicer:
             # Splice old junctions into new junctions.
             if oldOpenArc.junctions:
                 newOpenArc.junctions = self.spliceJunctions(equilibriumOldRow, equilibriumNewRow, oldOpenArc.junctions, newOpenArc.junctions)
+
+            if oldOpenArc.chainID != newOpenArc.chainID:
+                remapChainIDs[oldOpenArc.chainID] = newOpenArc.chainID
 
         # Do the actual splicing.
 
@@ -798,7 +805,7 @@ class GraphSplicer:
         with Benchmark(F"Delete Arcs"):
             self.oldGraph.deleteArcsOpenedAbove(equilibriumOldRow)
         with Benchmark(F"Shift Rows by {rowShiftInOldGraph}"):
-            self.oldGraph.shiftRows(rowShiftInOldGraph)
+            self.oldGraph.shiftRows(rowShiftInOldGraph, remapChainIDs)
         with Benchmark("Insert Front"):
             self.oldGraph.insertFront(self.newGraph, equilibriumNewRow)
         with Benchmark("Recreate Keyframe Row Cache"):
