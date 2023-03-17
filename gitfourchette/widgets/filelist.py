@@ -175,6 +175,7 @@ class FileList(QListView):
         iconSize = self.fontMetrics().height()
         self.setIconSize(QSize(iconSize, iconSize))
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
+        self.setUniformItemSizes(True)  # potential perf boost with many files
 
     @property
     def flModel(self) -> FileListModel:

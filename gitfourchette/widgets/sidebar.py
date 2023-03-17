@@ -597,6 +597,7 @@ class Sidebar(QTreeView):
         self.setModel(SidebarModel(self))
 
         self.setAnimated(True)
+        self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thin spacers
 
     def updateHiddenBranches(self, hiddenBranches: list[str]):
         self.model().updateHiddenBranches(hiddenBranches)

@@ -64,6 +64,9 @@ class GraphView(QListView):
 
         self.setModel(self.clFilter)
 
+        # Massive perf boost when displaying/updating huge commit logs
+        self.setUniformItemSizes(True)
+
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevents double-clicking to edit row text
@@ -371,8 +374,8 @@ class GraphView(QListView):
             self.update(newFilterIndex)
 
     def refreshPrefs(self):
-        self.model().beginResetModel()
-        self.model().endResetModel()
+        # Force redraw to reflect changes in row height, flattening, date format, etc.
+        self.model().layoutChanged.emit()
 
     # -------------------------------------------------------------------------
     # Find text in commit message or hash
