@@ -789,10 +789,14 @@ class RepoWidget(QWidget):
             self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
 
     def refreshWindowTitle(self):
-        shortname = self.state.shortName
-        repo = self.repo
+        shortname = self.getTitle()
         inBrackets = ""
-        if repo.head_is_unborn:
+        suffix = ""
+        repo = self.repo if self.state else None
+
+        if not repo:
+            pass
+        elif repo.head_is_unborn:
             inBrackets = self.tr("unborn HEAD")
         elif repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
             inBrackets = self.tr("repo is empty")
@@ -802,14 +806,19 @@ class RepoWidget(QWidget):
         else:
             inBrackets = porcelain.getActiveBranchShorthand(repo)
 
-        suffix = "" #qAppName()
         if settings.prefs.debug_showPID:
-            suffix += F"{qAppName()} PID {os.getpid()}, {qtBindingName}"
+            suffix += qAppName()
+            if __debug__:
+                suffix += "-debug"
+            suffix += F" PID {os.getpid()}, {qtBindingName}"
 
         if suffix:
             suffix = " \u2013 " + suffix
 
-        self.window().setWindowTitle(F"{shortname} [{inBrackets}]{suffix}")
+        if inBrackets:
+            suffix = F" [{inBrackets}]{suffix}"
+
+        self.window().setWindowTitle(shortname + suffix)
 
     # -------------------------------------------------------------------------
 
@@ -891,6 +900,10 @@ class RepoWidget(QWidget):
     def refreshPrefs(self):
         self.diffView.refreshPrefs()
         self.graphView.refreshPrefs()
+
+        # Reflect any change in titlebar prefs
+        if self.isVisible():
+            self.refreshWindowTitle()
 
     # -------------------------------------------------------------------------
 

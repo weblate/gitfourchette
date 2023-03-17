@@ -74,9 +74,11 @@ class MainWindow(QMainWindow):
         self.welcomeStack.setCurrentWidget(self.welcomeWidget)
         self.setCentralWidget(self.welcomeStack)
 
-        menuBar = self.makeMenu()
-        self.setMenuBar(menuBar)
-        self.autoHideMenuBar = AutoHideMenuBar(menuBar)
+        self.globalMenuBar = QMenuBar(self)
+        self.globalMenuBar.setObjectName("GFMainMenuBar")
+        self.autoHideMenuBar = AutoHideMenuBar(self.globalMenuBar)
+        self.fillGlobalMenuBar()
+        self.setMenuBar(self.globalMenuBar)
 
         self.statusProgress = QProgressBar()
         self.statusProgress.setMaximumHeight(16)
@@ -195,9 +197,9 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key.Key_Alt:
             self.autoHideMenuBar.toggle()
 
-    def makeMenu(self) -> QMenuBar:
-        menubar = QMenuBar(self)
-        menubar.setObjectName("MWMenuBar")
+    def fillGlobalMenuBar(self):
+        menubar = self.globalMenuBar
+        menubar.clear()
 
         # -------------------------------------------------------------
 
@@ -261,7 +263,7 @@ class MainWindow(QMainWindow):
 
         repoMenu: QMenu = menubar.addMenu(self.tr("&Repo"))
         repoMenu.setObjectName("MWRepoMenu")
-        repoMenu.setEnabled(False)
+        # repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
 
         a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
@@ -286,7 +288,6 @@ class MainWindow(QMainWindow):
         repoMenu.addAction(self.tr("Add Re&mote..."), self.newRemote)
 
         repoMenu.addSeparator()
-
 
         configFilesMenu = repoMenu.addMenu(self.tr("&Local Config Files"))
 
@@ -366,40 +367,39 @@ class MainWindow(QMainWindow):
 
         self.fillRecentMenu()
 
-        return menubar
-
-    def onAcceptPrefsDialog(self, dlg: PrefsDialog):
-        if not dlg.prefDiff:  # No changes were made to the prefs
+    def onAcceptPrefsDialog(self, prefDiff: dict):
+        # Early out if the prefs didn't change
+        if not prefDiff:
             return
 
         # Apply changes from prefDiff to the actual prefs
-        for k in dlg.prefDiff:
-            settings.prefs.__dict__[k] = dlg.prefDiff[k]
+        for k, v in prefDiff.items():
+            settings.prefs.__dict__[k] = v
 
         # Write prefs to disk
         settings.prefs.write()
 
-        # Apply new style
-        if 'qtStyle' in dlg.prefDiff:
-            settings.applyQtStylePref(forceApplyDefault=True)
-        if 'debug_verbosity' in dlg.prefDiff:
-            log.setVerbosity(settings.prefs.debug_verbosity)
-
-        settings.applyLanguagePref()
-
         # Notify widgets
-        self.refreshPrefs()
+        self.refreshPrefs(prefDiff)
 
-        info = [self.tr("Some changes may require restarting {0} to take effect.").format(qAppName())]
+        # Warn if changed any setting that requires a reload
+        warnIfChanged = [
+            "fileWatcher",  # FSW installed upon opening the repo
+            "graph_chronologicalOrder",  # need to reload entire commit sequence
+            "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
+            "diff_showStrayCRs",  # GF isn't able to re-render a single diff yet
+            "diff_colorblindFriendlyColors",  # ditto
+            "diff_largeFileThresholdKB",  # ditto
+            "diff_imageFileThresholdKB",  # ditto
+        ]
 
-        if "language" in dlg.prefDiff:
-            info.append(self.tr("In particular, some menus and buttons will remain untranslated until you restart the application."))
-
-        showInformation(self, self.tr("Apply Settings"), paragraphs(info))
+        if any(k in warnIfChanged for k in prefDiff):
+            showInformation(self, self.tr("Apply Settings"),
+                            self.tr("You may need to reload the current repository for all new settings to take effect."))
 
     def openSettings(self):
         dlg = PrefsDialog(self)
-        dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg))
+        dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg.prefDiff))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
 
@@ -426,8 +426,9 @@ class MainWindow(QMainWindow):
         # Get out of welcome widget
         self.welcomeStack.setCurrentWidget(self.tabs)
 
-        self.repoMenu.setEnabled(False)
+        # self.repoMenu.setEnabled(False)
         w = self.currentRepoWidget()
+        w.refreshWindowTitle()  # Refresh window title before loading
         w.restoreSplitterStates()
 
         # If we don't have a RepoState, then the tab is lazy-loaded.
@@ -442,7 +443,7 @@ class MainWindow(QMainWindow):
                     return
                 settings.history.write()
 
-        self.repoMenu.setEnabled(True)
+        # self.repoMenu.setEnabled(True)
         w.refreshWindowTitle()
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
@@ -1002,7 +1003,21 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Refresh prefs
 
-    def refreshPrefs(self):
+    def refreshPrefs(self, prefDiff: dict = dict()):
+        # Apply new style
+        if "qtStyle" in prefDiff:
+            settings.applyQtStylePref(forceApplyDefault=True)
+
+        if "debug_verbosity" in prefDiff:
+            log.setVerbosity(settings.prefs.debug_verbosity)
+
+        if "language" in prefDiff:
+            settings.applyLanguagePref()
+            self.fillGlobalMenuBar()
+
+        if "maxRecentRepos" in prefDiff:
+            self.fillRecentMenu()
+
         if settings.prefs.showStatusBar:
             self.statusBar.show()
         else:
