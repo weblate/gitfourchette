@@ -11,12 +11,6 @@ import re
 DLRATE_REFRESH_INTERVAL = 1000
 
 
-PRIVATE_KEY_FILES = [
-    "id_ed25519",
-    "id_rsa",
-]
-
-
 AUTH_NAMES = {
     pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT: "userpass_plaintext",
     pygit2.GIT_CREDENTIAL_SSH_KEY: "ssh_key",
@@ -114,12 +108,13 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
         if not self.usingCustomKeyFile:
             sshDirectory = QStandardPaths.locate(QStandardPaths.HomeLocation, ".ssh", QStandardPaths.LocateDirectory)
             if sshDirectory:
-                for file in PRIVATE_KEY_FILES:
-                    privkey = os.path.join(sshDirectory, file)
-                    pubkey = privkey + ".pub"
-                    if os.path.isfile(privkey) and os.path.isfile(pubkey):
-                        log.info("RemoteLink", "Discovered key pair", privkey)
-                        self.keypairFiles.append((pubkey, privkey))
+                for file in os.listdir(sshDirectory):
+                    pubkey = os.path.join(sshDirectory, file)
+                    if pubkey.endswith(".pub"):
+                        privkey = pubkey.removesuffix(".pub")
+                        if os.path.isfile(privkey) and os.path.isfile(pubkey):
+                            log.info("RemoteLink", "Discovered key pair", privkey)
+                            self.keypairFiles.append((pubkey, privkey))
 
         # See if any of the keys are passphrase-protected or unreadable
         for pubkey, privkey in self.keypairFiles:
