@@ -79,6 +79,9 @@ def paintGraphFrame(
     except KeyError:
         log.warning("graphpaint", "skipping unregistered commit:", commit.oid)
         return
+    except IndexError:
+        log.warning("graphpaint", "skipping commit that is probably not registered yet:", commit.oid)
+        return
 
     painter.save()
     painter.setRenderHints(QPainter.RenderHint.Antialiasing, True)

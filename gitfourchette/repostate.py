@@ -189,7 +189,6 @@ class RepoState:
 
     def getCommitSequentialIndex(self, oid: pygit2.Oid):
         position = self.commitPositions[oid]
-        assert position.batch < len(self.batchOffsets)
         return self.batchOffsets[position.batch] + position.offsetInBatch
 
     def initializeWalker(self, tipOids: Iterable[pygit2.Oid]) -> pygit2.Walker:
@@ -295,9 +294,15 @@ class RepoState:
 
         i = 0
         while graphSplicer.keepGoing:
+            # DON'T call processEvents() here, otherwise GraphView may try to repaint while splicing a large amount
+            # of commits, but the information is incomplete (in this loop, commitPositions refers to a commit batch
+            # that is still missing, etc.). GraphView somehow ignores setUpdatesEnabled(False) in this loop!
+            """
             if i != 0 and i % PROGRESS_INTERVAL == 0:
                 log.info("progress", "GraphSplicer commits processed:", i)
                 QCoreApplication.processEvents()
+            """
+
             offsetFromTop = i
             i += 1
 
