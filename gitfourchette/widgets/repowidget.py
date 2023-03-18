@@ -234,6 +234,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.graphView.amendChanges,           tasks.AmendCommit)
         self.connectTask(self.graphView.checkoutCommit,         tasks.CheckoutCommit)
+        self.connectTask(self.graphView.cherrypickCommit,       tasks.CherrypickCommit)
         self.connectTask(self.graphView.commitChanges,          tasks.NewCommit)
         self.connectTask(self.graphView.exportCommitAsPatch,    tasks.ExportCommitAsPatch)
         self.connectTask(self.graphView.exportWorkdirAsPatch,   tasks.ExportWorkdirAsPatch)

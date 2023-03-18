@@ -43,6 +43,7 @@ class GraphView(QListView):
     newBranchFromCommit = Signal(pygit2.Oid)
     newTagOnCommit = Signal(pygit2.Oid)
     checkoutCommit = Signal(pygit2.Oid)
+    cherrypickCommit = Signal(pygit2.Oid)
     revertCommit = Signal(pygit2.Oid)
     exportCommitAsPatch = Signal(pygit2.Oid)
     exportWorkdirAsPatch = Signal()
@@ -106,7 +107,7 @@ class GraphView(QListView):
                 ActionDef(self.tr("&Check Out..."), lambda: self.checkoutCommit.emit(oid)),
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Cherry &Pick..."), self.cherrypickCurrentCommit),
+                ActionDef(self.tr("Cherry &Pick..."), lambda: self.cherrypickCommit.emit(oid)),
                 ActionDef(self.tr("Re&vert..."), lambda: self.revertCommit.emit(oid)),
                 ActionDef(self.tr("E&xport As Patch..."), lambda: self.exportCommitAsPatch.emit(oid)),
                 ActionDef.SEPARATOR,
@@ -273,21 +274,6 @@ class GraphView(QListView):
         label.linkActivated.connect(self.linkActivated)
 
         messageBox.show()
-
-    def cherrypickCurrentCommit(self):
-        # TODO: This should totally be reworked
-        oid = self.currentCommitOid
-        if not oid:
-            return
-
-        def work():
-            self.repo.git.cherry_pick(oid)
-
-        def onComplete(_):
-            self.repoWidget.quickRefresh()
-            self.selectCommit(oid)
-
-        self.repoWidget._startAsyncWorker(1000, work, onComplete, F"Cherry-picking “{shortHash(oid)}”")
 
     def resetHeadFlow(self):
         oid = self.currentCommitOid

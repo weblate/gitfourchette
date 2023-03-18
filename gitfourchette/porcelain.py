@@ -942,6 +942,10 @@ def fastForwardBranch(repo: pygit2.Repository, localBranchName: str, remoteBranc
         raise NotImplementedError(F"Unsupported merge analysis {mergeAnalysis}.")
 
 
+def cherrypick(repo: pygit2.Repository, oid: pygit2.Oid):
+    repo.cherrypick(oid)
+
+
 def getSuperproject(repo: pygit2.Repository):
     """
     If `repo` is a submodule, returns the path to the superproject's working directory,

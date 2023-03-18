@@ -384,3 +384,17 @@ class NewTag(RepoTask):
             pygit2.GIT_OBJ_COMMIT,
             self.repo.default_signature,
             "empty tag message")
+
+
+class CherrypickCommit(RepoTask):
+    def name(self):
+        return translate("Operation", "Cherry-pick")
+
+    def refreshWhat(self):
+        return TaskAffectsWhat.LOCALREFS
+
+    def flow(self, oid: pygit2.Oid):
+        yield from self._flowBeginWorkerThread()
+        porcelain.cherrypick(self.repo, oid)
+
+        self.repo.state_cleanup()  # also cleans up .git/MERGE_MSG

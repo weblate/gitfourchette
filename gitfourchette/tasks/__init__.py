@@ -8,6 +8,7 @@ from gitfourchette.tasks.branchtasks import RecallCommit
 from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutCommit, RevertCommit, ResetHead
 from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIdentity
 from gitfourchette.tasks.committasks import NewTag
+from gitfourchette.tasks.committasks import CherrypickCommit
 from gitfourchette.tasks.exporttasks import ExportCommitAsPatch, ExportStashAsPatch, ExportWorkdirAsPatch
 from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch
 from gitfourchette.tasks.nettasks import DeleteRemoteBranch, RenameRemoteBranch
