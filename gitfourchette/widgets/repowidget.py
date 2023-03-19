@@ -787,6 +787,10 @@ class RepoWidget(QWidget):
         else:
             inBrackets = porcelain.getActiveBranchShorthand(repo)
 
+        if repo and repo.index.conflicts:
+            inBrackets += ", \u26a0 "
+            inBrackets += self.tr("merge conflict")
+
         if settings.prefs.debug_showPID:
             suffix += qAppName()
             if __debug__:

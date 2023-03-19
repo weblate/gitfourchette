@@ -32,6 +32,10 @@ class NewCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage)
 
     def flow(self):
+        if self.repo.index.conflicts:
+            yield from self._flowAbort(
+                self.tr("Please fix merge conflicts in the working directory before committing."))
+
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
         if not porcelain.hasAnyStagedChanges(self.repo):
             yield from self._flowConfirm(
@@ -95,6 +99,10 @@ class AmendCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage, forAmending=True)
 
     def flow(self):
+        if self.repo.index.conflicts:
+            yield from self._flowAbort(
+                self.tr("Please fix merge conflicts in the working directory before amending the commit."))
+
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = porcelain.getHeadCommit(self.repo)
 

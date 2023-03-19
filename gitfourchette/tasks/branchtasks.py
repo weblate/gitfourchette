@@ -175,6 +175,11 @@ class _NewBranchBaseTask(RepoTask):
 
 class NewBranchFromHead(_NewBranchBaseTask):
     def flow(self):
+        if self.repo.head_is_unborn:
+            yield from self._flowAbort(
+                self.tr("Cannot create a local branch when HEAD is unborn.")
+                + " " + translate("Global", "Please create the initial commit in this repository first."))
+
         tip = porcelain.getHeadCommit(self.repo).oid
         yield from self._internalFlow(tip)
 

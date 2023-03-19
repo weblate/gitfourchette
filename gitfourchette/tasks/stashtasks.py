@@ -42,6 +42,17 @@ class NewStash(RepoTask):
         return self.parent()
 
     def flow(self, paths: list[str] | None = None):
+        # libgit2 will refuse to create a stash if there are conflicts
+        if self.repo.index.conflicts:
+            yield from self._flowAbort(
+                self.tr("Before creating a stash, please fix merge conflicts in the working directory."))
+
+        # libgit2 will refuse to create a stash if there are no commits at all
+        if self.repo.head_is_unborn:
+            yield from self._flowAbort(
+                self.tr("Cannot create a stash when HEAD is unborn.")
+                + " " + translate("Global", "Please create the initial commit in this repository first."))
+
         # TODO: Remove this try/except once libgit2 1.6 support lands in pygit2
         try:
             porcelain.pygit2VersionAtLeast((1, 11, 3), featureName="File-by-file stashing")
