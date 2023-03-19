@@ -112,9 +112,16 @@ def noChange(delta: pygit2.DiffDelta):
     details = []
 
     oldFileExists = not isZeroId(delta.old_file.id)
+    newFileExists = not isZeroId(delta.new_file.id)
+
+    if not newFileExists:
+        message = translate("DiffModel", "Empty file was deleted.")
 
     if not oldFileExists:
-        message = translate("DiffModel", "File is empty.")
+        if delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
+            message = translate("DiffModel", "New empty file.")
+        else:
+            message = translate("DiffModel", "File is empty.")
 
     if delta.old_file.path != delta.new_file.path:
         details.append(translate("DiffModel", "Renamed:") + f" “{html.escape(delta.old_file.path)}” &rarr; “{html.escape(delta.new_file.path)}”.")

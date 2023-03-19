@@ -195,7 +195,7 @@ def getUnstagedChanges(repo: Repository, updateIndex: bool = False, showBinary: 
         flags |= pygit2.GIT_DIFF_SHOW_BINARY
 
     dirtyDiff = repo.diff(None, None, flags=flags)
-    dirtyDiff.find_similar()
+    # dirtyDiff.find_similar()  #-- it seems that find_similar cannot find renames in unstaged changes, so don't bother
     return dirtyDiff
 
 

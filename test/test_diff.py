@@ -14,7 +14,7 @@ def testSensibleMessageShownForUnstagedEmptyFile(qtbot, tempDir, mainWindow):
 
     assert not rw.diffView.isVisibleTo(rw)
     assert rw.richDiffView.isVisibleTo(rw)
-    assert "is empty" in rw.richDiffView.toPlainText().lower()
+    assert "empty" in rw.richDiffView.toPlainText().lower()
 
 
 def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
