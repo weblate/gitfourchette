@@ -405,6 +405,7 @@ class PrefsDialog(QDialog):
             "tabs": translate("Prefs", "Tabs"),
             "graph": translate("Prefs", "Graph"),
             "trash": translate("Prefs", "Trash"),
+            "external": translate("Prefs", "External tools"),
             "debug": translate("Prefs", "Debug"),
 
             "language": translate("Prefs", "Language"),
@@ -443,6 +444,10 @@ class PrefsDialog(QDialog):
             "debug_verbosity": translate("Prefs", "Logging verbosity"),
             "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
             "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
+
+            "external_editor": translate("Prefs", "Text editor"),
+            "external_diff": translate("Prefs", "Diff tool"),
+            "external_merge": translate("Prefs", "Merge tool"),
 
             "FULL_PATHS": translate("PathDisplayStyle", "Full paths"),
             "ABBREVIATE_DIRECTORIES": translate("PathDisplayStyle", "Abbreviate directories"),

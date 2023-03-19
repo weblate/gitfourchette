@@ -8,7 +8,7 @@ from gitfourchette.qt import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBlockerContext,
                                 shortHash, PersistentFileDialog, showWarning, showInformation, askConfirmation,
-                                paragraphs)
+                                paragraphs, isZeroId, openInTextEditor, openInDiffTool)
 from pathlib import Path
 from typing import Any, Callable, Generator
 import errno
@@ -28,6 +28,17 @@ PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
 
 BLANK_OID = pygit2.Oid(raw=b'')
+
+
+def dumpTempDiffFile(repo: pygit2.Repository, diffFile: pygit2.DiffFile, inBrackets: str):
+    blobId = diffFile.id
+    blob: pygit2.Blob = repo[blobId].peel(pygit2.Blob)
+    name, ext = os.path.splitext(os.path.basename(diffFile.path))
+    name = F"{name}[{inBrackets}]{ext}"
+    path = os.path.join(getSessionTemporaryDirectory(), name)
+    with open(path, "wb") as f:
+        f.write(blob.data)
+    return path
 
 
 class SelectedFileBatchError(Exception):
@@ -264,13 +275,44 @@ class FileList(QListView):
             qmb.button(QMessageBox.StandardButton.YesAll).clicked.connect(runBatch)
             qmb.show()
 
-    def openFile(self):
-        def run(entry: pygit2.Patch):
-            entryPath = os.path.join(self.repo.workdir, entry.delta.new_file.path)
-            QDesktopServices.openUrl(QUrl.fromLocalFile(entryPath))
+    def openWorkdirFile(self):
+        def run(patch: pygit2.Patch):
+            entryPath = os.path.join(self.repo.workdir, patch.delta.new_file.path)
+            openInTextEditor(self, entryPath)
 
         self.confirmBatch(run, self.tr("Open in external editor"),
                           self.tr("Really open <b>{0} files</b> in external editor?"))
+
+    def wantOpenInDiffTool(self):
+        self.confirmBatch(self._openInDiffTool, self.tr("Open in external diff tool"),
+                          self.tr("Really open <b>{0} files</b> in external diff tool?"))
+
+    def _openInDiffTool(self, patch: pygit2.Patch):
+        if isZeroId(patch.delta.new_file.id):
+            raise SelectedFileBatchError(
+                self.tr("{0}: Can’t open external diff tool on a deleted file.").format(patch.delta.new_file.path))
+
+        if isZeroId(patch.delta.old_file.id):
+            raise SelectedFileBatchError(
+                self.tr("{0}: Can’t open external diff tool on a new file.").format(patch.delta.new_file.path))
+
+        oldDiffFile = patch.delta.old_file
+        newDiffFile = patch.delta.new_file
+
+        if self.navContext == NavContext.UNSTAGED:
+            # Unstaged: compare indexed state to workdir file
+            oldPath = dumpTempDiffFile(self.repo, oldDiffFile, "INDEXED")
+            newPath = os.path.join(self.repo.workdir, newDiffFile.path)
+        elif self.navContext == NavContext.STAGED:
+            # Staged: compare HEAD state to indexed state
+            oldPath = dumpTempDiffFile(self.repo, oldDiffFile, "HEAD")
+            newPath = dumpTempDiffFile(self.repo, newDiffFile, "STAGED")
+        else:
+            # Committed: compare parent state to this commit
+            oldPath = dumpTempDiffFile(self.repo, oldDiffFile, "OLD")
+            newPath = dumpTempDiffFile(self.repo, newDiffFile, "NEW")
+
+        openInDiffTool(self, oldPath, newPath)
 
     def showInFolder(self):
         def run(entry: pygit2.Patch):
@@ -451,23 +493,12 @@ class FileList(QListView):
         self.selectRow(row)
         return True
 
-    def openRevisionPriorToChange(self):
-        def run(diff):
-            diffFile: pygit2.DiffFile = diff.delta.old_file
+    def openHeadRevision(self):
+        def run(patch: pygit2.Patch):
+            tempPath = dumpTempDiffFile(self.repo, patch.delta.old_file, "HEAD")
+            openInTextEditor(self, tempPath)
 
-            blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
-
-            name, ext = os.path.splitext(os.path.basename(diffFile.path))
-            name = F"{name}[lastcommit]{ext}"
-
-            tempPath = os.path.join(getSessionTemporaryDirectory(), name)
-
-            with open(tempPath, "wb") as f:
-                f.write(blob.data)
-
-            QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
-
-        self.confirmBatch(run, self.tr("Open unmodified revision"),
+        self.confirmBatch(run, self.tr("Open HEAD version of file"),
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
     def wantPartialStash(self):
@@ -501,14 +532,18 @@ class DirtyFiles(FileList):
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
+            ActionDef(self.tr("&Open in {0}", "", n).format(settings.getExternalEditorName()),
+                      self.openWorkdirFile, icon=QStyle.StandardPixmap.SP_FileIcon),
+            ActionDef(self.tr("Open &Diff in {0}", "", n).format(settings.getDiffToolName()),
+                      self.wantOpenInDiffTool, icon=QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
             ActionDef(self.tr("&Stash %n File(s)...", "", n), self.wantPartialStash),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
+            ActionDef(self.tr("Open HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                      self.openHeadRevision),
             ActionDef.SEPARATOR,
             self.pathDisplayStyleSubmenu()
         ]
@@ -546,14 +581,18 @@ class StagedFiles(FileList):
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
+            ActionDef(self.tr("&Open in {0}", "", n).format(settings.getExternalEditorName()),
+                      self.openWorkdirFile, QStyle.StandardPixmap.SP_FileIcon),
+            ActionDef(self.tr("Open &Diff in {0}", "", n).format(settings.getDiffToolName()),
+                      self.wantOpenInDiffTool, QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
             ActionDef(self.tr("&Stash %n File(s)...", "", n), self.wantPartialStash),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Open Unmodified &Revision(s) in External Editor", "", n), self.openRevisionPriorToChange),
+            ActionDef(self.tr("Open &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                      self.openHeadRevision),
             ActionDef.SEPARATOR,
             self.pathDisplayStyleSubmenu()
         ] + super().createContextMenuActions(n)
@@ -576,6 +615,8 @@ class CommittedFiles(FileList):
     def createContextMenuActions(self, n):
         return [
             ActionDef(self.tr("Open Diff in New &Window"), self.wantOpenDiffInNewWindow),
+            ActionDef(self.tr("Open &Diff in {0}", "", n).format(settings.getDiffToolName()),
+                      self.wantOpenInDiffTool, QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("&Open Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
             [
                 ActionDef(self.tr("&At Commit"), self.openNewRevision),
@@ -612,19 +653,23 @@ class CommittedFiles(FileList):
     def saveOldRevision(self):
         self.saveRevisionAs(beforeCommit=True)
 
+    def saveRevisionAsTempFile(self, diff, beforeCommit: bool = False):
+        try:
+            name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
+        except FileNotFoundError as fnf:
+            raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
+
+        tempPath = os.path.join(getSessionTemporaryDirectory(), name)
+
+        with open(tempPath, "wb") as f:
+            f.write(blob.data)
+
+        return tempPath
+
     def openRevision(self, beforeCommit: bool = False):
-        def run(diff):
-            try:
-                name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
-            except FileNotFoundError as fnf:
-                raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
-
-            tempPath = os.path.join(getSessionTemporaryDirectory(), name)
-
-            with open(tempPath, "wb") as f:
-                f.write(blob.data)
-
-            QDesktopServices.openUrl(QUrl.fromLocalFile(tempPath))
+        def run(patch: pygit2.Patch):
+            tempPath = self.saveRevisionAsTempFile(patch, beforeCommit)
+            openInTextEditor(self, tempPath)
 
         if beforeCommit:
             title = self.tr("Open revision before commit")
@@ -634,7 +679,7 @@ class CommittedFiles(FileList):
         self.confirmBatch(run, title,
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
-    def saveRevisionAs(self, beforeCommit: bool = False, saveInto=None):
+    def saveRevisionAs(self, beforeCommit: bool = False, saveInto: str = ""):
         def dump(path: str, mode: int, data: bytes):
             with open(path, "wb") as f:
                 f.write(data)
@@ -662,14 +707,14 @@ class CommittedFiles(FileList):
 
         self.confirmBatch(run, title, self.tr("Really export <b>{0} files</b>?"))
 
-    def getFileRevisionInfo(self, diff: pygit2.Diff, beforeCommit: bool = False):
+    def getFileRevisionInfo(self, patch: pygit2.Patch, beforeCommit: bool = False) -> tuple[str, pygit2.Blob, pygit2.DiffFile]:
         if beforeCommit:
-            diffFile = diff.delta.old_file
-            if diff.delta.status == pygit2.GIT_DELTA_ADDED:
+            diffFile = patch.delta.old_file
+            if patch.delta.status == pygit2.GIT_DELTA_ADDED:
                 raise FileNotFoundError(errno.ENOENT, self.tr("This file didn’t exist before the commit."), diffFile.path)
         else:
-            diffFile = diff.delta.new_file
-            if diff.delta.status == pygit2.GIT_DELTA_DELETED:
+            diffFile = patch.delta.new_file
+            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
                 raise FileNotFoundError(errno.ENOENT, self.tr("This file was deleted by the commit."), diffFile.path)
 
         blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
@@ -684,19 +729,18 @@ class CommittedFiles(FileList):
         return name, blob, diffFile
 
     def openHeadRevision(self):
-        def run(diff):
-            diffFile = diff.delta.new_file
+        def run(patch: pygit2.Patch):
+            diffFile = patch.delta.new_file
             path = os.path.join(self.repo.workdir, diffFile.path)
             if os.path.isfile(path):
-                QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+                openInTextEditor(self, path)
             else:
                 raise SelectedFileBatchError(self.tr("{0}: There’s no file at this path on HEAD.").format(diffFile.path))
 
         self.confirmBatch(run, self.tr("Open revision at HEAD"), self.tr("Really open <b>{0} files</b>?"))
 
     def wantOpenDiffInNewWindow(self):
-        def run(patch):
-            if patch and patch.delta:
-                self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitOid, patch.delta.new_file.path))
+        def run(patch: pygit2.Patch):
+            self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitOid, patch.delta.new_file.path))
 
         self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} files</b>?"))

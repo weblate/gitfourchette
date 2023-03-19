@@ -172,6 +172,9 @@ class Prefs(BasePrefs):
     graph_chronologicalOrder    : bool          = True
     graph_flattenLanes          : bool          = True
     graph_rowHeight             : GraphRowHeight = GraphRowHeight.TIGHT
+    external_editor             : str           = ""
+    external_diff               : str           = ""
+    external_merge              : str           = ""
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True
@@ -330,3 +333,30 @@ def applyLanguagePref():
                 installedTranslators.append(baseTranslator)
         except BaseException:
             print("Failed to load Qt base translation for language", prefs.language)
+
+
+def getExternalEditorName():
+    command = prefs.external_editor
+
+    if not command:
+        return translate("Global", "Text Editor")
+
+    return command.split(" ", 1)[0]
+
+
+def getDiffToolName():
+    command = prefs.external_diff
+
+    if not command:
+        return translate("Global", "Diff Tool")
+
+    return command.split(" ", 1)[0]
+
+
+def getMergeToolName():
+    command = prefs.external_merge
+
+    if not command:
+        return translate("Global", "Merge Tool")
+
+    return command.split(" ", 1)[0]

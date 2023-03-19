@@ -7,6 +7,7 @@ import contextlib
 import html
 import os
 import re
+import subprocess
 import sys
 import traceback
 import typing
@@ -84,12 +85,16 @@ def paragraphs(*args) -> str:
     return "<p>" + "</p><p>".join(args) + "</p>"
 
 
-def showInFolder(pathStr):
+def openFolder(path: str):
+    QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+
+def showInFolder(path: str):
     """
     Show a file or folder with explorer/finder.
     Source: https://stackoverflow.com/a/46019091/3388962
     """
-    path = os.path.abspath(pathStr)
+    path = os.path.abspath(path)
     isdir = os.path.isdir(path)
 
     if WINDOWS:
@@ -113,7 +118,40 @@ def showInFolder(pathStr):
 
     # Fallback.
     dirPath = path if os.path.isdir(path) else os.path.dirname(path)
-    QDesktopServices.openUrl(QUrl.fromLocalFile(dirPath))
+    openFolder(dirPath)
+
+
+def openInExternalTool(
+        parent: QWidget,
+        prefKey: str,
+        paths: list[str],
+        allowQDesktopFallback: bool = False):
+
+    from gitfourchette import settings
+    command = getattr(settings.prefs, prefKey, "")
+
+    if not command and allowQDesktopFallback:
+        for p in paths:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(p))
+        return
+
+    if not command:
+        translatedPrefKey = prefKey  # TODO: access PrefsDialog.settingsTranslationTable
+        showWarning(
+            parent,
+            translatedPrefKey,
+            translate("Global", "Please set up “{0}” in the Preferences.").format(translatedPrefKey))
+        return
+
+    subprocess.Popen([command] + paths, start_new_session=True)
+
+
+def openInTextEditor(parent: QWidget, path: str):
+    return openInExternalTool(parent, "external_editor", [path], allowQDesktopFallback=True)
+
+
+def openInDiffTool(parent: QWidget, a: str, b: str):
+    return openInExternalTool(parent, "external_diff", [a, b])
 
 
 def messageSummary(body: str, elision=" […]"):

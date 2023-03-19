@@ -9,7 +9,7 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
                                 PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation,
-                                paragraphs, NonCriticalOperation)
+                                paragraphs, NonCriticalOperation, openInTextEditor)
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -686,7 +686,7 @@ class MainWindow(QMainWindow):
     def _openLocalConfigFile(self, fullPath: str):
         def createAndOpen():
             open(fullPath, "ab").close()
-            QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
+            openInTextEditor(self, fullPath)
 
         if not os.path.exists(fullPath):
             basename = os.path.basename(fullPath)
@@ -699,7 +699,7 @@ class MainWindow(QMainWindow):
                 okButtonText=self.tr("Create “{0}”").format(basename),
                 callback=createAndOpen)
         else:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
+            openInTextEditor(self, fullPath)
 
     @needRepoWidget
     def openGitignore(self, rw: RepoWidget):

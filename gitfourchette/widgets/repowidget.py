@@ -12,7 +12,8 @@ from gitfourchette.tasks import TaskAffectsWhat
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon,
-                                paragraphs, NonCriticalOperation, tweakWidgetFont)
+                                paragraphs, NonCriticalOperation, tweakWidgetFont,
+                                openFolder, openInTextEditor)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -106,7 +107,7 @@ class RepoWidget(QWidget):
 
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
-        self.conflictView.openFile.connect(lambda path: self.openConflictFile(path))
+        self.conflictView.openFile.connect(self.openConflictFile)
 
         self.graphView.emptyClicked.connect(self.setNoCommitSelected)
         self.graphView.commitClicked.connect(self.loadCommitAsync)
@@ -674,14 +675,14 @@ class RepoWidget(QWidget):
 
     def openSubmoduleFolder(self, submoduleKey: str):
         path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        openFolder(path)
 
     # -------------------------------------------------------------------------
     # Conflicts
 
     def openConflictFile(self, path: str):
         fullPath = os.path.join(self.repo.workdir, path)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(fullPath))
+        openInTextEditor(self, fullPath)
 
     # -------------------------------------------------------------------------
     # Entry point for generic "Find" command
@@ -822,7 +823,7 @@ class RepoWidget(QWidget):
     def openRescueFolder(self):
         trash = Trash(self.repo)
         if trash.exists():
-            QDesktopServices.openUrl(QUrl.fromLocalFile(trash.trashDir))
+            openFolder(trash.trashDir)
         else:
             showInformation(
                 self,
