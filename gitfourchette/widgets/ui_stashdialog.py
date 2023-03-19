@@ -14,7 +14,7 @@ class Ui_StashDialog(object):
             StashDialog.setObjectName(u"StashDialog")
         StashDialog.setWindowModality(Qt.NonModal)
         StashDialog.setEnabled(True)
-        StashDialog.resize(543, 157)
+        StashDialog.resize(461, 432)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -40,21 +40,39 @@ class Ui_StashDialog(object):
 
         self.formLayout.setWidget(1, QFormLayout.LabelRole, self.optionsLabel)
 
-        self.keepIndexCheckBox = QCheckBox(StashDialog)
-        self.keepIndexCheckBox.setObjectName(u"keepIndexCheckBox")
+        self.cleanupCheckBox = QCheckBox(StashDialog)
+        self.cleanupCheckBox.setObjectName(u"cleanupCheckBox")
+        self.cleanupCheckBox.setChecked(True)
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.keepIndexCheckBox)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.cleanupCheckBox)
 
-        self.includeUntrackedCheckBox = QCheckBox(StashDialog)
-        self.includeUntrackedCheckBox.setObjectName(u"includeUntrackedCheckBox")
-        self.includeUntrackedCheckBox.setChecked(True)
+        self.line = QFrame(StashDialog)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.includeUntrackedCheckBox)
+        self.formLayout.setWidget(3, QFormLayout.SpanningRole, self.line)
 
-        self.includeIgnoredCheckBox = QCheckBox(StashDialog)
-        self.includeIgnoredCheckBox.setObjectName(u"includeIgnoredCheckBox")
+        self.willBackUpChangesLabel = QLabel(StashDialog)
+        self.willBackUpChangesLabel.setObjectName(u"willBackUpChangesLabel")
 
-        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.includeIgnoredCheckBox)
+        self.formLayout.setWidget(4, QFormLayout.SpanningRole, self.willBackUpChangesLabel)
+
+        self.willRemoveChangesLabel = QLabel(StashDialog)
+        self.willRemoveChangesLabel.setObjectName(u"willRemoveChangesLabel")
+
+        self.formLayout.setWidget(5, QFormLayout.SpanningRole, self.willRemoveChangesLabel)
+
+        self.willKeepChangesLabel = QLabel(StashDialog)
+        self.willKeepChangesLabel.setObjectName(u"willKeepChangesLabel")
+
+        self.formLayout.setWidget(6, QFormLayout.SpanningRole, self.willKeepChangesLabel)
+
+        self.fileList = QListWidget(StashDialog)
+        self.fileList.setObjectName(u"fileList")
+        self.fileList.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        self.formLayout.setWidget(7, QFormLayout.FieldRole, self.fileList)
 
         self.buttonBox = QDialogButtonBox(StashDialog)
         self.buttonBox.setObjectName(u"buttonBox")
@@ -62,7 +80,13 @@ class Ui_StashDialog(object):
         self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
         self.buttonBox.setCenterButtons(False)
 
-        self.formLayout.setWidget(4, QFormLayout.FieldRole, self.buttonBox)
+        self.formLayout.setWidget(17, QFormLayout.FieldRole, self.buttonBox)
+
+        self.indexAndWtWarning = QLabel(StashDialog)
+        self.indexAndWtWarning.setObjectName(u"indexAndWtWarning")
+        self.indexAndWtWarning.setWordWrap(True)
+
+        self.formLayout.setWidget(8, QFormLayout.SpanningRole, self.indexAndWtWarning)
 
 #if QT_CONFIG(shortcut)
         self.messageLabel.setBuddy(self.messageEdit)
@@ -71,22 +95,22 @@ class Ui_StashDialog(object):
         self.retranslateUi(StashDialog)
         self.buttonBox.rejected.connect(StashDialog.reject)
         self.buttonBox.accepted.connect(StashDialog.accept)
+        self.cleanupCheckBox.clicked["bool"].connect(self.willRemoveChangesLabel.setVisible)
+        self.cleanupCheckBox.clicked["bool"].connect(self.willKeepChangesLabel.setHidden)
 
         QMetaObject.connectSlotsByName(StashDialog)
 
     def retranslateUi(self, StashDialog):
         StashDialog.setWindowTitle(QCoreApplication.translate("StashDialog", u"New stash", None))
         self.messageLabel.setText(QCoreApplication.translate("StashDialog", u"&Description", None))
+        self.messageEdit.setPlaceholderText(QCoreApplication.translate("StashDialog", u"Optional stash message", None))
         self.optionsLabel.setText(QCoreApplication.translate("StashDialog", u"Options", None))
 #if QT_CONFIG(tooltip)
-        self.keepIndexCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"Tick this to leave all staged changes (already added to the index) intact in the working directory after stashing. They will be saved in the stash regardless.", None))
+        self.cleanupCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"Normally, stashed changes are removed from the working directory.\n"
+"Untick this to leave the stashed changes intact instead.", None))
 #endif // QT_CONFIG(tooltip)
-        self.keepIndexCheckBox.setText(QCoreApplication.translate("StashDialog", u"&Keep staged files in the working directory", None))
-#if QT_CONFIG(tooltip)
-        self.includeUntrackedCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"All untracked files will also be stashed and then cleaned up from the working directory.", None))
-#endif // QT_CONFIG(tooltip)
-        self.includeUntrackedCheckBox.setText(QCoreApplication.translate("StashDialog", u"Save &untracked files in the stash (new files that you haven\u2019t staged yet)", None))
-#if QT_CONFIG(tooltip)
-        self.includeIgnoredCheckBox.setToolTip(QCoreApplication.translate("StashDialog", u"All ignored files will also be stashed and then cleaned up from the working directory.", None))
-#endif // QT_CONFIG(tooltip)
-        self.includeIgnoredCheckBox.setText(QCoreApplication.translate("StashDialog", u"Save &ignored files in the stash", None))
+        self.cleanupCheckBox.setText(QCoreApplication.translate("StashDialog", u"&Remove stashed changes after stashing", None))
+        self.willBackUpChangesLabel.setText(QCoreApplication.translate("StashDialog", u"The stash will back up all changes to the files ticked below.", None))
+        self.willRemoveChangesLabel.setText(QCoreApplication.translate("StashDialog", u"These changes will then be removed from the working directory.", None))
+        self.willKeepChangesLabel.setText(QCoreApplication.translate("StashDialog", u"These changes will remain in the working directory.", None))
+        self.indexAndWtWarning.setText(QCoreApplication.translate("StashDialog", u"Warning: Some of the files have both staged and unstaged changes. Those changes will be combined in the stash.", None))

@@ -172,6 +172,7 @@ class FileList(QListView):
     nothingClicked = Signal()
     entryClicked = Signal(pygit2.Patch, NavLocator)
     openDiffInNewWindow = Signal(pygit2.Patch, NavLocator)
+    stashFiles = Signal(list)  # list[str]
 
     navContext: NavContext
     commitOid: pygit2.Oid
@@ -356,7 +357,7 @@ class FileList(QListView):
         index: QModelIndex
         for index in self.selectedIndexes():
             patch: pygit2.Patch = index.data(Qt.ItemDataRole.UserRole)
-            if not patch:
+            if not patch or not patch.delta:
                 raise ValueError(self.tr("This file appears to have changed since we last read it. Try refreshing the window."))
             assert isinstance(patch, pygit2.Patch)
             yield patch
@@ -469,6 +470,12 @@ class FileList(QListView):
         self.confirmBatch(run, self.tr("Open unmodified revision"),
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
+    def wantPartialStash(self):
+        paths = []
+        for patch in self.selectedEntries():
+            paths.append(patch.delta.old_file.path)
+        self.stashFiles.emit(paths)
+
 
 class DirtyFiles(FileList):
     stageFiles = Signal(list)
@@ -496,6 +503,7 @@ class DirtyFiles(FileList):
             ActionDef.SEPARATOR,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, icon=QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
+            ActionDef(self.tr("&Stash %n File(s)...", "", n), self.wantPartialStash),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, icon=QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
@@ -540,6 +548,7 @@ class StagedFiles(FileList):
             ActionDef.SEPARATOR,
             ActionDef(self.tr("&Open %n File(s) in External Editor", "", n), self.openFile, QStyle.StandardPixmap.SP_FileIcon),
             ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
+            ActionDef(self.tr("&Stash %n File(s)...", "", n), self.wantPartialStash),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
             ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),

@@ -232,6 +232,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.diffView.revertPatch,             tasks.RevertPatch)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
+        self.connectTask(self.dirtyFiles.stashFiles,            tasks.NewStash)
         self.connectTask(self.graphView.amendChanges,           tasks.AmendCommit)
         self.connectTask(self.graphView.checkoutCommit,         tasks.CheckoutCommit)
         self.connectTask(self.graphView.cherrypickCommit,       tasks.CherrypickCommit)
@@ -265,6 +266,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.renameBranch,             tasks.RenameBranch)
         self.connectTask(self.sidebar.renameRemoteBranch,       tasks.RenameRemoteBranch)
         self.connectTask(self.sidebar.switchToBranch,           tasks.SwitchBranch)
+        self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
 
     # -------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>StashDialog</class>
- <widget class="QDialog" name="StashDialog">
+ <class>StashDialog_Legacy</class>
+ <widget class="QDialog" name="StashDialog_Legacy">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>461</width>
-    <height>432</height>
+    <width>543</width>
+    <height>157</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -47,6 +47,9 @@
    </item>
    <item row="0" column="1">
     <widget class="QLineEdit" name="messageEdit">
+     <property name="text">
+      <string/>
+     </property>
      <property name="placeholderText">
       <string>Optional stash message</string>
      </property>
@@ -60,55 +63,39 @@
     </widget>
    </item>
    <item row="1" column="1">
-    <widget class="QCheckBox" name="cleanupCheckBox">
+    <widget class="QCheckBox" name="keepIndexCheckBox">
      <property name="toolTip">
-      <string>Normally, stashed changes are removed from the working directory.
-Untick this to leave the stashed changes intact instead.</string>
+      <string>Tick this to leave all staged changes (already added to the index) intact in the working directory after stashing. They will be saved in the stash regardless.</string>
      </property>
      <property name="text">
-      <string>&amp;Remove stashed changes after stashing</string>
+      <string>&amp;Keep staged files in the working directory</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QCheckBox" name="includeUntrackedCheckBox">
+     <property name="toolTip">
+      <string>All untracked files will also be stashed and then cleaned up from the working directory.</string>
+     </property>
+     <property name="text">
+      <string>Save &amp;untracked files in the stash (new files that you haven’t staged yet)</string>
      </property>
      <property name="checked">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="3" column="1">
+    <widget class="QCheckBox" name="includeIgnoredCheckBox">
+     <property name="toolTip">
+      <string>All ignored files will also be stashed and then cleaned up from the working directory.</string>
      </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QLabel" name="willBackUpChangesLabel">
      <property name="text">
-      <string>The stash will back up all changes to the files ticked below.</string>
+      <string>Save &amp;ignored files in the stash</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QLabel" name="willRemoveChangesLabel">
-     <property name="text">
-      <string>These changes will then be removed from the working directory.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="2">
-    <widget class="QLabel" name="willKeepChangesLabel">
-     <property name="text">
-      <string>These changes will remain in the working directory.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QListWidget" name="fileList">
-     <property name="selectionMode">
-      <enum>QAbstractItemView::ExtendedSelection</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="1">
+   <item row="4" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -121,16 +108,6 @@ Untick this to leave the stashed changes intact instead.</string>
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QLabel" name="indexAndWtWarning">
-     <property name="text">
-      <string>Warning: Some of the files have both staged and unstaged changes. Those changes will be combined in the stash.</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <resources/>
@@ -138,12 +115,12 @@ Untick this to leave the stashed changes intact instead.</string>
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>StashDialog</receiver>
+   <receiver>StashDialog_Legacy</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>336</x>
-     <y>427</y>
+     <x>232</x>
+     <y>149</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
@@ -154,48 +131,16 @@ Untick this to leave the stashed changes intact instead.</string>
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>StashDialog</receiver>
+   <receiver>StashDialog_Legacy</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>431</x>
-     <y>427</y>
+     <x>396</x>
+     <y>149</y>
     </hint>
     <hint type="destinationlabel">
      <x>364</x>
      <y>71</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>cleanupCheckBox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>willRemoveChangesLabel</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>180</x>
-     <y>53</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>172</x>
-     <y>127</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>cleanupCheckBox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>willKeepChangesLabel</receiver>
-   <slot>setHidden(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>219</x>
-     <y>52</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>207</x>
-     <y>153</y>
     </hint>
    </hints>
   </connection>

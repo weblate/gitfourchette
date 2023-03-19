@@ -4,6 +4,7 @@ from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
 from gitfourchette.widgets.stashdialog import StashDialog
+from gitfourchette.widgets.stashdialog_legacy import StashDialog_Legacy
 from html import escape
 import os
 import pygit2
@@ -40,26 +41,63 @@ class NewStash(RepoTask):
     def rw(self) -> 'RepoWidget':
         return self.parent()
 
-    def flow(self):
-        dlg = StashDialog(self.parent())
+    def flow(self, paths: list[str] | None = None):
+        # TODO: Remove this try/except once libgit2 1.6 support lands in pygit2
+        try:
+            porcelain.pygit2VersionAtLeast((1, 11, 3), featureName="File-by-file stashing")
+        except NotImplementedError as exc:
+            if paths:
+                yield from self._flowAbort(str(exc))
+            else:
+                yield from self.legacyFlow()
+            return
+
+        status = self.repo.status(untracked_files="all", ignored=False)
+
+        if not status:
+            yield from self._flowAbort(self.tr("There are no changes to stash."), "information")
+
+        dlg = StashDialog(status, paths, self.parent())
+        util.setWindowModal(dlg)
+        dlg.show()
+        # dlg.setMaximumHeight(dlg.height())
+        yield from self._flowDialog(dlg)
+
+        tickedFiles = dlg.tickedPaths()
+
+        stashMessage = dlg.ui.messageEdit.text()
+        keepIntact = not dlg.ui.cleanupCheckBox.isChecked()
+        dlg.deleteLater()
+
+        yield from self._flowBeginWorkerThread()
+        with self.rw.fileWatcher.blockWatchingIndex():
+            porcelain.newStash(self.repo, stashMessage, paths=tickedFiles)
+            if not keepIntact:
+                porcelain.restoreFiles(self.repo, tickedFiles)
+
+    def legacyFlow(self):
+        """
+        TODO: Remove this once libgit2 1.6 support lands in pygit2
+        """
+
+        dlg = StashDialog_Legacy(self.parent())
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)
 
         stashMessage = dlg.ui.messageEdit.text()
-        stashFlags = ""
-        if dlg.ui.keepIndexCheckBox.isChecked():
-            stashFlags += "k"
-        if dlg.ui.includeUntrackedCheckBox.isChecked():
-            stashFlags += "u"
-        if dlg.ui.includeIgnoredCheckBox.isChecked():
-            stashFlags += "i"
         dlg.deleteLater()
+
+        keepIndex = dlg.ui.keepIndexCheckBox.isChecked()
+        includeUntracked = dlg.ui.includeUntrackedCheckBox.isChecked()
+        includeIgnored = dlg.ui.includeIgnoredCheckBox.isChecked()
 
         yield from self._flowBeginWorkerThread()
         with self.rw.fileWatcher.blockWatchingIndex():
-            porcelain.newStash(self.repo, stashMessage, stashFlags)
+            porcelain.newStash_legacy(
+                self.repo, stashMessage,
+                keepIndex=keepIndex, includeUntracked=includeUntracked, includeIgnored=includeIgnored)
 
 
 class ApplyStash(RepoTask):

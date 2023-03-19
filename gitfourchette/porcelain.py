@@ -14,6 +14,21 @@ HEADS_PREFIX = "refs/heads/"
 REMOTES_PREFIX = "refs/remotes/"
 TAGS_PREFIX = "refs/tags/"
 
+GIT_STATUS_INDEX_MASK = (
+        pygit2.GIT_STATUS_INDEX_NEW
+        | pygit2.GIT_STATUS_INDEX_MODIFIED
+        | pygit2.GIT_STATUS_INDEX_DELETED
+        | pygit2.GIT_STATUS_INDEX_RENAMED
+        | pygit2.GIT_STATUS_INDEX_TYPECHANGE)
+
+GIT_STATUS_WT_MASK = (
+        pygit2.GIT_STATUS_WT_NEW
+        | pygit2.GIT_STATUS_WT_MODIFIED
+        | pygit2.GIT_STATUS_WT_DELETED
+        | pygit2.GIT_STATUS_WT_TYPECHANGE
+        | pygit2.GIT_STATUS_WT_RENAMED
+        | pygit2.GIT_STATUS_WT_UNREADABLE)
+
 
 class NameValidationError(ValueError):
     CANNOT_BE_EMPTY = 0
@@ -94,6 +109,36 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
 class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallbacks):
     def stash_apply_progress(self, pr):
         log.info("porcelain", f"stash apply progress: {pr}")
+
+
+def pygit2VersionAtLeast(requiredVersion: tuple, raiseError=True, featureName="This feature"):
+    requiredVersionString = ".".join(str(n) for n in requiredVersion)
+
+    currentVersionString = pygit2.__version__
+    currentVersion = []
+    for n in currentVersionString.split("."):
+        try:
+            currentVersion.append(int(n))
+        except ValueError:
+            currentVersion.append(0)
+
+    # Trim trailing zeros to ease comparison
+    while currentVersion and currentVersion[-1] == 0:
+        currentVersion.pop()
+
+    requiredVersion = list(requiredVersion)
+    while requiredVersion and requiredVersion[-1] == 0:
+        requiredVersion.pop()
+
+    if tuple(currentVersion) < tuple(requiredVersion):
+        if not raiseError:
+            return False
+
+        message = (f"{featureName} requires pygit2 v{requiredVersionString} or later "
+                   f"(you have v{currentVersionString}).")
+        raise NotImplementedError(message)
+
+    return True
 
 
 def refreshIndex(repo: Repository, force: bool = False):
@@ -743,6 +788,23 @@ def stageFiles(repo: Repository, patches: list[pygit2.Patch]):
     index.write()
 
 
+def restoreFiles(repo: Repository, paths: list[str]):
+    """
+    Resets the given files to their state at the HEAD commit.
+    Any staged, unstaged, or untracked changes in those files will be lost.
+    NOTE: This will not
+    """
+
+    assert not repo.head_is_unborn, "restoreFiles doesn't support unborn HEAD"
+
+    strategy = (pygit2.GIT_CHECKOUT_FORCE
+                | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
+                | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
+
+    headTree: pygit2.Tree = repo.head.peel(pygit2.Tree)
+    repo.checkout_tree(headTree, paths=paths, strategy=strategy)
+
+
 def discardFiles(repo: Repository, paths: list[str]):
     """
     Discards unstaged changes in the given files.
@@ -792,7 +854,14 @@ def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
     index.write()
 
 
-def newStash(repo: Repository, message: str, flags: Iterable[Literal["k", "u", "i"]]) -> pygit2.Oid:
+def newStash_legacy(
+        repo: Repository,
+        message: str,
+        keepIndex: bool,
+        includeUntracked: bool,
+        includeIgnored: bool) -> pygit2.Oid:
+    # TODO: Remove this once libgit2 1.6 support lands in pygit2.
+
     try:
         signature = repo.default_signature
     except ValueError:
@@ -802,9 +871,36 @@ def newStash(repo: Repository, message: str, flags: Iterable[Literal["k", "u", "
     oid = repo.stash(
         stasher=signature,
         message=message,
-        keep_index='k' in flags,
-        include_untracked='u' in flags,
-        include_ignored='i' in flags)
+        keep_index=keepIndex,
+        include_untracked=includeUntracked,
+        include_ignored=includeIgnored)
+
+    return oid
+
+
+def newStash(repo: Repository, message: str, paths: list[str]) -> pygit2.Oid:
+    """
+    Creates a stash that backs up all changes to the given files.
+    Does NOT remove the changes from the workdir (you can use resetFiles afterwards).
+    """
+
+    assert paths, "path list cannot be empty"
+
+    try:
+        signature = repo.default_signature
+    except ValueError:
+        # Allow creating a stash if the identity isn't set
+        signature = Signature(name="UNKNOWN", email="UNKNOWN")
+
+    oid = repo.stash(
+        stasher=signature,
+        message=message,
+        keep_index=False,
+        keep_all=True,
+        include_untracked=False,
+        include_ignored=False,
+        paths=paths)
+
     return oid
 
 
