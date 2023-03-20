@@ -15,14 +15,15 @@ def testNavigation(qtbot, tempDir, mainWindow):
     oid3 = pygit2.Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
     oid4 = pygit2.Oid(hex="58be4659bb571194ed4562d04b359d26216f526e")
 
-    rw.graphView.selectCommit(oid1)             # -8
-    qlvClickNthRow(rw.committedFiles, 1)        # -7
-    rw.graphView.selectCommit(oid2)             # -6
-    qlvClickNthRow(rw.committedFiles, 1)        # -5
-    rw.graphView.selectUncommittedChanges()     # -4
-    qlvClickNthRow(rw.stagedFiles, 0)           # -3
-    qlvClickNthRow(rw.dirtyFiles, 0)            # -2
-    rw.graphView.selectCommit(oid3)             # -1
+    # ..........................................# -9 select a1.txt in UNSTAGED
+    rw.graphView.selectCommit(oid1)             # -8 select a1.txt in 83834a7
+    qlvClickNthRow(rw.committedFiles, 1)        # -7 select a2.txt in 83834a7
+    rw.graphView.selectCommit(oid2)             # -6 select b1.txt in 6e14752
+    qlvClickNthRow(rw.committedFiles, 1)        # -5 select b2.txt in 6e14752
+    rw.graphView.selectUncommittedChanges()     # -4 select a1.txt in UNSTAGED
+    qlvClickNthRow(rw.stagedFiles, 0)           # -3 select a1.txt in STAGED
+    qlvClickNthRow(rw.dirtyFiles, 0)            # -2 select a1.txt in UNSTAGED again
+    rw.graphView.selectCommit(oid3)             # -1 select c1.txt in bab66b4
 
     history = [
         (oid1, "a/a1.txt"),                     # -8
@@ -37,6 +38,7 @@ def testNavigation(qtbot, tempDir, mainWindow):
 
     def assertHistoryMatches(t):
         context, selectedFile = t
+        assert rw.diffView.currentPatch.delta.old_file.path == selectedFile
         if context in ["UNSTAGED", "UNTRACKED"]:
             assert rw.graphView.currentCommitOid in [None, ""]
             assert rw.filesStack.currentWidget() == rw.stageSplitter
@@ -139,14 +141,16 @@ def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, tempDir, mainWin
 
     assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
 
+    # can't go further; the FLV's selection has snapped to c1, which has in turn trimmed the history
     rw.navigateForward()
-    assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
+    assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
 
-    # can't go further
-    rw.navigateForward()
-    assert qlvGetSelection(rw.dirtyFiles) == ["c/c2.txt"]
-
+    # navigating back must skip over b1.txt because it's gone
     rw.navigateBack()
+    assert qlvGetSelection(rw.dirtyFiles) == ["a/a1.txt"]
+
+    # navigating forward must skip over b1.txt because it's gone
+    rw.navigateForward()
     assert qlvGetSelection(rw.dirtyFiles) == ["c/c1.txt"]
 
 
@@ -230,6 +234,7 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
 
     # Back to UNSTAGED context
     assert rw.navLocator.context == NavContext.UNSTAGED
+    assert rw.navLocator.path == "b/b1.txt"
     assert qlvGetSelection(rw.dirtyFiles) == ["b/b1.txt"]
     assert qlvGetSelection(rw.stagedFiles) == []
 

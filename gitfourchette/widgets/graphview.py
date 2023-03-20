@@ -200,7 +200,7 @@ class GraphView(QListView):
         postSummary = ""
         nLines = len(commit.message.rstrip().split('\n'))
 
-        parentHashes = [F"<a href=\"gitfourchette://commit#{p}\">{shortHash(p)}</a>" for p in commit.parent_ids]
+        parentHashes = [F"<a href=\"{APP_URL_SCHEME}://commit#{p}\">{shortHash(p)}</a>" for p in commit.parent_ids]
         parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
@@ -316,8 +316,9 @@ class GraphView(QListView):
             oid = current.data(CommitLogModel.CommitRole).oid
             self.commitClicked.emit(oid)
 
-    def selectUncommittedChanges(self):
-        self.setCurrentIndex(self.model().index(0, 0))
+    def selectUncommittedChanges(self, force=False):
+        if force or self.currentCommitOid is not None:
+            self.setCurrentIndex(self.model().index(0, 0))
 
     def getFilterIndexForCommit(self, oid: pygit2.Oid):
         try:

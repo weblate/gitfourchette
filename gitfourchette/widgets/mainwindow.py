@@ -552,9 +552,12 @@ class MainWindow(QMainWindow):
 
         settings.history.setRepoNumCommits(repo.workdir, len(commitSequence))
 
-        rw.graphView.selectUncommittedChanges()
-        if newState.activeCommitOid:
-            rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
+        rw.graphView.selectUncommittedChanges(force=True)
+
+        # Scrolling HEAD into view isn't super intuitive if we boot to Uncommitted Changes
+        # if newState.activeCommitOid:
+        #     rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
+
         # rw.saveFilePositions()
         return True
 

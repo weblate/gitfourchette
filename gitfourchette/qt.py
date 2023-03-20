@@ -12,6 +12,8 @@
 import os
 import sys
 
+APP_URL_SCHEME = "gitfourchette"
+
 QTPY = False
 QT5 = False
 QT6 = False

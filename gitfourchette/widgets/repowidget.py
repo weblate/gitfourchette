@@ -30,6 +30,8 @@ from typing import Generator, Literal, Type, Callable
 import os
 import pygit2
 
+TAG = "RepoWidget"
+
 
 class RepoWidget(QWidget):
     nameChange: Signal = Signal()
@@ -347,23 +349,22 @@ class RepoWidget(QWidget):
 
         self.navHistory.push(self.navLocator)
 
-    def restoreSelectedFile(self):
-        pos = self.navLocator
-
-        if pos.context.isDirty():
+    def restoreSelectedFile(self, locator: NavLocator):
+        if locator.context.isDirty():
             fl = self.dirtyFiles
-        elif pos.context == NavContext.STAGED:
+        elif locator.context == NavContext.STAGED:
             fl = self.stagedFiles
-        elif pos.context == NavContext.COMMITTED:
+        elif locator.context == NavContext.COMMITTED:
             fl = self.committedFiles
         else:
             return False
 
-        return fl.selectFile(pos.path)
+        fl.clearSelectionSilently()
+        return fl.selectFile(locator.path)
 
-    def restoreDiffPosition(self):
-        cursorPosition = self.navLocator.diffCursor
-        scrollPosition = self.navLocator.diffScroll
+    def restoreDiffPosition(self, locator: NavLocator):
+        cursorPosition = locator.diffCursor
+        scrollPosition = locator.diffScroll
 
         newTextCursor = QTextCursor(self.diffView.textCursor())
         newTextCursor.setPosition(cursorPosition)
@@ -376,48 +377,67 @@ class RepoWidget(QWidget):
             QApplication.beep()
             return False
 
+        previousLocator = self.navLocator
+
         self.navLocator = locator
         self.navHistory.bump(locator)
-        self.navHistory.lock()
+        self.saveFilePositions()
+        self.navHistory.push(locator)
 
-        if self.navLocator.context.isWorkdir():
-            if self.graphView.currentCommitOid is not None:
+        # Discard signals from GraphView as we adjust the selected commit
+        # and prevent modifying the navigation history.
+        with QSignalBlockerContext(self.graphView), self.navHistory.lockContext():
+            # Always adjust GraphView row - it may have gotten out of sync with navLocator if we're calling
+            # navigateTo to restore a coherent state after the GraphView model changes.
+            if locator.context.isWorkdir():
                 self.graphView.selectUncommittedChanges()
-                success = True
+                self.filesStack.setCurrentWidget(self.stageSplitter)
+                return self.restoreSelectedFile(locator)
             else:
-                success = self.restoreSelectedFile()
-        else:
-            oid = self.navLocator.commit
-            if self.graphView.currentCommitOid != oid:
-                success = self.graphView.selectCommit(oid, silent=True)
-            else:
-                self.graphView.scrollToCommit(oid)
-                success = self.restoreSelectedFile()
-
-        self.navHistory.unlock()
-        return success
+                if not self.graphView.selectCommit(locator.commit, silent=True):
+                    return False
+                self.filesStack.setCurrentWidget(self.committedFilesContainer)
+                if locator.commit == previousLocator.commit and self.committedFiles.commitOid == locator.commit:
+                    # no need to reload the same commit
+                    return self.restoreSelectedFile(locator)
+                else:
+                    self.loadCommitAsync(locator.commit)
+                    return True  # it's async, so we can't know if it's successful yet... but it'll most likely succeed since commits are immutable
 
     def navigateBack(self):
-        if self.navHistory.isAtTopOfStack:
-            self.saveFilePositions()
+        self.saveFilePositions()
+        start = self.navLocator
 
-        startPos = self.navLocator
+        while self.navHistory.canGoBack():
+            locator = self.navHistory.navigateBack()
+            success = self.navigateTo(locator)
 
-        while not self.navHistory.isAtBottomOfStack:
-            pos = self.navHistory.navigateBack()
-            success = self.navigateTo(pos)
-
-            if success and pos != startPos:
+            if not success:
+                # This locator is stale, nuke it and keep going
+                self.navHistory.popCurrent()
+            elif locator.similarEnoughTo(start):
+                # Keep going if same file comes up several times in a row
+                continue
+            else:
+                # We're done
                 break
 
     def navigateForward(self):
-        startPos = self.navLocator
+        self.saveFilePositions()
+        start = self.navLocator
 
-        while not self.navHistory.isAtTopOfStack:
-            pos = self.navHistory.navigateForward()
-            success = self.navigateTo(pos)
+        while self.navHistory.canGoForward():
+            locator = self.navHistory.navigateForward()
+            success = self.navigateTo(locator)
 
-            if success and pos != startPos:
+            if not success:
+                # This locator is stale, nuke it and keep going
+                self.navHistory.popCurrent()
+            elif locator.similarEnoughTo(start):
+                # Keep going if same file comes up several times in a row
+                continue
+            else:
+                # We're done
                 break
 
     # -------------------------------------------------------------------------
@@ -530,16 +550,16 @@ class RepoWidget(QWidget):
 
         self.clearDiffView()
 
-    def refreshWorkdirViewAsync(self, forceSelectFile: NavLocator = None, allowUpdateIndex: bool = False):
+    def refreshWorkdirViewAsync(self, locator: NavLocator = None, allowUpdateIndex: bool = False):
         with QSignalBlockerContext(self.sidebar):
             self.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
         task = tasks.LoadWorkdir(self)
         task.setRepo(self.repo)
-        task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, forceSelectFile))
+        task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, locator))
         return self.repoTaskRunner.put(task, allowUpdateIndex)
 
-    def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, forceSelectFile: NavLocator):
+    def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, locator: NavLocator = None):
         """Fill Staged/Unstaged views with uncommitted changes"""
 
         stagedESR = self.stagedFiles.earliestSelectedRow()
@@ -561,8 +581,8 @@ class RepoWidget(QWidget):
         # Switch to correct card in filesStack to show dirtyView and stageView
         self.filesStack.setCurrentWidget(self.stageSplitter)
 
-        if forceSelectFile:  # for Revert Hunk from DiffView
-            self.navLocator = forceSelectFile
+        if locator:  # for Revert Hunk from DiffView
+            self.navLocator = locator
         else:
             # Try to recall where we were last time we looked at the workdir.
             # If that fails ("or" clause), make a dummy NavPos so the history knows we're looking at the workdir now.
@@ -571,7 +591,7 @@ class RepoWidget(QWidget):
         # After patchApplied.emit has caused a refresh of the dirty/staged file views,
         # restore selected row in appropriate file list view so the user can keep hitting
         # enter (del) to stage (unstage) a series of files.
-        if not self.restoreSelectedFile():
+        if not self.restoreSelectedFile(self.navLocator):
             if stagedESR >= 0:
                 self.stagedFiles.selectRow(min(stagedESR, self.stagedFiles.model().rowCount()-1))
             elif dirtyESR >= 0:
@@ -580,8 +600,6 @@ class RepoWidget(QWidget):
         # If no file is selected in either FileListView, clear the diffView of any residual diff.
         if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
             self.clearDiffView()
-
-        self.navHistory.unlock()
 
     def loadCommitAsync(self, oid: pygit2.Oid):
         # Attempt to select matching ref in sidebar
@@ -622,7 +640,7 @@ class RepoWidget(QWidget):
         self.committedHeader.setToolTip("<p>" + escape(summary.strip()).replace("\n", "<br>"))
 
         # Select the best file in this commit - which may trigger loadPatchAsync
-        self.restoreSelectedFile()
+        self.restoreSelectedFile(self.navLocator)
 
     def loadPatchAsync(self, patch: pygit2.Patch, locator: NavLocator):
         task = tasks.LoadPatch(self)
@@ -645,6 +663,7 @@ class RepoWidget(QWidget):
 
         self.saveFilePositions()
         self.navLocator = self.navHistory.recallFileInSameContext(locator) or locator
+        self.navHistory.push(self.navLocator)
         self.diffHeader.setText(locator.asTitle())
 
         if type(result) == DiffConflict:
@@ -656,7 +675,7 @@ class RepoWidget(QWidget):
         elif type(result) == DiffModel:
             self.diffStack.setCurrentWidget(self.diffView)
             self.diffView.replaceDocument(self.repo, patch, locator, result)
-            self.restoreDiffPosition()  # restore position after we've replaced the document
+            self.restoreDiffPosition(self.navLocator)  # restore position after we've replaced the document
         elif type(result) == DiffImagePair:
             self.diffStack.setCurrentWidget(self.richDiffView)
             self.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
@@ -897,14 +916,19 @@ class RepoWidget(QWidget):
         if not isinstance(url, QUrl):
             url = QUrl(url)
 
-        if url.scheme() != "gitfourchette":
-            log.warning("RepoWidget", "Unsupported scheme in internal link: ", url)
+        if url.scheme() != APP_URL_SCHEME:
+            log.warning(TAG, "Unsupported scheme in internal link:", url.toDisplayString())
             return
 
-        if url.authority() == "commit":
+        log.info(TAG, F"Internal link:", url.toDisplayString())
+
+        if url.authority() == NavLocator.URL_AUTHORITY:
+            navLoc = NavLocator.parseUrl(url)
+            self.navigateTo(navLoc)
+        elif url.authority() == "commit":
             oid = pygit2.Oid(hex=url.fragment())
             self.graphView.selectCommit(oid)
         elif url.authority() == "refresh":
             self.quickRefresh()
         else:
-            log.warning("RepoWidget", "Unsupported authority in internal link: ", url)
+            log.warning(TAG, "Unsupported authority in internal link: ", url.toDisplayString())

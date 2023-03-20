@@ -3,9 +3,11 @@ from gitfourchette import log
 from gitfourchette import util
 from gitfourchette.qt import *
 from pygit2 import Oid
+from typing import ClassVar
 import enum
 
 
+TAG = "nav"
 BLANK_OID = Oid(raw=b'')
 
 
@@ -54,6 +56,8 @@ class NavLocator:
     diffScroll: int = 0
     diffCursor: int = 0
 
+    URL_AUTHORITY: ClassVar[str] = "go"
+
     def __post_init__(self):
         assert isinstance(self.context, NavContext)
         assert isinstance(self.commit, Oid)
@@ -68,6 +72,17 @@ class NavLocator:
     def __repr__(self) -> str:
         return F"NavPos({self.contextKey[:10]} {self.path} {self.diffScroll} {self.diffCursor})"
 
+    def similarEnoughTo(self, other: 'NavLocator'):
+        return (self.context == other.context
+                and self.commit == other.commit
+                and self.path == other.path)
+
+    def inSameDiffSetAs(self, other: 'NavLocator'):
+        if self.context.isWorkdir():
+            return other.context.isWorkdir()
+        else:
+            return self.commit == other.commit
+
     def asTitle(self):
         header = self.path
         if self.context == NavContext.COMMITTED:
@@ -75,6 +90,40 @@ class NavLocator:
         elif self.context.isWorkdir():
             header += " [" + self.context.translateName() + "]"
         return header
+
+    def url(self, *queryTuples: tuple[str, str]):
+        url = QUrl()
+        url.setScheme(APP_URL_SCHEME)
+        url.setAuthority(NavLocator.URL_AUTHORITY)
+        url.setPath("/" + self.path)
+
+        if self.context == NavContext.COMMITTED:
+            url.setFragment(self.commit.hex)
+        else:
+            url.setFragment(self.context.name)
+
+        if queryTuples:
+            query = QUrlQuery()
+            query.setQueryItems(queryTuples)
+            url.setQuery(query)
+
+        return url
+
+    @staticmethod
+    def parseUrl(url: QUrl):
+        assert url.authority() == NavLocator.URL_AUTHORITY
+        assert url.hasFragment()
+        frag = url.fragment()
+        path = url.path()
+        assert path.startswith("/")
+        path = path.removeprefix("/")
+        try:
+            context = NavContext[frag]
+            commit = BLANK_OID
+        except KeyError:
+            context = NavContext.COMMITTED
+            commit = Oid(hex=frag)
+        return NavLocator(context, commit, path)
 
     @property
     def contextKey(self):
@@ -107,26 +156,19 @@ class NavHistory:
         self.history = []
         self.recent = {}
         self.current = 0
-        self.locked = False
+        self.lockRefCount = 0
         self.counter = 0
 
-    def lock(self):
+    @property
+    def locked(self):
         """All push calls are ignored while the history is locked."""
-        self.locked = True
+        return self.lockRefCount > 0
 
-    def unlock(self):
-        self.locked = False
+    def lockContext(self):
+        return NavHistoryLockContext(self)
 
     def push(self, pos: NavLocator):
-        if self.locked:
-            return
-
-        if not pos:
-            log.info("nav", "ignoring:", pos)
-            return
-
-        if len(self.history) > 0 and self.history[self.current] == pos:
-            log.info("nav", "discarding:", pos)
+        if self.locked or not pos:
             return
 
         self.counter += 1
@@ -134,34 +176,25 @@ class NavHistory:
         self.recent[pos.contextKey] = (pos, self.counter)
         self.recent[pos.fileKey] = (pos, self.counter)
 
-        if self.current < len(self.history) - 1:
-            self.trim()
-
-        log.info("nav", F"pushing #{self.counter}:", pos)
-        self.history.append(pos)
-        self.current = len(self.history) - 1
+        if len(self.history) > 0 and self.history[self.current].similarEnoughTo(pos):
+            # Update in-place
+            self.history[self.current] = pos
+        else:
+            if self.current < len(self.history) - 1:
+                self.trim()
+            self.history.append(pos)
+            self.current = len(self.history) - 1
 
     def trim(self):
-        log.info("nav", F"trimming: {self.current}")
         self.history = self.history[: self.current + 1]
-        assert self.isAtTopOfStack
+        assert not self.canGoForward()
 
     def bump(self, pos: NavLocator):
-        log.info("nav", "bump", pos)
-
         self.counter += 1
 
         self.recent[pos.contextKey] = (pos, self.counter)
         self.recent[pos.fileKey] = (pos, self.counter)
     
-    @property
-    def isAtTopOfStack(self):
-        return self.current == len(self.history) - 1
-
-    @property
-    def isAtBottomOfStack(self):
-        return self.current == 0
-
     def recallCommit(self, oid: Oid):
         """ Recalls the most recent NavLocator in a commit context. """
         recent = self.recent.get(oid.hex, (None, -1))
@@ -177,19 +210,29 @@ class NavHistory:
         pos = self.recent.get(otherLocator.fileKey, (None, -1))
         return pos[0]
 
+    def canGoForward(self):
+        count = len(self.history)
+        return count > 0 and self.current < count - 1
+
+    def canGoBack(self):
+        count = len(self.history)
+        return count > 0 and self.current > 0
+
     def navigateBack(self):
-        if self.current > 0:
-            self.current -= 1
-            log.info("nav", "back to", self.current, self.history[self.current])
-            return self.history[self.current]
-        else:
+        if not self.canGoBack():
             return None
+        self.current -= 1
+        return self.history[self.current]
 
     def navigateForward(self):
-        if self.current < len(self.history) - 1:
-            self.current += 1
-            log.info("nav", "fwd to", self.current, self.history[self.current])
-            return self.history[self.current]
+        if not self.canGoForward():
+            return None
+        self.current += 1
+        return self.history[self.current]
+
+    def popCurrent(self):
+        if self.current < len(self.history):
+            return self.history.pop(self.current)
         else:
             return None
 
@@ -205,3 +248,16 @@ class NavHistory:
             s += f"{h.contextKey[:7]} {h.path:32} {h.diffScroll} {h.diffCursor}"
             i -= 1
         return s
+
+
+class NavHistoryLockContext:
+    def __init__(self, history: NavHistory):
+        self.history = history
+
+    def __enter__(self):
+        self.history.lockRefCount += 1
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+        if self.history.lockRefCount > 0:
+            self.history.lockRefCount -= 1
