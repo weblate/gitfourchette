@@ -188,6 +188,10 @@ class DiffModel:
 
         cursor: QTextCursor = QTextCursor(document)
 
+        # Begin batching text insertions for performance.
+        # This prevents Qt from recomputing the document's layout after every line insertion.
+        cursor.beginEditBlock()
+
         defaultBF = cursor.blockFormat()
         defaultCF = cursor.charFormat()
 
@@ -268,5 +272,8 @@ class DiffModel:
                     oldLine += 1
 
                 insertLineData(ld, bf, defaultCF)
+
+        # Done batching text insertions.
+        cursor.endEditBlock()
 
         return DiffModel(document=document, lineData=lineData, style=style)
