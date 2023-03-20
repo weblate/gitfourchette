@@ -20,8 +20,8 @@ def makeCommandLineParser() -> QCommandLineParser:
 
 
 def main():
-    # allow interrupting with Control-C
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    # Quit app cleanly on Ctrl+C (all repos and associated file handles will be freed)
+    signal.signal(signal.SIGINT, lambda *args: QApplication.quit())
 
     # inject our own exception hook to show an error dialog in case of unhandled exceptions
     # (note that this may get overridden when running under a debugger)
@@ -32,6 +32,13 @@ def main():
     app.setApplicationName("GitFourchette")  # used by QStandardPaths
     # Don't use app.setOrganizationName because it changes QStandardPaths.
     app.setApplicationVersion("1.0.0")
+
+    # Force Python interpreter to run every now and then so it can run the Ctrl+C signal handler
+    # (Otherwise the app won't actually die until the window regains focus, see https://stackoverflow.com/q/4938723)
+    if __debug__:
+        timer = QTimer()
+        timer.start(300)
+        timer.timeout.connect(lambda: None)
 
     # Initialize command line options
     commandLine = makeCommandLineParser()
