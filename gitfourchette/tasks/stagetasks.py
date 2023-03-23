@@ -13,7 +13,7 @@ import pygit2
 class _BaseStagingTask(RepoTask):
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parent()
+        return self.parentWidget()
 
     def refreshWhat(self):
         return TaskAffectsWhat.INDEX | TaskAffectsWhat.INDEXWRITE
@@ -123,7 +123,7 @@ class ApplyPatch(RepoTask):
             self.tr("Do you want to {0} this entire file <b>“{1}”</b>?").format(verb, escape(shortPath)))
 
         qmb = util.asyncMessageBox(
-            self.parent(),
+            self.parentWidget(),
             'information',
             self.tr("{0}: selection empty").format(action),
             questionText,
@@ -238,7 +238,7 @@ class ApplyPatchFile(RepoTask):
         allFilesCaption = self.tr("All files")
 
         qfd = util.PersistentFileDialog.openFile(
-            self.parent(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
+            self.parentWidget(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
 
         yield from self._flowDialog(qfd)
 

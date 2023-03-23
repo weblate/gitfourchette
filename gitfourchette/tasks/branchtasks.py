@@ -45,7 +45,7 @@ class RenameBranch(RepoTask):
         forbiddenBranchNames.remove(oldBranchName)
 
         dlg = showTextInputDialog(
-            self.parent(),
+            self.parentWidget(),
             self.tr("Rename local branch “{0}”").format(escape(util.elide(oldBranchName))),
             self.tr("Enter new name:"),
             oldBranchName,
@@ -135,7 +135,7 @@ class _NewBranchBaseTask(RepoTask):
             targetSubtitle=commitMessage,
             upstreams=upstreams,
             reservedNames=forbiddenBranchNames,
-            parent=self.parent())
+            parent=self.parentWidget())
 
         if upstream:
             i = dlg.ui.upstreamComboBox.findText(upstream)
@@ -218,7 +218,7 @@ class EditTrackedBranch(RepoTask):
         return TaskAffectsWhat.LOCALREFS
 
     def flow(self, localBranchName: str):
-        dlg = TrackedBranchDialog(self.repo, localBranchName, self.parent())
+        dlg = TrackedBranchDialog(self.repo, localBranchName, self.parentWidget())
         util.setWindowModal(dlg)
         yield from self._flowDialog(dlg)
 
@@ -273,14 +273,14 @@ class FastForwardBranch(RepoTask):
             else:
                 message.append(self.tr("Your local branch “{0}” is already up-to-date with “{1}”.").format(
                     escape(localBranchName), escape(remoteBranchName)))
-            util.showInformation(self.parent(), self.name(), util.paragraphs(message))
+            util.showInformation(self.parentWidget(), self.name(), util.paragraphs(message))
 
     def onError(self, exc):
         if isinstance(exc, porcelain.DivergentBranchesError):
             text = util.paragraphs(
                 self.tr("Can’t fast-forward “{0}” to “{1}”.").format(exc.localBranch.shorthand, exc.remoteBranch.shorthand),
                 self.tr("The branches are divergent."))
-            util.showWarning(self.parent(), self.name(), text)
+            util.showWarning(self.parentWidget(), self.name(), text)
         else:
             super().onError(exc)
 
@@ -297,7 +297,7 @@ class RecallCommit(RepoTask):
 
     def flow(self):
         dlg = showTextInputDialog(
-            self.parent(),
+            self.parentWidget(),
             self.tr("Recall lost commit"),
             self.tr("If you know the hash of a commit that isn’t part of any branches,<br>"
                     "{0} will try to recall it for you.").format(qAppName()),
@@ -321,7 +321,7 @@ class RecallCommit(RepoTask):
         yield from self._flowExitWorkerThread()
 
         util.showInformation(
-            self.parent(),
+            self.parentWidget(),
             self.tr("Recall lost commit"),
             util.paragraphs(
                 self.tr("Hurray, the commit was found! Find it on this branch:"),

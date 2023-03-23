@@ -39,7 +39,7 @@ class NewStash(RepoTask):
 
     @property
     def rw(self) -> 'RepoWidget':
-        return self.parent()
+        return self.parentWidget()
 
     def flow(self, paths: list[str] | None = None):
         # libgit2 will refuse to create a stash if there are conflicts
@@ -68,7 +68,7 @@ class NewStash(RepoTask):
         if not status:
             yield from self._flowAbort(self.tr("There are no changes to stash."), "information")
 
-        dlg = StashDialog(status, paths, self.parent())
+        dlg = StashDialog(status, paths, self.parentWidget())
         util.setWindowModal(dlg)
         dlg.show()
         # dlg.setMaximumHeight(dlg.height())
@@ -91,7 +91,7 @@ class NewStash(RepoTask):
         TODO: Remove this once libgit2 1.6 support lands in pygit2
         """
 
-        dlg = StashDialog_Legacy(self.parent())
+        dlg = StashDialog_Legacy(self.parentWidget())
         util.setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
@@ -125,7 +125,7 @@ class ApplyStash(RepoTask):
         question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
                            ).format(escape(stashMessage))
 
-        qmb = util.asyncMessageBox(self.parent(), 'question', self.name(), question,
+        qmb = util.asyncMessageBox(self.parentWidget(), 'question', self.name(), question,
                                    QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
                                    deleteOnClose=False)
 

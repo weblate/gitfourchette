@@ -28,7 +28,7 @@ class NewRemote(RepoTask):
             remoteURL="",
             customKeyFile="",
             existingRemotes=existingRemotes,
-            parent=self.parent())
+            parent=self.parentWidget())
 
         util.setWindowModal(dlg)
         dlg.show()
@@ -62,7 +62,7 @@ class EditRemote(RepoTask):
             remoteURL=oldRemoteUrl,
             customKeyFile=repoconfig.getRemoteKeyFile(self.repo, oldRemoteName),
             existingRemotes=existingRemotes,
-            parent=self.parent())
+            parent=self.parentWidget())
 
         util.setWindowModal(dlg)
         dlg.show()

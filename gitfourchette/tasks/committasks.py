@@ -23,7 +23,7 @@ class NewCommit(RepoTask):
 
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parent()
+        return self.parentWidget()
 
     def getDraftMessage(self):
         return self.rw.state.getDraftCommitMessage()
@@ -53,7 +53,7 @@ class NewCommit(RepoTask):
             committerSignature=sig,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
-            parent=self.parent())
+            parent=self.parentWidget())
 
         util.setWindowModal(cd)
 
@@ -90,7 +90,7 @@ class AmendCommit(RepoTask):
 
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parent()
+        return self.parentWidget()
 
     def getDraftMessage(self):
         return self.rw.state.getDraftCommitMessage(forAmending=True)
@@ -113,7 +113,7 @@ class AmendCommit(RepoTask):
             committerSignature=self.repo.default_signature,
             amendingCommitHash=util.shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
-            parent=self.parent())
+            parent=self.parentWidget())
 
         util.setWindowModal(cd)
 
@@ -154,7 +154,7 @@ class SetUpIdentityFirstRun(RepoTask):
             sig = self.repo.default_signature
             return
 
-        dlg = QDialog(self.parent())
+        dlg = QDialog(self.parentWidget())
 
         ui = Ui_IdentityDialog1()
         ui.setupUi(dlg)
@@ -214,7 +214,7 @@ class SetUpRepoIdentity(RepoTask):
         localName, localEmail = porcelain.getLocalIdentity(self.repo)
         useLocalIdentity = bool(localName or localEmail)
 
-        dlg = QDialog(self.parent())
+        dlg = QDialog(self.parentWidget())
 
         ui = Ui_IdentityDialog2()
         ui.setupUi(dlg)
@@ -304,7 +304,7 @@ class CheckoutCommit(RepoTask):
         commitMessage = porcelain.getCommitMessage(self.repo, oid)
         commitMessage, junk = util.messageSummary(commitMessage)
 
-        dlg = QDialog(self.parent())
+        dlg = QDialog(self.parentWidget())
 
         ui = Ui_CheckoutCommitDialog()
         ui.setupUi(dlg)
@@ -375,7 +375,7 @@ class NewTag(RepoTask):
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
 
         dlg = showTextInputDialog(
-            self.parent(),
+            self.parentWidget(),
             self.tr("New tag on commit “{0}”").format(util.shortHash(oid)),
             self.tr("Enter tag name:"),
             okButtonText=self.tr("Create Tag"),

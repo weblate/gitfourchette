@@ -25,7 +25,7 @@ class _BaseNetTask(RepoTask):
     def _showRemoteLinkDialog(self):
         assert not self.remoteLinkDialog
         assert util.onAppThread()
-        self.remoteLinkDialog = RemoteLinkProgressDialog(self.parent())
+        self.remoteLinkDialog = RemoteLinkProgressDialog(self.parentWidget())
 
     def _closeRemoteLinkDialog(self):
         assert util.onAppThread()
@@ -85,7 +85,7 @@ class RenameRemoteBranch(_BaseNetTask):
         nameTaken = self.tr("This name is already taken by another branch on this remote.")
 
         dlg = showTextInputDialog(
-            self.parent(),
+            self.parentWidget(),
             self.tr("Rename remote branch “{0}”").format(escape(remoteBranchName)),
             self.tr("Enter new name:"),
             newBranchName,

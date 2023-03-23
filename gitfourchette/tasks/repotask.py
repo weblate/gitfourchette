@@ -117,12 +117,20 @@ class RepoTask(QObject):
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
-        self.setObjectName("RepoTask")
         self.repo = None
         self._currentFlow = None
         self._currentIteration = 0
         self.taskID = RepoTask._globalTaskCounter
         RepoTask._globalTaskCounter += 1
+        self.setObjectName(f"RepoTask({self})")
+
+    def parentWidget(self) -> QWidget:
+        p = self.parent()
+        while p:
+            if isinstance(p, QWidget):
+                return p
+            p = p.parent()
+        raise ValueError(F"RepoTask {self} has no parent widget")
 
     def setRepo(self, repo: pygit2.Repository):
         self.repo = repo
@@ -149,7 +157,7 @@ class RepoTask(QObject):
         It is recommended to `yield from` one of the `_flowXXX` methods instead of instantiating
         a FlowControlToken directly. For example::
 
-            meaning = QInputDialog.getInt(self.parent(), "Hello",
+            meaning = QInputDialog.getInt(self.parentWidget(), "Hello",
                                           "What's the meaning of life?")
             yield from self._flowBeginWorkerThread()
             expensiveComputationCorrect = meaning == 42
@@ -164,16 +172,16 @@ class RepoTask(QObject):
         Runs if flow() was interrupted by an error.
         """
         if isinstance(exc, porcelain.ConflictError):
-            showConflictErrorMessage(self.parent(), exc, self.name())
+            showConflictErrorMessage(self.parentWidget(), exc, self.name())
         elif isinstance(exc, porcelain.MultiFileError):
             # Patch doesn't apply
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
             for filePath, fileException in exc.fileExceptions.items():
                 message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
-            util.showWarning(self.parent(), self.name(), message)
+            util.showWarning(self.parentWidget(), self.name(), message)
         else:
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
-            util.excMessageBox(exc, title=self.name(), message=message, parent=self.parent())
+            util.excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
 
     def refreshWhat(self) -> TaskAffectsWhat:
         """
@@ -193,7 +201,7 @@ class RepoTask(QObject):
 
         if warningText:
             assert util.onAppThread()
-            qmb = util.asyncMessageBox(self.parent(), warningTextIcon, self.name(), warningText)
+            qmb = util.asyncMessageBox(self.parentWidget(), warningTextIcon, self.name(), warningText)
             qmb.show()
 
         raise FlowControlAbort()
@@ -224,8 +232,10 @@ class RepoTask(QObject):
         """
         assert util.onAppThread(), "Subtask must start on UI thread"
 
-        subtask = subtaskClass(self.parent())
+        # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
+        subtask = subtaskClass(self)
         subtask.setRepo(self.repo)
+        subtask.setObjectName(f"{self.objectName()}_subtask({subtask})")
         yield from subtask.flow(*args, **kwargs)
 
         # Make sure we're back on the UI thread before re-entering the root task
@@ -276,12 +286,8 @@ class RepoTask(QObject):
         if not verb:
             verb = title
 
-        qmb = util.asyncMessageBox(
-            self.parent(),
-            'question',
-            title,
-            text,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        qmb = util.asyncMessageBox(self.parentWidget(), 'question', title, text,
+                                   QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
         # so it connects to the "accepted" signal.
@@ -348,7 +354,7 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            util.showInformation(self.parent(), self.tr("Operation in progress"),
+            util.showInformation(task.parentWidget(), self.tr("Operation in progress"),
                                  self.tr("Please wait for the current operation to complete. "
                                          "({0} cannot be interrupted by {1})").format(self._currentTask, task))
 
@@ -428,7 +434,8 @@ class RepoTaskRunner(QObject):
             task.deleteLater()
 
         else:
-            assert False, f"You are only allowed to yield a FlowControlToken (you yielded: {type(result).__name__})"
+            assert False, ("In a RepoTask coroutine, you can only yield a FlowControlToken "
+                           f"(you yielded: {type(result).__name__})")
 
     def _wrapNext(self, flow):
         try:

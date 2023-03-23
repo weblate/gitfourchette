@@ -67,6 +67,8 @@ class RepoWidget(QWidget):
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
 
+        self.setObjectName("RepoWidget")
+
         # Use RepoTaskRunner to schedule operations on the repository
         # to run on a thread separate from the UI thread.
         self.repoTaskRunner = tasks.RepoTaskRunner(self)
@@ -273,7 +275,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def initTask(self, taskClass: Type[tasks.RepoTask]):
-        task = taskClass(self)
+        task = taskClass(self.repoTaskRunner)
         task.setRepo(self.repo)
         return task
 
