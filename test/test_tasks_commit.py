@@ -268,6 +268,6 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
     rw.graphView.selectCommit(oid)
     rw.graphView.revertCommit.emit(oid)
 
-    rw.graphView.uncommittedChangesClicked.emit()
+    rw.graphView.selectUncommittedChanges()
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
     assert rw.repo.status() == {"c/c2-2.txt": pygit2.GIT_STATUS_INDEX_NEW}

@@ -1,9 +1,9 @@
-from dataclasses import dataclass
 from gitfourchette import log
 from gitfourchette import util
 from gitfourchette.qt import *
 from pygit2 import Oid
 from typing import ClassVar
+import dataclasses
 import enum
 
 
@@ -17,14 +17,15 @@ class NavContext(enum.IntEnum):
     State of a patch in the staging pipeline
     """
 
-    EMPTY = 0
-    UNTRACKED = 1
-    UNSTAGED = 2
-    STAGED = 3
-    COMMITTED = 4
+    EMPTY       = 0
+    COMMITTED   = 1
+    WORKDIR     = 2
+    UNTRACKED   = 3
+    UNSTAGED    = 4
+    STAGED      = 5
 
     def isWorkdir(self):
-        return self == NavContext.UNTRACKED or self == NavContext.UNSTAGED or self == NavContext.STAGED
+        return self == NavContext.WORKDIR or self == NavContext.UNTRACKED or self == NavContext.UNSTAGED or self == NavContext.STAGED
 
     def isDirty(self):
         return self == NavContext.UNTRACKED or self == NavContext.UNSTAGED
@@ -43,7 +44,7 @@ class NavContext(enum.IntEnum):
         return names.get(self, translate("NavContext", "Unknown"))
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class NavLocator:
     """
     Resource locator within a repository.
@@ -109,6 +110,9 @@ class NavLocator:
 
         return url
 
+    def replace(self, **kwargs):
+        return dataclasses.replace(self, **kwargs)
+
     @staticmethod
     def parseUrl(url: QUrl):
         assert url.authority() == NavLocator.URL_AUTHORITY
@@ -149,32 +153,22 @@ class NavHistory:
     current: int
     "Current position in the history stack. Hitting next/forward moves this index."
 
-    recent: dict[str, tuple[NavLocator, int]]
-    "Most recent NavPos and 'timestamp' by context (commit oid/UNSTAGED/UNTRACKED/STAGED)."
+    recent: dict[str, NavLocator]
+    "Most recent NavPos by context key"
 
     def __init__(self):
         self.history = []
         self.recent = {}
         self.current = 0
-        self.lockRefCount = 0
-        self.counter = 0
-
-    @property
-    def locked(self):
-        """All push calls are ignored while the history is locked."""
-        return self.lockRefCount > 0
-
-    def lockContext(self):
-        return NavHistoryLockContext(self)
 
     def push(self, pos: NavLocator):
-        if self.locked or not pos:
+        if not pos:
             return
 
-        self.counter += 1
-
-        self.recent[pos.contextKey] = (pos, self.counter)
-        self.recent[pos.fileKey] = (pos, self.counter)
+        self.recent[pos.contextKey] = pos
+        self.recent[pos.fileKey] = pos
+        if pos.context.isWorkdir():
+            self.recent["WORKDIR"] = pos
 
         if len(self.history) > 0 and self.history[self.current].similarEnoughTo(pos):
             # Update in-place
@@ -189,26 +183,19 @@ class NavHistory:
         self.history = self.history[: self.current + 1]
         assert not self.canGoForward()
 
-    def bump(self, pos: NavLocator):
-        self.counter += 1
-
-        self.recent[pos.contextKey] = (pos, self.counter)
-        self.recent[pos.fileKey] = (pos, self.counter)
-    
-    def recallCommit(self, oid: Oid):
-        """ Recalls the most recent NavLocator in a commit context. """
-        recent = self.recent.get(oid.hex, (None, -1))
-        return recent[0]
-
     def recallWorkdir(self):
-        """ Recalls the most recent NavLocator in a workdir context. """
-        contextKeys = [NavContext.UNTRACKED.name, NavContext.UNSTAGED.name, NavContext.STAGED.name]
-        recents = (self.recent.get(c, (None, -1)) for c in contextKeys)
-        return max(recents, key=lambda x: x[1])[0]
+        return self.recent.get("WORKDIR", None)
 
-    def recallFileInSameContext(self, otherLocator: NavLocator) -> NavLocator:
-        pos = self.recent.get(otherLocator.fileKey, (None, -1))
-        return pos[0]
+    def refine(self, locator: NavLocator):
+        # If no path is specified, attempt to recall any path in the same context
+        if not locator.path:
+            locator2 = self.recent.get(locator.contextKey, None)
+            if not locator2:
+                return locator
+            else:
+                locator = locator2
+
+        return self.recent.get(locator.fileKey, None) or locator
 
     def canGoForward(self):
         count = len(self.history)
@@ -217,6 +204,13 @@ class NavHistory:
     def canGoBack(self):
         count = len(self.history)
         return count > 0 and self.current > 0
+
+    def canGoDelta(self, delta: int):
+        assert delta == -1 or delta == 1
+        if delta > 0:
+            return self.canGoForward()
+        else:
+            return self.canGoBack()
 
     def navigateBack(self):
         if not self.canGoBack():
@@ -229,6 +223,13 @@ class NavHistory:
             return None
         self.current += 1
         return self.history[self.current]
+
+    def navigateDelta(self, delta: int):
+        assert delta == -1 or delta == 1
+        if delta > 0:
+            return self.navigateForward()
+        else:
+            return self.navigateBack()
 
     def popCurrent(self):
         if self.current < len(self.history):
@@ -249,15 +250,3 @@ class NavHistory:
             i -= 1
         return s
 
-
-class NavHistoryLockContext:
-    def __init__(self, history: NavHistory):
-        self.history = history
-
-    def __enter__(self):
-        self.history.lockRefCount += 1
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-        if self.history.lockRefCount > 0:
-            self.history.lockRefCount -= 1

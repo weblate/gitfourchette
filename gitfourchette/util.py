@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.settings import PathDisplayStyle
+from gitfourchette import log
 from pygit2 import Oid
 import contextlib
 import html
@@ -285,8 +286,6 @@ def asyncMessageBox(
         deleteOnClose=True,
 ) -> QMessageBox:
 
-    from gitfourchette import log
-
     loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
     if icon in ['information', 'question']:
         log.info("MessageBox", loggedMessage)
@@ -459,14 +458,18 @@ class QSignalBlockerContext:
     """
     Context manager wrapper around QSignalBlocker.
     """
-    def __init__(self, objectToBlock: QObject | QWidget):
-        self.objectToBlock = objectToBlock
+    def __init__(self, *objectsToBlock: QObject | QWidget):
+        self.objectsToBlock = objectsToBlock
 
     def __enter__(self):
-        self.objectToBlock.blockSignals(True)
+        for o in self.objectsToBlock:
+            if o.signalsBlocked():
+                log.warning("QSignalBlockerContext", "Nesting QSignalBlockerContexts isn't a great idea!")
+            o.blockSignals(True)
 
     def __exit__(self, excType, excValue, excTraceback):
-        self.objectToBlock.blockSignals(False)
+        for o in self.objectsToBlock:
+            o.blockSignals(False)
 
 
 class DisableWidgetContext:

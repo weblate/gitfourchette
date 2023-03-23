@@ -11,6 +11,8 @@ from html import escape
 from typing import Literal
 import pygit2
 
+from gitfourchette.nav import NavLocator, NavContext
+
 
 class CommitFilter(QSortFilterProxyModel):
     hiddenOids: set[pygit2.Oid]
@@ -36,9 +38,7 @@ class CommitFilter(QSortFilterProxyModel):
 
 
 class GraphView(QListView):
-    uncommittedChangesClicked = Signal()
-    emptyClicked = Signal()
-    commitClicked = Signal(pygit2.Oid)
+    jump = Signal(NavLocator)
     resetHead = Signal(pygit2.Oid, str, bool)
     newBranchFromCommit = Signal(pygit2.Oid)
     newTagOnCommit = Signal(pygit2.Oid)
@@ -309,12 +309,13 @@ class GraphView(QListView):
 
     def onSetCurrent(self, current: QModelIndex = None):
         if current is None or not current.isValid():
-            self.emptyClicked.emit()
+            locator = NavLocator(NavContext.EMPTY)
         elif current.row() == 0:  # uncommitted changes
-            self.uncommittedChangesClicked.emit()
+            locator = NavLocator(NavContext.WORKDIR)
         else:
             oid = current.data(CommitLogModel.CommitRole).oid
-            self.commitClicked.emit(oid)
+            locator = NavLocator(NavContext.COMMITTED, commit=oid)
+        self.jump.emit(locator)
 
     def selectUncommittedChanges(self, force=False):
         if force or self.currentCommitOid is not None:

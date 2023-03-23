@@ -98,22 +98,16 @@ class RepoWidget(QWidget):
         self.richDiffView.anchorClicked.connect(self.processInternalLink)
         self.graphView.linkActivated.connect(self.processInternalLink)
 
-        # The staged files and unstaged files view are mutually exclusive.
-        self.stagedFiles.entryClicked.connect(self.dirtyFiles.clearSelectionSilently)
-        self.dirtyFiles.entryClicked.connect(self.stagedFiles.clearSelectionSilently)
-
-        for v in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
-            v.nothingClicked.connect(lambda: self.diffHeader.setText(" "))
-            v.nothingClicked.connect(self.diffView.clear)
-            v.entryClicked.connect(self.loadPatchAsync)
+        for fileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
+            # File list view selections are mutually exclusive.
+            for otherFileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
+                if fileList != otherFileList:
+                    fileList.jump.connect(otherFileList.clearSelectionSilently)
+            fileList.nothingClicked.connect(self.clearDiffView)
 
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
         self.conflictView.openFile.connect(self.openConflictFile)
-
-        self.graphView.emptyClicked.connect(self.setNoCommitSelected)
-        self.graphView.commitClicked.connect(self.loadCommitAsync)
-        self.graphView.uncommittedChangesClicked.connect(self.refreshWorkdirViewAsync)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
@@ -229,11 +223,13 @@ class RepoWidget(QWidget):
 
         self.connectTask(self.amendButton.clicked,              tasks.AmendCommit, argc=0)
         self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
+        self.connectTask(self.committedFiles.jump,              tasks.Jump)
         self.connectTask(self.conflictView.hardSolve,           tasks.HardSolveConflict)
         self.connectTask(self.conflictView.markSolved,          tasks.MarkConflictSolved)
         self.connectTask(self.diffView.applyPatch,              tasks.ApplyPatch)
         self.connectTask(self.diffView.revertPatch,             tasks.RevertPatch)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
+        self.connectTask(self.dirtyFiles.jump,                  tasks.Jump)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.dirtyFiles.stashFiles,            tasks.NewStash)
         self.connectTask(self.graphView.amendChanges,           tasks.AmendCommit)
@@ -242,6 +238,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.graphView.commitChanges,          tasks.NewCommit)
         self.connectTask(self.graphView.exportCommitAsPatch,    tasks.ExportCommitAsPatch)
         self.connectTask(self.graphView.exportWorkdirAsPatch,   tasks.ExportWorkdirAsPatch)
+        self.connectTask(self.graphView.jump,                   tasks.Jump)
         self.connectTask(self.graphView.newBranchFromCommit,    tasks.NewBranchFromCommit)
         self.connectTask(self.graphView.newStash,               tasks.NewStash)
         self.connectTask(self.graphView.newTagOnCommit,         tasks.NewTag)
@@ -258,6 +255,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.editTrackingBranch,       tasks.EditTrackedBranch)
         self.connectTask(self.sidebar.exportStashAsPatch,       tasks.ExportStashAsPatch)
         self.connectTask(self.sidebar.exportWorkdirAsPatch,     tasks.ExportWorkdirAsPatch)
+        self.connectTask(self.sidebar.fastForwardBranch,        tasks.FastForwardBranch)
         self.connectTask(self.sidebar.fetchRemote,              tasks.FetchRemote)
         self.connectTask(self.sidebar.fetchRemoteBranch,        tasks.FetchRemoteBranch)
         self.connectTask(self.sidebar.newBranch,                tasks.NewBranchFromHead)
@@ -265,20 +263,23 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.newRemote,                tasks.NewRemote)
         self.connectTask(self.sidebar.newStash,                 tasks.NewStash)
         self.connectTask(self.sidebar.newTrackingBranch,        tasks.NewTrackingBranch)
-        self.connectTask(self.sidebar.fastForwardBranch,        tasks.FastForwardBranch)
         self.connectTask(self.sidebar.renameBranch,             tasks.RenameBranch)
         self.connectTask(self.sidebar.renameRemoteBranch,       tasks.RenameRemoteBranch)
         self.connectTask(self.sidebar.switchToBranch,           tasks.SwitchBranch)
+        self.connectTask(self.stagedFiles.jump,                 tasks.Jump)
         self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
 
     # -------------------------------------------------------------------------
 
-    def runTask(self, taskClass: Type[tasks.RepoTask], *args):
+    def initTask(self, taskClass: Type[tasks.RepoTask]):
         task = taskClass(self)
         task.setRepo(self.repo)
-        #task.setArgs(*args)
-        self.repoTaskRunner.put(task, *args)
+        return task
+
+    def runTask(self, taskClass: Type[tasks.RepoTask], *args, **kwargs):
+        task = self.initTask(taskClass)
+        self.repoTaskRunner.put(task, *args, **kwargs)
         return task
 
     def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1, preamble: Callable = None):
@@ -337,6 +338,8 @@ class RepoWidget(QWidget):
         dc = 0
         ds = 0
         if self.diffStack.currentWidget() == self.diffView:
+            if not self.diffView.currentLocator.similarEnoughTo(self.navLocator):
+                print("LOCATOR MISMATCH")
             dc = self.diffView.textCursor().position()
             ds = self.diffView.verticalScrollBar().value()
 
@@ -349,7 +352,11 @@ class RepoWidget(QWidget):
 
         self.navHistory.push(self.navLocator)
 
+        return self.navLocator
+
     def restoreSelectedFile(self, locator: NavLocator):
+        # TODO: This should probably go
+
         if locator.context.isDirty():
             fl = self.dirtyFiles
         elif locator.context == NavContext.STAGED:
@@ -360,7 +367,12 @@ class RepoWidget(QWidget):
             return False
 
         fl.clearSelectionSilently()
-        return fl.selectFile(locator.path)
+        if fl.selectFile(locator.path):
+            # self.curLocator = locator  #? loadpatch should do this?
+            # self.navHistory.push(locator)
+            return True
+        else:
+            return False
 
     def restoreDiffPosition(self, locator: NavLocator):
         cursorPosition = locator.diffCursor
@@ -372,73 +384,14 @@ class RepoWidget(QWidget):
 
         self.diffView.verticalScrollBar().setValue(scrollPosition)
 
-    def navigateTo(self, locator: NavLocator):
-        if not locator:
-            QApplication.beep()
-            return False
-
-        previousLocator = self.navLocator
-
-        self.navLocator = locator
-        self.navHistory.bump(locator)
-        self.saveFilePositions()
-        self.navHistory.push(locator)
-
-        # Discard signals from GraphView as we adjust the selected commit
-        # and prevent modifying the navigation history.
-        with QSignalBlockerContext(self.graphView), self.navHistory.lockContext():
-            # Always adjust GraphView row - it may have gotten out of sync with navLocator if we're calling
-            # navigateTo to restore a coherent state after the GraphView model changes.
-            if locator.context.isWorkdir():
-                self.graphView.selectUncommittedChanges()
-                self.filesStack.setCurrentWidget(self.stageSplitter)
-                return self.restoreSelectedFile(locator)
-            else:
-                if not self.graphView.selectCommit(locator.commit, silent=True):
-                    return False
-                self.filesStack.setCurrentWidget(self.committedFilesContainer)
-                if locator.commit == previousLocator.commit and self.committedFiles.commitOid == locator.commit:
-                    # no need to reload the same commit
-                    return self.restoreSelectedFile(locator)
-                else:
-                    self.loadCommitAsync(locator.commit)
-                    return True  # it's async, so we can't know if it's successful yet... but it'll most likely succeed since commits are immutable
+    def jump(self, locator: NavLocator, warnIfMissing=True):
+        self.runTask(tasks.Jump, locator, warnIfMissing=warnIfMissing)
 
     def navigateBack(self):
-        self.saveFilePositions()
-        start = self.navLocator
-
-        while self.navHistory.canGoBack():
-            locator = self.navHistory.navigateBack()
-            success = self.navigateTo(locator)
-
-            if not success:
-                # This locator is stale, nuke it and keep going
-                self.navHistory.popCurrent()
-            elif locator.similarEnoughTo(start):
-                # Keep going if same file comes up several times in a row
-                continue
-            else:
-                # We're done
-                break
+        self.runTask(tasks.JumpBackOrForward, -1)
 
     def navigateForward(self):
-        self.saveFilePositions()
-        start = self.navLocator
-
-        while self.navHistory.canGoForward():
-            locator = self.navHistory.navigateForward()
-            success = self.navigateTo(locator)
-
-            if not success:
-                # This locator is stale, nuke it and keep going
-                self.navHistory.popCurrent()
-            elif locator.similarEnoughTo(start):
-                # Keep going if same file comes up several times in a row
-                continue
-            else:
-                # We're done
-                break
+        self.runTask(tasks.JumpBackOrForward, 1)
 
     # -------------------------------------------------------------------------
 
@@ -524,6 +477,7 @@ class RepoWidget(QWidget):
     def clearDiffView(self):
         self.diffView.clear()
         self.diffStack.setCurrentWidget(self.diffView)
+        self.diffHeader.setText(" ")
 
     def setPendingWorkdir(self, path):
         self.pathPending = os.path.normpath(path)
@@ -554,8 +508,7 @@ class RepoWidget(QWidget):
         with QSignalBlockerContext(self.sidebar):
             self.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
-        task = tasks.LoadWorkdir(self)
-        task.setRepo(self.repo)
+        task = self.initTask(tasks.LoadWorkdir)
         task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, locator))
         return self.repoTaskRunner.put(task, allowUpdateIndex)
 
@@ -582,16 +535,18 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentWidget(self.stageSplitter)
 
         if locator:  # for Revert Hunk from DiffView
-            self.navLocator = locator
+            pass
         else:
             # Try to recall where we were last time we looked at the workdir.
             # If that fails ("or" clause), make a dummy NavPos so the history knows we're looking at the workdir now.
-            self.navLocator = self.navHistory.recallWorkdir() or NavLocator(NavContext.UNSTAGED)
+            locator = self.navHistory.recallWorkdir() or NavLocator(NavContext.UNSTAGED)
+        # self.tgtLocator = locator
 
+        # TODO: Very important
         # After patchApplied.emit has caused a refresh of the dirty/staged file views,
         # restore selected row in appropriate file list view so the user can keep hitting
         # enter (del) to stage (unstage) a series of files.
-        if not self.restoreSelectedFile(self.navLocator):
+        if not self.restoreSelectedFile(locator):
             if stagedESR >= 0:
                 self.stagedFiles.selectRow(min(stagedESR, self.stagedFiles.model().rowCount()-1))
             elif dirtyESR >= 0:
@@ -600,53 +555,6 @@ class RepoWidget(QWidget):
         # If no file is selected in either FileListView, clear the diffView of any residual diff.
         if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
             self.clearDiffView()
-
-    def loadCommitAsync(self, oid: pygit2.Oid):
-        # Attempt to select matching ref in sidebar
-        with QSignalBlockerContext(self.sidebar):
-            self.sidebar.selectAnyRef(*self.state.reverseRefCache.get(oid, []))
-
-        task = tasks.LoadCommit(self)
-        task.setRepo(self.repo)
-        task.success.connect(lambda: self._loadCommit(oid, task.diffs, task.message))
-        self.repoTaskRunner.put(task, oid)
-
-    def _loadCommit(self, oid: pygit2.Oid, parentDiffs: list[pygit2.Diff], summary: str):
-        """Load commit details into Changed Files view"""
-
-        self.saveFilePositions()
-
-        # Reset committed files view.
-        # Block its signals as we refill it to prevent updating the diff.
-        with QSignalBlockerContext(self.committedFiles):
-            self.committedFiles.clear()
-            self.committedFiles.setCommit(oid)
-            self.committedFiles.setContents(parentDiffs)
-
-        self.navLocator = self.navHistory.recallCommit(oid)
-        if not self.navLocator:
-            self.navLocator = NavLocator(NavContext.COMMITTED, oid, path=self.committedFiles.getFirstPath())
-
-        # Show message if commit is empty
-        if self.committedFiles.flModel.rowCount() == 0:
-            self.diffStack.setCurrentWidget(self.richDiffView)
-            self.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
-
-        # Switch to correct card in filesStack
-        self.filesStack.setCurrentWidget(self.committedFilesContainer)
-
-        # Set header text
-        self.committedHeader.setText(self.tr("Changes in {0}:").format(shortHash(oid)))
-        self.committedHeader.setToolTip("<p>" + escape(summary.strip()).replace("\n", "<br>"))
-
-        # Select the best file in this commit - which may trigger loadPatchAsync
-        self.restoreSelectedFile(self.navLocator)
-
-    def loadPatchAsync(self, patch: pygit2.Patch, locator: NavLocator):
-        task = tasks.LoadPatch(self)
-        task.setRepo(self.repo)
-        task.success.connect(lambda: self._loadPatch(patch, locator, task.result))
-        self.repoTaskRunner.put(task, patch, locator)
 
     def loadPatchInNewWindow(self, patch: pygit2.Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
@@ -657,33 +565,6 @@ class RepoWidget(QWidget):
             diffWindow.setWindowFlag(Qt.WindowType.Window, True)
             diffWindow.setFrameStyle(QFrame.Shape.NoFrame)
             diffWindow.show()
-
-    def _loadPatch(self, patch: pygit2.Patch, locator: NavLocator, result):
-        """Load a file diff into the Diff View"""
-
-        self.saveFilePositions()
-        self.navLocator = self.navHistory.recallFileInSameContext(locator) or locator
-        self.navHistory.push(self.navLocator)
-        self.diffHeader.setText(locator.asTitle())
-
-        if type(result) == DiffConflict:
-            self.diffStack.setCurrentWidget(self.conflictView)
-            self.conflictView.displayConflict(result)
-        elif type(result) == DiffModelError:
-            self.diffStack.setCurrentWidget(self.richDiffView)
-            self.richDiffView.displayDiffModelError(result)
-        elif type(result) == DiffModel:
-            self.diffStack.setCurrentWidget(self.diffView)
-            self.diffView.replaceDocument(self.repo, patch, locator, result)
-            self.restoreDiffPosition(self.navLocator)  # restore position after we've replaced the document
-        elif type(result) == DiffImagePair:
-            self.diffStack.setCurrentWidget(self.richDiffView)
-            self.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
-        else:
-            self.diffStack.setCurrentWidget(self.richDiffView)
-            self.richDiffView.displayDiffModelError(DiffModelError(
-                self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
-                icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
     def startPushFlow(self, branchName: str = ""):
         pushDialog = PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
@@ -780,14 +661,16 @@ class RepoWidget(QWidget):
             self.graphView.verticalScrollBar().setValue(initialGraphScroll)
             oldLocatorCommit = initialLocator.commit
             if oldLocatorCommit in self.state.commitPositions:
-                self.navigateTo(initialLocator)
+                self.jump(initialLocator)
             else:
                 self.graphView.selectCommit(self.state.activeCommitOid)
         elif self.isWorkdirShown:
             # Refresh workdir view on separate thread AFTER all the processing above
             # (All the above accesses the repository on the UI thread)
             allowUpdateIndex = bool(flags & TaskAffectsWhat.INDEXWRITE)
+            # TODO: USE allowUpdateIndex! Put it in the locator's options or something?
             self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
+            # self.jump(initialLocator)
 
     def refreshWindowTitle(self):
         shortname = self.getTitle()
@@ -829,13 +712,7 @@ class RepoWidget(QWidget):
 
     def selectRef(self, refName: str):
         oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
-        self.graphView.selectCommit(oid)
-
-    """
-    def selectTag(self, tagName: str):
-        oid = porcelain.getCommitOidFromTagName(self.repo, tagName)
-        self.selectCommit(oid)
-    """
+        self.jump(NavLocator(NavContext.COMMITTED, commit=oid), warnIfMissing=True)
 
     # -------------------------------------------------------------------------
 
@@ -924,7 +801,7 @@ class RepoWidget(QWidget):
 
         if url.authority() == NavLocator.URL_AUTHORITY:
             navLoc = NavLocator.parseUrl(url)
-            self.navigateTo(navLoc)
+            self.jump(navLoc)
         elif url.authority() == "commit":
             oid = pygit2.Oid(hex=url.fragment())
             self.graphView.selectCommit(oid)

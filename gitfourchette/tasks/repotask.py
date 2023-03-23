@@ -125,7 +125,7 @@ class RepoTask(QObject):
     def canKill(self, task: 'RepoTask'):
         return False
 
-    def flow(self, *args) -> Generator:
+    def flow(self, *args, **kwargs) -> Generator:
         """
         Generator that performs the task. You can think of this as a coroutine.
 
@@ -200,7 +200,7 @@ class RepoTask(QObject):
         """
         yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
 
-    def _flowSubtask(self, subtaskClass: Type['RepoTask'], *args):
+    def _flowSubtask(self, subtaskClass: Type['RepoTask'], *args, **kwargs):
         """
         Runs a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
@@ -209,11 +209,13 @@ class RepoTask(QObject):
 
         subtask = subtaskClass(self.parent())
         subtask.setRepo(self.repo)
-        yield from subtask.flow(*args)
+        yield from subtask.flow(*args, **kwargs)
 
         # Make sure we're back on the UI thread before re-entering the root task
         if not util.onAppThread():
             yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
+
+        return subtask
 
     def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """
@@ -306,11 +308,11 @@ class RepoTaskRunner(QObject):
     def isBusy(self):
         return self._currentTask is not None or self._zombieTask is not None or self._threadPool.activeThreadCount() > 0
 
-    def put(self, task: RepoTask, *args):
+    def put(self, task: RepoTask, *args, **kwargs):
         assert util.onAppThread()
 
         # Get flow generator
-        task._currentFlow = task.flow(*args)
+        task._currentFlow = task.flow(*args, **kwargs)
         assert isinstance(task._currentFlow, Generator), "flow() must contain at least one yield statement"
 
         if not self._currentTask:

@@ -180,8 +180,8 @@ class FileListModel(QAbstractListModel):
 
 
 class FileList(QListView):
+    jump = Signal(NavLocator)
     nothingClicked = Signal()
-    entryClicked = Signal(pygit2.Patch, NavLocator)
     openDiffInNewWindow = Signal(pygit2.Patch, NavLocator)
     stashFiles = Signal(list)  # list[str]
 
@@ -203,6 +203,9 @@ class FileList(QListView):
     @property
     def flModel(self) -> FileListModel:
         return self.model()
+
+    def isEmpty(self):
+        return self.model().rowCount() == 0
 
     def setContents(self, diffs: list[pygit2.Diff]):
         self.flModel.setDiffs(diffs)
@@ -369,9 +372,8 @@ class FileList(QListView):
                 current = None
 
         if current and current.isValid():
-            patch = current.data(PATCH_ROLE)
             locator = self.getNavLocatorForIndex(current)
-            self.entryClicked.emit(patch, locator)
+            self.jump.emit(locator)
         else:
             self.nothingClicked.emit()
 
@@ -482,16 +484,26 @@ class FileList(QListView):
             return ""
 
     def selectFile(self, file: str):
-        if not file:
-            row = 0
-        else:
-            try:
-                row = self.model().getRowForFile(file)
-            except KeyError:
-                return False
+        assert file
+
+        try:
+            row = self.model().getRowForFile(file)
+        except KeyError:
+            return False
+
+        if self.selectionModel().isRowSelected(row):
+            # Re-selecting an already selected row may deselect it??
+            return True
 
         self.selectRow(row)
         return True
+
+    def getPatchForFile(self, file: str):
+        try:
+            row = self.flModel.getRowForFile(file)
+            return self.flModel.getPatchAt(self.flModel.index(row, 0))
+        except KeyError:
+            return None
 
     def openHeadRevision(self):
         def run(patch: pygit2.Patch):
