@@ -70,7 +70,6 @@ class FlowControlToken(QObject):
     class Kind(enum.IntEnum):
         CONTINUE_ON_UI_THREAD = enum.auto()
         CONTINUE_ON_WORK_THREAD = enum.auto()
-        ABORT_TASK = enum.auto()
         WAIT_READY = enum.auto()
 
     ready = Signal()
@@ -86,6 +85,18 @@ class FlowControlToken(QObject):
 
     def __str__(self):
         return F"FlowControlToken({self.flowControl.name})"
+
+
+class FlowControlAbort(BaseException):
+    """ To bail from a coroutine early, we must raise an exception to ensure that
+    any active context managers exit deterministically."""
+    pass
+
+
+class FlowControlEarlySuccess(BaseException):
+    """ To bail from a coroutine early, we must raise an exception to ensure that
+    any active context managers exit deterministically."""
+    pass
 
 
 class RepoTask(QObject):
@@ -185,7 +196,13 @@ class RepoTask(QObject):
             qmb = util.asyncMessageBox(self.parent(), warningTextIcon, self.name(), warningText)
             qmb.show()
 
-        yield FlowControlToken(FlowControlToken.Kind.ABORT_TASK)
+        raise FlowControlAbort()
+        yield  # Dummy yield to make it a generator
+
+    def _flowStop(self):
+        assert util.onAppThread()
+        raise FlowControlEarlySuccess()
+        yield  # Dummy yield to make it a generator
 
     def _flowBeginWorkerThread(self):
         """
@@ -372,13 +389,7 @@ class RepoTaskRunner(QObject):
         if isinstance(result, FlowControlToken):
             control = result.flowControl
 
-            if control == FlowControlToken.Kind.ABORT_TASK:
-                # Stop here
-                log.info(TAG, f"Task aborted: {task}")
-                self._releaseTask(task)
-                task.deleteLater()
-
-            elif control == FlowControlToken.Kind.WAIT_READY:
+            if control == FlowControlToken.Kind.WAIT_READY:
                 self.progress.emit(self.tr("Awaiting your input to resume {0}").format(task.name()), False)
 
                 # Re-enter when user is ready
@@ -402,11 +413,14 @@ class RepoTaskRunner(QObject):
             # Stop tracking this task
             self._releaseTask(task)
 
-            if isinstance(exception, StopIteration):
+            if isinstance(exception, (StopIteration, FlowControlEarlySuccess)):
                 # No more steps in the flow
                 log.info(TAG, f"Task successful: {task}")
                 task.success.emit()
                 self.refreshPostTask.emit(task)
+            elif isinstance(exception, FlowControlAbort):
+                # Controlled exit
+                pass
             else:
                 # Run task's error callback
                 task.onError(exception)
@@ -432,6 +446,8 @@ class RepoTaskRunner(QObject):
         assert task is self._currentTask or task is self._zombieTask
 
         self._continueFlow.disconnect()
+
+        task._currentFlow = None
 
         if task is self._currentTask:
             self._currentTask = None
