@@ -145,7 +145,10 @@ class SidebarModel(QAbstractItemModel):
                 elif name.startswith(porcelain.REMOTES_PREFIX):
                     name = name.removeprefix(porcelain.REMOTES_PREFIX)
                     remote, name = porcelain.splitRemoteBranchShorthand(name)
-                    self._remoteBranchesDict[remote].append(name)
+                    try:
+                        self._remoteBranchesDict[remote].append(name)
+                    except KeyError:
+                        print("Oops, missing remote:", remote)
                 elif name.startswith(porcelain.TAGS_PREFIX):
                     name = name.removeprefix(porcelain.TAGS_PREFIX)
                     self._tags.append(name)
