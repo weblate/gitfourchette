@@ -9,6 +9,7 @@ import re
 
 CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", re.IGNORECASE)
+DIFF_HEADER_PATTERN = re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
 
 HEADS_PREFIX = "refs/heads/"
 REMOTES_PREFIX = "refs/remotes/"
@@ -952,7 +953,20 @@ def patchApplies(
 
     # Attempt to apply every patch in the diff separately, so we can report which file an error pertains to
     for patch in diff:
-        patchDiff = pygit2.Diff.parse_diff(patch.data)  # can we extract a diff from the patch without re-parsing it?
+        patchData = patch.data
+
+        # Work around libgit2 bug: If a patch lacks the "index" line (as our partial patches do),
+        # then libgit2 fails to recreate the "---" and "+++" lines. Then it can't parse its own output.
+        patchLines = patchData.splitlines(True)
+        if len(patchLines) >= 2 and patchLines[0].startswith(b"diff --git ") and patchLines[1].startswith(b"@@"):
+            header = patchLines[0].strip().decode("utf-8")
+            match = re.match(DIFF_HEADER_PATTERN, header)
+            if match:
+                patchLines.insert(1, ("--- " + match[1] + "\n").encode("utf-8"))
+                patchLines.insert(2, ("+++ " + match[2] + "\n").encode("utf-8"))
+                patchData = b"".join(patchLines)
+
+        patchDiff = pygit2.Diff.parse_diff(patchData)  # can we extract a diff from the patch without re-parsing it?
         try:
             repo.applies(patchDiff, location, raise_error=True)
         except (pygit2.GitError, OSError) as exc:
