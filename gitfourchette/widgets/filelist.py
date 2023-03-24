@@ -484,7 +484,8 @@ class FileList(QListView):
             return ""
 
     def selectFile(self, file: str):
-        assert file
+        if not file:
+            return False
 
         try:
             row = self.model().getRowForFile(file)

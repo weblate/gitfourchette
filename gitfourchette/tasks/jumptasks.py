@@ -22,12 +22,18 @@ class Jump(RepoTask):
     Only the Jump task may "cement" the RepoWidget's navLocator.
     """
 
+    def name(self):
+        return self.tr("Navigate in repo")
+
     @property
     def rw(self):
         from gitfourchette.widgets.repowidget import RepoWidget
         rw: RepoWidget = self.parentWidget()
         assert isinstance(rw, RepoWidget)
         return rw
+
+    def canKill(self, task: 'RepoTask'):
+        return isinstance(task, Jump)
 
     def flow(self, locator: NavLocator, backup=True, warnIfMissing=False):
         if not locator:
@@ -44,37 +50,32 @@ class Jump(RepoTask):
         log.info(TAG, "locator refined to:", locator)
 
         # As we do this, prevent emitting other "jump" signals
-        with QSignalBlockerContext(rw.graphView, rw.dirtyFiles, rw.stagedFiles, rw.committedFiles, rw.sidebar):
-            if locator.context.isWorkdir():
-                locator = yield from self.loadWorkdir(locator)
-            else:
-                locator = yield from self.loadCommit(locator, warnIfMissing)
+        if locator.context.isWorkdir():
+            locator = yield from self.loadWorkdir(locator)
+            flv = rw.stagedFiles if locator.context == NavContext.STAGED else rw.dirtyFiles
+        else:
+            locator = yield from self.loadCommit(locator, warnIfMissing)
+            flv = rw.committedFiles
 
-            if locator.context.isWorkdir():
-                flv = rw.stagedFiles if locator.context == NavContext.STAGED else rw.dirtyFiles
-            else:
-                flv = rw.committedFiles
+        # If we still don't have a path in the locator, fall back to first path in file list.
+        # TODO: do we still need earliestSelectedRow/latestSelectedRow in workdir view?
+        if not locator.path:
+            locator = locator.replace(path=flv.getFirstPath())
+            locator = rw.navHistory.refine(locator)
 
+        with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles, rw.committedFiles):
             # Clear selection in other FileListViews
             for otherFlv in rw.dirtyFiles, rw.stagedFiles, rw.committedFiles:
                 if otherFlv is not flv:
-                    otherFlv.clearSelection()  # NOT silently to avoid nesting QSignalBlockerContexts
+                    otherFlv.clearSelection()
 
-            # If we still don't have a path after refining, fall back to first path
-            # TODO: do we still need earliestSelectedRow/latestSelectedRow in workdir view?
-            if not locator.path:
-                locator = locator.replace(path=flv.getFirstPath())
-                locator = rw.navHistory.refine(locator)
-
+            # Select correct row in file list
             anyFile = False
-
-            # Select correct file in target flv
             if locator.path:
                 anyFile = flv.selectFile(locator.path)
 
-            # Set correct card in filesStack
-            # (after selecting the file to avoid flashing)
-            if flv is rw.committedFiles:
+            # Set correct card in filesStack (after selecting the file to avoid flashing)
+            if locator.context == NavContext.COMMITTED:
                 rw.filesStack.setCurrentWidget(rw.committedFilesContainer)
             else:
                 rw.filesStack.setCurrentWidget(rw.stageSplitter)
@@ -84,45 +85,51 @@ class Jump(RepoTask):
                 rw.clearDiffView()
                 return
 
-            self.setFinalLocator(locator)
-            rw.diffHeader.setText(locator.asTitle())
+        self.setFinalLocator(locator)
+        rw.diffHeader.setText(locator.asTitle())
 
-            # Load patch in DiffView
-            patch = flv.getPatchForFile(locator.path)
-            patchTask: tasks.LoadPatch = yield from self._flowSubtask(tasks.LoadPatch, patch, locator)
-            result = patchTask.result
+        # Load patch in DiffView
+        patch = flv.getPatchForFile(locator.path)
+        patchTask: tasks.LoadPatch = yield from self._flowSubtask(tasks.LoadPatch, patch, locator)
+        result = patchTask.result
 
-            if type(result) == DiffConflict:
-                rw.diffStack.setCurrentWidget(rw.conflictView)
-                rw.conflictView.displayConflict(result)
-            elif type(result) == DiffModelError:
-                rw.diffStack.setCurrentWidget(rw.richDiffView)
-                rw.richDiffView.displayDiffModelError(result)
-            elif type(result) == DiffModel:
-                rw.diffStack.setCurrentWidget(rw.diffView)
-                rw.diffView.replaceDocument(rw.repo, patch, locator, result)
-                rw.restoreDiffPosition(locator)  # restore position after we've replaced the document
-            elif type(result) == DiffImagePair:
-                rw.diffStack.setCurrentWidget(rw.richDiffView)
-                rw.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
-            else:
-                rw.diffStack.setCurrentWidget(rw.richDiffView)
-                rw.richDiffView.displayDiffModelError(DiffModelError(
-                    self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
-                    icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
+        if type(result) == DiffConflict:
+            rw.diffStack.setCurrentWidget(rw.conflictView)
+            rw.conflictView.displayConflict(result)
+        elif type(result) == DiffModelError:
+            rw.diffStack.setCurrentWidget(rw.richDiffView)
+            rw.richDiffView.displayDiffModelError(result)
+        elif type(result) == DiffModel:
+            rw.diffStack.setCurrentWidget(rw.diffView)
+            rw.diffView.replaceDocument(rw.repo, patch, locator, result)
+            rw.restoreDiffPosition(locator)  # restore position after we've replaced the document
+        elif type(result) == DiffImagePair:
+            rw.diffStack.setCurrentWidget(rw.richDiffView)
+            rw.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
+        else:
+            rw.diffStack.setCurrentWidget(rw.richDiffView)
+            rw.richDiffView.displayDiffModelError(DiffModelError(
+                self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
+                icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
     def loadWorkdir(self, locator: NavLocator):
         rw = self.rw
         previousLocator = rw.navLocator
 
-        rw.graphView.selectUncommittedChanges()
-        rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
+        with QSignalBlockerContext(rw.graphView, rw.sidebar):
+            rw.graphView.selectUncommittedChanges()
+            rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
+        # Stale workdir model - force load workdir
         # TODO: add option to force reload even if the previouslocator's context isn't stale (e.g. when hitting F5)
-        if previousLocator.context == NavContext.EMPTY:  # stale, force load workdir
+        if previousLocator.context == NavContext.EMPTY:
+            # Load workdir (async)
             workdirTask: tasks.LoadWorkdir = yield from self._flowSubtask(tasks.LoadWorkdir, False)
-            rw.dirtyFiles.setContents([workdirTask.dirtyDiff])
-            rw.stagedFiles.setContents([workdirTask.stageDiff])
+
+            # Fill FileListViews
+            with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles):
+                rw.dirtyFiles.setContents([workdirTask.dirtyDiff])
+                rw.stagedFiles.setContents([workdirTask.stageDiff])
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
@@ -131,9 +138,7 @@ class Jump(RepoTask):
 
         # If jumping to generic workdir context, find a concrete context
         if locator.context == NavContext.WORKDIR:
-            numDirtyFiles = rw.dirtyFiles.model().rowCount()
-            numStagedFiles = rw.stagedFiles.model().rowCount()
-            if numDirtyFiles == 0 and numStagedFiles != 0:
+            if rw.dirtyFiles.isEmpty() and not rw.stagedFiles.isEmpty():
                 locator = locator.replace(context=NavContext.STAGED)
             else:
                 locator = locator.replace(context=NavContext.UNSTAGED)
@@ -155,8 +160,12 @@ class Jump(RepoTask):
     def loadCommit(self, locator: NavLocator, warnIfMissing: bool):
         rw = self.rw
 
-        if not rw.graphView.selectCommit(locator.commit, silent=not warnIfMissing):
-            # Commit is gone
+        # Select row in commit log
+        with QSignalBlockerContext(rw.graphView, rw.sidebar):
+            commitFound = rw.graphView.selectCommit(locator.commit, silent=not warnIfMissing)
+
+        # Commit is gone (hidden or not loaded yet)
+        if not commitFound:
             yield from self._flowAbort()
 
         flv = rw.committedFiles
@@ -167,27 +176,32 @@ class Jump(RepoTask):
 
         else:
             # Attempt to select matching ref in sidebar
-            rw.sidebar.selectAnyRef(*rw.state.reverseRefCache.get(locator.commit, []))
+            with QSignalBlockerContext(rw.sidebar):
+                rw.sidebar.selectAnyRef(*rw.state.reverseRefCache.get(locator.commit, []))
 
             # Load commit (async)
             subtask: tasks.LoadCommit = yield from self._flowSubtask(tasks.LoadCommit, locator.commit)
 
+            # Get data from subtask
             diffs = subtask.diffs
-            summary = subtask.message
+            summary = subtask.message.strip()
 
-            # Reset committed files view
-            flv.clear()
-            flv.setCommit(locator.commit)
-            flv.setContents(diffs)
+            # Fill committed file list
+            with QSignalBlockerContext(flv):
+                flv.clear()
+                flv.setCommit(locator.commit)
+                flv.setContents(diffs)
+                numChanges = flv.model().rowCount()
 
             # Show message if commit is empty
-            if flv.flModel.rowCount() == 0:
+            if flv.isEmpty():
                 rw.diffStack.setCurrentWidget(rw.richDiffView)
                 rw.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
 
             # Set header text
-            rw.committedHeader.setText(self.tr("Changes in {0}:").format(shortHash(locator.commit)))
-            rw.committedHeader.setToolTip("<p>" + escape(summary.strip()).replace("\n", "<br>"))
+            rw.committedHeader.setText(self.tr("%n change(s) in {0}:", "", numChanges
+                                               ).format(shortHash(locator.commit)))
+            rw.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
         # Special case if there are no changes
         if flv.isEmpty():
