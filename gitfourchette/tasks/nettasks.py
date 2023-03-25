@@ -5,7 +5,7 @@ Remote access tasks.
 from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
 from html import escape
@@ -19,8 +19,8 @@ class _BaseNetTask(RepoTask):
         super().__init__(parent)
         self.remoteLinkDialog = None
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.REMOTES
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Remotes
 
     def _showRemoteLinkDialog(self):
         assert not self.remoteLinkDialog

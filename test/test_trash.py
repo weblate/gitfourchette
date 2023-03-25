@@ -15,7 +15,7 @@ def testBackupDiscardedPatches(qtbot, tempDir, mainWindow):
     writeFile(F"{wd}/SomeNewFile.txt", "this file is untracked")
     writeFile(F"{wd}/MassiveFile.txt", "." * (1024 * settings.prefs.trash_maxFileSizeKB + 1))
 
-    rw.quickRefresh()  # refresh manually because we added files after repowidget was already created
+    rw.refreshRepo()  # refresh manually because we added files after repowidget was already created
 
     assert set(qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt"}
     assert qlvGetRowData(rw.stagedFiles) == []

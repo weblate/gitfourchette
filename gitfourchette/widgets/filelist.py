@@ -65,12 +65,17 @@ class FileListModel(QAbstractListModel):
         self.modelReset.emit()
 
     def setDiffs(self, diffs: list[pygit2.Diff]):
+        self.beginResetModel()
+
+        self.entries.clear()
+        self.fileRows.clear()
+
         for diff in diffs:
             for patchNo, delta in enumerate(diff.deltas):
                 self.fileRows[delta.new_file.path] = len(self.entries)
                 self.entries.append(FileListModel.Entry(delta, diff, patchNo))
 
-        self.modelReset.emit()
+        self.endResetModel()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.entries)
@@ -138,7 +143,7 @@ class FileListModel(QAbstractListModel):
             else:
                 fromText = translate("FileList", "from:")
                 toText = translate("FileList", "to:")
-                opText = translate("FileList", "operation:")
+                opText = translate("FileList", "status:")
 
                 # see git_diff_status_char (diff_print.c)
                 operationCaptions = {
@@ -177,6 +182,14 @@ class FileListModel(QAbstractListModel):
 
     def getRowForFile(self, path):
         return self.fileRows[path]
+
+    def getFileAtRow(self, row: int):
+        if row < 0 or row >= self.rowCount():
+            return ""
+        return self.data(self.index(row), FILEPATH_ROLE)
+
+    def hasFile(self, path):
+        return path in self.fileRows
 
 
 class FileList(QListView):

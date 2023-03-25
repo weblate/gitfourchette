@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.widgets.commitdialog import CommitDialog
@@ -18,8 +18,8 @@ class NewCommit(RepoTask):
     def name(self):
         return translate("Operation", "Commit")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
@@ -85,8 +85,8 @@ class AmendCommit(RepoTask):
     def name(self):
         return translate("Operation", "Amend commit")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     @property
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
@@ -145,8 +145,8 @@ class SetUpIdentityFirstRun(RepoTask):
     def name(self):
         return translate("Operation", "Set up identity")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.NOTHING
+    def effects(self):
+        return TaskEffects.Nothing
 
     def flow(self, okButtonText=""):
         # Getting the default signature will fail if the user's identity is missing or incorrectly set
@@ -205,8 +205,8 @@ class SetUpRepoIdentity(RepoTask):
     def name(self):
         return translate("Operation", "Set up identity")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.NOTHING
+    def effects(self):
+        return TaskEffects.Nothing
 
     def flow(self):
         repoName = porcelain.repoName(self.repo)
@@ -294,8 +294,8 @@ class CheckoutCommit(RepoTask):
     def name(self):
         return translate("Operation", "Check out commit")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+    def effects(self):
+        return TaskEffects.Refs | TaskEffects.Head
 
     def flow(self, oid: pygit2.Oid):
         refs = porcelain.refsPointingAtCommit(self.repo, oid)
@@ -344,8 +344,8 @@ class RevertCommit(RepoTask):
     def name(self):
         return translate("Operation", "Revert commit")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
@@ -356,8 +356,8 @@ class ResetHead(RepoTask):
     def name(self):
         return translate("Operation", "Reset HEAD")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def flow(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
         yield from self._flowBeginWorkerThread()
@@ -368,8 +368,8 @@ class NewTag(RepoTask):
     def name(self):
         return translate("Operation", "New tag")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Refs
 
     def flow(self, oid: pygit2.Oid):
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
@@ -398,8 +398,8 @@ class CherrypickCommit(RepoTask):
     def name(self):
         return translate("Operation", "Cherry-pick")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()

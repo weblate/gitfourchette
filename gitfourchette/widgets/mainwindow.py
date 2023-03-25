@@ -266,7 +266,7 @@ class MainWindow(QMainWindow):
         # repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
 
-        a = repoMenu.addAction(self.tr("&Refresh"), self.quickRefresh)
+        a = repoMenu.addAction(self.tr("&Refresh"), self.refreshRepo)
         a.setShortcuts(GlobalShortcuts.refresh)
 
         a = repoMenu.addAction(self.tr("&Hard Refresh"), self.hardRefresh)
@@ -623,8 +623,8 @@ class MainWindow(QMainWindow):
         return wrapper
 
     @needRepoWidget
-    def quickRefresh(self, rw: RepoWidget):
-        rw.quickRefresh()
+    def refreshRepo(self, rw: RepoWidget):
+        rw.refreshRepo()
 
     @needRepoWidget
     def hardRefresh(self, rw: RepoWidget):

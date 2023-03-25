@@ -65,20 +65,35 @@ class NavLocator:
         assert isinstance(self.path, str)
 
     def __bool__(self):
-        # A position is considered empty iff it has an empty context.
-        # The locator is NOT considered empty when the path is empty but the context isn't
-        # (e.g. in the STAGED context, with no files selected.)
+        """
+        Return True if the locator's context is anything but EMPTY.
+
+        The locator is NOT considered empty when the path is empty but the context isn't
+        (e.g. in the STAGED context, with no files selected.)
+        """
         return self.context.value != NavContext.EMPTY
     
     def __repr__(self) -> str:
         return F"NavPos({self.contextKey[:10]} {self.path} {self.diffScroll} {self.diffCursor})"
 
-    def similarEnoughTo(self, other: 'NavLocator'):
+    @staticmethod
+    def inCommit(oid: Oid, path: str = ""):
+        return NavLocator(context=NavContext.COMMITTED, commit=oid, path=path)
+
+    @staticmethod
+    def inUnstaged(path: str = ""):
+        return NavLocator(context=NavContext.UNSTAGED, path=path)
+
+    @staticmethod
+    def inStaged(path: str = ""):
+        return NavLocator(context=NavContext.STAGED, path=path)
+
+    def isSimilarEnoughTo(self, other: 'NavLocator'):
         return (self.context == other.context
                 and self.commit == other.commit
                 and self.path == other.path)
 
-    def inSameDiffSetAs(self, other: 'NavLocator'):
+    def isInSameDiffSetAs(self, other: 'NavLocator'):
         if self.context.isWorkdir():
             return other.context.isWorkdir()
         else:
@@ -170,7 +185,7 @@ class NavHistory:
         if pos.context.isWorkdir():
             self.recent["WORKDIR"] = pos
 
-        if len(self.history) > 0 and self.history[self.current].similarEnoughTo(pos):
+        if len(self.history) > 0 and self.history[self.current].isSimilarEnoughTo(pos):
             # Update in-place
             self.history[self.current] = pos
         else:
@@ -184,9 +199,30 @@ class NavHistory:
         assert not self.canGoForward()
 
     def recallWorkdir(self):
+        """
+        Attempt to return the most recent locator matching STAGED or UNSTAGED
+        contexts.
+
+        May return None there's no trace of the workdir in the history.
+        """
         return self.recent.get("WORKDIR", None)
 
     def refine(self, locator: NavLocator):
+        """
+        Attempt to make a locator more precise by looking up the most recent
+        matching locator in the history.
+
+        For example, given a locator with context=UNSTAGED but without a path,
+        refine() will return the locator for an unstaged file that was most
+        recently saved to the history.
+
+        In addition, diff cursor/scroll positions will be filled in if the
+        history contains them.
+
+        If refining isn't possible, this function returns the same locator as
+        the input.
+        """
+
         # If no path is specified, attempt to recall any path in the same context
         if not locator.path:
             locator2 = self.recent.get(locator.contextKey, None)

@@ -2,7 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.porcelain import HEADS_PREFIX, REMOTES_PREFIX
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
@@ -14,8 +14,8 @@ class SwitchBranch(RepoTask):
     def name(self):
         return translate("Operation", "Switch to branch")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+    def effects(self):
+        return TaskEffects.Refs | TaskEffects.Head
 
     def flow(self, newBranch: str, askForConfirmation: bool):
         assert not newBranch.startswith(HEADS_PREFIX)
@@ -60,8 +60,8 @@ class RenameBranch(RepoTask):
         yield from self._flowBeginWorkerThread()
         porcelain.renameBranch(self.repo, oldBranchName, newBranchName)
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Refs
 
 
 class DeleteBranch(RepoTask):
@@ -82,8 +82,8 @@ class DeleteBranch(RepoTask):
         yield from self._flowBeginWorkerThread()
         porcelain.deleteBranch(self.repo, localBranchName)
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Refs
 
 
 class _NewBranchBaseTask(RepoTask):
@@ -169,8 +169,8 @@ class _NewBranchBaseTask(RepoTask):
         if switchTo:
             porcelain.checkoutLocalBranch(repo, localName)
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Refs
 
 
 class NewBranchFromHead(_NewBranchBaseTask):
@@ -214,8 +214,8 @@ class EditTrackedBranch(RepoTask):
     def name(self):
         return translate("Operation", "Change remote branch tracked by local branch")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Refs
 
     def flow(self, localBranchName: str):
         dlg = TrackedBranchDialog(self.repo, localBranchName, self.parentWidget())
@@ -284,16 +284,16 @@ class FastForwardBranch(RepoTask):
         else:
             super().onError(exc)
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS | TaskAffectsWhat.HEAD
+    def effects(self):
+        return TaskEffects.Refs | TaskEffects.Head
 
 
 class RecallCommit(RepoTask):
     def name(self):
         return translate("Operation", "Recall lost commit")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Refs
 
     def flow(self):
         dlg = showTextInputDialog(

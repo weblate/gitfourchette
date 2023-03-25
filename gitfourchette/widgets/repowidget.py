@@ -8,7 +8,7 @@ from gitfourchette.globalstatus import globalstatus
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.tasks import TaskAffectsWhat
+from gitfourchette.tasks import TaskEffects
 from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon,
@@ -81,7 +81,7 @@ class RepoWidget(QWidget):
         self.scheduledRefresh = QTimer(self)
         self.scheduledRefresh.setSingleShot(True)
         self.scheduledRefresh.setInterval(1000)
-        self.scheduledRefresh.timeout.connect(self.quickRefresh)
+        self.scheduledRefresh.timeout.connect(self.refreshRepo)
 
         self.navLocator = NavLocator()
         self.navHistory = NavHistory()
@@ -320,7 +320,7 @@ class RepoWidget(QWidget):
 
     def onIndexChange(self):
         if self.isWorkdirShown:
-            self.quickRefresh()
+            self.refreshRepo()
 
     # -------------------------------------------------------------------------
 
@@ -340,7 +340,7 @@ class RepoWidget(QWidget):
         dc = 0
         ds = 0
         if self.diffStack.currentWidget() == self.diffView:
-            if not self.diffView.currentLocator.similarEnoughTo(self.navLocator):
+            if not self.diffView.currentLocator.isSimilarEnoughTo(self.navLocator):
                 print("LOCATOR MISMATCH")
             dc = self.diffView.textCursor().position()
             ds = self.diffView.verticalScrollBar().value()
@@ -386,8 +386,8 @@ class RepoWidget(QWidget):
 
         self.diffView.verticalScrollBar().setValue(scrollPosition)
 
-    def jump(self, locator: NavLocator, warnIfMissing=True):
-        self.runTask(tasks.Jump, locator, warnIfMissing=warnIfMissing)
+    def jump(self, locator: NavLocator):
+        self.runTask(tasks.Jump, locator)
 
     def navigateBack(self):
         self.runTask(tasks.JumpBackOrForward, -1)
@@ -506,58 +506,6 @@ class RepoWidget(QWidget):
 
         self.clearDiffView()
 
-    def refreshWorkdirViewAsync(self, locator: NavLocator = None, allowUpdateIndex: bool = False):
-        with QSignalBlockerContext(self.sidebar):
-            self.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
-
-        task = self.initTask(tasks.LoadWorkdir)
-        task.success.connect(lambda: self._fillWorkdirView(task.dirtyDiff, task.stageDiff, locator))
-        return self.repoTaskRunner.put(task, allowUpdateIndex)
-
-    def _fillWorkdirView(self, dirtyDiff: pygit2.Diff, stageDiff: pygit2.Diff, locator: NavLocator = None):
-        """Fill Staged/Unstaged views with uncommitted changes"""
-
-        stagedESR = self.stagedFiles.earliestSelectedRow()
-        dirtyESR = self.dirtyFiles.earliestSelectedRow()
-        self.saveFilePositions()
-
-        # Reset dirty & stage views. Block their signals as we refill them to prevent updating the diff view.
-        with QSignalBlockerContext(self.dirtyFiles), QSignalBlockerContext(self.stagedFiles):
-            self.dirtyFiles.clear()
-            self.stagedFiles.clear()
-            self.dirtyFiles.setContents([dirtyDiff])
-            self.stagedFiles.setContents([stageDiff])
-
-        nDirty = self.dirtyFiles.model().rowCount()
-        nStaged = self.stagedFiles.model().rowCount()
-        self.dirtyHeader.setText(self.tr("%n dirty file(s):", "", nDirty))
-        self.stagedHeader.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
-
-        # Switch to correct card in filesStack to show dirtyView and stageView
-        self.filesStack.setCurrentWidget(self.stageSplitter)
-
-        if locator:  # for Revert Hunk from DiffView
-            pass
-        else:
-            # Try to recall where we were last time we looked at the workdir.
-            # If that fails ("or" clause), make a dummy NavPos so the history knows we're looking at the workdir now.
-            locator = self.navHistory.recallWorkdir() or NavLocator(NavContext.UNSTAGED)
-        # self.tgtLocator = locator
-
-        # TODO: Very important
-        # After patchApplied.emit has caused a refresh of the dirty/staged file views,
-        # restore selected row in appropriate file list view so the user can keep hitting
-        # enter (del) to stage (unstage) a series of files.
-        if not self.restoreSelectedFile(locator):
-            if stagedESR >= 0:
-                self.stagedFiles.selectRow(min(stagedESR, self.stagedFiles.model().rowCount()-1))
-            elif dirtyESR >= 0:
-                self.dirtyFiles.selectRow(min(dirtyESR, self.dirtyFiles.model().rowCount()-1))
-
-        # If no file is selected in either FileListView, clear the diffView of any residual diff.
-        if 0 == (len(self.dirtyFiles.selectedIndexes()) + len(self.stagedFiles.selectedIndexes())):
-            self.clearDiffView()
-
     def loadPatchInNewWindow(self, patch: pygit2.Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
@@ -611,68 +559,12 @@ class RepoWidget(QWidget):
     def isWorkdirShown(self):
         return self.filesStack.currentWidget() == self.stageSplitter
 
-    def quickRefresh(self, flags: TaskAffectsWhat = TaskAffectsWhat.DEFAULT):
-        if flags == TaskAffectsWhat.NOTHING:
+    def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh):
+        if flags == TaskEffects.Nothing:
             return
-
-        oldActiveCommit = self.state.activeCommitOid
 
         self.scheduledRefresh.stop()
-
-        if self.repoTaskRunner.isBusy():
-            # Prevent disastrous multithreaded accesses to the same repo.
-            # TODO: We should really make most of this a task, and queue the tasks in the RepoTask.
-            log.warning("RepoWidget", "Can't refresh while task runner is busy!")
-            return
-
-        with Benchmark("Refresh ref cache"):
-            oldRefCache = self.state.refCache
-            self.state.refreshRefCache()
-
-        with Benchmark("Load tainted commits only"):
-            nRemovedRows, nAddedRows = self.state.loadTaintedCommitsOnly(oldRefCache)
-
-        initialLocator = self.navLocator
-        initialGraphScroll = self.graphView.verticalScrollBar().value()
-
-        with QSignalBlockerContext(self.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
-            # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
-            # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-            with Benchmark("Set hidden commits"):
-                self.graphView.setHiddenCommits(self.state.hiddenCommits)
-            if nRemovedRows >= 0:
-                self.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, self.state.commitSequence)
-            else:
-                self.graphView.setCommitSequence(self.state.commitSequence)
-
-        if oldActiveCommit != self.state.activeCommitOid:
-            self.graphView.repaintCommit(oldActiveCommit)
-            self.graphView.repaintCommit(self.state.activeCommitOid)
-
-        with QSignalBlockerContext(self.sidebar), Benchmark("Refresh sidebar"):
-            self.sidebar.refresh(self.state)
-
-        self.refreshWindowTitle()
-
-        assert self.navLocator == initialLocator, "locator has changed"
-
-        if initialLocator and initialLocator.context == NavContext.COMMITTED:
-            # After inserting/deleting rows in the commit log model,
-            # the selected row may jump around. Try to restore the initial
-            # locator to ensure the previously selected commit stays selected.
-            self.graphView.verticalScrollBar().setValue(initialGraphScroll)
-            oldLocatorCommit = initialLocator.commit
-            if oldLocatorCommit in self.state.commitPositions:
-                self.jump(initialLocator)
-            else:
-                self.graphView.selectCommit(self.state.activeCommitOid)
-        elif self.isWorkdirShown:
-            # Refresh workdir view on separate thread AFTER all the processing above
-            # (All the above accesses the repository on the UI thread)
-            allowUpdateIndex = bool(flags & TaskAffectsWhat.INDEXWRITE)
-            # TODO: USE allowUpdateIndex! Put it in the locator's options or something?
-            self.refreshWorkdirViewAsync(allowUpdateIndex=allowUpdateIndex)
-            # self.jump(initialLocator)
+        self.runTask(tasks.RefreshRepo, flags)
 
     def refreshWindowTitle(self):
         shortname = self.getTitle()
@@ -714,7 +606,7 @@ class RepoWidget(QWidget):
 
     def selectRef(self, refName: str):
         oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
-        self.jump(NavLocator(NavContext.COMMITTED, commit=oid), warnIfMissing=True)
+        self.jump(NavLocator(NavContext.COMMITTED, commit=oid))
 
     # -------------------------------------------------------------------------
 
@@ -765,7 +657,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, task: tasks.RepoTask):
-        self.quickRefresh(task.refreshWhat())
+        self.refreshRepo(task.effects())
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
         if progressText:
@@ -808,6 +700,6 @@ class RepoWidget(QWidget):
             oid = pygit2.Oid(hex=url.fragment())
             self.graphView.selectCommit(oid)
         elif url.authority() == "refresh":
-            self.quickRefresh()
+            self.refreshRepo()
         else:
             log.warning(TAG, "Unsupported authority in internal link: ", url.toDisplayString())

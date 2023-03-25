@@ -328,8 +328,8 @@ class PushDialog(QDialog):
             def name(self):
                 return translate("Operation", "Push")
 
-            def refreshWhat(self) -> tasks.TaskAffectsWhat:
-                return tasks.TaskAffectsWhat.REMOTES
+            def effects(self) -> tasks.TaskEffects:
+                return tasks.TaskEffects.Remotes
 
             def flow(self):
                 yield from self._flowBeginWorkerThread()

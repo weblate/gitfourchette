@@ -52,14 +52,32 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
         qmb.setDetailedText("\n".join(exc.conflicts))
 
 
-class TaskAffectsWhat(enum.IntFlag):
-    NOTHING = 0
-    INDEX = enum.auto()
-    INDEXWRITE = enum.auto()
-    LOCALREFS = enum.auto()
-    REMOTES = enum.auto()
-    HEAD = enum.auto()
-    DEFAULT = INDEX | LOCALREFS | REMOTES
+class TaskEffects(enum.IntFlag):
+    """
+    Flags indicating which parts of the UI to refresh
+    after a task runs to completion.
+    """
+
+    Nothing = 0
+    "The task doesn't modify the repository."
+
+    Workdir = enum.auto()
+    "The task affects indexed and/or unstaged changes."
+
+    Refs = enum.auto()
+    "The task affects branches (local or remote), stashes, or tags."
+
+    Remotes = enum.auto()
+    "The task affects remotes registered with this repository."
+
+    Head = enum.auto()
+    "The task moves HEAD to a different commit."
+
+    ShowWorkdir = enum.auto()
+    "Make sure the workdir is visible once the task succeeds."
+
+    DefaultRefresh = Workdir | Refs | Remotes
+    "Default flags for RepoWidget.refreshRepo()"
 
 
 class FlowControlToken(QObject):
@@ -183,11 +201,11 @@ class RepoTask(QObject):
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
             util.excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
 
-    def refreshWhat(self) -> TaskAffectsWhat:
+    def effects(self) -> TaskEffects:
         """
         Returns which parts of the UI should be refreshed when this task is done.
         """
-        return TaskAffectsWhat.NOTHING
+        return TaskEffects.Nothing
 
     def _flowAbort(
             self,
@@ -236,6 +254,7 @@ class RepoTask(QObject):
         subtask = subtaskClass(self)
         subtask.setRepo(self.repo)
         subtask.setObjectName(f"{self.objectName()}_subtask({subtask})")
+        log.info(TAG, f"{self}: Entering subtask {subtask}")
         yield from subtask.flow(*args, **kwargs)
 
         # Make sure we're back on the UI thread before re-entering the root task

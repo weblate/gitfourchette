@@ -2,7 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette import trash
 from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.widgets.stashdialog import StashDialog
 from gitfourchette.widgets.stashdialog_legacy import StashDialog_Legacy
 from html import escape
@@ -34,8 +34,8 @@ class NewStash(RepoTask):
     def name(self):
         return translate("Operation", "New stash")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
     @property
     def rw(self) -> 'RepoWidget':
@@ -115,8 +115,9 @@ class ApplyStash(RepoTask):
     def name(self):
         return translate("Operation", "Apply stash")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.LOCALREFS  # LOCALREFS only changes if the stash is deleted
+    def effects(self):
+        # Refs only change if the stash is deleted after a successful application.
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
     def flow(self, stashCommitId: pygit2.Oid, tickDelete=True):
         stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)
@@ -155,8 +156,8 @@ class DropStash(RepoTask):
     def name(self):
         return translate("Operation", "Drop stash")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.LOCALREFS
+    def effects(self):
+        return TaskEffects.Refs
 
     def flow(self, stashCommitId: pygit2.Oid):
         stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)

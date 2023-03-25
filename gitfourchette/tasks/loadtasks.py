@@ -4,7 +4,7 @@ from gitfourchette import util
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffModel, ShouldDisplayPatchAsImageDiff, \
     DiffImagePair
 import pygit2
@@ -22,11 +22,11 @@ class LoadWorkdir(RepoTask):
             return True
         return type(task) in [LoadCommit, LoadPatch]
 
-    def flow(self, allowUpdateIndex: bool):
+    def flow(self, allowWriteIndex: bool):
         yield from self._flowBeginWorkerThread()
 
         with Benchmark("LoadWorkdir/Index"):
-            porcelain.refreshIndex(self.repo, force=allowUpdateIndex)
+            porcelain.refreshIndex(self.repo)
 
         yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Staged"):
@@ -34,7 +34,7 @@ class LoadWorkdir(RepoTask):
 
         yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Unstaged"):
-            self.dirtyDiff = porcelain.getUnstagedChanges(self.repo, allowUpdateIndex)
+            self.dirtyDiff = porcelain.getUnstagedChanges(self.repo, allowWriteIndex)
 
 
 class LoadCommit(RepoTask):
@@ -52,8 +52,8 @@ class LoadCommit(RepoTask):
 
 
 class LoadPatch(RepoTask):
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.NOTHING  # let custom callback in RepoWidget do it
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Nothing  # let custom callback in RepoWidget do it
 
     def name(self):
         return translate("Operation", "Load diff")

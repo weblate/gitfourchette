@@ -6,7 +6,7 @@ from gitfourchette import porcelain
 from gitfourchette import repoconfig
 from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.widgets.remotedialog import RemoteDialog
 from html import escape
@@ -16,8 +16,8 @@ class NewRemote(RepoTask):
     def name(self):
         return translate("Operation", "Add remote")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.REMOTES
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Refs | TaskEffects.Remotes
 
     def flow(self):
         existingRemotes = [r.name for r in self.repo.remotes]
@@ -47,8 +47,8 @@ class EditRemote(RepoTask):
     def name(self):
         return translate("Operation", "Edit remote")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.REMOTES
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Refs | TaskEffects.Remotes
 
     def flow(self, oldRemoteName: str):
         oldRemoteUrl = self.repo.remotes[oldRemoteName].url
@@ -83,8 +83,8 @@ class DeleteRemote(RepoTask):
     def name(self):
         return translate("Operation", "Remove remote")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.REMOTES
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Refs | TaskEffects.Remotes
 
     def flow(self, remoteName: str):
         yield from self._flowConfirm(

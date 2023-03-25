@@ -3,16 +3,25 @@ Tasks that navigate to a specific area of the repository.
 
 Unlike most other tasks, jump tasks directly manipulate the UI extensively, via RepoWidget.
 """
-
 from gitfourchette import log, tasks
-from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.benchmark import Benchmark
+from gitfourchette.nav import NavLocator, NavContext, NavHistory
 from gitfourchette.qt import *
-from gitfourchette.tasks import RepoTask
-from gitfourchette.util import QSignalBlockerContext, shortHash
+from gitfourchette.tasks import RepoTask, TaskEffects
+from gitfourchette.util import QSignalBlockerContext, shortHash, onAppThread
 from gitfourchette.widgets.diffmodel import DiffConflict, DiffModelError, DiffModel, DiffImagePair
 from html import escape
+import enum
 
 TAG = "Jump"
+
+
+class JumpFlags(enum.IntFlag):
+    WarnIfLocationInvalid = enum.auto()
+    ForceRefreshWorkdir = enum.auto()
+    AllowWriteIndex = enum.auto()
+
+    DefaultFlags = WarnIfLocationInvalid
 
 
 class Jump(RepoTask):
@@ -33,32 +42,31 @@ class Jump(RepoTask):
         return rw
 
     def canKill(self, task: 'RepoTask'):
-        return isinstance(task, Jump)
+        return isinstance(task, (Jump, RefreshRepo))
 
-    def flow(self, locator: NavLocator, backup=True, warnIfMissing=False):
+    def flow(self, locator: NavLocator, jumpFlags: JumpFlags = JumpFlags.DefaultFlags):
         if not locator:
             return
 
         rw = self.rw
         log.info(TAG, locator)
 
-        if backup:
-            rw.saveFilePositions()
+        # Back up current locator
+        rw.saveFilePositions()
 
         # Refine locator: Try to recall where we were last time we looked at this context.
         locator = rw.navHistory.refine(locator)
         log.info(TAG, "locator refined to:", locator)
 
-        # As we do this, prevent emitting other "jump" signals
+        # Show workdir or commit views (and update them if needed)
         if locator.context.isWorkdir():
-            locator = yield from self.loadWorkdir(locator)
+            locator = yield from self.showWorkdir(locator, jumpFlags)
             flv = rw.stagedFiles if locator.context == NavContext.STAGED else rw.dirtyFiles
         else:
-            locator = yield from self.loadCommit(locator, warnIfMissing)
+            locator = yield from self.showCommit(locator, jumpFlags)
             flv = rw.committedFiles
 
         # If we still don't have a path in the locator, fall back to first path in file list.
-        # TODO: do we still need earliestSelectedRow/latestSelectedRow in workdir view?
         if not locator.path:
             locator = locator.replace(path=flv.getFirstPath())
             locator = rw.navHistory.refine(locator)
@@ -112,22 +120,27 @@ class Jump(RepoTask):
                 self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
                 icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
-    def loadWorkdir(self, locator: NavLocator):
+    def showWorkdir(self, locator: NavLocator, jumpFlags: JumpFlags):
         rw = self.rw
         previousLocator = rw.navLocator
 
-        with QSignalBlockerContext(rw.graphView, rw.sidebar):
+        # Save selected row number for the end of the function
+        previousRowStaged = rw.stagedFiles.earliestSelectedRow()
+        previousRowDirty = rw.dirtyFiles.earliestSelectedRow()
+
+        with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
             rw.graphView.selectUncommittedChanges()
             rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
         # Stale workdir model - force load workdir
-        # TODO: add option to force reload even if the previouslocator's context isn't stale (e.g. when hitting F5)
-        if previousLocator.context == NavContext.EMPTY:
+        if previousLocator.context == NavContext.EMPTY or jumpFlags & JumpFlags.ForceRefreshWorkdir:
             # Load workdir (async)
-            workdirTask: tasks.LoadWorkdir = yield from self._flowSubtask(tasks.LoadWorkdir, False)
+            allowWriteIndex = jumpFlags & JumpFlags.AllowWriteIndex
+            workdirTask: tasks.LoadWorkdir = yield from self._flowSubtask(
+                tasks.LoadWorkdir, allowWriteIndex=allowWriteIndex)
 
             # Fill FileListViews
-            with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles):
+            with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles):  # Don't emit jump signals
                 rw.dirtyFiles.setContents([workdirTask.dirtyDiff])
                 rw.stagedFiles.setContents([workdirTask.stageDiff])
 
@@ -142,6 +155,7 @@ class Jump(RepoTask):
                 locator = locator.replace(context=NavContext.STAGED)
             else:
                 locator = locator.replace(context=NavContext.UNSTAGED)
+            locator = rw.navHistory.refine(locator)
 
         # Special case if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
@@ -155,14 +169,27 @@ class Jump(RepoTask):
             self.setFinalLocator(locator.replace(path=""))
             yield from self._flowStop()
 
+        # (Un)Staging a file makes it vanish from its file list.
+        # But we don't want the selection to go blank in this case.
+        # Restore selected row (by row number) in the file list so the user
+        # can keep hitting RETURN/DELETE to stage/unstage a series of files.
+        isStaged = locator.context == NavContext.STAGED
+        flModel = (rw.stagedFiles if isStaged else rw.dirtyFiles).flModel
+        flPrevRow = previousRowStaged if isStaged else previousRowDirty
+        if locator.path and not flModel.hasFile(locator.path) and flPrevRow >= 0:
+            path = flModel.getFileAtRow(min(flPrevRow, flModel.rowCount()-1))
+            locator = locator.replace(path=path)
+            locator = rw.navHistory.refine(locator)
+
         return locator
 
-    def loadCommit(self, locator: NavLocator, warnIfMissing: bool):
+    def showCommit(self, locator: NavLocator, jumpFlags: JumpFlags):
         rw = self.rw
 
         # Select row in commit log
-        with QSignalBlockerContext(rw.graphView, rw.sidebar):
-            commitFound = rw.graphView.selectCommit(locator.commit, silent=not warnIfMissing)
+        with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
+            warn = jumpFlags & JumpFlags.WarnIfLocationInvalid
+            commitFound = rw.graphView.selectCommit(locator.commit, silent=not warn)
 
         # Commit is gone (hidden or not loaded yet)
         if not commitFound:
@@ -176,7 +203,7 @@ class Jump(RepoTask):
 
         else:
             # Attempt to select matching ref in sidebar
-            with QSignalBlockerContext(rw.sidebar):
+            with QSignalBlockerContext(rw.sidebar):  # Don't emit jump signals
                 rw.sidebar.selectAnyRef(*rw.state.reverseRefCache.get(locator.commit, []))
 
             # Load commit (async)
@@ -187,7 +214,7 @@ class Jump(RepoTask):
             summary = subtask.message.strip()
 
             # Fill committed file list
-            with QSignalBlockerContext(flv):
+            with QSignalBlockerContext(flv):  # Don't emit jump signals
                 flv.clear()
                 flv.setCommit(locator.commit)
                 flv.setContents(diffs)
@@ -237,19 +264,114 @@ class JumpBackOrForward(tasks.RepoTask):
 
         start = rw.saveFilePositions()
 
-        while rw.navHistory.canGoDelta(delta):
-            locator = rw.navHistory.navigateDelta(delta)
+        # Isolate history as we modify it so Jump task doesn't mess it up
+        history = rw.navHistory
+        rw.navHistory = NavHistory()
+
+        while history.canGoDelta(delta):
+            # Move back or forward in the history
+            locator = history.navigateDelta(delta)
 
             # Keep going if same file comes up several times in a row
-            if locator.similarEnoughTo(start):
+            if locator.isSimilarEnoughTo(start):
                 continue
 
-            yield from self._flowSubtask(Jump, locator, backup=False)
+            # Jump
+            yield from self._flowSubtask(Jump, locator, jumpFlags=0)
 
-            # Navigation is deemed to be successful if the RepoWidget's final locator
-            # is similar enough to the one from the history.
-            if rw.navLocator.similarEnoughTo(locator):
+            # The jump was successful if the RepoWidget's locator
+            # comes out similar enough to the one from the history.
+            if rw.navLocator.isSimilarEnoughTo(locator):
                 break
 
-            # This locator is stale, nuke it and keep going
-            rw.navHistory.popCurrent()
+            # This point in history is stale, nuke it and keep going
+            history.popCurrent()
+
+        # Restore history
+        history.push(rw.navLocator)
+        rw.navHistory = history
+
+
+class RefreshRepo(tasks.RepoTask):
+    def name(self):
+        return self.tr("Refresh repo")
+
+    def canKill(self, task: 'RepoTask'):
+        return isinstance(task, (Jump, RefreshRepo))
+
+    def effects(self) -> TaskEffects:
+        # Stop refresh chain here - this task is responsible for other post-task refreshes
+        return TaskEffects.Nothing
+
+    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh):
+        from gitfourchette.widgets.repowidget import RepoWidget
+
+        rw: RepoWidget = self.parentWidget()
+        assert isinstance(rw, RepoWidget)
+        assert onAppThread()
+
+        if effectFlags == TaskEffects.Nothing:
+            return
+
+        oldActiveCommit = rw.state.activeCommitOid
+        initialLocator = rw.navLocator
+        initialGraphScroll = rw.graphView.verticalScrollBar().value()
+
+        if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
+            with Benchmark("Refresh ref cache"):
+                oldRefCache = rw.state.refCache
+                rw.state.refreshRefCache()
+
+            with Benchmark("Load tainted commits only"):
+                assert onAppThread()  # loadTaintedCommitsOnly is not thread safe for now
+                nRemovedRows, nAddedRows = rw.state.loadTaintedCommitsOnly(oldRefCache)
+
+            with QSignalBlockerContext(rw.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
+                # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
+                # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
+                with Benchmark("Set hidden commits"):
+                    rw.graphView.setHiddenCommits(rw.state.hiddenCommits)
+                if nRemovedRows >= 0:
+                    rw.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, rw.state.commitSequence)
+                else:
+                    rw.graphView.setCommitSequence(rw.state.commitSequence)
+
+        if oldActiveCommit != rw.state.activeCommitOid:
+            rw.graphView.repaintCommit(oldActiveCommit)
+            rw.graphView.repaintCommit(rw.state.activeCommitOid)
+
+        with QSignalBlockerContext(rw.sidebar), Benchmark("Refresh sidebar"):
+            rw.sidebar.refresh(rw.state)
+
+        rw.refreshWindowTitle()
+
+        # Now jump to where we should be after the refresh
+        assert rw.navLocator == initialLocator, "locator has changed"
+
+        jumpTo = initialLocator
+        jumpFlags = JumpFlags.DefaultFlags
+
+        if rw.isWorkdirShown or effectFlags & TaskEffects.ShowWorkdir:
+            # Refresh workdir view on separate thread AFTER all the processing above
+            jumpTo = NavLocator(NavContext.WORKDIR)
+
+            if effectFlags & TaskEffects.Workdir:
+                jumpFlags |= JumpFlags.ForceRefreshWorkdir | JumpFlags.AllowWriteIndex
+
+        elif initialLocator and initialLocator.context == NavContext.COMMITTED:
+            # After inserting/deleting rows in the commit log model,
+            # the selected row may jump around. Try to restore the initial
+            # locator to ensure the previously selected commit stays selected.
+            rw.graphView.verticalScrollBar().setValue(initialGraphScroll)
+            if initialLocator.commit in rw.state.commitPositions:
+                jumpTo = initialLocator
+            else:
+                # Old commit is gone - jump to HEAD
+                jumpTo = NavLocator.inCommit(rw.state.activeCommitOid)
+
+            if effectFlags & TaskEffects.Workdir:
+                # TODO: set flag in RepoState so we know to force reload the index when we switch back to the workdir
+                log.warning(TAG, "missed stale index update")
+                pass
+
+        yield from self._flowSubtask(Jump, jumpTo, jumpFlags)

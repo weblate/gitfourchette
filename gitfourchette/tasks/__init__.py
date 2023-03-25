@@ -1,4 +1,4 @@
-from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskEffects
 
 from gitfourchette.tasks.branchtasks import NewTrackingBranch, EditTrackedBranch
 from gitfourchette.tasks.branchtasks import NewBranchFromHead, SwitchBranch, RenameBranch, DeleteBranch
@@ -10,7 +10,7 @@ from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIden
 from gitfourchette.tasks.committasks import NewTag
 from gitfourchette.tasks.committasks import CherrypickCommit
 from gitfourchette.tasks.exporttasks import ExportCommitAsPatch, ExportStashAsPatch, ExportWorkdirAsPatch
-from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward
+from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward, RefreshRepo
 from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch
 from gitfourchette.tasks.nettasks import DeleteRemoteBranch, RenameRemoteBranch
 from gitfourchette.tasks.nettasks import FetchRemote, FetchRemoteBranch

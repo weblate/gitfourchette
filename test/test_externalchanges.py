@@ -30,7 +30,7 @@ def testExternalUnstage(qtbot, tempDir, mainWindow):
 
     subprocess.run(externalGitUnstageCmd, check=True, cwd=wd)
 
-    rw.quickRefresh()
+    rw.refreshRepo()
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
 
 

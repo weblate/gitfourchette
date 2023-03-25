@@ -6,7 +6,7 @@ import pygit2
 
 
 def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
-    assert rw.navLocator.similarEnoughTo(locator)
+    assert rw.navLocator.isSimilarEnoughTo(locator)
     assert rw.diffView.currentPatch.delta.old_file.path == locator.path
     if locator.context.isDirty():
         assert rw.graphView.currentCommitOid in [None, ""]
@@ -45,14 +45,14 @@ def testNavigation(qtbot, tempDir, mainWindow):
     rw.graphView.selectCommit(oid3)             # -1 select c1.txt in bab66b4
 
     history = [
-        NavLocator(NavContext.COMMITTED, commit=oid1, path="a/a1.txt"), # -8
-        NavLocator(NavContext.COMMITTED, commit=oid1, path="a/a2.txt"), # -7
-        NavLocator(NavContext.COMMITTED, commit=oid2, path="b/b1.txt"), # -6
-        NavLocator(NavContext.COMMITTED, commit=oid2, path="b/b2.txt"), # -5
-        NavLocator(NavContext.UNSTAGED, path="a/a1.txt"),               # -4
-        NavLocator(NavContext.STAGED, path="a/a1.txt"),                 # -3
-        NavLocator(NavContext.UNSTAGED, path="a/a1.txt"),               # -2
-        NavLocator(NavContext.COMMITTED, commit=oid3, path="c/c1.txt"), # -1
+        NavLocator.inCommit(oid1, "a/a1.txt"),  # -8
+        NavLocator.inCommit(oid1, "a/a2.txt"),  # -7
+        NavLocator.inCommit(oid2, "b/b1.txt"),  # -6
+        NavLocator.inCommit(oid2, "b/b2.txt"),  # -5
+        NavLocator.inUnstaged("a/a1.txt"),      # -4
+        NavLocator.inStaged("a/a1.txt"),        # -3
+        NavLocator.inUnstaged("a/a1.txt"),      # -2
+        NavLocator.inCommit(oid3, "c/c1.txt"),  # -1
     ]
 
     assertHistoryMatches(rw, history[-1])
@@ -95,7 +95,7 @@ def testNavigation(qtbot, tempDir, mainWindow):
 
     # now fork from linear history
     rw.graphView.selectCommit(oid4)
-    historyFork = NavLocator(NavContext.COMMITTED, commit=oid4, path="master.txt")
+    historyFork = NavLocator.inCommit(oid4, "master.txt")
     assertHistoryMatches(rw, historyFork)
 
     # can't go further
@@ -131,29 +131,29 @@ def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, tempDir, mainWin
     qlvClickNthRow(rw.dirtyFiles, 3)  # c/c1.txt
     qlvClickNthRow(rw.dirtyFiles, 4)  # c/c2.txt
 
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c2.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c2.txt"))
 
     rw.navigateBack()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
     rw.navigateBack()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="b/b1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("b/b1.txt"))
 
     rw.dirtyFiles.discard()  # discard b/b1.txt
     acceptQMessageBox(rw, "really discard changes")
 
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
     # can't go further; the FLV's selection has snapped to c1, which has in turn trimmed the history
     rw.navigateForward()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
     # navigating back must skip over b1.txt because it's gone
     rw.navigateBack()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="a/a1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("a/a1.txt"))
 
     # navigating forward must skip over b1.txt because it's gone
     rw.navigateForward()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
 
 def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow):
@@ -171,25 +171,25 @@ def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow
     qlvClickNthRow(rw.dirtyFiles, 3)
     qlvClickNthRow(rw.dirtyFiles, 4)
 
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c2.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c2.txt"))
     rw.dirtyFiles.discard()
     acceptQMessageBox(rw, "really discard changes")
 
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
     # Can't go further
     for i in range(10):
         rw.navigateForward()
-        assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+        assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="a/a1"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("a/a1"))
 
     rw.navigateBack()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="c/c1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
     rw.navigateBack()
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="b/b1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("b/b1.txt"))
 
 
 def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
@@ -210,21 +210,21 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
 
     # Select b1.txt in UNSTAGED context
     qlvClickNthRow(rw.dirtyFiles, 2)
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="b/b1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("b/b1.txt"))
 
     # Select c2.txt in STAGED context
     qlvClickNthRow(rw.stagedFiles, 1)
-    assertHistoryMatches(rw, NavLocator(NavContext.STAGED, path="c/c2.txt"))
+    assertHistoryMatches(rw, NavLocator.inStaged("c/c2.txt"))
 
     # Select a2.txt in COMMITTED context (83834a7)
     rw.graphView.selectCommit(oid1)
     qlvClickNthRow(rw.committedFiles, 1)
-    assertHistoryMatches(rw, NavLocator(NavContext.COMMITTED, commit=oid1, path="a/a2.txt"))
+    assertHistoryMatches(rw, NavLocator.inCommit(oid1, "a/a2.txt"))
 
     # Select b2.txt in COMMITTED context (6e14752)
     rw.graphView.selectCommit(oid2)
     qlvClickNthRow(rw.committedFiles, 1)
-    assertHistoryMatches(rw, NavLocator(NavContext.COMMITTED, commit=oid2, path="b/b2.txt"))
+    assertHistoryMatches(rw, NavLocator.inCommit(oid2, "b/b2.txt"))
 
     # Rewind
     rw.navigateBack()  # back to first file in 6e14752
@@ -234,18 +234,18 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
     rw.navigateBack()  # back to UNSTAGED
 
     # Back to UNSTAGED context
-    assertHistoryMatches(rw, NavLocator(NavContext.UNSTAGED, path="b/b1.txt"))
+    assertHistoryMatches(rw, NavLocator.inUnstaged("b/b1.txt"))
 
     # Advance to STAGED context
     rw.navigateForward()
-    assertHistoryMatches(rw, NavLocator(NavContext.STAGED, path="c/c2.txt"))
+    assertHistoryMatches(rw, NavLocator.inStaged("c/c2.txt"))
 
     # Advance to COMMITTED context (83834a7)
     rw.navigateForward()  # skip automatically selected file in 83834a7
     rw.navigateForward()
-    assertHistoryMatches(rw, NavLocator(NavContext.COMMITTED, commit=oid1, path="a/a2.txt"))
+    assertHistoryMatches(rw, NavLocator.inCommit(oid1, "a/a2.txt"))
 
     # Advance to COMMITTED context (6e14752)
     rw.navigateForward()  # skip automatically selected file in 6e14752
     rw.navigateForward()
-    assertHistoryMatches(rw, NavLocator(NavContext.COMMITTED, commit=oid2, path="b/b2.txt"))
+    assertHistoryMatches(rw, NavLocator.inCommit(oid2, "b/b2.txt"))

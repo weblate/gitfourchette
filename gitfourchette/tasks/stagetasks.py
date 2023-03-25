@@ -2,7 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette import reverseunidiff
 from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.trash import Trash
 from gitfourchette.widgets.diffview import PatchPurpose
 from html import escape
@@ -12,11 +12,21 @@ import pygit2
 
 class _BaseStagingTask(RepoTask):
     @property
-    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parentWidget()
+    def rw(self):  # hack for now - assume parent is a RepoWidget
+        from gitfourchette.widgets.repowidget import RepoWidget
+        rw: RepoWidget = self.parentWidget()
+        assert isinstance(rw, RepoWidget)
+        return rw
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.INDEXWRITE
+    def canKill(self, task: 'RepoTask'):
+        # Jump/Refresh tasks shouldn't prevent a staging task from starting
+        # when the user holds down RETURN/DELETE in a FileListView
+        # to stage/unstage a series of files.
+        from gitfourchette import tasks
+        return isinstance(task, (tasks.Jump, tasks.RefreshRepo))
+
+    def effects(self):
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
 
 class StageFiles(_BaseStagingTask):
@@ -37,8 +47,8 @@ class DiscardFiles(_BaseStagingTask):
     def name(self):
         return translate("Operation", "Discard files")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.INDEX
+    def effects(self):
+        return TaskEffects.Workdir
 
     def flow(self, patches: list[pygit2.Patch]):
         textPara = []
@@ -83,8 +93,10 @@ class ApplyPatch(RepoTask):
     def name(self):
         return translate("Operation", "Apply patch")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.INDEX | TaskAffectsWhat.INDEXWRITE
+    def effects(self) -> TaskEffects:
+        # Patched file stays dirty
+        # TODO: Show Patched File In Workdir
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def flow(self, fullPatch: pygit2.Patch, subPatch: bytes, purpose: PatchPurpose):
         if not subPatch:
@@ -154,6 +166,11 @@ class RevertPatch(RepoTask):
     def name(self):
         return translate("Operation", "Revert patch")
 
+    def effects(self) -> TaskEffects:
+        # Patched file stays dirty
+        # TODO: Show Patched File In Workdir
+        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
+
     def flow(self, fullPatch: pygit2.Patch, patchData: bytes):
         if not patchData:
             yield from self._flowAbort(self.tr("There’s nothing to revert in the selection."))
@@ -179,8 +196,8 @@ class HardSolveConflict(RepoTask):
     def name(self):
         return translate("Operation", "Hard solve conflict")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.INDEX
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir
 
     def flow(self, path: str, keepOid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
@@ -206,8 +223,8 @@ class MarkConflictSolved(RepoTask):
     def name(self):
         return translate("Operation", "Mark conflict solved")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.INDEX
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir
 
     def flow(self, path: str):
         yield from self._flowBeginWorkerThread()
@@ -225,8 +242,8 @@ class ApplyPatchFile(RepoTask):
     def name(self):
         return translate("Operation", "Apply patch file")
 
-    def refreshWhat(self) -> TaskAffectsWhat:
-        return TaskAffectsWhat.INDEX  # TODO: not really... more like the workdir
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir
 
     def flow(self, reverse: bool):
         if reverse:

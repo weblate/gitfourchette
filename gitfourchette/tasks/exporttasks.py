@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskAffectsWhat
+from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 import contextlib
 import html
 import pygit2
@@ -11,8 +11,8 @@ class ComposePatch(RepoTask):
     def name(self):
         return translate("Operation", "Export patch file")
 
-    def refreshWhat(self):
-        return TaskAffectsWhat.NOTHING
+    def effects(self):
+        return TaskEffects.Nothing
 
     def composePatch(self, diffs, fileName):
         yield from self._flowBeginWorkerThread()

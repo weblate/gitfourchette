@@ -172,11 +172,14 @@ class RepoState:
         self.uiPrefs.write()
 
     def refreshRefCache(self):
-        self.refCache = porcelain.mapRefsToOids(self.repo)
+        refCache = porcelain.mapRefsToOids(self.repo)
 
-        self.reverseRefCache = defaultdict(list)
-        for k, v in self.refCache.items():
-            self.reverseRefCache[v].append(k)
+        reverseRefCache = defaultdict(list)
+        for k, v in refCache.items():
+            reverseRefCache[v].append(k)
+
+        self.refCache = refCache
+        self.reverseRefCache = reverseRefCache
 
     @property
     def shortName(self) -> str:
@@ -323,7 +326,7 @@ class RepoState:
             nRemoved = graphSplicer.equilibriumOldRow
             nAdded = graphSplicer.equilibriumNewRow
         else:
-            nRemoved = -1  # We could use len(self.commitSequence), but -1 will force quickRefresh to replace the model wholesale
+            nRemoved = -1  # We could use len(self.commitSequence), but -1 will force refreshRepo to replace the model wholesale
             nAdded = len(newCommitSequence)
 
         with Benchmark("Nuke unreachable commits from cache"):
