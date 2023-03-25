@@ -12,14 +12,23 @@ import pygit2
 
 @dataclass
 class LineData:
-    # For visual representation
     text: str
+    "Line text for visual representation."
 
     diffLine: pygit2.DiffLine | None
+    "pygit2 diff line data."
 
-    cursorStart: int  # position of the cursor at the start of the line in the DiffView widget
+    cursorStart: int
+    "Cursor position at start of line in QDocument."
 
     hunkPos: DiffLinePos
+    "Which hunk this line pertains to, and its position in the hunk."
+
+    cursorEnd: int = -1
+    "Cursor position at end of line in QDocument."
+
+    clumpID: int = -1
+    "Which clump this line pertains to. 'Clumps' are groups of adjacent +/- lines."
 
 
 class DiffModelError(Exception):
@@ -221,6 +230,8 @@ class DiffModel:
             if not document.isEmpty():
                 cursor.insertBlock()
                 ld.cursorStart = cursor.position()
+            else:
+                ld.cursorStart = 0
 
             cursor.setBlockFormat(bf)
             cursor.setBlockCharFormat(cf)
@@ -229,6 +240,11 @@ class DiffModel:
             if trailer:
                 cursor.setCharFormat(style.warningCF1)
                 cursor.insertText(trailer)
+
+            ld.cursorEnd = cursor.position()
+
+        clumpID = 0
+        numLinesInClump = 0
 
         # For each line of the diff, create a LineData object.
         for hunkID, hunk in enumerate(patch.hunks):
@@ -243,7 +259,13 @@ class DiffModel:
             insertLineData(hunkHeaderLD, style.arobaseBF, style.arobaseCF)
 
             for hunkLineNum, diffLine in enumerate(hunk.lines):
-                if diffLine.origin in "=><":  # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+                # Any lines that aren't +/- break up the current clump
+                if diffLine.origin not in "+-" and numLinesInClump != 0:
+                    clumpID += 1
+                    numLinesInClump = 0
+
+                # Skip GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+                if diffLine.origin in "=><":
                     continue
 
                 ld = LineData(
@@ -260,11 +282,15 @@ class DiffModel:
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == -1
                     newLine += 1
+                    ld.clumpID = clumpID
+                    numLinesInClump += 1
                 elif diffLine.origin == '-':
                     bf = style.minusBF
                     assert diffLine.new_lineno == -1
                     assert diffLine.old_lineno == oldLine
                     oldLine += 1
+                    ld.clumpID = clumpID
+                    numLinesInClump += 1
                 else:
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == oldLine

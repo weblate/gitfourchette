@@ -69,6 +69,7 @@ class DiffGutter(QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
+        assert isinstance(parent, DiffView)
         self.diffView = parent
 
         if MACOS or WINDOWS:
@@ -88,6 +89,15 @@ class DiffGutter(QWidget):
 
     def paintEvent(self, event: QPaintEvent):
         self.diffView.gutterPaintEvent(event)
+
+    def wheelEvent(self, event: QWheelEvent):
+        # Forward mouse wheel to parent widget
+        self.parentWidget().wheelEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        # Double click to select clump of lines
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.diffView.selectClumpOfLinesAt(event.pos())
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -566,6 +576,10 @@ class DiffView(QPlainTextEdit):
     # ---------------------------------------------
     # Cursor/selection
 
+    def getMaxPosition(self):
+        lastBlock = self.document().lastBlock()
+        return lastBlock.position() + max(0, lastBlock.length() - 1)
+
     def getAnchorHomeLinePosition(self):
         cursor: QTextCursor = self.textCursor()
 
@@ -613,15 +627,49 @@ class DiffView(QPlainTextEdit):
             cursor.setPosition(homeLinePosition, QTextCursor.MoveMode.MoveAnchor)
             # Move cursor to END of clicked line
             cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
-            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
         else:
             # Move anchor to END of home line
             cursor.setPosition(homeLinePosition, QTextCursor.MoveMode.MoveAnchor)
-            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.MoveAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.MoveAnchor)
             # Move cursor to START of clicked line
             cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
             cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
 
+        self.replaceCursor(cursor)
+
+    def selectClumpOfLinesAt(self, point: QPoint):
+        clickedPosition = self.getStartOfLineAt(point)
+
+        ldList = self.lineData
+        i = self.findLineDataIndexAt(clickedPosition)
+        ld = ldList[i]
+
+        if ld.hunkPos.hunkLineNum < 0:
+            # Hunk header line, select whole hunk
+            start = i
+            end = i
+            while end < len(ldList)-1 and ldList[end+1].hunkPos.hunkID == ld.hunkPos.hunkID:
+                end += 1
+        elif ld.clumpID < 0:
+            # Context line
+            QApplication.beep()
+            return
+        else:
+            # Get clump boundaries
+            start = i
+            end = i
+            while start > 0 and ldList[start-1].clumpID == ld.clumpID:
+                start -= 1
+            while end < len(ldList)-1 and ldList[end+1].clumpID == ld.clumpID:
+                end += 1
+
+        startPosition = ldList[start].cursorStart
+        endPosition = min(self.getMaxPosition(), ldList[end].cursorEnd + 1)  # +1 to select empty lines
+
+        cursor: QTextCursor = self.textCursor()
+        cursor.setPosition(startPosition, QTextCursor.MoveMode.MoveAnchor)
+        cursor.setPosition(endPosition, QTextCursor.MoveMode.KeepAnchor)
         self.replaceCursor(cursor)
 
     # ---------------------------------------------
