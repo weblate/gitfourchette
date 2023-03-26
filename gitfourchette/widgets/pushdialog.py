@@ -70,13 +70,14 @@ class PushDialog(QDialog):
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
 
         if remoteItem != ERemoteItem.ExistingRef:
-            self.ui.remoteNameLabel.setText(remoteData + "/")
+            self.ui.remoteNameLabel.setText("\u21AA " + remoteData + "/")
             newRBN = porcelain.generateUniqueBranchNameOnRemote(self.repo, remoteData, localBranch.branch_name)
-            self.ui.newRemoteBranchGroupBox.setVisible(True)
+            self.ui.newRemoteBranchStackedWidget.setCurrentIndex(0)
             self.ui.newRemoteBranchNameEdit.setText(newRBN)
             self.ui.newRemoteBranchNameEdit.setFocus(Qt.FocusReason.TabFocusReason)
         else:
-            self.ui.newRemoteBranchGroupBox.setVisible(False)
+            self.ui.newRemoteBranchStackedWidget.setCurrentIndex(1)
+            self.ui.remoteBranchEdit.setFocus(Qt.FocusReason.TabFocusReason)
             pass
 
         self.updateTrackCheckBox()
@@ -85,41 +86,45 @@ class PushDialog(QDialog):
 
     def updateTrackCheckBox(self, resetCheckedState=True):
         localBranch = self.currentLocalBranch
-        localName = localBranch.shorthand
-        remoteName = self.currentRemoteBranchFullName
+        lbName = localBranch.shorthand
+        rbName = self.currentRemoteBranchFullName
         lbUpstream = localBranch.upstream.shorthand if localBranch.upstream else "???"
 
         metrics = self.ui.trackingLabel.fontMetrics()
 
-        localName = escape(metrics.elidedText(localName, Qt.TextElideMode.ElideMiddle, 150))
-        remoteName = escape(metrics.elidedText(remoteName, Qt.TextElideMode.ElideMiddle, 150))
+        lbName = escape(metrics.elidedText(lbName, Qt.TextElideMode.ElideMiddle, 150))
+        rbName = escape(metrics.elidedText(rbName, Qt.TextElideMode.ElideMiddle, 150))
         lbUpstream = escape(metrics.elidedText(lbUpstream, Qt.TextElideMode.ElideMiddle, 150))
 
-        if not localBranch.upstream:
-            if self.ui.trackCheckBox.isChecked():
-                text = self.tr("“{0}” will track “{1}”.").format(localName, remoteName)
-            else:
-                text = self.tr("“{0}” currently does not track any remote branch.").format(localName)
-            checked = False
-            enabled = True
-        elif localBranch.upstream.shorthand == self.currentRemoteBranchFullName:
-            text = self.tr("“{0}” already tracks remote branch “{1}”.").format(localName, lbUpstream)
-            checked = True
-            enabled = False
-        else:
-            if self.ui.trackCheckBox.isChecked():
-                text = self.tr("“{0}” will track “{1}” instead of “{2}”.").format(localName, remoteName, lbUpstream)
-            else:
-                text = self.tr("“{0}” currently tracks “{1}”.").format(localName, lbUpstream)
-            checked = False
-            enabled = True
+        hasUpstream = bool(localBranch.upstream)
+        isTrackingHomeBranch = hasUpstream and localBranch.upstream.shorthand == self.currentRemoteBranchFullName
 
-        self.ui.trackingLabel.setText(text)
+        if not resetCheckedState:
+            willTrack = self.ui.trackCheckBox.isChecked()
+        else:
+            willTrack = self.willPushToNewBranch or isTrackingHomeBranch
+
+        if not hasUpstream and willTrack:
+            text = self.tr("“{0}” will track “{1}”.").format(lbName, rbName)
+        elif not hasUpstream and not willTrack:
+            text = self.tr("“{0}” currently does not track any remote branch.").format(lbName)
+        elif isTrackingHomeBranch:
+            text = self.tr("“{0}” already tracks remote branch “{1}”.").format(lbName, lbUpstream)
+        elif willTrack:
+            text = self.tr("“{0}” will track “{1}” instead of “{2}”.").format(lbName, rbName, lbUpstream)
+        else:
+            text = self.tr("“{0}” currently tracks “{1}”.").format(lbName, lbUpstream)
+
+        self.ui.trackingLabel.setWordWrap(True)
+        self.ui.trackingLabel.setText("<small>" + text + "</small>")
         self.ui.trackingLabel.setContentsMargins(20, 0, 0, 0)
-        self.ui.trackingLabel.setEnabled(enabled)
-        self.ui.trackCheckBox.setEnabled(enabled)
+        self.ui.trackingLabel.setEnabled(not isTrackingHomeBranch)
+        self.ui.trackCheckBox.setEnabled(not isTrackingHomeBranch)
+        self.setOkButtonText()
+
         if resetCheckedState:
-            self.ui.trackCheckBox.setChecked(checked)
+            with util.QSignalBlockerContext(self.ui.trackCheckBox):
+                self.ui.trackCheckBox.setChecked(willTrack)
 
     @property
     def currentLocalBranchName(self) -> str:
@@ -130,9 +135,13 @@ class PushDialog(QDialog):
         return self.repo.branches.local[self.currentLocalBranchName]
 
     @property
-    def forcePush(self) -> bool:
+    def willForcePush(self) -> bool:
+        return not self.willPushToNewBranch and self.ui.forcePushCheckBox.isChecked()
+
+    @property
+    def willPushToNewBranch(self) -> bool:
         remoteItem, _ = self.ui.remoteBranchEdit.currentData()
-        return remoteItem == ERemoteItem.ExistingRef and self.ui.forcePushCheckBox.isChecked()
+        return remoteItem == ERemoteItem.NewRef
 
     @property
     def currentRemoteName(self):
@@ -178,7 +187,7 @@ class PushDialog(QDialog):
 
     @property
     def refspec(self):
-        prefix = "+" if self.forcePush else ""
+        prefix = "+" if self.willForcePush else ""
         return F"{prefix}refs/heads/{self.currentLocalBranchName}:refs/heads/{self.currentRemoteBranchName}"
 
     def fillRemoteComboBox(self):
@@ -238,7 +247,9 @@ class PushDialog(QDialog):
 
         self.ui = Ui_PushDialog()
         self.ui.setupUi(self)
-        util.tweakWidgetFont(self.ui.trackingLabel, 90)
+        # util.tweakWidgetFont(self.ui.trackingLabel, 90)
+        self.ui.trackingLabel.setMinimumHeight(self.ui.trackingLabel.height())
+        self.ui.trackingLabel.setMaximumHeight(self.ui.trackingLabel.height())
 
         self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.startOperationButton.setText(self.tr("&Push"))
@@ -276,8 +287,10 @@ class PushDialog(QDialog):
 
     def setOkButtonText(self):
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        if self.ui.forcePushCheckBox.isChecked():
-            okButton.setText(self.tr("Force &Push"))
+        if self.willForcePush:
+            okButton.setText(self.tr("Force &push"))
+        elif self.willPushToNewBranch:
+            okButton.setText(self.tr("&Push new branch"))
         else:
             okButton.setText(self.tr("&Push"))
 

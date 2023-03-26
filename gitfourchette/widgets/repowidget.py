@@ -341,7 +341,7 @@ class RepoWidget(QWidget):
         ds = 0
         if self.diffStack.currentWidget() == self.diffView:
             if not self.diffView.currentLocator.isSimilarEnoughTo(self.navLocator):
-                print("LOCATOR MISMATCH")
+                log.warning(TAG, f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. ({self.diffView.currentLocator})")
             dc = self.diffView.textCursor().position()
             ds = self.diffView.verticalScrollBar().value()
 
