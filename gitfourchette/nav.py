@@ -5,10 +5,12 @@ from pygit2 import Oid
 from typing import ClassVar
 import dataclasses
 import enum
+import time
 
 
 TAG = "nav"
 BLANK_OID = Oid(raw=b'')
+PUSH_INTERVAL = 0.5
 
 
 @enum.unique
@@ -171,10 +173,25 @@ class NavHistory:
     recent: dict[str, NavLocator]
     "Most recent NavPos by context key"
 
+    lastPushTime: float
+    """Timestamp of the last modification to the history,
+    to avoid pushing a million entries when dragging the mouse, etc."""
+
     def __init__(self):
         self.history = []
         self.recent = {}
         self.current = 0
+        self.lastPushTime = 0.0
+        self.ignoreDelay = False
+
+        # In a real use case, locators are dropped from the history if push()
+        # calls occur in quick succession. This avoids polluting the history
+        # with unimportant entries when the user drags the mouse across
+        # GraphView, for instance. However, in unit tests, navigation occurs
+        # blazingly quickly, but we want each location to be recorded in the
+        # history.
+        from gitfourchette.settings import TEST_MODE
+        self.ignoreDelay |= TEST_MODE
 
     def push(self, pos: NavLocator):
         if not pos:
@@ -185,14 +202,22 @@ class NavHistory:
         if pos.context.isWorkdir():
             self.recent["WORKDIR"] = pos
 
-        if len(self.history) > 0 and self.history[self.current].isSimilarEnoughTo(pos):
-            # Update in-place
+        now = time.time()
+        if self.ignoreDelay:
+            recentPush = False
+        else:
+            recentPush = (now - self.lastPushTime) < PUSH_INTERVAL
+
+        if len(self.history) > 0 and \
+                (recentPush or self.history[self.current].isSimilarEnoughTo(pos)):
+            # Update in-place; don't update lastPush timestamp
             self.history[self.current] = pos
         else:
             if self.current < len(self.history) - 1:
                 self.trim()
             self.history.append(pos)
             self.current = len(self.history) - 1
+            self.lastPushTime = now
 
     def trim(self):
         self.history = self.history[: self.current + 1]
