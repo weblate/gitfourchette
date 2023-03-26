@@ -4,7 +4,6 @@ import dataclasses
 import enum
 import json
 import os
-import time
 
 
 TEST_MODE = False
@@ -192,10 +191,12 @@ class History(BasePrefs):
     cloneHistory: list[str] = dataclasses.field(default_factory=list)
     fileDialogPaths: dict = dataclasses.field(default_factory=dict)
 
+    _maxSeq = -1
+
     def addRepo(self, path: str):
         path = os.path.normpath(path)
         repo = self.getRepo(path)
-        repo['time'] = time.time()
+        repo['seq'] = self.drawSequenceNumber()
         return repo
 
     def getRepo(self, path) -> dict:
@@ -236,13 +237,15 @@ class History(BasePrefs):
     def removeRepo(self, path: str):
         path = os.path.normpath(path)
         self.repos.pop(path, None)
+        self.invalidateSequenceNumber()
 
     def clearRepoHistory(self):
         self.repos.clear()
+        self.invalidateSequenceNumber()
 
     def getRecentRepoPaths(self, n: int, newestFirst=True):
         sortedPaths = (path for path, _ in
-                       sorted(self.repos.items(), key=lambda i: i[1].get('time', 0), reverse=newestFirst))
+                       sorted(self.repos.items(), key=lambda i: i[1].get('seq', -1), reverse=newestFirst))
 
         return (path for path, _ in zip(sortedPaths, range(n)))
 
@@ -270,6 +273,15 @@ class History(BasePrefs):
 
     def clearCloneHistory(self):
         self.cloneHistory.clear()
+
+    def drawSequenceNumber(self, increment=1):
+        if self._maxSeq < 0 and self.repos:
+            self._maxSeq = max(r.get('seq', -1) for r in self.repos.values())
+        self._maxSeq += increment
+        return self._maxSeq
+
+    def invalidateSequenceNumber(self):
+        self._maxSeq = -1
 
 
 @dataclasses.dataclass
