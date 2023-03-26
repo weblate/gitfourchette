@@ -1,11 +1,11 @@
 from gitfourchette import log
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES
+from gitfourchette.toolbox.qcomboboxwithpreview import QComboBoxWithPreview
 from gitfourchette.util import abbreviatePath
 from gitfourchette.widgets.graphdelegate import abbreviatePerson
 import datetime
 import enum
-import re
 import pygit2
 
 
@@ -44,57 +44,6 @@ def splitSettingKey(n):
     return category, item
 
 
-class ComboBoxWithPreview(QComboBox):
-    class ItemDelegate(QStyledItemDelegate):
-        def __init__(self, parent, previewCallback):
-            super().__init__(parent)
-            self.previewCallback = previewCallback
-
-        def paint(self, painter, option, index):
-            super().paint(painter, option, index)
-
-            painter.save()
-
-            pw: QWidget = self.parent()
-
-            rect = QRect(option.rect)
-            rect.setLeft(rect.left() + pw.width())
-
-            painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
-            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, self.previewCallback(index.data(Qt.ItemDataRole.UserRole)))
-            painter.restore()
-
-    def __init__(self, parent, previewCallback):
-        super().__init__(parent)
-        delegate = ComboBoxWithPreview.ItemDelegate(self, previewCallback)
-        self.setItemDelegate(delegate)
-
-    def showPopup(self):
-        self.view().setMinimumWidth(300)
-        super().showPopup()
-
-
-class DatePresetDelegate(QStyledItemDelegate):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def paint(self, painter, option, index):
-        super().paint(painter, option, index)
-
-        painter.save()
-        name, format, now = index.data(Qt.ItemDataRole.UserRole)
-        if option.state & QStyle.StateFlag.State_Selected:
-            painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.HighlightedText))
-        painter.drawText(option.rect, Qt.AlignmentFlag.AlignVCenter, F"{name}")
-        painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, QPalette.ColorRole.PlaceholderText))
-
-        rect = QRect(option.rect)
-        rect.setLeft(rect.left() + painter.fontMetrics().horizontalAdvance("M"*8))
-
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, F"{now.strftime(format)}")
-        painter.restore()
-
-
 class PrefsDialog(QDialog):
     lastOpenTab = 0
 
@@ -110,7 +59,7 @@ class PrefsDialog(QDialog):
 
         self.setObjectName("PrefsDialog")
 
-        self.setWindowTitle(self.tr("{0} Preferences", "{0} = GitFourchette").format(qAppName()))
+        self.setWindowTitle(self.tr("{app} Preferences").format(app=qAppName()))
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -142,12 +91,19 @@ class PrefsDialog(QDialog):
                 categoryForms[category] = form
                 pCategory = category
 
+                headerText = self.translateSetting(f"{category}_HEADER")
+                if headerText != f"{category}_HEADER":
+                    headerText = headerText.format(app=qAppName())
+                    explainer = QLabel(headerText)
+                    explainer.setWordWrap(True)
+                    explainer.setTextFormat(Qt.TextFormat.RichText)
+                    form.addRow(explainer)
+
+            suffix = ""
             if caption:
                 caption = self.translateSetting(prefKey)
                 if isinstance(caption, tuple):
                     caption, suffix = caption
-                else:
-                    suffix = ""
 
             if prefKey == 'language':
                 control = self.languageControl(prefKey, prefValue)
@@ -191,16 +147,6 @@ class PrefsDialog(QDialog):
                 form.addRow(caption, control)
             else:
                 form.addRow(control)
-
-        explainer = QLabel(
-            self.tr("When you discard changes from the working directory, "
-                    "{0} keeps a temporary copy in a hidden “trash” folder. "
-                    "This gives you a last resort to rescue changes that you have discarded by mistake. "
-                    "You can look around this trash folder via <i>“Repo &rarr; Rescue Discarded Changes”</i>."
-                    ).format(qAppName()))
-        explainer.setTextFormat(Qt.TextFormat.RichText)
-        explainer.setWordWrap(True)
-        categoryForms["trash"].insertRow(0, explainer)
 
         layout = QVBoxLayout()
         layout.addWidget(tabWidget)
@@ -331,12 +277,15 @@ class PrefsDialog(QDialog):
 
     def enumControl(self, prefKey, prefValue, enumType, previewCallback=None):
         if previewCallback:
-            control = ComboBoxWithPreview(self, previewCallback)
+            control = QComboBoxWithPreview(self)
         else:
             control = QComboBox(self)
 
         for enumMember in enumType:
-            control.addItem(self.translateSetting(enumMember.name), enumMember)
+            if previewCallback:
+                control.addItemWithPreview(self.translateSetting(enumMember.name), enumMember, previewCallback(enumMember))
+            else:
+                control.addItem(self.translateSetting(enumMember.name), enumMember)
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
 
@@ -380,16 +329,14 @@ class PrefsDialog(QDialog):
         preview.setEnabled(False)
         preview.setMaximumWidth(preview.fontMetrics().horizontalAdvance(bogusTime))
 
-        control = QComboBox()
+        control = QComboBoxWithPreview(self)
         control.setEditable(True)
-        for preset in presets:
-            control.addItem("", (*preset, now))
+        for presetName, presetFormat in presets:
+            control.addItemWithPreview(presetName, presetFormat, now.strftime(presetFormat))
         control.currentIndexChanged.connect(onCurrentIndexChanged)
         control.editTextChanged.connect(onEditTextChanged)
-        control.setItemDelegate(DatePresetDelegate(parent=control))
         control.setMinimumWidth(200)
         control.setCurrentIndex(-1)
-        control.view().setMinimumWidth(control.fontMetrics().horizontalAdvance(bogusTime))
 
         control.setEditText(prefValue)
 
@@ -438,6 +385,11 @@ class PrefsDialog(QDialog):
 
             "trash_maxFiles": (translate("Prefs", "Max discarded patches in the trash"), translate("Prefs", "files")),
             "trash_maxFileSizeKB": (translate("Prefs", "Don’t salvage patches bigger than"), translate("Prefs", "KB")),
+            "trash_HEADER": translate(
+                "Prefs",
+                "When you discard changes from the working directory, {app} keeps a temporary copy in a hidden "
+                "“trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. "
+                "You can look around this trash folder via <i>“Repo &rarr; Rescue Discarded Changes”</i>."),
 
             "debug_showMemoryIndicator": translate("Prefs", "Show memory indicator in status bar"),
             "debug_showPID": translate("Prefs", "Show technical info in title bar"),
