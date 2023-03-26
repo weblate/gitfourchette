@@ -76,7 +76,7 @@ class LoadPatch(RepoTask):
 
         if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
             ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]
-            return DiffConflict(self.repo, ancestor, ours, theirs)
+            return DiffConflict(ancestor, ours, theirs)
 
         try:
             diffModel = DiffModel.fromPatch(patch)

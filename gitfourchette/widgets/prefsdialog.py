@@ -1,6 +1,6 @@
 from gitfourchette import log
 from gitfourchette.qt import *
-from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES
+from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES, DIFF_TOOL_PRESETS, MERGE_TOOL_PRESETS
 from gitfourchette.toolbox.qcomboboxwithpreview import QComboBoxWithPreview
 from gitfourchette.util import abbreviatePath
 from gitfourchette.widgets.graphdelegate import abbreviatePerson
@@ -85,7 +85,7 @@ class PrefsDialog(QDialog):
             if category != pCategory:
                 formContainer = QWidget(self)
                 form = QFormLayout(formContainer)
-                form.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+                form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
                 formContainer.setLayout(form)
                 tabWidget.addTab(formContainer, self.translateSetting(category) or self.tr("General"))
                 categoryForms[category] = form
@@ -123,6 +123,10 @@ class PrefsDialog(QDialog):
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
             elif prefKey == 'maxRecentRepos':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 50)
+            elif prefKey == 'external_diff':
+                control = self.strControlWithPresets(prefKey, prefValue, DIFF_TOOL_PRESETS)
+            elif prefKey == 'external_merge':
+                control = self.strControlWithPresets(prefKey, prefValue, MERGE_TOOL_PRESETS)
             elif issubclass(prefType, enum.Enum):
                 control = self.enumControl(prefKey, prefValue, prefType)
             elif prefType is str:
@@ -242,6 +246,21 @@ class PrefsDialog(QDialog):
     def strControl(self, prefKey, prefValue):
         control = QLineEdit(prefValue, self)
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, v))
+        return control
+
+    def strControlWithPresets(self, prefKey, prefValue, presets):
+        control = QComboBoxWithPreview(self)
+        control.setEditable(True)
+
+        for k in presets:
+            control.addItemWithPreview(k, presets[k], presets[k])
+            if prefValue == presets[k]:
+                control.setCurrentIndex(control.count()-1)
+
+        control.setEditText(prefValue)
+        control.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred))
+
+        control.editTextChanged.connect(lambda text: self.assign(prefKey, text))
         return control
 
     def intControl(self, prefKey, prefValue):

@@ -1,16 +1,16 @@
 from gitfourchette import log
 from gitfourchette.qt import *
+import contextlib
 import dataclasses
 import enum
 import json
 import os
+import shlex
 
 
 TEST_MODE = False
 
-
 REPO_SETTINGS_DIR = "gitfourchette"
-
 
 SHORT_DATE_PRESETS = [
     ('ISO', '%Y-%m-%d %H:%M'),
@@ -25,6 +25,45 @@ LANGUAGES = [
     "en_US",
     "fr_FR"
 ]
+
+DIFF_TOOL_PRESETS = {
+    "FileMerge": "opendiff $1 $2",
+    "KDiff3": "kdiff3 $1 $2",
+    "Meld": "meld $1 $2",
+    "WinMerge": "winmergeu /u /wl /wr $1 $2",
+    "GVim": "gvim -f -d $1 $2",
+    "MacVim": "mvim -f -d $1 $2",
+    "VS Code": "code --diff $1 $2 --wait",
+}
+
+# $1: ANCESTOR/BASE
+# $2: OURS/LOCAL
+# $3: THEIRS/REMOTE
+# $4: MERGED
+MERGE_TOOL_PRESETS = {
+    "FileMerge": "opendiff -ancestor $1 $2 $3 -merge $4",
+    "KDiff3": "kdiff3 --merge $1 $2 $3 --output $4",
+    "WinMerge": "winmergeu /u /wl /wm /wr /am $1 $2 $3 /o $4",
+    "Meld": "meld --auto-merge $1 $2 $3 -o $4",
+    "GVim": "gvim -f -d -c 'wincmd J' $4 $2 $1 $3",
+    "MacVim": "mvim -f -d -c 'wincmd J' $4 $2 $1 $3",
+    "VS Code": "code --merge $2 $3 $1 $4 --wait",
+}
+
+externalToolPresetFilter = []
+if MACOS:
+    externalToolPresetFilter = ["WinMerge", "GVim"]
+elif WINDOWS:
+    externalToolPresetFilter = ["FileMerge", "MacVim"]
+else:
+    externalToolPresetFilter = ["FileMerge", "WinMerge", "MacVim"]
+for key in externalToolPresetFilter:
+    with contextlib.suppress(KeyError):
+        del DIFF_TOOL_PRESETS[key]
+    with contextlib.suppress(KeyError):
+        del MERGE_TOOL_PRESETS[key]
+del externalToolPresetFilter
+del key
 
 
 def encodeBinary(b: QByteArray) -> str:
@@ -172,8 +211,8 @@ class Prefs(BasePrefs):
     graph_flattenLanes          : bool          = True
     graph_rowHeight             : GraphRowHeight = GraphRowHeight.TIGHT
     external_editor             : str           = ""
-    external_diff               : str           = ""
-    external_merge              : str           = ""
+    external_diff               : str           = list(DIFF_TOOL_PRESETS.values())[0]
+    external_merge              : str           = list(MERGE_TOOL_PRESETS.values())[0]
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True
@@ -347,28 +386,28 @@ def applyLanguagePref():
             print("Failed to load Qt base translation for language", prefs.language)
 
 
+def _getCmdName(command, fallback, presets):
+    if not command.strip():
+        return fallback
+    else:
+        presetName = next((k for k, v in presets.items() if v == command), "")
+        if presetName:
+            return presetName
+
+        p = shlex.split(command, posix=not WINDOWS)[0]
+        p = p.removeprefix('"').removeprefix("'")
+        p = p.removesuffix('"').removesuffix("'")
+        p = os.path.basename(p)
+        return p
+
+
 def getExternalEditorName():
-    command = prefs.external_editor
-
-    if not command:
-        return translate("Global", "Text Editor")
-
-    return command.split(" ", 1)[0]
+    return _getCmdName(prefs.external_editor, translate("Global", "Text Editor"), {})
 
 
 def getDiffToolName():
-    command = prefs.external_diff
-
-    if not command:
-        return translate("Global", "Diff Tool")
-
-    return command.split(" ", 1)[0]
+    return _getCmdName(prefs.external_diff, translate("Global", "Diff Tool"), DIFF_TOOL_PRESETS)
 
 
 def getMergeToolName():
-    command = prefs.external_merge
-
-    if not command:
-        return translate("Global", "Merge Tool")
-
-    return command.split(" ", 1)[0]
+    return _getCmdName(prefs.external_merge, translate("Global", "Merge Tool"), MERGE_TOOL_PRESETS)

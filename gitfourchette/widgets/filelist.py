@@ -8,7 +8,7 @@ from gitfourchette.qt import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBlockerContext,
                                 shortHash, PersistentFileDialog, showWarning, showInformation, askConfirmation,
-                                paragraphs, isZeroId, openInTextEditor, openInDiffTool)
+                                paragraphs, isZeroId, openInTextEditor, openInDiffTool, dumpTempBlob)
 from pathlib import Path
 from typing import Any, Callable, Generator
 import errno
@@ -28,17 +28,6 @@ PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
 
 BLANK_OID = pygit2.Oid(raw=b'')
-
-
-def dumpTempDiffFile(repo: pygit2.Repository, diffFile: pygit2.DiffFile, inBrackets: str):
-    blobId = diffFile.id
-    blob: pygit2.Blob = repo[blobId].peel(pygit2.Blob)
-    name, ext = os.path.splitext(os.path.basename(diffFile.path))
-    name = F"{name}[{inBrackets}]{ext}"
-    path = os.path.join(getSessionTemporaryDirectory(), name)
-    with open(path, "wb") as f:
-        f.write(blob.data)
-    return path
 
 
 class SelectedFileBatchError(Exception):
@@ -315,18 +304,20 @@ class FileList(QListView):
         oldDiffFile = patch.delta.old_file
         newDiffFile = patch.delta.new_file
 
+        diffDir = getSessionTemporaryDirectory()
+
         if self.navContext == NavContext.UNSTAGED:
             # Unstaged: compare indexed state to workdir file
-            oldPath = dumpTempDiffFile(self.repo, oldDiffFile, "INDEXED")
+            oldPath = dumpTempBlob(self.repo, diffDir, oldDiffFile, "INDEXED")
             newPath = os.path.join(self.repo.workdir, newDiffFile.path)
         elif self.navContext == NavContext.STAGED:
             # Staged: compare HEAD state to indexed state
-            oldPath = dumpTempDiffFile(self.repo, oldDiffFile, "HEAD")
-            newPath = dumpTempDiffFile(self.repo, newDiffFile, "STAGED")
+            oldPath = dumpTempBlob(self.repo, diffDir, oldDiffFile, "HEAD")
+            newPath = dumpTempBlob(self.repo, diffDir, newDiffFile, "STAGED")
         else:
             # Committed: compare parent state to this commit
-            oldPath = dumpTempDiffFile(self.repo, oldDiffFile, "OLD")
-            newPath = dumpTempDiffFile(self.repo, newDiffFile, "NEW")
+            oldPath = dumpTempBlob(self.repo, diffDir, oldDiffFile, "OLD")
+            newPath = dumpTempBlob(self.repo, diffDir, newDiffFile, "NEW")
 
         openInDiffTool(self, oldPath, newPath)
 
@@ -521,7 +512,7 @@ class FileList(QListView):
 
     def openHeadRevision(self):
         def run(patch: pygit2.Patch):
-            tempPath = dumpTempDiffFile(self.repo, patch.delta.old_file, "HEAD")
+            tempPath = dumpTempBlob(self.repo, getSessionTemporaryDirectory(), patch.delta.old_file, "HEAD")
             openInTextEditor(self, tempPath)
 
         self.confirmBatch(run, self.tr("Open HEAD version of file"),

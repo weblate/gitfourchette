@@ -142,6 +142,10 @@ def pygit2VersionAtLeast(requiredVersion: tuple, raiseError=True, featureName="T
     return True
 
 
+def workdirPath(repo: Repository, path: str):
+    return os.path.join(repo.workdir, path)
+
+
 def refreshIndex(repo: Repository, force: bool = False):
     """
     Reload the index. Call this before manipulating the staging area

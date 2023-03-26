@@ -10,6 +10,6 @@ def getSessionTemporaryDirectory():
     global tempdir
 
     if not tempdir:
-        tempdir = tempfile.TemporaryDirectory(prefix="GitFourchette-", ignore_cleanup_errors=True)
+        tempdir = tempfile.TemporaryDirectory(prefix="gitfourchette-", suffix=".tmp", ignore_cleanup_errors=True)
 
     return tempdir.name

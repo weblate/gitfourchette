@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'conflictview.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.0
+## Created by: Qt User Interface Compiler version 6.4.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -57,6 +57,11 @@ class Ui_ConflictView(object):
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.verticalLayout_2 = QVBoxLayout(self.groupBox_2)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.mergeToolButton = QPushButton(self.groupBox_2)
+        self.mergeToolButton.setObjectName(u"mergeToolButton")
+
+        self.verticalLayout_2.addWidget(self.mergeToolButton)
+
         self.editFileButton = QPushButton(self.groupBox_2)
         self.editFileButton.setObjectName(u"editFileButton")
 
@@ -84,5 +89,6 @@ class Ui_ConflictView(object):
         self.theirsButton.setText(QCoreApplication.translate("ConflictView", u"Use theirs", None))
         self.titleLabel.setText(QCoreApplication.translate("ConflictView", u"Merge conflict", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("ConflictView", u"Reconcile manually", None))
+        self.mergeToolButton.setText(QCoreApplication.translate("ConflictView", u"Merge in {0}", None))
         self.editFileButton.setText(QCoreApplication.translate("ConflictView", u"Edit file", None))
         self.markSolvedButton.setText(QCoreApplication.translate("ConflictView", u"Mark as resolved", None))

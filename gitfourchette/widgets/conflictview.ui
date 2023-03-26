@@ -99,6 +99,13 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
+       <widget class="QPushButton" name="mergeToolButton">
+        <property name="text">
+         <string>Merge in {0}</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="editFileButton">
         <property name="text">
          <string>Edit file</string>

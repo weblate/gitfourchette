@@ -77,15 +77,11 @@ class DiffImagePair:
         self.newImage = QImage.fromData(imageDataB)
 
 
+@dataclass
 class DiffConflict:
-    ancestor: pygit2.IndexEntry
-    ours: pygit2.IndexEntry
-    theirs: pygit2.IndexEntry
-
-    def __init__(self, repo: pygit2.Repository, ancestor: pygit2.IndexEntry, ours: pygit2.IndexEntry, theirs: pygit2.IndexEntry):
-        self.ancestor = ancestor
-        self.ours = ours
-        self.theirs = theirs
+    ancestor: pygit2.IndexEntry | None
+    ours: pygit2.IndexEntry | None
+    theirs: pygit2.IndexEntry | None
 
 
 class DiffStyle:

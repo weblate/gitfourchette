@@ -26,6 +26,7 @@ class QComboBoxWithPreview(QComboBox):
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
+        self.numPresets = 0
         self.longestCaptionWidth = 0
         self.longestDataWidth = 0
         self.longestPreviewWidth = 0
@@ -43,15 +44,20 @@ class QComboBoxWithPreview(QComboBox):
         self.longestPreviewWidth = max(self.longestPreviewWidth, self.fontMetrics().horizontalAdvance(preview))
         # if self.isEditable():
         #     self.setMinimumWidth(self.longestDataWidth + 32)
+        self.numPresets += 1
 
     def showPopup(self):
         self.view().setMinimumWidth(self.longestCaptionWidth + self.longestPreviewWidth + 16)
         super().showPopup()
 
     def onActivated(self, index: int):
-        if index < 0:
+        # The signal may be sent for an index beyond the number of presets
+        # when the user hits enter with a custom item.
+        if index < 0 or index >= self.numPresets:
             return
+
         data = self.itemData(index, Qt.ItemDataRole.UserRole + 0)
         self.dataPicked.emit(data)
+
         if self.isEditable():
             self.setEditText(str(data))

@@ -2,6 +2,7 @@ from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
+from gitfourchette import tempdir
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.globalstatus import globalstatus
@@ -13,7 +14,7 @@ from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon,
                                 paragraphs, NonCriticalOperation, tweakWidgetFont,
-                                openFolder, openInTextEditor)
+                                openFolder, openInTextEditor, openInMergeTool, dumpTempBlob)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -25,6 +26,7 @@ from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.sidebar import Sidebar
+from gitfourchette.unmergedconflict import UnmergedConflict
 from html import escape
 from typing import Generator, Literal, Type, Callable
 import os
@@ -110,6 +112,7 @@ class RepoWidget(QWidget):
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
         self.conflictView.openFile.connect(self.openConflictFile)
+        self.conflictView.openMergeTool.connect(self.openConflictInMergeTool)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
@@ -531,8 +534,12 @@ class RepoWidget(QWidget):
     # Conflicts
 
     def openConflictFile(self, path: str):
-        fullPath = os.path.join(self.repo.workdir, path)
+        fullPath = porcelain.workdirPath(self.repo, path)
         openInTextEditor(self, fullPath)
+
+    def openConflictInMergeTool(self, conflict: DiffConflict):
+        umc = UnmergedConflict(self, self.repo, conflict)
+        umc.startProcess()
 
     # -------------------------------------------------------------------------
     # Entry point for generic "Find" command
@@ -676,6 +683,7 @@ class RepoWidget(QWidget):
     def refreshPrefs(self):
         self.diffView.refreshPrefs()
         self.graphView.refreshPrefs()
+        self.conflictView.refreshPrefs()
 
         # Reflect any change in titlebar prefs
         if self.isVisible():
