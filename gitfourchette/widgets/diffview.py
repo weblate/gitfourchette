@@ -538,6 +538,13 @@ class DiffView(QPlainTextEdit):
         bottom = top + round(self.blockBoundingRect(block).height())
 
         # Draw line numbers and hunk separator lines
+        if settings.prefs.diff_colorblindFriendlyColors:
+            noOldPlaceholder = "+"
+            noNewPlaceholder = "-"
+        else:
+            noOldPlaceholder = "·"
+            noNewPlaceholder = "·"
+
         painter.setPen(textColor)
         while block.isValid() and top <= paintRect.bottom():
             if blockNumber >= len(self.lineData):
@@ -547,8 +554,8 @@ class DiffView(QPlainTextEdit):
             if block.isVisible() and bottom >= paintRect.top():
                 if ld.diffLine:
                     # Draw line numbers
-                    old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else "·"
-                    new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else "·"
+                    old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else noOldPlaceholder
+                    new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else noNewPlaceholder
 
                     colW = (gutterRect.width() - 4) // 2
                     painter.drawText(0, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, old)
