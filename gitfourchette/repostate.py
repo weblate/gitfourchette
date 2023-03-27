@@ -6,7 +6,6 @@ from gitfourchette import settings
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.hiddencommitsolver import HiddenCommitSolver
-from gitfourchette.globalstatus import globalstatus
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
 from gitfourchette.qt import *
 from gitfourchette.settings import BasePrefs

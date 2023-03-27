@@ -5,7 +5,6 @@ from gitfourchette import tasks
 from gitfourchette import tempdir
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.filewatcher import FileWatcher
-from gitfourchette.globalstatus import globalstatus
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
@@ -23,6 +22,7 @@ from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, Co
 from gitfourchette.widgets.graphview import GraphView, CommitLogModel
 from gitfourchette.widgets.pushdialog import PushDialog
 from gitfourchette.widgets.qelidedlabel import QElidedLabel
+from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplay, RepoStatusDisplayCache
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.sidebar import Sidebar
@@ -79,6 +79,9 @@ class RepoWidget(QWidget):
 
         self.state = None
         self.pathPending = None
+
+        self.statusDisplayCache = RepoStatusDisplayCache(self)
+        self.statusDisplayCache.setStatus(self.tr("Opening repository..."), True)
 
         self.scheduledRefresh = QTimer(self)
         self.scheduledRefresh.setSingleShot(True)
@@ -311,7 +314,7 @@ class RepoWidget(QWidget):
         self.state.fileWatcher.shutdown()
 
     def onDirectoryChange(self):
-        globalstatus.setText(self.tr("Detected external change..."))
+        self.statusDisplayCache.setStatus(self.tr("Detected external change..."), spinning=True)
 
         if self.scheduledRefresh.interval() == 0:
             # Just fire it now if instantaneous
@@ -594,6 +597,9 @@ class RepoWidget(QWidget):
         if repo and repo.index.conflicts:
             inBrackets += ", \u26a0 "
             inBrackets += self.tr("merge conflict")
+            self.statusDisplayCache.setWarning(self.tr("merge conflict in workdir"))
+        else:
+            self.statusDisplayCache.setWarning()
 
         if settings.prefs.debug_showPID:
             suffix += qAppName()
@@ -667,18 +673,9 @@ class RepoWidget(QWidget):
         self.refreshRepo(task.effects())
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
-        if progressText:
-            # If this RW isn't the current tab, prefix message with repo name
-            if not self.isVisible():
-                progressText = "[" + self.getTitle() + "] " + progressText
-
-            if withSpinner:
-                globalstatus.setIndeterminateProgressCaption(progressText)
-            else:
-                globalstatus.clearProgress()
-                globalstatus.setText(progressText)
-        else:
-            globalstatus.clearProgress()
+        self.statusDisplayCache.status = progressText
+        self.statusDisplayCache.spinning = withSpinner
+        self.statusDisplayCache.updated.emit(self.statusDisplayCache)
 
     def refreshPrefs(self):
         self.diffView.refreshPrefs()

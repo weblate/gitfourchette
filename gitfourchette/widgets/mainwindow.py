@@ -3,10 +3,10 @@ from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.globalstatus import globalstatus
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
+from gitfourchette.toolbox.memoryindicator import MemoryIndicator
 from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
                                 PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation,
                                 paragraphs, NonCriticalOperation, openInTextEditor)
@@ -17,6 +17,7 @@ from gitfourchette.widgets.customtabwidget import CustomTabWidget
 from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.prefsdialog import PrefsDialog
 from gitfourchette.widgets.repowidget import RepoWidget
+from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplay
 from gitfourchette.widgets.welcomewidget import WelcomeWidget
 from html import escape
 from typing import Literal
@@ -24,13 +25,6 @@ import gc
 import os
 import pygit2
 import re
-
-
-try:
-    import psutil
-except ImportError:
-    print("psutil isn't available. The memory indicator will not work.")
-    psutil = None
 
 
 class Session:
@@ -47,7 +41,7 @@ class MainWindow(QMainWindow):
     tabs: CustomTabWidget
     recentMenu: QMenu
     repoMenu: QMenu
-    memoryIndicator: QPushButton | None
+    memoryIndicator: MemoryIndicator
 
     def __init__(self):
         super().__init__()
@@ -80,33 +74,21 @@ class MainWindow(QMainWindow):
         self.fillGlobalMenuBar()
         self.setMenuBar(self.globalMenuBar)
 
-        self.statusProgress = QProgressBar()
-        self.statusProgress.setMaximumHeight(16)
-        self.statusProgress.setMaximumWidth(128)
-        self.statusProgress.setVisible(False)
-        self.statusProgress.setTextVisible(False)
-        globalstatus.statusText.connect(self.updateStatusMessage)
-        globalstatus.progressMaximum.connect(lambda v: self.statusProgress.setMaximum(v))
-        globalstatus.progressValue.connect(lambda v: [self.statusProgress.setVisible(True), self.statusProgress.setValue(v)])
-        globalstatus.progressDisable.connect(lambda: self.statusProgress.setVisible(False))
-        self.statusBar = QStatusBar()
+        self.statusDisplay = RepoStatusDisplay(self)
+        self.memoryIndicator = MemoryIndicator(self)
+        self.memoryIndicator.setVisible(False)
+
+        self.statusBar = QStatusBar(self)
         self.statusBar.setSizeGripEnabled(False)
-        self.statusBar.addPermanentWidget(self.statusProgress)
+        self.statusBar.addPermanentWidget(self.statusDisplay, 1)
+        self.statusBar.addPermanentWidget(self.memoryIndicator)
         self.setStatusBar(self.statusBar)
-        self.memoryIndicator = None
 
         self.setAcceptDrops(True)
         self.styleSheetReloadScheduled = False
         QApplication.instance().installEventFilter(self)
 
         self.refreshPrefs()
-
-    def close(self) -> bool:
-        globalstatus.statusText.disconnect()
-        globalstatus.progressMaximum.disconnect()
-        globalstatus.progressValue.disconnect()
-        globalstatus.progressDisable.disconnect()
-        return super().close()
 
     def goBack(self):
         rw = self.currentRepoWidget()
@@ -161,37 +143,6 @@ class MainWindow(QMainWindow):
                 return True
 
         return False
-
-    def onMemoryIndicatorClicked(self):
-        gc.collect()
-
-        print("Top-Level Windows:")
-        for tlw in QApplication.topLevelWindows():
-            print("*", tlw)
-        print("Top-Level Widgets:")
-        for tlw in QApplication.topLevelWidgets():
-            print("*", tlw, tlw.objectName())
-        print()
-
-        self.updateMemoryIndicator()
-
-    def updateMemoryIndicator(self):
-        numQObjects = sum(1 + len(tlw.findChildren(QObject))  # "+1" to account for tlw itself
-                          for tlw in QApplication.topLevelWidgets())
-
-        if psutil:
-            rss = psutil.Process(os.getpid()).memory_info().rss
-            self.memoryIndicator.setText(F"{rss // 1024:,}K {numQObjects:,}Q")
-        else:
-            self.memoryIndicator.setText(F"{numQObjects:,}Q")
-
-    def updateStatusMessage(self, message):
-        self.statusBar.showMessage(message)
-
-    def paintEvent(self, event:QPaintEvent):
-        if self.memoryIndicator:
-            self.updateMemoryIndicator()
-        super().paintEvent(event)
 
     def keyReleaseEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_Alt:
@@ -430,6 +381,8 @@ class MainWindow(QMainWindow):
         w = self.currentRepoWidget()
         w.refreshWindowTitle()  # Refresh window title before loading
         w.restoreSplitterStates()
+
+        self.statusDisplay.install(w.statusDisplayCache)
 
         # If we don't have a RepoState, then the tab is lazy-loaded.
         # We need to load it now.
@@ -1021,23 +974,8 @@ class MainWindow(QMainWindow):
         if "maxRecentRepos" in prefDiff:
             self.fillRecentMenu()
 
-        if settings.prefs.showStatusBar:
-            self.statusBar.show()
-        else:
-            self.statusBar.hide()
-
-        if self.memoryIndicator:
-            self.memoryIndicator.deleteLater()
-            self.memoryIndicator = None
-
-        if settings.prefs.debug_showMemoryIndicator:
-            self.memoryIndicator = QPushButton("Mem")
-            self.memoryIndicator.setStyleSheet("border: none;")  # don't let it thicken the status bar
-            self.memoryIndicator.setMinimumWidth(128)
-            self.memoryIndicator.clicked.connect(lambda e: self.onMemoryIndicatorClicked())
-            self.memoryIndicator.setToolTip("Force GC")
-            self.memoryIndicator.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            self.statusBar.addPermanentWidget(self.memoryIndicator)
+        self.statusBar.setVisible(settings.prefs.showStatusBar)
+        self.memoryIndicator.setVisible(settings.prefs.debug_showMemoryIndicator)
 
         self.tabs.refreshPrefs()
         self.autoHideMenuBar.refreshPrefs()
