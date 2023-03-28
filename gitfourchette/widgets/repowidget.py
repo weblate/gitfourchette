@@ -602,6 +602,9 @@ class RepoWidget(QWidget):
         if flags == TaskEffects.Nothing:
             return
 
+        if flags & TaskEffects.Workdir:
+            self.state.workdirStale = True
+
         self.scheduledRefresh.stop()
         self.runTask(tasks.RefreshRepo, flags)
 

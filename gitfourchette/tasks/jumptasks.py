@@ -131,9 +131,16 @@ class Jump(RepoTask):
         with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
             rw.graphView.selectUncommittedChanges()
             rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
+            yield from self._flowWaitNextEventLoop()
 
         # Stale workdir model - force load workdir
-        if previousLocator.context == NavContext.EMPTY or jumpFlags & JumpFlags.ForceRefreshWorkdir:
+        if (previousLocator.context == NavContext.EMPTY
+                or jumpFlags & JumpFlags.ForceRefreshWorkdir
+                or rw.state.workdirStale):
+            # Don't clear stale flag until AFTER we're done reloading the workdir
+            # so that it stays stale if this task gets interrupted.
+            rw.state.workdirStale = True
+
             # Load workdir (async)
             allowWriteIndex = jumpFlags & JumpFlags.AllowWriteIndex
             workdirTask: tasks.LoadWorkdir = yield from self._flowSubtask(
@@ -148,6 +155,8 @@ class Jump(RepoTask):
             nStaged = rw.stagedFiles.model().rowCount()
             rw.dirtyHeader.setText(self.tr("%n dirty file(s):", "", nDirty))
             rw.stagedHeader.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
+
+            rw.state.workdirStale = False
 
         # If jumping to generic workdir context, find a concrete context
         if locator.context == NavContext.WORKDIR:
@@ -313,6 +322,8 @@ class RefreshRepo(tasks.RepoTask):
         if effectFlags == TaskEffects.Nothing:
             return
 
+        rw.state.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
+
         oldActiveCommit = rw.state.activeCommitOid
         initialLocator = rw.navLocator
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
@@ -368,10 +379,5 @@ class RefreshRepo(tasks.RepoTask):
             else:
                 # Old commit is gone - jump to HEAD
                 jumpTo = NavLocator.inCommit(rw.state.activeCommitOid)
-
-            if effectFlags & TaskEffects.Workdir:
-                # TODO: set flag in RepoState so we know to force reload the index when we switch back to the workdir
-                log.warning(TAG, "missed stale index update")
-                pass
 
         yield from self._flowSubtask(Jump, jumpTo, jumpFlags)

@@ -107,6 +107,8 @@ class RepoState:
 
     hiddenCommits: set[pygit2.Oid]
 
+    workdirStale: bool
+
     uiPrefs: RepoPrefs
 
     def __init__(self, repo: pygit2.Repository):
@@ -144,6 +146,8 @@ class RepoState:
         self.superproject = porcelain.getSuperproject(self.repo)
 
         self.activeCommitOid = None
+
+        self.workdirStale = True
 
         self.uiPrefs.load()
 
