@@ -1,3 +1,4 @@
+from __future__ import annotations
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.qt import *
 from gitfourchette import util
@@ -87,6 +88,7 @@ class FlowControlToken(QObject):
 
     class Kind(enum.IntEnum):
         CONTINUE_ON_UI_THREAD = enum.auto()
+        CONTINUE_ON_UI_THREAD_LATER = enum.auto()
         CONTINUE_ON_WORK_THREAD = enum.auto()
         WAIT_READY = enum.auto()
 
@@ -122,6 +124,8 @@ class RepoTask(QObject):
     Task that manipulates a repository.
     """
 
+    FlowGeneratorType = Generator[FlowControlToken, None, Any]
+
     success = Signal()
     "Emitted when the task has successfully run to completion."
 
@@ -130,7 +134,7 @@ class RepoTask(QObject):
     repo: pygit2.Repository | None
     taskID: int
 
-    _currentFlow: Generator
+    _currentFlow: FlowGeneratorType
     _currentIteration: int
 
     def __init__(self, parent: QObject):
@@ -159,10 +163,10 @@ class RepoTask(QObject):
     def __str__(self):
         return f"{self.__class__.__name__}#{self.taskID}"
 
-    def canKill(self, task: 'RepoTask'):
+    def canKill(self, task: RepoTask):
         return False
 
-    def flow(self, *args, **kwargs) -> Generator:
+    def flow(self, *args, **kwargs) -> FlowGeneratorType:
         """
         Generator that performs the task. You can think of this as a coroutine.
 
@@ -243,7 +247,15 @@ class RepoTask(QObject):
         """
         yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
 
-    def _flowSubtask(self, subtaskClass: Type['RepoTask'], *args, **kwargs):
+    def _flowWaitNextEventLoop(self):
+        """
+        Defers continuation of the coroutine to the next UI event loop.
+        Use this to let UI events be processed during a long operation that cannot be moved to a separate thread.
+        """
+        yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD_LATER)
+
+    def _flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
+                     ) -> Generator[FlowControlToken, None, RepoTask]:
         """
         Runs a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
@@ -420,77 +432,91 @@ class RepoTaskRunner(QObject):
         # Prime the flow (i.e. start coroutine)
         self._iterateFlow(task, FlowControlToken())
 
-    def _iterateFlow(self, task: RepoTask, result: FlowControlToken | BaseException):
-        flow = task._currentFlow
-        task._currentIteration += 1
-        # log.info(TAG, f"Iterate on task {task} ({task._currentIteration}) ({result})")
+    def _iterateFlow(self, task: RepoTask, nextResult: FlowControlToken | BaseException):
+        while nextResult:
+            result = nextResult
+            nextResult = None
 
-        assert util.onAppThread()
+            flow = task._currentFlow
+            task._currentIteration += 1
 
-        assert not isinstance(result, Generator), \
-            "You're trying to yield a nested generator. Did you mean 'yield from'?"
+            assert util.onAppThread()
 
-        if task is self._zombieTask:
-            assert task is not self._currentTask
-            self._releaseTask(task)
-            task.deleteLater()
-            if self._currentTask:
-                self._startTask(self._currentTask)
-            return
+            assert not isinstance(result, Generator), \
+                "You're trying to yield a nested generator. Did you mean 'yield from'?"
 
-        assert task is self._currentTask
+            if task is self._zombieTask:
+                assert task is not self._currentTask
+                self._releaseTask(task)
+                task.deleteLater()
+                if self._currentTask:
+                    self._startTask(self._currentTask)
+                return
 
-        if isinstance(result, FlowControlToken):
-            control = result.flowControl
+            assert task is self._currentTask
 
-            if control == FlowControlToken.Kind.WAIT_READY:
-                self.progress.emit(self.tr("Awaiting your input to resume {0}").format(task.name()), False)
+            if isinstance(result, FlowControlToken):
+                control = result.flowControl
 
-                # Re-enter when user is ready
-                result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
+                if control == FlowControlToken.Kind.WAIT_READY:
+                    self.progress.emit(self.tr("Awaiting your input to resume {0}").format(task.name()), False)
 
-            else:
-                self.progress.emit(self.tr("In progress: {0}...").format(task.name()), True)
+                    # Re-enter when user is ready
+                    result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
 
-                # Wrapper around `next(flow)`.
-                # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
-                wrapper = util.QRunnableFunctionWrapper(lambda: self._wrapNext(flow))
+                elif not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD:
+                    self.progress.emit(self.tr("In progress: {0}...").format(task.name()), True)
 
-                if not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD:
+                    # Wrapper around `next(flow)`.
+                    # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
+                    wrapper = util.QRunnableFunctionWrapper(lambda: self._emitNextToken(flow))
                     self._threadPool.start(wrapper)
+
+                elif not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_UI_THREAD_LATER:
+                    self.progress.emit(self.tr("In progress: {0}...").format(task.name()), True)
+
+                    # Re-enter on next UI event loop
+                    QTimer.singleShot(0, lambda: self._iterateFlow(task, FlowControlToken()))
+
                 else:
-                    wrapper.run()
+                    # Get next continuation token on this thread then loop to beginning of _iterateFlow
+                    nextResult = self._getNextToken(flow)
 
-        elif isinstance(result, BaseException):
-            exception: BaseException = result
+            elif isinstance(result, BaseException):
+                exception: BaseException = result
 
-            # Stop tracking this task
-            self._releaseTask(task)
+                # Stop tracking this task
+                self._releaseTask(task)
 
-            if isinstance(exception, (StopIteration, FlowControlEarlySuccess)):
-                # No more steps in the flow
-                log.info(TAG, f"Task successful: {task}")
-                task.success.emit()
-                self.refreshPostTask.emit(task)
-            elif isinstance(exception, FlowControlAbort):
-                # Controlled exit
-                pass
+                if isinstance(exception, (StopIteration, FlowControlEarlySuccess)):
+                    # No more steps in the flow
+                    log.info(TAG, f"Task successful: {task}")
+                    task.success.emit()
+                    self.refreshPostTask.emit(task)
+                elif isinstance(exception, FlowControlAbort):
+                    # Controlled exit
+                    pass
+                else:
+                    # Run task's error callback
+                    task.onError(exception)
+
+                task.deleteLater()
+
             else:
-                # Run task's error callback
-                task.onError(exception)
+                assert False, ("In a RepoTask coroutine, you can only yield a FlowControlToken "
+                               f"(you yielded: {type(result).__name__})")
 
-            task.deleteLater()
-
-        else:
-            assert False, ("In a RepoTask coroutine, you can only yield a FlowControlToken "
-                           f"(you yielded: {type(result).__name__})")
-
-    def _wrapNext(self, flow):
+    @staticmethod
+    def _getNextToken(flow: RepoTask.FlowGeneratorType):
         try:
-            nextToken = next(flow)
-            self._continueFlow.emit(nextToken)
+            return next(flow)
         except BaseException as exception:
-            self._continueFlow.emit(exception)
+            return exception
+
+    def _emitNextToken(self, flow: RepoTask.FlowGeneratorType):
+        nextToken = self._getNextToken(flow)
+        self._continueFlow.emit(nextToken)
+        return nextToken
 
     def _releaseTask(self, task: RepoTask):
         log.info(TAG, f"End task {task}")
