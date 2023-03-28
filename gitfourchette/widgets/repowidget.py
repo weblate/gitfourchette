@@ -84,6 +84,11 @@ class RepoWidget(QWidget):
         self.statusDisplayCache = RepoStatusDisplayCache(self)
         self.statusDisplayCache.setStatus(self.tr("Opening repository..."), True)
 
+        self.busyCursorDelayer = QTimer(self)
+        self.busyCursorDelayer.setSingleShot(True)
+        self.busyCursorDelayer.setInterval(100)
+        self.busyCursorDelayer.timeout.connect(lambda: self.setCursor(Qt.CursorShape.BusyCursor))
+
         self.scheduledRefresh = QTimer(self)
         self.scheduledRefresh.setSingleShot(True)
         self.scheduledRefresh.setInterval(1000)
@@ -288,7 +293,7 @@ class RepoWidget(QWidget):
 
     def runTask(self, taskClass: Type[tasks.RepoTask], *args, **kwargs):
         task = self.initTask(taskClass)
-        self.repoTaskRunner.put(task, *args, **kwargs)
+        QTimer.singleShot(0, lambda: self.repoTaskRunner.put(task, *args, **kwargs))
         return task
 
     def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1, preamble: Callable = None):
@@ -700,6 +705,12 @@ class RepoWidget(QWidget):
         self.statusDisplayCache.status = progressText
         self.statusDisplayCache.spinning = withSpinner
         self.statusDisplayCache.updated.emit(self.statusDisplayCache)
+
+        if not withSpinner:
+            self.busyCursorDelayer.stop()
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+        elif not self.busyCursorDelayer.isActive():
+            self.busyCursorDelayer.start()
 
     def refreshPrefs(self):
         self.diffView.refreshPrefs()
