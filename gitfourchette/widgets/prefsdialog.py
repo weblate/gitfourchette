@@ -4,7 +4,6 @@ from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES, DIFF_TO
 from gitfourchette.toolbox.qcomboboxwithpreview import QComboBoxWithPreview
 from gitfourchette.util import abbreviatePath
 from gitfourchette.widgets.graphdelegate import abbreviatePerson
-import datetime
 import enum
 import pygit2
 
@@ -331,18 +330,16 @@ class PrefsDialog(QDialog):
         return control
 
     def dateFormatControl(self, prefKey, prefValue, presets):
-        now = datetime.datetime(1999, 12, 31, 23, 59)
+        currentDate = QDateTime.currentDateTime()
+        sampleDate = QDateTime(QDate(currentDate.date().year(), 1, 30), QTime(9, 45))
         bogusTime = "Wednesday, December 99, 9999 99:99:99 AM"
 
-        def onEditTextChanged(text):
-            preview.setText(now.strftime(text))
-            self.assign(prefKey, text)
+        def genPreview(f):
+            return QLocale().toString(sampleDate, f)
 
-        def onCurrentIndexChanged(i):
-            if i < 0 or i >= len(presets):
-                return
-            control.setCurrentIndex(-1)
-            control.setEditText(presets[i][1])
+        def onEditTextChanged(text):
+            preview.setText(genPreview(text))
+            self.assign(prefKey, text)
 
         preview = QLabel(bogusTime)
         preview.setEnabled(False)
@@ -350,13 +347,12 @@ class PrefsDialog(QDialog):
 
         control = QComboBoxWithPreview(self)
         control.setEditable(True)
-        for presetName, presetFormat in presets:
-            control.addItemWithPreview(presetName, presetFormat, now.strftime(presetFormat))
-        control.currentIndexChanged.connect(onCurrentIndexChanged)
+        for presetName, presetFormat in presets.items():
+            control.addItemWithPreview(presetName, presetFormat, genPreview(presetFormat))
+            if prefValue == presetFormat:
+                control.setCurrentIndex(control.count()-1)
         control.editTextChanged.connect(onEditTextChanged)
         control.setMinimumWidth(200)
-        control.setCurrentIndex(-1)
-
         control.setEditText(prefValue)
 
         return vBoxWidget(control, preview)

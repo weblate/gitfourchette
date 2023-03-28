@@ -6,7 +6,6 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.util import messageSummary
 from dataclasses import dataclass
-from datetime import datetime
 import pygit2
 import re
 
@@ -129,7 +128,9 @@ class GraphDelegate(QStyledItemDelegate):
             summaryText, contd = messageSummary(commit.message, ELISION)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
             authorText = abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle)
-            dateText = datetime.fromtimestamp(commit.author.time).strftime(settings.prefs.shortTimeFormat)
+
+            qdt = QDateTime.fromSecsSinceEpoch(commit.author.time)
+            dateText = self.repoWidget.locale().toString(qdt, settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
         else:

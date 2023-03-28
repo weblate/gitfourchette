@@ -12,19 +12,19 @@ TEST_MODE = False
 
 REPO_SETTINGS_DIR = "gitfourchette"
 
-SHORT_DATE_PRESETS = [
-    ('ISO', '%Y-%m-%d %H:%M'),
-    ('Universal 1', '%d %b %Y %H:%M'),
-    ('Universal 2', '%a %d %b %Y %H:%M'),
-    ('European 1', '%d/%m/%Y %H:%M'),
-    ('European 2', '%d.%m.%Y %H:%M'),
-    ('American', '%m/%d/%Y %I:%M %p'),
-]
-
 LANGUAGES = [
     "en_US",
-    "fr_FR"
+    "fr_FR",
 ]
+
+SHORT_DATE_PRESETS = {
+    "ISO": "yyyy-MM-dd HH:mm",
+    "Universal 1": "dd MMM yyyy HH:mm",
+    "Universal 2": "ddd dd MMM yyyy HH:mm",
+    "European 1": "dd/MM/yy HH:mm",
+    "European 2": "dd.MM.yy HH:mm",
+    "American": "M/d/yy h:mm ap",
+}
 
 DIFF_TOOL_PRESETS = {
     "FileMerge": "opendiff $1 $2",
@@ -190,7 +190,7 @@ class Prefs(BasePrefs):
     qtStyle                     : str           = ""
     fileWatcher                 : bool          = False
     shortHashChars              : int           = 7
-    shortTimeFormat             : str           = SHORT_DATE_PRESETS[0][1]
+    shortTimeFormat             : str           = list(SHORT_DATE_PRESETS.values())[0]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS
     authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.ABBREVIATED_EMAIL
     maxRecentRepos              : int           = 20
