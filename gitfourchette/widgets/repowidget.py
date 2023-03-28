@@ -13,7 +13,8 @@ from gitfourchette.trash import Trash
 from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
                                 showWarning, showInformation, askConfirmation, stockIcon,
                                 paragraphs, NonCriticalOperation, tweakWidgetFont,
-                                openFolder, openInTextEditor, openInMergeTool, dumpTempBlob)
+                                openFolder, openInTextEditor, openInMergeTool, dumpTempBlob,
+                                onAppThread)
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -469,18 +470,41 @@ class RepoWidget(QWidget):
         self.cleanup()
 
     def cleanup(self):
-        if self.state and self.state.repo:
+        assert onAppThread()
+
+        # Clear UI
+        with QSignalBlockerContext(
+                self.committedFiles, self.dirtyFiles, self.stagedFiles,
+                self.graphView, self.sidebar):
+            self.setEnabled(False)
             self.committedFiles.clear()
             self.dirtyFiles.clear()
             self.stagedFiles.clear()
             self.graphView.clear()
             self.clearDiffView()
-            # Save path if we want to reload the repo later
-            self.pathPending = os.path.normpath(self.state.repo.workdir)
-            self.state.repo.free()
+            self.sidebar.model().clear()
+
+        # Shut down filesystem watcher
         if self.state and self.state.fileWatcher:
             self.state.fileWatcher.shutdown()
+
+        if self.state and self.state.repo:
+            # Save path if we want to reload the repo later
+            self.pathPending = os.path.normpath(self.state.repo.workdir)
+
+            # Kill any ongoing task then block UI thread until the task dies cleanly
+            self.repoTaskRunner.killCurrentTask()
+            self.repoTaskRunner.joinZombieTask()
+
+            # Free the repository
+            self.state.repo.free()
+            self.state.repo = None
+            log.info(TAG, "Repository freed:", self.pathPending)
+
         self.setRepoState(None)
+
+        # Clean up status bar if there were repo-specific warnings in it
+        self.refreshWindowTitle()
 
     def clearDiffView(self):
         self.diffView.clear()

@@ -110,19 +110,34 @@ class SidebarModel(QAbstractItemModel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.clear()
+
+    def clear(self, emitSignals=True):
+        if emitSignals:
+            self.beginResetModel()
+
         self.repo = None
+        self._localBranches = []
+        self._tracking = []
+        self._unbornHead = ""
+        self._detachedHead = ""
+        self._checkedOut = ""
+        self._stashes = []
+        self._remotes = []
+        self._remoteURLs = []
+        self._remoteBranchesDict = {}
+        self._tags = []
+        self._submodules = []
+        self._hiddenBranches = []
+
+        if emitSignals:
+            self.endResetModel()
 
     def refreshCache(self, repo: pygit2.Repository, hiddenBranches: list[str], refCache: Iterable[str]):
         self.beginResetModel()
 
+        self.clear(emitSignals=False)
         self.repo = repo
-
-        self._localBranches = []
-        self._tracking = []
-        self._tags = []
-        self._remotes = []
-        self._remoteURLs = []
-        self._remoteBranchesDict = {}
 
         # Remote list
         with Benchmark("Sidebar/Remotes"):

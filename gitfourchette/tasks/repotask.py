@@ -344,11 +344,45 @@ class RepoTaskRunner(QObject):
         self._threadPool = QThreadPool(parent)
         self._threadPool.setMaxThreadCount(1)
 
-        self._pendingKiller = None
-        self._pendingKillerArgs = []
-
     def isBusy(self):
         return self._currentTask is not None or self._zombieTask is not None or self._threadPool.activeThreadCount() > 0
+
+    def killCurrentTask(self):
+        """
+        Interrupt current task next time it yields a FlowControlToken.
+
+        The task will not die immediately; use joinZombieTask() after killing
+        the task to block the current thread until the task runner is empty.
+        """
+        if not self._currentTask:
+            # Nothing to kill.
+            return
+
+        if not self._zombieTask:
+            # Move the currently-running task to zombie mode.
+            # It'll get deleted next time it yields a FlowControlToken.
+            self._zombieTask = self._currentTask
+        else:
+            # There's already a zombie. This means that the current task hasn't
+            # started yet - it's waiting on the zombie to die.
+            # Just overwrite the current task, but let the zombie die cleanly.
+            assert self._currentTask._currentIteration == 0, "_currentTask isn't supposed to have started yet!"
+            self._currentTask.deleteLater()
+
+        self._currentTask = None
+
+    def joinZombieTask(self):
+        """Block UI thread until the current zombie task is dead.
+        Returns immediately if there's no zombie task."""
+
+        assert util.onAppThread()
+        while self._zombieTask:
+            QThread.yieldCurrentThread()
+            QThread.msleep(30)
+            flags = QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
+            flags |= QEventLoop.ProcessEventsFlag.WaitForMoreEvents
+            QApplication.processEvents(flags, 30)
+        assert not self.isBusy()
 
     def put(self, task: RepoTask, *args, **kwargs):
         assert util.onAppThread()
@@ -363,13 +397,7 @@ class RepoTaskRunner(QObject):
 
         elif task.canKill(self._currentTask):
             log.info(TAG, f"Task {task} killed task {self._currentTask}")
-            if not self._zombieTask:
-                self._zombieTask = self._currentTask
-            else:
-                # Current task hasn't started yet, it's still waiting on the zombie to die.
-                # We can kill the current task, so just overwrite it, but leave the zombie alone.
-                assert self._currentTask._currentIteration == 0, "it's not supposed to have started yet!"
-                self._currentTask.deleteLater()
+            self.killCurrentTask()
             self._currentTask = task
 
         else:
@@ -406,7 +434,8 @@ class RepoTaskRunner(QObject):
             assert task is not self._currentTask
             self._releaseTask(task)
             task.deleteLater()
-            self._startTask(self._currentTask)
+            if self._currentTask:
+                self._startTask(self._currentTask)
             return
 
         assert task is self._currentTask
