@@ -1,3 +1,4 @@
+from __future__ import annotations
 from gitfourchette import log
 from gitfourchette import util
 from gitfourchette.qt import *
@@ -11,6 +12,26 @@ import time
 TAG = "nav"
 BLANK_OID = Oid(raw=b'')
 PUSH_INTERVAL = 0.5
+
+
+class NavFlags(enum.IntFlag):
+    IgnoreInvalidLocation = enum.auto()
+    ForceRefreshWorkdir = enum.auto()
+    AllowWriteIndex = enum.auto()
+    AllowLongLines = enum.auto()
+    AllowLargeDiffs = enum.auto()
+
+    DefaultFlags = 0
+
+    @staticmethod
+    def parseUrl(url: QUrl):
+        query = QUrlQuery(url)
+        value = query.queryItemValue("jumpflags")
+
+        if value:
+            return NavFlags(int(value))
+        else:
+            return NavFlags.DefaultFlags
 
 
 @enum.unique
@@ -58,8 +79,9 @@ class NavLocator:
     path: str = ""
     diffScroll: int = 0
     diffCursor: int = 0
+    flags: NavFlags = NavFlags.DefaultFlags  # WARNING: Those are not saved in history
 
-    URL_AUTHORITY: ClassVar[str] = "go"
+    URL_AUTHORITY: ClassVar[str] = "jump"
 
     def __post_init__(self):
         assert isinstance(self.context, NavContext)
@@ -90,16 +112,19 @@ class NavLocator:
     def inStaged(path: str = ""):
         return NavLocator(context=NavContext.STAGED, path=path)
 
-    def isSimilarEnoughTo(self, other: 'NavLocator'):
+    def isSimilarEnoughTo(self, other: NavLocator):
         return (self.context == other.context
                 and self.commit == other.commit
                 and self.path == other.path)
 
-    def isInSameDiffSetAs(self, other: 'NavLocator'):
+    def isInSameDiffSetAs(self, other: NavLocator):
         if self.context.isWorkdir():
             return other.context.isWorkdir()
         else:
             return self.commit == other.commit
+
+    def hasFlags(self, flags: NavFlags):
+        return flags == (self.flags & flags)
 
     def asTitle(self):
         header = self.path
@@ -109,7 +134,7 @@ class NavLocator:
             header += " [" + self.context.translateName() + "]"
         return header
 
-    def url(self, *queryTuples: tuple[str, str]):
+    def url(self):
         url = QUrl()
         url.setScheme(APP_URL_SCHEME)
         url.setAuthority(NavLocator.URL_AUTHORITY)
@@ -120,15 +145,27 @@ class NavLocator:
         else:
             url.setFragment(self.context.name)
 
-        if queryTuples:
-            query = QUrlQuery()
-            query.setQueryItems(queryTuples)
+        query = QUrlQuery()
+        if self.flags != NavFlags.DefaultFlags:
+            query.addQueryItem("flags", str(self.flags.value))
+        if not query.isEmpty():
             url.setQuery(query)
 
         return url
 
-    def replace(self, **kwargs):
+    def toHtml(self, text: str):
+        href = self.url().toString()
+        assert '"' not in href
+        if "[" in text:
+            return text.replace("[", f"<a href=\"{href}\">").replace("]", "</a>")
+        else:
+            return f"<a href=\"{href}\">{text}</a>"
+
+    def replace(self, **kwargs) -> NavLocator:
         return dataclasses.replace(self, **kwargs)
+
+    def withExtraFlags(self, extraFlags: NavFlags) -> NavLocator:
+        return self.replace(flags=self.flags | extraFlags)
 
     @staticmethod
     def parseUrl(url: QUrl):
@@ -144,7 +181,14 @@ class NavLocator:
         except KeyError:
             context = NavContext.COMMITTED
             commit = Oid(hex=frag)
-        return NavLocator(context, commit, path)
+
+        flags = NavFlags.DefaultFlags
+        query = QUrlQuery(url.query())
+        if not query.isEmpty():
+            strFlags = query.queryItemValue("flags")
+            flags = NavFlags(int(strFlags))
+
+        return NavLocator(context, commit, path, flags=flags)
 
     @property
     def contextKey(self):
@@ -197,6 +241,10 @@ class NavHistory:
         if not pos:
             return
 
+        # Clear volatile flags
+        if pos.flags != NavFlags.DefaultFlags:
+            pos = pos.replace(flags=NavFlags.DefaultFlags)
+
         self.recent[pos.contextKey] = pos
         self.recent[pos.fileKey] = pos
         if pos.context.isWorkdir():
@@ -248,15 +296,21 @@ class NavHistory:
         the input.
         """
 
+        originalLocator = locator
+
         # If no path is specified, attempt to recall any path in the same context
         if not locator.path:
-            locator2 = self.recent.get(locator.contextKey, None)
-            if not locator2:
-                return locator
-            else:
-                locator = locator2
+            locator = self.recent.get(locator.contextKey, None)
+            if not locator:
+                locator = originalLocator
 
-        return self.recent.get(locator.fileKey, None) or locator
+        locator = self.recent.get(locator.fileKey, None) or locator
+
+        # Restore volatile flags
+        if originalLocator.flags != locator.flags:
+            locator = locator.replace(flags=originalLocator.flags)
+
+        return locator
 
     def canGoForward(self):
         count = len(self.history)

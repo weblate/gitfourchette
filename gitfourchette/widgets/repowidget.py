@@ -707,11 +707,8 @@ class RepoWidget(QWidget):
         log.info(TAG, F"Internal link:", url.toDisplayString())
 
         if url.authority() == NavLocator.URL_AUTHORITY:
-            navLoc = NavLocator.parseUrl(url)
-            self.jump(navLoc)
-        elif url.authority() == "commit":
-            oid = pygit2.Oid(hex=url.fragment())
-            self.graphView.selectCommit(oid)
+            locator = NavLocator.parseUrl(url)
+            self.jump(locator)
         elif url.authority() == "refresh":
             self.refreshRepo()
         else:

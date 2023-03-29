@@ -94,6 +94,6 @@ def testPatchBecameInvalid(qtbot, tempDir, mainWindow):
     assert rw.richDiffView.isVisibleTo(rw)
     doc = rw.richDiffView.document()
     text = doc.toRawText()
-    assert "file may have changed on disk" in text.lower()
+    assert "changed on disk" in text.lower()
 
 

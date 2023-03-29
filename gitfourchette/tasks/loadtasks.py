@@ -2,7 +2,7 @@ from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import util
 from gitfourchette.benchmark import Benchmark
-from gitfourchette.nav import NavLocator
+from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffModel, ShouldDisplayPatchAsImageDiff, \
@@ -64,11 +64,11 @@ class LoadPatch(RepoTask):
     def _processPatch(self, patch: pygit2.Patch, locator: NavLocator
                       ) -> DiffModel | DiffModelError | DiffConflict | DiffImagePair:
         if not patch:
-            return DiffModelError(
-                self.tr("Patch is invalid."),
-                self.tr("The patched file may have changed on disk since we cached it. "
-                        "Try [refreshing] the window.").replace("[", "<a href='gitfourchette://refresh'>").replace("]", "</a>"),
-            icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+            locator = locator.withExtraFlags(NavFlags.ForceRefreshWorkdir)
+            message = locator.toHtml(self.tr("The file appears to have changed on disk since we cached it. "
+                                             "[Try to refresh it.]"))
+            return DiffModelError(self.tr("Outdated diff."), message,
+                                  icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if not patch.delta:
             # Rare libgit2 bug, should be fixed in 1.6.0
@@ -79,7 +79,7 @@ class LoadPatch(RepoTask):
             return DiffConflict(ancestor, ours, theirs)
 
         try:
-            diffModel = DiffModel.fromPatch(patch)
+            diffModel = DiffModel.fromPatch(patch, locator)
             diffModel.document.moveToThread(QApplication.instance().thread())
             return diffModel
         except DiffModelError as dme:

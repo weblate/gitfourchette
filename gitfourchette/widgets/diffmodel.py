@@ -1,6 +1,6 @@
 from gitfourchette import colors
 from gitfourchette import settings
-from gitfourchette.nav import NavLocator
+from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
 from gitfourchette.util import isZeroId, isImageFormatSupported
@@ -8,6 +8,8 @@ from dataclasses import dataclass
 import html
 import os
 import pygit2
+
+MAX_LINE_LENGTH = 10_000
 
 
 @dataclass
@@ -144,7 +146,7 @@ class DiffModel:
     style: DiffStyle
 
     @staticmethod
-    def fromPatch(patch: pygit2.Patch):
+    def fromPatch(patch: pygit2.Patch, locator: NavLocator):
         if patch.delta.similarity == 100:
             raise noChange(patch.delta)
 
@@ -175,12 +177,12 @@ class DiffModel:
 
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
-        if len(patch.data) > threshold:
+        if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeDiffs):
             humanSize = locale.formattedDataSize(len(patch.data))
-            humanThreshold = locale.formattedDataSize(threshold)
+            target = locator.withExtraFlags(NavFlags.AllowLargeDiffs)
             raise DiffModelError(
                 translate("DiffModel", "This patch is too large to be previewed ({0}).").format(humanSize),
-                translate("DiffModel", "You can change the size threshold in the Preferences (current limit: {0}).").format(humanThreshold),
+                target.toHtml(translate("DiffModel", "[Load diff anyway] (this may take a moment)")),
                 QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:
@@ -263,6 +265,13 @@ class DiffModel:
                 # Skip GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
                 if diffLine.origin in "=><":
                     continue
+
+                if len(diffLine.content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
+                    target = locator.withExtraFlags(NavFlags.AllowLongLines)
+                    raise DiffModelError(
+                        translate("DiffModel", "This file contains very long lines."),
+                        target.toHtml(translate("DiffModel", "[Load diff anyway] (this may take a moment)")),
+                        QStyle.StandardPixmap.SP_MessageBoxWarning)
 
                 ld = LineData(
                     text=diffLine.content,

@@ -200,7 +200,10 @@ class GraphView(QListView):
         postSummary = ""
         nLines = len(commit.message.rstrip().split('\n'))
 
-        parentHashes = [F"<a href=\"{APP_URL_SCHEME}://commit#{p}\">{shortHash(p)}</a>" for p in commit.parent_ids]
+        parentHashes = []
+        for p in commit.parent_ids:
+            parentHashes.append(NavLocator.inCommit(p).toHtml("[" + shortHash(p) + "]"))
+
         parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
