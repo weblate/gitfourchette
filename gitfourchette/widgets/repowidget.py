@@ -4,7 +4,6 @@ from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette import tempdir
 from gitfourchette.benchmark import Benchmark
-from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
@@ -46,8 +45,6 @@ class RepoWidget(QWidget):
     navLocator: NavLocator
     navHistory: NavHistory
 
-    scheduledRefresh: QTimer
-
     @property
     def repo(self) -> pygit2.Repository:
         return self.state.repo
@@ -62,10 +59,6 @@ class RepoWidget(QWidget):
             return os.path.normpath(self.state.repo.workdir)
         else:
             return self.pathPending
-
-    @property
-    def fileWatcher(self) -> FileWatcher:
-        return self.state.fileWatcher
 
     def __init__(self, parent, sharedSplitterStates=None):
         super().__init__(parent)
@@ -88,11 +81,6 @@ class RepoWidget(QWidget):
         self.busyCursorDelayer.setSingleShot(True)
         self.busyCursorDelayer.setInterval(100)
         self.busyCursorDelayer.timeout.connect(lambda: self.setCursor(Qt.CursorShape.BusyCursor))
-
-        self.scheduledRefresh = QTimer(self)
-        self.scheduledRefresh.setSingleShot(True)
-        self.scheduledRefresh.setInterval(1000)
-        self.scheduledRefresh.timeout.connect(self.refreshRepo)
 
         self.navLocator = NavLocator()
         self.navHistory = NavHistory()
@@ -306,33 +294,8 @@ class RepoWidget(QWidget):
     def setRepoState(self, state: RepoState):
         if state:
             self.state = state
-            self.state.fileWatcher.setParent(self)
-            self.state.fileWatcher.directoryChanged.connect(self.onDirectoryChange)
-            self.state.fileWatcher.indexChanged.connect(self.onIndexChange)
         else:
             self.state = None
-
-    def installFileWatcher(self, intervalMS=100):
-        self.state.fileWatcher.boot(intervalMS)
-        self.scheduledRefresh.setInterval(intervalMS)
-
-    def stopFileWatcher(self):
-        self.state.fileWatcher.shutdown()
-
-    def onDirectoryChange(self):
-        self.statusDisplayCache.setStatus(self.tr("Detected external change..."), spinning=True)
-
-        if self.scheduledRefresh.interval() == 0:
-            # Just fire it now if instantaneous
-            # TODO: Do we need this one? There's already a delay in FSW
-            self.scheduledRefresh.timeout.emit()
-        else:
-            self.scheduledRefresh.stop()
-            self.scheduledRefresh.start()
-
-    def onIndexChange(self):
-        if self.isWorkdirShown:
-            self.refreshRepo()
 
     # -------------------------------------------------------------------------
 
@@ -489,10 +452,6 @@ class RepoWidget(QWidget):
             self.clearDiffView()
             self.sidebar.model().clear()
 
-        # Shut down filesystem watcher
-        if self.state and self.state.fileWatcher:
-            self.state.fileWatcher.shutdown()
-
         if self.state and self.state.repo:
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
@@ -608,7 +567,6 @@ class RepoWidget(QWidget):
         if flags & TaskEffects.Workdir:
             self.state.workdirStale = True
 
-        self.scheduledRefresh.stop()
         self.runTask(tasks.RefreshRepo, flags)
 
     def onRegainFocus(self):

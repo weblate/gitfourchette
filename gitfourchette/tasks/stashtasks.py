@@ -37,10 +37,6 @@ class NewStash(RepoTask):
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
-    @property
-    def rw(self) -> 'RepoWidget':
-        return self.parentWidget()
-
     def flow(self, paths: list[str] | None = None):
         # libgit2 will refuse to create a stash if there are conflicts
         if self.repo.index.conflicts:
@@ -81,10 +77,9 @@ class NewStash(RepoTask):
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        with self.rw.fileWatcher.blockWatchingIndex():
-            porcelain.newStash(self.repo, stashMessage, paths=tickedFiles)
-            if not keepIntact:
-                porcelain.restoreFiles(self.repo, tickedFiles)
+        porcelain.newStash(self.repo, stashMessage, paths=tickedFiles)
+        if not keepIntact:
+            porcelain.restoreFiles(self.repo, tickedFiles)
 
     def legacyFlow(self):
         """
@@ -105,10 +100,9 @@ class NewStash(RepoTask):
         includeIgnored = dlg.ui.includeIgnoredCheckBox.isChecked()
 
         yield from self._flowBeginWorkerThread()
-        with self.rw.fileWatcher.blockWatchingIndex():
-            porcelain.newStash_legacy(
-                self.repo, stashMessage,
-                keepIndex=keepIndex, includeUntracked=includeUntracked, includeIgnored=includeIgnored)
+        porcelain.newStash_legacy(
+            self.repo, stashMessage,
+            keepIndex=keepIndex, includeUntracked=includeUntracked, includeIgnored=includeIgnored)
 
 
 class ApplyStash(RepoTask):

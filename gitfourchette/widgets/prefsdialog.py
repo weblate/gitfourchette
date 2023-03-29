@@ -372,7 +372,6 @@ class PrefsDialog(QDialog):
 
             "language": translate("Prefs", "Language"),
             "qtStyle": translate("Prefs", "Theme"),
-            "fileWatcher": translate("Prefs", "File watcher"),
             "shortHashChars": (translate("Prefs", "Shorten hashes to"), translate("Prefs", "characters")),
             "shortTimeFormat": translate("Prefs", "Short time format"),
             "pathDisplayStyle": translate("Prefs", "Path display style"),

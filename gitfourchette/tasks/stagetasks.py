@@ -11,13 +11,6 @@ import pygit2
 
 
 class _BaseStagingTask(RepoTask):
-    @property
-    def rw(self):  # hack for now - assume parent is a RepoWidget
-        from gitfourchette.widgets.repowidget import RepoWidget
-        rw: RepoWidget = self.parentWidget()
-        assert isinstance(rw, RepoWidget)
-        return rw
-
     def canKill(self, task: 'RepoTask'):
         # Jump/Refresh tasks shouldn't prevent a staging task from starting
         # when the user holds down RETURN/DELETE in a FileListView
@@ -39,8 +32,7 @@ class StageFiles(_BaseStagingTask):
             yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
-        with self.rw.fileWatcher.blockWatchingIndex():  # TODO: Also block FSW from watching ALL changes
-            porcelain.stageFiles(self.repo, patches)
+        porcelain.stageFiles(self.repo, patches)
 
 
 class DiscardFiles(_BaseStagingTask):
@@ -70,7 +62,6 @@ class DiscardFiles(_BaseStagingTask):
 
         yield from self._flowBeginWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
-        # TODO: block FSW from watching changes?
         Trash(self.repo).backupPatches(patches)
         porcelain.discardFiles(self.repo, paths)
 
@@ -85,8 +76,7 @@ class UnstageFiles(_BaseStagingTask):
             yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
-        with self.rw.fileWatcher.blockWatchingIndex():
-            porcelain.unstageFiles(self.repo, patches)
+        porcelain.unstageFiles(self.repo, patches)
 
 
 class ApplyPatch(RepoTask):

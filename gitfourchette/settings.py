@@ -188,7 +188,6 @@ class Prefs(BasePrefs):
 
     language                    : str           = ""
     qtStyle                     : str           = ""
-    fileWatcher                 : bool          = False
     shortHashChars              : int           = 7
     shortTimeFormat             : str           = list(SHORT_DATE_PRESETS.values())[0]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS

@@ -4,7 +4,6 @@ from gitfourchette import log
 from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.benchmark import Benchmark
-from gitfourchette.filewatcher import FileWatcher
 from gitfourchette.hiddencommitsolver import HiddenCommitSolver
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
 from gitfourchette.qt import *
@@ -152,8 +151,6 @@ class RepoState:
         self.uiPrefs.load()
 
         self.resolveHiddenCommits()
-
-        self.fileWatcher = FileWatcher(None, self.repo)
 
     @property
     def hiddenBranches(self):

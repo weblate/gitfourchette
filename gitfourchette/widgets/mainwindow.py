@@ -337,7 +337,6 @@ class MainWindow(QMainWindow):
 
         # Warn if changed any setting that requires a reload
         warnIfChanged = [
-            "fileWatcher",  # FSW installed upon opening the repo
             "graph_chronologicalOrder",  # need to reload entire commit sequence
             "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
             "diff_showStrayCRs",  # GF isn't able to re-render a single diff yet
