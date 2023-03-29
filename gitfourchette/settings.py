@@ -219,6 +219,7 @@ class Prefs(BasePrefs):
     debug_showPID               : bool          = True
     debug_fixU2029InClipboard   : bool          = False
     debug_hideStashJunkParents  : bool          = True
+    debug_autoRefresh           : bool          = True
     debug_verbosity             : log.Logger.Verbosity = log.Logger.Verbosity.QUIET
 
 

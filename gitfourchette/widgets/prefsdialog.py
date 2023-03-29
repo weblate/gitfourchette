@@ -411,6 +411,7 @@ class PrefsDialog(QDialog):
             "debug_verbosity": translate("Prefs", "Logging verbosity"),
             "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
             "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
+            "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
 
             "external_editor": translate("Prefs", "Text editor"),
             "external_diff": translate("Prefs", "Diff tool"),

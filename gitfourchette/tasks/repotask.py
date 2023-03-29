@@ -356,6 +356,10 @@ class RepoTaskRunner(QObject):
         self._threadPool = QThreadPool(parent)
         self._threadPool.setMaxThreadCount(1)
 
+    @property
+    def currentTask(self):
+        return self._currentTask
+
     def isBusy(self):
         return self._currentTask is not None or self._zombieTask is not None or self._threadPool.activeThreadCount() > 0
 

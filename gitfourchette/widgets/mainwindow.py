@@ -90,6 +90,8 @@ class MainWindow(QMainWindow):
 
         self.refreshPrefs()
 
+        QGuiApplication.instance().applicationStateChanged.connect(self.onApplicationStateChanged)
+
     def goBack(self):
         rw = self.currentRepoWidget()
         if rw:
@@ -377,7 +379,6 @@ class MainWindow(QMainWindow):
         # Get out of welcome widget
         self.welcomeStack.setCurrentWidget(self.tabs)
 
-        # self.repoMenu.setEnabled(False)
         w = self.currentRepoWidget()
         w.refreshWindowTitle()  # Refresh window title before loading
         w.restoreSplitterStates()
@@ -395,8 +396,11 @@ class MainWindow(QMainWindow):
                 if not success:
                     return
                 settings.history.write()
+        else:
+            # Trigger repo refresh.
+            # TODO: This also gets triggered when MOVING TABS, which is bad with large repos
+            w.onRegainFocus()
 
-        # self.repoMenu.setEnabled(True)
         w.refreshWindowTitle()
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
@@ -559,6 +563,13 @@ class MainWindow(QMainWindow):
             self.fillRecentMenu()
 
         return newRW
+
+    # -------------------------------------------------------------------------
+
+    def onApplicationStateChanged(self, state: Qt.ApplicationState):
+        rw = self.currentRepoWidget()
+        if rw and state == Qt.ApplicationState.ApplicationActive and settings.prefs.debug_autoRefresh:
+            rw.onRegainFocus()
 
     # -------------------------------------------------------------------------
     # Repo menu callbacks

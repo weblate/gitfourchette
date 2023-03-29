@@ -305,8 +305,12 @@ class RefreshRepo(tasks.RepoTask):
     def name(self):
         return self.tr("Refresh repo")
 
-    def canKill(self, task: 'RepoTask'):
-        return isinstance(task, (Jump, RefreshRepo))
+    @staticmethod
+    def canKill_static(task: RepoTask):
+        return task is None or isinstance(task, (Jump, RefreshRepo))
+
+    def canKill(self, task: RepoTask):
+        return RefreshRepo.canKill_static(task)
 
     def effects(self) -> TaskEffects:
         # Stop refresh chain here - this task is responsible for other post-task refreshes

@@ -599,6 +599,9 @@ class RepoWidget(QWidget):
         return self.filesStack.currentWidget() == self.stageSplitter
 
     def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh):
+        if not self.state:
+            return
+
         if flags == TaskEffects.Nothing:
             return
 
@@ -607,6 +610,15 @@ class RepoWidget(QWidget):
 
         self.scheduledRefresh.stop()
         self.runTask(tasks.RefreshRepo, flags)
+
+    def onRegainFocus(self):
+        if not self.state:
+            return
+
+        if self.isVisible() and tasks.RefreshRepo.canKill_static(self.repoTaskRunner.currentTask):
+            QTimer.singleShot(0, lambda: self.refreshRepo(TaskEffects.DefaultRefresh | TaskEffects.Workdir))
+        else:
+            self.state.workdirStale = True
 
     def refreshWindowTitle(self):
         shortname = self.getTitle()
