@@ -370,7 +370,7 @@ class RefreshRepo(tasks.RepoTask):
             # the selected row may jump around. Try to restore the initial
             # locator to ensure the previously selected commit stays selected.
             rw.graphView.verticalScrollBar().setValue(initialGraphScroll)
-            if initialLocator.commit in rw.state.commitPositions:
+            if initialLocator.commit in rw.state.graph.commitRows:
                 jumpTo = initialLocator
             else:
                 # Old commit is gone - jump to HEAD

@@ -14,6 +14,15 @@ ABRIDGMENT_THRESHOLD = 25
 DEAD_VALUE = "!DEAD"
 
 
+@dataclass(frozen=True)
+class BatchRow:
+    batch: int = -1
+    offset: int = -1
+
+    def invalid(self):
+        return self.batch < 0
+
+
 @dataclass
 class ArcJunction:
     """ Represents the merging of an Arc into another Arc. """
@@ -256,7 +265,7 @@ class GeneratorState(Frame):
     peakArcCount: int
 
     def __init__(self, startArcSentinel: Arc):
-        super().__init__(-1, "", [], [], lastArc=startArcSentinel)
+        super().__init__(row=-1, commit="", solvedArcs=[], openArcs=[], lastArc=startArcSentinel)
         self.freeLanes = []
         self.parentLookup = defaultdict(list)
         self.peakArcCount = 0
@@ -447,12 +456,27 @@ class Graph:
     keyframeRows: list[int] | None
     startArc: Arc  # linked list start sentinel; guaranteed to never be None
 
+    commitRows: dict[Oid, BatchRow]
+    batchOffsets: list[int]
+    """
+    Everytime we refresh, new rows may be inserted at the top of the graph.
+    This may push existing rows down, away from the top of the graph.
+    To avoid recomputing offsetFromTop for every commit, we keep track of the
+    general offset of every batch of rows created by every refresh.
+    """
+
     def __init__(self):
         self.clear()
+
+    def getCommitRow(self, oid: Oid):
+        offset = self.commitRows[oid]
+        return self.batchOffsets[offset.batch] + offset.offset
 
     def clear(self):
         self.keyframes = []
         self.keyframeRows = []
+        self.commitRows = {}
+        self.batchOffsets = [0]
         self.startArc = Arc(-1, -1, -1, "!TOP", "!BOTTOM", [], None)
 
     def shallowCopyFrom(self, source):

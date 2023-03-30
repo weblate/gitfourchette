@@ -243,7 +243,7 @@ class GraphView(QListView):
 
         if debugInfoRequested:
             state = self.repoWidget.state
-            seqIndex = state.getCommitSequentialIndex(oid)
+            seqIndex = state.graph.getCommitRow(oid)
             frame = state.graph.getFrame(seqIndex)
             markup += f"""<hr><b>Top secret debug info</b><br>
                 GraphView row: {self.currentIndex().row()}<br>
@@ -326,7 +326,7 @@ class GraphView(QListView):
 
     def getFilterIndexForCommit(self, oid: pygit2.Oid):
         try:
-            rawIndex = self.repoWidget.state.getCommitSequentialIndex(oid)
+            rawIndex = self.repoWidget.state.graph.getCommitRow(oid)
         except KeyError:
             return None
 

@@ -75,7 +75,7 @@ def paintGraphFrame(
 
     try:
         # Get this commit's sequential index in the graph
-        myRow = state.getCommitSequentialIndex(commit.oid)
+        myRow = state.graph.getCommitRow(commit.oid)
     except KeyError:
         log.warning("graphpaint", "skipping unregistered commit:", commit.oid)
         return
@@ -94,6 +94,8 @@ def paintGraphFrame(
 
     # Get graph frame for this row
     frame = state.graph.getFrame(myRow)
+    assert frame.commit == commit.oid
+    assert frame.row == myRow
 
     # Get the commit's lane ID
     commitLane = frame.getHomeLaneForCommit()

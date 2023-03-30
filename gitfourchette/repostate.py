@@ -5,7 +5,7 @@ from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.benchmark import Benchmark
 from gitfourchette.hiddencommitsolver import HiddenCommitSolver
-from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL
+from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
 from gitfourchette.qt import *
 from gitfourchette.settings import BasePrefs
 from typing import Iterable
@@ -14,12 +14,6 @@ import pygit2
 
 
 PROGRESS_INTERVAL = 5000
-
-
-@dataclass
-class BatchedOffset:
-    batch: int
-    offsetInBatch: int
 
 
 def progressTick(progress, i, numCommitsBallpark=0):
@@ -90,18 +84,6 @@ class RepoState:
     # oid of the active commit (to make it bold)
     activeCommitOid: pygit2.Oid | None
 
-    # Everytime we refresh, new rows may be inserted at the top of the graph.
-    # This may push existing rows down, away from the top of the graph.
-    # To avoid recomputing offsetFromTop for every commit metadata,
-    # we keep track of the general offset of every batch of rows created by every refresh.
-    batchOffsets: list[int]
-
-    commitPositions: dict[pygit2.Oid, BatchedOffset]
-
-    currentBatchID: int
-
-    mutex: QMutex
-
     foreignCommits: set[pygit2.Oid]
 
     hiddenCommits: set[pygit2.Oid]
@@ -130,12 +112,10 @@ class RepoState:
             self.repo.config.add_file(tempConfigPath, level=1)
 
         self.walker = None
-        self.currentBatchID = 0
 
         self.commitSequence = []
         self.hiddenCommits = set()
 
-        self.commitPositions = {}
         self.graph = None
 
         self.refCache = {}
@@ -190,10 +170,6 @@ class RepoState:
 
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
-    def getCommitSequentialIndex(self, oid: pygit2.Oid):
-        position = self.commitPositions[oid]
-        return self.batchOffsets[position.batch] + position.offsetInBatch
-
     def initializeWalker(self, tipOids: Iterable[pygit2.Oid]) -> pygit2.Walker:
         sorting = pygit2.GIT_SORT_TOPOLOGICAL
 
@@ -242,12 +218,13 @@ class RepoState:
 
         foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
         hiddenCommitSolver = self.newHiddenCommitSolver()
+        currentBatchID = 0
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop, numCommitsBallpark)
 
                 commitSequence.append(commit)
-                self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
+                graph.commitRows[commit.oid] = BatchRow(currentBatchID, offsetFromTop)
 
                 foreignCommitSolver.feed(commit)
                 hiddenCommitSolver.feed(commit)
@@ -275,15 +252,13 @@ class RepoState:
         self.foreignCommits = foreignCommitSolver.foreignCommits
         self.hiddenCommits = hiddenCommitSolver.hiddenCommits
         self.graph = graph
-        self.batchOffsets = [0]
-        self.currentBatchID = 0
 
         bench.__exit__(None, None, None)
 
         return commitSequence
 
     def loadTaintedCommitsOnly(self, oldRefCache: dict[str, pygit2.Oid]):
-        self.currentBatchID += 1
+        currentBatchID = len(self.graph.batchOffsets)
 
         newCommitSequence = []
 
@@ -314,8 +289,8 @@ class RepoState:
             except StopIteration:
                 break
 
-            wasKnown = commit.oid in self.commitPositions
-            self.commitPositions[commit.oid] = BatchedOffset(self.currentBatchID, offsetFromTop)
+            wasKnown = commit.oid in self.graph.commitRows
+            self.graph.commitRows[commit.oid] = BatchRow(batch=currentBatchID, offset=offsetFromTop)
 
             newCommitSequence.append(commit)
             graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids, wasKnown)
@@ -331,7 +306,7 @@ class RepoState:
 
         with Benchmark("Nuke unreachable commits from cache"):
             for trashedCommit in (graphSplicer.oldCommitsSeen - graphSplicer.newCommitsSeen):
-                del self.commitPositions[trashedCommit]
+                del self.graph.commitRows[trashedCommit]
 
         # Piece correct commit sequence back together
         with Benchmark("Reassemble commit sequence"):
@@ -345,9 +320,9 @@ class RepoState:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
         # Compute new batch offset
-        assert self.currentBatchID == len(self.batchOffsets)
-        self.batchOffsets = [previousOffset + graphSplicer.oldGraphRowOffset for previousOffset in self.batchOffsets]
-        self.batchOffsets.append(0)
+        assert currentBatchID == len(self.graph.batchOffsets)
+        self.graph.batchOffsets = [previousOffset + graphSplicer.oldGraphRowOffset for previousOffset in self.graph.batchOffsets]
+        self.graph.batchOffsets.append(0)  # Latest batch starts at top of graph
 
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
