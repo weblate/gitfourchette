@@ -1,6 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette import reverseunidiff
 from gitfourchette import util
+from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.trash import Trash
@@ -173,13 +174,11 @@ class RevertPatch(RepoTask):
         yield from self._flowBeginWorkerThread()
         diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
 
-        # yield from self._flowExitWorkerThread()
-        # # Get any file changed by the diff
-        # changedFile = ""
-        # for p in diff:
-        #     if p.delta.status != pygit2.GIT_DELTA_DELETED:
-        #         changedFile = p.delta.new_file.path
-        # self.patchApplied.emit(NavPos("UNSTAGED", changedFile))  # send a NavPos to have RepoWidget show the file in the unstaged list
+        # After the task, jump to a NavLocator that points to any file that was modified by the patch
+        for p in diff:
+            if p.delta.status != pygit2.GIT_DELTA_DELETED:
+                self.jumpTo = NavLocator.inUnstaged(p.delta.new_file.path)
+                break
 
 
 class HardSolveConflict(RepoTask):

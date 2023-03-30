@@ -1,5 +1,6 @@
 from __future__ import annotations
 from gitfourchette.benchmark import Benchmark
+from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette import util
 from gitfourchette import log
@@ -133,6 +134,7 @@ class RepoTask(QObject):
 
     repo: pygit2.Repository | None
     taskID: int
+    jumpTo: NavLocator | None
 
     _currentFlow: FlowGeneratorType
     _currentIteration: int
@@ -145,6 +147,7 @@ class RepoTask(QObject):
         self.taskID = RepoTask._globalTaskCounter
         RepoTask._globalTaskCounter += 1
         self.setObjectName(f"RepoTask({self})")
+        self.jumpTo = None
 
     def parentWidget(self) -> QWidget:
         p = self.parent()

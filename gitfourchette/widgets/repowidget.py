@@ -557,7 +557,7 @@ class RepoWidget(QWidget):
     def isWorkdirShown(self):
         return self.filesStack.currentWidget() == self.stageSplitter
 
-    def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh):
+    def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
         if not self.state:
             return
 
@@ -567,7 +567,7 @@ class RepoWidget(QWidget):
         if flags & TaskEffects.Workdir:
             self.state.workdirStale = True
 
-        self.runTask(tasks.RefreshRepo, flags)
+        self.runTask(tasks.RefreshRepo, flags, jumpTo)
 
     def onRegainFocus(self):
         if not self.state:
@@ -672,7 +672,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, task: tasks.RepoTask):
-        self.refreshRepo(task.effects())
+        self.refreshRepo(task.effects(), task.jumpTo)
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
         self.statusDisplayCache.status = progressText

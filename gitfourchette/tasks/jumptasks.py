@@ -307,7 +307,7 @@ class RefreshRepo(tasks.RepoTask):
         # Stop refresh chain here - this task is responsible for other post-task refreshes
         return TaskEffects.Nothing
 
-    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh):
+    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
         from gitfourchette.widgets.repowidget import RepoWidget
 
         rw: RepoWidget = self.parentWidget()
@@ -354,11 +354,12 @@ class RefreshRepo(tasks.RepoTask):
         # Now jump to where we should be after the refresh
         assert rw.navLocator == initialLocator, "locator has changed"
 
-        jumpTo = initialLocator
+        jumpTo = jumpTo or initialLocator
 
         if rw.isWorkdirShown or effectFlags & TaskEffects.ShowWorkdir:
             # Refresh workdir view on separate thread AFTER all the processing above
-            jumpTo = NavLocator(NavContext.WORKDIR)
+            if not jumpTo.context.isWorkdir():
+                jumpTo = NavLocator(NavContext.WORKDIR)
 
             if effectFlags & TaskEffects.Workdir:
                 newFlags = jumpTo.flags | NavFlags.ForceRefreshWorkdir | NavFlags.AllowWriteIndex
