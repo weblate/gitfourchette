@@ -46,7 +46,6 @@ class LoadCommit(RepoTask):
 
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
-        # import time; time.sleep(1) #----------to debug out-of-order events
         self.diffs = porcelain.loadCommitDiffs(self.repo, oid)
         self.message = porcelain.getCommitMessage(self.repo, oid)
 
@@ -92,5 +91,4 @@ class LoadPatch(RepoTask):
 
     def flow(self, patch: pygit2.Patch, locator: NavLocator):
         yield from self._flowBeginWorkerThread()
-        # import time; time.sleep(1) #----------to debug out-of-order events
         self.result = self._processPatch(patch, locator)

@@ -251,7 +251,6 @@ def loadCommitDiffs(repo: Repository, oid: Oid, showBinary: bool = False) -> lis
         flags |= pygit2.GIT_DIFF_SHOW_BINARY
 
     commit: pygit2.Commit = repo.get(oid)
-    #import time; time.sleep(1) #to debug out-of-order events
 
     if commit.parents:
         allDiffs = []
