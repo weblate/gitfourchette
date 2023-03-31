@@ -218,6 +218,38 @@ class DiffView(QPlainTextEdit):
             self.gutterMaxDigits = 0
         self.updateGutterWidth(0)
 
+        # Now restore cursor/scrollbar positions
+        self.restorePosition(locator)
+
+    def restorePosition(self, locator: NavLocator):
+        pos = locator.diffCursor
+        lineNo = locator.diffLineNo
+
+        # Get position at start of line
+        try:
+            sol = self.lineCursorStartCache[lineNo]
+        except IndexError:
+            sol = self.lineCursorStartCache[-1]
+
+        # Get position at end of line
+        try:
+            eol = self.lineCursorStartCache[lineNo+1]
+        except IndexError:
+            eol = self.getMaxPosition()
+
+        # If cursor position still falls within the same line, keep that position.
+        # Otherwise, snap cursor position to start of line.
+        if not (sol <= pos < eol):
+            pos = sol
+
+        # Move text cursor
+        newTextCursor = self.textCursor()
+        newTextCursor.setPosition(pos)
+        self.setTextCursor(newTextCursor)
+
+        # Finally, restore the scrollbar
+        self.verticalScrollBar().setValue(locator.diffScroll)
+
     def refreshPrefs(self):
         monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         if settings.prefs.diff_font:

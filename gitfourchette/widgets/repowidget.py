@@ -312,20 +312,20 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def saveFilePositions(self):
-        dc = 0
-        ds = 0
+        diffCursor = 0
+        diffLineNo = 0
+        diffScroll = 0
         if self.diffStack.currentWidget() == self.diffView:
             if not self.diffView.currentLocator.isSimilarEnoughTo(self.navLocator):
                 log.warning(TAG, f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. ({self.diffView.currentLocator})")
-            dc = self.diffView.textCursor().position()
-            ds = self.diffView.verticalScrollBar().value()
+            diffCursor = self.diffView.textCursor().position()
+            diffLineNo = self.diffView.findLineDataIndexAt(diffCursor)
+            diffScroll = self.diffView.verticalScrollBar().value()
 
-        self.navLocator = NavLocator(
-            context=self.navLocator.context,
-            commit=self.navLocator.commit,
-            path=self.navLocator.path,
-            diffCursor=dc,
-            diffScroll=ds)
+        self.navLocator = self.navLocator.replace(
+            diffCursor=diffCursor,
+            diffLineNo=diffLineNo,
+            diffScroll=diffScroll)
 
         self.navHistory.push(self.navLocator)
 
@@ -350,16 +350,6 @@ class RepoWidget(QWidget):
             return True
         else:
             return False
-
-    def restoreDiffPosition(self, locator: NavLocator):
-        cursorPosition = locator.diffCursor
-        scrollPosition = locator.diffScroll
-
-        newTextCursor = QTextCursor(self.diffView.textCursor())
-        newTextCursor.setPosition(cursorPosition)
-        self.diffView.setTextCursor(newTextCursor)
-
-        self.diffView.verticalScrollBar().setValue(scrollPosition)
 
     def jump(self, locator: NavLocator):
         self.runTask(tasks.Jump, locator)

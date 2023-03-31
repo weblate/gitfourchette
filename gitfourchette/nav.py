@@ -77,8 +77,9 @@ class NavLocator:
     context: NavContext = NavContext.EMPTY
     commit: Oid = BLANK_OID
     path: str = ""
-    diffScroll: int = 0
+    diffLineNo: int = 0
     diffCursor: int = 0
+    diffScroll: int = 0
     flags: NavFlags = NavFlags.DefaultFlags  # WARNING: Those are not saved in history
 
     URL_AUTHORITY: ClassVar[str] = "jump"
@@ -98,7 +99,7 @@ class NavLocator:
         return self.context.value != NavContext.EMPTY
     
     def __repr__(self) -> str:
-        return F"NavPos({self.contextKey[:10]} {self.path} {self.diffScroll} {self.diffCursor})"
+        return F"{self.__class__.__name__}({self.contextKey[:10]} {self.path})"
 
     @staticmethod
     def inCommit(oid: Oid, path: str = ""):

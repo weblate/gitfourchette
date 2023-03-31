@@ -102,7 +102,6 @@ class Jump(RepoTask):
         elif type(result) == DiffModel:
             rw.diffStack.setCurrentWidget(rw.diffView)
             rw.diffView.replaceDocument(rw.repo, patch, locator, result)
-            rw.restoreDiffPosition(locator)  # restore position after we've replaced the document
         elif type(result) == DiffImagePair:
             rw.diffStack.setCurrentWidget(rw.richDiffView)
             rw.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
