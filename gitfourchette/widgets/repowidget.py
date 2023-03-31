@@ -220,6 +220,8 @@ class RepoWidget(QWidget):
         #    w.setFrameStyle(QFrame.Shape.NoFrame)
         self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
+        self.diffView.contextualHelp.connect(self.statusDisplayCache.setStatus)
+
         # ----------------------------------
         # Connect signals to async tasks
 

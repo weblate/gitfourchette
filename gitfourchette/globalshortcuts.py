@@ -39,9 +39,9 @@ class GlobalShortcuts:
     navBack: MultiShortcut = NO_SHORTCUT
     navForward: MultiShortcut = NO_SHORTCUT
 
-    stageHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]  # Enter = on keypad; Return = main keys
+    stageHotkeys = [Qt.Key.Key_Return, Qt.Key.Key_Enter]  # Return: main keys; Enter: on keypad
     discardHotkeys = [Qt.Key.Key_Delete, Qt.Key.Key_Backspace]
-    checkoutCommitFromGraphHotkeys = [Qt.Key.Key_Enter, Qt.Key.Key_Return]
+    checkoutCommitFromGraphHotkeys = [Qt.Key.Key_Return, Qt.Key.Key_Enter]
     getCommitInfoHotkeys = [Qt.Key.Key_Space]
 
     @classmethod

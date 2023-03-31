@@ -141,6 +141,7 @@ class DiffView(QPlainTextEdit):
     applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
     revertPatch = Signal(pygit2.Patch, bytes)
     widgetMoved = Signal()
+    contextualHelp = Signal(str)
 
     lineData: list[LineData]
     lineCursorStartCache: list[int]
@@ -177,6 +178,10 @@ class DiffView(QPlainTextEdit):
 
         # Work around control characters inserted by Qt 6 when copying text
         self.copyAvailable.connect(self.onCopyAvailable)
+
+        # Emit contextual help with non-empty selection
+        self.cursorPositionChanged.connect(self.emitSelectionHelp)
+        self.selectionChanged.connect(self.emitSelectionHelp)
 
         self.searchBar = SearchBar(self, self.tr("Find in Diff"))
         # self.searchBar.textChanged.connect(self.onSearchTextChanged)
@@ -422,7 +427,7 @@ class DiffView(QPlainTextEdit):
         except IndexError:
             return -1
 
-    def extractSelection(self, reverse=False) -> bytes:
+    def getSelectedLineExtents(self):
         cursor: QTextCursor = self.textCursor()
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
@@ -436,10 +441,24 @@ class DiffView(QPlainTextEdit):
         biStart = self.findLineDataIndexAt(posStart)
         biEnd = self.findLineDataIndexAt(posEnd, biStart)
 
+        return biStart, biEnd
+
+    def isSelectionActionable(self):
+        start, end = self.getSelectedLineExtents()
+        if start < 0:
+            return False
+        for i in range(start, end+1):
+            ld = self.lineData[i]
+            if ld.diffLine and ld.diffLine.origin in "+-":
+                return True
+        return False
+
+    def extractSelection(self, reverse=False) -> bytes:
+        start, end = self.getSelectedLineExtents()
         return extractSubpatch(
             self.currentPatch,
-            self.lineData[biStart].hunkPos,
-            self.lineData[biEnd].hunkPos,
+            self.lineData[start].hunkPos,
+            self.lineData[end].hunkPos,
             reverse)
 
     def extractHunk(self, hunkID: int, reverse=False) -> bytes:
@@ -710,6 +729,36 @@ class DiffView(QPlainTextEdit):
         cursor.setPosition(startPosition, QTextCursor.MoveMode.MoveAnchor)
         cursor.setPosition(endPosition, QTextCursor.MoveMode.KeepAnchor)
         self.replaceCursor(cursor)
+
+    # ---------------------------------------------
+    # Selection help
+
+    def emitSelectionHelp(self):
+        if self.currentLocator.context in [NavContext.COMMITTED, NavContext.EMPTY]:
+            return
+
+        if not self.isSelectionActionable():
+            self.contextualHelp.emit("")
+            return
+
+        start, end = self.getSelectedLineExtents()
+        numLines = end - start + 1
+
+        if self.currentLocator.context == NavContext.UNSTAGED:
+            help = self.tr("Hit {stagekey} to stage the current/selected line(s), or {discardkey} to discard it/them.",
+                           "singular: 'current line', plural: 'selected lines'", numLines)
+        elif self.currentLocator.context == NavContext.STAGED:
+            help = self.tr("Hit {unstagekey} to unstage the current/selected line(s).",
+                           "singular: 'current line', plural: 'selected lines'", numLines)
+        else:
+            return
+
+        help = help.format(
+            stagekey=QKeySequence(GlobalShortcuts.stageHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText),
+            unstagekey=QKeySequence(GlobalShortcuts.discardHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText),
+            discardkey=QKeySequence(GlobalShortcuts.discardHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText))
+
+        self.contextualHelp.emit("💡 " + help)
 
     # ---------------------------------------------
     # Clipboard

@@ -36,6 +36,8 @@ class RepoStatusDisplay(QWidget):
         self.statusSpinner.stop()
 
         self.statusLabel = QLabel()
+        # Emojis such as the lightbulb may increase the label's height
+        self.statusLabel.setMaximumHeight(self.statusLabel.fontMetrics().height())
 
         self.statusWarning = QLabel()
         self.statusWarning.setStyleSheet("QLabel { background-color: yellow; padding-left: 6px; padding-right: 6px; }")
