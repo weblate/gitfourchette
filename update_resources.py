@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 import argparse, difflib, os, re, subprocess, sys
+import xml.etree.ElementTree as ET
 
 repoRootDir = os.path.dirname(os.path.realpath(sys.argv[0]))
 repoRootDir = os.path.relpath(repoRootDir)
@@ -145,6 +146,7 @@ for file in os.listdir(langDir):
     call(LUPDATE, *opts.split(), srcDir, "-ts", filePath, capture_output=False)
 
 # Generate .qm files from .ts files
+anyPlaceholderMismatches = False
 for file in os.listdir(langDir):
     if not file.endswith(".ts"):
         continue
@@ -153,11 +155,42 @@ for file in os.listdir(langDir):
     qmPath = os.path.join(assetsDir, F"{basename}.qm")
     call(LRELEASE, "-removeidentical", filePath, "-qm", qmPath)
 
+    # Check placeholders in .ts files
+    for messageTag in ET.parse(filePath).getroot().findall('context/message'):
+        sourceText = messageTag.findtext('source')
+        sourcePlaceholders = set(re.findall(r"\{.*?\}", sourceText))
+        if not sourcePlaceholders:
+            continue
+
+        translationText = messageTag.findtext('translation').strip()
+        if translationText:
+            translations = [translationText]
+        else:
+            translations = [t.text for t in messageTag.find('translation') if t.text and t.text.strip()]
+
+        for tt in translations:
+            translationPlaceholders = set(re.findall(r"\{.*?\}", tt))
+            missingPlaceholders = sourcePlaceholders - translationPlaceholders
+            if translationPlaceholders != sourcePlaceholders:
+                anyPlaceholderMismatches = True
+                print(f"******* {file}: PLACEHOLDER MISMATCH! "
+                      f"Missing: {' '.join(s for s in missingPlaceholders)} "
+                      f"in: \"{tt}\"")
+
+
 if cliArgs.translate:
     print("""
 *******************************************************************************
 You are using --translate, which generates extra info in the .ts files.
 Before committing the .ts files, please clean them up by running
 this script again WITHOUT --translate.
+*******************************************************************************
+""")
+
+if anyPlaceholderMismatches:
+    print("""
+*******************************************************************************
+THE TRANSLATION FILES CONTAIN MISMATCHED PLACEHOLDERS.
+PLEASE REVIEW THE TRANSLATIONS BEFORE COMMITTING!
 *******************************************************************************
 """)
