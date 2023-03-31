@@ -97,7 +97,7 @@ class DiffGutter(QWidget):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         # Double click to select clump of lines
         if event.button() == Qt.MouseButton.LeftButton:
-            self.diffView.selectClumpOfLinesAt(event.pos())
+            self.diffView.selectClumpOfLinesAt(clickPoint=event.pos())
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -696,11 +696,13 @@ class DiffView(QPlainTextEdit):
 
         self.replaceCursor(cursor)
 
-    def selectClumpOfLinesAt(self, point: QPoint):
-        clickedPosition = self.getStartOfLineAt(point)
+    def selectClumpOfLinesAt(self, clickPoint: QPoint = None, textCursorPosition: int = -1):
+        assert bool(textCursorPosition >= 0) ^ bool(clickPoint)
+        if textCursorPosition < 0:
+            textCursorPosition = self.getStartOfLineAt(clickPoint)
 
         ldList = self.lineData
-        i = self.findLineDataIndexAt(clickedPosition)
+        i = self.findLineDataIndexAt(textCursorPosition)
         ld = ldList[i]
 
         if ld.hunkPos.hunkLineNum < 0:
