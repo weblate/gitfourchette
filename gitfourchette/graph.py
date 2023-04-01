@@ -104,7 +104,7 @@ class Arc:
             n += 1
         return n
 
-    def isParentlessCommit(self):
+    def isParentlessCommitBogusArc(self):
         return self.openedBy == self.closedBy
 
     def connectsHiddenCommit(self, hiddenCommits: set):
@@ -150,7 +150,7 @@ class Frame:
             # It's a parentless + childless commit.
             # Implementation detail: for parentless commits, we create a bogus arc
             # as the "last" arc in the frame; we can get the lane from this bogus arc.
-            assert self.lastArc.isParentlessCommit()
+            assert self.lastArc.isParentlessCommitBogusArc()
             assert self.lastArc.openedBy == self.commit
             return self.lastArc.lane
 
@@ -158,12 +158,16 @@ class Frame:
         solvedArcsCopy = self.solvedArcs.copy()
         openArcsCopy = self.openArcs.copy()
 
-        # Clean up arcs that just got closed
+        # Move arcs that just got closed to solved list
         for lane, arc in enumerate(openArcsCopy):
             if arc and 0 <= arc.closedAt <= self.row:
-                self.reserveArcListCapacity(solvedArcsCopy, lane+1)
-                solvedArcsCopy[lane] = arc
                 openArcsCopy[lane] = None
+
+                # For parentless commits, prevent bogus auto-closing arcs
+                # from overwriting legitimate closed arcs.
+                if not arc.isParentlessCommitBogusArc():
+                    self.reserveArcListCapacity(solvedArcsCopy, lane+1)
+                    solvedArcsCopy[lane] = arc
 
         # Remove stale closed arcs and trim "Nones" off end of list
         self.cleanUpArcList(openArcsCopy, self.row, alsoTrimBack=True)

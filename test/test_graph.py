@@ -79,7 +79,7 @@ def testGraph1():
     checkFrame(pb, 2, "b1", open="a2-a3,b1-b2")
     checkFrame(pb, 3, "b2", solved="b1-b2", open="b2-a3,a2-a3")
     checkFrame(pb, 4, "a3", solved="b2-a3,a2-a3", open="a3-a4")
-    checkFrame(pb, 5, "a4", solved="a4-a4")  # Parentless commits are weird - they "solve themselves"
+    checkFrame(pb, 5, "a4", solved="a3-a4")
 
 
 def testGapBetweenBranches():
@@ -111,7 +111,7 @@ def testGapBetweenBranches():
     checkFrame(pb, 2, "c1", open="a1-a2,b1-a2,c1-c2")
     checkFrame(pb, 3, "a2", solved="a1-a2,b1-a2", open="c1-c2,a2-f")
     frameC2 = checkFrame(pb, 4, "c2", solved="c1-c2", open="a2-f,c2-f")
-    checkFrame(pb, 5, "f", solved="f-f,f-f")  # Parentless commits are weird - they "solve themselves"
+    checkFrame(pb, 5, "f", solved="a2-f,c2-f")
 
     laneRemap, numFlattenedLanes = frameC2.flattenLanes([])
     assert laneRemap[0] == (0, 0)
@@ -154,7 +154,7 @@ def testNewBranchInGap():
     frameC2 = checkFrame(pb, 4, "c2", solved="c1-c2", open="a2-a3,c2-f")
     frameD1 = checkFrame(pb, 5, "d1", open="a2-a3,c2-f,d1-f")
     frameA3 = checkFrame(pb, 6, "a3", solved="a2-a3", open="a3-f,c2-f,d1-f")
-    frameF = checkFrame(pb, 7, "f", solved="f-f,f-f,f-f")  # Parentless commits are weird - they "solve themselves"
+    frameF = checkFrame(pb, 7, "f", solved="a3-f,c2-f,d1-f")
 
     laneRemap, numFlattenedLanes = frameA2.flattenLanes([])
     print("Frame A2:", laneRemap)
