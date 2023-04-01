@@ -617,6 +617,20 @@ class Sidebar(QTreeView):
         self.setAnimated(True)
         self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thin spacers
 
+    def visualRect(self, index):
+        """Required so the theme can properly draw unindented rows.
+        The offset should match that in SidebarDelegate."""
+
+        vr = super().visualRect(index)
+
+        with contextlib.suppress(ValueError):
+            item = SidebarModel.unpackItem(index)
+
+            if item in UNINDENT_ITEMS:
+                vr.adjust(-self.indentation(), 0, 0, 0)
+
+        return vr
+
     def updateHiddenBranches(self, hiddenBranches: list[str]):
         self.model().updateHiddenBranches(hiddenBranches)
 
