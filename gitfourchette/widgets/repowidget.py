@@ -283,7 +283,7 @@ class RepoWidget(QWidget):
 
     def runTask(self, taskClass: Type[tasks.RepoTask], *args, **kwargs):
         task = self.initTask(taskClass)
-        QTimer.singleShot(0, lambda: self.repoTaskRunner.put(task, *args, **kwargs))
+        self.repoTaskRunner.put(task, *args, **kwargs)
         return task
 
     def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1, preamble: Callable = None):
