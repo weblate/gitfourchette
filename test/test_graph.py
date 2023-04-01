@@ -1,138 +1,7 @@
 import pytest
 
 from gitfourchette.graph import Graph, Frame
-
-
-class MockCommit:
-    def __init__(self, name, parents=[]):
-        self.oid = name
-        self.parents = parents
-
-
-@pytest.fixture
-def seq1():
-    """
-
-    a1
-     |
-    a2
-     |
-     |  b1
-     |   |
-     |  b2
-     |   |
-    a3__/
-     |
-    a4
-
-    """
-
-    a4 = MockCommit("a4", [])
-    a3 = MockCommit("a3", [a4])
-    a2 = MockCommit("a2", [a3])
-    a1 = MockCommit("a1", [a2])
-
-    b2 = MockCommit("b2", [a3])
-    b1 = MockCommit("b1", [b2])
-
-    seq = [a1, a2, b1, b2, a3, a4]
-    return seq
-
-
-@pytest.fixture
-def seqGapBetweenBranches():
-    """
-
-    a1
-     |
-     |  b1
-     |   |
-     |   |  c1
-     |   |   |
-    a2__/    |
-     |       |
-     |      c2
-     |       |
-     f______/
-
-    """
-
-    f = MockCommit("f", [])
-    a2 = MockCommit("a2", [f])
-    a1 = MockCommit("a1", [a2])
-
-    b1 = MockCommit("b1", [a2])
-
-    c2 = MockCommit("c2", [f])
-    c1 = MockCommit("c1", [c2])
-
-    seq = [a1,b1,c1,a2,c2,f]
-    return seq
-
-
-@pytest.fixture
-def seqNewBranchInGap():
-    """
-
-    a1
-     |
-     |  b1
-     |   |
-     |   |  c1
-     |   |   |
-    a2__/    |
-     |       |
-     |      c2
-     |       |
-     |  d1   |   (drawn right of c1's branch if flattening is enabled)
-     |   |   |
-    a3   |   |
-     |   |   |
-     f__/___/
-
-
-     alternate:
-
-    a1
-     |
-     |  b1
-     |   |
-     |   |  c1
-     |   |   |
-    a2__/    |
-     |       |
-     |      c2
-     |       |
-     |       |  d1
-     |       |   |
-    a3       |   |
-     |       |   |
-     f______/___/
-
-
-    """
-
-    f = MockCommit("f", [])
-    a3 = MockCommit("a3", [f])
-    a2 = MockCommit("a2", [a3])
-    a1 = MockCommit("a1", [a2])
-
-    b1 = MockCommit("b1", [a2])
-
-    c2 = MockCommit("c2", [f])
-    c1 = MockCommit("c1", [c2])
-
-    d1 = MockCommit("d1", [f])
-
-    seq = [a1,b1,c1,a2,c2,d1,a3,f]
-    return seq
-
-
-def parentMap(commitList: list[MockCommit]):
-    parentMap = {}
-    for commit in commitList:
-        parentMap[commit.oid] = [parent.oid for parent in commit.parents]
-    return parentMap
+from .test_graphsplicing import parseAncestryOneLiner
 
 
 def findSolvedArc(frame, openedBy, closedBy):
@@ -182,9 +51,26 @@ def getNextFrame(pb):
     return pb.copyCleanFrame()
 
 
-def testGraph1(seq1):
+def testGraph1():
+    """
+
+    a1
+     |
+    a2
+     |
+     |  b1
+     |   |
+     |  b2
+     |   |
+    a3__/
+     |
+    a4
+
+    """
+    sequence, parentMap, heads = parseAncestryOneLiner("a1,a2 a2,a3 b1,b2 b2,a3 a3,a4 a4")
+
     g = Graph()
-    g.generateFullSequence([c.oid for c in seq1], parentMap(seq1))
+    g.generateFullSequence(sequence, parentMap)
     print("\n" + g.textDiagram())
     pb = g.startPlayback(0)
 
@@ -196,9 +82,27 @@ def testGraph1(seq1):
     checkFrame(pb, 5, "a4", solved="a4-a4")  # Parentless commits are weird - they "solve themselves"
 
 
-def testGapBetweenBranches(seqGapBetweenBranches):
+def testGapBetweenBranches():
+    """
+
+    a1
+     |
+     |  b1
+     |   |
+     |   |  c1
+     |   |   |
+    a2__/    |
+     |       |
+     |      c2
+     |       |
+     f______/
+
+    """
+
+    sequence, parentMap, heads = parseAncestryOneLiner("a1,a2 b1,a2 c1,c2 a2,f c2,f f")
+
     g = Graph()
-    g.generateFullSequence([c.oid for c in seqGapBetweenBranches], parentMap(seqGapBetweenBranches))
+    g.generateFullSequence(sequence, parentMap)
     print("\n" + g.textDiagram())
     pb = g.startPlayback(0)
 
@@ -214,9 +118,32 @@ def testGapBetweenBranches(seqGapBetweenBranches):
     assert laneRemap[2] == (1, 1)
 
 
-def testNewBranchInGap(seqNewBranchInGap):
+def testNewBranchInGap():
+    """
+    Flattening OFF:         Flattening ON:
+
+    a1                      a1
+     |                       |
+     |  b1                   |  b1
+     |   |                   |   |
+     |   |  c1               |   |  c1
+     |   |   |               |   |   |
+    a2__/    |              a2__/    |
+     |       |               |       |
+     |      c2               |      c2
+     |       |               |     /
+     |  d1   |               |    /   d1
+     |   |   |               |    |    |
+    a3   |   |              a3    |    |
+     |   |   |               |    |    |
+     f__/___/                f___/____/
+
+    """
+
+    sequence, parentMap, heads = parseAncestryOneLiner("a1,a2 b1,a2 c1,c2 a2,a3 c2,f d1,f a3,f f")
+
     g = Graph()
-    g.generateFullSequence([c.oid for c in seqNewBranchInGap], parentMap(seqNewBranchInGap))
+    g.generateFullSequence(sequence, parentMap)
     print("\n" + g.textDiagram())
     pb = g.startPlayback(0)
 
