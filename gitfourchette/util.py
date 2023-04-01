@@ -256,6 +256,12 @@ def translateExceptionName(exc: BaseException):
     return d.get(name, name)
 
 
+def shortenTracebackPath(line):
+    return re.sub(r'^\s*File "([^"]+)", line (\d+)',
+                  lambda m: F'{os.path.basename(m.group(1))}:{m.group(2)}',
+                  line, 1)
+
+
 def excMessageBox(
         exc,
         title="",
@@ -290,11 +296,6 @@ def excMessageBox(
             summary = traceback.format_exception_only(exc.__class__, exc)
             summary = ''.join(summary).strip()
             message += "<br><br>" + html.escape(summary)
-
-        def shortenTracebackPath(line):
-            return re.sub(r'^\s*File "([^"]+)"',
-                          lambda m: F'File "{os.path.basename(m.group(1))}"',
-                          line, 1)
 
         details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
         details = [shortenTracebackPath(line) for line in details]

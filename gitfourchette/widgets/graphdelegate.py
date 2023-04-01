@@ -4,10 +4,12 @@ from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.graphpaint import paintGraphFrame
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.util import messageSummary
+from gitfourchette.util import messageSummary, shortenTracebackPath
 from dataclasses import dataclass
+import contextlib
 import pygit2
 import re
+import traceback
 
 
 @dataclass
@@ -76,7 +78,13 @@ class GraphDelegate(QStyledItemDelegate):
     def state(self) -> RepoState:
         return self.repoWidget.state
 
-    def paint(self, painter: QPainter, option, index):
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        try:
+            self._paint(painter, option, index)
+        except BaseException as exc:
+            self._paintError(painter, option, index, exc)
+
+    def _paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
 
@@ -232,6 +240,30 @@ class GraphDelegate(QStyledItemDelegate):
         # ----------------
         painter.restore()
         pass  # QStyledItemDelegate.paint(self, painter, option, index)
+
+    def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):
+        """Last-resort row drawing routine used if _paint raises an exception."""
+
+        text = "?" * 7
+        with contextlib.suppress(BaseException):
+            commit: pygit2.Commit = index.data(CommitLogModel.CommitRole)
+            text = commit.oid.hex[:7]
+        with contextlib.suppress(BaseException):
+            details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+            text += " " + shortenTracebackPath(details[-2].splitlines(False)[0]) + ":: " + repr(exc)
+
+        if option.state & QStyle.StateFlag.State_Selected:
+            bg, fg = Qt.GlobalColor.red, Qt.GlobalColor.white
+        else:
+            bg, fg = option.palette.color(QPalette.ColorRole.Base), Qt.GlobalColor.red
+
+        painter.restore()
+        painter.save()
+        painter.fillRect(option.rect, bg)
+        painter.setPen(fg)
+        painter.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.SmallestReadableFont))
+        painter.drawText(option.rect, Qt.AlignmentFlag.AlignVCenter, text)
+        painter.restore()
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         mult = settings.prefs.graph_rowHeight
