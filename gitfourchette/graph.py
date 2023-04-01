@@ -258,6 +258,104 @@ class Frame:
 
         return list(zip(mapAbove, mapBelow)), column
 
+    def textDiagram(self):
+        COLUMN_WIDTH = 2
+
+        def getx(lane):
+            assert lane >= 0
+            assert lane < maxLanes
+            return lane * COLUMN_WIDTH
+
+        homeLane = self.getHomeLaneForCommit()
+        maxLanes = max(len(self.openArcs), len(self.solvedArcs)) + 1
+
+        gridHi = [" "] * (maxLanes * COLUMN_WIDTH + 4)
+        gridLo = [" "] * (maxLanes * COLUMN_WIDTH + 4)
+        for pl in self.getArcsPassingByCommit():
+            if pl.length() > ABRIDGMENT_THRESHOLD:
+                gridHi[getx(pl.lane)] = "┊"  # TODO: Depending on junctions, we may or may not want to abridge
+                gridLo[getx(pl.lane)] = "┊"
+            else:
+                gridHi[getx(pl.lane)] = "│"
+                gridLo[getx(pl.lane)] = "│"
+
+        closed = list(self.getArcsClosedByCommit())
+        opened = list(self.getArcsOpenedByCommit())
+        passing = list(self.getArcsPassingByCommit())
+
+        def hline(scanline, fromCol, toCol):
+            lcol = min(fromCol, toCol)
+            rcol = max(fromCol, toCol)
+            for i in range(getx(lcol), getx(rcol) + 1):
+                scanline[i] = "─"
+
+        if closed:
+            leftmostClosedLane = min([cl.lane for cl in closed])
+            rightmostClosedLane = max([cl.lane for cl in closed])
+            hline(gridHi, leftmostClosedLane, rightmostClosedLane)
+            for cl in closed:
+                if cl.lane == homeLane:
+                    gridHi[getx(cl.lane)] = "│"
+
+        if opened:
+            leftmostOpenedLane = min([l.lane for l in opened])
+            rightmostOpenedLane = max([l.lane for l in opened])
+            hline(gridLo, leftmostOpenedLane, rightmostOpenedLane)
+            for ol in opened:
+                if ol.lane == homeLane:
+                    gridLo[getx(ol.lane)] = "│"
+
+        for cl in closed:
+            if cl.lane > homeLane:
+                gridHi[getx(cl.lane)] = "╯"
+            elif cl.lane < homeLane:
+                gridHi[getx(cl.lane)] = "╰"
+
+        for ol in opened:
+            if ol.lane > homeLane:
+                gridLo[getx(ol.lane)] = "╮"
+            elif ol.lane < homeLane:
+                gridLo[getx(ol.lane)] = "╭"
+
+        junctionExplainer = ""
+        for pl in passing:
+            for junction in pl.junctions:
+                if junction.joinedAt == self.row:
+                    assert junction.joinedBy == self.commit, F"junction commit {junction.joinedBy} != frame commit {self.commit}  at junction row {junction.joinedAt}"
+                    hline(gridLo, homeLane, pl.lane)
+                    if homeLane > pl.lane:
+                        gridLo[getx(pl.lane)] = "╭"
+                        gridLo[getx(homeLane)] = "╯"
+                    elif homeLane < pl.lane:
+                        gridLo[getx(pl.lane)] = "╮"
+                        gridLo[getx(homeLane)] = "╰"
+                    else:
+                        assert False, "junction plugged into passing arc that's on my homeLane?"
+                    junctionExplainer += F"JunctionOn\"{pl}\":{homeLane}[{junction.joinedBy[:4]}]->{pl.lane};"
+
+        if not opened and not closed:
+            gridHi[getx(homeLane)] = "╳"  # "━"
+        elif not opened:
+            ## TODO: this is drawn for some orphan commits!
+            # if len(closed) == 1 and closed[0].closedAt == closed[0].openedAt:
+            #    gridHi[getx(homeLane)] = "?╳"
+            # else:
+            #    gridHi[getx(homeLane)] = "┷"
+            gridHi[getx(homeLane)] = "┷"
+        elif not closed:
+            gridHi[getx(homeLane)] = "┯"
+        else:
+            gridHi[getx(homeLane)] = "┿"
+
+        gridHiStr = ''.join(gridHi)
+        gridLoStr = ''.join(gridLo)
+
+        text = ""
+        text += F"{int(self.row):<4} {self.commit[:4]:>4} {gridHiStr}\n"
+        if any(c in gridLoStr for c in "╭╮╰╯"):
+            text += F"{' ' * 9} {gridLoStr} {junctionExplainer}\n"
+        return text
+
 
 class GeneratorState(Frame):
     freeLanes: list[int]
@@ -704,6 +802,23 @@ class Graph:
         """
 
         self.keyframeRows = [kf.row for kf in self.keyframes]
+
+    def textDiagram(self, row0=0, maxRows=20):
+        text = ""
+
+        try:
+            context = self.startPlayback(row0)
+        except StopIteration:
+            return F"Won't draw graph because it's empty below row {row0}!"
+
+        for _ in context:
+            frame = context.copyCleanFrame()
+            text += frame.textDiagram()
+            maxRows -= 1
+            if maxRows < 0:
+                break
+
+        return text
 
 
 class GraphSplicer:

@@ -185,6 +185,7 @@ def getNextFrame(pb):
 def testGraph1(seq1):
     g = Graph()
     g.generateFullSequence([c.oid for c in seq1], parentMap(seq1))
+    print("\n" + g.textDiagram())
     pb = g.startPlayback(0)
 
     checkFrame(pb, 0, "a1", open="a1-a2")
@@ -198,6 +199,7 @@ def testGraph1(seq1):
 def testGapBetweenBranches(seqGapBetweenBranches):
     g = Graph()
     g.generateFullSequence([c.oid for c in seqGapBetweenBranches], parentMap(seqGapBetweenBranches))
+    print("\n" + g.textDiagram())
     pb = g.startPlayback(0)
 
     checkFrame(pb, 0, "a1", open="a1-a2")
@@ -215,6 +217,7 @@ def testGapBetweenBranches(seqGapBetweenBranches):
 def testNewBranchInGap(seqNewBranchInGap):
     g = Graph()
     g.generateFullSequence([c.oid for c in seqNewBranchInGap], parentMap(seqNewBranchInGap))
+    print("\n" + g.textDiagram())
     pb = g.startPlayback(0)
 
     frameA1 = checkFrame(pb, 0, "a1", open="a1-a2")
