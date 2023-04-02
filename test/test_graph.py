@@ -1,10 +1,10 @@
 import pytest
 
-from gitfourchette.graph import Graph, Frame
+from gitfourchette.graph import Graph, Frame, PlaybackState
 from .test_graphsplicing import parseAncestryOneLiner
 
 
-def findSolvedArc(frame, openedBy, closedBy):
+def findSolvedArc(frame: Frame, openedBy, closedBy):
     for a in frame.solvedArcs:
         if not a:
             continue
@@ -13,7 +13,7 @@ def findSolvedArc(frame, openedBy, closedBy):
     assert False, f"did not find solved arc {openedBy} -> {closedBy} in frame {frame.row}"
 
 
-def findOpenArc(frame, openedBy, closedBy):
+def findOpenArc(frame: Frame, openedBy, closedBy):
     for a in frame.openArcs:
         if not a:
             continue
@@ -22,9 +22,9 @@ def findOpenArc(frame, openedBy, closedBy):
     assert False, f"did not find open arc {openedBy} -> {closedBy} in frame {frame.row}"
 
 
-def checkFrame(pb, row, commit, solved="", open=""):
+def checkFrame(pb: PlaybackState, row, commit, solved="", open=""):
     pb.advanceToNextRow()
-    frame = pb.copyCleanFrame()
+    frame = pb.sealCopy()
 
     assert frame.row == row
     assert frame.commit == commit
@@ -44,11 +44,6 @@ def checkFrame(pb, row, commit, solved="", open=""):
     assert numOpen == sum(1 for oa in frame.openArcs if oa is not None), "there are more open arcs to test"
 
     return frame
-
-
-def getNextFrame(pb):
-    pb.advanceToNextRow()
-    return pb.copyCleanFrame()
 
 
 def testGraph1():

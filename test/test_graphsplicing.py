@@ -70,6 +70,12 @@ SCENARIOS = {
         True,
     ),
 
+    "non-top head rises to top after amending": (
+        "    a,b b,e c,d d,e e,f f,g g",
+        "c,d a,b b,e     d,e e,f f,g g",
+        True,
+    ),
+
     "lone commit appears at top": (
         "  a,b b,c c,d d",
         "x a,b b,c c,d d",
@@ -246,8 +252,8 @@ def verifyKeyframes(g: Graph):
     for row, keyframe in zip(g.keyframeRows, g.keyframes):
         playback.advanceToCommit(keyframe.commit)
 
-        frame1 = playback.copyCleanFrame()
-        frame2 = keyframe.copyCleanFrame()
+        frame1 = playback.sealCopy()
+        frame2 = keyframe.sealCopy()
 
         assert frame1 == frame2, F"Keyframe at row {row} doesn't reflect reality"
 
@@ -266,13 +272,16 @@ def testGraphSplicing(scenarioKey):
     print("Keyframes BEFORE REFRESH:", g.keyframeRows)
     print("Num arcs total BEFORE REFRESH:", g.startArc.getNumberOfArcsFromHere())
 
+    # verify that row cache is consistent
+    assert list(range(len(sequence1))) == [g.getCommitRow(c) for c in sequence1]
+
     # verify that all keyframes are correct
     verifyKeyframes(g)
 
     # modify top of history
     splicer = g.startSplicing(heads1, heads2)
     for commit2 in sequence2:
-        splicer.spliceNewCommit(commit2, parentsOf2[commit2], commit2 in sequence1, keyframeInterval=KF_INTERVAL_TEST)
+        splicer.spliceNewCommit(commit2, parentsOf2[commit2], keyframeInterval=KF_INTERVAL_TEST)
         if not splicer.keepGoing:
             print("Equilibrium found at:", commit2)
             break
@@ -283,6 +292,9 @@ def testGraphSplicing(scenarioKey):
     for trashedCommit in (splicer.oldCommitsSeen - splicer.newCommitsSeen):
         assert trashedCommit not in sequence2, F"commit '{trashedCommit}' erroneously trashed"
 
+    # delete the splicer to ensure that any dtors don't mess up the spliced graph
+    del splicer
+
     print(F"Graph after --------- (heads: {heads2})")
     print(g.textDiagram())
     print("Keyframes AFTER REFRESH:", g.keyframeRows)
@@ -292,6 +304,9 @@ def testGraphSplicing(scenarioKey):
     verification = Graph()
     verification.generateFullSequence(sequence2, parentsOf2)
     assert g.textDiagram() == verification.textDiagram()
+
+    # verify that row cache is consistent
+    assert list(range(len(sequence2))) == [g.getCommitRow(c) for c in sequence2]
 
     # verify that all keyframes are correct
     verifyKeyframes(g)

@@ -184,7 +184,7 @@ class GraphView(QListView):
         if not oid:
             return
 
-        debugInfoRequested = QGuiApplication.keyboardModifiers() & Qt.KeyboardModifier.AltModifier
+        debugInfoRequested = QGuiApplication.keyboardModifiers() & (Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ShiftModifier)
 
         def formatSignature(sig: pygit2.Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
@@ -196,9 +196,9 @@ class GraphView(QListView):
         commit: pygit2.Commit = self.currentIndex().data(CommitLogModel.CommitRole)
 
         summary, contd = messageSummary(commit.message)
+        details = commit.message if contd else ""
 
         postSummary = ""
-        nLines = len(commit.message.rstrip().split('\n'))
 
         parentHashes = []
         for p in commit.parent_ids:
@@ -239,22 +239,21 @@ class GraphView(QListView):
             <tr><td><b>{parentTitle}&nbsp;</b></td><td>{parentValueMarkup}</td></tr>
             <tr><td><b>{authorTitle}&nbsp;</b></td><td>{authorMarkup}</td></tr>
             <tr><td><b>{committerTitle}&nbsp;</b></td><td>{committerMarkup}</td></tr>
-            </table>"""
+            """
 
         if debugInfoRequested:
             state = self.repoWidget.state
             seqIndex = state.graph.getCommitRow(oid)
             frame = state.graph.getFrame(seqIndex)
-            markup += f"""<hr><b>Top secret debug info</b><br>
-                GraphView row: {self.currentIndex().row()}<br>
-                Commit sequence index: {seqIndex}<br>
-                arcs: {len(frame.openArcs)} open, {len(frame.solvedArcs)} solved<br>
-                {frame}
+            markup += F"""
+                <tr><td><b>View row</b></td><td>{self.currentIndex().row()}</td></tr>
+                <tr><td><b>Graph row</b></td><td>{repr(state.graph.commitRows[oid])}</td></tr>
+                <tr><td><b>Arcs</b></td><td>{len(frame.openArcs)} open, {len(frame.solvedArcs)} solved</td></tr>
             """
+            details = str(frame) + "\n\n" + details
+        markup += "</table>"
 
         title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
-
-        details = commit.message if contd else None
 
         messageBox = asyncMessageBox(self, 'information', title, markup, macShowTitle=False,
                                      buttons=QMessageBox.StandardButton.Ok)

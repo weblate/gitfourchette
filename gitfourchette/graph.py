@@ -3,44 +3,165 @@ from collections import defaultdict
 from dataclasses import dataclass
 from gitfourchette import log
 from gitfourchette.benchmark import Benchmark
-from pygit2 import Oid
-from typing import Iterable
+from typing import Iterable, ClassVar
 import bisect
+import contextlib
 import itertools
+import pygit2
 
 
 KF_INTERVAL = 5000
+"""
+Interval (in number of commits) at which keyframes are saved while preparing
+the graph.
+
+The bigger the interval...:
+- faster initial loading of the repo & less memory usage;
+- but slower random access to any point of the graph.
+"""
+
 ABRIDGMENT_THRESHOLD = 25
+
 DEAD_VALUE = "!DEAD"
+
+Oid = pygit2.Oid | str
 
 
 @dataclass(frozen=True)
 class BatchRow:
-    batch: int = -1
-    offset: int = -1
+    """
+    For a row in the Graph, BatchRow keeps track of the row's batch number
+    and position within the batch.
 
-    def invalid(self):
-        return self.batch < 0
+    When a repo is refreshed, new commits may appear at the top of the graph.
+    This may push existing rows down, away from the top of the graph.
+
+    Recomputing row numbers for the entire graph becomes costly if it contains
+    tens of thousands of commits.
+
+    Instead, we keep track of batches of rows inserted into the graph at each
+    refresh. We adjust a single offset value for each batch.
+    """
+
+    b: int = -1
+    "Batch number (look up its global offset in BatchManager)"
+
+    y: int = -1
+    "Position of this row relative to its batch"
+
+    class BatchManager:
+        """
+        Manages row batch offsets.
+
+        A single BatchManager is shared by all repositories opened throughout
+        the lifespan of the app.
+        """
+
+        globalOffsets: ClassVar[list[int]] = []
+        freeBatchNos: ClassVar[list[int]] = []
+
+        @classmethod
+        def reserveNewBatch(cls):
+            if cls.freeBatchNos:
+                batchNo = cls.freeBatchNos.pop()
+                cls.globalOffsets[batchNo] = 0
+            else:
+                cls.globalOffsets.append(0)
+                batchNo = len(cls.globalOffsets) - 1
+
+            return batchNo
+
+        @classmethod
+        def freeBatch(cls, batchNo: int):
+            cls.globalOffsets[batchNo] = -1
+            cls.freeBatchNos.append(batchNo)
+
+            # Compact end of list
+            while cls.globalOffsets and cls.globalOffsets[-1] == -1:
+                with contextlib.suppress(ValueError):
+                    cls.freeBatchNos.remove(len(cls.globalOffsets) - 1)
+                cls.globalOffsets.pop()
+
+        @classmethod
+        def shiftBatches(cls, shift: int, batchNos: Iterable[int]):
+            for b in batchNos:
+                cls.globalOffsets[b] += shift
+
+    def isValid(self):
+        return self.b >= 0 and self.y >= 0
+
+    def __repr__(self):
+        offset = -1 if self.b < 0 else BatchRow.BatchManager.globalOffsets[self.b]
+        return f"{int(self)} (b{self.b}r{self.y}+{offset})"
+
+    def __str__(self):
+        return str(int(self))
+
+    def toGlobalPosition(self) -> int:
+        return int(self)
+
+    def __int__(self) -> int:
+        """Any BatchRow is convertible to int, giving a global row index.
+        Note that the int value of any given BatchRow may change over time
+        as the graph gets spliced."""
+        if self.b < 0:
+            return -1
+        return BatchRow.BatchManager.globalOffsets[self.b] + self.y
+
+    # -------------------------------------------------------------------------
+    # Arithmetics
+
+    def __add__(self, other: BatchRow | int) -> int:
+        return int(self) + int(other)
+
+    def __sub__(self, other: BatchRow | int) -> int:
+        return int(self) - int(other)
+
+    def __mod__(self, other: BatchRow | int) -> int:
+        return int(self) % int(other)
+
+    def __rmod__(self, other: BatchRow | int) -> int:
+        return int(other) % int(self)
+
+    # -------------------------------------------------------------------------
+    # Comparisons
+    # (BatchRows must be comparable so we can use bisect.)
+
+    def __le__(self, other: BatchRow | int):
+        return int(self) <= int(other)
+
+    def __lt__(self, other: BatchRow | int):
+        return int(self) < int(other)
+
+    def __ge__(self, other: BatchRow | int):
+        return int(self) >= int(other)
+
+    def __gt__(self, other: BatchRow | int):
+        return int(self) > int(other)
+
+    def __eq__(self, other: BatchRow | int):
+        return int(self) == int(other)
+
+
+BATCHROW_UNDEF = BatchRow(-1, -1)
+"Use this special BatchRow as a placeholder for a row position that is yet to be determined."
 
 
 @dataclass
 class ArcJunction:
     """ Represents the merging of an Arc into another Arc. """
 
-    joinedAt: int
+    joinedAt: BatchRow
     "Row number in which this junction occurs"
 
     joinedBy: Oid
     "Hash of the joining arc's opening commit"
 
-    def __lt__(self, other):
+    def __lt__(self, other: ArcJunction):
         """
         Calling sorted() on a list of ArcJunctions will sort them by `joinedAt` (row numbers).
         """
         return self.joinedAt < other.joinedAt
-
-    def copyWithOffset(self, offset):
-        return ArcJunction(self.joinedAt + offset, self.joinedBy)
 
 
 @dataclass
@@ -55,11 +176,14 @@ class Arc:
     Other arcs may merge into an open arc via an ArcJunction.
     """
 
-    openedAt: int
+    openedAt: BatchRow
     "Row number in which this arc was opened"
 
-    closedAt: int
+    closedAt: BatchRow
     "Row number in which this arc was closed"
+
+    chainTop: BatchRow
+    "Row number of the tip of the arc chain (topmost commit in branch)"
 
     lane: int
     "Lane assigned to this arc"
@@ -73,20 +197,19 @@ class Arc:
     junctions: list[ArcJunction]
     "Other arcs merging into this arc"
 
-    chainID: int
-    "Row number of the tip of the arc chain (topmost commit in branch)"
-
     nextArc: Arc | None = None
     "Next node in the arc linked list"
 
     def __repr__(self):
-        s = F"{self.chainID}/{self.openedAt}:{str(self.openedBy)[:5]}\u2192{self.closedAt}:{str(self.closedBy)[:5]}"
-        if self.closedAt < 0:
+        s = F"Arc(top: {self.chainTop}, oa: {self.openedAt}, ob: {str(self.openedBy)[:5]} \u2192 ca: {self.closedAt}, cb: {str(self.closedBy)[:5]})"
+        if self.closedAt == BATCHROW_UNDEF:
             s += "?"
         return s
 
     def length(self):
-        return self.closedAt - self.openedAt
+        assert type(self.openedAt) == BatchRow
+        assert type(self.closedAt) == BatchRow
+        return int(self.closedAt) - int(self.openedAt)
 
     def __next__(self):
         return self.nextArc
@@ -122,7 +245,7 @@ class Arc:
 class Frame:
     """ A frame is a slice of the graph at a given row. """
 
-    row: int
+    row: BatchRow
     commit: Oid
     solvedArcs: list[Arc | None]  # Arcs that have resolved their parent commit
     openArcs: list[Arc | None]  # Arcs that have not resolved their parent commit yet
@@ -154,7 +277,11 @@ class Frame:
             assert self.lastArc.openedBy == self.commit
             return self.lastArc.lane
 
-    def copyCleanFrame(self) -> Frame:
+    def sealCopy(self) -> Frame:
+        """
+        Generated frames must be "sealed off" to make them suitable
+        for rendering or for use as keyframes.
+        """
         solvedArcsCopy = self.solvedArcs.copy()
         openArcsCopy = self.openArcs.copy()
 
@@ -179,7 +306,7 @@ class Frame:
 
         return Frame(self.row, self.commit, solvedArcsCopy, openArcsCopy, self.lastArc)
 
-    def isEquilibriumReached(self, peer):
+    def isEquilibriumReached(self, peer: Frame):
         for mine, theirs in itertools.zip_longest(self.openArcs, peer.openArcs):
             mineIsStale = (not mine) or (0 <= mine.closedAt < self.row)
             theirsIsStale = (not theirs) or (0 <= theirs.closedAt < peer.row)
@@ -207,7 +334,7 @@ class Frame:
             theList.append(None)
 
     @staticmethod
-    def cleanUpArcList(theList: list[Arc|None], olderThanRow: int, alsoTrimBack: bool = True):
+    def cleanUpArcList(theList: list[Arc|None], olderThanRow: BatchRow, alsoTrimBack: bool = True):
         # Remove references to arcs that were closed earlier than `olderThanRow`
         for j, arc in enumerate(theList):
             if arc and 0 <= arc.closedAt < olderThanRow:
@@ -237,7 +364,7 @@ class Frame:
         # Sort arcs by Chain Birth Row
 
         def sortArc(a: Arc):
-            return a.chainID * 1000 + a.lane
+            return int(a.chainTop) * 1000 + a.lane
 
         arcsAbove = sorted(arcsAbove, key=sortArc, reverse=True)
         arcsBelow = sorted(arcsBelow, key=sortArc, reverse=True)
@@ -323,6 +450,7 @@ class Frame:
 
         junctionExplainer = ""
         for pl in passing:
+            assert pl.junctions == sorted(pl.junctions), "Junction list is supposed to be sorted!"
             for junction in pl.junctions:
                 if junction.joinedAt == self.row:
                     assert junction.joinedBy == self.commit, F"junction commit {junction.joinedBy} != frame commit {self.commit}  at junction row {junction.joinedAt}"
@@ -365,15 +493,21 @@ class GeneratorState(Frame):
     freeLanes: list[int]
     parentLookup: defaultdict[Oid, list[Arc]]  # all lanes
     peakArcCount: int
+    batchNo: int
 
     def __init__(self, startArcSentinel: Arc):
-        super().__init__(row=-1, commit="", solvedArcs=[], openArcs=[], lastArc=startArcSentinel)
+        super().__init__(row=BATCHROW_UNDEF, commit="",
+                         solvedArcs=[], openArcs=[], lastArc=startArcSentinel)
         self.freeLanes = []
         self.parentLookup = defaultdict(list)
         self.peakArcCount = 0
+        self.batchNo = BatchRow.BatchManager.reserveNewBatch()
 
-    def createArcsForNewCommit(self, me: Oid, myParents: list[Oid]):
-        self.row += 1
+    def newCommit(self, me: Oid, myParents: list[Oid]):
+        """Create arcs for a new commit row."""
+
+        row = BatchRow(b=self.batchNo, y=self.row.y + 1)
+        self.row = row
         self.commit = me
 
         hasParents = len(myParents) > 0
@@ -383,18 +517,17 @@ class GeneratorState(Frame):
         myOpenArcs = self.parentLookup.get(me)
         myHomeLane = -1
         handOffHomeLane = False
-        myHomeChain = -1
         if not myOpenArcs:
             # Nobody was looking for me, so I'm the tip of a new branch
-            myHomeChain = self.row
+            myHomeChain = row
         else:
-            myMainOpenArc = sorted(myOpenArcs, key=lambda arc: arc.lane)[0]
+            myMainOpenArc = min(myOpenArcs, key=lambda a: a.lane)
             myHomeLane = myMainOpenArc.lane
-            myHomeChain = myMainOpenArc.chainID
+            myHomeChain = myMainOpenArc.chainTop
             for arc in myOpenArcs:
                 assert arc.closedBy == me
-                assert arc.closedAt == -1
-                arc.closedAt = self.row
+                assert arc.closedAt == BATCHROW_UNDEF
+                arc.closedAt = row
                 self.solvedArcs[arc.lane] = arc
                 self.openArcs[arc.lane] = None  # Free up the lane below
                 if hasParents and arc.lane == myHomeLane:
@@ -420,11 +553,10 @@ class GeneratorState(Frame):
             if sawFirstParent:
                 arcsOfParent = self.parentLookup.get(parent)
                 if arcsOfParent:
-                    arcsOfParent = sorted(arcsOfParent, key=lambda arc: arc.lane)
-                    arc = arcsOfParent[0]
+                    arc = min(arcsOfParent, key=lambda a: a.lane)
                     assert arc.closedBy == parent
-                    assert arc.closedAt == -1
-                    arc.junctions.append(ArcJunction(joinedAt=self.row, joinedBy=me))
+                    assert arc.closedAt == BATCHROW_UNDEF
+                    arc.junctions.append(ArcJunction(joinedAt=row, joinedBy=me))
                     continue
 
             # We didn't make a junction, so open up a new arc on a free lane.
@@ -442,8 +574,10 @@ class GeneratorState(Frame):
                 # Pick leftmost free lane
                 freeLane = self.freeLanes.pop(0)
 
-            newArc = Arc(self.row, -1, freeLane, me, parent, [],
-                         myHomeChain if not sawFirstParent else self.row, None)
+            newArc = Arc(lane=freeLane,
+                         openedAt=row, closedAt=BATCHROW_UNDEF,
+                         chainTop=myHomeChain if not sawFirstParent else row,
+                         openedBy=me, closedBy=parent, junctions=[])
             self.openArcs[freeLane] = newArc
             self.parentLookup[parent].append(newArc)
             self.lastArc.nextArc = newArc
@@ -463,12 +597,14 @@ class GeneratorState(Frame):
                     myHomeLane = len(self.openArcs)
                 else:
                     myHomeLane = self.freeLanes[0]  # PEEK only! do not pop!
-            newArc = Arc(self.row, self.row, myHomeLane, me, me, [], myHomeChain, None)
+            newArc = Arc(lane=myHomeLane,
+                         openedAt=row, closedAt=row, chainTop=myHomeChain,
+                         openedBy=me, closedBy=me, junctions=[])
             self.lastArc.nextArc = newArc
             self.lastArc = newArc
 
         assert not handOffHomeLane
-        assert myHomeChain >= 0
+        assert myHomeChain != BATCHROW_UNDEF
         assert len(self.openArcs) == len(self.solvedArcs)
 
         self.peakArcCount = max(self.peakArcCount, len(self.openArcs))
@@ -498,7 +634,7 @@ class PlaybackState(Frame):
             self.seenCommits.add(self.commit)
 
         goalFound = False
-        goalRow = -1
+        goalRow = BATCHROW_UNDEF
         goalCommit = ""
 
         while self.lastArc.nextArc:
@@ -530,6 +666,8 @@ class PlaybackState(Frame):
         self.row = goalRow
         self.commit = goalCommit
 
+        assert isinstance(self.row, BatchRow)
+
     def advanceToCommit(self, commit: Oid):
         """
         Advances playback until a specific commit hash is found.
@@ -555,53 +693,73 @@ class PlaybackState(Frame):
 
 class Graph:
     keyframes: list[Frame]
-    keyframeRows: list[int] | None
+    keyframeRows: list[BatchRow]
     startArc: Arc  # linked list start sentinel; guaranteed to never be None
 
     commitRows: dict[Oid, BatchRow]
-    batchOffsets: list[int]
-    """
-    Everytime we refresh, new rows may be inserted at the top of the graph.
-    This may push existing rows down, away from the top of the graph.
-    To avoid recomputing offsetFromTop for every commit, we keep track of the
-    general offset of every batch of rows created by every refresh.
-    """
+    ownBatches: list[int]
 
     def __init__(self):
-        self.clear()
-
-    def getCommitRow(self, oid: Oid):
-        offset = self.commitRows[oid]
-        return self.batchOffsets[offset.batch] + offset.offset
-
-    def clear(self):
         self.keyframes = []
         self.keyframeRows = []
         self.commitRows = {}
-        self.batchOffsets = [0]
-        self.startArc = Arc(-1, -1, -1, "!TOP", "!BOTTOM", [], None)
+        self.startArc = Arc(
+            openedAt=BATCHROW_UNDEF,
+            closedAt=BATCHROW_UNDEF,
+            chainTop=BATCHROW_UNDEF,
+            lane=-1,
+            openedBy="!TOP",
+            closedBy="!BOTTOM",
+            junctions=[],
+            nextArc=None)
+        self.ownBatches = []
 
-    def shallowCopyFrom(self, source):
+    def __del__(self):
+        self.freeOwnBatches()
+
+    def freeOwnBatches(self):
+        for b in self.ownBatches:
+            BatchRow.BatchManager.freeBatch(b)
+        self.ownBatches = []
+
+    def shallowCopyFrom(self, source: Graph):
+        assert not set(self.ownBatches).intersection(set(source.ownBatches))
+
+        # Free up owned batches
+        self.freeOwnBatches()
+
         self.keyframes = source.keyframes
         self.keyframeRows = source.keyframeRows
         self.startArc = source.startArc
+        self.commitRows = source.commitRows
+        self.ownBatches = source.ownBatches
+
+        source.ownBatches = []
 
     def isEmpty(self):
         return self.startArc.nextArc is None
 
+    def getCommitRow(self, oid: Oid):
+        return int(self.commitRows[oid])
+
     def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
                              keyframeInterval=KF_INTERVAL):
-        cacher = GeneratorState(self.startArc)
+        generator = GeneratorState(self.startArc)
 
-        for me in sequence:
-            cacher.createArcsForNewCommit(me, parentsOf[me])
-            if cacher.row % keyframeInterval == 0:
-                self.saveKeyframe(cacher)
+        self.ownBatches.append(generator.batchNo)
+
+        for commit in sequence:
+            generator.newCommit(commit, parentsOf[commit])
+
+            self.commitRows[commit] = generator.row
+
+            if int(generator.row) % keyframeInterval == 0:
+                self.saveKeyframe(generator)
 
     def saveKeyframe(self, frame: Frame) -> int:
         assert len(self.keyframes) == len(self.keyframeRows)
 
-        kf = frame.copyCleanFrame()
+        kf = frame.sealCopy()
 
         kfID = bisect.bisect_left(self.keyframeRows, frame.row)
         if kfID < len(self.keyframes) and self.keyframes[kfID].row == frame.row:
@@ -637,22 +795,24 @@ class Graph:
         return bestKeyframeID
 
     def startGenerator(self) -> GeneratorState:
-        assert self.isEmpty(), "cannot re-cache an existing graph!"
-        return GeneratorState(self.startArc)
+        assert self.isEmpty(), "cannot regenerate an existing graph!"
+        generator = GeneratorState(self.startArc)
+        self.ownBatches.append(generator.batchNo)
+        return generator
 
     def startPlayback(self, goalRow: int = 0) -> PlaybackState:
         kfID = self.getBestKeyframeID(goalRow)
         if kfID >= 0:
             kf = self.keyframes[kfID]
         else:
-            kf = self.getKF0()
+            kf = self.initialKeyframe()
 
         player = PlaybackState(kf)
 
         # Position playback context on target row
         try:
             volatileKeyframeCounter = 1
-            assert player.row <= goalRow
+            assert player.row <= goalRow, f"{player.row} {goalRow}"
             while player.row < goalRow:
                 player.advanceToNextRow()  # raises StopIteration if depleted
                 if player.row - kf.row >= volatileKeyframeCounter:
@@ -675,23 +835,23 @@ class Graph:
             frame = self.keyframes[kfID]
         else:
             # Cache miss
-            frame = self.startPlayback(row).copyCleanFrame()
+            frame = self.startPlayback(row).sealCopy()
 
-        assert frame.row == row
+        assert frame.row == row, f"frame({int(frame.row)})/row({row}) mismatch"
         return frame
 
     def startSplicing(self, oldHeads: set[Oid], newHeads: set[Oid]) -> GraphSplicer:
         return GraphSplicer(self, oldHeads, newHeads)
 
-    def getKF0(self):
+    def initialKeyframe(self):
         return Frame(
-            row=-1,
+            row=BATCHROW_UNDEF,
             commit=self.startArc.openedBy,
             solvedArcs=[],
             openArcs=[],
             lastArc=self.startArc)
 
-    def deleteKeyframesWithArcsOpenedAbove(self, row: int):
+    def deleteKeyframesDependingOnRowsAbove(self, row: int):
         """
         Deletes all keyframes containing any arcs opened above the given row.
         """
@@ -721,11 +881,10 @@ class Graph:
 
         # Delete the keyframes up to kfID.
         self.keyframes = self.keyframes[kfID:]
+        self.keyframeRows = self.keyframeRows[kfID:]
+        assert len(self.keyframes) == len(self.keyframeRows)
 
-        # Invalidate keyframe row cache.
-        self.keyframeRows = None
-
-    def deleteArcsOpenedAbove(self, row):
+    def deleteArcsDependingOnRowsAbove(self, row: int):
         """
         Deletes all arcs opened before the given row.
         """
@@ -745,33 +904,9 @@ class Graph:
         self.startArc.nextArc =\
             next((arc for arc in self.startArc if arc.openedAt >= row), None)
 
-    def shiftRows(self, rowOffset: int, remapChains: dict[int, int]):
-        """
-        Apply an offset to all rows referenced by arcs and keyframes.
-        """
-
-        if rowOffset == 0:
-            return
-
-        # Shift rows in remaining keyframes
-        for kf in self.keyframes:
-            kf.row += rowOffset
-
-        # Shift rows in remaining arcs
-        for arc in self.startArc:
-            arc.chainID = remapChains.get(arc.chainID, arc.chainID)
-            if arc.openedAt >= 0:
-                arc.openedAt += rowOffset
-            if arc.closedAt >= 0:
-                arc.closedAt += rowOffset
-            if arc.junctions:
-                for junction in arc.junctions:
-                    junction.joinedAt += rowOffset
-
     def insertFront(self, frontGraph: Graph, numRowsToInsert: int):
         """
         Inserts contents of frontGraph at the beginning of this graph.
-        Does not offset row indices!
         (This function is invoked as step 2 of merging two graphs.)
         """
 
@@ -798,15 +933,10 @@ class Graph:
         # Steal their keyframes
         lastFrontKeyframeID = frontGraph.getBestKeyframeID(numRowsToInsert - 1)
         if lastFrontKeyframeID >= 0:
+            assert len(self.keyframes) == len(self.keyframeRows)
+            assert len(frontGraph.keyframes) == len(frontGraph.keyframeRows)
             self.keyframes = frontGraph.keyframes[:lastFrontKeyframeID + 1] + self.keyframes
-            self.keyframeRows = None  # Invalidate cache of keyframe rows
-
-    def recreateKeyframeRowCache(self):
-        """
-        Recreates the cache of keyframe rows (for bisecting).
-        """
-
-        self.keyframeRows = [kf.row for kf in self.keyframes]
+            self.keyframeRows = frontGraph.keyframeRows[:lastFrontKeyframeID + 1] + self.keyframeRows
 
     def textDiagram(self, row0=0, maxRows=20):
         text = ""
@@ -817,7 +947,7 @@ class Graph:
             return F"Won't draw graph because it's empty below row {row0}!"
 
         for _ in context:
-            frame = context.copyCleanFrame()
+            frame = context.sealCopy()
             text += frame.textDiagram()
             maxRows -= 1
             if maxRows < 0:
@@ -830,6 +960,9 @@ class GraphSplicer:
     def __init__(self, oldGraph: Graph, oldHeads: Iterable[Oid], newHeads: Iterable[Oid]):
         self.keepGoing = True
         self.foundEquilibrium = False
+        self.equilibriumNewRow = -1
+        self.equilibriumOldRow = -1
+        self.oldGraphRowOffset = 0
 
         self.newGraph = Graph()
         self.newGenerator = self.newGraph.startGenerator()
@@ -846,31 +979,27 @@ class GraphSplicer:
         self.newCommitsSeen = set()
         self.oldCommitsSeen = set()
 
-    def __enter__(self):
-        return self
+    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], keyframeInterval=KF_INTERVAL):
+        assert self.keepGoing
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Convenience context manager so you don't have to call finish() manually.
-        """
-        self.finish()
-
-    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid],
-                        newCommitWasKnown: bool, keyframeInterval=KF_INTERVAL):
         self.newCommitsSeen.add(newCommit)
 
         # Generate arcs for new frame.
-        self.newGenerator.createArcsForNewCommit(newCommit, parentsOfNewCommit)
+        self.newGenerator.newCommit(newCommit, parentsOfNewCommit)
 
-        # Save keyframe in new context.
-        if self.newGenerator.row % keyframeInterval == 0:
+        # Save keyframe in new context every now and then.
+        if int(self.newGenerator.row) % keyframeInterval == 0:
             self.newGraph.saveKeyframe(self.newGenerator)
+
+        # Register this commit in the new graph's row sequence.
+        self.newGraph.commitRows[newCommit] = self.newGenerator.row
 
         # Is it one of the commits that we must see before we can stop consuming new commits?
         if newCommit in self.requiredNewCommits:
             self.requiredNewCommits.remove(newCommit)
 
         # If the commit wasn't known in the old graph, don't advance the old graph.
+        newCommitWasKnown = newCommit in self.oldGraph.commitRows
         if not newCommitWasKnown:
             return
 
@@ -915,8 +1044,8 @@ class GraphSplicer:
         """Completion with equilibrium"""
 
         # We'll basically concatenate newContext[eqNewRow:] and oldContext[:eqOldRow].
-        equilibriumNewRow = self.newGenerator.row
-        equilibriumOldRow = self.oldPlayer.row
+        equilibriumNewRow = int(self.newGenerator.row)
+        equilibriumOldRow = int(self.oldPlayer.row)
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
         log.info("GraphSplicer", F"FOUND EQUILIBRIUM @new={equilibriumNewRow};old={equilibriumOldRow}!")
@@ -924,37 +1053,49 @@ class GraphSplicer:
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.
         equilibriumNewOpenArcs = list(filter(None, self.newGenerator.openArcs))
-        equilibriumOldOpenArcs = list(filter(None, self.oldPlayer.copyCleanFrame().openArcs))
+        equilibriumOldOpenArcs = list(filter(None, self.oldPlayer.sealCopy().openArcs))
         assert len(equilibriumOldOpenArcs) == len(equilibriumNewOpenArcs)
 
-        # map old chain IDs to new chain IDs after splicing
-        remapChainIDs = {}
-
+        # Fix up dangling open arcs in new graph
         for oldOpenArc, newOpenArc in zip(equilibriumOldOpenArcs, equilibriumNewOpenArcs):
+            # Find out where the arc is resolved
             assert newOpenArc.openedBy == oldOpenArc.openedBy
-            # Find out where open arc ends.
-            newOpenArc.closedAt = oldOpenArc.closedAt + rowShiftInOldGraph
-            # Splice old junctions into new junctions.
-            if oldOpenArc.junctions:
-                newOpenArc.junctions = self.spliceJunctions(equilibriumOldRow, equilibriumNewRow, oldOpenArc.junctions, newOpenArc.junctions)
+            assert newOpenArc.closedBy == oldOpenArc.closedBy
+            assert newOpenArc.closedAt == BATCHROW_UNDEF  # new graph's been interrupted before resolving this arc
+            newOpenArc.closedAt = oldOpenArc.closedAt
 
-            if oldOpenArc.chainID != newOpenArc.chainID:
-                remapChainIDs[oldOpenArc.chainID] = newOpenArc.chainID
+            # Splice old junctions into new junctions
+            if oldOpenArc.junctions:
+                junctions = []
+                junctions.extend(j for j in newOpenArc.junctions if j.joinedAt <= equilibriumNewRow)  # before eq
+                junctions.extend(j for j in oldOpenArc.junctions if j.joinedAt > equilibriumOldRow)  # after eq
+                assert all(junctions.count(x) == 1 for x in junctions), "duplicate junctions after splicing"
+                newOpenArc.junctions = junctions
 
         # Do the actual splicing.
 
         # If we're adding a commit at the top of the graph, the closed arcs of the first keyframe will be incorrect,
         # so we must make sure to nuke the keyframe for equilibriumOldRow if it exists.
-        with Benchmark(F"Delete Keyframes"):
-            self.oldGraph.deleteKeyframesWithArcsOpenedAbove(equilibriumOldRow + 1)
-        with Benchmark(F"Delete Arcs"):
-            self.oldGraph.deleteArcsOpenedAbove(equilibriumOldRow)
-        with Benchmark(F"Shift Rows by {rowShiftInOldGraph}"):
-            self.oldGraph.shiftRows(rowShiftInOldGraph, remapChainIDs)
+        with Benchmark("Delete lost keyframes"):
+            self.oldGraph.deleteKeyframesDependingOnRowsAbove(equilibriumOldRow + 1)
+
+        with Benchmark("Delete lost arcs"):
+            self.oldGraph.deleteArcsDependingOnRowsAbove(equilibriumOldRow)
+
+        with Benchmark("Delete lost rows"):
+            for lostCommit in (self.oldCommitsSeen - self.newCommitsSeen):
+                del self.oldGraph.commitRows[lostCommit]
+
+        with Benchmark(F"Shift {len(self.oldGraph.ownBatches)} old batches by {rowShiftInOldGraph} rows"):
+            BatchRow.BatchManager.shiftBatches(rowShiftInOldGraph, self.oldGraph.ownBatches)
+
         with Benchmark("Insert Front"):
             self.oldGraph.insertFront(self.newGraph, equilibriumNewRow)
-        with Benchmark("Recreate Keyframe Row Cache"):
-            self.oldGraph.recreateKeyframeRowCache()
+
+        with Benchmark("Update row cache"):
+            self.oldGraph.commitRows.update(self.newGraph.commitRows)
+            self.oldGraph.ownBatches.extend(self.newGraph.ownBatches)  # Steal newGraph's batches
+            self.newGraph.ownBatches = []  # Don't let newGraph nuke the batches in its __del__
 
         # Save rows for use by external code
         self.equilibriumNewRow = equilibriumNewRow
@@ -993,23 +1134,3 @@ class GraphSplicer:
 
         # Do NOT test solved arcs!
         return True
-
-    @staticmethod
-    def spliceJunctions(oldEqRow, newEqRow, oldJunctions, newJunctions):
-        oldOffset = newEqRow - oldEqRow
-
-        spliced = []
-
-        # Copy junctions before equilibrium
-        spliced.extend( j for j in newJunctions if j.joinedAt <= newEqRow )
-
-        # Copy junctions after equilibrium (with offset)
-        spliced.extend( j.copyWithOffset(oldOffset) for j in oldJunctions if j.joinedAt > oldEqRow )
-
-        # Ensure the resulting list is sorted and contains no duplicates
-        assert spliced == sorted(spliced), "spliced list of junctions isn't sorted!"
-        assert all(spliced.count(x) == 1 for x in spliced),\
-            "spliced list of junctions contains duplicates!"  # can't do set(spliced) because Junction isn't frozen
-
-        return spliced
-

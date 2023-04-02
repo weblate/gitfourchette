@@ -218,14 +218,10 @@ class RepoState:
 
         foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
         hiddenCommitSolver = self.newHiddenCommitSolver()
-        currentBatchID = 0
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop, numCommitsBallpark)
-
                 commitSequence.append(commit)
-                graph.commitRows[commit.oid] = BatchRow(currentBatchID, offsetFromTop)
-
                 foreignCommitSolver.feed(commit)
                 hiddenCommitSolver.feed(commit)
         except StopIteration:
@@ -240,9 +236,15 @@ class RepoState:
 
         graphGenerator = graph.startGenerator()
         for commit in commitSequence:
-            graphGenerator.createArcsForNewCommit(commit.oid, commit.parent_ids)
-            if graphGenerator.row % KF_INTERVAL == 0:
-                progress.setValue(graphGenerator.row)
+            graphGenerator.newCommit(commit.oid, commit.parent_ids)
+
+            row = graphGenerator.row
+            assert type(row) == BatchRow
+            assert int(row) >= 0
+            graph.commitRows[commit.oid] = row
+
+            if int(row) % KF_INTERVAL == 0:
+                progress.setValue(int(row))
                 QCoreApplication.processEvents()
                 graph.saveKeyframe(graphGenerator)
 
@@ -258,7 +260,9 @@ class RepoState:
         return commitSequence
 
     def loadTaintedCommitsOnly(self, oldRefCache: dict[str, pygit2.Oid]):
-        currentBatchID = len(self.graph.batchOffsets)
+        # DO NOT call processEvents() here. While splicing a large amount of
+        # commits, GraphView may try to repaint an incomplete graph.
+        # GraphView somehow ignores setUpdatesEnabled(False) here!
 
         newCommitSequence = []
 
@@ -270,30 +274,11 @@ class RepoState:
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
 
-        i = 0
-        while graphSplicer.keepGoing:
-            # DON'T call processEvents() here, otherwise GraphView may try to repaint while splicing a large amount
-            # of commits, but the information is incomplete (in this loop, commitPositions refers to a commit batch
-            # that is still missing, etc.). GraphView somehow ignores setUpdatesEnabled(False) in this loop!
-            """
-            if i != 0 and i % PROGRESS_INTERVAL == 0:
-                log.info("progress", "GraphSplicer commits processed:", i)
-                QCoreApplication.processEvents()
-            """
-
-            offsetFromTop = i
-            i += 1
-
-            try:
-                commit: pygit2.Commit = next(walker)
-            except StopIteration:
-                break
-
-            wasKnown = commit.oid in self.graph.commitRows
-            self.graph.commitRows[commit.oid] = BatchRow(batch=currentBatchID, offset=offsetFromTop)
-
+        for commit in walker:
             newCommitSequence.append(commit)
-            graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids, wasKnown)
+            graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids)
+            if not graphSplicer.keepGoing:
+                break
 
         graphSplicer.finish()
 
@@ -303,10 +288,6 @@ class RepoState:
         else:
             nRemoved = -1  # We could use len(self.commitSequence), but -1 will force refreshRepo to replace the model wholesale
             nAdded = len(newCommitSequence)
-
-        with Benchmark("Nuke unreachable commits from cache"):
-            for trashedCommit in (graphSplicer.oldCommitsSeen - graphSplicer.newCommitsSeen):
-                del self.graph.commitRows[trashedCommit]
 
         # Piece correct commit sequence back together
         with Benchmark("Reassemble commit sequence"):
@@ -318,11 +299,6 @@ class RepoState:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
-
-        # Compute new batch offset
-        assert currentBatchID == len(self.graph.batchOffsets)
-        self.graph.batchOffsets = [previousOffset + graphSplicer.oldGraphRowOffset for previousOffset in self.graph.batchOffsets]
-        self.graph.batchOffsets.append(0)  # Latest batch starts at top of graph
 
         # Resolve foreign commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
