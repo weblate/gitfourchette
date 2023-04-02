@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from gitfourchette.qt import *
-from gitfourchette.util import stockIcon
+from gitfourchette.toolbox.qtutils import stockIcon
 import typing
 
 

@@ -3,11 +3,11 @@ from dataclasses import dataclass, field
 from gitfourchette import log
 from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
-from gitfourchette.benchmark import Benchmark
 from gitfourchette.hiddencommitsolver import HiddenCommitSolver
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
 from gitfourchette.qt import *
 from gitfourchette.settings import BasePrefs
+from gitfourchette.toolbox import *
 from typing import Iterable
 import os
 import pygit2

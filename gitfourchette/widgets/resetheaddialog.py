@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.util import shortHash
+from gitfourchette.toolbox import *
 import pygit2
 
 

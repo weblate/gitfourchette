@@ -7,6 +7,8 @@ import os
 import re
 
 
+BLANK_OID = pygit2.Oid(raw=b'')
+
 CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", re.IGNORECASE)
 DIFF_HEADER_PATTERN = re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
@@ -39,6 +41,7 @@ class NameValidationError(ValueError):
     CONTAINS_ILLEGAL_CHAR = 4
     CONTAINS_ILLEGAL_SEQ = 5
     NOT_WINDOWS_FRIENDLY = 6
+    NAME_TAKEN = 7
 
     def __init__(self, code: int):
         super().__init__(F"Name validation failed ({code})")
@@ -140,6 +143,10 @@ def pygit2VersionAtLeast(requiredVersion: tuple, raiseError=True, featureName="T
         raise NotImplementedError(message)
 
     return True
+
+
+def isZeroId(oid: pygit2.Oid) -> bool:
+    return oid.raw == BLANK_OID.raw
 
 
 def workdirPath(repo: Repository, path: str):
@@ -374,7 +381,7 @@ def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
     return nameDict
 
 
-def validateRefName(name: str):
+def validateRefName(name: str, reservedNames: list[str]):
     """
     Checks the validity of a ref name according to `man git-check-ref-format`.
     Raises NameValidationError if the name is incorrect.
@@ -417,6 +424,9 @@ def validateRefName(name: str):
     # Prevent filenames that are reserved on Windows
     elif WINDOWS_RESERVED_FILENAMES_PATTERN.match(name):
         raise E(E.NOT_WINDOWS_FRIENDLY)
+
+    elif name.lower() in (n.lower() for n in reservedNames):
+        raise E(E.NAME_TAKEN)
 
 
 def validateSignatureItem(s: str):

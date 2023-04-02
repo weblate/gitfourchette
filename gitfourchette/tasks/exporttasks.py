@@ -1,7 +1,8 @@
 from gitfourchette import porcelain
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.toolbox import *
 import contextlib
 import html
 import pygit2
@@ -33,7 +34,7 @@ class ComposePatch(RepoTask):
         if not composed:
             yield from self._flowAbort(self.tr("Nothing to export. The patch is empty."), warningTextIcon="information")
 
-        qfd = util.PersistentFileDialog.saveFile(self.parentWidget(), "SaveFile", self.name(), fileName)
+        qfd = PersistentFileDialog.saveFile(self.parentWidget(), "SaveFile", self.name(), fileName)
         yield from self._flowDialog(qfd)
         savePath = qfd.selectedFiles()[0]
 
@@ -52,10 +53,10 @@ class ExportCommitAsPatch(ComposePatch):
         diffs = porcelain.loadCommitDiffs(self.repo, oid, showBinary=True)
 
         commit: pygit2.Commit = self.repo[oid].peel(pygit2.Commit)
-        summary, _ = util.messageSummary(commit.message, elision="")
+        summary, _ = messageSummary(commit.message, elision="")
         summary = "".join(c for c in summary if c.isalnum() or c in " ._-")
         summary = summary.strip()[:50].strip()
-        initialName = f"{porcelain.repoName(self.repo)} {util.shortHash(oid)} - {summary}.patch"
+        initialName = f"{porcelain.repoName(self.repo)} {shortHash(oid)} - {summary}.patch"
 
         yield from self.composePatch(diffs, initialName)
 
@@ -72,7 +73,7 @@ class ExportStashAsPatch(ExportCommitAsPatch):
         commit: pygit2.Commit = self.repo[oid].peel(pygit2.Commit)
         coreMessage = porcelain.getCoreStashMessage(commit.message)
 
-        initialName = f"{porcelain.repoName(self.repo)} - {coreMessage} [stashed on {util.shortHash(commit.parent_ids[0])}].patch"
+        initialName = f"{porcelain.repoName(self.repo)} - {coreMessage} [stashed on {shortHash(commit.parent_ids[0])}].patch"
 
         yield from self.composePatch(diffs, initialName)
 
@@ -87,6 +88,6 @@ class ExportWorkdirAsPatch(ComposePatch):
         diff = porcelain.getWorkdirChanges(self.repo, showBinary=True)
 
         headOid = porcelain.getHeadCommitOid(self.repo)
-        initialName = f"{porcelain.repoName(self.repo)} - uncommitted changes on {util.shortHash(headOid)}.patch"
+        initialName = f"{porcelain.repoName(self.repo)} - uncommitted changes on {shortHash(headOid)}.patch"
 
         yield from self.composePatch([diff], initialName)

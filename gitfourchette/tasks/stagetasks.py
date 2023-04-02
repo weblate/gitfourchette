@@ -1,12 +1,11 @@
 from gitfourchette import porcelain
 from gitfourchette import reverseunidiff
-from gitfourchette import util
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.widgets.diffview import PatchPurpose
-from html import escape
 import os
 import pygit2
 
@@ -57,7 +56,7 @@ class DiscardFiles(_BaseStagingTask):
         textPara.append(translate("Global", "This cannot be undone!"))
 
         yield from self._flowConfirm(
-            text=util.paragraphs(textPara),
+            text=paragraphs(textPara),
             verb=self.tr("Discard changes", "Button label"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
@@ -104,7 +103,7 @@ class ApplyPatch(RepoTask):
             textPara.append(translate("Global", "This cannot be undone!"))
             yield from self._flowConfirm(
                 title,
-                text=util.paragraphs(textPara),
+                text=paragraphs(textPara),
                 verb=self.tr("Discard lines", "Button label"),
                 buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
@@ -121,11 +120,11 @@ class ApplyPatch(RepoTask):
         verb = PatchPurpose.getName(purpose, verbOnly=True).lower()
         shortPath = os.path.basename(fullPatch.delta.new_file.path)
 
-        questionText = util.paragraphs(
+        questionText = paragraphs(
             self.tr("You are trying to {0} changes from the line-by-line editor, but you haven’t selected any red/green lines.").format(verb),
             self.tr("Do you want to {0} this entire file <b>“{1}”</b>?").format(verb, escape(shortPath)))
 
-        qmb = util.asyncMessageBox(
+        qmb = asyncMessageBox(
             self.parentWidget(),
             'information',
             self.tr("{0}: selection empty").format(action),
@@ -243,7 +242,7 @@ class ApplyPatchFile(RepoTask):
         patchFileCaption = self.tr("Patch file")
         allFilesCaption = self.tr("All files")
 
-        qfd = util.PersistentFileDialog.openFile(
+        qfd = PersistentFileDialog.openFile(
             self.parentWidget(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
 
         yield from self._flowDialog(qfd)

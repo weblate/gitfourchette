@@ -6,10 +6,8 @@ from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.reverseunidiff import reverseUnidiff
-from gitfourchette.toolbox.memoryindicator import MemoryIndicator
-from gitfourchette.util import (compactPath, showInFolder, excMessageBox, DisableWidgetContext, QSignalBlockerContext,
-                                PersistentFileDialog, setWindowModal, showWarning, showInformation, askConfirmation,
-                                paragraphs, NonCriticalOperation, openInTextEditor)
+from gitfourchette.toolbox import *
+from gitfourchette.exttools import openInTextEditor
 from gitfourchette.widgets.aboutdialog import showAboutDialog
 from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
 from gitfourchette.widgets.clonedialog import CloneDialog
@@ -19,7 +17,6 @@ from gitfourchette.widgets.prefsdialog import PrefsDialog
 from gitfourchette.widgets.repowidget import RepoWidget
 from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplay
 from gitfourchette.widgets.welcomewidget import WelcomeWidget
-from html import escape
 from typing import Literal
 import gc
 import os

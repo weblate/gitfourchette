@@ -2,12 +2,10 @@ from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
-from gitfourchette.util import PersistentFileDialog
-from gitfourchette.util import stockIcon
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_clonedialog import Ui_CloneDialog
 from gitfourchette.tasks import RepoTaskRunner
-from html import escape
 import pygit2
 
 

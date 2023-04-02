@@ -1,10 +1,9 @@
 from gitfourchette import log
 from gitfourchette import porcelain
-from gitfourchette import util
-from gitfourchette.benchmark import Benchmark
 from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffModel, ShouldDisplayPatchAsImageDiff, \
     DiffImagePair
 import pygit2
@@ -86,7 +85,7 @@ class LoadPatch(RepoTask):
         except ShouldDisplayPatchAsImageDiff:
             return DiffImagePair(self.repo, patch.delta, locator)
         except BaseException as exc:
-            summary, details = util.excStrings(exc)
+            summary, details = excStrings(exc)
             return DiffModelError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
     def flow(self, patch: pygit2.Patch, locator: NavLocator):

@@ -4,7 +4,7 @@ from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.graphpaint import paintGraphFrame
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.util import messageSummary, shortenTracebackPath
+from gitfourchette.toolbox import *
 from dataclasses import dataclass
 import contextlib
 import pygit2

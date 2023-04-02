@@ -1,15 +1,12 @@
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import tasks
-from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
-from gitfourchette.util import paragraphs, QSignalBlockerContext
-from gitfourchette.util import addComboBoxItem, stockIcon, escamp, setWindowModal, showWarning
+from gitfourchette.trtables import translateExceptionName
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
-from html import escape
 import enum
 import pygit2
 import traceback
@@ -123,7 +120,7 @@ class PushDialog(QDialog):
         self.setOkButtonText()
 
         if resetCheckedState:
-            with util.QSignalBlockerContext(self.ui.trackCheckBox):
+            with QSignalBlockerContext(self.ui.trackCheckBox):
                 self.ui.trackCheckBox.setChecked(willTrack)
 
     @property
@@ -247,7 +244,6 @@ class PushDialog(QDialog):
 
         self.ui = Ui_PushDialog()
         self.ui.setupUi(self)
-        # util.tweakWidgetFont(self.ui.trackingLabel, 90)
         self.ui.trackingLabel.setMinimumHeight(self.ui.trackingLabel.height())
         self.ui.trackingLabel.setMaximumHeight(self.ui.trackingLabel.height())
 
@@ -300,8 +296,8 @@ class PushDialog(QDialog):
 
         reservedNames = self.reservedRemoteBranchNames.get(self.currentRemoteName, [])
 
-        return util.validateRefName(name, reservedNames,
-                                    self.tr("This name is already taken by another branch on this remote."))
+        return nameValidationMessage(name, reservedNames,
+                                     self.tr("This name is already taken by another branch on this remote."))
 
     def enableInputs(self, on: bool):
         widgets = [self.ui.remoteBranchEdit,
@@ -361,7 +357,7 @@ class PushDialog(QDialog):
                 QApplication.alert(pushDialog, 500)
                 pushDialog.pushInProgress = False
                 pushDialog.enableInputs(True)
-                pushDialog.ui.statusForm.setBlurb(F"<b>{util.translateExceptionName(exc)}:</b> {escape(str(exc))}")
+                pushDialog.ui.statusForm.setBlurb(F"<b>{translateExceptionName(exc)}:</b> {escape(str(exc))}")
 
         self.pushInProgress = True
         self.enableInputs(False)

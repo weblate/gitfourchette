@@ -1,7 +1,7 @@
 from gitfourchette import log
 from gitfourchette import repoconfig
 from gitfourchette.qt import *
-from gitfourchette.util import compactPath
+from gitfourchette.toolbox import *
 import base64
 import os.path
 import pygit2

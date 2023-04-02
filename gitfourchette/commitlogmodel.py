@@ -1,5 +1,4 @@
 from gitfourchette.qt import *
-from html import escape
 import pygit2
 
 

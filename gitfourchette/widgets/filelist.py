@@ -1,14 +1,13 @@
 from dataclasses import dataclass
 from gitfourchette import log
 from gitfourchette import settings
-from gitfourchette.actiondef import ActionDef
+from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.porcelain import BLANK_OID, isZeroId
 from gitfourchette.qt import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
-from gitfourchette.util import (abbreviatePath, showInFolder, hasFlag, QSignalBlockerContext,
-                                shortHash, PersistentFileDialog, showWarning, showInformation, askConfirmation,
-                                paragraphs, isZeroId, openInTextEditor, openInDiffTool, dumpTempBlob)
+from gitfourchette.toolbox import *
 from pathlib import Path
 from typing import Any, Callable, Generator
 import errno
@@ -26,8 +25,6 @@ FALLBACK_STATUS_ICON = QIcon("assets:status_fallback.svg")
 
 PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
-
-BLANK_OID = pygit2.Oid(raw=b'')
 
 
 class SelectedFileBatchError(Exception):
@@ -391,9 +388,9 @@ class FileList(QListView):
         holding down LMB and dragging. This event handler enforces single-item
         selection unless the user holds down Shift or Ctrl.
         """
-        isLMB = hasFlag(event.buttons(), Qt.MouseButton.LeftButton)
-        isShift = hasFlag(event.modifiers(), Qt.KeyboardModifier.ShiftModifier)
-        isCtrl = hasFlag(event.modifiers(), Qt.KeyboardModifier.ControlModifier)
+        isLMB = bool(event.buttons() & Qt.MouseButton.LeftButton)
+        isShift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+        isCtrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
 
         if isLMB and not isShift and not isCtrl:
             self.mousePressEvent(event)  # re-route event as if it were a click event

@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.util import excMessageBox, NonCriticalOperation
+from gitfourchette.toolbox import excMessageBox, NonCriticalOperation
 import os
 import signal
 import sys

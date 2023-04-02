@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.widgets.ui_aboutdialog import Ui_AboutDialog
 import contextlib
 import pygit2
@@ -55,7 +55,7 @@ class AboutDialog(QDialog):
                 buildDate = (" " + self.tr("built on:", "when the software was built") +
                              " " + gitfourchette._buildconstants.buildDate)
 
-        util.tweakWidgetFont(self.ui.plainTextEdit, 90)
+        tweakWidgetFont(self.ui.plainTextEdit, 90)
 
         self.ui.plainTextEdit.setPlainText(F"""\
 {appName} {appVersion}{'-debug' if __debug__ else ''}

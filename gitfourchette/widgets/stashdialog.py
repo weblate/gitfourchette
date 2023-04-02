@@ -1,6 +1,7 @@
 from gitfourchette import porcelain
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_stashdialog import Ui_StashDialog
 
@@ -22,7 +23,7 @@ class StashDialog(QDialog):
                   self.ui.willRemoveChangesLabel,
                   self.ui.willKeepChangesLabel,
                   self.ui.indexAndWtWarning):
-            util.tweakWidgetFont(l, 95)
+            tweakWidgetFont(l, 95)
 
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
@@ -38,7 +39,7 @@ class StashDialog(QDialog):
             listItem = QListWidgetItem(filePath, self.ui.fileList)
             listItem.setSizeHint(QSize(100, 16))
             listItem.setData(Qt.ItemDataRole.UserRole, filePath)
-            util.tweakWidgetFont(listItem, 95)
+            tweakWidgetFont(listItem, 95)
             if not preTicked or filePath in preTicked:
                 listItem.setCheckState(Qt.CheckState.Checked)
                 if not scrollTo:

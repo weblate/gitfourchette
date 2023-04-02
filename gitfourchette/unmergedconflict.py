@@ -1,7 +1,8 @@
 from gitfourchette import porcelain
 from gitfourchette import tempdir
 from gitfourchette.qt import *
-from gitfourchette.util import dumpTempBlob, openInMergeTool, asyncMessageBox, paragraphs
+from gitfourchette.toolbox import *
+from gitfourchette.exttools import openInMergeTool
 from gitfourchette.widgets.diffmodel import DiffConflict
 import filecmp
 import os

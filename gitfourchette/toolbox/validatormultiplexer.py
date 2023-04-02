@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from gitfourchette.qt import *
-from gitfourchette.util import stockIcon
+from gitfourchette.toolbox.qtutils import stockIcon
 from typing import Callable, Iterable, Optional
 import contextlib
 

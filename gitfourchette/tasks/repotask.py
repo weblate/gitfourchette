@@ -1,11 +1,9 @@
 from __future__ import annotations
-from gitfourchette.benchmark import Benchmark
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
-from gitfourchette import util
+from gitfourchette.toolbox import *
 from gitfourchette import log
 from gitfourchette import porcelain
-from html import escape
 from typing import Any, Generator, Literal, Type
 import enum
 import pygit2
@@ -48,7 +46,7 @@ def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opNa
         message += translate("Conflict", "Before you try again, you should either "
                                          "commit, stash, or discard your changes.")
 
-    qmb = util.showWarning(parent, title, message)
+    qmb = showWarning(parent, title, message)
 
     if numConflicts > maxConflicts:
         qmb.setDetailedText("\n".join(exc.conflicts))
@@ -203,10 +201,10 @@ class RepoTask(QObject):
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
             for filePath, fileException in exc.fileExceptions.items():
                 message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
-            util.showWarning(self.parentWidget(), self.name(), message)
+            showWarning(self.parentWidget(), self.name(), message)
         else:
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
-            util.excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
+            excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
 
     def effects(self) -> TaskEffects:
         """
@@ -217,7 +215,7 @@ class RepoTask(QObject):
     def _flowAbort(
             self,
             warningText: str = "",
-            warningTextIcon: util.MessageBoxIconName = "warning"
+            warningTextIcon: MessageBoxIconName = "warning"
     ):
         """
         Aborts the task with an optional error message.
@@ -225,15 +223,15 @@ class RepoTask(QObject):
         """
 
         if warningText:
-            assert util.onAppThread()
-            qmb = util.asyncMessageBox(self.parentWidget(), warningTextIcon, self.name(), warningText)
+            assert onAppThread()
+            qmb = asyncMessageBox(self.parentWidget(), warningTextIcon, self.name(), warningText)
             qmb.show()
 
         raise FlowControlAbort()
         yield  # Dummy yield to make it a generator
 
     def _flowStop(self):
-        assert util.onAppThread()
+        assert onAppThread()
         raise FlowControlEarlySuccess()
         yield  # Dummy yield to make it a generator
 
@@ -263,7 +261,7 @@ class RepoTask(QObject):
         Runs a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
         """
-        assert util.onAppThread(), "Subtask must start on UI thread"
+        assert onAppThread(), "Subtask must start on UI thread"
 
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
         subtask = subtaskClass(self)
@@ -273,7 +271,7 @@ class RepoTask(QObject):
         yield from subtask.flow(*args, **kwargs)
 
         # Make sure we're back on the UI thread before re-entering the root task
-        if not util.onAppThread():
+        if not onAppThread():
             yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
 
         return subtask
@@ -320,14 +318,14 @@ class RepoTask(QObject):
         if not verb:
             verb = title
 
-        qmb = util.asyncMessageBox(self.parentWidget(), 'question', title, text,
-                                   QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        qmb = asyncMessageBox(self.parentWidget(), 'question', title, text,
+                              QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
         # so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
         if buttonIcon:
-            yes.setIcon(util.stockIcon(buttonIcon))
+            yes.setIcon(stockIcon(buttonIcon))
         yes.setText(verb)
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
@@ -394,7 +392,7 @@ class RepoTaskRunner(QObject):
         """Block UI thread until the current zombie task is dead.
         Returns immediately if there's no zombie task."""
 
-        assert util.onAppThread()
+        assert onAppThread()
         while self._zombieTask:
             QThread.yieldCurrentThread()
             QThread.msleep(30)
@@ -404,7 +402,7 @@ class RepoTaskRunner(QObject):
         assert not self.isBusy()
 
     def put(self, task: RepoTask, *args, **kwargs):
-        assert util.onAppThread()
+        assert onAppThread()
 
         # Get flow generator
         task._currentFlow = task.flow(*args, **kwargs)
@@ -420,9 +418,9 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            util.showInformation(task.parentWidget(), self.tr("Operation in progress"),
-                                 self.tr("Please wait for the current operation to complete. "
-                                         "({0} cannot be interrupted by {1})").format(self._currentTask, task))
+            showInformation(task.parentWidget(), self.tr("Operation in progress"),
+                            self.tr("Please wait for the current operation to complete. "
+                                    "({0} cannot be interrupted by {1})").format(self._currentTask, task))
 
     def _startTask(self, task):
         assert self._currentTask == task
@@ -447,7 +445,7 @@ class RepoTaskRunner(QObject):
             flow = task._currentFlow
             task._currentIteration += 1
 
-            assert util.onAppThread()
+            assert onAppThread()
 
             assert not isinstance(result, Generator), \
                 "You're trying to yield a nested generator. Did you mean 'yield from'?"
@@ -476,7 +474,7 @@ class RepoTaskRunner(QObject):
 
                     # Wrapper around `next(flow)`.
                     # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
-                    wrapper = util.QRunnableFunctionWrapper(lambda: self._emitNextToken(flow))
+                    wrapper = QRunnableFunctionWrapper(lambda: self._emitNextToken(flow))
                     self._threadPool.start(wrapper)
 
                 elif not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_UI_THREAD_LATER:
@@ -530,7 +528,7 @@ class RepoTaskRunner(QObject):
         self.progress.emit("", False)
         self._currentTaskBenchmark.__exit__(None, None, None)
 
-        assert util.onAppThread()
+        assert onAppThread()
         assert task is self._currentTask or task is self._zombieTask
 
         self._continueFlow.disconnect()

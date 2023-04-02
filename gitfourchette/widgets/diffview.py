@@ -2,19 +2,15 @@ from gitfourchette import colors
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
-from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
+from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-from gitfourchette.util import (PersistentFileDialog, excMessageBox, QSignalBlockerContext,
-                                showWarning, askConfirmation, asyncMessageBox, stockIcon,
-                                paragraphs)
 from gitfourchette.widgets.diffmodel import DiffModel, LineData
 from gitfourchette.widgets.searchbar import SearchBar
 from bisect import bisect_left, bisect_right
-from html import escape
 from pygit2 import GitError, Patch, Repository, Diff
 from typing import Literal
 import enum

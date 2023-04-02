@@ -1,4 +1,4 @@
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
@@ -38,7 +38,7 @@ class NewBranchDialog(QDialog):
         nameTaken = self.tr("This name is already taken by another local branch.")
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(self.acceptButton)
-        validator.connectInput(self.ui.nameEdit, lambda name: util.validateRefName(name, reservedNames, nameTaken))
+        validator.connectInput(self.ui.nameEdit, lambda name: nameValidationMessage(name, reservedNames, nameTaken))
         validator.run()
 
         convertToBrandedDialog(self, self.tr("New branch"),

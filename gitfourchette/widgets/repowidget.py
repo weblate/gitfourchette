@@ -3,17 +3,13 @@ from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette import tempdir
-from gitfourchette.benchmark import Benchmark
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.tasks import TaskEffects
+from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-from gitfourchette.util import (excMessageBox, excStrings, QSignalBlockerContext, shortHash,
-                                showWarning, showInformation, askConfirmation, stockIcon,
-                                paragraphs, NonCriticalOperation, tweakWidgetFont,
-                                openFolder, openInTextEditor, openInMergeTool, dumpTempBlob,
-                                onAppThread)
+from gitfourchette.exttools import openInTextEditor, openInMergeTool
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
 from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
@@ -21,13 +17,11 @@ from gitfourchette.widgets.diffview import DiffView
 from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
 from gitfourchette.widgets.graphview import GraphView, CommitLogModel
 from gitfourchette.widgets.pushdialog import PushDialog
-from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplay, RepoStatusDisplayCache
 from gitfourchette.widgets.richdiffview import RichDiffView
 from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.sidebar import Sidebar
 from gitfourchette.unmergedconflict import UnmergedConflict
-from html import escape
 from typing import Generator, Literal, Type, Callable
 import os
 import pygit2
@@ -114,6 +108,7 @@ class RepoWidget(QWidget):
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
         self.sidebar.refClicked.connect(self.selectRef)
+        self.sidebar.uncommittedChangesClicked.connect(lambda: print("UC Clicked in sidebar"))
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)

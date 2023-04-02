@@ -1,9 +1,10 @@
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator, NavFlags
+from gitfourchette.porcelain import isZeroId
 from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
-from gitfourchette.util import isZeroId, isImageFormatSupported
+from gitfourchette.toolbox import *
 from dataclasses import dataclass
 import html
 import os

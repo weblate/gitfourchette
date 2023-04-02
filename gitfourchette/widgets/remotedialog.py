@@ -1,10 +1,8 @@
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.util import PersistentFileDialog
 from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
 from gitfourchette.widgets.ui_remotedialog import Ui_RemoteDialog
-from html import escape
 import os
 
 
@@ -34,7 +32,7 @@ class RemoteDialog(QDialog):
         hasCustomKeyFile = bool(customKeyFile)
         self.ui.keyFilePathEdit.setText(customKeyFile)
 
-        self.ui.keyFileGroupBox.setToolTip(util.paragraphs(
+        self.ui.keyFileGroupBox.setToolTip(paragraphs(
             self.tr("{0} normally uses public/private keys in ~/.ssh "
                     "to authenticate you with remote servers.").format(qAppName()),
             self.tr("Tick this box if you want to access this remote with a custom key.")))
@@ -48,12 +46,12 @@ class RemoteDialog(QDialog):
 
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(okButton)
-        validator.connectInput(self.ui.nameEdit, lambda s: util.validateRefName(s, existingRemotes, nameTaken))
+        validator.connectInput(self.ui.nameEdit, lambda s: nameValidationMessage(s, existingRemotes, nameTaken))
         validator.connectInput(self.ui.urlEdit, lambda s: cannotBeEmpty if not s.strip() else "")
         validator.connectInput(self.ui.keyFilePathEdit, self.validateKeyFileInput, mustBeValid=False)
 
         if edit:
-            title = self.tr("Edit remote “{0}”").format(escape(util.elide(remoteName)))
+            title = self.tr("Edit remote “{0}”").format(escape(elide(remoteName)))
             self.setWindowTitle(self.tr("Edit remote"))
             okButton.setText(self.tr("Save changes"))
         else:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from gitfourchette.util import isZeroId
+from gitfourchette.porcelain import isZeroId
 import io
 import pygit2
 

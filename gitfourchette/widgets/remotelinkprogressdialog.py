@@ -1,6 +1,6 @@
 from gitfourchette.qt import *
-from gitfourchette.util import stockIcon, setWindowModal
 from gitfourchette.remotelink import RemoteLink
+from gitfourchette.toolbox import *
 from gitfourchette import settings
 
 

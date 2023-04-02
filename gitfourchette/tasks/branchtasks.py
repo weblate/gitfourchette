@@ -1,12 +1,12 @@
 from gitfourchette import porcelain
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.porcelain import HEADS_PREFIX, REMOTES_PREFIX
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.newbranchdialog import NewBranchDialog
 from gitfourchette.widgets.trackedbranchdialog import TrackedBranchDialog
-from html import escape
 import pygit2
 
 
@@ -44,13 +44,15 @@ class RenameBranch(RepoTask):
         forbiddenBranchNames = self.repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
         forbiddenBranchNames.remove(oldBranchName)
 
+        nameTaken = self.tr("This name is already taken by another local branch.")
+
         dlg = showTextInputDialog(
             self.parentWidget(),
-            self.tr("Rename local branch “{0}”").format(escape(util.elide(oldBranchName))),
+            self.tr("Rename local branch “{0}”").format(escape(elide(oldBranchName))),
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),
-            validate=lambda name: util.validateRefName(name, forbiddenBranchNames, self.tr("This name is already taken by another local branch.")),
+            validate=lambda name: nameValidationMessage(name, forbiddenBranchNames, nameTaken),
             deleteOnClose=False)
 
         yield from self._flowDialog(dlg)
@@ -71,8 +73,8 @@ class DeleteBranch(RepoTask):
     def flow(self, localBranchName: str):
         assert not localBranchName.startswith(HEADS_PREFIX)
 
-        text = util.paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
-                               translate("Global", "This cannot be undone!"))
+        text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
+                          translate("Global", "This cannot be undone!"))
 
         yield from self._flowConfirm(
             text=text,
@@ -127,11 +129,11 @@ class _NewBranchBaseTask(RepoTask):
         forbiddenBranchNames = repo.listall_branches(pygit2.GIT_BRANCH_LOCAL)
 
         commitMessage = porcelain.getCommitMessage(repo, tip)
-        commitMessage, junk = util.messageSummary(commitMessage)
+        commitMessage, junk = messageSummary(commitMessage)
 
         dlg = NewBranchDialog(
             initialName=localName,
-            target=util.shortHash(tip),
+            target=shortHash(tip),
             targetSubtitle=commitMessage,
             upstreams=upstreams,
             reservedNames=forbiddenBranchNames,
@@ -144,7 +146,7 @@ class _NewBranchBaseTask(RepoTask):
                 if switchTo:
                     dlg.ui.upstreamCheckBox.setChecked(True)
 
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)
@@ -219,7 +221,7 @@ class EditTrackedBranch(RepoTask):
 
     def flow(self, localBranchName: str):
         dlg = TrackedBranchDialog(self.repo, localBranchName, self.parentWidget())
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         yield from self._flowDialog(dlg)
 
         remoteBranchName = dlg.newTrackedBranchName
@@ -273,14 +275,14 @@ class FastForwardBranch(RepoTask):
             else:
                 message.append(self.tr("Your local branch “{0}” is already up-to-date with “{1}”.").format(
                     escape(localBranchName), escape(remoteBranchName)))
-            util.showInformation(self.parentWidget(), self.name(), util.paragraphs(message))
+            showInformation(self.parentWidget(), self.name(), paragraphs(message))
 
     def onError(self, exc):
         if isinstance(exc, porcelain.DivergentBranchesError):
-            text = util.paragraphs(
+            text = paragraphs(
                 self.tr("Can’t fast-forward “{0}” to “{1}”.").format(exc.localBranch.shorthand, exc.remoteBranch.shorthand),
                 self.tr("The branches are divergent."))
-            util.showWarning(self.parentWidget(), self.name(), text)
+            showWarning(self.parentWidget(), self.name(), text)
         else:
             super().onError(exc)
 
@@ -320,10 +322,10 @@ class RecallCommit(RepoTask):
 
         yield from self._flowExitWorkerThread()
 
-        util.showInformation(
+        showInformation(
             self.parentWidget(),
             self.tr("Recall lost commit"),
-            util.paragraphs(
+            paragraphs(
                 self.tr("Hurray, the commit was found! Find it on this branch:"),
                 "<b>{0}</b>".format(escape(branchName))
             ))

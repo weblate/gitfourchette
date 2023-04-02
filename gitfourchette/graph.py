@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from gitfourchette import log
-from gitfourchette.benchmark import Benchmark
+from gitfourchette.toolbox import *
 from typing import Iterable, ClassVar
 import bisect
 import contextlib

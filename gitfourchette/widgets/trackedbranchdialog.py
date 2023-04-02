@@ -1,8 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
-from gitfourchette.util import elide, escamp, addComboBoxItem, tweakWidgetFont
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import makeBrandedDialog
-from html import escape
 import pygit2
 
 

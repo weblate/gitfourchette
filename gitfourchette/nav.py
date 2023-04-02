@@ -1,7 +1,7 @@
 from __future__ import annotations
 from gitfourchette import log
-from gitfourchette import util
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from pygit2 import Oid
 from typing import ClassVar
 import dataclasses
@@ -130,7 +130,7 @@ class NavLocator:
     def asTitle(self):
         header = self.path
         if self.context == NavContext.COMMITTED:
-            header += " @ " + util.shortHash(self.commit)
+            header += " @ " + shortHash(self.commit)
         elif self.context.isWorkdir():
             header += " [" + self.context.translateName() + "]"
         return header

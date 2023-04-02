@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.toolbox.qbusyspinner import QBusySpinner
+from gitfourchette.toolbox import *
 
 
 class RepoStatusDisplayCache(QObject):

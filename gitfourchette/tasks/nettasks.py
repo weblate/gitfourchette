@@ -3,12 +3,11 @@ Remote access tasks.
 """
 
 from gitfourchette import porcelain
-from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
-from html import escape
 import contextlib
 
 
@@ -24,11 +23,11 @@ class _BaseNetTask(RepoTask):
 
     def _showRemoteLinkDialog(self):
         assert not self.remoteLinkDialog
-        assert util.onAppThread()
+        assert onAppThread()
         self.remoteLinkDialog = RemoteLinkProgressDialog(self.parentWidget())
 
     def _closeRemoteLinkDialog(self):
-        assert util.onAppThread()
+        assert onAppThread()
         if self.remoteLinkDialog:
             self.remoteLinkDialog.close()
             self.remoteLinkDialog.deleteLater()
@@ -52,7 +51,7 @@ class DeleteRemoteBranch(_BaseNetTask):
 
         remoteName, _ = porcelain.splitRemoteBranchShorthand(remoteBranchShorthand)
 
-        text = util.paragraphs(
+        text = paragraphs(
             self.tr("Really delete branch <b>“{0}”</b> "
                     "from the remote repository?").format(escape(remoteBranchShorthand)),
             self.tr("The remote branch will disappear for all users of remote “{0}”.").format(escape(remoteName))
@@ -90,7 +89,7 @@ class RenameRemoteBranch(_BaseNetTask):
             self.tr("Enter new name:"),
             newBranchName,
             okButtonText=self.tr("Rename on remote"),
-            validate=lambda name: util.validateRefName(name, reservedNames, nameTaken),
+            validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken),
             deleteOnClose=False)
 
         yield from self._flowDialog(dlg)

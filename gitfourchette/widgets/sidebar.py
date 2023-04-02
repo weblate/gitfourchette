@@ -1,11 +1,8 @@
 from gitfourchette import porcelain
-from gitfourchette.actiondef import ActionDef
-from gitfourchette.benchmark import Benchmark
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.util import elide, escamp, stockIcon
-from html import escape
 from typing import Any, Iterable
 import contextlib
 import enum

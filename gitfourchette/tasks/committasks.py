@@ -1,5 +1,4 @@
 from gitfourchette import porcelain
-from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
@@ -40,7 +39,7 @@ class NewCommit(RepoTask):
         if not porcelain.hasAnyStagedChanges(self.repo):
             yield from self._flowConfirm(
                 title=self.tr("Create empty commit"),
-                text=util.paragraphs(
+                text=paragraphs(
                     self.tr("No files are staged for commit."),
                     self.tr("Do you want to create an empty commit anyway?")))
 
@@ -55,7 +54,7 @@ class NewCommit(RepoTask):
             detachedHead=self.repo.head_is_detached,
             parent=self.parentWidget())
 
-        util.setWindowModal(cd)
+        setWindowModal(cd)
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self._flowDialog(cd, abortTaskIfRejected=False)
@@ -111,11 +110,11 @@ class AmendCommit(RepoTask):
             initialText=headCommit.message,
             authorSignature=headCommit.author,
             committerSignature=self.repo.default_signature,
-            amendingCommitHash=util.shortHash(headCommit.oid),
+            amendingCommitHash=shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
             parent=self.parentWidget())
 
-        util.setWindowModal(cd)
+        setWindowModal(cd)
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self._flowDialog(cd, abortTaskIfRejected=False)
@@ -179,12 +178,12 @@ class SetUpIdentityFirstRun(RepoTask):
             "Before editing this repository, please set up your identity for Git. "
             "This information will be embedded into the commits and tags that you author.")
 
-        util.tweakWidgetFont(dlg.ui.help1, 90)
-        util.tweakWidgetFont(dlg.ui.help2, 90)
+        tweakWidgetFont(dlg.ui.help1, 90)
+        tweakWidgetFont(dlg.ui.help2, 90)
 
         convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
 
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         yield from self._flowDialog(dlg)
 
         name = ui.nameEdit.text()
@@ -260,7 +259,7 @@ class SetUpRepoIdentity(RepoTask):
         onLocalIdentityCheckBoxChanged(useLocalIdentity)
 
         convertToBrandedDialog(dlg)
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         yield from self._flowDialog(dlg)
 
         name = ui.nameEdit.text()
@@ -302,7 +301,7 @@ class CheckoutCommit(RepoTask):
         refs = [r.removeprefix(porcelain.HEADS_PREFIX) for r in refs if r.startswith(porcelain.HEADS_PREFIX)]
 
         commitMessage = porcelain.getCommitMessage(self.repo, oid)
-        commitMessage, junk = util.messageSummary(commitMessage)
+        commitMessage, junk = messageSummary(commitMessage)
 
         dlg = QDialog(self.parentWidget())
 
@@ -316,7 +315,7 @@ class CheckoutCommit(RepoTask):
             ui.switchToLocalBranchComboBox.setVisible(False)
             ui.switchToLocalBranchRadioButton.setVisible(False)
 
-        dlg.setWindowTitle(self.tr("Check out commit {0}").format(util.shortHash(oid)))
+        dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=f"“{commitMessage}”")
         yield from self._flowDialog(dlg)
 
@@ -376,7 +375,7 @@ class NewTag(RepoTask):
 
         dlg = showTextInputDialog(
             self.parentWidget(),
-            self.tr("New tag on commit “{0}”").format(util.shortHash(oid)),
+            self.tr("New tag on commit “{0}”").format(shortHash(oid)),
             self.tr("Enter tag name:"),
             okButtonText=self.tr("Create Tag"),
             deleteOnClose=False)

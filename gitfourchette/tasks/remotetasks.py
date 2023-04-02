@@ -4,12 +4,10 @@ Remote management tasks.
 
 from gitfourchette import porcelain
 from gitfourchette import repoconfig
-from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.widgets.remotedialog import RemoteDialog
-from html import escape
 
 
 class NewRemote(RepoTask):
@@ -30,7 +28,7 @@ class NewRemote(RepoTask):
             existingRemotes=existingRemotes,
             parent=self.parentWidget())
 
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)
@@ -64,7 +62,7 @@ class EditRemote(RepoTask):
             existingRemotes=existingRemotes,
             parent=self.parentWidget())
 
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)
@@ -88,7 +86,7 @@ class DeleteRemote(RepoTask):
 
     def flow(self, remoteName: str):
         yield from self._flowConfirm(
-            text=util.paragraphs(
+            text=paragraphs(
                 self.tr("Really remove remote <b>“{0}”</b>?").format(escape(remoteName)),
                 self.tr("This will merely detach the remote from your local repository. "
                         "The remote server itself will not be affected.")),

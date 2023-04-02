@@ -1,6 +1,5 @@
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.util import tweakWidgetFont
 from gitfourchette.widgets.ui_commitdialog import Ui_CommitDialog
 from pygit2 import Signature
 

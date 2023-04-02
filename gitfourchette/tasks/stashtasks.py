@@ -1,12 +1,10 @@
 from gitfourchette import porcelain
 from gitfourchette import trash
-from gitfourchette import util
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.stashdialog import StashDialog
 from gitfourchette.widgets.stashdialog_legacy import StashDialog_Legacy
-from html import escape
-import os
 import pygit2
 
 
@@ -65,7 +63,7 @@ class NewStash(RepoTask):
             yield from self._flowAbort(self.tr("There are no changes to stash."), "information")
 
         dlg = StashDialog(status, paths, self.parentWidget())
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         dlg.show()
         # dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)
@@ -87,7 +85,7 @@ class NewStash(RepoTask):
         """
 
         dlg = StashDialog_Legacy(self.parentWidget())
-        util.setWindowModal(dlg)
+        setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)
@@ -120,9 +118,9 @@ class ApplyStash(RepoTask):
         question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
                            ).format(escape(stashMessage))
 
-        qmb = util.asyncMessageBox(self.parentWidget(), 'question', self.name(), question,
-                                   QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-                                   deleteOnClose=False)
+        qmb = asyncMessageBox(self.parentWidget(), 'question', self.name(), question,
+                              QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                              deleteOnClose=False)
 
         def updateButtonText(ticked: bool):
             okButton = qmb.button(QMessageBox.StandardButton.Ok)

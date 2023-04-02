@@ -1,7 +1,6 @@
-from gitfourchette import util
+from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.qelidedlabel import QElidedLabel
 from typing import Callable
 
 
@@ -26,7 +25,7 @@ def makeBrandedDialogLayout(
     titleLayout.setContentsMargins(0, 0, 0, 0)
     title = QLabel(titleText, dialog)
     title.setTextFormat(Qt.TextFormat.RichText)
-    util.tweakWidgetFont(title, 150, bold=True)
+    tweakWidgetFont(title, 150, bold=True)
     titleLayout.addWidget(title)
 
     if subtitleText:
@@ -35,7 +34,7 @@ def makeBrandedDialogLayout(
             subtitle.setWordWrap(True)
         else:
             subtitle = QElidedLabel(subtitleText, dialog)
-        util.tweakWidgetFont(subtitle, relativeSize=90)
+        tweakWidgetFont(subtitle, relativeSize=90)
         titleLayout.addWidget(subtitle)
         title.setAlignment(Qt.AlignmentFlag.AlignBottom)
         subtitle.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -127,7 +126,7 @@ def showTextInputDialog(
     if deleteOnClose:
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-    util.setWindowModal(dlg)
+    setWindowModal(dlg)
 
     dlg.show()
     dlg.setMinimumHeight(dlg.height())

@@ -1,13 +1,10 @@
-from gitfourchette.actiondef import ActionDef
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.commitlogmodel import CommitLogModel
 from gitfourchette.qt import *
-from gitfourchette.util import (messageSummary, shortHash, stockIcon, showWarning, asyncMessageBox,
-                                askConfirmation, paragraphs)
+from gitfourchette.toolbox import *
 from gitfourchette.widgets.graphdelegate import GraphDelegate
 from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
-from html import escape
 from typing import Literal
 import pygit2
 
