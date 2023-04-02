@@ -146,7 +146,7 @@ class RepoTask(QObject):
         self._currentIteration = 0
         self.taskID = RepoTask._globalTaskCounter
         RepoTask._globalTaskCounter += 1
-        self.setObjectName(f"RepoTask({self})")
+        self.setObjectName(f"task{self.__class__.__name__}")
         self.jumpTo = None
 
     def parentWidget(self) -> QWidget:
@@ -164,7 +164,7 @@ class RepoTask(QObject):
         return str(self)
 
     def __str__(self):
-        return f"{self.__class__.__name__}#{self.taskID}"
+        return self.objectName()
 
     def canKill(self, task: RepoTask):
         return False
@@ -268,7 +268,7 @@ class RepoTask(QObject):
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
         subtask = subtaskClass(self)
         subtask.setRepo(self.repo)
-        subtask.setObjectName(f"{self.objectName()}_subtask({subtask})")
+        subtask.setObjectName(f"{self.objectName()}:sub{subtask.objectName()}")
         log.info(TAG, f"{self}: Entering subtask {subtask}")
         yield from subtask.flow(*args, **kwargs)
 
