@@ -3,6 +3,14 @@ import pytest
 import re
 
 
+KF_INTERVAL_TEST = 3
+"""
+In the real world, the interval between keyframes is on the order of thousands
+of frames. For unit testing purposes, let's save keyframes more frequently --
+our test graphs are tiny.
+"""
+
+
 # Values are 3-tuples:
 # [0]: Old graph definition oneliner
 # [1]: New graph definition oneliner (used for splicing)
@@ -251,7 +259,7 @@ def testGraphSplicing(scenarioKey):
     sequence2, parentsOf2, heads2 = parseAncestryOneLiner(textGraph2)
 
     g = Graph()
-    g.generateFullSequence(sequence1, parentsOf1)
+    g.generateFullSequence(sequence1, parentsOf1, keyframeInterval=KF_INTERVAL_TEST)
 
     print(F"Graph before --------- (heads: {heads1})")
     print(g.textDiagram())
@@ -264,7 +272,7 @@ def testGraphSplicing(scenarioKey):
     # modify top of history
     splicer = g.startSplicing(heads1, heads2)
     for commit2 in sequence2:
-        splicer.spliceNewCommit(commit2, parentsOf2[commit2], commit2 in sequence1)
+        splicer.spliceNewCommit(commit2, parentsOf2[commit2], commit2 in sequence1, keyframeInterval=KF_INTERVAL_TEST)
         if not splicer.keepGoing:
             print("Equilibrium found at:", commit2)
             break

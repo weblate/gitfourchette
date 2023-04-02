@@ -589,12 +589,13 @@ class Graph:
     def isEmpty(self):
         return self.startArc.nextArc is None
 
-    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]]):
+    def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
+                             keyframeInterval=KF_INTERVAL):
         cacher = GeneratorState(self.startArc)
 
         for me in sequence:
             cacher.createArcsForNewCommit(me, parentsOf[me])
-            if cacher.row % KF_INTERVAL == 0:
+            if cacher.row % keyframeInterval == 0:
                 self.saveKeyframe(cacher)
 
     def saveKeyframe(self, frame: Frame) -> int:
@@ -854,14 +855,15 @@ class GraphSplicer:
         """
         self.finish()
 
-    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], newCommitWasKnown: bool):
+    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid],
+                        newCommitWasKnown: bool, keyframeInterval=KF_INTERVAL):
         self.newCommitsSeen.add(newCommit)
 
         # Generate arcs for new frame.
         self.newGenerator.createArcsForNewCommit(newCommit, parentsOfNewCommit)
 
         # Save keyframe in new context.
-        if self.newGenerator.row % KF_INTERVAL == 0:
+        if self.newGenerator.row % keyframeInterval == 0:
             self.newGraph.saveKeyframe(self.newGenerator)
 
         # Is it one of the commits that we must see before we can stop consuming new commits?
