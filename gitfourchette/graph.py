@@ -148,6 +148,12 @@ BATCHROW_UNDEF = BatchRow(-1, -1)
 
 
 @dataclass
+class ChainHandle:
+    """ Object shared by arcs on the same chain. """
+    topRow: BatchRow = BATCHROW_UNDEF
+
+
+@dataclass
 class ArcJunction:
     """ Represents the merging of an Arc into another Arc. """
 
@@ -182,7 +188,7 @@ class Arc:
     closedAt: BatchRow
     "Row number in which this arc was closed"
 
-    chainTop: BatchRow
+    chain: ChainHandle
     "Row number of the tip of the arc chain (topmost commit in branch)"
 
     lane: int
@@ -201,7 +207,7 @@ class Arc:
     "Next node in the arc linked list"
 
     def __repr__(self):
-        s = F"Arc(top: {self.chainTop}, oa: {self.openedAt}, ob: {str(self.openedBy)[:5]} \u2192 ca: {self.closedAt}, cb: {str(self.closedBy)[:5]})"
+        s = F"Arc(chain: {self.chain.topRow}, oa: {self.openedAt}, ob: {str(self.openedBy)[:5]} \u2192 ca: {self.closedAt}, cb: {str(self.closedBy)[:5]})"
         if self.closedAt == BATCHROW_UNDEF:
             s += "?"
         return s
@@ -252,30 +258,36 @@ class Frame:
     lastArc: Arc
 
     def getArcsClosedByCommit(self):
-        return filter(lambda arc: arc and arc.closedAt == self.row, self.solvedArcs)
+        return (arc for arc in self.solvedArcs if arc and arc.closedAt == self.row)
 
     def getArcsOpenedByCommit(self):
-        return filter(lambda arc: arc and arc.openedAt == self.row, self.openArcs)
+        return (arc for arc in self.openArcs if arc and arc.openedAt == self.row)
 
     def getArcsPassingByCommit(self):
-        return filter(lambda arc: arc and arc.openedAt != self.row, self.openArcs)
+        return (arc for arc in self.openArcs if arc and arc.openedAt != self.row)
 
-    def getHomeLaneForCommit(self):
+    def getHomeArcForCommit(self) -> Arc:
         leftmostClosed = next(self.getArcsClosedByCommit(), None)
         leftmostOpened = next(self.getArcsOpenedByCommit(), None)
         if leftmostOpened and leftmostClosed:
-            return max(leftmostClosed.lane, leftmostOpened.lane)
+            return max(leftmostClosed, leftmostOpened, key=lambda a: a.lane)
         elif leftmostClosed:
-            return leftmostClosed.lane
+            return leftmostClosed
         elif leftmostOpened:
-            return leftmostOpened.lane
+            return leftmostOpened
         else:
             # It's a parentless + childless commit.
             # Implementation detail: for parentless commits, we create a bogus arc
             # as the "last" arc in the frame; we can get the lane from this bogus arc.
             assert self.lastArc.isParentlessCommitBogusArc()
             assert self.lastArc.openedBy == self.commit
-            return self.lastArc.lane
+            return self.lastArc
+
+    def getHomeLaneForCommit(self) -> int:
+        return self.getHomeArcForCommit().lane
+
+    def getHomeChainForCommit(self) -> ChainHandle:
+        return self.getHomeArcForCommit().chain
 
     def sealCopy(self) -> Frame:
         """
@@ -364,7 +376,7 @@ class Frame:
         # Sort arcs by Chain Birth Row
 
         def sortArc(a: Arc):
-            return int(a.chainTop) * 1000 + a.lane
+            return int(a.chain.topRow) * 1000 + a.lane
 
         arcsAbove = sorted(arcsAbove, key=sortArc, reverse=True)
         arcsBelow = sorted(arcsBelow, key=sortArc, reverse=True)
@@ -397,7 +409,10 @@ class Frame:
             assert lane < maxLanes
             return lane * COLUMN_WIDTH
 
-        homeLane = self.getHomeLaneForCommit()
+        homeArc = self.getHomeArcForCommit()
+        homeLane = homeArc.lane
+        homeChain = homeArc.chain
+
         maxLanes = max(len(self.openArcs), len(self.solvedArcs)) + 1
 
         gridHi = [" "] * (maxLanes * COLUMN_WIDTH + 4)
@@ -483,9 +498,9 @@ class Frame:
         gridLoStr = ''.join(gridLo)
 
         text = ""
-        text += F"{int(self.row):<4} {self.commit[:4]:>4} {gridHiStr}\n"
+        text += F"{int(self.row):<4} {int(homeChain.topRow):<4} {self.commit[:4]:>4} {gridHiStr}\n"
         if any(c in gridLoStr for c in "╭╮╰╯"):
-            text += F"{' ' * 9} {gridLoStr} {junctionExplainer}\n"
+            text += F"{' ' * 14} {gridLoStr} {junctionExplainer}\n"
         return text
 
 
@@ -519,11 +534,11 @@ class GeneratorState(Frame):
         handOffHomeLane = False
         if not myOpenArcs:
             # Nobody was looking for me, so I'm the tip of a new branch
-            myHomeChain = row
+            myHomeChain = ChainHandle(row)
         else:
             myMainOpenArc = min(myOpenArcs, key=lambda a: a.lane)
             myHomeLane = myMainOpenArc.lane
-            myHomeChain = myMainOpenArc.chainTop
+            myHomeChain = myMainOpenArc.chain
             for arc in myOpenArcs:
                 assert arc.closedBy == me
                 assert arc.closedAt == BATCHROW_UNDEF
@@ -574,9 +589,16 @@ class GeneratorState(Frame):
                 # Pick leftmost free lane
                 freeLane = self.freeLanes.pop(0)
 
-            newArc = Arc(lane=freeLane,
+            if not sawFirstParent:
+                # Hand off my chain
+                parentChain = myHomeChain
+            else:
+                # Branch out new chain downward
+                parentChain = ChainHandle(row)
+
+            # Make arc from this commit to its parent
+            newArc = Arc(lane=freeLane, chain=parentChain,
                          openedAt=row, closedAt=BATCHROW_UNDEF,
-                         chainTop=myHomeChain if not sawFirstParent else row,
                          openedBy=me, closedBy=parent, junctions=[])
             self.openArcs[freeLane] = newArc
             self.parentLookup[parent].append(newArc)
@@ -597,16 +619,17 @@ class GeneratorState(Frame):
                     myHomeLane = len(self.openArcs)
                 else:
                     myHomeLane = self.freeLanes[0]  # PEEK only! do not pop!
-            newArc = Arc(lane=myHomeLane,
-                         openedAt=row, closedAt=row, chainTop=myHomeChain,
+            newArc = Arc(lane=myHomeLane, chain=myHomeChain,
+                         openedAt=row, closedAt=row,
                          openedBy=me, closedBy=me, junctions=[])
             self.lastArc.nextArc = newArc
             self.lastArc = newArc
 
         assert not handOffHomeLane
-        assert myHomeChain != BATCHROW_UNDEF
+        assert myHomeChain.topRow != BATCHROW_UNDEF
         assert len(self.openArcs) == len(self.solvedArcs)
 
+        # Keep track of peak arc count for statistics
         self.peakArcCount = max(self.peakArcCount, len(self.openArcs))
 
 
@@ -706,7 +729,7 @@ class Graph:
         self.startArc = Arc(
             openedAt=BATCHROW_UNDEF,
             closedAt=BATCHROW_UNDEF,
-            chainTop=BATCHROW_UNDEF,
+            chain=ChainHandle(BATCHROW_UNDEF),
             lane=-1,
             openedBy="!TOP",
             closedBy="!BOTTOM",
@@ -1063,6 +1086,13 @@ class GraphSplicer:
             assert newOpenArc.closedBy == oldOpenArc.closedBy
             assert newOpenArc.closedAt == BATCHROW_UNDEF  # new graph's been interrupted before resolving this arc
             newOpenArc.closedAt = oldOpenArc.closedAt
+
+            # Remap chain - the ChainHandle object is shared with all arcs on this chain
+            newCH = newOpenArc.chain
+            oldCH = oldOpenArc.chain
+            assert newCH.topRow != BATCHROW_UNDEF
+            assert oldCH.topRow != BATCHROW_UNDEF
+            oldCH.topRow = newCH.topRow
 
             # Splice old junctions into new junctions
             if oldOpenArc.junctions:

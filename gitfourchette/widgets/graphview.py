@@ -242,12 +242,17 @@ class GraphView(QListView):
             state = self.repoWidget.state
             seqIndex = state.graph.getCommitRow(oid)
             frame = state.graph.getFrame(seqIndex)
+            homeChainTopRow = frame.getHomeChainForCommit().topRow
+            homeChainTopOid = state.graph.getFrame(homeChainTopRow).commit
+            homeChainLocator = NavLocator.inCommit(homeChainTopOid)
             markup += F"""
                 <tr><td><b>View row</b></td><td>{self.currentIndex().row()}</td></tr>
                 <tr><td><b>Graph row</b></td><td>{repr(state.graph.commitRows[oid])}</td></tr>
+                <tr><td><b>Home chain</b></td><td>{repr(homeChainTopRow)} ({homeChainLocator.toHtml(shortHash(homeChainTopOid))})</td></tr>
                 <tr><td><b>Arcs</b></td><td>{len(frame.openArcs)} open, {len(frame.solvedArcs)} solved</td></tr>
             """
             details = str(frame) + "\n\n" + details
+
         markup += "</table>"
 
         title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
