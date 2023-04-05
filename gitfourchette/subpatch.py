@@ -65,6 +65,13 @@ def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
     else:
         preamble += F"new file mode {nf.mode:06o}\n"
 
+    # Work around libgit2 bug: if a patch lacks the "index" line,
+    # libgit2 will fail to parse it if there are "old mode"/"new mode" lines.
+    # Also, even if the patch is successfully parsed as a Diff, and we need to
+    # regenerate it (from the Diff), libgit2 may fail to re-create the
+    # "---"/"+++" lines and it'll therefore fail to parse its own output.
+    preamble += f"index {of.id.hex}..{'f'*40}\n"
+
     if ofExists:
         preamble += F"--- a/{of.path}\n"
     else:
