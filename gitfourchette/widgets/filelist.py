@@ -544,10 +544,29 @@ class FileList(QListView):
             paths.append(patch.delta.old_file.path)
         self.stashFiles.emit(paths)
 
+    def revertModeActionDef(self, n: int, callback: Callable):
+        action = ActionDef(self.tr("Revert Old Mode(s)", "", n), callback, enabled=False)
+
+        for entry in self.selectedEntries():
+            om = entry.delta.old_file.mode
+            nm = entry.delta.new_file.mode
+            if (entry.delta.status in [pygit2.GIT_DELTA_MODIFIED, pygit2.GIT_DELTA_RENAMED]
+                    and om != nm
+                    and nm in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]):
+                action.enabled = True
+                if n == 1:
+                    if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+                        action.caption = self.tr("Revert Old Mode ({0})").format("-x")
+                    elif nm == pygit2.GIT_FILEMODE_BLOB:
+                        action.caption = self.tr("Revert Old Mode ({0})").format("+x")
+
+        return action
+
 
 class DirtyFiles(FileList):
     stageFiles = Signal(list)
     discardFiles = Signal(list)
+    discardModeChanges = Signal(list)
 
     def __init__(self, parent):
         super().__init__(parent, NavContext.UNSTAGED)
@@ -568,6 +587,7 @@ class DirtyFiles(FileList):
                 QStyle.StandardPixmap.SP_TrashIcon,
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
+            self.revertModeActionDef(n, self.wantDiscardModeChanges),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("&Open in {0}", "", n).format(settings.getExternalEditorName()),
                       self.openWorkdirFile, icon=QStyle.StandardPixmap.SP_FileIcon),
@@ -600,9 +620,13 @@ class DirtyFiles(FileList):
     def discard(self):
         self.discardFiles.emit(list(self.selectedEntries()))
 
+    def wantDiscardModeChanges(self):
+        self.discardModeChanges.emit(list(self.selectedEntries()))
+
 
 class StagedFiles(FileList):
     unstageFiles: Signal = Signal(list)
+    unstageModeChanges: Signal = Signal(list)
 
     def __init__(self, parent):
         super().__init__(parent, NavContext.STAGED)
@@ -617,6 +641,7 @@ class StagedFiles(FileList):
                 QStyle.StandardPixmap.SP_ArrowUp,
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
+            self.revertModeActionDef(n, self.wantUnstageModeChange),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("&Open in {0}", "", n).format(settings.getExternalEditorName()),
                       self.openWorkdirFile, QStyle.StandardPixmap.SP_FileIcon),
@@ -643,6 +668,9 @@ class StagedFiles(FileList):
 
     def unstage(self):
         self.unstageFiles.emit(list(self.selectedEntries()))
+
+    def wantUnstageModeChange(self):
+        self.unstageModeChanges.emit(list(self.selectedEntries()))
 
 
 class CommittedFiles(FileList):

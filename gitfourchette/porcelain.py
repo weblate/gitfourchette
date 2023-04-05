@@ -819,6 +819,17 @@ def restoreFiles(repo: Repository, paths: list[str]):
     repo.checkout_tree(headTree, paths=paths, strategy=strategy)
 
 
+def getStagedTree(repo: Repository) -> pygit2.Tree:
+    # refresh index before getting indexTree in case an external program modified the staging area
+    repo.index.read(force=False)
+
+    # get tree with staged changes
+    indexTreeId = repo.index.write_tree()
+    indexTree = repo[indexTreeId]
+
+    return indexTree
+
+
 def discardFiles(repo: Repository, paths: list[str]):
     """
     Discards unstaged changes in the given files.
@@ -829,15 +840,29 @@ def discardFiles(repo: Repository, paths: list[str]):
                 | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
                 | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
 
-    # refresh index before getting indexTree in case an external program modified the staging area
-    repo.index.read(force=False)
-
     # get tree with staged changes
-    indexTreeId = repo.index.write_tree()
-    indexTree = repo[indexTreeId]
+    indexTree = getStagedTree(repo)
 
     # reset files to their state in the staged tree
     repo.checkout_tree(indexTree, paths=paths, strategy=strategy)
+
+
+def discardModeChanges(repo: Repository, paths: list[str]):
+    """
+    Discards mode changes in the given files.
+    """
+
+    # get tree with staged changes
+    indexTree = getStagedTree(repo)
+
+    # reset files to their mode in the staged tree
+    for p in paths:
+        try:
+            mode = indexTree[p].filemode
+        except KeyError:
+            continue
+        if mode in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]:
+            os.chmod(workdirPath(repo, p), mode)
 
 
 def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
@@ -865,6 +890,20 @@ def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
             assert old_path in headTree
             obj = headTree[old_path]
             index.add(pygit2.IndexEntry(old_path, obj.oid, obj.filemode))
+    index.write()
+
+
+def unstageModeChanges(repo: Repository, patches: list[pygit2.Patch]):
+    index = repo.index
+
+    for patch in patches:
+        of = patch.delta.old_file
+        nf = patch.delta.new_file
+        if (of.mode != nf.mode
+                and patch.delta.status not in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_DELETED, pygit2.GIT_DELTA_UNTRACKED]
+                and of.mode in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]):
+            index.add(pygit2.IndexEntry(nf.path, nf.id, of.mode))
+
     index.write()
 
 

@@ -79,6 +79,46 @@ class UnstageFiles(_BaseStagingTask):
         porcelain.unstageFiles(self.repo, patches)
 
 
+class DiscardModeChanges(_BaseStagingTask):
+    def name(self):
+        return translate("Operation", "Discard mode changes")
+
+    def flow(self, patches: list[pygit2.Patch]):
+        textPara = []
+
+        if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
+            QApplication.beep()
+            yield from self._flowAbort()
+        elif len(patches) == 1:
+            path = patches[0].delta.new_file.path
+            textPara.append(self.tr("Really discard mode change in <b>“{0}”</b>?").format(escape(path)))
+        else:
+            textPara.append(self.tr("Really discard mode changes in <b>%n files</b>?", "", len(patches)))
+        textPara.append(translate("Global", "This cannot be undone!"))
+
+        yield from self._flowConfirm(
+            text=paragraphs(textPara),
+            verb=self.tr("Discard mode changes", "Button label"),
+            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+
+        yield from self._flowBeginWorkerThread()
+        paths = [patch.delta.new_file.path for patch in patches]
+        porcelain.discardModeChanges(self.repo, paths)
+
+
+class UnstageModeChanges(_BaseStagingTask):
+    def name(self):
+        return translate("Operation", "Unstage mode changes")
+
+    def flow(self, patches: list[pygit2.Patch]):
+        if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
+            QApplication.beep()
+            yield from self._flowAbort()
+
+        yield from self._flowBeginWorkerThread()
+        porcelain.unstageModeChanges(self.repo, patches)
+
+
 class ApplyPatch(RepoTask):
     def name(self):
         return translate("Operation", "Apply patch")

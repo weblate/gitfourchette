@@ -228,6 +228,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.diffView.applyPatch,              tasks.ApplyPatch)
         self.connectTask(self.diffView.revertPatch,             tasks.RevertPatch)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
+        self.connectTask(self.dirtyFiles.discardModeChanges,    tasks.DiscardModeChanges)
         self.connectTask(self.dirtyFiles.jump,                  tasks.Jump)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.dirtyFiles.stashFiles,            tasks.NewStash)
@@ -268,6 +269,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.stagedFiles.jump,                 tasks.Jump)
         self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
+        self.connectTask(self.stagedFiles.unstageModeChanges,   tasks.UnstageModeChanges)
 
     # -------------------------------------------------------------------------
 
