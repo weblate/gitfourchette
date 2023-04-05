@@ -8,7 +8,8 @@ from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.diffmodel import DiffConflict, DiffModelError, DiffModel, DiffImagePair
+from gitfourchette.diffview.diffdocument import DiffDocument
+from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 
 TAG = "Jump"
 
@@ -25,7 +26,7 @@ class Jump(RepoTask):
 
     @property
     def rw(self):
-        from gitfourchette.widgets.repowidget import RepoWidget
+        from gitfourchette.repowidget import RepoWidget
         rw: RepoWidget = self.parentWidget()
         assert isinstance(rw, RepoWidget)
         return rw
@@ -93,18 +94,18 @@ class Jump(RepoTask):
         if type(result) == DiffConflict:
             rw.diffStack.setCurrentWidget(rw.conflictView)
             rw.conflictView.displayConflict(result)
-        elif type(result) == DiffModelError:
-            rw.diffStack.setCurrentWidget(rw.richDiffView)
-            rw.richDiffView.displayDiffModelError(result)
-        elif type(result) == DiffModel:
+        elif type(result) == SpecialDiffError:
+            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.specialDiffView.displaySpecialDiffError(result)
+        elif type(result) == DiffDocument:
             rw.diffStack.setCurrentWidget(rw.diffView)
             rw.diffView.replaceDocument(rw.repo, patch, locator, result)
         elif type(result) == DiffImagePair:
-            rw.diffStack.setCurrentWidget(rw.richDiffView)
-            rw.richDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
+            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.specialDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
         else:
-            rw.diffStack.setCurrentWidget(rw.richDiffView)
-            rw.richDiffView.displayDiffModelError(DiffModelError(
+            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
                 icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
@@ -156,9 +157,9 @@ class Jump(RepoTask):
         # Special case if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
             rw.filesStack.setCurrentWidget(rw.stageSplitter)
-            rw.diffStack.setCurrentWidget(rw.richDiffView)
+            rw.diffStack.setCurrentWidget(rw.specialDiffView)
             rw.diffHeader.setText(self.tr("Working directory clean"))
-            rw.richDiffView.displayDiffModelError(DiffModelError(
+            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("The working directory is clean."),
                 self.tr("There aren’t any changes to commit."),
                 QStyle.StandardPixmap.SP_MessageBoxInformation))
@@ -218,8 +219,8 @@ class Jump(RepoTask):
 
             # Show message if commit is empty
             if flv.isEmpty():
-                rw.diffStack.setCurrentWidget(rw.richDiffView)
-                rw.richDiffView.displayDiffModelError(DiffModelError(self.tr("Empty commit.")))
+                rw.diffStack.setCurrentWidget(rw.specialDiffView)
+                rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(self.tr("Empty commit.")))
 
             # Set header text
             rw.committedHeader.setText(self.tr("%n change(s) in {0}:", "", numChanges
@@ -229,9 +230,9 @@ class Jump(RepoTask):
         # Special case if there are no changes
         if flv.isEmpty():
             rw.filesStack.setCurrentWidget(rw.committedFilesContainer)
-            rw.diffStack.setCurrentWidget(rw.richDiffView)
+            rw.diffStack.setCurrentWidget(rw.specialDiffView)
             rw.diffHeader.setText(self.tr("Empty commit"))
-            rw.richDiffView.displayDiffModelError(DiffModelError(
+            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("This commit is empty."),
                 self.tr("Commit “{0}” doesn’t affect any files.").format(shortHash(locator.commit)),
                 QStyle.StandardPixmap.SP_MessageBoxInformation))
@@ -253,7 +254,7 @@ class JumpBackOrForward(tasks.RepoTask):
     """
 
     def flow(self, delta: int):
-        from gitfourchette.widgets.repowidget import RepoWidget
+        from gitfourchette.repowidget import RepoWidget
 
         rw: RepoWidget = self.parentWidget()
         assert isinstance(rw, RepoWidget)
@@ -304,7 +305,7 @@ class RefreshRepo(tasks.RepoTask):
         return TaskEffects.Nothing
 
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
-        from gitfourchette.widgets.repowidget import RepoWidget
+        from gitfourchette.repowidget import RepoWidget
 
         rw: RepoWidget = self.parentWidget()
         assert isinstance(rw, RepoWidget)

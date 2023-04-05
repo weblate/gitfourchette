@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.brandeddialog import makeBrandedDialog
+from gitfourchette.forms.brandeddialog import makeBrandedDialog
 import pygit2
 
 

@@ -4,8 +4,8 @@ TODO: Remove this once libgit2 1.6 support lands in pygit2
 
 
 from gitfourchette.qt import *
-from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
-from gitfourchette.widgets.ui_stashdialog_legacy import Ui_StashDialog_Legacy
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_stashdialog_legacy import Ui_StashDialog_Legacy
 
 
 class StashDialog_Legacy(QDialog):

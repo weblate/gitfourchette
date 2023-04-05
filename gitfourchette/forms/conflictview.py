@@ -1,9 +1,9 @@
-from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.diffmodel import DiffConflict
-from gitfourchette.widgets.ui_conflictview import Ui_ConflictView
+from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
+                                                DiffConflict)
+from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 import pygit2
 
 

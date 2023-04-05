@@ -3,8 +3,8 @@ from gitfourchette import trash
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.stashdialog import StashDialog
-from gitfourchette.widgets.stashdialog_legacy import StashDialog_Legacy
+from gitfourchette.forms.stashdialog import StashDialog
+from gitfourchette.forms.stashdialog_legacy import StashDialog_Legacy
 import pygit2
 
 

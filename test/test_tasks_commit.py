@@ -3,9 +3,9 @@ from .fixtures import *
 from .util import *
 from gitfourchette import porcelain
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
-from gitfourchette.widgets.commitdialog import CommitDialog
-from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
-from gitfourchette.widgets.ui_identitydialog1 import Ui_IdentityDialog1
+from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.resetheaddialog import ResetHeadDialog
+from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 import pygit2
 
 

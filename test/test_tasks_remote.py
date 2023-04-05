@@ -1,15 +1,12 @@
-from . import reposcenario
-from .fixtures import *
-from .util import *
-from gitfourchette.widgets.repowidget import RepoWidget
-from gitfourchette.widgets.remotedialog import RemoteDialog
-from gitfourchette.widgets.sidebar import EItem
-from gitfourchette import porcelain
-import re
-
 """
 Remote management tests.
 """
+
+from . import reposcenario
+from .fixtures import *
+from .util import *
+from gitfourchette.forms.remotedialog import RemoteDialog
+from gitfourchette.sidebar.sidebarmodel import EItem
 
 
 def testNewRemote(qtbot, tempDir, mainWindow):

@@ -5,7 +5,7 @@ from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-from gitfourchette.widgets.diffview import PatchPurpose
+from gitfourchette.diffview.diffview import PatchPurpose
 import os
 import pygit2
 

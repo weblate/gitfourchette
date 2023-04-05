@@ -3,7 +3,7 @@ from gitfourchette import tempdir
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.exttools import openInMergeTool
-from gitfourchette.widgets.diffmodel import DiffConflict
+from gitfourchette.diffview.specialdiff import DiffConflict
 import filecmp
 import os
 import pygit2

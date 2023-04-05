@@ -1,28 +1,32 @@
+from typing import Literal, Type, Callable
+
+import pygit2
+
 from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
+from gitfourchette.diffview.diffdocument import DiffDocument
+from gitfourchette.diffview.diffview import DiffView
+from gitfourchette.diffview.specialdiff import DiffConflict
+from gitfourchette.diffview.specialdiffview import SpecialDiffView
 from gitfourchette.exttools import openInTextEditor
+from gitfourchette.filelists.committedfiles import CommittedFiles
+from gitfourchette.filelists.dirtyfiles import DirtyFiles
+from gitfourchette.filelists.stagedfiles import StagedFiles
+from gitfourchette.forms.brandeddialog import showTextInputDialog
+from gitfourchette.forms.conflictview import ConflictView
+from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.forms.repostatusdisplay import RepoStatusDisplayCache
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
+from gitfourchette.sidebar.sidebar import Sidebar
 from gitfourchette.tasks import TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
-from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.conflictview import ConflictView
-from gitfourchette.widgets.diffmodel import DiffModel, DiffConflict
-from gitfourchette.widgets.diffview import DiffView
-from gitfourchette.widgets.filelist import DirtyFiles, StagedFiles, CommittedFiles
-from gitfourchette.widgets.pushdialog import PushDialog
-from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplayCache
-from gitfourchette.widgets.richdiffview import RichDiffView
-from gitfourchette.widgets.sidebar import Sidebar
-from typing import Literal, Type, Callable
-import os
-import pygit2
 
 TAG = "RepoWidget"
 
@@ -85,10 +89,10 @@ class RepoWidget(QWidget):
         self.dirtyFiles = DirtyFiles(self)
         self.stagedFiles = StagedFiles(self)
         self.diffView = DiffView(self)
-        self.richDiffView = RichDiffView(self)
+        self.specialDiffView = SpecialDiffView(self)
         self.conflictView = ConflictView(self)
 
-        self.richDiffView.anchorClicked.connect(self.processInternalLink)
+        self.specialDiffView.anchorClicked.connect(self.processInternalLink)
         self.graphView.linkActivated.connect(self.processInternalLink)
 
         for fileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
@@ -165,7 +169,7 @@ class RepoWidget(QWidget):
         self.filesStack.setCurrentWidget(self.committedFilesContainer)
 
         self.diffStack.addWidget(self.diffView)
-        self.diffStack.addWidget(self.richDiffView)
+        self.diffStack.addWidget(self.specialDiffView)
         self.diffStack.addWidget(self.conflictView)
         self.diffStack.setCurrentWidget(self.diffView)
 
@@ -412,6 +416,9 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
 
+    def __repr__(self):
+        return f"RepoWidget({self.getTitle()})"
+
     def getTitle(self):
         if self.state:
             return self.state.shortName
@@ -490,7 +497,7 @@ class RepoWidget(QWidget):
     def loadPatchInNewWindow(self, patch: pygit2.Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
-            diffWindow.replaceDocument(self.repo, patch, locator, DiffModel.fromPatch(patch))
+            diffWindow.replaceDocument(self.repo, patch, locator, DiffDocument.fromPatch(patch))
             diffWindow.resize(550, 700)
             diffWindow.setWindowTitle(locator.asTitle())
             diffWindow.setWindowFlag(Qt.WindowType.Window, True)

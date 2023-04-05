@@ -1,6 +1,6 @@
 from gitfourchette import log
 from gitfourchette.qt import *
-from gitfourchette.widgets.ui_statusform import Ui_StatusForm
+from gitfourchette.forms.ui_statusform import Ui_StatusForm
 
 
 class StatusForm(QWidget):

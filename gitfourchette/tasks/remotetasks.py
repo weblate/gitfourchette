@@ -7,7 +7,7 @@ from gitfourchette import repoconfig
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.remotedialog import RemoteDialog
+from gitfourchette.forms.remotedialog import RemoteDialog
 
 
 class NewRemote(RepoTask):

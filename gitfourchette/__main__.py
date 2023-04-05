@@ -92,7 +92,7 @@ def main():
         session.activeTabIndex = len(session.tabs) - 1
 
     def bootMainWindow():
-        from gitfourchette.widgets.mainwindow import MainWindow
+        from gitfourchette.mainwindow import MainWindow
         MainWindow.reloadStyleSheet()
         window = MainWindow()
         window.show()

@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.widgets.ui_searchbar import Ui_SearchBar
+from gitfourchette.forms.ui_searchbar import Ui_SearchBar
 
 
 class SearchBar(QWidget):

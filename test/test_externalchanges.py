@@ -1,15 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.repowidget import RepoWidget
-from gitfourchette.widgets.remotedialog import RemoteDialog
-from gitfourchette.widgets.sidebar import EItem
-from gitfourchette.widgets.stashdialog import StashDialog
-from gitfourchette import porcelain
-import re
-import shutil
 import subprocess
-import threading
 
 
 def testExternalUnstage(qtbot, tempDir, mainWindow):
@@ -91,8 +83,8 @@ def testPatchBecameInvalid(qtbot, tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 1)  # Select b/b2.txt
 
     assert not rw.diffView.isVisibleTo(rw)
-    assert rw.richDiffView.isVisibleTo(rw)
-    doc = rw.richDiffView.document()
+    assert rw.specialDiffView.isVisibleTo(rw)
+    doc = rw.specialDiffView.document()
     text = doc.toRawText()
     assert "changed on disk" in text.lower()
 

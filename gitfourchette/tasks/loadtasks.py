@@ -1,12 +1,14 @@
+import pygit2
+
 from gitfourchette import log
 from gitfourchette import porcelain
+from gitfourchette.diffview.diffdocument import DiffDocument
+from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
+                                                DiffConflict)
 from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.diffmodel import DiffModelError, DiffConflict, DiffModel, ShouldDisplayPatchAsImageDiff, \
-    DiffImagePair
-import pygit2
 
 TAG = "LoadTasks"
 
@@ -60,33 +62,33 @@ class LoadPatch(RepoTask):
         return type(task) in [LoadPatch]
 
     def _processPatch(self, patch: pygit2.Patch, locator: NavLocator
-                      ) -> DiffModel | DiffModelError | DiffConflict | DiffImagePair:
+                      ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:
         if not patch:
             locator = locator.withExtraFlags(NavFlags.ForceRefreshWorkdir)
             message = locator.toHtml(self.tr("The file appears to have changed on disk since we cached it. "
                                              "[Try to refresh it.]"))
-            return DiffModelError(self.tr("Outdated diff."), message,
-                                  icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+            return SpecialDiffError(self.tr("Outdated diff."), message,
+                                    icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if not patch.delta:
             # Rare libgit2 bug, should be fixed in 1.6.0
-            return DiffModelError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+            return SpecialDiffError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
             ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]
             return DiffConflict(ancestor, ours, theirs)
 
         try:
-            diffModel = DiffModel.fromPatch(patch, locator)
+            diffModel = DiffDocument.fromPatch(patch, locator)
             diffModel.document.moveToThread(QApplication.instance().thread())
             return diffModel
-        except DiffModelError as dme:
+        except SpecialDiffError as dme:
             return dme
         except ShouldDisplayPatchAsImageDiff:
             return DiffImagePair(self.repo, patch.delta, locator)
         except BaseException as exc:
             summary, details = excStrings(exc)
-            return DiffModelError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
+            return SpecialDiffError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
     def flow(self, patch: pygit2.Patch, locator: NavLocator):
         yield from self._flowBeginWorkerThread()

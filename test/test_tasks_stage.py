@@ -1,7 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.forms.commitdialog import CommitDialog
 import pygit2
 
 

@@ -5,8 +5,8 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.graphview.commitlogfilter import CommitLogFilter
 from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
-from gitfourchette.widgets.searchbar import SearchBar
-from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
+from gitfourchette.forms.searchbar import SearchBar
+from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from typing import Literal
 import pygit2
 

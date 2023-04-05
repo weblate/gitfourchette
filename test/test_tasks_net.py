@@ -7,7 +7,7 @@ We use a bare repository on the local filesystem as a "remote server".
 
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.sidebar import EItem
+from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette import porcelain
 
 

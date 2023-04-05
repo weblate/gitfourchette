@@ -1,7 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.commitdialog import CommitDialog
+from gitfourchette.forms.commitdialog import CommitDialog
 import pygit2
 
 
@@ -13,8 +13,8 @@ def testSensibleMessageShownForUnstagedEmptyFile(qtbot, tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 0)
 
     assert not rw.diffView.isVisibleTo(rw)
-    assert rw.richDiffView.isVisibleTo(rw)
-    assert "empty" in rw.richDiffView.toPlainText().lower()
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert "empty" in rw.specialDiffView.toPlainText().lower()
 
 
 def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):

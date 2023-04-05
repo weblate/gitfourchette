@@ -1,4 +1,4 @@
-from gitfourchette.widgets.mainwindow import MainWindow
+from gitfourchette.mainwindow import MainWindow
 from pytestqt.qtbot import QtBot
 import pytest
 import tempfile

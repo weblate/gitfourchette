@@ -1,6 +1,6 @@
 from gitfourchette.qt import *
 from gitfourchette import exttools
-from gitfourchette.widgets.ui_aboutdialog import Ui_AboutDialog
+from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
 import contextlib
 import pygit2
 import sys

@@ -5,8 +5,8 @@ from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import translateExceptionName
-from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
-from gitfourchette.widgets.ui_pushdialog import Ui_PushDialog
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
 import enum
 import pygit2
 import traceback

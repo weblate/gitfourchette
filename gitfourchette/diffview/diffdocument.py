@@ -1,14 +1,13 @@
+from dataclasses import dataclass
+
+import pygit2
+
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.diffview.specialdiff import SpecialDiffError
 from gitfourchette.nav import NavLocator, NavFlags
-from gitfourchette.porcelain import isZeroId
-from gitfourchette.subpatch import DiffLinePos
 from gitfourchette.qt import *
-from gitfourchette.toolbox import *
-from dataclasses import dataclass
-import html
-import os
-import pygit2
+from gitfourchette.subpatch import DiffLinePos
 
 MAX_LINE_LENGTH = 10_000
 
@@ -32,59 +31,6 @@ class LineData:
 
     clumpID: int = -1
     "Which clump this line pertains to. 'Clumps' are groups of adjacent +/- lines."
-
-
-class DiffModelError(Exception):
-    def __init__(
-            self,
-            message: str,
-            details: str = "",
-            icon=QStyle.StandardPixmap.SP_MessageBoxInformation,
-            preformatted: str = "",
-            longform: str = "",
-    ):
-        super().__init__(message)
-        self.message = message
-        self.details = details
-        self.icon = icon
-        self.preformatted = preformatted
-        self.longform = longform
-
-
-class ShouldDisplayPatchAsImageDiff(Exception):
-    def __init__(self):
-        super().__init__("This patch should be viewed as an image diff!")
-
-
-class DiffImagePair:
-    oldImage: QImage
-    newImage: QImage
-
-    def __init__(self, repo: pygit2.Repository, delta: pygit2.DiffDelta, locator: NavLocator):
-        if not isZeroId(delta.old_file.id):
-            imageDataA = repo[delta.old_file.id].peel(pygit2.Blob).data
-        else:
-            imageDataA = b''
-
-        if isZeroId(delta.new_file.id):
-            imageDataB = b''
-        elif locator.context.isDirty():
-            fullPath = os.path.join(repo.workdir, delta.new_file.path)
-            assert os.lstat(fullPath).st_size == delta.new_file.size, "Size mismatch in unstaged image file"
-            with open(fullPath, 'rb') as file:
-                imageDataB = file.read()
-        else:
-            imageDataB = repo[delta.new_file.id].peel(pygit2.Blob).data
-
-        self.oldImage = QImage.fromData(imageDataA)
-        self.newImage = QImage.fromData(imageDataB)
-
-
-@dataclass
-class DiffConflict:
-    ancestor: pygit2.IndexEntry | None
-    ours: pygit2.IndexEntry | None
-    theirs: pygit2.IndexEntry | None
 
 
 class DiffStyle:
@@ -115,33 +61,8 @@ class DiffStyle:
         self.warningCF1.setForeground(QColor(200, 30, 0))
 
 
-def noChange(delta: pygit2.DiffDelta):
-    message = translate("DiffModel", "File contents didn’t change.")
-    details = []
-
-    oldFileExists = not isZeroId(delta.old_file.id)
-    newFileExists = not isZeroId(delta.new_file.id)
-
-    if not newFileExists:
-        message = translate("DiffModel", "Empty file was deleted.")
-
-    if not oldFileExists:
-        if delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
-            message = translate("DiffModel", "New empty file.")
-        else:
-            message = translate("DiffModel", "File is empty.")
-
-    if delta.old_file.path != delta.new_file.path:
-        details.append(translate("DiffModel", "Renamed:") + f" “{html.escape(delta.old_file.path)}” &rarr; “{html.escape(delta.new_file.path)}”.")
-
-    if oldFileExists and delta.old_file.mode != delta.new_file.mode:
-        details.append(translate("DiffModel", "Mode change:") + f" “{delta.old_file.mode:06o}” &rarr; “{delta.new_file.mode:06o}”.")
-
-    return DiffModelError(message, "\n".join(details))
-
-
 @dataclass
-class DiffModel:
+class DiffDocument:
     document: QTextDocument
     lineData: list[LineData]
     style: DiffStyle
@@ -149,45 +70,25 @@ class DiffModel:
     @staticmethod
     def fromPatch(patch: pygit2.Patch, locator: NavLocator):
         if patch.delta.similarity == 100:
-            raise noChange(patch.delta)
-
-        locale = QLocale()
+            raise SpecialDiffError.noChange(patch.delta)
 
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
-            of = patch.delta.old_file
-            nf = patch.delta.new_file
-            if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
-                largestSize = max(of.size, nf.size)
-                threshold = settings.prefs.diff_imageFileThresholdKB * 1024
-                if largestSize > threshold:
-                    humanSize = locale.formattedDataSize(largestSize)
-                    humanThreshold = locale.formattedDataSize(threshold)
-                    raise DiffModelError(
-                        translate("DiffModel", "This image is too large to be previewed ({0}).").format(humanSize),
-                        translate("DiffModel", "You can change the size threshold in the Preferences (current limit: {0}).").format(humanThreshold),
-                        QStyle.StandardPixmap.SP_MessageBoxWarning)
-                else:
-                    raise ShouldDisplayPatchAsImageDiff()
-            else:
-                oldHumanSize = locale.formattedDataSize(of.size)
-                newHumanSize = locale.formattedDataSize(nf.size)
-                raise DiffModelError(
-                    translate("DiffModel", "File appears to be binary."),
-                    f"{oldHumanSize} &rarr; {newHumanSize}")
+            raise SpecialDiffError.binaryDiff(patch.delta)
 
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
         if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeDiffs):
+            locale = QLocale()
             humanSize = locale.formattedDataSize(len(patch.data))
             target = locator.withExtraFlags(NavFlags.AllowLargeDiffs)
-            raise DiffModelError(
-                translate("DiffModel", "This patch is too large to be previewed ({0}).").format(humanSize),
-                target.toHtml(translate("DiffModel", "[Load diff anyway] (this may take a moment)")),
+            raise SpecialDiffError(
+                translate("Diff", "This patch is too large to be previewed ({0}).").format(humanSize),
+                target.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
                 QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if len(patch.hunks) == 0:
-            raise noChange(patch.delta)
+            raise SpecialDiffError.noChange(patch.delta)
 
         style = DiffStyle()
 
@@ -223,7 +124,7 @@ class DiffModel:
             elif ld.text.endswith('\n'):
                 trimBack = -1
             else:
-                trailer = translate("DiffModel", "<no newline at end of file>")
+                trailer = translate("Diff", "<no newline at end of file>")
                 trimBack = None
 
             if not document.isEmpty():
@@ -269,9 +170,9 @@ class DiffModel:
 
                 if len(diffLine.content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
                     target = locator.withExtraFlags(NavFlags.AllowLongLines)
-                    raise DiffModelError(
-                        translate("DiffModel", "This file contains very long lines."),
-                        target.toHtml(translate("DiffModel", "[Load diff anyway] (this may take a moment)")),
+                    raise SpecialDiffError(
+                        translate("Diff", "This file contains very long lines."),
+                        target.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
                         QStyle.StandardPixmap.SP_MessageBoxWarning)
 
                 ld = LineData(
@@ -308,4 +209,4 @@ class DiffModel:
         # Done batching text insertions.
         cursor.endEditBlock()
 
-        return DiffModel(document=document, lineData=lineData, style=style)
+        return DiffDocument(document=document, lineData=lineData, style=style)

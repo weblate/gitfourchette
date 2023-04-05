@@ -2,8 +2,8 @@ from gitfourchette import porcelain
 from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
-from gitfourchette.widgets.ui_stashdialog import Ui_StashDialog
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_stashdialog import Ui_StashDialog
 
 
 class StashDialog(QDialog):

@@ -3,6 +3,8 @@ Library of widgets and utilities that aren't specifically tied to GitFourchette'
 """
 
 from .actiondef import ActionDef
+from .autohidemenubar import AutoHideMenuBar
+from .customtabwidget import CustomTabWidget, CustomTabBar
 from .benchmark import Benchmark
 from .excutils import shortenTracebackPath, excStrings
 from .gitutils import shortHash, dumpTempBlob, nameValidationMessage

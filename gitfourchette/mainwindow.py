@@ -1,27 +1,25 @@
+import gc
+import os
+import re
+from typing import Literal
+
+import pygit2
+
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
+from gitfourchette.diffview.diffview import DiffView
+from gitfourchette.exttools import openInTextEditor
+from gitfourchette.forms.aboutdialog import showAboutDialog
+from gitfourchette.forms.clonedialog import CloneDialog
+from gitfourchette.forms.prefsdialog import PrefsDialog
+from gitfourchette.forms.repostatusdisplay import RepoStatusDisplay
+from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.reverseunidiff import reverseUnidiff
+from gitfourchette.repowidget import RepoWidget
 from gitfourchette.toolbox import *
-from gitfourchette.exttools import openInTextEditor
-from gitfourchette.widgets.aboutdialog import showAboutDialog
-from gitfourchette.widgets.autohidemenubar import AutoHideMenuBar
-from gitfourchette.widgets.clonedialog import CloneDialog
-from gitfourchette.widgets.customtabwidget import CustomTabWidget
-from gitfourchette.widgets.diffview import DiffView
-from gitfourchette.widgets.prefsdialog import PrefsDialog
-from gitfourchette.widgets.repowidget import RepoWidget
-from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplay
-from gitfourchette.widgets.welcomewidget import WelcomeWidget
-from typing import Literal
-import gc
-import os
-import pygit2
-import re
 
 
 class Session:

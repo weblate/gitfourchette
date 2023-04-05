@@ -8,7 +8,7 @@
 
 from gitfourchette.qt import *
 
-from gitfourchette.widgets.statusform import StatusForm
+from gitfourchette.forms.statusform import StatusForm
 
 class Ui_PushDialog(object):
     def setupUi(self, PushDialog):

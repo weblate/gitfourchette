@@ -1,7 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.clonedialog import CloneDialog
+from gitfourchette.forms.clonedialog import CloneDialog
 import os
 
 

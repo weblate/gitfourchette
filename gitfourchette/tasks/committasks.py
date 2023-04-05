@@ -2,12 +2,12 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.brandeddialog import convertToBrandedDialog, showTextInputDialog
-from gitfourchette.widgets.commitdialog import CommitDialog
-from gitfourchette.widgets.signatureform import SignatureForm
-from gitfourchette.widgets.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
-from gitfourchette.widgets.ui_identitydialog1 import Ui_IdentityDialog1
-from gitfourchette.widgets.ui_identitydialog2 import Ui_IdentityDialog2
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
+from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.signatureform import SignatureForm
+from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
+from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
+from gitfourchette.forms.ui_identitydialog2 import Ui_IdentityDialog2
 import contextlib
 import html
 import pygit2

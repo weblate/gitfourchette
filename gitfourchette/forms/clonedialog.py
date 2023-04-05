@@ -3,8 +3,8 @@ from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.brandeddialog import convertToBrandedDialog
-from gitfourchette.widgets.ui_clonedialog import Ui_CloneDialog
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
 from gitfourchette.tasks import RepoTaskRunner
 import pygit2
 

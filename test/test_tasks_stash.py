@@ -1,8 +1,8 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.sidebar import EItem
-from gitfourchette.widgets.stashdialog import StashDialog
+from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.forms.stashdialog import StashDialog
 import os
 
 

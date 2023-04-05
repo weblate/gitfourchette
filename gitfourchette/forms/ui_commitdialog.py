@@ -8,7 +8,7 @@
 
 from gitfourchette.qt import *
 
-from gitfourchette.widgets.signatureform import SignatureForm
+from gitfourchette.forms.signatureform import SignatureForm
 
 class Ui_CommitDialog(object):
     def setupUi(self, CommitDialog):

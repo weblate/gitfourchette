@@ -1,12 +1,8 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.widgets.repowidget import RepoWidget
-from gitfourchette.widgets.remotedialog import RemoteDialog
-from gitfourchette.widgets.sidebar import EItem
-from gitfourchette.widgets.stashdialog import StashDialog
+from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette import porcelain
-import re
 
 
 def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):

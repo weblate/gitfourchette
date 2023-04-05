@@ -6,8 +6,8 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.brandeddialog import showTextInputDialog
-from gitfourchette.widgets.remotelinkprogressdialog import RemoteLinkProgressDialog
+from gitfourchette.forms.brandeddialog import showTextInputDialog
+from gitfourchette.forms.remotelinkprogressdialog import RemoteLinkProgressDialog
 import contextlib
 
 

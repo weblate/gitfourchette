@@ -1,22 +1,22 @@
+import enum
+import os
+import re
+from bisect import bisect_left, bisect_right
+from typing import Literal
+
+import pygit2
+from pygit2 import Patch, Repository, Diff
+
 from gitfourchette import colors
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import settings
+from gitfourchette.diffview.diffdocument import DiffDocument, LineData
+from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.toolbox import *
-from gitfourchette.trash import Trash
-from gitfourchette.widgets.diffmodel import DiffModel, LineData
-from gitfourchette.widgets.searchbar import SearchBar
-from bisect import bisect_left, bisect_right
-from pygit2 import GitError, Patch, Repository, Diff
-from typing import Literal
-import enum
-import os
-import pygit2
-import re
 
 
 def get1FileChangedByDiff(diff: Diff):
@@ -190,7 +190,7 @@ class DiffView(QPlainTextEdit):
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
 
-    def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, dm: DiffModel):
+    def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, dm: DiffDocument):
         oldDocument = self.document()
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit

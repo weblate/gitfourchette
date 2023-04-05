@@ -2,7 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import translateNameValidationCode
-from gitfourchette.widgets.ui_signatureform import Ui_SignatureForm
+from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
 from pygit2 import Signature
 
 

@@ -1,13 +1,12 @@
 from gitfourchette.qt import *
-from gitfourchette import log
-from gitfourchette.widgets.diffmodel import DiffModelError
+from gitfourchette.diffview.diffdocument import SpecialDiffError
 import html
 import pygit2
 
 IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
 
 
-class RichDiffView(QTextBrowser):
+class SpecialDiffView(QTextBrowser):
     def replaceDocument(self, newDocument: QTextDocument):
         if self.document():
             self.document().deleteLater()
@@ -17,10 +16,10 @@ class RichDiffView(QTextBrowser):
 
         self.setOpenLinks(False)
 
-    def displayDiffModelError(self, dme: DiffModelError):
+    def displaySpecialDiffError(self, err: SpecialDiffError):
         document = QTextDocument()
 
-        pixmap = QApplication.style().standardIcon(dme.icon).pixmap(48, 48)
+        pixmap = QApplication.style().standardIcon(err.icon).pixmap(48, 48)
         document.addResource(IMAGE_RESOURCE_TYPE, QUrl("icon"), pixmap)
 
         markup = (
@@ -28,14 +27,14 @@ class RichDiffView(QTextBrowser):
             "<tr>"
             "<td><img src='icon'/></td>"
             "<td width=8></td>"
-            F"<td width='100%'><big>{dme.message}</big><br/>{dme.details}</td>"
+            F"<td width='100%'><big>{err.message}</big><br/>{err.details}</td>"
             "</tr>"
             "</table>")
 
-        if dme.preformatted:
-            markup += F"<pre>{html.escape(dme.preformatted)}</pre>"
+        if err.preformatted:
+            markup += F"<pre>{html.escape(err.preformatted)}</pre>"
 
-        markup += dme.longform
+        markup += err.longform
 
         document.setHtml(markup)
         self.replaceDocument(document)
