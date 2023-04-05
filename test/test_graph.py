@@ -1,7 +1,7 @@
 import pytest
 
 from gitfourchette.graph import Graph, Frame, PlaybackState
-from .test_graphsplicing import parseAncestryOneLiner
+from .test_graphsplicer import parseAncestryOneLiner
 
 
 def findSolvedArc(frame: Frame, openedBy, closedBy):

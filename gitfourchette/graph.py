@@ -151,6 +151,7 @@ BATCHROW_UNDEF = BatchRow(-1, -1)
 class ChainHandle:
     """ Object shared by arcs on the same chain. """
     topRow: BatchRow = BATCHROW_UNDEF
+    bottomRow: BatchRow = BATCHROW_UNDEF
 
 
 @dataclass
@@ -534,14 +535,16 @@ class GeneratorState(Frame):
         handOffHomeLane = False
         if not myOpenArcs:
             # Nobody was looking for me, so I'm the tip of a new branch
-            myHomeChain = ChainHandle(row)
+            myHomeChain = ChainHandle(row, BATCHROW_UNDEF)
         else:
             myMainOpenArc = min(myOpenArcs, key=lambda a: a.lane)
             myHomeLane = myMainOpenArc.lane
             myHomeChain = myMainOpenArc.chain
             for arc in myOpenArcs:
+                # Close off open arcs
                 assert arc.closedBy == me
                 assert arc.closedAt == BATCHROW_UNDEF
+                assert arc.chain.bottomRow == BATCHROW_UNDEF
                 arc.closedAt = row
                 self.solvedArcs[arc.lane] = arc
                 self.openArcs[arc.lane] = None  # Free up the lane below
@@ -549,6 +552,8 @@ class GeneratorState(Frame):
                     handOffHomeLane = True
                 else:
                     bisect.insort(self.freeLanes, arc.lane)
+                    # Close off chain
+                    arc.chain.bottomRow = row
             del self.parentLookup[me]
 
             """ 
@@ -594,7 +599,8 @@ class GeneratorState(Frame):
                 parentChain = myHomeChain
             else:
                 # Branch out new chain downward
-                parentChain = ChainHandle(row)
+                parentChain = ChainHandle(row, BATCHROW_UNDEF)
+            assert parentChain.bottomRow == BATCHROW_UNDEF
 
             # Make arc from this commit to its parent
             newArc = Arc(lane=freeLane, chain=parentChain,
@@ -619,6 +625,13 @@ class GeneratorState(Frame):
                     myHomeLane = len(self.openArcs)
                 else:
                     myHomeLane = self.freeLanes[0]  # PEEK only! do not pop!
+
+                # Close off home chain
+                myHomeChain.bottomRow = row
+            else:
+                assert myHomeChain.bottomRow != BATCHROW_UNDEF, \
+                    "parentless commit's home chain is supposed to be closed off here!"
+
             newArc = Arc(lane=myHomeLane, chain=myHomeChain,
                          openedAt=row, closedAt=row,
                          openedBy=me, closedBy=me, junctions=[])
@@ -729,7 +742,7 @@ class Graph:
         self.startArc = Arc(
             openedAt=BATCHROW_UNDEF,
             closedAt=BATCHROW_UNDEF,
-            chain=ChainHandle(BATCHROW_UNDEF),
+            chain=ChainHandle(BATCHROW_UNDEF, BATCHROW_UNDEF),
             lane=-1,
             openedBy="!TOP",
             closedBy="!BOTTOM",
@@ -806,6 +819,7 @@ class Graph:
         If the keyframe occurs before the desired `row`, you can create a PlaybackState from that keyframe
         and iterate the PlaybackState until it reaches the desired row.
         """
+        assert row >= 0
         assert len(self.keyframes) == len(self.keyframeRows)
 
         bestKeyframeID = bisect.bisect_right(self.keyframeRows, row) - 1
@@ -850,7 +864,13 @@ class Graph:
 
         return player
 
-    def getFrame(self, row: int = 0) -> Frame:
+    def getCommitFrame(self, commit: Oid, unsafe=False) -> Frame:
+        row = self.getCommitRow(commit)
+        return self.getFrame(row, unsafe)
+
+    def getFrame(self, row: int = 0, unsafe=False) -> Frame:
+        assert row >= 0
+
         kfID = self.getBestKeyframeID(row)
 
         if kfID >= 0 and self.keyframes[kfID].row == row:
@@ -858,7 +878,9 @@ class Graph:
             frame = self.keyframes[kfID]
         else:
             # Cache miss
-            frame = self.startPlayback(row).sealCopy()
+            frame = self.startPlayback(row)
+            if not unsafe:
+                frame = frame.sealCopy()
 
         assert frame.row == row, f"frame({int(frame.row)})/row({row}) mismatch"
         return frame
@@ -1164,3 +1186,71 @@ class GraphSplicer:
 
         # Do NOT test solved arcs!
         return True
+
+
+class GraphMarker:
+    def __init__(self, graph: Graph):
+        self.graph = graph
+        self.rows = {}
+        self.marks = {}
+
+    def mark(self, commit: Oid, value: int = 1, recurse=True):
+        frame = self.graph.getCommitFrame(commit, unsafe=True)
+        row = frame.row
+        chain = frame.getHomeChainForCommit()
+        chainId = id(chain)
+
+        rows: list | None = self.rows.get(chainId, None)
+        if not rows:
+            self.rows[chainId] = [row]
+            self.marks[chainId] = [value]
+        else:
+            marks = self.marks[chainId]
+            i = bisect.bisect_left(rows, row)
+            if i >= len(rows) or rows[i] != row:
+                rows.insert(i, row)
+                marks.insert(i, value)
+            elif marks[i] == value:
+                # Marked up with same value, stop here
+                return
+            else:
+                # Overwrite weaker value with our stronger value
+                assert marks[i] <= value, "markup wasn't done in increasing order of value!"
+                marks[i] = value
+
+            # Bulldoze weaker values on same branch
+            if i+1 < len(rows):
+                assert all(m <= value for m in marks[i+1:]), "remaining values on this branch are supposed to be weaker, markup was probably not done in order"
+                del rows[i+1:]
+                del marks[i+1:]
+
+        # Also mark MAIN parent chain
+        if recurse and chain.bottomRow != BATCHROW_UNDEF:
+            assert int(chain.bottomRow) >= 0
+            cbrFrame = self.graph.getFrame(int(chain.bottomRow), unsafe=True)
+            if cbrFrame.getHomeChainForCommit() is not chain:
+                self.mark(cbrFrame.commit, value, recurse=False)
+
+    def lookup(self, commit: Oid, fallback=0):
+        row = self.graph.getCommitRow(commit)
+
+        while True:
+            frame = self.graph.getFrame(row, unsafe=True)
+            chain = frame.getHomeChainForCommit()
+            chainId = id(chain)
+
+            # Find mark above commit on this chain
+            rows = self.rows.get(chainId, None)
+            if rows:  # chain must be marked
+                i = -1 + bisect.bisect_right(rows, row)
+                if i >= 0:  # commit must be at or below first mark in chain
+                    assert rows[i] <= row
+                    return self.marks[chainId][i]
+
+            # Chain was unmarked, or the commit was above the first mark in the chain.
+            if chain.topRow == row:
+                # Reached tip of unmarked chain
+                return fallback
+            else:
+                # Continue up in graph: Jump to the chain that we merge into.
+                row = chain.topRow
