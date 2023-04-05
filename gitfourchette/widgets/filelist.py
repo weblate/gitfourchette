@@ -98,6 +98,29 @@ class FileListModel(QAbstractListModel):
             if role == Qt.ItemDataRole.DisplayRole:
                 path = abbreviatePath(path, settings.prefs.pathDisplayStyle)
 
+                # Show important mode info in brackets
+                modeInfo = ""
+                om = delta.old_file.mode
+                nm = delta.new_file.mode
+                if om != 0 and nm != 0 and om != nm:
+                    # Mode change
+                    if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+                        modeInfo = "+x"
+                    elif om == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+                        modeInfo = "-x"
+                elif om == 0:
+                    # New file
+                    if nm in [0, pygit2.GIT_FILEMODE_BLOB]:
+                        pass
+                    elif nm == pygit2.GIT_FILEMODE_LINK:
+                        modeInfo = "link"
+                    elif nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+                        modeInfo = "+x"
+                    else:
+                        modeInfo = f"{delta.new_file.mode:o}"
+                if modeInfo:
+                    path = f"[{modeInfo}] {path}"
+
             return path
 
         elif role == Qt.ItemDataRole.DecorationRole:
