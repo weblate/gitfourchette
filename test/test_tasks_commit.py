@@ -2,7 +2,7 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette import porcelain
-from gitfourchette.commitlogmodel import CommitLogModel
+from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.widgets.commitdialog import CommitDialog
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from gitfourchette.widgets.ui_identitydialog1 import Ui_IdentityDialog1

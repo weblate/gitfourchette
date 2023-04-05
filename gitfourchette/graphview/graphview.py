@@ -1,37 +1,14 @@
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.commitlogmodel import CommitLogModel
+from gitfourchette.graphview.commitlogmodel import CommitLogModel
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.graphdelegate import GraphDelegate
+from gitfourchette.graphview.commitlogfilter import CommitLogFilter
+from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.resetheaddialog import ResetHeadDialog
 from typing import Literal
 import pygit2
-
-from gitfourchette.nav import NavLocator, NavContext
-
-
-class CommitFilter(QSortFilterProxyModel):
-    hiddenOids: set[pygit2.Oid]
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.hiddenOids = set()
-        self.setDynamicSortFilter(True)
-
-    @property
-    def clModel(self) -> CommitLogModel:
-        return self.sourceModel()
-
-    def setHiddenCommits(self, hiddenCommits: set[pygit2.Oid]):
-        self.hiddenOids = hiddenCommits
-
-    def filterAcceptsRow(self, sourceRow: int, sourceParent: QModelIndex) -> bool:
-        if sourceRow == 0:  # Uncommitted Changes
-            return True
-
-        commit = self.clModel._commitSequence[sourceRow - 1]  # -1 to account for Uncommited Changes
-        return commit.oid not in self.hiddenOids
 
 
 class GraphView(QListView):
@@ -51,13 +28,13 @@ class GraphView(QListView):
     linkActivated = Signal(str)
 
     clModel: CommitLogModel
-    clFilter: CommitFilter
+    clFilter: CommitLogFilter
 
     def __init__(self, parent):
         super().__init__(parent)
 
         self.clModel = CommitLogModel(self)
-        self.clFilter = CommitFilter(self)
+        self.clFilter = CommitLogFilter(self)
         self.clFilter.setSourceModel(self.clModel)
 
         self.setModel(self.clFilter)
@@ -68,7 +45,7 @@ class GraphView(QListView):
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevents double-clicking to edit row text
-        self.setItemDelegate(GraphDelegate(parent, parent=self))
+        self.setItemDelegate(CommitLogDelegate(parent, parent=self))
 
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenuRequested)

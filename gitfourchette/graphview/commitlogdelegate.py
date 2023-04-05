@@ -1,7 +1,7 @@
 from gitfourchette import colors
 from gitfourchette import settings
-from gitfourchette.commitlogmodel import CommitLogModel
-from gitfourchette.graphpaint import paintGraphFrame
+from gitfourchette.graphview.commitlogmodel import CommitLogModel
+from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.toolbox import *
@@ -58,7 +58,7 @@ def abbreviatePerson(sig: pygit2.Signature, style: settings.AuthorDisplayStyle =
         return sig.email
 
 
-class GraphDelegate(QStyledItemDelegate):
+class CommitLogDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
         self.repoWidget = repoWidget

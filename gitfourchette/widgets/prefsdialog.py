@@ -3,7 +3,7 @@ from gitfourchette import trtables
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES, DIFF_TOOL_PRESETS, MERGE_TOOL_PRESETS
 from gitfourchette.toolbox import *
-from gitfourchette.widgets.graphdelegate import abbreviatePerson
+from gitfourchette.graphview.commitlogdelegate import abbreviatePerson
 import enum
 import pygit2
 

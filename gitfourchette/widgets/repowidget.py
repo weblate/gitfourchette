@@ -2,27 +2,25 @@ from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
-from gitfourchette import tempdir
+from gitfourchette.exttools import openInTextEditor
+from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.tasks import TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-from gitfourchette.exttools import openInTextEditor, openInMergeTool
+from gitfourchette.unmergedconflict import UnmergedConflict
 from gitfourchette.widgets.brandeddialog import showTextInputDialog
 from gitfourchette.widgets.conflictview import ConflictView
-from gitfourchette.widgets.diffmodel import DiffModel, DiffModelError, DiffConflict, DiffImagePair, ShouldDisplayPatchAsImageDiff
+from gitfourchette.widgets.diffmodel import DiffModel, DiffConflict
 from gitfourchette.widgets.diffview import DiffView
-from gitfourchette.widgets.filelist import FileList, DirtyFiles, StagedFiles, CommittedFiles, FileListModel
-from gitfourchette.widgets.graphview import GraphView, CommitLogModel
+from gitfourchette.widgets.filelist import DirtyFiles, StagedFiles, CommittedFiles
 from gitfourchette.widgets.pushdialog import PushDialog
-from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplay, RepoStatusDisplayCache
+from gitfourchette.widgets.repostatusdisplay import RepoStatusDisplayCache
 from gitfourchette.widgets.richdiffview import RichDiffView
-from gitfourchette.widgets.searchbar import SearchBar
 from gitfourchette.widgets.sidebar import Sidebar
-from gitfourchette.unmergedconflict import UnmergedConflict
-from typing import Generator, Literal, Type, Callable
+from typing import Literal, Type, Callable
 import os
 import pygit2
 
