@@ -58,15 +58,19 @@ class CustomTabWidget(QWidget):
     tabDoubleClicked: Signal = Signal(int)
     tabContextMenuRequested: Signal = Signal(QPoint, int)
 
+    currentWidgetChanged = Signal()
+    """Emitted when the displayed widget is actually changed (in contrast to
+    currentChanged, which is emitted even when dragging the foreground tab)."""
+
     def __init__(self, parent):
         super().__init__(parent)
 
         self.stacked = QStackedWidget(self)
+        self.shadowCurrentWidget = None
 
         self.tabs = CustomTabBar(self)
         self.tabs.tabMoved.connect(self.onTabMoved)
-        self.tabs.currentChanged.connect(self.stacked.setCurrentIndex)
-        self.tabs.currentChanged.connect(self.currentChanged)
+        self.tabs.currentChanged.connect(self.onCurrentChanged)
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
         self.tabs.tabMiddleClicked.connect(self.tabCloseRequested)
         self.tabs.tabDoubleClicked.connect(self.tabDoubleClicked)
@@ -96,9 +100,23 @@ class CustomTabWidget(QWidget):
         self.tabContextMenuRequested.emit(globalPoint, index)
 
     def onTabMoved(self, fromIndex: int, toIndex: int):
+        # Keep QStackedWidget in sync with QTabBar
         w = self.stacked.widget(fromIndex)
         self.stacked.removeWidget(w)
         self.stacked.insertWidget(toIndex, w)
+
+    def onCurrentChanged(self, i: int):
+        # Keep QStackedWidget in sync with QTabBar
+        self.stacked.setCurrentIndex(i)
+
+        # See if we should emit the currentWidgetChanged signal
+        currentWidget = self.currentWidget()
+        if currentWidget is not self.shadowCurrentWidget:
+            self.shadowCurrentWidget = currentWidget
+            self.currentWidgetChanged.emit()
+
+        # Forward signal
+        self.currentChanged.emit(i)
 
     def addTab(self, w: QWidget, name: str) -> int:
         i1 = self.stacked.addWidget(w)

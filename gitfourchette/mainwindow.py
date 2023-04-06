@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         self.move(QPoint(50, 50))
 
         self.tabs = CustomTabWidget(self)
-        self.tabs.currentChanged.connect(self.onTabChange)
+        self.tabs.currentWidgetChanged.connect(self.onTabCurrentWidgetChanged)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)
         self.tabs.tabDoubleClicked.connect(self.onTabDoubleClicked)
@@ -365,15 +365,15 @@ class MainWindow(QMainWindow):
     def currentRepoWidget(self) -> RepoWidget:
         return self.tabs.currentWidget()
 
-    def onTabChange(self, i):
-        if i < 0:
-            self.setWindowTitle(qAppName())
+    def onTabCurrentWidgetChanged(self):
+        w = self.currentRepoWidget()
+
+        if not w:
             return
 
         # Get out of welcome widget
         self.welcomeStack.setCurrentWidget(self.tabs)
 
-        w = self.currentRepoWidget()
         w.refreshWindowTitle()  # Refresh window title before loading
         w.restoreSplitterStates()
 
@@ -392,7 +392,6 @@ class MainWindow(QMainWindow):
                 settings.history.write()
         else:
             # Trigger repo refresh.
-            # TODO: This also gets triggered when MOVING TABS, which is bad with large repos
             w.onRegainFocus()
 
         w.refreshWindowTitle()
@@ -757,6 +756,7 @@ class MainWindow(QMainWindow):
         # If that was the last tab, back to welcome widget
         if self.tabs.count() == 0:
             self.welcomeStack.setCurrentWidget(self.welcomeWidget)
+            self.setWindowTitle(qAppName())
 
         if singleTab:
             self.saveSession()
@@ -870,7 +870,7 @@ class MainWindow(QMainWindow):
             if errors:
                 self._reportSessionErrors(errors)
 
-            # Update history (don't write it yet - onTabChange will do it below)
+            # Update history (don't write it yet - onTabCurrentWidgetChanged will do it below)
             for path in reversed(successfulRepos):
                 settings.history.addRepo(path)
             self.fillRecentMenu()
@@ -883,7 +883,7 @@ class MainWindow(QMainWindow):
             # Set current tab and load its repo.
             if activeTab >= 0:
                 self.tabs.setCurrentIndex(session.activeTabIndex)
-                self.onTabChange(session.activeTabIndex)
+                self.onTabCurrentWidgetChanged()
 
     def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):
         numErrors = len(errors)
