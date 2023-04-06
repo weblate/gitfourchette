@@ -273,7 +273,7 @@ class ApplyPatchFile(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
-    def flow(self, reverse: bool):
+    def flow(self, reverse: bool, path: str = ""):
         if reverse:
             title = self.tr("Import patch file (to apply in reverse)")
         else:
@@ -282,12 +282,13 @@ class ApplyPatchFile(RepoTask):
         patchFileCaption = self.tr("Patch file")
         allFilesCaption = self.tr("All files")
 
-        qfd = PersistentFileDialog.openFile(
-            self.parentWidget(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
+        if not path:
+            qfd = PersistentFileDialog.openFile(
+                self.parentWidget(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
 
-        yield from self._flowDialog(qfd)
+            yield from self._flowDialog(qfd)
 
-        path = qfd.selectedFiles()[0]
+            path = qfd.selectedFiles()[0]
 
         yield from self._flowBeginWorkerThread()
 
@@ -305,6 +306,24 @@ class ApplyPatchFile(RepoTask):
 
         # Do a dry run first so we don't litter the workdir with a patch that failed halfway through.
         # If the patch doesn't apply, this raises a MultiFileError.
-        porcelain.patchApplies(self.repo, patchData)
+        diff = porcelain.patchApplies(self.repo, patchData)
+        deltas = list(diff.deltas)
+
+        yield from self._flowExitWorkerThread()
+
+        numDeltas = len(deltas)
+        numListed = min(numDeltas, 10)
+        numUnlisted = numDeltas - numListed
+        text = self.tr("Patch file <b>“{0}”</b> can be applied cleanly to your working directory. "
+                       "It will modify <b>%n</b> files:", "", numDeltas).format(os.path.basename(path))
+        text += "<ul>"
+        for delta in deltas[:numListed]:
+            text += F"<li>({delta.status_char()}) {escape(delta.new_file.path)}</li>"
+        if len(deltas) > numListed:
+            text += "<li><i>" + self.tr("(and %n more)", "", numUnlisted) + "</i></li>"
+
+        text += "</ul>"
+
+        yield from self._flowConfirm(title, text, verb=self.tr("Apply patch"))
 
         porcelain.applyPatch(self.repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)

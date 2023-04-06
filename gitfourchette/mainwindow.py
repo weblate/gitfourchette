@@ -929,7 +929,10 @@ class MainWindow(QMainWindow):
         if mime.hasUrls() and len(mime.urls()) > 0:
             url: QUrl = mime.urls()[0]
             if url.isLocalFile():
-                return "open", url.toLocalFile()
+                if url.path().endswith(".patch"):
+                    return "patch", url.toLocalFile()
+                else:
+                    return "open", url.toLocalFile()
             else:
                 return "clone", url.toString()
 
@@ -960,6 +963,18 @@ class MainWindow(QMainWindow):
         elif action == "open":
             event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
             self.openRepo(data)
+        elif action == "patch":
+            event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
+            rw = self.currentRepoWidget()
+            if rw:
+                print("Import patch", data)
+                rw.runTask(tasks.ApplyPatchFile, False, data)
+                # self.importPatch(rw, data)
+            else:
+                showInformation(self, self.tr("No repository"),
+                                self.tr("Please open a repository before importing a patch."))
+        else:
+            log.warning("MainWindow", f"Unsupported drag-and-drop outcome {action}")
 
     # -------------------------------------------------------------------------
     # Refresh prefs
