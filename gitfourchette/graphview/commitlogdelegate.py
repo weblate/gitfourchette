@@ -204,7 +204,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Message
         # use muted color for foreign commit messages if not selected
-        if not isSelected and commit and commit.oid in self.state.foreignCommits:
+        if not isSelected and commit and not self.state.localCommits.lookup(commit.oid):
             painter.setPen(Qt.GlobalColor.gray)
         rect.setLeft(rect.right())
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)

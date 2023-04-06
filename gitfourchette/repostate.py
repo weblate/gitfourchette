@@ -4,7 +4,7 @@ from gitfourchette import log
 from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.hiddencommitsolver import HiddenCommitSolver
-from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
+from gitfourchette.graph import Graph, GraphMarker, GraphSplicer, KF_INTERVAL, BatchRow
 from gitfourchette.qt import *
 from gitfourchette.settings import BasePrefs
 from gitfourchette.toolbox import *
@@ -27,23 +27,6 @@ def progressTick(progress, i, numCommitsBallpark=0):
         QCoreApplication.processEvents()
         if progress.wasCanceled():
             raise StopIteration()
-
-
-class ForeignCommitSolver:
-    def __init__(self, commitsToRefs):
-        self._nextLocal = set()
-        self.foreignCommits = set()
-        for commitOid, refList in commitsToRefs.items():
-            if any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList):
-                self._nextLocal.add(commitOid)
-
-    def feed(self, commit: pygit2.Commit):
-        if commit.oid in self._nextLocal:
-            self._nextLocal.remove(commit.oid)
-            for p in commit.parents:
-                self._nextLocal.add(p.oid)
-        else:
-            self.foreignCommits.add(commit.oid)
 
 
 @dataclass
@@ -84,7 +67,9 @@ class RepoState:
     # oid of the active commit (to make it bold)
     activeCommitOid: pygit2.Oid | None
 
-    foreignCommits: set[pygit2.Oid]
+    localCommits: GraphMarker | None
+    """Use this to look up which commits are part of local branches,
+    and which commits are 'foreign'."""
 
     hiddenCommits: set[pygit2.Oid]
 
@@ -117,6 +102,7 @@ class RepoState:
         self.hiddenCommits = set()
 
         self.graph = None
+        self.localCommits = None
 
         self.refCache = {}
         self.reverseRefCache = {}
@@ -216,13 +202,11 @@ class RepoState:
             progress.setMinimum(0)
             progress.setMaximum(2 * numCommitsBallpark)  # reserve second half of progress bar for graph progress
 
-        foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
         hiddenCommitSolver = self.newHiddenCommitSolver()
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop, numCommitsBallpark)
                 commitSequence.append(commit)
-                foreignCommitSolver.feed(commit)
                 hiddenCommitSolver.feed(commit)
         except StopIteration:
             pass
@@ -239,21 +223,29 @@ class RepoState:
             graphGenerator.newCommit(commit.oid, commit.parent_ids)
 
             row = graphGenerator.row
+            rowInt = int(row)
+
             assert type(row) == BatchRow
-            assert int(row) >= 0
+            assert rowInt >= 0
             graph.commitRows[commit.oid] = row
 
-            if int(row) % KF_INTERVAL == 0:
-                progress.setValue(int(row))
-                QCoreApplication.processEvents()
+            # Save keyframes at regular intervals for faster random access,
+            # and also at commitless parents to help out GraphMarker
+            if rowInt % KF_INTERVAL == 0 or not commit.parents:
                 graph.saveKeyframe(graphGenerator)
+
+            if rowInt % KF_INTERVAL == 0:
+                progress.setValue(rowInt)
+                QCoreApplication.processEvents()
 
         log.info("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
 
         self.commitSequence = commitSequence
-        self.foreignCommits = foreignCommitSolver.foreignCommits
         self.hiddenCommits = hiddenCommitSolver.hiddenCommits
         self.graph = graph
+
+        with Benchmark("Mark local commits"):
+            self.refreshLocalCommits()
 
         bench.__exit__(None, None, None)
 
@@ -300,20 +292,29 @@ class RepoState:
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
-        # Resolve foreign commits
+        with Benchmark("Mark local commits"):
+            self.refreshLocalCommits()
+
+        # Resolve hidden commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
-        with Benchmark("Resolve foreign/hidden commits"):
-            foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
+        with Benchmark("Resolve hidden commits"):
             hiddenCommitSolver = self.newHiddenCommitSolver()
             for commit in self.commitSequence:
-                foreignCommitSolver.feed(commit)
-                hiddenCommitSolver.feed(commit)  # TODO: we can stop early by looking at hiddenCommitResolver.done; what about foreignCommitResolver?
-            self.foreignCommits = foreignCommitSolver.foreignCommits
+                hiddenCommitSolver.feed(commit)
+                if hiddenCommitSolver.done:
+                    break
             self.hiddenCommits = hiddenCommitSolver.hiddenCommits
 
         self.updateActiveCommitOid()
 
         return nRemoved, nAdded
+
+    def refreshLocalCommits(self):
+        localCommits = GraphMarker(self.graph)
+        for refName, commitOid in self.refCache.items():
+            if refName == 'HEAD' or refName.startswith("refs/heads/"):
+                localCommits.mark(commitOid)
+        self.localCommits = localCommits
 
     def toggleHideBranch(self, branchName: str):
         if branchName not in self.hiddenBranches:

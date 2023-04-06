@@ -789,7 +789,9 @@ class Graph:
 
             self.commitRows[commit] = generator.row
 
-            if int(generator.row) % keyframeInterval == 0:
+            # Save keyframes at regular intervals for faster random access,
+            # and also at commitless parents to help out GraphMarker
+            if int(generator.row) % keyframeInterval == 0 or not parentsOf[commit]:
                 self.saveKeyframe(generator)
 
     def saveKeyframe(self, frame: Frame) -> int:
@@ -1198,7 +1200,7 @@ class GraphMarker:
         frame = self.graph.getCommitFrame(commit, unsafe=True)
         row = frame.row
         chain = frame.getHomeChainForCommit()
-        chainId = id(chain)
+        chainId = int(chain.topRow)  # don't use id(chain) - that yields incorrect results after splicing
 
         rows: list | None = self.rows.get(chainId, None)
         if not rows:
@@ -1237,7 +1239,7 @@ class GraphMarker:
         while True:
             frame = self.graph.getFrame(row, unsafe=True)
             chain = frame.getHomeChainForCommit()
-            chainId = id(chain)
+            chainId = int(chain.topRow)  # don't use id(chain) - that yields incorrect results after splicing
 
             # Find mark above commit on this chain
             rows = self.rows.get(chainId, None)
