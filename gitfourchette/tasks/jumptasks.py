@@ -323,27 +323,31 @@ class RefreshRepo(tasks.RepoTask):
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
             oldRefCache = rw.state.refCache
-            rw.state.refreshRefCache()
+            anyRefsChanged = rw.state.refreshRefCache()
 
-            # Load tainted commits only
-            assert onAppThread()  # loadTaintedCommitsOnly is not thread safe for now
-            nRemovedRows, nAddedRows = rw.state.loadTaintedCommitsOnly(oldRefCache)
+            # Load commits from changed refs only
+            if anyRefsChanged:
+                assert onAppThread()  # loadTaintedCommitsOnly is not thread safe for now
+                nRemovedRows, nAddedRows = rw.state.loadChangedRefs(oldRefCache)
 
-            # Refresh top of graphview
-            with QSignalBlockerContext(rw.graphView):
-                # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
-                # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-                rw.graphView.setHiddenCommits(rw.state.hiddenCommits)
-                if nRemovedRows >= 0:
-                    rw.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, rw.state.commitSequence)
-                else:
-                    rw.graphView.setCommitSequence(rw.state.commitSequence)
+                # Refresh top of graphview
+                with QSignalBlockerContext(rw.graphView):
+                    # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
+                    # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
+                    rw.graphView.setHiddenCommits(rw.state.hiddenCommits)
+                    if nRemovedRows >= 0:
+                        rw.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, rw.state.commitSequence)
+                    else:
+                        rw.graphView.setCommitSequence(rw.state.commitSequence)
+            else:
+                log.info(TAG, "Refresh: No refs changed.")
 
         if oldActiveCommit != rw.state.activeCommitOid:
             rw.graphView.repaintCommit(oldActiveCommit)
             rw.graphView.repaintCommit(rw.state.activeCommitOid)
 
-        rw.sidebar.refresh(rw.state)
+        with QSignalBlockerContext(rw.sidebar):
+            rw.sidebar.refresh(rw.state)
 
         rw.refreshWindowTitle()
 

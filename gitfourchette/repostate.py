@@ -139,7 +139,16 @@ class RepoState:
 
     @benchmark
     def refreshRefCache(self):
+        """ Refresh refCache and reverseRefCache.
+
+        Return True if there were any changes in the refs since the last
+        refresh, or False if nothing changed.
+        """
         refCache = porcelain.mapRefsToOids(self.repo)
+
+        if refCache == self.refCache:
+            # Nothing to do!
+            return False
 
         reverseRefCache = defaultdict(list)
         for k, v in refCache.items():
@@ -147,6 +156,7 @@ class RepoState:
 
         self.refCache = refCache
         self.reverseRefCache = reverseRefCache
+        return True
 
     @property
     def shortName(self) -> str:
@@ -253,7 +263,7 @@ class RepoState:
         return commitSequence
 
     @benchmark
-    def loadTaintedCommitsOnly(self, oldRefCache: dict[str, pygit2.Oid]):
+    def loadChangedRefs(self, oldRefCache: dict[str, pygit2.Oid]):
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
