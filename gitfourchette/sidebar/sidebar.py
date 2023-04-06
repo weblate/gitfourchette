@@ -300,8 +300,7 @@ class Sidebar(QTreeView):
 
     def refresh(self, repoState: RepoState):
         sidebarModel: SidebarModel = self.model()
-        with Benchmark("Refresh sidebar cache"):
-            sidebarModel.refreshCache(repoState.repo, repoState.hiddenBranches, repoState.refCache)
+        sidebarModel.refreshCache(repoState.repo, repoState.hiddenBranches, repoState.refCache)
         self.expandAll()
 
     def onEntryClicked(self, item: EItem, data: str):

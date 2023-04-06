@@ -137,6 +137,7 @@ class RepoState:
             self.uiPrefs.draftCommitMessage = newMessage
         self.uiPrefs.write()
 
+    @benchmark
     def refreshRefCache(self):
         refCache = porcelain.mapRefsToOids(self.repo)
 
@@ -156,6 +157,7 @@ class RepoState:
 
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
+    @benchmark
     def initializeWalker(self, tipOids: Iterable[pygit2.Oid]) -> pygit2.Walker:
         sorting = pygit2.GIT_SORT_TOPOLOGICAL
 
@@ -244,13 +246,13 @@ class RepoState:
         self.hiddenCommits = hiddenCommitSolver.hiddenCommits
         self.graph = graph
 
-        with Benchmark("Mark local commits"):
-            self.refreshLocalCommits()
+        self.refreshLocalCommits()
 
         bench.__exit__(None, None, None)
 
         return commitSequence
 
+    @benchmark
     def loadTaintedCommitsOnly(self, oldRefCache: dict[str, pygit2.Oid]):
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
@@ -261,8 +263,7 @@ class RepoState:
         oldHeads = oldRefCache.values()
         newHeads = self.refCache.values()
 
-        with Benchmark("Init walker"):
-            walker = self.initializeWalker(newHeads)
+        walker = self.initializeWalker(newHeads)
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
 
@@ -292,8 +293,7 @@ class RepoState:
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
-        with Benchmark("Mark local commits"):
-            self.refreshLocalCommits()
+        self.refreshLocalCommits()
 
         # Resolve hidden commits
         # todo: this will do a pass on all commits. Can we look at fewer commits?
@@ -309,6 +309,7 @@ class RepoState:
 
         return nRemoved, nAdded
 
+    @benchmark
     def refreshLocalCommits(self):
         localCommits = GraphMarker(self.graph)
         for refName, commitOid in self.refCache.items():
@@ -316,6 +317,7 @@ class RepoState:
                 localCommits.mark(commitOid)
         self.localCommits = localCommits
 
+    @benchmark
     def toggleHideBranch(self, branchName: str):
         if branchName not in self.hiddenBranches:
             self.hideBranch(branchName)

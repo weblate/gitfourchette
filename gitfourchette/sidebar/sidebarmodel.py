@@ -130,6 +130,7 @@ class SidebarModel(QAbstractItemModel):
         if emitSignals:
             self.endResetModel()
 
+    @benchmark
     def refreshCache(self, repo: pygit2.Repository, hiddenBranches: list[str], refCache: Iterable[str]):
         self.beginResetModel()
 

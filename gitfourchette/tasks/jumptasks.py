@@ -321,19 +321,19 @@ class RefreshRepo(tasks.RepoTask):
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
 
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
-            with Benchmark("Refresh ref cache"):
-                oldRefCache = rw.state.refCache
-                rw.state.refreshRefCache()
+            # Refresh ref cache
+            oldRefCache = rw.state.refCache
+            rw.state.refreshRefCache()
 
-            with Benchmark("Load tainted commits only"):
-                assert onAppThread()  # loadTaintedCommitsOnly is not thread safe for now
-                nRemovedRows, nAddedRows = rw.state.loadTaintedCommitsOnly(oldRefCache)
+            # Load tainted commits only
+            assert onAppThread()  # loadTaintedCommitsOnly is not thread safe for now
+            nRemovedRows, nAddedRows = rw.state.loadTaintedCommitsOnly(oldRefCache)
 
-            with QSignalBlockerContext(rw.graphView), Benchmark(F"Refresh top of graphview ({nRemovedRows} removed, {nAddedRows} added)"):
+            # Refresh top of graphview
+            with QSignalBlockerContext(rw.graphView):
                 # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
                 # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-                with Benchmark("Set hidden commits"):
-                    rw.graphView.setHiddenCommits(rw.state.hiddenCommits)
+                rw.graphView.setHiddenCommits(rw.state.hiddenCommits)
                 if nRemovedRows >= 0:
                     rw.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, rw.state.commitSequence)
                 else:
@@ -343,8 +343,7 @@ class RefreshRepo(tasks.RepoTask):
             rw.graphView.repaintCommit(oldActiveCommit)
             rw.graphView.repaintCommit(rw.state.activeCommitOid)
 
-        with QSignalBlockerContext(rw.sidebar), Benchmark("Refresh sidebar"):
-            rw.sidebar.refresh(rw.state)
+        rw.sidebar.refresh(rw.state)
 
         rw.refreshWindowTitle()
 
