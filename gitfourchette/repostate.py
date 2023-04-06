@@ -266,10 +266,12 @@ class RepoState:
         walker = self.initializeWalker(newHeads)
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
+        newHiddenCommitSolver: HiddenCommitSolver = self.newHiddenCommitSolver()
 
         for commit in walker:
             newCommitSequence.append(commit)
             graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids)
+            newHiddenCommitSolver.feed(commit)
             if not graphSplicer.keepGoing:
                 break
 
@@ -295,15 +297,8 @@ class RepoState:
 
         self.refreshLocalCommits()
 
-        # Resolve hidden commits
-        # todo: this will do a pass on all commits. Can we look at fewer commits?
-        with Benchmark("Resolve hidden commits"):
-            hiddenCommitSolver = self.newHiddenCommitSolver()
-            for commit in self.commitSequence:
-                hiddenCommitSolver.feed(commit)
-                if hiddenCommitSolver.done:
-                    break
-            self.hiddenCommits = hiddenCommitSolver.hiddenCommits
+        # Update hidden commits
+        self.hiddenCommits.update(newHiddenCommitSolver.hiddenCommits)
 
         self.updateActiveCommitOid()
 
