@@ -567,8 +567,8 @@ class RepoWidget(QWidget):
         if not self.state:
             return
 
-        if self.isVisible() and tasks.RefreshRepo.canKill_static(self.repoTaskRunner.currentTask):
-            QTimer.singleShot(0, lambda: self.refreshRepo(TaskEffects.DefaultRefresh | TaskEffects.Workdir))
+        if self.isVisible() and not self.repoTaskRunner.isBusy():
+            self.refreshRepo(TaskEffects.DefaultRefresh | TaskEffects.Workdir)
         else:
             self.state.workdirStale = True
 
