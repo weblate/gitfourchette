@@ -3,7 +3,7 @@ from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.graph import Frame, Graph
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState
+from gitfourchette.repostate import RepoState, UC_FAKEID
 from itertools import zip_longest
 from pygit2 import Commit, Oid
 
@@ -11,6 +11,8 @@ from pygit2 import Commit, Oid
 LANE_WIDTH = 10
 LANE_THICKNESS = 2
 DOT_RADIUS = 3
+UC_COLOR = colors.gray
+UC_STIPPLE = 12
 ABRIDGMENT_THRESHOLD = 50
 
 
@@ -65,22 +67,22 @@ def getCommitBulletColumn(
 
 def paintGraphFrame(
         state: RepoState,
-        commit: Commit,
+        oid: Oid,
         painter: QPainter,
         rect: QRect,
         outlineColor: QColor
 ):
-    if not commit or not state.graph:
+    if not state.graph:
         return
 
     try:
         # Get this commit's sequential index in the graph
-        myRow = state.graph.getCommitRow(commit.oid)
+        myRow = state.graph.getCommitRow(oid)
     except KeyError:
-        log.warning("graphpaint", "skipping unregistered commit:", commit.oid)
+        log.warning("graphpaint", "skipping unregistered commit:", oid)
         return
     except IndexError:
-        log.warning("graphpaint", "skipping commit that is probably not registered yet:", commit.oid)
+        log.warning("graphpaint", "skipping commit that is probably not registered yet:", oid)
         return
 
     painter.save()
@@ -94,7 +96,7 @@ def paintGraphFrame(
 
     # Get graph frame for this row
     frame = state.graph.getFrame(myRow)
-    assert frame.commit == commit.oid
+    assert frame.commit == oid
     assert frame.row == myRow
 
     # Get the commit's lane ID
@@ -111,22 +113,29 @@ def paintGraphFrame(
     mx = x + myColumn * LANE_WIDTH  # the screen X of this commit's bullet point
 
     # draw bullet point _outline_ for this commit, beneath everything else
-    painter.setPen(QPen(outlineColor, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
+    painter.setPen(QPen(outlineColor, 2, Qt.PenStyle.SolidLine))
     painter.setBrush(Qt.BrushStyle.NoBrush)
     painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
 
     path = QPainterPath()
 
-    def submitPath(path: QPainterPath, column):
-        if not path.isEmpty():
-            # white outline
-            painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
-            painter.drawPath(path)
-            # actual color
-            painter.setPen(QPen(getColor(column), LANE_THICKNESS, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
-            painter.drawPath(path)
-            # clear path for next iteration
-            path.clear()
+    def submitPath(path: QPainterPath, column, stipple=False, dashOffset = 0):
+        if path.isEmpty():
+            return
+        # white outline
+        painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
+        painter.drawPath(path)
+        # actual color
+        color = UC_COLOR if stipple else getColor(column)
+        pen = QPen(color, LANE_THICKNESS, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin)
+        if stipple:
+            interval = rect.height()/(UC_STIPPLE*LANE_THICKNESS)
+            pen.setDashPattern([interval, interval])
+            pen.setDashOffset(dashOffset * 0.5 * rect.height()/(LANE_THICKNESS))
+        painter.setPen(pen)
+        painter.drawPath(path)
+        # clear path for next iteration
+        path.clear()
 
     arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
     arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
@@ -139,26 +148,25 @@ def paintGraphFrame(
         bx = x + columnB * LANE_WIDTH
         path.moveTo(ax, top)
         path.cubicTo(ax, middle, bx, middle, bx, bottom)
-        submitPath(path, arc.lane)
+        submitPath(path, arc.lane, arc.openedBy == UC_FAKEID)
 
     # draw arcs CLOSED BY commit (from above)
     for arc in reversed(arcsClosedByCommit):
         columnA, _ = laneColumnsAB[arc.lane]  # column above, column below
         ax = x + columnA * LANE_WIDTH
-        # Fork Up from Commit Bullet Point
-        path.moveTo(mx, middle)
-        path.quadTo(ax, middle, ax, top)
-        submitPath(path, arc.lane)
+        # Path from above does elbow shape to merge into commit bullet point
+        path.moveTo(ax, top)
+        path.quadTo(ax, middle, mx, middle)
+        submitPath(path, arc.lane, arc.openedBy == UC_FAKEID)
 
     # draw arcs OPENED BY commit (downwards)
     for arc in reversed(arcsOpenedByCommit):
         _, columnB = laneColumnsAB[arc.lane]  # column above, column below
         bx = x + columnB * LANE_WIDTH
-        # Fork Down from Commit Bullet Point
+        # Path forks downward from commit bullet point
         path.moveTo(mx, middle)
-        #path.lineTo(bx-dirB*LANE_WIDTH, middle)
         path.quadTo(bx, middle, bx, bottom)
-        submitPath(path, arc.lane)
+        submitPath(path, arc.lane, arc.openedBy == UC_FAKEID, dashOffset=1)
 
     # draw arc junctions
     for arc in arcsPassingByCommit:
@@ -177,7 +185,7 @@ def paintGraphFrame(
 
     # draw bullet point for this commit
     painter.setPen(Qt.PenStyle.NoPen)
-    painter.setBrush(getColor(commitLane))
+    painter.setBrush(getColor(commitLane) if oid != UC_FAKEID else UC_COLOR)
     painter.drawEllipse(QPoint(mx, middle), DOT_RADIUS, DOT_RADIUS)
 
     # we're done, clean up

@@ -4,6 +4,7 @@ import pygit2
 
 class CommitLogModel(QAbstractListModel):
     CommitRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 0
+    OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
 
     _commitSequence: list[pygit2.Commit] | None
 
@@ -31,29 +32,32 @@ class CommitLogModel(QAbstractListModel):
         # DON'T interleave beginRemoveRows/beginInsertRows!
         # It'll crash with QSortFilterProxyModel!
         if nRemovedRows != 0:
-            self.beginRemoveRows(parent, 1, nRemovedRows)
+            self.beginRemoveRows(parent, 0, nRemovedRows)
             self.endRemoveRows()
 
         if nAddedRows != 0:
-            self.beginInsertRows(parent, 1, nAddedRows)
+            self.beginInsertRows(parent, 0, nAddedRows)
             self.endInsertRows()
 
     def rowCount(self, *args, **kwargs) -> int:
         if not self.isValid:
             return 0
         else:
-            return 1 + len(self._commitSequence)
+            return len(self._commitSequence)
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole):
         if not self.isValid:
             return None
 
-        if index.row() == 0:
-            return None
-
         if role == Qt.ItemDataRole.DisplayRole:
             return None
         elif role == CommitLogModel.CommitRole:
-            return self._commitSequence[index.row() - 1]
+            return self._commitSequence[index.row()]
+        elif role == CommitLogModel.OidRole:
+            commit = self._commitSequence[index.row()]
+            if commit:
+                return commit.oid
+            else:
+                return None
         else:
             return None

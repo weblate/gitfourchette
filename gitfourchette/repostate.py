@@ -13,6 +13,7 @@ import os
 import pygit2
 
 
+UC_FAKEID = "UC_FAKEID"
 PROGRESS_INTERVAL = 5000
 
 
@@ -104,6 +105,7 @@ class RepoState:
         self.graph = None
         self.localCommits = None
 
+        self.headIsDetached = False
         self.refCache = {}
         self.reverseRefCache = {}
         self.refreshRefCache()
@@ -144,6 +146,8 @@ class RepoState:
         Return True if there were any changes in the refs since the last
         refresh, or False if nothing changed.
         """
+        self.headIsDetached = self.repo.head_is_detached
+
         refCache = porcelain.mapRefsToOids(self.repo)
 
         if refCache == self.refCache:
@@ -194,6 +198,12 @@ class RepoState:
         except pygit2.GitError:
             self.activeCommitOid = None
 
+    def _uncommittedChangesFakeCommitParents(self):
+        try:
+            return [self.refCache["HEAD"]]
+        except KeyError:  # Unborn HEAD
+            return []
+
     def loadCommitSequence(self, progress: QProgressDialog):
         progress.setLabelText(tr("Processing commit log..."))
         QCoreApplication.processEvents()
@@ -204,7 +214,7 @@ class RepoState:
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
-        commitSequence: list[pygit2.Commit] = []
+        commitSequence: list[pygit2.Commit | None] = []
         graph = Graph()
 
         # Retrieve the number of commits that we loaded last time we opened this repo
@@ -231,19 +241,30 @@ class RepoState:
         progress.setMaximum(len(commitSequence))
 
         graphGenerator = graph.startGenerator()
+
+        # Generate fake "Uncommitted Changes" with HEAD as parent
+        commitSequence.insert(0, None)
+
         for commit in commitSequence:
-            graphGenerator.newCommit(commit.oid, commit.parent_ids)
+            if not commit:
+                oid = UC_FAKEID
+                parents = self._uncommittedChangesFakeCommitParents()
+            else:
+                oid = commit.oid
+                parents = commit.parent_ids
+
+            graphGenerator.newCommit(oid, parents)
 
             row = graphGenerator.row
             rowInt = int(row)
 
             assert type(row) == BatchRow
             assert rowInt >= 0
-            graph.commitRows[commit.oid] = row
+            graph.commitRows[oid] = row
 
             # Save keyframes at regular intervals for faster random access,
             # and also at commitless parents to help out GraphMarker
-            if rowInt % KF_INTERVAL == 0 or not commit.parents:
+            if rowInt % KF_INTERVAL == 0 or not parents:
                 graph.saveKeyframe(graphGenerator)
 
             if rowInt % KF_INTERVAL == 0:
@@ -278,12 +299,18 @@ class RepoState:
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
         newHiddenCommitSolver: HiddenCommitSolver = self.newHiddenCommitSolver()
 
-        for commit in walker:
-            newCommitSequence.append(commit)
-            graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids)
-            newHiddenCommitSolver.feed(commit)
-            if not graphSplicer.keepGoing:
-                break
+        # Generate fake "Uncommitted Changes" with HEAD as parent
+        newCommitSequence.insert(0, None)
+        graphSplicer.spliceNewCommit(UC_FAKEID, self._uncommittedChangesFakeCommitParents())
+
+        if graphSplicer.keepGoing:
+            with Benchmark("Walk graph until equilibrium"):
+                for commit in walker:
+                    newCommitSequence.append(commit)
+                    graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids)
+                    newHiddenCommitSolver.feed(commit)
+                    if not graphSplicer.keepGoing:
+                        break
 
         graphSplicer.finish()
 
@@ -383,6 +410,8 @@ class RepoState:
     def resolveHiddenCommits(self):
         solver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:
+            if not commit:  # May be a fake commit such as Uncommitted Changes
+                continue
             solver.feed(commit)
             if solver.done:
                 break

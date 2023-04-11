@@ -20,10 +20,8 @@ class CommitLogFilter(QSortFilterProxyModel):
         self.hiddenOids = hiddenCommits
 
     def filterAcceptsRow(self, sourceRow: int, sourceParent: QModelIndex) -> bool:
-        if sourceRow == 0:  # Uncommitted Changes
-            return True
+        commit = self.clModel._commitSequence[sourceRow]
 
-        commit = self.clModel._commitSequence[sourceRow - 1]  # -1 to account for Uncommited Changes
-        return commit.oid not in self.hiddenOids
+        return (not commit) or (commit.oid not in self.hiddenOids)
 
 

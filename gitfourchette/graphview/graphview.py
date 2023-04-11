@@ -151,10 +151,8 @@ class GraphView(QListView):
     def currentCommitOid(self) -> pygit2.Oid | None:
         if not self.currentIndex().isValid():
             return
-        commit: pygit2.Commit = self.currentIndex().data(CommitLogModel.CommitRole)
-        if not commit:  # Uncommitted Changes has no bound data
-            return
-        return commit.oid
+        oid = self.currentIndex().data(CommitLogModel.OidRole)
+        return oid
 
     def getInfoOnCurrentCommit(self):
         oid = self.currentCommitOid
@@ -294,15 +292,17 @@ class GraphView(QListView):
     def onSetCurrent(self, current: QModelIndex = None):
         if current is None or not current.isValid():
             locator = NavLocator(NavContext.EMPTY)
-        elif current.row() == 0:  # uncommitted changes
-            locator = NavLocator(NavContext.WORKDIR)
         else:
-            oid = current.data(CommitLogModel.CommitRole).oid
-            locator = NavLocator(NavContext.COMMITTED, commit=oid)
+            oid = current.data(CommitLogModel.OidRole)
+            if oid:
+                locator = NavLocator(NavContext.COMMITTED, commit=oid)
+            else:  # uncommitted changes
+                locator = NavLocator(NavContext.WORKDIR)
         self.jump.emit(locator)
 
     def selectUncommittedChanges(self, force=False):
         if force or self.currentCommitOid is not None:
+            # TODO: Actual lookup
             self.setCurrentIndex(self.model().index(0, 0))
 
     def getFilterIndexForCommit(self, oid: pygit2.Oid):
@@ -311,7 +311,7 @@ class GraphView(QListView):
         except KeyError:
             return None
 
-        newSourceIndex = self.clModel.index(1 + rawIndex, 0)
+        newSourceIndex = self.clModel.index(rawIndex, 0)
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)
         return newFilterIndex
 
@@ -372,9 +372,9 @@ class GraphView(QListView):
             start = self.model().rowCount()
 
         if forward:
-            self.searchCommitInRange(range(1 + start, self.model().rowCount()))
+            self.searchCommitInRange(range(start, self.model().rowCount()))
         else:
-            self.searchCommitInRange(range(start - 1, -1, -1))
+            self.searchCommitInRange(range(start, -1, -1))
 
     def searchCommitInRange(self, searchRange: range):
         message = self.searchBar.sanitizedSearchTerm
@@ -407,7 +407,7 @@ class GraphView(QListView):
             if forward:
                 newRange = range(0, self.model().rowCount())
             else:
-                newRange = range(self.model().rowCount() - 1, 0, -1)
+                newRange = range(self.model().rowCount(), 0, -1)
             self.searchCommitInRange(newRange)
 
         prompt = [

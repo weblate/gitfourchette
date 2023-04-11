@@ -725,8 +725,8 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
 
     tips: list[tuple[str, Commit]] = []
 
-    # Detached HEAD doesn't appear in repo.listall_reference_objects, so it must be processed separately
-    if repo.head_is_detached:
+    # Always add 'HEAD' if we have one
+    if not repo.head_is_unborn:
         try:
             commit: Commit = repo.head.peel(Commit)
             tips.append(("HEAD", commit))
@@ -755,6 +755,8 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
             log.info("porcelain", F"{e} - Skipping stash '{stash.message}'")
             pass
 
+    # Reinsert all tips in chronological order
+    # (In Python 3.7+, dict key order is stable)
     tips = sorted(tips, key=lambda item: item[1].commit_time, reverse=True)
     return dict((ref, commit.oid) for ref, commit in tips)
 

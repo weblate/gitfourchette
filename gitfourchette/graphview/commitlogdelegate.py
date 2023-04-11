@@ -3,7 +3,7 @@ from gitfourchette import settings
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState
+from gitfourchette.repostate import RepoState, UC_FAKEID
 from gitfourchette.toolbox import *
 from dataclasses import dataclass
 import contextlib
@@ -130,8 +130,9 @@ class CommitLogDelegate(QStyledItemDelegate):
         if self.hashCharWidth == 0:
             self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
 
-        if index.row() > 0:
-            commit: pygit2.Commit = index.data(CommitLogModel.CommitRole)
+        commit: pygit2.Commit | None = index.data(CommitLogModel.CommitRole)
+        if commit:
+            oid = commit.oid
             # TODO: If is stash, getCoreStashMessage
             summaryText, contd = messageSummary(commit.message, ELISION)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
@@ -142,6 +143,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
         else:
+            oid = UC_FAKEID
             commit = None
             summaryText = self.tr("[Uncommitted Changes]")
             hashText = "·" * settings.prefs.shortHashChars
@@ -170,14 +172,19 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Graph
         rect.setLeft(rect.right())
-        if commit is not None:
-            paintGraphFrame(self.state, commit, painter, rect, outlineColor)
+        # if commit is not None:
+        paintGraphFrame(self.state, oid, painter, rect, outlineColor)
 
         # ------ Callouts
-        if commit is not None and commit.oid in self.state.reverseRefCache:
-            for refName in self.state.reverseRefCache[commit.oid]:
-                calloutText = refName
-                calloutColor = Qt.GlobalColor.darkMagenta
+        if oid in self.state.reverseRefCache:
+            for refName in self.state.reverseRefCache[oid]:
+                if refName != 'HEAD':
+                    calloutText = refName
+                    calloutColor = Qt.GlobalColor.darkMagenta
+                elif self.state.headIsDetached:
+                    calloutText = self.tr("detached HEAD")
+                else:
+                    continue
 
                 for prefix in CALLOUTS:
                     if refName.startswith(prefix):
@@ -186,9 +193,6 @@ class CommitLogDelegate(QStyledItemDelegate):
                             calloutText = refName.removeprefix(prefix)
                         calloutColor = calloutDef.color
                         break
-
-                if refName == 'HEAD':
-                    calloutText = self.tr("detached HEAD")
 
                 painter.save()
                 painter.setFont(self.smallFont)
