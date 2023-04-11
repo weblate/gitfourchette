@@ -34,9 +34,9 @@ class UnmergedConflict(QObject):
         # Make sure the output path exists so the FSW can begin watching it
         shutil.copyfile(porcelain.workdirPath(repo, self.conflict.ours.path), self.scratchPath)
 
-        s = os.stat(self.scratchPath)
-
         self.process = None
+
+        self.mergeFailed.connect(lambda: self.deleteLater())
 
     def startProcess(self):
         self.process = openInMergeTool(self, self.ancestorPath, self.oursPath, self.theirsPath, self.scratchPath)
@@ -64,19 +64,6 @@ class UnmergedConflict(QObject):
                 self.tr("Is that correct?")),
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         qmb.button(QMessageBox.StandardButton.Ok).setText(self.tr("Confirm merge resolution"))
-        qmb.accepted.connect(self.onAcceptMergedFile)
-        qmb.rejected.connect(self.onRejectMergedFile)
+        qmb.accepted.connect(self.mergeComplete)
+        qmb.rejected.connect(self.mergeFailed)
         qmb.show()
-
-    def onRejectMergedFile(self):
-        self.deleteLater()
-
-    def onAcceptMergedFile(self):
-        with open(self.scratchPath, "rb") as scratchFile, \
-                open(porcelain.workdirPath(self.repo, self.conflict.ours.path), "wb") as ourFile:
-            data = scratchFile.read()
-            ourFile.write(data)
-
-        del self.repo.index.conflicts[self.conflict.ours.path]
-
-        self.deleteLater()

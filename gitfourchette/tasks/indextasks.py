@@ -1,11 +1,12 @@
 from gitfourchette import porcelain
 from gitfourchette import reverseunidiff
+from gitfourchette.diffview.diffview import PatchPurpose
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-from gitfourchette.diffview.diffview import PatchPurpose
+from gitfourchette.unmergedconflict import UnmergedConflict
 import os
 import pygit2
 
@@ -264,6 +265,28 @@ class MarkConflictSolved(RepoTask):
         del repo.index.conflicts[path]
         assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
         repo.index.write()
+
+
+class AcceptMergeConflictResolution(RepoTask):
+    def name(self):
+        return translate("Operation", "Accept merge conflict resolution")
+
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir
+
+    def flow(self, umc: UnmergedConflict):
+        yield from self._flowBeginWorkerThread()
+        repo = self.repo
+
+        with open(umc.scratchPath, "rb") as scratchFile, \
+                open(porcelain.workdirPath(repo, umc.conflict.ours.path), "wb") as ourFile:
+            data = scratchFile.read()
+            ourFile.write(data)
+
+        del repo.index.conflicts[umc.conflict.ours.path]
+        repo.index.add(umc.conflict.ours.path)
+
+        umc.deleteLater()
 
 
 class ApplyPatchFile(RepoTask):

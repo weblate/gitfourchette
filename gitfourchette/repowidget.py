@@ -524,6 +524,7 @@ class RepoWidget(QWidget):
 
     def openConflictInMergeTool(self, conflict: DiffConflict):
         umc = UnmergedConflict(self, self.repo, conflict)
+        umc.mergeComplete.connect(lambda: self.runTask(tasks.AcceptMergeConflictResolution, umc))
         umc.startProcess()
 
     # -------------------------------------------------------------------------
