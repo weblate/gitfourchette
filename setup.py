@@ -17,9 +17,9 @@ setup(
     package_data={
         'gitfourchette.assets': ['*']
     },
-    python_requires='>=3',
+    python_requires='>= 3.10',
     install_requires=[
-        'pygit2>=1.11.0',
+        'pygit2 >= 1.12',
         'PySide6>=6.4.1',
         'PySide6 !=6.4.0, !=6.4.0.1, !=6.5.1',
     ],

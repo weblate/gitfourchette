@@ -4,7 +4,6 @@ from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.stashdialog import StashDialog
-from gitfourchette.forms.stashdialog_legacy import StashDialog_Legacy
 import pygit2
 
 
@@ -47,16 +46,6 @@ class NewStash(RepoTask):
                 self.tr("Cannot create a stash when HEAD is unborn.")
                 + " " + translate("Global", "Please create the initial commit in this repository first."))
 
-        # TODO: Remove this try/except once libgit2 1.6 support lands in pygit2
-        try:
-            porcelain.pygit2VersionAtLeast((1, 11, 3), featureName="File-by-file stashing")
-        except NotImplementedError as exc:
-            if paths:
-                yield from self._flowAbort(str(exc))
-            else:
-                yield from self.legacyFlow()
-            return
-
         status = self.repo.status(untracked_files="all", ignored=False)
 
         if not status:
@@ -78,29 +67,6 @@ class NewStash(RepoTask):
         porcelain.newStash(self.repo, stashMessage, paths=tickedFiles)
         if not keepIntact:
             porcelain.restoreFiles(self.repo, tickedFiles)
-
-    def legacyFlow(self):
-        """
-        TODO: Remove this once libgit2 1.6 support lands in pygit2
-        """
-
-        dlg = StashDialog_Legacy(self.parentWidget())
-        setWindowModal(dlg)
-        dlg.show()
-        dlg.setMaximumHeight(dlg.height())
-        yield from self._flowDialog(dlg)
-
-        stashMessage = dlg.ui.messageEdit.text()
-        dlg.deleteLater()
-
-        keepIndex = dlg.ui.keepIndexCheckBox.isChecked()
-        includeUntracked = dlg.ui.includeUntrackedCheckBox.isChecked()
-        includeIgnored = dlg.ui.includeIgnoredCheckBox.isChecked()
-
-        yield from self._flowBeginWorkerThread()
-        porcelain.newStash_legacy(
-            self.repo, stashMessage,
-            keepIndex=keepIndex, includeUntracked=includeUntracked, includeIgnored=includeIgnored)
 
 
 class ApplyStash(RepoTask):

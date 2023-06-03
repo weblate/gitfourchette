@@ -909,30 +909,6 @@ def unstageModeChanges(repo: Repository, patches: list[pygit2.Patch]):
     index.write()
 
 
-def newStash_legacy(
-        repo: Repository,
-        message: str,
-        keepIndex: bool,
-        includeUntracked: bool,
-        includeIgnored: bool) -> pygit2.Oid:
-    # TODO: Remove this once libgit2 1.6 support lands in pygit2.
-
-    try:
-        signature = repo.default_signature
-    except ValueError:
-        # Allow creating a stash if the identity isn't set
-        signature = Signature(name="UNKNOWN", email="UNKNOWN")
-
-    oid = repo.stash(
-        stasher=signature,
-        message=message,
-        keep_index=keepIndex,
-        include_untracked=includeUntracked,
-        include_ignored=includeIgnored)
-
-    return oid
-
-
 def newStash(repo: Repository, message: str, paths: list[str]) -> pygit2.Oid:
     """
     Creates a stash that backs up all changes to the given files.

@@ -9,13 +9,14 @@ import os
 def testNewStash(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
+    writeFile(F"{wd}/a/untracked.txt", "this file is untracked\n")  # untracked file
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
     assert len(repo.listall_stashes()) == 0
 
     assert len(rw.sidebar.datasForItemType(EItem.Stash)) == 0
-    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/untracked.txt"]
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
     findMenuAction(menu, "new stash").trigger()
@@ -24,38 +25,56 @@ def testNewStash(qtbot, tempDir, mainWindow):
     dlg.ui.messageEdit.setText("helloworld")
     dlg.accept()
 
-    assert len(repo.listall_stashes()) == 1
-    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)]
-    assert qlvGetRowData(rw.dirtyFiles) == []
-
-
-def testNewStashWithUntrackedFiles(qtbot, tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-    writeFile(F"{wd}/a/untracked.txt", "this file is untracked\n")  # unstaged change
-    rw = mainWindow.openRepo(wd)
-    repo = rw.repo
-
-    assert len(repo.listall_stashes()) == 0
-
-    assert len(rw.sidebar.datasForItemType(EItem.Stash)) == 0
-    assert qlvGetRowData(rw.dirtyFiles) == ["a/untracked.txt"]
-
-    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
-    findMenuAction(menu, "new stash").trigger()
-
-    dlg: StashDialog = findQDialog(rw, "new stash")
-    dlg.ui.messageEdit.setText("helloworld")
-    dlg.ui.includeUntrackedCheckBox.setChecked(True)
-    dlg.accept()
-
-    assert not os.path.isfile(f"{wd}/a/untracked.txt")
-    assert len(repo.listall_stashes()) == 1
-    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)]
-    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert not os.path.isfile(f"{wd}/a/untracked.txt"), "untracked file must be gone after stashing"
+    assert qlvGetRowData(rw.dirtyFiles) == [], "workdir must be clean after stashing"
+    assert len(repo.listall_stashes()) == 1, "there must be one stash in the repo"
+    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)], "stash must be in sidebar"
 
     rw.selectRef("refs/stash")
     assert rw.committedFiles.isVisibleTo(rw)
-    assert qlvGetRowData(rw.committedFiles) == ["a/untracked.txt"]
+    assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt", "a/untracked.txt"]
+
+
+def testNewPartialStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE 1\n")  # unstaged change
+    writeFile(F"{wd}/a/a2.txt", "a2\nPENDING CHANGE 2\n")  # unstaged change
+    writeFile(F"{wd}/a/untracked1.txt", "this file is untracked 1\n")  # untracked file
+    writeFile(F"{wd}/a/untracked2.txt", "this file is untracked 1\n")  # untracked file
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    dirtyFiles = ["a/a1.txt", "a/a2.txt", "a/untracked1.txt", "a/untracked2.txt"]
+    stashedFiles = ["a/a2.txt", "a/untracked2.txt"]
+    keptFiles = sorted(set(dirtyFiles) - set(stashedFiles))
+
+    assert len(repo.listall_stashes()) == 0
+
+    assert len(rw.sidebar.datasForItemType(EItem.Stash)) == 0
+    assert qlvGetRowData(rw.dirtyFiles) == dirtyFiles
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
+    findMenuAction(menu, "new stash").trigger()
+
+    dlg: StashDialog = findQDialog(rw, "new stash")
+    dlg.ui.messageEdit.setText("helloworld")
+
+    # Uncheck some files to produce a partial stash
+    fl = dlg.ui.fileList
+    assert qlvGetRowData(fl) == dirtyFiles
+    for uncheckFile in keptFiles:
+        qlvClickNthRow(fl, dirtyFiles.index(uncheckFile))
+        fl.selectedItems()[0].setCheckState(Qt.CheckState.Unchecked)
+
+    dlg.accept()
+
+    assert os.path.isfile(f"{wd}/a/untracked1.txt"), "untracked file 1 should still be here"
+    assert not os.path.isfile(f"{wd}/a/untracked2.txt"), "untracked file 2 must be gone"
+    assert qlvGetRowData(rw.dirtyFiles) == keptFiles
+
+    rw.selectRef("refs/stash")
+    assert rw.committedFiles.isVisibleTo(rw)
+    assert qlvGetRowData(rw.committedFiles) == stashedFiles
 
 
 def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
@@ -69,7 +88,6 @@ def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
 
     dlg: StashDialog = findQDialog(rw, "new stash")
     dlg.ui.messageEdit.setText("helloworld")
-    dlg.ui.includeUntrackedCheckBox.setChecked(True)
     dlg.accept()
 
     assert not os.path.isfile(f"{wd}/a/untracked.txt")
