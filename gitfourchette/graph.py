@@ -735,6 +735,8 @@ class Graph:
     commitRows: dict[Oid, BatchRow]
     ownBatches: list[int]
 
+    volatilePlayer: PlaybackState | None
+
     def __init__(self):
         self.keyframes = []
         self.keyframeRows = []
@@ -749,6 +751,7 @@ class Graph:
             junctions=[],
             nextArc=None)
         self.ownBatches = []
+        self.volatilePlayer = None
 
     def __del__(self):
         self.freeOwnBatches()
@@ -771,6 +774,9 @@ class Graph:
         self.ownBatches = source.ownBatches
 
         source.ownBatches = []
+
+        source.volatilePlayer = None
+        self.volatilePlayer = None
 
     def isEmpty(self):
         return self.startArc.nextArc is None
@@ -836,14 +842,17 @@ class Graph:
         self.ownBatches.append(generator.batchNo)
         return generator
 
-    def startPlayback(self, goalRow: int = 0) -> PlaybackState:
+    def startPlayback(self, goalRow: int = 0, oneOff: bool = False) -> PlaybackState:
         kfID = self.getBestKeyframeID(goalRow)
         if kfID >= 0:
             kf = self.keyframes[kfID]
         else:
             kf = self.initialKeyframe()
 
-        player = PlaybackState(kf)
+        if oneOff and self.volatilePlayer and goalRow >= self.volatilePlayer.row >= kf.row:
+            player = self.volatilePlayer
+        else:
+            player = PlaybackState(kf)
 
         # Position playback context on target row
         try:
@@ -851,15 +860,21 @@ class Graph:
             assert player.row <= goalRow, f"{player.row} {goalRow}"
             while player.row < goalRow:
                 player.advanceToNextRow()  # raises StopIteration if depleted
+
+                # Save keyframes every now and then
                 if player.row - kf.row >= volatileKeyframeCounter:
                     volatileKeyframeCounter *= 2
                     self.saveKeyframe(player)
+
             assert player.row == goalRow
             player.callingNextWillAdvanceFrame = False  # let us re-obtain current frame by calling next()
         except StopIteration:
             # Depleted - make sure we get StopIteration next time we call `next`.
             assert player.callingNextWillAdvanceFrame
             assert player.lastArc.nextArc is None
+
+        if oneOff:
+            self.volatilePlayer = player
 
         return player
 
@@ -1147,6 +1162,9 @@ class GraphSplicer:
             self.oldGraph.commitRows.update(self.newGraph.commitRows)
             self.oldGraph.ownBatches.extend(self.newGraph.ownBatches)  # Steal newGraph's batches
             self.newGraph.ownBatches = []  # Don't let newGraph nuke the batches in its __del__
+
+        # Invalidate volatile player, which may be referring to dead keyframes
+        self.oldGraph.volatilePlayer = None
 
         # Save rows for use by external code
         self.equilibriumNewRow = equilibriumNewRow
