@@ -62,10 +62,17 @@ if PYSIDE2:  # Patch PySide2's exec_ functions
     QApplication.exec = QApplication.exec_
     QMenu.exec = qMenuExec
 
-if PYSIDE6 and qtBindingVersion.startswith("6.4.0"):  # See PYSIDE-2104
-    QApplication()
-    QMessageBox.critical(None, "", "PySide6 6.4.0 isn't supported. Please upgrade to 6.4.1 or later.")
-    exit(1)
+if PYSIDE6:
+    badPyside6Versions = [
+        "6.4.0",  # PYSIDE-2104
+        "6.4.0.1",  # PYSIDE-2104
+        "6.5.1",  # PYSIDE-2346
+    ]
+    if any(v == qtBindingVersion for v in badPyside6Versions):
+        QApplication()
+        QMessageBox.critical(None, "", f"PySide6 version {qtBindingVersion} isn't supported.\n"
+                                       f"Please upgrade to the latest version of PySide6.")
+        exit(1)
 
 # QEvent::ThemeChange is still undocumented. It only seems to work in Qt 6.
 if PYQT5 or PYQT6:
