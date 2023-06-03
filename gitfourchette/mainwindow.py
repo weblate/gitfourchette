@@ -123,6 +123,10 @@ class MainWindow(QMainWindow):
                 return True
 
         elif (isPress or isDblClick) and self.isActiveWindow():
+            # As of PyQt6 6.5.1, QContextMenuEvent sometimes pretends that its event type is a MouseButtonDblClick
+            if PYQT6 and not isinstance(event, QMouseEvent):
+                return False
+
             mouseEvent: QMouseEvent = event
 
             isBack = mouseEvent.button() == Qt.MouseButton.BackButton
@@ -136,7 +140,7 @@ class MainWindow(QMainWindow):
                     elif rw and isForward:
                         rw.navigateForward()
 
-                # eat navigation clicks or double-clicks
+                # Eat clicks or double-clicks of back and forward mouse buttons
                 return True
 
         return False
