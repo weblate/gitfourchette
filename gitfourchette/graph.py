@@ -789,24 +789,21 @@ class Graph:
 
             self.commitRows[commit] = generator.row
 
-            # Save keyframes at regular intervals for faster random access,
-            # and also at commitless parents to help out GraphMarker
-            if int(generator.row) % keyframeInterval == 0 or not parentsOf[commit]:
+            # Save keyframes at regular intervals for faster random access.
+            if int(generator.row) % keyframeInterval == 0:
                 self.saveKeyframe(generator)
 
     def saveKeyframe(self, frame: Frame) -> int:
         assert len(self.keyframes) == len(self.keyframeRows)
 
-        kf = frame.sealCopy()
-
         kfID = bisect.bisect_left(self.keyframeRows, frame.row)
         if kfID < len(self.keyframes) and self.keyframes[kfID].row == frame.row:
-            assert self.keyframes[kfID] == kf
             log.info("Graph", "Not overwriting existing keyframe", kfID)
-            return kfID
-
-        self.keyframes.insert(kfID, kf)
-        self.keyframeRows.insert(kfID, frame.row)
+            assert self.keyframes[kfID] == frame.sealCopy()
+        else:
+            kf = frame.sealCopy()
+            self.keyframes.insert(kfID, kf)
+            self.keyframeRows.insert(kfID, frame.row)
         return kfID
 
     def getBestKeyframeID(self, row: int) -> int:
@@ -1188,71 +1185,3 @@ class GraphSplicer:
 
         # Do NOT test solved arcs!
         return True
-
-
-class GraphMarker:
-    def __init__(self, graph: Graph):
-        self.graph = graph
-        self.rows = {}
-        self.marks = {}
-
-    def mark(self, commit: Oid, value: int = 1, recurse=True):
-        frame = self.graph.getCommitFrame(commit, unsafe=True)
-        row = frame.row
-        chain = frame.getHomeChainForCommit()
-        chainId = int(chain.topRow)  # don't use id(chain) - that yields incorrect results after splicing
-
-        rows: list | None = self.rows.get(chainId, None)
-        if not rows:
-            self.rows[chainId] = [row]
-            self.marks[chainId] = [value]
-        else:
-            marks = self.marks[chainId]
-            i = bisect.bisect_left(rows, row)
-            if i >= len(rows) or rows[i] != row:
-                rows.insert(i, row)
-                marks.insert(i, value)
-            elif marks[i] == value:
-                # Marked up with same value, stop here
-                return
-            else:
-                # Overwrite weaker value with our stronger value
-                assert marks[i] <= value, "markup wasn't done in increasing order of value!"
-                marks[i] = value
-
-            # Bulldoze weaker values on same branch
-            if i+1 < len(rows):
-                assert all(m <= value for m in marks[i+1:]), "remaining values on this branch are supposed to be weaker, markup was probably not done in order"
-                del rows[i+1:]
-                del marks[i+1:]
-
-        # Also mark MAIN parent chain
-        if recurse and chain.bottomRow != BATCHROW_UNDEF:
-            assert int(chain.bottomRow) >= 0
-            cbrFrame = self.graph.getFrame(int(chain.bottomRow), unsafe=True)
-            if cbrFrame.getHomeChainForCommit() is not chain:
-                self.mark(cbrFrame.commit, value, recurse=False)
-
-    def lookup(self, commit: Oid, fallback=0):
-        row = self.graph.getCommitRow(commit)
-
-        while True:
-            frame = self.graph.getFrame(row, unsafe=True)
-            chain = frame.getHomeChainForCommit()
-            chainId = int(chain.topRow)  # don't use id(chain) - that yields incorrect results after splicing
-
-            # Find mark above commit on this chain
-            rows = self.rows.get(chainId, None)
-            if rows:  # chain must be marked
-                i = -1 + bisect.bisect_right(rows, row)
-                if i >= 0:  # commit must be at or below first mark in chain
-                    assert rows[i] <= row
-                    return self.marks[chainId][i]
-
-            # Chain was unmarked, or the commit was above the first mark in the chain.
-            if chain.topRow == row:
-                # Reached tip of unmarked chain
-                return fallback
-            else:
-                # Continue up in graph: Jump to the chain that we merge into.
-                row = chain.topRow

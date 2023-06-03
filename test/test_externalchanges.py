@@ -79,7 +79,9 @@ def testPatchBecameInvalid(qtbot, tempDir, mainWindow):
 
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt", "b/b2.txt"]
 
+    qlvClickNthRow(rw.dirtyFiles, 1)  # Select b/b2.txt
     writeFile(f"{wd}/b/b2.txt", "pulled the rug out from under the cached patch")
+    qlvClickNthRow(rw.dirtyFiles, 0)  # Select something else
     qlvClickNthRow(rw.dirtyFiles, 1)  # Select b/b2.txt
 
     assert not rw.diffView.isVisibleTo(rw)

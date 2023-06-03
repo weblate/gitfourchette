@@ -1,5 +1,7 @@
+import itertools
 import pytest
 from gitfourchette.graph import *
+from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
 from .test_graphsplicer import parseAncestryOneLiner
 from dataclasses import dataclass
 
@@ -21,21 +23,14 @@ class ChainMarkerFixture:
     """ Map of local commit seeds to a list of all local commits.
     All unlisted commits are considered to be "foreign". """
 
-    def generateGraph(self):
-        sequence, parentMap, heads = parseAncestryOneLiner(self.graphDef)
-        g = Graph()
-        g.generateFullSequence(sequence, parentMap)
-        assert set(self.headsDef.split()) == set(heads)
-        return g
-
     def hiddenCommitsParametrizedArgs(self):
-        return [(self.generateGraph(), self.headsDef.split(), k.split(), v.split()) for k, v in self.hiddenCommits.items()]
+        return [(self, k.split(), v.split()) for k, v in self.hiddenCommits.items()]
 
     def hiddenCommitsParametrizedNames(self):
         return [self.graphName + ": " + k for k in self.hiddenCommits]
 
     def localCommitsParametrizedArgs(self):
-        return [(self.generateGraph(), k.split(), v.split()) for k, v in self.localCommits.items()]
+        return [(self, k.split(), v.split()) for k, v in self.localCommits.items()]
 
     def localCommitsParametrizedNames(self):
         return [self.graphName + ": " + k for k in self.localCommits]
@@ -120,9 +115,9 @@ allFixtures = [
             "b": "",  # cannot be hidden because VIP commits depend on it
             "sc": "sc si su",
             "a sc": "a sc si su b c",
-            "su": "su",
-            "si": "si",
-            "si su": "si su",
+            "su!": "su",
+            "si!": "si",
+            "si! su!": "si su",
         },
 
         localCommits={
@@ -160,58 +155,188 @@ allFixtures = [
             "a b c": "a b c",
         },
     ),
+
+    # a ┯
+    # c ┿─╮
+    # d │ ┿
+    # e ┷─╯
+    ChainMarkerFixture(
+        graphName="nojunction",
+        graphDef="a,c c,e,d d,e e",
+        headsDef="a",
+        hiddenCommits={
+            "": "",
+            "a": "a c d e",
+        },
+        localCommits={
+            "": "",
+            "a": "a c d e",
+        },
+    ),
+
+    # a ┯
+    # b │ ┯
+    # c ┿─╮  (junction)
+    # d │ ┿
+    # e ┷─╯
+    ChainMarkerFixture(
+        graphName="junction",
+        graphDef="a,c b,d c,e,d d,e e",
+        headsDef="a b",
+        hiddenCommits={
+            "": "",
+            "a": "a c",
+            "b": "b",
+            "a b": "a b c d e",
+        },
+        localCommits={
+            "": "",
+            "a": "a c d e",
+            "b": "b d e",
+            "a b": "a b c d e",
+        },
+    ),
+
+    #  a ┯
+    #  b │ ┯
+    #  c │ │ ┯
+    #  j ┿─╮ │    FPbf
+    #  k ┿─│─╮    FPcf
+    # bf │ ┷ │
+    # cf │   ┷
+    # af ┷
+    ChainMarkerFixture(
+        graphName="2 junctions on 1 branch",
+        graphDef="a,j b,bf c,cf j,k,bf k,af,cf bf cf af",
+        headsDef="a b c",
+        hiddenCommits={
+            "": "",
+            "a": "a j k af",
+            "b": "b",
+            "c": "c",
+            "a b": "a j k af b bf",
+        },
+        localCommits={
+            "": "",
+            "a": "a j k af bf cf",
+            "b": "b bf",
+            "c": "c cf",
+        },
+    ),
+
+    # a ┯─╮
+    # b │ │ ┯
+    # c │ ┿─╯
+    # d ┿─╯
+    # e ┷
+    ChainMarkerFixture(
+        graphName="deep propagation",
+        graphDef="a,d,c b,c c,d d,e e",
+        headsDef="a b",
+        hiddenCommits={
+            "": "",
+            "a": "a",  # should not hide anything else because b depends on it
+            "b": "b",
+        },
+        localCommits={
+            "": "",
+            "b": "b c d e",
+        },
+    ),
+
+    ChainMarkerFixture(
+        graphName="deep propagation with junctions",
+        graphDef="a,f b,d c,j j,e,d d,e e,f f,g g",
+        headsDef="a b c",
+        hiddenCommits={
+            "": "",
+            "a": "a",
+            "a b": "a b",
+            "c": "c j",
+            "b c": "b c j d e",
+        },
+        localCommits={
+            "": "",
+            "c": "c j d e f g",  # <--- that's the tricky one
+            "b": "b d e f g",
+        },
+    ),
+
+    ChainMarkerFixture(
+        graphName="non-tip head should stay visible",
+        graphDef="a,b b,e,c c,d d,e e,f f",
+        headsDef="a c",  # note the extra head "c" here. We want it to stay visible when hiding "a"
+        hiddenCommits={
+            "": "",
+            "a": "a b",  # "c" must be visible
+        },
+        localCommits={
+            "": "",
+        },
+    ),
 ]
 
 
 @pytest.mark.parametrize(
-    argnames=("graph", "heads", "seeds", "expected"),
+    argnames=("fixture", "seeds", "expected"),
     argvalues=itertools.chain.from_iterable(g.hiddenCommitsParametrizedArgs() for g in allFixtures),
     ids=itertools.chain.from_iterable(g.hiddenCommitsParametrizedNames() for g in allFixtures),
 )
-def testHiddenCommitMarks(graph, heads, seeds, expected):
+def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
+    fixtureHeads = fixture.headsDef.split()
+    sequence, parentMap, graphHeads = parseAncestryOneLiner(fixture.graphDef)
+    graph = Graph()
+    graph.generateFullSequence(sequence, parentMap)
+    assert all(h in fixtureHeads for h in graphHeads)
+
     print("\n"+graph.textDiagram())
     print("Seed hidden commits:", seeds)
     print("Expected hidden commits:", expected)
 
-    cm = GraphMarker(graph)
+    cm = HiddenCommitSolver()
 
-    # The order of the marking below is IMPORTANT
+    for c in set(seeds):
+        cm.tagCommit(c.removesuffix("!"), cm.Tag.HARDHIDE if c.endswith("!") else cm.Tag.SOFTHIDE)
 
-    # FIRST, mark HIDDEN NON-heads as FORCE-HIDDEN
-    for c in set(seeds) - set(heads):
-        print(f"Marking {c} as FORCE-HIDDEN")
-        cm.mark(c, 0, recurse=False)
+    for c in set(fixtureHeads) - set(seeds):
+        cm.tagCommit(c, cm.Tag.SHOW)
 
-    # THEN, mark NON-HIDDEN heads as VISIBLE
-    for c in set(heads) - set(seeds):
-        print(f"Marking {c} as VISIBLE")
-        cm.mark(c, 1)
+    for c in sequence:
+        cm.feed(c, parentMap[c])
 
-    for c in graph.commitRows.keys():
-        lookedUp = cm.lookup(c, -1)
-        isVisible = lookedUp > 0
-        print(f"Looking up {c} (supposed to be {'hidden' if c in expected else 'visible'}) resulted in {lookedUp}")
+    for c in sequence:
+        isVisible = c not in cm.marked
+        print(f"Looking up {c} (supposed to be {'hidden' if c in expected else 'visible'}) resulted in {isVisible}")
         assert isVisible == (c not in expected)
-        print(c, "PASS", lookedUp)
+        print(c, "PASS", isVisible)
 
 
 @pytest.mark.parametrize(
-    argnames=("graph", "seeds", "expected"),
+    argnames=("fixture", "seeds", "expected"),
     argvalues=itertools.chain.from_iterable(g.localCommitsParametrizedArgs() for g in allFixtures),
     ids=itertools.chain.from_iterable(g.localCommitsParametrizedNames() for g in allFixtures),
 )
-def testLocalCommitMarks(graph, seeds, expected):
+def testLocalCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
+    fixtureHeads = fixture.headsDef.split()
+    sequence, parentMap, graphHeads = parseAncestryOneLiner(fixture.graphDef)
+    graph = Graph()
+    graph.generateFullSequence(sequence, parentMap)
+    assert all(h in fixtureHeads for h in graphHeads)
+
     print("\n"+graph.textDiagram())
     print("Seed commits:", seeds)
     print("Expected commits:", expected)
 
-    cm = GraphMarker(graph)
+    cm = ForeignCommitSolver({})
 
     for c in seeds:
         print(f"Marking {c} as LOCAL")
-        cm.mark(c)
+        cm.setLocal(c)
 
-    for c in graph.commitRows.keys():
-        lookedUp = cm.lookup(c)
-        assert lookedUp == (c in expected), f"{c} should be marked {c in expected}, was marked {lookedUp}"
-        print(c, "PASS", lookedUp)
+    for c in sequence:
+        cm.feed(c, parentMap[c])
+
+    for c in sequence:
+        isLocal = c not in cm.marked
+        assert isLocal == (c in expected), f"{c} should be marked {c in expected}, was marked {isLocal}"
+        print(c, "PASS", isLocal)

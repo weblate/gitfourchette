@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 from gitfourchette import log
 from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
-from gitfourchette.hiddencommitsolver import HiddenCommitSolver
-from gitfourchette.graph import Graph, GraphMarker, GraphSplicer, KF_INTERVAL, BatchRow
+from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
+from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
 from gitfourchette.qt import *
 from gitfourchette.settings import BasePrefs
 from gitfourchette.toolbox import *
@@ -68,7 +68,7 @@ class RepoState:
     # oid of the active commit (to make it bold)
     activeCommitOid: pygit2.Oid | None
 
-    localCommits: GraphMarker | None
+    foreignCommits: set[pygit2.Oid]
     """Use this to look up which commits are part of local branches,
     and which commits are 'foreign'."""
 
@@ -224,12 +224,11 @@ class RepoState:
             progress.setMinimum(0)
             progress.setMaximum(2 * numCommitsBallpark)  # reserve second half of progress bar for graph progress
 
-        hiddenCommitSolver = self.newHiddenCommitSolver()
+
         try:
             for offsetFromTop, commit in enumerate(walker):
                 progressTick(progress, offsetFromTop, numCommitsBallpark)
                 commitSequence.append(commit)
-                hiddenCommitSolver.feed(commit)
         except StopIteration:
             pass
 
@@ -245,6 +244,9 @@ class RepoState:
         # Generate fake "Uncommitted Changes" with HEAD as parent
         commitSequence.insert(0, None)
 
+        hiddenCommitSolver = self.newHiddenCommitSolver()
+        foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
+
         for commit in commitSequence:
             if not commit:
                 oid = UC_FAKEID
@@ -255,6 +257,9 @@ class RepoState:
 
             graphGenerator.newCommit(oid, parents)
 
+            foreignCommitSolver.feed(oid, parents)
+            hiddenCommitSolver.feed(oid, parents)
+
             row = graphGenerator.row
             rowInt = int(row)
 
@@ -262,22 +267,18 @@ class RepoState:
             assert rowInt >= 0
             graph.commitRows[oid] = row
 
-            # Save keyframes at regular intervals for faster random access,
-            # and also at commitless parents to help out GraphMarker
-            if rowInt % KF_INTERVAL == 0 or not parents:
-                graph.saveKeyframe(graphGenerator)
-
+            # Save keyframes at regular intervals for faster random access.
             if rowInt % KF_INTERVAL == 0:
+                graph.saveKeyframe(graphGenerator)
                 progress.setValue(rowInt)
                 QCoreApplication.processEvents()
 
         log.info("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
 
         self.commitSequence = commitSequence
-        self.hiddenCommits = hiddenCommitSolver.hiddenCommits
+        self.foreignCommits = foreignCommitSolver.marked
+        self.hiddenCommits = hiddenCommitSolver.marked
         self.graph = graph
-
-        self.refreshLocalCommits()
 
         bench.__exit__(None, None, None)
 
@@ -298,6 +299,7 @@ class RepoState:
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
         newHiddenCommitSolver: HiddenCommitSolver = self.newHiddenCommitSolver()
+        newForeignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
 
         # Generate fake "Uncommitted Changes" with HEAD as parent
         newCommitSequence.insert(0, None)
@@ -306,9 +308,15 @@ class RepoState:
         if graphSplicer.keepGoing:
             with Benchmark("Walk graph until equilibrium"):
                 for commit in walker:
+                    oid = commit.oid
+                    parents = commit.parent_ids
+
                     newCommitSequence.append(commit)
-                    graphSplicer.spliceNewCommit(commit.oid, commit.parent_ids)
-                    newHiddenCommitSolver.feed(commit)
+                    graphSplicer.spliceNewCommit(oid, parents)
+
+                    newHiddenCommitSolver.feed(oid, parents)
+                    newForeignCommitSolver.feed(oid, parents)
+
                     if not graphSplicer.keepGoing:
                         break
 
@@ -317,9 +325,13 @@ class RepoState:
         if graphSplicer.foundEquilibrium:
             nRemoved = graphSplicer.equilibriumOldRow
             nAdded = graphSplicer.equilibriumNewRow
+            self.hiddenCommits.update(newHiddenCommitSolver.marked)
+            self.foreignCommits.update(newForeignCommitSolver.marked)
         else:
             nRemoved = -1  # We could use len(self.commitSequence), but -1 will force refreshRepo to replace the model wholesale
             nAdded = len(newCommitSequence)
+            self.hiddenCommits = newHiddenCommitSolver.marked
+            self.foreignCommits = newForeignCommitSolver.marked
 
         # Piece correct commit sequence back together
         with Benchmark("Reassemble commit sequence"):
@@ -332,22 +344,9 @@ class RepoState:
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
-        self.refreshLocalCommits()
-
-        # Update hidden commits
-        self.hiddenCommits.update(newHiddenCommitSolver.hiddenCommits)
-
         self.updateActiveCommitOid()
 
         return nRemoved, nAdded
-
-    @benchmark
-    def refreshLocalCommits(self):
-        localCommits = GraphMarker(self.graph)
-        for refName, commitOid in self.refCache.items():
-            if refName == 'HEAD' or refName.startswith("refs/heads/"):
-                localCommits.mark(commitOid)
-        self.localCommits = localCommits
 
     @benchmark
     def toggleHideBranch(self, branchName: str):
@@ -393,17 +392,21 @@ class RepoState:
 
     def newHiddenCommitSolver(self) -> HiddenCommitSolver:
         solver = HiddenCommitSolver()
+        T = HiddenCommitSolver.Tag
+
+        for head in self.refCache.values():
+            solver.tagCommit(head, T.SHOW)
 
         for hiddenBranchTip in self.getHiddenBranchOids():
-            solver.hideCommit(hiddenBranchTip)
+            solver.tagCommit(hiddenBranchTip, T.SOFTHIDE)
 
         if settings.prefs.debug_hideStashJunkParents:
             for stash in self.repo.listall_stashes():
                 stashCommit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
                 if len(stashCommit.parents) >= 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):
-                    solver.hideCommit(stashCommit.parents[1].id, force=True)
+                    solver.tagCommit(stashCommit.parents[1].id, T.HARDHIDE)
                 if len(stashCommit.parents) >= 3 and stashCommit.parents[2].raw_message.startswith(b"untracked files on "):
-                    solver.hideCommit(stashCommit.parents[2].id, force=True)
+                    solver.tagCommit(stashCommit.parents[2].id, T.HARDHIDE)
 
         return solver
 
@@ -412,7 +415,7 @@ class RepoState:
         for commit in self.commitSequence:
             if not commit:  # May be a fake commit such as Uncommitted Changes
                 continue
-            solver.feed(commit)
+            solver.feed(commit.oid, commit.parent_ids)
             if solver.done:
                 break
-        self.hiddenCommits = solver.hiddenCommits
+        self.hiddenCommits = solver.marked

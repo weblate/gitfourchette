@@ -2,14 +2,12 @@ from gitfourchette.graph import *
 import pytest
 import re
 
-
-KF_INTERVAL_TEST = 3
+KF_INTERVAL_TEST = 1
 """
 In the real world, the interval between keyframes is on the order of thousands
 of frames. For unit testing purposes, let's save keyframes more frequently --
 our test graphs are tiny.
 """
-
 
 # Values are 3-tuples:
 # [0]: Old graph definition oneliner
@@ -26,6 +24,12 @@ SCENARIOS = {
         "    a,b b,e c,d d,e e,f f,g g",
         "n,a a,b b,e c,d d,e e,f f,g g",
         True,
+    ),
+
+    "new parentless branch appears": (
+        "                     a1,a2 b1,b2 c1,c2 a2 b2 c2",
+        "a0,a1 b0,b1 d0,d1 d1 a1,a2 b1,b2 c1,c2 a2 b2 c2",
+        True
     ),
 
     "several new commits": (
@@ -94,13 +98,26 @@ SCENARIOS = {
         False,
     ),
 
+    #  0 a ┯
+    #  1 b ┿
+    #      │─╮─╮─╮
+    #  2 c ┿ │ │ │
+    #  3 d │ ┿ │ │
+    #      │ ╰───╮        JunctionOn"Arc(chain: 1, oa: 1, ob: b → ca: 5, cb: f)":1[d]->3;
+    #  4 e │ │ ┿ │
+    #  5 f │ │ │ ┿
+    #  6 s │ │ │ ┿
+    #  7 r │ │ ┿ │
+    #  8 p ┿ │ │ │
+    #  9 q │ ┿ │ │
+    # 10 z ┷─╯─╯─╯
     "octopus": (
         "a,b b,c,d,e,f c,p d,q,f e,r f,s s,z r,z p,z q,z z",
         "a,b b,c,d,e,f c,p d,q,f e,r f,s s,z r,z p,z q,z z",
         True,
     ),
 
-    "new commit appears at top; unchanged branches don't need to be reviewed": (
+    "parentless commit appears at top; other branches don't need to be reviewed": (
         "  a,b b,c c,d d,e e,q f,g g,h h,i t,u i,r u,v v,s q,r r,s s x,y y,z z",
         "n a,b b,c c,d d,e e,q f,g g,h h,i t,u i,r u,v v,s q,r r,s s x,y y,z z",
         True,
@@ -153,10 +170,16 @@ SCENARIOS = {
         "a,b b",
         False,
     ),
- 
+
     "1 to 2": (
         "b",
         "a,b b",
+        True,
+    ),
+
+    "1 to 2b": (
+        "y,x x,c c",
+        "a,b b,c c",
         True,
     ),
 
@@ -190,9 +213,15 @@ SCENARIOS = {
         False,
     ),
 
-    "completely different, newer is longer, unclosed link when older depleted": (
+    "completely different, newer is longer, 1 commitless 'loop'": (
         "p,q q,r r",
         "a,b,f b,c c,d d,e e,f f",
+        False,
+    ),
+
+    "completely different, newer is longer, 2 commitless 'loops'": (
+        "p,q q,r r",
+        "a,b,f,g b,c c,d d,e e,f f g",
         False,
     ),
 
@@ -217,6 +246,42 @@ SCENARIOS = {
     "stash at top": (
         "             a,b b,c c",
         "s1,a,s2 s2,a a,b b,c c",
+        True,
+    ),
+
+    "truncated graph with junctions (fork points) pointing outside the graph": (
+        "c9e,ce1 493,6e1,f73,d01 d01,6db f73,6db 6e1,120,7f8 120,bab bab,838 838,646,6db 646,42e 42e 7f8,597 597,c07",
+        "c9e,ce1 493,6e1,f73,d01 d01,6db f73,6db 6e1,120,7f8 120,bab bab,838 838,646,6db 646,42e 42e 7f8,597 597,c07",
+        True,
+    ),
+
+    "careful not to rewire main dead branch into LL of branches after splicing": (
+        "a,d b,d,c c,d d,f f",
+        "m,d b,d,c c,d d,f f",
+        True
+    ),
+
+    "careful not to rewire main dead branch into LL of branches after splicing 2": (
+        "a1,a2 b1,b2,b' b',b2 b2,a2 c,a2,c' c',a2 a2,a3 a3,a4 d1,d2 d2,a4 a4,f f",
+        "am,a2 b1,b2,b' b',b2 b2,a2 c,a2,c' c',a2 a2,a3 a3,a4 d1,d2 d2,a4 a4,f f",
+        True,
+    ),
+
+    "equilibrium in between disjoint branches 1": (
+        "a,b b c,d d",
+        "x,b b c,d d",
+        True,
+    ),
+
+    "equilibrium in between disjoint branches 2": (
+        "a,b b c,d d",
+        "x,y y c,d d",
+        True,
+    ),
+
+    "equilibrium in between disjoint branches 3": (
+        "a,b b c",
+        "x,b b c",
         True,
     ),
 }
@@ -267,6 +332,10 @@ def testGraphSplicing(scenarioKey):
     g = Graph()
     g.generateFullSequence(sequence1, parentsOf1, keyframeInterval=KF_INTERVAL_TEST)
 
+    verification = Graph()
+    verification.generateFullSequence(sequence2, parentsOf2)
+
+    print("---------------------------------------------------")
     print(F"Graph before --------- (heads: {heads1})")
     print(g.textDiagram())
     print("Keyframes BEFORE REFRESH:", g.keyframeRows)
@@ -276,7 +345,11 @@ def testGraphSplicing(scenarioKey):
     assert list(range(len(sequence1))) == [g.getCommitRow(c) for c in sequence1]
 
     # verify that all keyframes are correct
+    print("Verifying keyframes...")
     verifyKeyframes(g)
+
+    print("---------------------------------------------------")
+    print("Start splicing...")
 
     # modify top of history
     splicer = g.startSplicing(heads1, heads2)
@@ -296,13 +369,15 @@ def testGraphSplicing(scenarioKey):
     del splicer
 
     print(F"Graph after --------- (heads: {heads2})")
+    print("Keyframes AFTER SPLICING:", g.keyframeRows)
+    print("Num branches AFTER SPLICING:", g.startArc.getNumberOfArcsFromHere())
+
+    # Nuke KFs to force going thru everything again
+    g.keyframes = []
+    g.keyframeRows = []
     print(g.textDiagram())
-    print("Keyframes AFTER REFRESH:", g.keyframeRows)
-    print("Num arcs total AFTER REFRESH:", g.startArc.getNumberOfArcsFromHere())
 
     # verify that the splicing was correct
-    verification = Graph()
-    verification.generateFullSequence(sequence2, parentsOf2)
     assert g.textDiagram() == verification.textDiagram()
 
     # verify that row cache is consistent
