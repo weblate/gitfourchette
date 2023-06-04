@@ -12,7 +12,6 @@ from gitfourchette.toolbox import *
 class ConflictView(QWidget):
     hardSolve = Signal(str, pygit2.Oid)
     markSolved = Signal(str)
-    openFile = Signal(str)
     openMergeTool = Signal(DiffConflict)
 
     currentConflict: DiffConflict | None
@@ -34,7 +33,6 @@ class ConflictView(QWidget):
         self.ui.oursButton.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.ours.path, self.currentConflict.ours.id))
         self.ui.theirsButton.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.ours.path, self.currentConflict.theirs.id))
         self.ui.markSolvedButton.clicked.connect(lambda: self.markSolved.emit(self.currentConflict.ours.path))
-        self.ui.editFileButton.clicked.connect(lambda: self.openFile.emit(self.currentConflict.ours.path))
         self.ui.mergeToolButton.clicked.connect(lambda: self.openMergeTool.emit(self.currentConflict))
 
         self.ui.deletedByUsDelete.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.theirs.path, BLANK_OID))

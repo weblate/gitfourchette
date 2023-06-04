@@ -71,13 +71,6 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="editFileButton">
-            <property name="text">
-             <string>Edit file</string>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QPushButton" name="markSolvedButton">
             <property name="text">
              <string>Mark as resolved</string>

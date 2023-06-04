@@ -54,11 +54,6 @@ class Ui_ConflictView(object):
 
         self.verticalLayout_2.addWidget(self.mergeToolButton)
 
-        self.editFileButton = QPushButton(self.groupBox_2)
-        self.editFileButton.setObjectName(u"editFileButton")
-
-        self.verticalLayout_2.addWidget(self.editFileButton)
-
         self.markSolvedButton = QPushButton(self.groupBox_2)
         self.markSolvedButton.setObjectName(u"markSolvedButton")
         self.markSolvedButton.setFlat(False)
@@ -123,7 +118,6 @@ class Ui_ConflictView(object):
         self.theirsButton.setText(QCoreApplication.translate("ConflictView", u"Use theirs", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("ConflictView", u"Reconcile manually", None))
         self.mergeToolButton.setText(QCoreApplication.translate("ConflictView", u"Merge in {0}", None))
-        self.editFileButton.setText(QCoreApplication.translate("ConflictView", u"Edit file", None))
         self.markSolvedButton.setText(QCoreApplication.translate("ConflictView", u"Mark as resolved", None))
         self.deletedByUsDelete.setText(QCoreApplication.translate("ConflictView", u"Don\u2019t add", None))
         self.deletedByUsAdd.setText(QCoreApplication.translate("ConflictView", u"Add \u201c{0}\u201d to our branch", None))

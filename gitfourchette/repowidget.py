@@ -104,7 +104,6 @@ class RepoWidget(QWidget):
 
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
-        self.conflictView.openFile.connect(self.openConflictFile)
         self.conflictView.openMergeTool.connect(self.openConflictInMergeTool)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
@@ -517,10 +516,6 @@ class RepoWidget(QWidget):
 
     # -------------------------------------------------------------------------
     # Conflicts
-
-    def openConflictFile(self, path: str):
-        fullPath = porcelain.workdirPath(self.repo, path)
-        openInTextEditor(self, fullPath)
 
     def openConflictInMergeTool(self, conflict: DiffConflict):
         umc = UnmergedConflict(self, self.repo, conflict)
