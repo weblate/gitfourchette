@@ -50,12 +50,10 @@ def testFetchRemote(qtbot, tempDir, mainWindow):
     # Make some modifications to the bare repository that serves as a remote.
     # We're going to create a new branch and delete another.
     # The client must pick up on those modifications once it fetches the remote.
-    bareRepo = pygit2.Repository(barePath)
-    assert bareRepo.is_bare
-    porcelain.newBranch(bareRepo, "new-remote-branch")
-    porcelain.deleteBranch(bareRepo, "no-parent")
-    bareRepo.free()  # necessary for correct test teardown on Windows
-    del bareRepo
+    with RepositoryContextManager(barePath) as bareRepo:
+        assert bareRepo.is_bare
+        porcelain.newBranch(bareRepo, "new-remote-branch")
+        porcelain.deleteBranch(bareRepo, "no-parent")
 
     rw = mainWindow.openRepo(wd)
 
@@ -80,13 +78,11 @@ def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
 
     # Modify the master branch in the bare repository that serves as a remote.
     # The client must pick up on this modification once it fetches the remote branch.
-    bareRepo = pygit2.Repository(barePath)
-    assert bareRepo.is_bare
-    assert bareRepo.head.target == oldHead
-    porcelain.resetHead(bareRepo, newHead, resetMode="soft")  # can't reset hard in bare repos, whatever...
-    assert bareRepo.head.target == newHead
-    bareRepo.free()  # necessary for correct test teardown on Windows
-    del bareRepo
+    with RepositoryContextManager(barePath) as bareRepo:
+        assert bareRepo.is_bare
+        assert bareRepo.head.target == oldHead
+        porcelain.resetHead(bareRepo, newHead, resetMode="soft")  # can't reset hard in bare repos, whatever...
+        assert bareRepo.head.target == newHead
 
     rw = mainWindow.openRepo(wd)
 

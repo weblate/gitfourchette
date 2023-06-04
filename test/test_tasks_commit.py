@@ -231,10 +231,8 @@ def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
 
     oid = pygit2.Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
 
-    repo = pygit2.Repository(wd)
-    porcelain.checkoutCommit(repo, oid)
-    repo.free()  # necessary for correct test teardown on Windows
-    del repo
+    with RepositoryContextManager(wd) as repo:
+        porcelain.checkoutCommit(repo, oid)
 
     rw = mainWindow.openRepo(wd)
 
