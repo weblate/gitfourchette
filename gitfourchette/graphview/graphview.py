@@ -118,11 +118,15 @@ class GraphView(QListView):
         self.clModel.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, commitSequence)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
-        oid = self.currentCommitOid
-        if oid:
-            self.checkoutCommit.emit(oid)
+        if event.button() == Qt.MouseButton.LeftButton:
+            event.accept()
+            oid = self.currentCommitOid
+            if oid:
+                self.checkoutCommit.emit(oid)
+            else:
+                self.commitChanges.emit()
         else:
-            self.commitChanges.emit()
+            super().mouseDoubleClickEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
