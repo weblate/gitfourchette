@@ -2,6 +2,8 @@ import dataclasses
 import enum
 import json
 
+import pygit2
+
 from gitfourchette import log
 from gitfourchette.qt import *
 
@@ -10,6 +12,8 @@ class PrefsJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, bytes):
             return {"_type": "bytes", "data": obj.hex()}
+        elif isinstance(obj, pygit2.Signature):
+            return { "_type": "Signature", "name": obj.name, "email": obj.email, "time": obj.time, "offset": obj.offset }
         return super(self).default(obj)
 
 
@@ -23,6 +27,8 @@ class PrefsJSONDecoder(json.JSONDecoder):
         type = j['_type']
         if type == "bytes":
             return bytes.fromhex(j["data"])
+        elif type == "Signature":
+            return pygit2.Signature(j["name"], j["email"], j["time"], j["offset"])
         return j
 
 
@@ -103,15 +109,18 @@ class PrefsFile:
                     log.warning("prefs", F"{prefsPath}: skipping unknown key: {k}")
                     continue
 
-                originalType = type(self.__dict__[k])
+                if obj[k] is None:
+                    continue
+
+                originalType = self.__dataclass_fields__[k].type
                 if issubclass(originalType, enum.IntEnum):
                     acceptedType = int
                 else:
                     acceptedType = originalType
 
-                if type(obj[k]) != acceptedType:
-                    log.warning("prefs", F"{prefsPath}: value type mismatch for {k}: expected {acceptedType}, got {type(obj[k])}")
-                    continue
-                self.__dict__[k] = originalType(obj[k])
+                if acceptedType is not originalType:
+                    self.__dict__[k] = originalType(obj[k])
+                else:
+                    self.__dict__[k] = obj[k]
 
         return True

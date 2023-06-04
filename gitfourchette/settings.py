@@ -134,7 +134,7 @@ class History(PrefsFile):
     filename = "history.json"
 
     repos: dict = dataclasses.field(default_factory=dict)
-    cloneHistory: list[str] = dataclasses.field(default_factory=list)
+    cloneHistory: list = dataclasses.field(default_factory=list)
     fileDialogPaths: dict = dataclasses.field(default_factory=dict)
 
     _maxSeq = -1
@@ -234,7 +234,7 @@ class History(PrefsFile):
 class Session(PrefsFile):
     filename = "session.json"
 
-    tabs                        : list[str]     = dataclasses.field(default_factory=list)
+    tabs                        : list          = dataclasses.field(default_factory=list)
     activeTabIndex              : int           = -1
     windowGeometry              : bytes         = b""
     splitterStates              : dict          = dataclasses.field(default_factory=dict)

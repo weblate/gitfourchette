@@ -36,8 +36,9 @@ class RepoPrefs(PrefsFile):
     _parentDir = ""
 
     draftCommitMessage: str = ""
+    draftCommitSignature: pygit2.Signature = None
     draftAmendMessage: str = ""
-    hiddenBranches: list[str] = field(default_factory=list)
+    hiddenBranches: list = field(default_factory=list)
 
     def getParentDir(self):
         return self._parentDir
@@ -130,13 +131,21 @@ class RepoState:
         else:
             return self.uiPrefs.draftCommitMessage
 
-    def setDraftCommitMessage(self, newMessage: str | None, forAmending: bool = False):
-        if not newMessage:
-            newMessage = ""
+    def getDraftCommitAuthor(self) -> pygit2.Signature:
+        return self.uiPrefs.draftCommitSignature
+
+    def setDraftCommitMessage(
+            self,
+            message: str | None,
+            author: pygit2.Signature | None = None,
+            forAmending: bool = False):
+        if not message:
+            message = ""
         if forAmending:
-            self.uiPrefs.draftAmendMessage = newMessage
+            self.uiPrefs.draftAmendMessage = message
         else:
-            self.uiPrefs.draftCommitMessage = newMessage
+            self.uiPrefs.draftCommitMessage = message
+            self.uiPrefs.draftCommitSignature = author
         self.uiPrefs.write()
 
     @benchmark

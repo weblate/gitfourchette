@@ -72,9 +72,23 @@
      <property name="checkable">
       <bool>false</bool>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="SignatureForm" name="authorSignature" native="true"/>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="overrideCommitterSignature">
+        <property name="toolTip">
+         <string>&lt;p&gt;Check this to use the same custom signature for the author and committer.&lt;/p&gt;
+&lt;p&gt;If you uncheck this, only the author will be overridden, and the committer will be set to: {0}.&lt;/p&gt;</string>
+        </property>
+        <property name="text">
+         <string>Also override committer signature</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

@@ -34,6 +34,10 @@ class CommitDialog(QDialog):
             buttonCaption = self.tr("&Commit")
             self.setWindowTitle(self.tr("Commit"))
 
+        committerQDT = QDateTime.fromSecsSinceEpoch(committerSignature.time, Qt.TimeSpec.OffsetFromUTC, committerSignature.offset * 60)
+        formatWidgetTooltip(self.ui.overrideCommitterSignature,
+                            escape(f"{committerSignature.name} <{committerSignature.email}>, {committerQDT.toString()}"))
+
         self.ui.detachedHeadWarning.setVisible(detachedHead)
 
         self.ui.authorSignature.setSignature(authorSignature)
@@ -93,5 +97,7 @@ class CommitDialog(QDialog):
             return None
 
     def getOverriddenCommitterSignature(self):
-        return self.getOverriddenAuthorSignature()
-
+        if self.ui.revealAuthor.isChecked() and self.ui.overrideCommitterSignature.isChecked():
+            return self.getOverriddenAuthorSignature()
+        else:
+            return None

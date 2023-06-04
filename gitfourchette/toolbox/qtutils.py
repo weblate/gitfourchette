@@ -86,6 +86,13 @@ def formatWidgetText(widget: QAbstractButton | QLabel, *args, **kwargs):
     return text
 
 
+def formatWidgetTooltip(widget: QWidget, *args, **kwargs):
+    text = widget.toolTip()
+    text = text.format(*args, **kwargs)
+    widget.setToolTip(text)
+    return text
+
+
 def addComboBoxItem(comboBox: QComboBox, caption: str, userData=None, isCurrent=False):
     if isCurrent:
         caption = "• " + caption

@@ -24,12 +24,6 @@ class NewCommit(RepoTask):
     def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
         return self.parentWidget()
 
-    def getDraftMessage(self):
-        return self.rw.state.getDraftCommitMessage()
-
-    def setDraftMessage(self, newMessage):
-        self.rw.state.setDraftCommitMessage(newMessage)
-
     def flow(self):
         if self.repo.index.conflicts:
             yield from self._flowAbort(
@@ -44,15 +38,18 @@ class NewCommit(RepoTask):
                     self.tr("Do you want to create an empty commit anyway?")))
 
         sig = self.repo.default_signature
-        initialMessage = self.getDraftMessage()
+        initialMessage = self.rw.state.getDraftCommitMessage()
+        initialAuthor = self.rw.state.getDraftCommitAuthor()
 
         cd = CommitDialog(
             initialText=initialMessage,
-            authorSignature=sig,
+            authorSignature=initialAuthor or sig,
             committerSignature=sig,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
             parent=self.parentWidget())
+
+        cd.ui.revealAuthor.setChecked(initialAuthor is not None and initialAuthor != sig)
 
         setWindowModal(cd)
 
@@ -60,24 +57,29 @@ class NewCommit(RepoTask):
         yield from self._flowDialog(cd, abortTaskIfRejected=False)
 
         message = cd.getFullMessage()
+        author = cd.getOverriddenAuthorSignature()
+        committer = cd.getOverriddenCommitterSignature()
 
         # Save commit message as draft now, so we don't lose it if the commit operation fails or is rejected.
-        if message != initialMessage:
-            self.setDraftMessage(message)
+        if message != initialMessage or author != initialAuthor:
+            savedAuthor = author if author != sig else None
+            self.rw.state.setDraftCommitMessage(message, savedAuthor)
 
         if cd.result() == QDialog.DialogCode.Rejected:
             cd.deleteLater()
             yield from self._flowAbort()
 
-        author = cd.getOverriddenAuthorSignature()
-        committer = cd.getOverriddenCommitterSignature()
         cd.deleteLater()
 
         yield from self._flowBeginWorkerThread()
+
+        if not author:
+            author = sig
+
         porcelain.createCommit(self.repo, message, author, committer)
 
         yield from self._flowExitWorkerThread()
-        self.setDraftMessage(None)  # Clear draft message
+        self.rw.state.setDraftCommitMessage(None, None)  # Clear draft message
 
 
 class AmendCommit(RepoTask):

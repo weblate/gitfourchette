@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'commitdialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.2
+## Created by: Qt User Interface Compiler version 6.4.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -52,12 +52,18 @@ class Ui_CommitDialog(object):
         self.authorGroupBox.setEnabled(True)
         self.authorGroupBox.setFlat(False)
         self.authorGroupBox.setCheckable(False)
-        self.horizontalLayout = QHBoxLayout(self.authorGroupBox)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.verticalLayout_2 = QVBoxLayout(self.authorGroupBox)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.authorSignature = SignatureForm(self.authorGroupBox)
         self.authorSignature.setObjectName(u"authorSignature")
 
-        self.horizontalLayout.addWidget(self.authorSignature)
+        self.verticalLayout_2.addWidget(self.authorSignature)
+
+        self.overrideCommitterSignature = QCheckBox(self.authorGroupBox)
+        self.overrideCommitterSignature.setObjectName(u"overrideCommitterSignature")
+        self.overrideCommitterSignature.setChecked(False)
+
+        self.verticalLayout_2.addWidget(self.overrideCommitterSignature)
 
 
         self.verticalLayout.addWidget(self.authorGroupBox)
@@ -95,4 +101,9 @@ class Ui_CommitDialog(object):
         self.descriptionEditor.setPlaceholderText(QCoreApplication.translate("CommitDialog", u"Long-form description (optional)", None))
         self.revealAuthor.setText(QCoreApplication.translate("CommitDialog", u"&Edit author", None))
         self.authorGroupBox.setTitle("")
+#if QT_CONFIG(tooltip)
+        self.overrideCommitterSignature.setToolTip(QCoreApplication.translate("CommitDialog", u"<p>Check this to use the same custom signature for the author and committer.</p>\n"
+"<p>If you uncheck this, only the author will be overridden, and the committer will be set to: {0}.</p>", None))
+#endif // QT_CONFIG(tooltip)
+        self.overrideCommitterSignature.setText(QCoreApplication.translate("CommitDialog", u"Also override committer signature", None))
         self.detachedHeadWarning.setText(QCoreApplication.translate("CommitDialog", u"Warning: You are not in any branch (detached HEAD). You should create a branch to ensure your commit won\u2019t be lost inadvertently.", None))
