@@ -94,7 +94,7 @@ def prefsTranslationTable():
         "ABBREVIATED_EMAIL": translate("Prefs", "Abbreviated email"),
 
         "CRAMPED": translate("Prefs", "Cramped"),
-        "TIGHT": translate("Prefs", "Tight (default)"),
+        "TIGHT": translate("Prefs", "Tight"),
         "RELAXED": translate("Prefs", "Relaxed"),
         "ROOMY": translate("Prefs", "Roomy"),
         "SPACIOUS": translate("Prefs", "Spacious"),

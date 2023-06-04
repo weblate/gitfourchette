@@ -115,7 +115,7 @@ class Prefs(PrefsFile):
     tabs_doubleClickOpensFolder : bool          = True
     graph_chronologicalOrder    : bool          = True
     graph_flattenLanes          : bool          = True
-    graph_rowHeight             : GraphRowHeight = GraphRowHeight.TIGHT
+    graph_rowHeight             : GraphRowHeight = GraphRowHeight.RELAXED
     external_editor             : str           = ""
     external_diff               : str           = list(DIFF_TOOL_PRESETS.values())[0]
     external_merge              : str           = list(MERGE_TOOL_PRESETS.values())[0]
