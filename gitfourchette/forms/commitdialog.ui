@@ -113,7 +113,7 @@
   <customwidget>
    <class>SignatureForm</class>
    <extends>QWidget</extends>
-   <header>gitfourchette.widgets.signatureform</header>
+   <header>gitfourchette.forms.signatureform</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

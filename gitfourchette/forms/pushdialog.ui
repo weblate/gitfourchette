@@ -242,7 +242,7 @@
   <customwidget>
    <class>StatusForm</class>
    <extends>QWidget</extends>
-   <header>gitfourchette.widgets.statusform</header>
+   <header>gitfourchette.forms.statusform</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
