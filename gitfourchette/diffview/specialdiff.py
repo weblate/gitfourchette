@@ -17,6 +17,14 @@ class DiffConflict:
     ours: pygit2.IndexEntry | None
     theirs: pygit2.IndexEntry | None
 
+    @property
+    def deletedByUs(self):
+        return not self.ours and self.theirs
+
+    @property
+    def deletedByThem(self):
+        return self.ours and not self.theirs
+
 
 class DiffImagePair:
     oldImage: QImage

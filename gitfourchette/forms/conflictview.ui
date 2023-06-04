@@ -27,53 +27,99 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Expanding</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>100</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
    <item row="5" column="0">
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>One-click reconcile</string>
+    <widget class="QStackedWidget" name="reconcileStack">
+     <property name="currentIndex">
+      <number>0</number>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout">
-      <item>
-       <widget class="QPushButton" name="oursButton">
-        <property name="text">
-         <string>Use ours</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="theirsButton">
-        <property name="text">
-         <string>Use theirs</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="2" column="0" colspan="2">
-    <widget class="QLabel" name="titleLabel">
-     <property name="text">
-      <string>Merge conflict</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
+     <widget class="QWidget" name="reconcile3Way">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>One-click reconcile</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QPushButton" name="oursButton">
+            <property name="text">
+             <string>Use ours</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="theirsButton">
+            <property name="text">
+             <string>Use theirs</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="title">
+          <string>Reconcile manually</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QPushButton" name="mergeToolButton">
+            <property name="text">
+             <string>Merge in {0}</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="editFileButton">
+            <property name="text">
+             <string>Edit file</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="markSolvedButton">
+            <property name="text">
+             <string>Mark as resolved</string>
+            </property>
+            <property name="flat">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="reconcileDeletedByUs">
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="4" column="0">
+        <widget class="QPushButton" name="deletedByUsDelete">
+         <property name="text">
+          <string>Don’t add</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="deletedByUsAdd">
+         <property name="text">
+          <string>Add “{0}” to our branch</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="deletedByUsText">
+         <property name="text">
+          <string>&lt;b&gt;Deleted by us:&lt;/b&gt; “{0}” has been deleted from our branch, but it still exists in the branch that we’re merging. While the file was gone from our side, the other branch has modified it.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item row="4" column="0">
@@ -92,38 +138,31 @@
      </property>
     </spacer>
    </item>
-   <item row="5" column="1">
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="title">
-      <string>Reconcile manually</string>
+   <item row="2" column="0" colspan="2">
+    <widget class="QLabel" name="titleLabel">
+     <property name="text">
+      <string>Merge conflict</string>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QPushButton" name="mergeToolButton">
-        <property name="text">
-         <string>Merge in {0}</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="editFileButton">
-        <property name="text">
-         <string>Edit file</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="markSolvedButton">
-        <property name="text">
-         <string>Mark as resolved</string>
-        </property>
-        <property name="flat">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
     </widget>
+   </item>
+   <item row="7" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Expanding</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>100</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

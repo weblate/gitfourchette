@@ -231,6 +231,7 @@ class HardSolveConflict(RepoTask):
     def flow(self, path: str, keepOid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
         repo = self.repo
+        fullPath = os.path.join(repo.workdir, path)
 
         porcelain.refreshIndex(repo)
         assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
@@ -239,9 +240,12 @@ class HardSolveConflict(RepoTask):
         trash.backupFile(path)
 
         # TODO: we should probably set the modes correctly and stuff as well
-        blob: pygit2.Blob = repo[keepOid].peel(pygit2.Blob)
-        with open(os.path.join(repo.workdir, path), "wb") as f:
-            f.write(blob.data)
+        if keepOid == porcelain.BLANK_OID:
+            os.unlink(fullPath)
+        else:
+            blob: pygit2.Blob = repo[keepOid].peel(pygit2.Blob)
+            with open(fullPath, "wb") as f:
+                f.write(blob.data)
 
         del repo.index.conflicts[path]
         assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)

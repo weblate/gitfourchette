@@ -79,6 +79,13 @@ def tweakWidgetFont(widget: QWidget, relativeSize: int = 100, bold: bool = False
     return font
 
 
+def formatWidgetText(widget: QAbstractButton | QLabel, *args, **kwargs):
+    text = widget.text()
+    text = text.format(*args, **kwargs)
+    widget.setText(text)
+    return text
+
+
 def addComboBoxItem(comboBox: QComboBox, caption: str, userData=None, isCurrent=False):
     if isCurrent:
         caption = "• " + caption

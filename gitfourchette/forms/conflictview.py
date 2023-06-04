@@ -1,10 +1,12 @@
+import pygit2
+
 from gitfourchette import settings
+from gitfourchette.diffview.specialdiff import DiffConflict
+from gitfourchette.filelists.filelistmodel import STATUS_ICONS
+from gitfourchette.forms.ui_conflictview import Ui_ConflictView
+from gitfourchette.porcelain import BLANK_OID
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
-                                                DiffConflict)
-from gitfourchette.forms.ui_conflictview import Ui_ConflictView
-import pygit2
 
 
 class ConflictView(QWidget):
@@ -13,16 +15,19 @@ class ConflictView(QWidget):
     openFile = Signal(str)
     openMergeTool = Signal(DiffConflict)
 
-    currentConflict: DiffConflict
+    currentConflict: DiffConflict | None
 
     def __init__(self, parent):
         super().__init__(parent)
+
+        self.currentConflict = None
+
         self.ui = Ui_ConflictView()
         self.ui.setupUi(self)
 
+        self.ui.deletedByUsAdd.setIcon(STATUS_ICONS['A'])
+        self.ui.deletedByUsDelete.setIcon(STATUS_ICONS['D'])
         tweakWidgetFont(self.ui.titleLabel, 150, bold=True)
-
-        self.currentConflict = None
 
         self.ui.mergeToolButton.setText(self.ui.mergeToolButton.text().format(settings.getMergeToolName()))
 
@@ -32,12 +37,28 @@ class ConflictView(QWidget):
         self.ui.editFileButton.clicked.connect(lambda: self.openFile.emit(self.currentConflict.ours.path))
         self.ui.mergeToolButton.clicked.connect(lambda: self.openMergeTool.emit(self.currentConflict))
 
+        self.ui.deletedByUsDelete.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.theirs.path, BLANK_OID))
+        self.ui.deletedByUsAdd.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.theirs.path, self.currentConflict.theirs.id))
+
     def clear(self):
         self.currentConflict = None
 
     def displayConflict(self, conflict: DiffConflict):
         self.currentConflict = conflict
 
-    def refreshPrefs(self):
         self.ui.retranslateUi(self)
-        self.ui.mergeToolButton.setText(self.ui.mergeToolButton.text().format(settings.getMergeToolName()))
+
+        if not conflict:
+            pass
+        elif conflict.deletedByUs:
+            self.ui.reconcileStack.setCurrentWidget(self.ui.reconcileDeletedByUs)
+            theirs = os.path.basename(conflict.theirs.path)
+            formatWidgetText(self.ui.deletedByUsText, escape(theirs))
+            formatWidgetText(self.ui.deletedByUsAdd, escamp(theirs))
+        else:
+            self.ui.reconcileStack.setCurrentWidget(self.ui.reconcile3Way)
+            formatWidgetText(self.ui.mergeToolButton, settings.getMergeToolName())
+
+    def refreshPrefs(self):
+        self.displayConflict(self.currentConflict)
+

@@ -20,7 +20,7 @@ from .qelidedlabel import QElidedLabel
 from .qrunnablefunctionwrapper import QRunnableFunctionWrapper
 from .qsignalblockercontext import QSignalBlockerContext
 from .qtutils import (addComboBoxItem, setWindowModal, isImageFormatSupported,
-                      onAppThread, tweakWidgetFont, stockIcon,
+                      onAppThread, tweakWidgetFont, formatWidgetText, stockIcon,
                       openFolder, showInFolder, DisableWidgetContext)
 from .textutils import escape, escamp, paragraphs, messageSummary, elide
 from .validatormultiplexer import ValidatorMultiplexer
