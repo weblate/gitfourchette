@@ -839,8 +839,8 @@ class MainWindow(QMainWindow):
     # Session management
 
     def restoreSession(self, session: settings.Session):
-        self.sharedSplitterStates = {k: settings.decodeBinary(session.splitterStates[k]) for k in session.splitterStates}
-        self.restoreGeometry(settings.decodeBinary(session.windowGeometry))
+        self.sharedSplitterStates = {k: session.splitterStates[k] for k in session.splitterStates}
+        self.restoreGeometry(session.windowGeometry)
 
         # Stop here if there are no tabs to load
         if not session.tabs:
@@ -906,9 +906,9 @@ class MainWindow(QMainWindow):
 
     def saveSession(self):
         session = settings.Session()
-        session.windowGeometry = settings.encodeBinary(self.saveGeometry())
+        session.windowGeometry = bytes(self.saveGeometry())
         if self.currentRepoWidget():
-            session.splitterStates = {s.objectName(): settings.encodeBinary(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
+            session.splitterStates = {s.objectName(): bytes(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
         else:
             session.splitterStates = {}
         session.tabs = [self.tabs.widget(i).workdir for i in range(self.tabs.count())]

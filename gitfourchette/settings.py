@@ -1,9 +1,9 @@
 from gitfourchette import log
+from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 import contextlib
 import dataclasses
 import enum
-import json
 import os
 import shlex
 
@@ -66,99 +66,6 @@ del externalToolPresetFilter
 del key
 
 
-def encodeBinary(b: QByteArray) -> str:
-    return b.toBase64().data().decode('utf-8')
-
-
-def decodeBinary(encoded: str) -> QByteArray:
-    return QByteArray.fromBase64(encoded.encode('utf-8'))
-
-
-class BasePrefs:
-    def getParentDir(self):
-        return QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
-
-    def _getFullPath(self, forWriting: bool):
-        prefsDir = self.getParentDir()
-        if not prefsDir:
-            return None
-
-        if forWriting:
-            os.makedirs(prefsDir, exist_ok=True)
-
-        fullPath = os.path.join(prefsDir, getattr(self, 'filename'))
-
-        if not forWriting and not os.path.isfile(fullPath):
-            return None
-
-        return fullPath
-
-    def write(self, force=False):
-        if not force and TEST_MODE:
-            log.info("prefs", "Disabling write prefs")
-            return None
-
-        prefsPath = self._getFullPath(forWriting=True)
-
-        if not prefsPath:
-            log.warning("prefs", "Couldn't get path for writing")
-            return None
-
-        # Get default values if we're saving a dataclass
-        defaults = {}
-        if dataclasses.is_dataclass(self):
-            for f in dataclasses.fields(self):
-                if f.default_factory != dataclasses.MISSING:
-                    defaults[f.name] = f.default_factory()
-                else:
-                    defaults[f.name] = f.default
-
-        # Skip private fields starting with an underscore,
-        # and skip fields that are set to the default value
-        filtered = {}
-        for k in self.__dict__:
-            if k.startswith("_"):
-                continue
-            v = self.__dict__[k]
-            if (k not in defaults) or (defaults[k] != v):
-                filtered[k] = v
-
-        # Dump the object to disk
-        with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
-            json.dump(obj=filtered, fp=jsonFile, indent='\t')
-
-        log.info("prefs", f"Wrote {prefsPath}")
-        return prefsPath
-
-    def load(self):
-        prefsPath = self._getFullPath(forWriting=False)
-        if not prefsPath:  # couldn't be found
-            return False
-
-        with open(prefsPath, 'rt', encoding='utf-8') as f:
-            obj = json.load(f)
-            for k in obj:
-                if k.startswith('_'):
-                    log.warning("prefs", F"{prefsPath}: skipping illegal key: {k}")
-                    continue
-                if k not in self.__dict__:
-                    log.warning("prefs", F"{prefsPath}: skipping unknown key: {k}")
-                    continue
-
-                originalType = type(self.__dict__[k])
-                if issubclass(originalType, enum.IntEnum):
-                    acceptedType = int
-                else:
-                    acceptedType = originalType
-
-                if type(obj[k]) != acceptedType:
-                    log.warning("prefs", F"{prefsPath}: value type mismatch for {k}: expected {acceptedType}, got {type(obj[k])}")
-                    continue
-                self.__dict__[k] = originalType(obj[k])
-
-        return True
-
-
 class PathDisplayStyle(enum.IntEnum):
     FULL_PATHS = 1
     ABBREVIATE_DIRECTORIES = 2
@@ -183,7 +90,7 @@ class GraphRowHeight(enum.IntEnum):
 
 
 @dataclasses.dataclass
-class Prefs(BasePrefs):
+class Prefs(PrefsFile):
     filename = "prefs.json"
 
     language                    : str           = ""
@@ -223,7 +130,7 @@ class Prefs(BasePrefs):
 
 
 @dataclasses.dataclass
-class History(BasePrefs):
+class History(PrefsFile):
     filename = "history.json"
 
     repos: dict = dataclasses.field(default_factory=dict)
@@ -324,12 +231,12 @@ class History(BasePrefs):
 
 
 @dataclasses.dataclass
-class Session(BasePrefs):
+class Session(PrefsFile):
     filename = "session.json"
 
     tabs                        : list[str]     = dataclasses.field(default_factory=list)
     activeTabIndex              : int           = -1
-    windowGeometry              : str           = ""
+    windowGeometry              : bytes         = b""
     splitterStates              : dict          = dataclasses.field(default_factory=dict)
 
 

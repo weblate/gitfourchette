@@ -5,8 +5,8 @@ from gitfourchette import porcelain, tempdir
 from gitfourchette import settings
 from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
+from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
-from gitfourchette.settings import BasePrefs
 from gitfourchette.toolbox import *
 from typing import Iterable
 import os
@@ -31,7 +31,7 @@ def progressTick(progress, i, numCommitsBallpark=0):
 
 
 @dataclass
-class RepoPrefs(BasePrefs):
+class RepoPrefs(PrefsFile):
     filename = "prefs.json"
     _parentDir = ""
 
