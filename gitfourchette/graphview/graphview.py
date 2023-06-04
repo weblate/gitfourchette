@@ -372,9 +372,9 @@ class GraphView(QListView):
             start = self.model().rowCount()
 
         if forward:
-            self.searchCommitInRange(range(start, self.model().rowCount()))
+            self.searchCommitInRange(range(1 + start, self.model().rowCount()))
         else:
-            self.searchCommitInRange(range(start, -1, -1))
+            self.searchCommitInRange(range(start - 1, -1, -1))
 
     def searchCommitInRange(self, searchRange: range):
         message = self.searchBar.sanitizedSearchTerm
