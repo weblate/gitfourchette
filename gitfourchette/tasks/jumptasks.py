@@ -51,10 +51,19 @@ class Jump(RepoTask):
         # Show workdir or commit views (and update them if needed)
         if locator.context.isWorkdir():
             locator = yield from self.showWorkdir(locator)
-            flv = rw.stagedFiles if locator.context == NavContext.STAGED else rw.dirtyFiles
         else:
             locator = yield from self.showCommit(locator)
+
+        # Early out?
+        if locator is None:
+            return
+
+        if locator.context == NavContext.COMMITTED:
             flv = rw.committedFiles
+        elif locator.context == NavContext.STAGED:
+            flv = rw.stagedFiles
+        else:
+            flv = rw.dirtyFiles
 
         # If we still don't have a path in the locator, fall back to first path in file list.
         if not locator.path:
@@ -164,7 +173,7 @@ class Jump(RepoTask):
                 self.tr("There aren’t any changes to commit."),
                 QStyle.StandardPixmap.SP_MessageBoxInformation))
             self.setFinalLocator(locator.replace(path=""))
-            yield from self._flowStop()
+            return None  # Force early out
 
         # (Un)Staging a file makes it vanish from its file list.
         # But we don't want the selection to go blank in this case.
@@ -237,7 +246,7 @@ class Jump(RepoTask):
                 self.tr("Commit “{0}” doesn’t affect any files.").format(shortHash(locator.commit)),
                 QStyle.StandardPixmap.SP_MessageBoxInformation))
             self.setFinalLocator(locator.replace(path=""))
-            yield from self._flowStop()
+            return None  # Force early out
 
         return locator
 

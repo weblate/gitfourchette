@@ -1,5 +1,7 @@
 from gitfourchette import porcelain
+from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
+from gitfourchette.tasks.jumptasks import RefreshRepo
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
@@ -400,10 +402,40 @@ class CherrypickCommit(RepoTask):
         return translate("Operation", "Cherry-pick")
 
     def effects(self):
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        effects = TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        if self.didCommit:
+            effects |= TaskEffects.Refs | TaskEffects.Head
+        return effects
+
+    @property
+    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
+        return self.parentWidget()
 
     def flow(self, oid: pygit2.Oid):
+        self.didCommit = False
+
         yield from self._flowBeginWorkerThread()
         porcelain.cherrypick(self.repo, oid)
+        anyConflicts = bool(self.repo.index.conflicts)
+        commit = self.repo[oid].peel(pygit2.Commit)
 
         self.repo.state_cleanup()  # also cleans up .git/MERGE_MSG
+
+        yield from self._flowExitWorkerThread()
+
+        if not anyConflicts and not porcelain.hasAnyStagedChanges(self.repo):
+            info = self.tr("There’s nothing to cherry-pick from “{0}” "
+                           "that the current branch doesn’t already have.").format(shortHash(oid))
+            yield from self._flowAbort(info, "information")
+
+        self.rw.state.setDraftCommitMessage(commit.message, author=commit.author)
+
+        if not anyConflicts:
+            yield from self._flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
+            yield from self._flowConfirm(
+                text=self.tr("Cherry-picking “{0}” was successful. "
+                             "Do you want to commit the result now?").format(shortHash(oid)),
+                verb=self.tr("Commit"),
+                cancelText=self.tr("Review changes"))
+            yield from self._flowSubtask(NewCommit)
+            self.didCommit = True

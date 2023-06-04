@@ -269,3 +269,32 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
     rw.graphView.selectUncommittedChanges()
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
     assert rw.repo.status() == {"c/c2-2.txt": pygit2.GIT_STATUS_INDEX_NEW}
+
+
+def testCherrypick(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepositoryContextManager(wd) as repo:
+        porcelain.checkoutLocalBranch(repo, "no-parent")
+
+    oid = pygit2.Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
+
+    rw = mainWindow.openRepo(wd)
+
+    rw.graphView.selectCommit(oid)
+    rw.graphView.cherrypickCommit.emit(oid)
+
+    assert rw.stageSplitter.isVisibleTo(rw)
+    assert rw.repo.status() == {"a/a1.txt": pygit2.GIT_STATUS_INDEX_NEW}
+
+    acceptQMessageBox(rw, "cherry.+success.+commit")
+
+    dialog: CommitDialog = findQDialog(rw, "commit")
+    assert dialog.ui.summaryEditor.text() == "First a/a1"
+
+    dialog.accept()
+
+    headCommit = porcelain.getHeadCommit(rw.repo)
+    assert headCommit.message == "First a/a1"
+    rw.graphView.selectCommit(headCommit.oid)
+    assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]

@@ -112,12 +112,6 @@ class FlowControlAbort(BaseException):
     pass
 
 
-class FlowControlEarlySuccess(BaseException):
-    """ To bail from a coroutine early, we must raise an exception to ensure that
-    any active context managers exit deterministically."""
-    pass
-
-
 class RepoTask(QObject):
     """
     Task that manipulates a repository.
@@ -230,11 +224,6 @@ class RepoTask(QObject):
         raise FlowControlAbort()
         yield  # Dummy yield to make it a generator
 
-    def _flowStop(self):
-        assert onAppThread()
-        raise FlowControlEarlySuccess()
-        yield  # Dummy yield to make it a generator
-
     def _flowBeginWorkerThread(self):
         """
         Moves the task to a non-UI thread.
@@ -306,6 +295,7 @@ class RepoTask(QObject):
             text: str = "",
             buttonIcon: (QStyle.StandardPixmap | str | None) = None,
             verb: str = "",
+            cancelText: str = "",
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -327,6 +317,9 @@ class RepoTask(QObject):
         if buttonIcon:
             yes.setIcon(stockIcon(buttonIcon))
         yes.setText(verb)
+
+        if cancelText:
+            qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self._flowDialog(qmb)
@@ -493,7 +486,7 @@ class RepoTaskRunner(QObject):
                 # Stop tracking this task
                 self._releaseTask(task)
 
-                if isinstance(exception, (StopIteration, FlowControlEarlySuccess)):
+                if isinstance(exception, StopIteration):
                     # No more steps in the flow
                     log.info(TAG, f"Task successful: {task}")
                     task.success.emit()
