@@ -78,3 +78,49 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
+def testCommitSearch(qtbot, tempDir, mainWindow):
+    # Commits that contain "first" in their summary
+    matchingCommits = [
+        pygit2.Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4"),
+        pygit2.Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"),
+        pygit2.Oid(hex="d31f5a60d406e831d056b8ac2538d515100c2df2"),
+        pygit2.Oid(hex="83d2f0431bcdc9c2fd2c17b828143be6ee4fbe80"),
+        pygit2.Oid(hex="2c349335b7f797072cf729c4f3bb0914ecb6dec9"),
+        pygit2.Oid(hex="ac7e7e44c1885efb472ad54a78327d66bfc4ecef"),
+    ]
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    searchBar = rw.graphView.searchBar
+    searchEdit = searchBar.ui.lineEdit
+
+    assert not searchBar.isVisibleTo(rw)
+
+    # QTest.keySequence(mainWindow, "Ctrl+F") doesn't work unless we show the window first...
+    mainWindow.dispatchSearchCommand()
+
+    assert searchBar.isVisibleTo(rw)
+
+    QTest.keyClicks(searchEdit, "first")
+
+    for oid in matchingCommits:
+        QTest.keySequence(searchEdit, "Return")
+        assert oid == rw.graphView.currentCommitOid
+
+    # end of log
+    QTest.keySequence(searchEdit, "Return")
+    rejectQMessageBox(rw, "occurrence")
+
+    # now search backwards
+    for oid in reversed(matchingCommits[:-1]):
+        QTest.keySequence(searchEdit, "Shift+Return")
+        assert oid == rw.graphView.currentCommitOid
+
+    # top of log
+    QTest.keySequence(searchEdit, "Shift+Return")
+    rejectQMessageBox(rw, "occurrence")
+
+    # escape closes search bar
+    QTest.keySequence(searchEdit, "Escape")
+    assert not searchBar.isVisibleTo(rw)

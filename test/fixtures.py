@@ -28,5 +28,7 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     mw = MainWindow()
     qtbot.addWidget(mw)
 
+    qt.QApplication.setActiveWindow(mw)
+
     # mw.show()
     return mw

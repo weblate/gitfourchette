@@ -1009,7 +1009,7 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Find
 
-    def dispatchSearchCommand(self, op: Literal["start", "next", "previous"]):
+    def dispatchSearchCommand(self, op: Literal["start", "next", "previous"] = "start"):
         activeWindow = QApplication.activeWindow()
         if activeWindow is self and self.currentRepoWidget():
             self.currentRepoWidget().dispatchSearchCommand(op)
