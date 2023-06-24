@@ -1,6 +1,8 @@
 import enum
 import pygit2
 
+Oid = pygit2.Oid
+
 
 class HiddenCommitSolver:
     @enum.unique
@@ -12,46 +14,47 @@ class HiddenCommitSolver:
 
     def __init__(self):
         self.tags = {}
-        self.marked = set()
 
     def tagCommit(self, commit: pygit2.Oid, tag: Tag):
         self.tags[commit] = tag
 
     @property
-    def done(self):
+    def done(self) -> bool:
         return len(self.tags) == 0
 
-    def feed(self, commit: pygit2.Oid, parents: list[pygit2.Oid]):
+    def newCommit(self, commit: Oid, parents: list[Oid], marked: set[Oid], discard: bool = False):
         T = HiddenCommitSolver.Tag
         tag = self.tags.pop(commit, T.NONE)
 
         if tag in [T.SOFTHIDE, T.HARDHIDE]:
-            self.marked.add(commit)
             for p in parents:
                 if p not in self.tags:
                     self.tags[p] = T.SOFTHIDE
+            marked.add(commit)
         else:
             for p in parents:
                 ctag = self.tags.get(p, T.NONE)
                 if ctag != T.HARDHIDE:
                     self.tags[p] = T.SHOW
+            if discard:
+                marked.discard(commit)
 
 
 class ForeignCommitSolver:
-    def __init__(self, commitsToRefs):
+    def __init__(self, commitsToRefs: dict[Oid, list[str]]):
         self._nextLocal = set()
-        self.marked = set()
         for commitOid, refList in commitsToRefs.items():
             if any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList):
                 self._nextLocal.add(commitOid)
 
-    def setLocal(self, commit: pygit2.Oid):
+    def setLocal(self, commit: Oid):
         self._nextLocal.add(commit)
 
-    def feed(self, commit: pygit2.Oid, parents: list[pygit2.Oid]):
+    def newCommit(self, commit: Oid, parents: list[Oid], marked: set[Oid], discard: bool = False):
         if commit in self._nextLocal:
             self._nextLocal.remove(commit)
-            for p in parents:
-                self._nextLocal.add(p)
+            self._nextLocal.update(parents)
+            if discard:
+                marked.discard(commit)
         else:
-            self.marked.add(commit)
+            marked.add(commit)

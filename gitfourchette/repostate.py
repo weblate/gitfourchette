@@ -253,6 +253,8 @@ class RepoState:
         # Generate fake "Uncommitted Changes" with HEAD as parent
         commitSequence.insert(0, None)
 
+        self.hiddenCommits = set()
+        self.foreignCommits = set()
         hiddenCommitSolver = self.newHiddenCommitSolver()
         foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
 
@@ -266,8 +268,8 @@ class RepoState:
 
             graphGenerator.newCommit(oid, parents)
 
-            foreignCommitSolver.feed(oid, parents)
-            hiddenCommitSolver.feed(oid, parents)
+            foreignCommitSolver.newCommit(oid, parents, self.foreignCommits)
+            hiddenCommitSolver.newCommit(oid, parents, self.hiddenCommits)
 
             row = graphGenerator.row
             rowInt = int(row)
@@ -285,8 +287,6 @@ class RepoState:
         log.info("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
 
         self.commitSequence = commitSequence
-        self.foreignCommits = foreignCommitSolver.marked
-        self.hiddenCommits = hiddenCommitSolver.marked
         self.graph = graph
 
         bench.__exit__(None, None, None)
@@ -323,8 +323,8 @@ class RepoState:
                     newCommitSequence.append(commit)
                     graphSplicer.spliceNewCommit(oid, parents)
 
-                    newHiddenCommitSolver.feed(oid, parents)
-                    newForeignCommitSolver.feed(oid, parents)
+                    newHiddenCommitSolver.newCommit(oid, parents, self.hiddenCommits, discard=True)
+                    newForeignCommitSolver.newCommit(oid, parents, self.foreignCommits, discard=True)
 
                     if not graphSplicer.keepGoing:
                         break
@@ -334,13 +334,9 @@ class RepoState:
         if graphSplicer.foundEquilibrium:
             nRemoved = graphSplicer.equilibriumOldRow
             nAdded = graphSplicer.equilibriumNewRow
-            self.hiddenCommits.update(newHiddenCommitSolver.marked)
-            self.foreignCommits.update(newForeignCommitSolver.marked)
         else:
             nRemoved = -1  # We could use len(self.commitSequence), but -1 will force refreshRepo to replace the model wholesale
             nAdded = len(newCommitSequence)
-            self.hiddenCommits = newHiddenCommitSolver.marked
-            self.foreignCommits = newForeignCommitSolver.marked
 
         # Piece correct commit sequence back together
         with Benchmark("Reassemble commit sequence"):
@@ -420,11 +416,11 @@ class RepoState:
         return solver
 
     def resolveHiddenCommits(self):
+        self.hiddenCommits = set()
         solver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:
             if not commit:  # May be a fake commit such as Uncommitted Changes
                 continue
-            solver.feed(commit.oid, commit.parent_ids)
+            solver.newCommit(commit.oid, commit.parent_ids, self.hiddenCommits)
             if solver.done:
                 break
-        self.hiddenCommits = solver.marked

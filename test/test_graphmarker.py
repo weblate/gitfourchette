@@ -301,11 +301,12 @@ def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     for c in set(fixtureHeads) - set(seeds):
         cm.tagCommit(c, cm.Tag.SHOW)
 
+    marked = set()
     for c in sequence:
-        cm.feed(c, parentMap[c])
+        cm.newCommit(c, parentMap[c], marked)
 
     for c in sequence:
-        isVisible = c not in cm.marked
+        isVisible = c not in marked
         print(f"Looking up {c} (supposed to be {'hidden' if c in expected else 'visible'}) resulted in {isVisible}")
         assert isVisible == (c not in expected)
         print(c, "PASS", isVisible)
@@ -333,10 +334,11 @@ def testLocalCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
         print(f"Marking {c} as LOCAL")
         cm.setLocal(c)
 
+    marked = set()
     for c in sequence:
-        cm.feed(c, parentMap[c])
+        cm.newCommit(c, parentMap[c], marked)
 
     for c in sequence:
-        isLocal = c not in cm.marked
+        isLocal = c not in marked
         assert isLocal == (c in expected), f"{c} should be marked {c in expected}, was marked {isLocal}"
         print(c, "PASS", isLocal)
