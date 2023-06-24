@@ -89,10 +89,12 @@ class DeleteBranch(RepoTask):
 
 
 class _NewBranchBaseTask(RepoTask):
+    TRACK_ANY_UPSTREAM = ".ANY"
+
     def name(self):
         return translate("Operation", "New local branch")
 
-    def _internalFlow(self, tip: pygit2.Oid, localName: str = "", switchTo: bool = False, upstream: str = ""):
+    def _internalFlow(self, tip: pygit2.Oid, localName: str = "", trackUpstream: str = TRACK_ANY_UPSTREAM):
         repo = self.repo
 
         # If we're creating a branch at the tip of the current branch, default to its name
@@ -139,12 +141,15 @@ class _NewBranchBaseTask(RepoTask):
             reservedNames=forbiddenBranchNames,
             parent=self.parentWidget())
 
-        if upstream:
-            i = dlg.ui.upstreamComboBox.findText(upstream)
-            if i >= 0:
+        if trackUpstream == self.TRACK_ANY_UPSTREAM:
+            trackUpstream = ""
+            dlg.ui.upstreamCheckBox.setChecked(bool(upstreams))
+        elif trackUpstream:
+            i = dlg.ui.upstreamComboBox.findText(trackUpstream)
+            found = i >= 0
+            dlg.ui.upstreamCheckBox.setChecked(found)
+            if found:
                 dlg.ui.upstreamComboBox.setCurrentIndex(i)
-                if switchTo:
-                    dlg.ui.upstreamCheckBox.setChecked(True)
 
         setWindowModal(dlg)
         dlg.show()
@@ -153,10 +158,10 @@ class _NewBranchBaseTask(RepoTask):
         dlg.deleteLater()
 
         localName = dlg.ui.nameEdit.text()
-        upstream = ""
+        trackUpstream = ""
         switchTo = dlg.ui.switchToBranchCheckBox.isChecked()
         if dlg.ui.upstreamCheckBox.isChecked():
-            upstream = dlg.ui.upstreamComboBox.currentText()
+            trackUpstream = dlg.ui.upstreamComboBox.currentText()
 
         yield from self._flowBeginWorkerThread()
 
@@ -164,8 +169,8 @@ class _NewBranchBaseTask(RepoTask):
         porcelain.newBranchFromCommit(repo, localName, tip, switchTo=False)
 
         # Optionally make it track a remote branch
-        if upstream:
-            porcelain.editTrackingBranch(repo, localName, upstream)
+        if trackUpstream:
+            porcelain.editTrackingBranch(repo, localName, trackUpstream)
 
         # Switch to it last (if user wants to)
         if switchTo:
@@ -183,7 +188,16 @@ class NewBranchFromHead(_NewBranchBaseTask):
                 + " " + translate("Global", "Please create the initial commit in this repository first."))
 
         tip = porcelain.getHeadCommit(self.repo).oid
-        yield from self._internalFlow(tip)
+
+        # Initialize upstream to the current branch's upstream, if any
+        try:
+            headBranchName = self.repo.head.shorthand
+            branch = self.repo.branches.local[headBranchName]
+            upstream = branch.upstream.shorthand if branch.upstream else ""
+            yield from self._internalFlow(tip, trackUpstream=upstream)
+        except KeyError:  # e.g. detached HEAD
+            # Pick any upstream
+            yield from self._internalFlow(tip)
 
 
 class NewBranchFromCommit(_NewBranchBaseTask):
@@ -198,7 +212,7 @@ class NewBranchFromLocalBranch(_NewBranchBaseTask):
         tip = branch.target
         localName = localBranchName
         upstream = branch.upstream.shorthand if branch.upstream else ""
-        yield from self._internalFlow(tip, localName, False, upstream)
+        yield from self._internalFlow(tip, localName, trackUpstream=upstream)
 
 
 class NewTrackingBranch(_NewBranchBaseTask):
@@ -208,8 +222,7 @@ class NewTrackingBranch(_NewBranchBaseTask):
         tip = branch.target
         localName = remoteBranchName.removeprefix(branch.remote_name + "/")
         upstream = branch.shorthand
-        switchTo = True
-        yield from self._internalFlow(tip, localName, switchTo, upstream)
+        yield from self._internalFlow(tip, localName, trackUpstream=upstream)
 
 
 class EditTrackedBranch(RepoTask):
