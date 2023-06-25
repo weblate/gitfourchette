@@ -672,6 +672,10 @@ def createCommit(
         parents
     )
 
+    # Repository.create_commit flushes the staged changes from the in-memory index.
+    # Write the index to disk so that other applications can pick up the updated staging area.
+    repo.index.write()
+
     assert not repo.head_is_unborn, "HEAD is still unborn after we have committed!"
 
     return newCommitOid
