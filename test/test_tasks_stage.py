@@ -1,7 +1,6 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.forms.commitdialog import CommitDialog
 import pygit2
 
 
@@ -85,5 +84,3 @@ def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == []
 
     assert rw.repo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_WT_NEW}
-
-

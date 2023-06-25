@@ -1,7 +1,7 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette import porcelain
 import pygit2
 
 
@@ -68,3 +68,41 @@ def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
 
     acceptQMessageBox(rw, "discard.+hunk")
     assert NEW_CONTENTS not in readFile(f"{wd}/master.txt").decode('utf-8')
+
+
+def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepositoryContextManager(wd) as repo:
+        # Commit a file WITHOUT a newline at end
+        writeFile(F"{wd}/master.txt", "hello")
+        repo.index.add_all(["master.txt"])
+        porcelain.createCommit(repo, "no newline at end of file", TEST_SIGNATURE, TEST_SIGNATURE)
+
+        # Add a newline to the file without committing
+        writeFile(F"{wd}/master.txt", "hello\n")
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.repo.status() == {"master.txt": pygit2.GIT_STATUS_WT_MODIFIED}
+
+    # Initiate subpatch by selecting lines and hitting return
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.diffView.setFocus()
+    rw.diffView.selectAll()
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+    assert rw.repo.status() == {"master.txt": pygit2.GIT_STATUS_INDEX_MODIFIED}
+
+    # It must also work in reverse - let's unstage this change via a subpatch
+    qlvClickNthRow(rw.stagedFiles, 0)
+    rw.diffView.setFocus()
+    rw.diffView.selectAll()
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
+    assert rw.repo.status() == {"master.txt": pygit2.GIT_STATUS_WT_MODIFIED}
+
+    # Finally, let's discard this change via a subpatch
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.diffView.setFocus()
+    rw.diffView.selectAll()
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
+    acceptQMessageBox(rw, "discard")
+    assert rw.repo.status() == {}

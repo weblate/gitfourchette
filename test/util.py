@@ -6,6 +6,9 @@ import tarfile
 import shutil
 
 
+TEST_SIGNATURE = pygit2.Signature("Test Person", "toto@example.com", 1672600000, 0)
+
+
 def unpackRepo(
         tempDir,
         testRepoName="TestGitRepository",

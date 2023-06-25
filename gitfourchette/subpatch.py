@@ -1,7 +1,18 @@
 from dataclasses import dataclass
 from gitfourchette.porcelain import isZeroId
+from typing import Iterable
 import io
 import pygit2
+
+
+REVERSE_ORIGIN_MAP = {
+    ' ': ' ',
+    '=': '=',
+    '+': '-',
+    '-': '+',
+    '>': '<',
+    '<': '>',
+}
 
 
 @dataclass
@@ -95,15 +106,10 @@ def originToDelta(origin):
 
 
 def reverseOrigin(origin):
-    if origin == '+':
-        return '-'
-    elif origin == '-':
-        return '+'
-    else:
-        return origin
+    return REVERSE_ORIGIN_MAP.get(origin, origin)
 
 
-def writeContext(subpatch, reverse, lines):
+def writeContext(subpatch: io.BytesIO, reverse: bool, lines: Iterable[pygit2.DiffLine]):
     skipOrigin = '-' if reverse else '+'
     for line in lines:
         if line.origin == skipOrigin:
@@ -111,7 +117,7 @@ def writeContext(subpatch, reverse, lines):
             continue
         elif line.origin in "=><":
             # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
-            # Just copy "\No newline at end of file" verbatim without an origin character
+            # Just copy "\ No newline at end of file" verbatim without an origin character
             pass
         elif line.origin in " -+":
             # Make it a context line
@@ -142,6 +148,7 @@ def extractSubpatch(
     for hunkID in range(startPos.hunkID, endPos.hunkID + 1):
         assert hunkID >= 0
         hunk = masterPatch.hunks[hunkID]
+        numHunkLines = len(hunk.lines)
 
         # Compute start line boundary for this hunk
         if hunkID == startPos.hunkID:  # First hunk in selection?
@@ -157,7 +164,13 @@ def extractSubpatch(
             if endLineNum < 0:  # The hunk header's relative line number is -1
                 endLineNum = 0
         else:  # Middle hunk: take all lines in hunk
-            endLineNum = len(hunk.lines) - 1
+            endLineNum = numHunkLines-1
+
+        # Expand selection to any lines saying "\ No newline at end of file"
+        # that are adjacent to the selection. This will let us properly reorder
+        # -/+ lines without an LF character later on (see plusLines below).
+        while endLineNum < numHunkLines-1 and hunk.lines[endLineNum+1].origin in "=><":
+            endLineNum += 1
 
         # Compute line count delta in this hunk
         lineCountDelta = sum(originToDelta(hunk.lines[ln].origin) for ln in range(startLineNum, endLineNum + 1))
@@ -195,15 +208,49 @@ def extractSubpatch(
         writeContext(patch, reverse,
                      (hunk.lines[ln] for ln in range(0, startLineNum)))
 
+        # We'll reorder all non-context lines so that "-" lines always appear above "+" lines.
+        # This buffer will hold "+" lines while we're processing a clump of non-context lines.
+        # This is to work around a libgit2 bug where it fails to parse "+" lines without LF
+        # that appear above "-" lines. (Vanilla git doesn't have this issue.)
+        # libgit2 fails to parse this:          But this parses fine:
+        #   +hello                                -hallo
+        #   \ No newline at end of file           +hello
+        #   -hallo                                \ No newline at end of file
+        plusLines = io.BytesIO()
+
         # Write selected lines within the hunk
         for ln in range(startLineNum, endLineNum + 1):
             line = hunk.lines[ln]
+
             if not reverse:
                 origin = line.origin
             else:
                 origin = reverseOrigin(line.origin)
-            patch.write(origin.encode())
-            patch.write(line.raw_content)
+
+            buffer = patch
+            if origin in "+<":
+                # Save those lines for the end of the clump - write to plusLines for now
+                buffer = plusLines
+            elif origin == " " and plusLines.tell() != 0:
+                # A context line breaks up the clump of non-context lines - flush plusLines
+                patch.write(plusLines.getvalue())
+                plusLines = io.BytesIO()
+
+            if origin in "=><":
+                # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+                # Just write raw content (b"\n\\ No newline at end of file") without an origin char
+                assert line.raw_content[0] == ord('\n')
+                buffer.write(line.raw_content)
+            else:
+                buffer.write(origin.encode())
+                buffer.write(line.raw_content)
+
+        # End of selected lines.
+        # All remaining lines in the hunk are context from now on.
+
+        # Flush plusLines
+        if plusLines.tell() != 0:
+            patch.write(plusLines.getvalue())
 
         # Write non-selected lines at end of hunk as context
         writeContext(patch, reverse,
