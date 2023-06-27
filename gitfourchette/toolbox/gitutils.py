@@ -2,6 +2,7 @@ from gitfourchette import porcelain
 from gitfourchette.trtables import translateNameValidationCode
 import pygit2
 import os
+import stat
 
 
 def shortHash(oid: pygit2.Oid) -> str:
@@ -26,6 +27,12 @@ def dumpTempBlob(
     path = os.path.join(dir, name)
     with open(path, "wb") as f:
         f.write(blob.data)
+
+    # Make it read-only (this will probably not work on Windows)
+    mode = os.stat(path).st_mode
+    readOnlyMask = ~(stat.S_IWRITE | stat.S_IWGRP | stat.S_IWOTH)
+    os.chmod(path, mode & readOnlyMask)
+
     return path
 
 
