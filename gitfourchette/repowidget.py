@@ -32,8 +32,9 @@ TAG = "RepoWidget"
 
 
 class RepoWidget(QWidget):
-    nameChange: Signal = Signal()
+    nameChange = Signal()
     openRepo = Signal(str)
+    openPrefs = Signal(str)
 
     state: RepoState
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
@@ -105,6 +106,7 @@ class RepoWidget(QWidget):
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
         self.conflictView.openMergeTool.connect(self.openConflictInMergeTool)
+        self.conflictView.openPrefs.connect(self.openPrefs)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)

@@ -2,6 +2,7 @@ import pygit2
 
 from gitfourchette import settings
 from gitfourchette.diffview.specialdiff import DiffConflict
+from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.filelists.filelistmodel import STATUS_ICONS
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.porcelain import BLANK_OID
@@ -13,6 +14,7 @@ class ConflictView(QWidget):
     hardSolve = Signal(str, pygit2.Oid)
     markSolved = Signal(str)
     openMergeTool = Signal(DiffConflict)
+    openPrefs = Signal(str)
 
     currentConflict: DiffConflict | None
 
@@ -34,6 +36,7 @@ class ConflictView(QWidget):
         self.ui.theirsButton.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.ours.path, self.currentConflict.theirs.id))
         self.ui.markSolvedButton.clicked.connect(lambda: self.markSolved.emit(self.currentConflict.ours.path))
         self.ui.mergeToolButton.clicked.connect(lambda: self.openMergeTool.emit(self.currentConflict))
+        self.ui.pickMergeToolButton.clicked.connect(lambda: self.openPrefs.emit(PREFKEY_MERGETOOL))
 
         self.ui.deletedByUsDelete.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.theirs.path, BLANK_OID))
         self.ui.deletedByUsAdd.clicked.connect(lambda: self.hardSolve.emit(self.currentConflict.theirs.path, self.currentConflict.theirs.id))

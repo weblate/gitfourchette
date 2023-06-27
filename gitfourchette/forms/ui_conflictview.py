@@ -47,18 +47,24 @@ class Ui_ConflictView(object):
 
         self.groupBox_2 = QGroupBox(self.reconcile3Way)
         self.groupBox_2.setObjectName(u"groupBox_2")
-        self.verticalLayout_2 = QVBoxLayout(self.groupBox_2)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.mergeToolButton = QPushButton(self.groupBox_2)
-        self.mergeToolButton.setObjectName(u"mergeToolButton")
+        self.gridLayout_3 = QGridLayout(self.groupBox_2)
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.pickMergeToolButton = QToolButton(self.groupBox_2)
+        self.pickMergeToolButton.setObjectName(u"pickMergeToolButton")
+        self.pickMergeToolButton.setText(u"\ud83d\udd27")
 
-        self.verticalLayout_2.addWidget(self.mergeToolButton)
+        self.gridLayout_3.addWidget(self.pickMergeToolButton, 0, 1, 1, 1)
 
         self.markSolvedButton = QPushButton(self.groupBox_2)
         self.markSolvedButton.setObjectName(u"markSolvedButton")
         self.markSolvedButton.setFlat(False)
 
-        self.verticalLayout_2.addWidget(self.markSolvedButton)
+        self.gridLayout_3.addWidget(self.markSolvedButton, 1, 0, 1, 2)
+
+        self.mergeToolButton = QPushButton(self.groupBox_2)
+        self.mergeToolButton.setObjectName(u"mergeToolButton")
+
+        self.gridLayout_3.addWidget(self.mergeToolButton, 0, 0, 1, 1)
 
 
         self.horizontalLayout.addWidget(self.groupBox_2)
@@ -117,8 +123,11 @@ class Ui_ConflictView(object):
         self.oursButton.setText(QCoreApplication.translate("ConflictView", u"Use ours", None))
         self.theirsButton.setText(QCoreApplication.translate("ConflictView", u"Use theirs", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("ConflictView", u"Reconcile manually", None))
-        self.mergeToolButton.setText(QCoreApplication.translate("ConflictView", u"Merge in {0}", None))
+#if QT_CONFIG(tooltip)
+        self.pickMergeToolButton.setToolTip(QCoreApplication.translate("ConflictView", u"Pick another merge tool", None))
+#endif // QT_CONFIG(tooltip)
         self.markSolvedButton.setText(QCoreApplication.translate("ConflictView", u"Mark as resolved", None))
+        self.mergeToolButton.setText(QCoreApplication.translate("ConflictView", u"Merge in {0}", None))
         self.deletedByUsDelete.setText(QCoreApplication.translate("ConflictView", u"Don\u2019t add", None))
         self.deletedByUsAdd.setText(QCoreApplication.translate("ConflictView", u"Add \u201c{0}\u201d to our branch", None))
         self.deletedByUsText.setText(QCoreApplication.translate("ConflictView", u"<b>Deleted by us:</b> \u201c{0}\u201d has been deleted from our branch, but it still exists in the branch that we\u2019re merging. While the file was gone from our side, the other branch has modified it.", None))

@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
 
         fileMenu.addSeparator()
 
-        a = fileMenu.addAction(self.tr("&Preferences..."), self.openSettings)
+        a = fileMenu.addAction(self.tr("&Preferences..."), self.openPrefsDialog)
         a.setMenuRole(QAction.MenuRole.PreferencesRole)
         a.setShortcuts(QKeySequence.StandardKey.Preferences)
 
@@ -348,8 +348,8 @@ class MainWindow(QMainWindow):
             showInformation(self, self.tr("Apply Settings"),
                             self.tr("You may need to reload the current repository for all new settings to take effect."))
 
-    def openSettings(self):
-        dlg = PrefsDialog(self)
+    def openPrefsDialog(self, focusOn: str = ""):
+        dlg = PrefsDialog(self, focusOn)
         dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg.prefDiff))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
@@ -553,6 +553,7 @@ class MainWindow(QMainWindow):
 
         newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
         newRW.openRepo.connect(lambda path: self.openRepoNextTo(newRW, path))
+        newRW.openPrefs.connect(self.openPrefsDialog)
 
         if addToHistory:
             settings.history.addRepo(workdir)

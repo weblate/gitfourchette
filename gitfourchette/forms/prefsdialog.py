@@ -50,8 +50,8 @@ class PrefsDialog(QDialog):
     def saveLastOpenTab(i):
         PrefsDialog.lastOpenTab = i
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent: QWidget, focusOn: str = ""):
+        super().__init__(parent)
 
         self.settingsTranslationTable = trtables.prefsTranslationTable()
 
@@ -150,13 +150,19 @@ class PrefsDialog(QDialog):
             else:
                 form.addRow(control)
 
+            if focusOn == prefKey:
+                tabWidget.setCurrentWidget(formContainer)
+                control.setFocus()
+
         layout = QVBoxLayout()
         layout.addWidget(tabWidget)
         layout.addWidget(buttonBox)
         self.setLayout(layout)
 
-        # Restore last open tab
-        tabWidget.setCurrentIndex(PrefsDialog.lastOpenTab)
+        if not focusOn:
+            # Restore last open tab
+            tabWidget.setCurrentIndex(PrefsDialog.lastOpenTab)
+
         tabWidget.currentChanged.connect(PrefsDialog.saveLastOpenTab)
 
         self.setModal(True)

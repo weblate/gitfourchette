@@ -1,8 +1,10 @@
+from gitfourchette import log
 from gitfourchette import porcelain
 from gitfourchette import tempdir
+from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.exttools import openInMergeTool
+from gitfourchette.exttools import openInMergeTool, PREFKEY_MERGETOOL
 from gitfourchette.diffview.specialdiff import DiffConflict
 import filecmp
 import os
@@ -11,9 +13,14 @@ import shutil
 import tempfile
 
 
+TAG = "UnmergedConflict"
+
+
 class UnmergedConflict(QObject):
     mergeFailed = Signal()
     mergeComplete = Signal()
+
+    process: QProcess | None
 
     def __init__(self, parent: QWidget, repo: pygit2.Repository, conflict: DiffConflict):
         super().__init__(parent)
@@ -39,11 +46,12 @@ class UnmergedConflict(QObject):
         self.mergeFailed.connect(lambda: self.deleteLater())
 
     def startProcess(self):
-        self.process = openInMergeTool(self, self.ancestorPath, self.oursPath, self.theirsPath, self.scratchPath)
-        self.process.finished.connect(self.onMergeProcessFinished)
+        self.process = openInMergeTool(self.parent(), self.ancestorPath, self.oursPath, self.theirsPath, self.scratchPath)
+        if self.process:
+            self.process.finished.connect(self.onMergeProcessFinished)
 
     def onMergeProcessFinished(self, exitCode: int, exitStatus: QProcess.ExitStatus):
-        print("Merge tool exited with code", exitCode, exitStatus)
+        log.info(TAG, "Merge tool exited with code", exitCode, exitStatus)
 
         if exitCode != 0 or exitStatus == QProcess.ExitStatus.CrashExit:
             self.mergeFailed.emit()
@@ -61,9 +69,10 @@ class UnmergedConflict(QObject):
             self.tr("Merge conflict resolved"),
             paragraphs(
                 self.tr("It looks like you’ve resolved the merge conflict in <b>“{0}”</b>.").format(self.conflict.ours.path),
-                self.tr("Is that correct?")),
+                self.tr("Do you want to keep this resolution?")),
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-        qmb.button(QMessageBox.StandardButton.Ok).setText(self.tr("Confirm merge resolution"))
+        qmb.button(QMessageBox.StandardButton.Ok).setText(self.tr("Confirm resolution"))
+        qmb.button(QMessageBox.StandardButton.Cancel).setText(self.tr("Discard resolution"))
         qmb.accepted.connect(self.mergeComplete)
         qmb.rejected.connect(self.mergeFailed)
         qmb.show()
