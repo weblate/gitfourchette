@@ -2,6 +2,8 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette import porcelain
+from gitfourchette.nav import NavLocator
+from gitfourchette.diffview.diffview import DiffView
 import pygit2
 
 
@@ -106,3 +108,28 @@ def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
     QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "discard")
     assert rw.repo.status() == {}
+
+
+def testDiffInNewWindow(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    assert 1 == len(QGuiApplication.topLevelWindows())
+
+    oid = pygit2.Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
+    rw.graphView.selectCommit(oid)
+    qlvClickNthRow(rw.committedFiles, 0)
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inCommit(oid, "c/c2.txt"))
+
+    rw.committedFiles.openDiffInNewWindow.emit(rw.diffView.currentPatch, rw.navLocator)
+
+    assert 2 == len(QGuiApplication.topLevelWindows())
+    diffWidget = next(w for w in QApplication.topLevelWidgets() if isinstance(w, DiffView))
+    assert diffWidget.isWindow()
+    assert diffWidget.window() is not mainWindow
+    assert diffWidget.window() is diffWidget
+    assert "c2.txt" in diffWidget.windowTitle()
+
+    # Make sure the diff is closed when the repowidget is gone
+    mainWindow.closeAllTabs()
+    qtbot.wait(1)  # doesn't get a chance to clean up windows without this...
+    assert 1 == len(QGuiApplication.topLevelWindows())

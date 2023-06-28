@@ -498,12 +498,13 @@ class RepoWidget(QWidget):
     def loadPatchInNewWindow(self, patch: pygit2.Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
-            diffWindow.replaceDocument(self.repo, patch, locator, DiffDocument.fromPatch(patch))
+            diffWindow.replaceDocument(self.repo, patch, locator, DiffDocument.fromPatch(patch, locator))
             diffWindow.resize(550, 700)
             diffWindow.setWindowTitle(locator.asTitle())
             diffWindow.setWindowFlag(Qt.WindowType.Window, True)
             diffWindow.setFrameStyle(QFrame.Shape.NoFrame)
             diffWindow.show()
+            diffWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
     def startPushFlow(self, branchName: str = ""):
         pushDialog = PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
