@@ -249,7 +249,15 @@ class HardSolveConflict(RepoTask):
 
         del repo.index.conflicts[path]
         assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
+
+        # Stage the file so it doesn't show up in both file lists
+        repo.index.add(path)
+
+        # Write index modifications to disk
         repo.index.write()
+
+        # Jump to staged file after the task
+        self.jumpTo = NavLocator.inStaged(path)
 
 
 class MarkConflictSolved(RepoTask):
