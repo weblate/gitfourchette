@@ -105,6 +105,16 @@ class ApplyStash(RepoTask):
         yield from self._flowBeginWorkerThread()
         porcelain.applyStash(self.repo, stashCommitId)
 
+        if self.repo.index.conflicts:
+            yield from self._flowExitWorkerThread()
+            message = [self.tr("Applying the stash “{0}” has caused merge conflicts "
+                               "because your files have diverged since they were stashed."
+                               ).format(escape(stashMessage))]
+            if deleteAfterApply:
+                message.append(self.tr("The stash wasn’t deleted in case you need to re-apply it later."))
+            showWarning(self.parentWidget(), self.tr("Conflicts caused by stash application"), paragraphs(message))
+            return
+
         if deleteAfterApply:
             backupStash(self.repo, stashCommitId)
             porcelain.dropStash(self.repo, stashCommitId)
