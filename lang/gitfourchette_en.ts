@@ -19,19 +19,36 @@
     </message>
 </context>
 <context>
-    <name>CommittedFiles</name>
+    <name>ApplyPatchFile</name>
     <message numerus="yes">
-        <source>&amp;Open Revision(s)...</source>
+        <source>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; files:</source>
         <translation>
-            <numerusform>&amp;Open Revision...</numerusform>
-            <numerusform>&amp;Open Revisions...</numerusform>
+            <numerusform>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; file:</numerusform>
+            <numerusform>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; files:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>&amp;Save Revision(s)...</source>
+        <source>(and %n more)</source>
         <translation>
-            <numerusform>&amp;Save Revision...</numerusform>
-            <numerusform>&amp;Save Revisions...</numerusform>
+            <numerusform>(and %n more)</numerusform>
+            <numerusform>(and %n more)</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>CommittedFiles</name>
+    <message numerus="yes">
+        <source>Open &amp;Diff(s) in {0}</source>
+        <translation>
+            <numerusform>Open &amp;Diff in {0}</numerusform>
+            <numerusform>Open &amp;Diffs in {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>E&amp;xport Diff(s) As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xport Diff As Patch...</numerusform>
+            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -50,6 +67,25 @@
     </message>
 </context>
 <context>
+    <name>DiffView</name>
+    <message numerus="yes">
+        <source>Hit {stagekey} to stage the current/selected line(s), or {discardkey} to discard it/them.</source>
+        <comment>singular: &apos;current line&apos;, plural: &apos;selected lines&apos;</comment>
+        <translation>
+            <numerusform>Hit {stagekey} to stage the current line, or {discardkey} to discard it.</numerusform>
+            <numerusform>Hit {stagekey} to stage the selected lines, or {discardkey} to discard them.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Hit {unstagekey} to unstage the current/selected line(s).</source>
+        <comment>singular: &apos;current line&apos;, plural: &apos;selected lines&apos;</comment>
+        <translation>
+            <numerusform>Hit {unstagekey} to unstage the current line.</numerusform>
+            <numerusform>Hit {unstagekey} to unstage the selected lines.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>DirtyFiles</name>
     <message numerus="yes">
         <source>&amp;Stage %n File(s)</source>
@@ -59,17 +95,17 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>&amp;Discard Changes</source>
+        <source>Open &amp;Diff(s) in {0}</source>
         <translation>
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+            <numerusform>Open &amp;Diff in {0}</numerusform>
+            <numerusform>Open &amp;Diffs in {0}</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>&amp;Open %n File(s) in External Editor</source>
+        <source>E&amp;xport Diff(s) As Patch...</source>
         <translation>
-            <numerusform>&amp;Open File in External Editor</numerusform>
-            <numerusform>&amp;Open %n Files in External Editor</numerusform>
+            <numerusform>E&amp;xport Diff As Patch...</numerusform>
+            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -87,10 +123,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open Unmodified &amp;Revision(s) in External Editor</source>
+        <source>Open HEAD Version(s) in {0}</source>
         <translation>
-            <numerusform>Open Unmodified &amp;Revision in External Editor</numerusform>
-            <numerusform>Open Unmodified &amp;Revisions in External Editor</numerusform>
+            <numerusform>Open HEAD Version in {0}</numerusform>
+            <numerusform>Open HEAD Versions in {0}</numerusform>
         </translation>
     </message>
 </context>
@@ -105,12 +141,56 @@
     </message>
 </context>
 <context>
+    <name>DiscardModeChanges</name>
+    <message numerus="yes">
+        <source>Really discard mode changes in &lt;b&gt;%n files&lt;/b&gt;?</source>
+        <translation>
+            <numerusform>Really discard mode changes in &lt;b&gt;%n file&lt;/b&gt;?</numerusform>
+            <numerusform>Really discard mode changes in &lt;b&gt;%n files&lt;/b&gt;?</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>FileList</name>
+    <message numerus="yes">
+        <source>Revert Old Mode(s)</source>
+        <translation>
+            <numerusform>Revert Old Mode</numerusform>
+            <numerusform>Revert Old Modes</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>GraphView</name>
     <message numerus="yes">
         <source>%n parent(s)</source>
         <translation>
             <numerusform>Parent</numerusform>
             <numerusform>%n parents</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>Jump</name>
+    <message numerus="yes">
+        <source>%n dirty file(s):</source>
+        <translation>
+            <numerusform>%n dirty file:</numerusform>
+            <numerusform>%n dirty files:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) staged for commit:</source>
+        <translation>
+            <numerusform>%n file staged for commit:</numerusform>
+            <numerusform>%n files staged for commit:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n change(s) in {0}:</source>
+        <translation>
+            <numerusform>%n change in {0}:</numerusform>
+            <numerusform>%n changes in {0}:</numerusform>
         </translation>
     </message>
 </context>
@@ -126,20 +206,6 @@
 </context>
 <context>
     <name>RepoWidget</name>
-    <message numerus="yes">
-        <source>%n dirty file(s):</source>
-        <translation>
-            <numerusform>%n dirty file:</numerusform>
-            <numerusform>%n dirty files:</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n file(s) staged for commit:</source>
-        <translation>
-            <numerusform>%n file staged for commit:</numerusform>
-            <numerusform>%n files staged for commit:</numerusform>
-        </translation>
-    </message>
     <message numerus="yes">
         <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch(es)?</source>
         <translation>
@@ -158,10 +224,17 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>&amp;Open %n File(s) in External Editor</source>
+        <source>Open &amp;Diff(s) in {0}</source>
         <translation>
-            <numerusform>Open File In External Editor</numerusform>
-            <numerusform>Open %n Files In External Editor</numerusform>
+            <numerusform>Open &amp;Diff in {0}</numerusform>
+            <numerusform>Open &amp;Diffs in {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>E&amp;xport Diff(s) As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xport Diff As Patch...</numerusform>
+            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -179,10 +252,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open Unmodified &amp;Revision(s) in External Editor</source>
+        <source>Open &amp;HEAD Version(s) in {0}</source>
         <translation>
-            <numerusform>Open Unmodified &amp;Revision in External Editor</numerusform>
-            <numerusform>Open Unmodified &amp;Revisions in External Editor</numerusform>
+            <numerusform>Open &amp;HEAD Version in {0}</numerusform>
+            <numerusform>Open &amp;HEAD Versions in {0}</numerusform>
         </translation>
     </message>
 </context>

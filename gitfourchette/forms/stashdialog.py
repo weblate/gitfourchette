@@ -28,7 +28,7 @@ class StashDialog(QDialog):
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
         self.ui.cleanupCheckBox.clicked.connect(lambda clean: okButton.setText(
-            self.tr("Stash then Remove Changes" if clean else "Stash and Keep Changes")))
+            self.tr("Stash then Remove Changes") if clean else self.tr("Stash and Keep Changes")))
 
         self.ui.fileList.setUniformItemSizes(True)
         scrollTo = None

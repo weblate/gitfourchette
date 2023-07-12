@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'searchbar.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.2
+## Created by: Qt User Interface Compiler version 6.4.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -52,7 +52,7 @@ class Ui_SearchBar(object):
         QMetaObject.connectSlotsByName(SearchBar)
 
     def retranslateUi(self, SearchBar):
-        SearchBar.setWindowTitle(QCoreApplication.translate("SearchBar", u"Form", None))
+        SearchBar.setWindowTitle(QCoreApplication.translate("SearchBar", u"Search", None))
         self.lineEdit.setPlaceholderText(QCoreApplication.translate("SearchBar", u"Search...", None))
 #if QT_CONFIG(tooltip)
         self.forwardButton.setToolTip(QCoreApplication.translate("SearchBar", u"Next Occurrence", None))

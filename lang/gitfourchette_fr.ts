@@ -4,10 +4,6 @@
 <context>
     <name></name>
     <message>
-        <source>Gathering refs...</source>
-        <translation>Rassemblement des refs...</translation>
-    </message>
-    <message>
         <source>Processing commit log...</source>
         <translation>Traitement du journal de commits...</translation>
     </message>
@@ -49,25 +45,28 @@
 <context>
     <name>AboutDialog</name>
     <message>
-        <source>Built on:</source>
-        <comment>when the software was built</comment>
-        <translation>Construit le&#xa0;:</translation>
-    </message>
-    <message>
         <source>The comfy Git UI for Linux.</source>
         <translation>Le client Git tout confort pour Linux.</translation>
     </message>
     <message>
-        <source>Have fun!</source>
-        <translation>Éclatez-vous&#xa0;!</translation>
+        <source>built on:</source>
+        <comment>when the software was built</comment>
+        <translation>construit le&#xa0;:</translation>
     </message>
     <message>
-        <source>About {0} {1}</source>
-        <translation>À propos de {0} {1}</translation>
+        <source>About {0}</source>
+        <translation>À propos de {0}</translation>
     </message>
     <message>
-        <source>Support me on Ko-fi</source>
-        <translation>Soutenez-moi sur Ko-fi</translation>
+        <source>Donate</source>
+        <translation>Faire un don</translation>
+    </message>
+</context>
+<context>
+    <name>AmendCommit</name>
+    <message>
+        <source>Please fix merge conflicts in the working directory before amending the commit.</source>
+        <translation>Veuillez résoudre les conflits de fusion dans le répertoire de travail avant de rectifier le commit.</translation>
     </message>
 </context>
 <context>
@@ -120,6 +119,24 @@
         <source>All files</source>
         <translation>Tous les fichiers</translation>
     </message>
+    <message numerus="yes">
+        <source>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; files:</source>
+        <translation>
+            <numerusform>Le fichier correctif &lt;b&gt;“{0}”&lt;/b&gt; peut être appliqué proprement à votre répertoire de travail. Cela modifiera &lt;b&gt;%n&lt;/b&gt; fichier&#xa0;:</numerusform>
+            <numerusform>Le fichier correctif &lt;b&gt;“{0}”&lt;/b&gt; peut être appliqué proprement à votre répertoire de travail. Cela modifiera &lt;b&gt;%n&lt;/b&gt; fichiers&#xa0;:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>(and %n more)</source>
+        <translation>
+            <numerusform>(et %n de plus)</numerusform>
+            <numerusform>(et %n de plus)</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Apply patch</source>
+        <translation>Application du correctif</translation>
+    </message>
 </context>
 <context>
     <name>ApplyStash</name>
@@ -128,40 +145,28 @@
         <translation>Voulez-vous appliquer les modifications remisées dans &lt;b&gt;“{0}”&lt;/b&gt; à votre répertoire de travail&#xa0;?</translation>
     </message>
     <message>
-        <source>Apply stash</source>
-        <comment>Button label</comment>
-        <translation>Appliquer la remise</translation>
-    </message>
-</context>
-<context>
-    <name>BranchNameValidation</name>
-    <message>
-        <source>Illegal name.</source>
-        <translation>Nom invalide.</translation>
+        <source>&amp;Apply &amp;&amp; Delete</source>
+        <translation>&amp;Appliquer &amp;&amp; jeter</translation>
     </message>
     <message>
-        <source>Illegal suffix.</source>
-        <translation>Suffixe invalide.</translation>
+        <source>&amp;Apply &amp;&amp; Keep</source>
+        <translation>&amp;Appliquer &amp;&amp; conserver</translation>
     </message>
     <message>
-        <source>Illegal prefix.</source>
-        <translation>Préfixe invalide.</translation>
+        <source>&amp;Delete the stash if it applies cleanly</source>
+        <translation>&amp;Jeter la remise si elle s’applique proprement</translation>
     </message>
     <message>
-        <source>Contains illegal character sequence.</source>
-        <translation>Contient une séquence de caractères invalide.</translation>
+        <source>Applying the stash “{0}” has caused merge conflicts because your files have diverged since they were stashed.</source>
+        <translation>L’application de la remise “{0}” a provoqué un conflit de fusion car vos fichiers ont divergés depuis qu’ils ont été remisés.</translation>
     </message>
     <message>
-        <source>Contains illegal character.</source>
-        <translation>Contient un caractère invalide.</translation>
+        <source>The stash wasn’t deleted in case you need to re-apply it later.</source>
+        <translation>La remise n’a pas été supprimée au cas où vous ayez besoin de la réappliquer plus tard.</translation>
     </message>
     <message>
-        <source>Cannot be empty.</source>
-        <translation>Ne peut être vide.</translation>
-    </message>
-    <message>
-        <source>Name already taken by another local branch.</source>
-        <translation>Ce nom est déjà pris par une autre branche locale.</translation>
+        <source>Conflicts caused by stash application</source>
+        <translation>Conflits provoqués par l’application de la remise</translation>
     </message>
 </context>
 <context>
@@ -192,6 +197,25 @@
     <message>
         <source>Enter &amp;detached HEAD here</source>
         <translation>&amp;Passer en HEAD détachée ici</translation>
+    </message>
+</context>
+<context>
+    <name>CherrypickCommit</name>
+    <message>
+        <source>There’s nothing to cherry-pick from “{0}” that the current branch doesn’t already have.</source>
+        <translation>Il n’y a rien à picorer depuis “{0}” qui ne soit pas déjà présent dans la branche actuelle.</translation>
+    </message>
+    <message>
+        <source>Cherry-picking “{0}” was successful. Do you want to commit the result now?</source>
+        <translation>Le picorage de “{0}” a réussi. Voulez-vous committer le résultat maintenant&#xa0;?</translation>
+    </message>
+    <message>
+        <source>Commit</source>
+        <translation>Committer</translation>
+    </message>
+    <message>
+        <source>Review changes</source>
+        <translation>Examiner les modifs</translation>
     </message>
 </context>
 <context>
@@ -275,12 +299,79 @@
         <source>&amp;Commit</source>
         <translation>&amp;Valider le commit</translation>
     </message>
+    <message>
+        <source>Cannot be empty.</source>
+        <translation>Ne peut être vide.</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Check this to use the same custom signature for the author and committer.&lt;/p&gt;
+&lt;p&gt;If you uncheck this, only the author will be overridden, and the committer will be set to: {0}.&lt;/p&gt;</source>
+        <translation>&lt;p&gt;Cochez ceci pour remplacer l’auteur et le committeur par la même signature.&lt;/p&gt;
+&lt;p&gt;Si ceci est décoché, seulement la signature de l’auteur sera remplacée&#xa0;; le committeur sera&#xa0;: {0}.&lt;/p&gt;</translation>
+    </message>
+    <message>
+        <source>Also override committer signature</source>
+        <translation>Remplacer également la signature du committeur</translation>
+    </message>
+</context>
+<context>
+    <name>CommitLogDelegate</name>
+    <message>
+        <source>[Uncommitted Changes]</source>
+        <translation>[Modifications non-committées]</translation>
+    </message>
+    <message>
+        <source>detached HEAD</source>
+        <translation>HEAD détachée</translation>
+    </message>
 </context>
 <context>
     <name>CommittedFiles</name>
+    <message numerus="yes">
+        <source>Open &amp;Diff(s) in {0}</source>
+        <translation>
+            <numerusform>Ouvrir la &amp;diff dans {0}</numerusform>
+            <numerusform>Ouvrir les &amp;diffs dans {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>E&amp;xport Diff(s) As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
+            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
+        </translation>
+    </message>
     <message>
-        <source>E&amp;xport As Patch...</source>
-        <translation>E&amp;xporter correctif...</translation>
+        <source>&amp;Open in {0}</source>
+        <translation>&amp;Ouvrir dans {0}</translation>
+    </message>
+    <message>
+        <source>Open Version &amp;At {0}</source>
+        <translation>Ouvrir la version &amp;en {0}</translation>
+    </message>
+    <message>
+        <source>Open Version &amp;Before {0}</source>
+        <translation>Ouvrir la version &amp;précédant {0}</translation>
+    </message>
+    <message>
+        <source>Open &amp;Current Version</source>
+        <translation>Ouvrir la version &amp;actuelle</translation>
+    </message>
+    <message>
+        <source>Sa&amp;ve a Copy...</source>
+        <translation>Sauve&amp;garder une copie...</translation>
+    </message>
+    <message>
+        <source>Save Version &amp;At {0}</source>
+        <translation>Sauvegarder la version &amp;en {0}</translation>
+    </message>
+    <message>
+        <source>Save Version &amp;Before {0}</source>
+        <translation>Sauvegarder la version &amp;précédant {0}</translation>
+    </message>
+    <message>
+        <source>Reset To This Version</source>
+        <translation>Réinitialiser à cette version</translation>
     </message>
     <message numerus="yes">
         <source>Open &amp;Path(s)</source>
@@ -317,31 +408,13 @@
         <source>Open revision at HEAD</source>
         <translation>Ouvrir la révision sur HEAD</translation>
     </message>
-    <message numerus="yes">
-        <source>&amp;Open Revision(s)...</source>
-        <translation>
-            <numerusform>&amp;Ouvrir révision...</numerusform>
-            <numerusform>&amp;Ouvrir révisions...</numerusform>
-        </translation>
+    <message>
+        <source>Reset file to version</source>
+        <translation>Réinitialiser le fichier à une version</translation>
     </message>
     <message>
-        <source>&amp;At Commit</source>
-        <translation>&amp;Au commit</translation>
-    </message>
-    <message>
-        <source>&amp;Before Commit</source>
-        <translation>A&amp;vant le commit</translation>
-    </message>
-    <message>
-        <source>&amp;Current (working directory)</source>
-        <translation>A&amp;ctuelle (copie de travail)</translation>
-    </message>
-    <message numerus="yes">
-        <source>&amp;Save Revision(s)...</source>
-        <translation>
-            <numerusform>&amp;Enregistrer révision...</numerusform>
-            <numerusform>&amp;Enregistrer révisions...</numerusform>
-        </translation>
+        <source>There are uncommitted changes in &lt;b&gt;“{0}”&lt;/b&gt;. Please commit or discard your changes and try again.</source>
+        <translation type="unfinished"></translation>
     </message>
     <message numerus="yes">
         <source>&amp;Copy Path(s)</source>
@@ -369,6 +442,21 @@
     <message>
         <source>Really open &lt;b&gt;{0} files&lt;/b&gt;?</source>
         <translation>Êtes-vous sûr d’ouvrir &lt;b&gt;{0} fichiers&lt;/b&gt;&#xa0;?</translation>
+    </message>
+    <message>
+        <source>Open Diff in New &amp;Window</source>
+        <translation>Ouvrir la diff dans une &amp;fenêtre détachée</translation>
+    </message>
+    <message>
+        <source>Open diff in new window</source>
+        <translation>Ouvrir la diff dans une fenêtre détachée</translation>
+    </message>
+</context>
+<context>
+    <name>ComposePatch</name>
+    <message>
+        <source>Nothing to export. The patch is empty.</source>
+        <translation>Rien à exporter. Le correctif est vide.</translation>
     </message>
 </context>
 <context>
@@ -421,12 +509,28 @@
         <translation>Réconciliation manuelle</translation>
     </message>
     <message>
-        <source>Edit file</source>
-        <translation>Éditer le fichier</translation>
-    </message>
-    <message>
         <source>Mark as resolved</source>
         <translation>Marquer conflit comme résolu</translation>
+    </message>
+    <message>
+        <source>Merge in {0}</source>
+        <translation>Fusionner dans {0}</translation>
+    </message>
+    <message>
+        <source>Don’t add</source>
+        <translation>Ne pas ajouter</translation>
+    </message>
+    <message>
+        <source>Add “{0}” to our branch</source>
+        <translation>Ajouter “{0}” à notre branche</translation>
+    </message>
+    <message>
+        <source>&lt;b&gt;Deleted by us:&lt;/b&gt; “{0}” has been deleted from our branch, but it still exists in the branch that we’re merging. While the file was gone from our side, the other branch has modified it.</source>
+        <translation>&lt;b&gt;Supprimé par nous&#xa0;:&lt;/b&gt; “{0}” a été supprimé de notre branche, mais il existe toujours dans la branche que nous sommes en train de fusionner. Alors que le fichier n’existe plus de notre côté, l’autre branche l’a modifié.</translation>
+    </message>
+    <message>
+        <source>Pick another merge tool</source>
+        <translation>Choisir un autre outil de fusion</translation>
     </message>
 </context>
 <context>
@@ -473,10 +577,34 @@
     </message>
 </context>
 <context>
-    <name>DiffModel</name>
+    <name>Diff</name>
+    <message>
+        <source>This patch is too large to be previewed ({0}).</source>
+        <translation>La diff pèse trop lourd pour être prévisualisée ({0}).</translation>
+    </message>
+    <message>
+        <source>[Load diff anyway] (this may take a moment)</source>
+        <translation>[Charger la diff malgré tout] (cela peut prendre un certain temps)</translation>
+    </message>
+    <message>
+        <source>&lt;no newline at end of file&gt;</source>
+        <translation>&lt;sans saut de ligne en fin de fichier&gt;</translation>
+    </message>
+    <message>
+        <source>This file contains very long lines.</source>
+        <translation>Ce fichier contient de très longues lignes.</translation>
+    </message>
     <message>
         <source>File contents didn’t change.</source>
         <translation>Le contenu du fichier n’a pas changé.</translation>
+    </message>
+    <message>
+        <source>Empty file was deleted.</source>
+        <translation>Fichier vide supprimé.</translation>
+    </message>
+    <message>
+        <source>New empty file.</source>
+        <translation>Nouveau fichier vide.</translation>
     </message>
     <message>
         <source>File is empty.</source>
@@ -501,14 +629,6 @@
     <message>
         <source>File appears to be binary.</source>
         <translation>Ce fichier semble contenir des données binaires.</translation>
-    </message>
-    <message>
-        <source>This patch is too large to be previewed ({0}).</source>
-        <translation>La diff pèse trop lourd pour être prévisualisée ({0}).</translation>
-    </message>
-    <message>
-        <source>&lt;no newline at end of file&gt;</source>
-        <translation>&lt;sans saut de ligne en fin de fichier&gt;</translation>
     </message>
 </context>
 <context>
@@ -565,6 +685,42 @@
         <source>&amp;Word wrap</source>
         <translation>Retour à la li&amp;gne auto.</translation>
     </message>
+    <message>
+        <source>Find in Diff</source>
+        <translation>Rechercher dans la diff</translation>
+    </message>
+    <message numerus="yes">
+        <source>Hit {stagekey} to stage the current/selected line(s), or {discardkey} to discard it/them.</source>
+        <comment>singular: &apos;current line&apos;, plural: &apos;selected lines&apos;</comment>
+        <translation>
+            <numerusform>Tapez {stagekey} pour indexer la ligne courante, ou {discardkey} pour la jeter.</numerusform>
+            <numerusform>Tapez {stagekey} pour indexer les lignes sélectionnées, ou {discardkey} pour les jeter.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Hit {unstagekey} to unstage the current/selected line(s).</source>
+        <comment>singular: &apos;current line&apos;, plural: &apos;selected lines&apos;</comment>
+        <translation>
+            <numerusform>Tapez {unstagekey} pour désindexer la ligne courante.</numerusform>
+            <numerusform>Tapez {unstagekey} pour désindexer les lignes sélectionnées.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>End of diff reached.</source>
+        <translation>Fin de la diff atteinte.</translation>
+    </message>
+    <message>
+        <source>Top of diff reached.</source>
+        <translation>Début de la diff atteint.</translation>
+    </message>
+    <message>
+        <source>No more occurrences of “{0}” found.</source>
+        <translation>Aucune autre occurrence de “{0}” trouvée.</translation>
+    </message>
+    <message>
+        <source>Wrap Around</source>
+        <translation>Boucler</translation>
+    </message>
 </context>
 <context>
     <name>DirtyFiles</name>
@@ -575,23 +731,27 @@
             <numerusform>Indexer %n fichiers</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
+    <message>
         <source>&amp;Discard Changes</source>
-        <translation>
-            <numerusform>Jeter la modification</numerusform>
-            <numerusform>Jeter les modifications</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>&amp;Open %n File(s) in External Editor</source>
-        <translation>
-            <numerusform>Ouvrir le fichier dans un éditeur externe</numerusform>
-            <numerusform>Ouvrir %n fichiers dans un éditeur externe</numerusform>
-        </translation>
+        <translation>&amp;Jeter les modifications</translation>
     </message>
     <message>
-        <source>E&amp;xport As Patch...</source>
-        <translation>E&amp;xporter correctif...</translation>
+        <source>Stas&amp;h Changes...</source>
+        <translation>&amp;Remiser les modifs...</translation>
+    </message>
+    <message numerus="yes">
+        <source>Open &amp;Diff(s) in {0}</source>
+        <translation>
+            <numerusform>Ouvrir la &amp;diff dans {0}</numerusform>
+            <numerusform>Ouvrir les &amp;diffs dans {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>E&amp;xport Diff(s) As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
+            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
+        </translation>
     </message>
     <message numerus="yes">
         <source>Open &amp;Path(s)</source>
@@ -607,11 +767,15 @@
             <numerusform>Copier les chemins</numerusform>
         </translation>
     </message>
+    <message>
+        <source>&amp;Open in {0}</source>
+        <translation>&amp;Ouvrir dans {0}</translation>
+    </message>
     <message numerus="yes">
-        <source>Open Unmodified &amp;Revision(s) in External Editor</source>
+        <source>Open HEAD Version(s) in {0}</source>
         <translation>
-            <numerusform>Ouvrir version intacte dans éditeur externe</numerusform>
-            <numerusform>Ouvrir version intactes dans éditeur externe</numerusform>
+            <numerusform>Ouvrir la version en HEAD dans {0}</numerusform>
+            <numerusform>Ouvrir les versions en HEAD dans {0}</numerusform>
         </translation>
     </message>
 </context>
@@ -635,6 +799,25 @@
     </message>
 </context>
 <context>
+    <name>DiscardModeChanges</name>
+    <message>
+        <source>Really discard mode change in &lt;b&gt;“{0}”&lt;/b&gt;?</source>
+        <translation>Êtes-vous sûr de jeter la modification de mode dans &lt;b&gt;“{0}”&lt;/b&gt;&#xa0;?</translation>
+    </message>
+    <message numerus="yes">
+        <source>Really discard mode changes in &lt;b&gt;%n files&lt;/b&gt;?</source>
+        <translation>
+            <numerusform>Êtes-vous sûr de jeter le changement de mode sur &lt;b&gt;%n fichier&lt;/b&gt;&#xa0;?</numerusform>
+            <numerusform>Êtes-vous sûr de jeter le changement de mode sur &lt;b&gt;%n fichiers&lt;/b&gt;&#xa0;?</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Discard mode changes</source>
+        <comment>Button label</comment>
+        <translation>Jeter changement de mode</translation>
+    </message>
+</context>
+<context>
     <name>DropStash</name>
     <message>
         <source>Really delete stash &lt;b&gt;“{0}”&lt;/b&gt;?</source>
@@ -646,14 +829,45 @@
     </message>
 </context>
 <context>
-    <name>ExportCommitAsPatch</name>
+    <name>Exception</name>
     <message>
-        <source>Nothing to export. The patch is empty.</source>
-        <translation>Rien à exporter. Le correctif est vide.</translation>
+        <source>Connection refused</source>
+        <translation>Connexion refusée</translation>
     </message>
     <message>
-        <source>Save commit as patch file</source>
-        <translation>Enregistrer un fichier correctif de ce commit</translation>
+        <source>File not found</source>
+        <translation>Fichier introuvable</translation>
+    </message>
+</context>
+<context>
+    <name>FastForwardBranch</name>
+    <message>
+        <source>To fast-forward a branch, a local branch must be checked out. Try switching to a local branch before fast-forwarding it.</source>
+        <translation>Pour faire avance-rapide sur une branche, il faut d’abord qu’une branche soit active. Essayez de basculer sur une branche locale avant d’essayer une avance-rapide.</translation>
+    </message>
+    <message>
+        <source>Can’t fast-forward “{0}” because it isn’t tracking a remote branch.</source>
+        <translation>Impossible de faire avance-rapide sur “{0}” car cette branche ne suit pas de branche distante.</translation>
+    </message>
+    <message>
+        <source>No fast-forwarding necessary.</source>
+        <translation>L’avance-rapide n’est pas nécessaire.</translation>
+    </message>
+    <message>
+        <source>Your local branch “{0}” is ahead of “{1}”.</source>
+        <translation>Votre branche locale “{0}” est en avance sur “{1}”.</translation>
+    </message>
+    <message>
+        <source>Your local branch “{0}” is already up-to-date with “{1}”.</source>
+        <translation>Votre branche locale “{0}” est déjà à jour avec “{1}”.</translation>
+    </message>
+    <message>
+        <source>Can’t fast-forward “{0}” to “{1}”.</source>
+        <translation>Impossible de faire une avance-rapide de “{0}” jusqu’à “{1}”.</translation>
+    </message>
+    <message>
+        <source>The branches are divergent.</source>
+        <translation>Les branches sont divergentes.</translation>
     </message>
 </context>
 <context>
@@ -673,10 +887,6 @@
     <message>
         <source>to:</source>
         <translation>à&#xa0;:</translation>
-    </message>
-    <message>
-        <source>operation:</source>
-        <translation>opération&#xa0;:</translation>
     </message>
     <message>
         <source>(added)</source>
@@ -731,10 +941,6 @@
         <translation>Êtes-vous sûr d’ouvrir &lt;b&gt;{0} dossiers&lt;/b&gt;&#xa0;?</translation>
     </message>
     <message>
-        <source>Open unmodified revision</source>
-        <translation>Ouvrir révision non-modifiée</translation>
-    </message>
-    <message>
         <source>This file appears to have changed since we last read it. Try refreshing the window.</source>
         <translation>Le fichier semble avoir changé depuis la dernière fois que nous l’avons lu. Vous pouvez tenter de rafraîchir la fenêtre.</translation>
     </message>
@@ -750,6 +956,53 @@
         <source>Save patch file</source>
         <translation>Enregistrer fichier correctif</translation>
     </message>
+    <message>
+        <source>Open in external diff tool</source>
+        <translation>Ouvrir dans outil de diff externe</translation>
+    </message>
+    <message>
+        <source>Really open &lt;b&gt;{0} files&lt;/b&gt; in external diff tool?</source>
+        <translation>Êtes-vous sûr d’ouvrir &lt;b&gt;{0} fichiers&lt;/b&gt; dans l‘outil de diff externe&#xa0;?</translation>
+    </message>
+    <message>
+        <source>{0}: Can’t open external diff tool on a deleted file.</source>
+        <translation>{0}&#xa0;: Impossible de faire la diff d’un fichier qui a été supprimé.</translation>
+    </message>
+    <message>
+        <source>{0}: Can’t open external diff tool on a new file.</source>
+        <translation>{0}&#xa0;: Impossible de faire la diff d’un nouveau fichier.</translation>
+    </message>
+    <message>
+        <source>For the time being, {0} is unable to export binary patches from a selection of files.</source>
+        <translation>Pour le moment, {0} ne peut pas exporter des correctifs binaires depuis une sélection de fichiers.</translation>
+    </message>
+    <message>
+        <source>The following binary files were skipped in the patch:</source>
+        <translation>Les fichiers binaires suivants ont été omis du correctif&#xa0;:</translation>
+    </message>
+    <message>
+        <source>The patch is empty.</source>
+        <translation>Le correctif est vide.</translation>
+    </message>
+    <message>
+        <source>Open HEAD version of file</source>
+        <translation>Ouvrir la version en HEAD du fichier</translation>
+    </message>
+    <message numerus="yes">
+        <source>Revert Old Mode(s)</source>
+        <translation>
+            <numerusform>Rétablir le mode</numerusform>
+            <numerusform>Rétablir les modes</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Revert Old Mode ({0})</source>
+        <translation>Rétablir le mode ({0})</translation>
+    </message>
+    <message>
+        <source>status:</source>
+        <translation>statut&#xa0;:</translation>
+    </message>
 </context>
 <context>
     <name>Global</name>
@@ -757,16 +1010,21 @@
         <source>This cannot be undone!</source>
         <translation>Vous ne pourrez pas annuler cette action&#xa0;!</translation>
     </message>
-</context>
-<context>
-    <name>GraphDelegate</name>
     <message>
-        <source>[Uncommitted Changes]</source>
-        <translation>[Modifications non-committées]</translation>
+        <source>Text Editor</source>
+        <translation>Éditeur texte</translation>
     </message>
     <message>
-        <source>detached HEAD</source>
-        <translation>HEAD détachée</translation>
+        <source>Diff Tool</source>
+        <translation>Outil de diff</translation>
+    </message>
+    <message>
+        <source>Merge Tool</source>
+        <translation>Outil de fusion</translation>
+    </message>
+    <message>
+        <source>Please create the initial commit in this repository first.</source>
+        <translation>Veuillez d’abord créer le commit initial dans ce dépôt.</translation>
     </message>
 </context>
 <context>
@@ -835,16 +1093,56 @@
         <translation>Infos sur le commit&#xa0;: {0}</translation>
     </message>
     <message>
-        <source>Commit Staged Changes...</source>
-        <translation>Committer les modifs indexées...</translation>
-    </message>
-    <message>
-        <source>Amend Last Commit...</source>
-        <translation>Rectifier le dernier commit...</translation>
-    </message>
-    <message>
         <source>E&amp;xport As Patch...</source>
         <translation>E&amp;xporter correctif...</translation>
+    </message>
+    <message>
+        <source>Find Commit</source>
+        <translation>Rechercher un commit</translation>
+    </message>
+    <message>
+        <source>&amp;Commit Staged Changes...</source>
+        <translation>&amp;Committer les modifs indexées...</translation>
+    </message>
+    <message>
+        <source>&amp;Amend Last Commit...</source>
+        <translation>R&amp;ectifier le dernier commit...</translation>
+    </message>
+    <message>
+        <source>&amp;Stash Uncommitted Changes...</source>
+        <translation>Re&amp;miser les modifs...</translation>
+    </message>
+    <message>
+        <source>E&amp;xport Uncommitted Changes As Patch...</source>
+        <translation>E&amp;xporter les modifs en tant que correctif...</translation>
+    </message>
+    <message>
+        <source>&amp;Tag This Commit...</source>
+        <translation>É&amp;tiqueter ce commit...</translation>
+    </message>
+    <message>
+        <source>Hidden commit</source>
+        <translation>Commit caché</translation>
+    </message>
+    <message>
+        <source>This commit is hidden from the log:</source>
+        <translation>Ce commit est caché du journal de commits&#xa0;:</translation>
+    </message>
+    <message>
+        <source>End of commit log reached.</source>
+        <translation>Fin du journal de commits atteinte.</translation>
+    </message>
+    <message>
+        <source>Top of commit log reached.</source>
+        <translation>Début du journal de commits atteint.</translation>
+    </message>
+    <message>
+        <source>No more occurrences of “{0}” found.</source>
+        <translation>Aucune autre occurrence de “{0}” trouvée.</translation>
+    </message>
+    <message>
+        <source>Wrap Around</source>
+        <translation>Boucler</translation>
     </message>
 </context>
 <context>
@@ -856,6 +1154,10 @@
     <message>
         <source>Proceed to Amend Commit</source>
         <translation>Procéder à la rectification du commit</translation>
+    </message>
+    <message>
+        <source>Proceed to New Tag</source>
+        <translation>Procéder à l’étiquetage</translation>
     </message>
 </context>
 <context>
@@ -889,16 +1191,8 @@
         <translation>Vous serez invité à renseigner une identité pour d’autres dépôts.</translation>
     </message>
     <message>
-        <source>Angle bracket characters are not allowed.</source>
-        <translation>Les chevrons ne sont pas des caractères permis.</translation>
-    </message>
-    <message>
-        <source>Please fill out both fields.</source>
-        <translation>Veuillez remplir les deux champs.</translation>
-    </message>
-    <message>
-        <source>Before you start creating commits, please set up your identity for Git. This information will be baked into every commit that you author.</source>
-        <translation>Avant de commencer à créer des commits, veuillez renseigner votre identité pour Git. Ces informations seront intégrées à tous les commits que vous créerez.</translation>
+        <source>Before editing this repository, please set up your identity for Git. This information will be embedded into the commits and tags that you author.</source>
+        <translation>Avant d’éditer ce dépôt, veuillez configurer votre identité pour Git. Ces informations seront intégrées dans les commits et les étiquettes que vous créerez.</translation>
     </message>
 </context>
 <context>
@@ -937,14 +1231,78 @@
     </message>
 </context>
 <context>
-    <name>LoadPatch</name>
+    <name>Jump</name>
     <message>
-        <source>Patch is invalid.</source>
-        <translation>Le correctif est invalide.</translation>
+        <source>Navigate in repo</source>
+        <translation>Navigation dans le dépôt</translation>
     </message>
     <message>
-        <source>The patched file may have changed on disk since we last read it. Try refreshing the window.</source>
-        <translation>Le fichier semble avoir changé depuis la dernière fois que nous l’avons lu. Vous pouvez tenter de rafraîchir la fenêtre.</translation>
+        <source>Can’t display diff of type {0}.</source>
+        <translation>Impossible d’afficher une diff de type {0}.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n dirty file(s):</source>
+        <translation>
+            <numerusform>%n fichier sale&#xa0;:</numerusform>
+            <numerusform>%n fichiers sales&#xa0;:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) staged for commit:</source>
+        <translation>
+            <numerusform>%n fichier indexé (prêt à être committé)&#xa0;:</numerusform>
+            <numerusform>%n fichiers indexés (prêts à être committés)&#xa0;:</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Working directory clean</source>
+        <translation>Répertoire de travail propre</translation>
+    </message>
+    <message>
+        <source>The working directory is clean.</source>
+        <translation>Le répertoire de travail est propre.</translation>
+    </message>
+    <message>
+        <source>There aren’t any changes to commit.</source>
+        <translation>Il n’y a aucune modification à committer.</translation>
+    </message>
+    <message>
+        <source>Empty commit.</source>
+        <translation>Commit vide.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n change(s) in {0}:</source>
+        <translation>
+            <numerusform>%n modification dans {0}&#xa0;:</numerusform>
+            <numerusform>%n modifications dans {0}&#xa0;:</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Empty commit</source>
+        <translation>Commit vide</translation>
+    </message>
+    <message>
+        <source>This commit is empty.</source>
+        <translation>Ce commit est vide.</translation>
+    </message>
+    <message>
+        <source>Commit “{0}” doesn’t affect any files.</source>
+        <translation>Le commit “{0}” n’affecte aucun fichier.</translation>
+    </message>
+</context>
+<context>
+    <name>LoadPatch</name>
+    <message>
+        <source>The file appears to have changed on disk since we cached it. [Try to refresh it.]</source>
+        <translation>Le fichier semble avoir changé sur le disque depuis la dernière fois que nous l’avons lu. [Rafraîchir]</translation>
+    </message>
+    <message>
+        <source>Outdated diff.</source>
+        <translation>Diff obsolète.</translation>
+    </message>
+    <message>
+        <source>Patch has no delta!</source>
+        <translation>Le patch n’a pas de delta!</translation>
     </message>
 </context>
 <context>
@@ -1012,14 +1370,6 @@
     <message>
         <source>&amp;Push Branch...</source>
         <translation>&amp;Publier la branche (push)...</translation>
-    </message>
-    <message>
-        <source>Pul&amp;l Branch...</source>
-        <translation>Rapatrier &amp;la branche (pull)...</translation>
-    </message>
-    <message>
-        <source>&amp;Find Commit...</source>
-        <translation>&amp;Rechercher un commit...</translation>
     </message>
     <message>
         <source>Stash Changes...</source>
@@ -1098,10 +1448,6 @@
         <translation>Application des préférences</translation>
     </message>
     <message>
-        <source>Some changes may require restarting {0} to take effect.</source>
-        <translation>Certains paramètres ne prendront effet qu’après un redémarrage de {0}.</translation>
-    </message>
-    <message>
         <source>Close Tab</source>
         <translation>Fermer l’onglet</translation>
     </message>
@@ -1164,10 +1510,6 @@
         <translation>Désolé, les dépôts superficiels (“shallow clone”) ne sont pas gérés par le logiciel actuellement.</translation>
     </message>
     <message>
-        <source>In particular, some menus and buttons will remain untranslated until you restart the application.</source>
-        <translation>En particulier, certains menus et boutons resteront non-traduits jusqu’à ce que l’application soit relancée.</translation>
-    </message>
-    <message>
         <source>Sorry, bare repositories aren’t supported yet.</source>
         <translation>Désolé, les dépôts nus (“bare repository”) ne sont pas gérés par le logiciel actuellement.</translation>
     </message>
@@ -1190,14 +1532,6 @@
     <message>
         <source>Couldn’t open the repository at “{0}”.</source>
         <translation>Impossible d’ouvrir le dépôt situé dans “{0}”.</translation>
-    </message>
-    <message>
-        <source>&amp;Diff</source>
-        <translation>D&amp;iff</translation>
-    </message>
-    <message>
-        <source>&amp;Find in Diff...</source>
-        <translation>&amp;Rechercher dans la diff...</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -1237,7 +1571,105 @@
     </message>
     <message>
         <source>Set Up Git &amp;Identity...</source>
-        <translation>Configurer identité Git...</translation>
+        <translation>Configurer &amp;identité Git...</translation>
+    </message>
+    <message>
+        <source>&amp;Edit</source>
+        <translation>&amp;Édition</translation>
+    </message>
+    <message>
+        <source>&amp;Find...</source>
+        <translation>&amp;Rechercher...</translation>
+    </message>
+    <message>
+        <source>&amp;Fast-Forward to Remote Branch...</source>
+        <translation>&amp;Avance-rapide vers la branche distante...</translation>
+    </message>
+    <message>
+        <source>Navigate Back</source>
+        <translation>Naviguer en arrière</translation>
+    </message>
+    <message>
+        <source>Navigate Forward</source>
+        <translation>Naviguer en avant</translation>
+    </message>
+    <message>
+        <source>Navigation Log</source>
+        <translation>Journal de navigation</translation>
+    </message>
+    <message>
+        <source>You may need to reload the current repository for all new settings to take effect.</source>
+        <translation>Il vous faudra peut-être recharger le dépôt courant pour que tous les nouveaux réglages prennent effet.</translation>
+    </message>
+    <message>
+        <source>Please open a repository before importing a patch.</source>
+        <translation>Veuillez ouvrir un dépôt avant d’importer un correctif.</translation>
+    </message>
+</context>
+<context>
+    <name>NameValidationError</name>
+    <message>
+        <source>This name is already taken by another remote.</source>
+        <translation>Ce nom désigne déjà un autre serveur.</translation>
+    </message>
+    <message>
+        <source>Cannot be empty.</source>
+        <translation>Ne peut être vide.</translation>
+    </message>
+    <message>
+        <source>Illegal name.</source>
+        <translation>Nom invalide.</translation>
+    </message>
+    <message>
+        <source>Illegal suffix.</source>
+        <translation>Suffixe invalide.</translation>
+    </message>
+    <message>
+        <source>Illegal prefix.</source>
+        <translation>Préfixe invalide.</translation>
+    </message>
+    <message>
+        <source>Contains illegal character sequence.</source>
+        <translation>Contient une séquence de caractères invalide.</translation>
+    </message>
+    <message>
+        <source>Contains illegal character.</source>
+        <translation>Contient un caractère invalide.</translation>
+    </message>
+    <message>
+        <source>This name is discouraged for compatibility with Windows.</source>
+        <translation>Ce nom est découragé pour la compatibilité avec Windows.</translation>
+    </message>
+    <message>
+        <source>This name is already taken.</source>
+        <translation>Ce nom est déjà pris.</translation>
+    </message>
+</context>
+<context>
+    <name>NavContext</name>
+    <message>
+        <source>Empty</source>
+        <translation>Vide</translation>
+    </message>
+    <message>
+        <source>Untracked</source>
+        <translation>Non-suivi</translation>
+    </message>
+    <message>
+        <source>Unstaged</source>
+        <translation>Non-indexé</translation>
+    </message>
+    <message>
+        <source>Staged</source>
+        <translation>Indexé</translation>
+    </message>
+    <message>
+        <source>Committed</source>
+        <translation>Committé</translation>
+    </message>
+    <message>
+        <source>Unknown</source>
+        <translation>Inconnu</translation>
     </message>
 </context>
 <context>
@@ -1266,6 +1698,21 @@
         <source>Commit at tip:</source>
         <translation>Commit à la pointe de la branche&#xa0;:</translation>
     </message>
+    <message>
+        <source>Create branch</source>
+        <translation>Créer une branche</translation>
+    </message>
+    <message>
+        <source>This name is already taken by another local branch.</source>
+        <translation>Ce nom est déjà pris par une autre branche locale.</translation>
+    </message>
+</context>
+<context>
+    <name>NewBranchFromHead</name>
+    <message>
+        <source>Cannot create a local branch when HEAD is unborn.</source>
+        <translation>Impossible de créer une branche locale lorsque HEAD est non-née (unborn HEAD).</translation>
+    </message>
 </context>
 <context>
     <name>NewCommit</name>
@@ -1280,6 +1727,40 @@
     <message>
         <source>Do you want to create an empty commit anyway?</source>
         <translation>Voulez-vous tout de même créer un commit vide&#xa0;?</translation>
+    </message>
+    <message>
+        <source>Please fix merge conflicts in the working directory before committing.</source>
+        <translation>Veuillez résoudre les conflits de fusion dans le répertoire de travail avant de committer.</translation>
+    </message>
+</context>
+<context>
+    <name>NewStash</name>
+    <message>
+        <source>Before creating a stash, please fix merge conflicts in the working directory.</source>
+        <translation>Avant de créer une remise, veuillez résoudre les conflits de fusion dans le répertoire de travail.</translation>
+    </message>
+    <message>
+        <source>Cannot create a stash when HEAD is unborn.</source>
+        <translation>Impossible de créer une remise lorsque HEAD est non-née (unborn HEAD).</translation>
+    </message>
+    <message>
+        <source>There are no changes to stash.</source>
+        <translation>Il n’y a aucune modification à remiser.</translation>
+    </message>
+</context>
+<context>
+    <name>NewTag</name>
+    <message>
+        <source>New tag on commit “{0}”</source>
+        <translation>Étiqueter le commit “{0}”</translation>
+    </message>
+    <message>
+        <source>Enter tag name:</source>
+        <translation>Saisissez le libellé de l’étiquette&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Create Tag</source>
+        <translation>Étiqueter</translation>
     </message>
 </context>
 <context>
@@ -1325,10 +1806,6 @@
         <translation>Application de la remise</translation>
     </message>
     <message>
-        <source>Pop stash</source>
-        <translation>Application puis suppression de la remise</translation>
-    </message>
-    <message>
         <source>Drop stash</source>
         <translation>Suppression de la remise</translation>
     </message>
@@ -1351,10 +1828,6 @@
     <message>
         <source>Change remote branch tracked by local branch</source>
         <translation>Changement de branche distante suivie par la branche locale</translation>
-    </message>
-    <message>
-        <source>Pull branch</source>
-        <translation>Rapatriement de la branche (pull)</translation>
     </message>
     <message>
         <source>Delete branch on remote</source>
@@ -1435,6 +1908,42 @@
     <message>
         <source>Set up identity</source>
         <translation>Configuration de l’identité</translation>
+    </message>
+    <message>
+        <source>Fast-forward branch</source>
+        <translation>Avance-rapide sur la branche</translation>
+    </message>
+    <message>
+        <source>New tag</source>
+        <translation>Nouvelle étiquette</translation>
+    </message>
+    <message>
+        <source>Cherry-pick</source>
+        <translation>Picorage</translation>
+    </message>
+    <message>
+        <source>Export patch file</source>
+        <translation>Export d’un fichier correctif</translation>
+    </message>
+    <message>
+        <source>Export stash as patch file</source>
+        <translation>Exporter la remise en tant que fichier correctif</translation>
+    </message>
+    <message>
+        <source>Export uncommitted changes as patch file</source>
+        <translation>Exporter les modifs en tant que fichier correctif</translation>
+    </message>
+    <message>
+        <source>Discard mode changes</source>
+        <translation>Jeter changement de mode</translation>
+    </message>
+    <message>
+        <source>Unstage mode changes</source>
+        <translation>Désindexer changement de mode</translation>
+    </message>
+    <message>
+        <source>Accept merge conflict resolution</source>
+        <translation>Accepter la résolution du conflit de fusion</translation>
     </message>
 </context>
 <context>
@@ -1552,10 +2061,6 @@
     <message>
         <source>Theme</source>
         <translation>Thème</translation>
-    </message>
-    <message>
-        <source>File watcher</source>
-        <translation>Réagir aux modifications externes sur le système de fichiers</translation>
     </message>
     <message>
         <source>Shorten hashes to</source>
@@ -1710,10 +2215,6 @@
         <translation>Exigu</translation>
     </message>
     <message>
-        <source>Tight (default)</source>
-        <translation>Serré (par défaut)</translation>
-    </message>
-    <message>
         <source>Relaxed</source>
         <translation>Détendu</translation>
     </message>
@@ -1724,6 +2225,38 @@
     <message>
         <source>Spacious</source>
         <translation>Spacieux</translation>
+    </message>
+    <message>
+        <source>External tools</source>
+        <translation>Outils externes</translation>
+    </message>
+    <message>
+        <source>When you discard changes from the working directory, {app} keeps a temporary copy in a hidden “trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. You can look around this trash folder via &lt;i&gt;“Repo &amp;rarr; Rescue Discarded Changes”&lt;/i&gt;.</source>
+        <translation>Lorsque vous jetez des modifications dans le répertoire de travail, {app} en conserve une copie temporaire dans un dossier caché “poubelle”. Cela vous donne une dernière chance de récupérer des modifications que vous auriez jetées par erreur. Vous pouvez examiner ce dossier poubelle via &lt;i&gt;“Dépôt &amp;rarr; Ouvrir la poubelle à modifs”&lt;/i&gt;.</translation>
+    </message>
+    <message>
+        <source>Hide synthetic parents of stash commits</source>
+        <translation>Cacher les parents synthétiques des commits de remise</translation>
+    </message>
+    <message>
+        <source>Auto-refresh when app regains focus</source>
+        <translation>Auto-rafraîchir lorsque l’application reprend la main</translation>
+    </message>
+    <message>
+        <source>Text editor</source>
+        <translation>Éditeur texte</translation>
+    </message>
+    <message>
+        <source>Diff tool</source>
+        <translation>Outil de diff</translation>
+    </message>
+    <message>
+        <source>Merge tool</source>
+        <translation>Outil de fusion</translation>
+    </message>
+    <message>
+        <source>Tight</source>
+        <translation>Serré</translation>
     </message>
 </context>
 <context>
@@ -1739,15 +2272,6 @@
     <message>
         <source>General</source>
         <translation>Général</translation>
-    </message>
-    <message>
-        <source>When you discard changes from the working directory, {0} keeps a temporary copy in a hidden “trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. You can look around this trash folder via &lt;i&gt;“Repo &amp;rarr; Rescue Discarded Changes”&lt;/i&gt;.</source>
-        <translation>Lorsque vous jetez des modifications dans le répertoire de travail, {0} en conserve une copie temporaire dans un dossier caché “poubelle”. Cela vous offre un ultime recours pour récupérer des modifs que vous avez jetées par erreur. Vous pouvez examiner ce dossier poubelle via &lt;i&gt;“Dépôt &amp;rarr; Ouvrir la poubelle à modifs”&lt;/i&gt;.</translation>
-    </message>
-    <message>
-        <source>{0} Preferences</source>
-        <comment>{0} = GitFourchette</comment>
-        <translation>Préférences de {0}</translation>
     </message>
     <message>
         <source>Default</source>
@@ -1766,24 +2290,9 @@
         <source>Reset</source>
         <translation>Réinitialiser</translation>
     </message>
-</context>
-<context>
-    <name>PullBranch</name>
     <message>
-        <source>To pull, you must be on a local branch. Try switching to a local branch first.</source>
-        <translation>Pour rapatrier (pull), vous devez être sur une branche locale. Essayez de basculer dans une branche locale puis recommencez.</translation>
-    </message>
-    <message>
-        <source>Can’t pull because “{0}” isn’t tracking a remote branch.</source>
-        <translation>Impossible de rapatrier, car “{0}” ne suit pas de branche distante.</translation>
-    </message>
-    <message>
-        <source>Can’t fast-forward “{0}” to “{1}”.</source>
-        <translation>Impossible de faire une avance-rapide de “{0}” jusqu’à “{1}”.</translation>
-    </message>
-    <message>
-        <source>The branches are divergent.</source>
-        <translation>Les branches sont divergentes.</translation>
+        <source>{app} Preferences</source>
+        <translation>Préférences de {app}</translation>
     </message>
 </context>
 <context>
@@ -1811,10 +2320,6 @@
     <message>
         <source>Status</source>
         <translation>Statut</translation>
-    </message>
-    <message>
-        <source>Options</source>
-        <translation>Options</translation>
     </message>
     <message>
         <source>To push a local branch to a remote, you must first add a remote to your repo.</source>
@@ -1845,26 +2350,8 @@
         <translation>ne suit rien</translation>
     </message>
     <message>
-        <source>Make “{0}” trac&amp;k “{1}” from now on</source>
-        <translation>Faire que “{0}” &amp;suive désormais “{1}”</translation>
-    </message>
-    <message>
-        <source>“{0}” already trac&amp;ks “{1}”</source>
-        <translation>“{0}” &amp;suit déjà “{1}”</translation>
-    </message>
-    <message>
-        <source>Make “{0}” trac&amp;k “{1}” from now on,
-instead of “{2}”</source>
-        <translation>Faire que “{0}” &amp;suive désormais “{1}”,
-à la place de “{2}”</translation>
-    </message>
-    <message>
         <source>[tracked]</source>
         <translation>[suivie]</translation>
-    </message>
-    <message>
-        <source>New remote branch:</source>
-        <translation>Nouv. branche distante&#xa0;:</translation>
     </message>
     <message>
         <source>&amp;Push</source>
@@ -1873,6 +2360,46 @@ instead of “{2}”</source>
     <message>
         <source>Contacting remote host...</source>
         <translation>Connexion au serveur...</translation>
+    </message>
+    <message>
+        <source>“{0}” will track “{1}”.</source>
+        <translation>“{0}” suivra “{1}”.</translation>
+    </message>
+    <message>
+        <source>“{0}” currently does not track any remote branch.</source>
+        <translation>“{0}” ne suit actuellement pas de branche distante.</translation>
+    </message>
+    <message>
+        <source>“{0}” already tracks remote branch “{1}”.</source>
+        <translation>“{0}” suit déjà la branche distante “{1}”.</translation>
+    </message>
+    <message>
+        <source>“{0}” will track “{1}” instead of “{2}”.</source>
+        <translation>“{0}” suivra “{1}” au lieu de “{2}”.</translation>
+    </message>
+    <message>
+        <source>“{0}” currently tracks “{1}”.</source>
+        <translation>“{0}” suit actuellement “{1}”.</translation>
+    </message>
+    <message>
+        <source>New remote branch on {0}</source>
+        <translation>Nouvelle branche distante sur {0}</translation>
+    </message>
+    <message>
+        <source>Force &amp;push</source>
+        <translation>Forcer à &amp;publier</translation>
+    </message>
+    <message>
+        <source>&amp;Push new branch</source>
+        <translation>&amp;Publier nouvelle branche</translation>
+    </message>
+    <message>
+        <source>This name is already taken by another branch on this remote.</source>
+        <translation>Ce nom est déjà pris par une autre branche sur ce serveur.</translation>
+    </message>
+    <message>
+        <source>&amp;Track this remote branch after pushing</source>
+        <translation>&amp;Suivre cette branche distante une fois publiée</translation>
     </message>
 </context>
 <context>
@@ -1895,18 +2422,17 @@ instead of “{2}”</source>
     </message>
 </context>
 <context>
+    <name>RefreshRepo</name>
+    <message>
+        <source>Refresh repo</source>
+        <translation>Rafraîchir le dépôt</translation>
+    </message>
+</context>
+<context>
     <name>RemoteDialog</name>
     <message>
         <source>Edit remote</source>
         <translation>Modifier le serveur</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>Nom</translation>
-    </message>
-    <message>
-        <source>URL</source>
-        <translation>URL</translation>
     </message>
     <message>
         <source>Edit remote “{0}”</source>
@@ -1915,6 +2441,58 @@ instead of “{2}”</source>
     <message>
         <source>Add remote</source>
         <translation>Ajouter un serveur</translation>
+    </message>
+    <message>
+        <source>{0} normally uses public/private keys in ~/.ssh to authenticate you with remote servers.</source>
+        <translation>{0} utilise normalement les clés publiques/privées dans ~/.ssh pour vous authentifier auprès de serveurs distants.</translation>
+    </message>
+    <message>
+        <source>Tick this box if you want to access this remote with a custom key.</source>
+        <translation>Cochez cette case si vous souhaitez accéder à ce serveur à l’aide d’une clé spéciale.</translation>
+    </message>
+    <message>
+        <source>Save changes</source>
+        <translation>Enregistrer les modifs</translation>
+    </message>
+    <message>
+        <source>File not found.</source>
+        <translation>Fichier introuvable.</translation>
+    </message>
+    <message>
+        <source>Accompanying private key not found.</source>
+        <translation>La clé privée associée est introuvable.</translation>
+    </message>
+    <message>
+        <source>Accompanying public key not found.</source>
+        <translation>La clé publique associée est introuvable.</translation>
+    </message>
+    <message>
+        <source>Select public key file for remote “{0}”</source>
+        <translation>Sélectionnez la clé publique à utiliser avec le serveur “{0}”</translation>
+    </message>
+    <message>
+        <source>Public key file</source>
+        <translation>Fichier de clé publique</translation>
+    </message>
+    <message>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom&#xa0;:</translation>
+    </message>
+    <message>
+        <source>&amp;URL:</source>
+        <translation>&amp;URL&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Use a custom &amp;key file to access this remote</source>
+        <translation>Utiliser une &amp;clé spéciale pour accéder à ce serveur</translation>
+    </message>
+    <message>
+        <source>Path to public or private key</source>
+        <translation>Chemin vers la clé publique ou privée</translation>
+    </message>
+    <message>
+        <source>&amp;Browse...</source>
+        <translation>&amp;Parcourir...</translation>
     </message>
 </context>
 <context>
@@ -1949,10 +2527,6 @@ instead of “{2}”</source>
         <translation>Le serveur dit accepter&#xa0;: {0}.</translation>
     </message>
     <message>
-        <source>Unsupported auth type.</source>
-        <translation>Type d’authentification non reconnu.</translation>
-    </message>
-    <message>
         <source>{0} total. Indexing...</source>
         <comment>e.g. &apos;12 MB total&apos;</comment>
         <translation>{0} total. Indexation...</translation>
@@ -1974,6 +2548,38 @@ instead of “{2}”</source>
     <message>
         <source>{0} of {1} objects ready.</source>
         <translation>{0} objets sur {1} prêts.</translation>
+    </message>
+    <message>
+        <source>Remote-specific public key file not found:</source>
+        <translation>Le fichier de clé publique spécifique au serveur est introuvable&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Remote-specific private key file not found:</source>
+        <translation>Le fichier de clé privée spécifique au serveur est introuvable&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Logging in with remote-specific key...</source>
+        <translation>Connexion à l’aide de la clé spécifique au serveur...</translation>
+    </message>
+    <message>
+        <source>Unsupported authentication type.</source>
+        <translation>Type d’authentification non géré.</translation>
+    </message>
+    <message>
+        <source>Could not find suitable key files for this remote.</source>
+        <translation>Impossible de trouver une clé adaptée à ce serveur.</translation>
+    </message>
+    <message>
+        <source>The key files couldn’t be opened (permission issues?).</source>
+        <translation>Les fichiers de clés ne peuvent pas être ouverts (problème de permissions&#xa0;?).</translation>
+    </message>
+    <message>
+        <source>Please note that {0} does not support passphrase-protected private keys yet. You may have better luck with a decrypted private key.</source>
+        <translation>Veuillez noter que {0} ne prend pas encore en charge les clés privées protégées par une phrase secrète (passphrase). Vous aurez sans doute de meilleurs résultats avec une clé privée décryptée.</translation>
+    </message>
+    <message>
+        <source>The remote has rejected your custom key file ({0}). To change key file settings for this remote, right-click on the remote in the sidebar and pick “Edit Remote”.</source>
+        <translation>Le serveur a rejeté votre clé spéciale ({0}). Pour paramétrer les fichiers clés à utiliser avec ce serveur, faites un clic droit sur le serveur dans la barre latérale et choisissez “Modifier le serveur”.</translation>
     </message>
 </context>
 <context>
@@ -2005,6 +2611,10 @@ instead of “{2}”</source>
         <source>Rename</source>
         <translation>Renommer</translation>
     </message>
+    <message>
+        <source>This name is already taken by another local branch.</source>
+        <translation>Ce nom est déjà pris par une autre branche locale.</translation>
+    </message>
 </context>
 <context>
     <name>RenameRemoteBranch</name>
@@ -2019,6 +2629,10 @@ instead of “{2}”</source>
     <message>
         <source>Rename on remote</source>
         <translation>Renommer sur le serveur</translation>
+    </message>
+    <message>
+        <source>This name is already taken by another branch on this remote.</source>
+        <translation>Ce nom est déjà pris par une autre branche sur ce serveur.</translation>
     </message>
 </context>
 <context>
@@ -2038,23 +2652,17 @@ instead of “{2}”</source>
         <source>In progress: {0}...</source>
         <translation>En cours&#xa0;: “{0}”...</translation>
     </message>
+    <message>
+        <source>Operation in progress</source>
+        <translation>Opération en cours</translation>
+    </message>
+    <message>
+        <source>Please wait for the current operation to complete. ({0} cannot be interrupted by {1})</source>
+        <translation>Veuillez attendre la fin de l’opération en cours. ({0} ne peut être interrompu par {1})</translation>
+    </message>
 </context>
 <context>
     <name>RepoWidget</name>
-    <message numerus="yes">
-        <source>%n dirty file(s):</source>
-        <translation>
-            <numerusform>%n fichier sale&#xa0;:</numerusform>
-            <numerusform>%n fichiers sales&#xa0;:</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n file(s) staged for commit:</source>
-        <translation>
-            <numerusform>%n fichier prêt à être committé&#xa0;:</numerusform>
-            <numerusform>%n fichiers prêts à être committés&#xa0;:</numerusform>
-        </translation>
-    </message>
     <message>
         <source>&amp;Commit</source>
         <translation>&amp;Commit</translation>
@@ -2072,10 +2680,6 @@ instead of “{2}”</source>
         <translation>&amp;Rectifier</translation>
     </message>
     <message>
-        <source>Detected external change...</source>
-        <translation>Changement extérieur détecté...</translation>
-    </message>
-    <message>
         <source>Edit repo nickname</source>
         <translation>Surnommer le dépôt</translation>
     </message>
@@ -2088,43 +2692,6 @@ ou laissez la case vierge pour réinitialiser&#xa0;:</translation>
         <source>Rename</source>
         <comment>edit repo nickname</comment>
         <translation>Surnommer</translation>
-    </message>
-    <message>
-        <source>Empty commit.</source>
-        <translation>Commit vide.</translation>
-    </message>
-    <message>
-        <source>Find Commit</source>
-        <translation>Rechercher un commit</translation>
-    </message>
-    <message>
-        <source>Invalid search term.</source>
-        <translation>Terme à rechercher invalide.</translation>
-    </message>
-    <message>
-        <source>No more occurrences of “{0}”.</source>
-        <translation>Il n’y a plus d’occurrences de “{0}”.</translation>
-    </message>
-    <message>
-        <source>Search for partial commit hash or message:</source>
-        <translation>Rechercher un hachage (même partiel)
-ou un message de commit&#xa0;:</translation>
-    </message>
-    <message>
-        <source>Please use “Find” to specify a search term before using “Find Next” or “Find Previous”.</source>
-        <translation>Veuillez d’abord utiliser “Rechercher” pour spécifier un terme à rechercher avant d’utiliser “Rechercher suivant” ou “Rechercher précédent”.</translation>
-    </message>
-    <message>
-        <source>Please select a commit from whence to resume the search.</source>
-        <translation>Veuillez sélectionner un commit d’où reprendre la recherche.</translation>
-    </message>
-    <message>
-        <source>Find in Diff</source>
-        <translation>Rechercher dans la diff</translation>
-    </message>
-    <message>
-        <source>Search for text in current diff:</source>
-        <translation>Rechercher le texte dans la diff actuelle&#xa0;:</translation>
     </message>
     <message>
         <source>unborn HEAD</source>
@@ -2152,7 +2719,7 @@ ou un message de commit&#xa0;:</translation>
     </message>
     <message>
         <source>There are no discarded changes to delete.</source>
-        <translation>Il n’y a aucune modif jetée à la poubelle.</translation>
+        <translation>Il n’y a aucune modification jetée à la poubelle.</translation>
     </message>
     <message>
         <source>Clear rescue folder</source>
@@ -2161,14 +2728,6 @@ ou un message de commit&#xa0;:</translation>
     <message>
         <source>Delete permanently</source>
         <translation>Supprimer définitivement</translation>
-    </message>
-    <message>
-        <source>Can’t display diff of type {0}.</source>
-        <translation>Impossible d’afficher une diff de type {0}.</translation>
-    </message>
-    <message>
-        <source>Please use “Find in Diff” to specify a search term before using “Find Next” or “Find Previous”.</source>
-        <translation>Veuillez d’abord utiliser “Rechercher dans la diff” pour spécifier un terme à rechercher avant d’utiliser “Rechercher suivant” ou “Rechercher précédent”.</translation>
     </message>
     <message numerus="yes">
         <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch(es)?</source>
@@ -2180,6 +2739,22 @@ ou un message de commit&#xa0;:</translation>
     <message>
         <source>This will free up {0} on disk.</source>
         <translation>Cela libèrera {0} sur le disque.</translation>
+    </message>
+    <message>
+        <source>Opening repository...</source>
+        <translation>Ouverture du dépôt...</translation>
+    </message>
+    <message>
+        <source>Load diff in new window</source>
+        <translation>Charger la diff dans une fenêtre détachée</translation>
+    </message>
+    <message>
+        <source>merge conflict</source>
+        <translation>conflit de fusion</translation>
+    </message>
+    <message>
+        <source>merge conflict in workdir</source>
+        <translation>conflit de fusion dans rép. de travail</translation>
     </message>
 </context>
 <context>
@@ -2194,18 +2769,26 @@ ou un message de commit&#xa0;:</translation>
     </message>
 </context>
 <context>
-    <name>RichDiffView</name>
+    <name>SearchBar</name>
     <message>
-        <source>Old: {0}&amp;times;{1} pixels, {2}</source>
-        <translation>Ancien&#xa0;: {0}&amp;times;{1} pixels, {2}</translation>
+        <source>Search...</source>
+        <translation>Rechercher...</translation>
     </message>
     <message>
-        <source>New: {0}&amp;times;{1} pixels, {2}</source>
-        <translation>Nouveau&#xa0;: {0}&amp;times;{1} pixels, {2}</translation>
+        <source>Next Occurrence</source>
+        <translation>Occurrence suivante</translation>
     </message>
     <message>
-        <source>(new file displayed below)</source>
-        <translation>(nouveau fichier affiché ci-dessous)</translation>
+        <source>Previous Occurrence</source>
+        <translation>Occurrence précédente</translation>
+    </message>
+    <message>
+        <source>Close Search Bar</source>
+        <translation>Fermer la barre de recherche</translation>
+    </message>
+    <message>
+        <source>Search</source>
+        <translation>Recherche</translation>
     </message>
 </context>
 <context>
@@ -2235,10 +2818,6 @@ ou un message de commit&#xa0;:</translation>
         <translation>&amp;Fetch...</translation>
     </message>
     <message>
-        <source>Pul&amp;l...</source>
-        <translation>Rapa&amp;trier (pull)...</translation>
-    </message>
-    <message>
         <source>Set &amp;Tracked Branch...</source>
         <translation>Branche distante sui&amp;vie...</translation>
     </message>
@@ -2253,10 +2832,6 @@ ou un message de commit&#xa0;:</translation>
     <message>
         <source>&amp;Hide in graph</source>
         <translation>&amp;Masquer dans le graphe</translation>
-    </message>
-    <message>
-        <source>New local branch tracking {0}...</source>
-        <translation>Nouvelle branche locale suivant “{0}”...</translation>
     </message>
     <message>
         <source>Fetch this remote branch...</source>
@@ -2287,10 +2862,6 @@ ou un message de commit&#xa0;:</translation>
         <translation>&amp;Nouvelle remise...</translation>
     </message>
     <message>
-        <source>&amp;Pop (apply and delete)</source>
-        <translation>A&amp;ppliquer la remise puis la supprimer</translation>
-    </message>
-    <message>
         <source>&amp;Apply</source>
         <translation>&amp;Appliquer la remise</translation>
     </message>
@@ -2311,16 +2882,40 @@ ou un message de commit&#xa0;:</translation>
         <translation>&amp;Ajouter un serveur...</translation>
     </message>
     <message>
-        <source>Commit Staged Changes...</source>
-        <translation>Committer les modifs indexées...</translation>
+        <source>&amp;Commit Staged Changes...</source>
+        <translation>&amp;Committer les modifs indexées...</translation>
     </message>
     <message>
-        <source>Amend Last Commit...</source>
-        <translation>Rectifier le dernier commit...</translation>
+        <source>&amp;Amend Last Commit...</source>
+        <translation>R&amp;ectifier le dernier commit...</translation>
     </message>
     <message>
-        <source>New Branch from Here...</source>
-        <translation>Nouvelle &amp;branche à partir d’ici...</translation>
+        <source>&amp;Stash Uncommitted Changes...</source>
+        <translation>Re&amp;miser les modifs...</translation>
+    </message>
+    <message>
+        <source>E&amp;xport Uncommitted Changes As Patch...</source>
+        <translation>E&amp;xporter les modifs en tant que correctif...</translation>
+    </message>
+    <message>
+        <source>Fast-Forward to “{0}”...</source>
+        <translation>Avance-rapide jusqu’à “{0}”...</translation>
+    </message>
+    <message>
+        <source>Fast-Forward...</source>
+        <translation>Avance-rapide...</translation>
+    </message>
+    <message>
+        <source>New &amp;Branch from Here...</source>
+        <translation>Démarrer une &amp;branche ici...</translation>
+    </message>
+    <message>
+        <source>New local branch tracking “{0}”...</source>
+        <translation>Nouvelle branche locale suivant “{0}”...</translation>
+    </message>
+    <message>
+        <source>E&amp;xport As Patch...</source>
+        <translation>E&amp;xporter correctif...</translation>
     </message>
 </context>
 <context>
@@ -2386,10 +2981,6 @@ ou un message de commit&#xa0;:</translation>
         <translation>HEAD non-née</translation>
     </message>
     <message>
-        <source>Local branch “{0}”</source>
-        <translation>Branche locale “{0}”</translation>
-    </message>
-    <message>
         <source>Active branch</source>
         <translation>Branche active</translation>
     </message>
@@ -2401,24 +2992,43 @@ ou un message de commit&#xa0;:</translation>
         <source>Tracking remote branch “{0}”</source>
         <translation>Suit la branche distante “{0}”</translation>
     </message>
+    <message>
+        <source>Local branch &lt;b&gt;“{0}”&lt;/b&gt;</source>
+        <translation>Branche locale &lt;b&gt;“{0}”&lt;/b&gt;</translation>
+    </message>
 </context>
 <context>
     <name>SignatureForm</name>
     <message>
-        <source>Name</source>
-        <translation>Nom</translation>
-    </message>
-    <message>
-        <source>Email</source>
-        <translation>Courriel</translation>
-    </message>
-    <message>
-        <source>Time</source>
-        <translation>Date</translation>
-    </message>
-    <message>
         <source>Signature</source>
         <translation>Signature</translation>
+    </message>
+    <message>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom&#xa0;:</translation>
+    </message>
+    <message>
+        <source>&amp;Email:</source>
+        <translation>&amp;Courriel&#xa0;:</translation>
+    </message>
+    <message>
+        <source>&amp;Time:</source>
+        <translation>&amp;Date&#xa0;:</translation>
+    </message>
+</context>
+<context>
+    <name>SpecialDiffView</name>
+    <message>
+        <source>Old: {0}&amp;times;{1} pixels, {2}</source>
+        <translation>Ancien&#xa0;: {0}&amp;times;{1} pixels, {2}</translation>
+    </message>
+    <message>
+        <source>New: {0}&amp;times;{1} pixels, {2}</source>
+        <translation>Nouveau&#xa0;: {0}&amp;times;{1} pixels, {2}</translation>
+    </message>
+    <message>
+        <source>(new file displayed below)</source>
+        <translation>(nouveau fichier affiché ci-dessous)</translation>
     </message>
 </context>
 <context>
@@ -2430,16 +3040,23 @@ ou un message de commit&#xa0;:</translation>
             <numerusform>Désinde&amp;xer %n fichiers</numerusform>
         </translation>
     </message>
+    <message>
+        <source>Stas&amp;h Changes...</source>
+        <translation>&amp;Remiser les modifs...</translation>
+    </message>
     <message numerus="yes">
-        <source>&amp;Open %n File(s) in External Editor</source>
+        <source>Open &amp;Diff(s) in {0}</source>
         <translation>
-            <numerusform>&amp;Ouvrir le fichier dans un éditeur externe</numerusform>
-            <numerusform>&amp;Ouvrir %n fichiers dans un éditeur externe</numerusform>
+            <numerusform>Ouvrir la &amp;diff dans {0}</numerusform>
+            <numerusform>Ouvrir les &amp;diffs dans {0}</numerusform>
         </translation>
     </message>
-    <message>
-        <source>E&amp;xport As Patch...</source>
-        <translation>E&amp;xporter correctif...</translation>
+    <message numerus="yes">
+        <source>E&amp;xport Diff(s) As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
+            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
+        </translation>
     </message>
     <message numerus="yes">
         <source>Open &amp;Path(s)</source>
@@ -2455,11 +3072,15 @@ ou un message de commit&#xa0;:</translation>
             <numerusform>&amp;Copier les chemins</numerusform>
         </translation>
     </message>
+    <message>
+        <source>&amp;Open in {0}</source>
+        <translation>&amp;Ouvrir dans {0}</translation>
+    </message>
     <message numerus="yes">
-        <source>Open Unmodified &amp;Revision(s) in External Editor</source>
+        <source>Open &amp;HEAD Version(s) in {0}</source>
         <translation>
-            <numerusform>Ouvrir la &amp;révision non-modifiée dans un éditeur externe</numerusform>
-            <numerusform>Ouvrir les &amp;révisions non-modifiées dans un éditeur externe</numerusform>
+            <numerusform>Ouvrir la version en &amp;HEAD dans {0}</numerusform>
+            <numerusform>Ouvrir les versions en &amp;HEAD dans {0}</numerusform>
         </translation>
     </message>
 </context>
@@ -2478,16 +3099,42 @@ ou un message de commit&#xa0;:</translation>
         <translation>Options</translation>
     </message>
     <message>
-        <source>&amp;Keep index</source>
-        <translation>Conserver l’inde&amp;x</translation>
+        <source>Stash then Remove Changes</source>
+        <translation>Remiser puis effacer les modifs</translation>
     </message>
     <message>
-        <source>Include &amp;untracked</source>
-        <translation>Remiser les fichiers &amp;non-suivis</translation>
+        <source>Optional stash message</source>
+        <translation>Message facultatif pour cette remise</translation>
     </message>
     <message>
-        <source>Include &amp;ignored</source>
-        <translation>Remiser les fichiers &amp;ignorés</translation>
+        <source>Normally, stashed changes are removed from the working directory.
+Untick this to leave the stashed changes intact instead.</source>
+        <translation>Normalement, une fois la remise créée, les modifications sont effacées de la copie de travail des fichiers affectés.
+Décochez ceci pour que les modifications remisées restent intactes dans le répertoire de travail.</translation>
+    </message>
+    <message>
+        <source>&amp;Remove stashed changes after stashing</source>
+        <translation>&amp;Effacer les modifications après la remise</translation>
+    </message>
+    <message>
+        <source>The stash will back up all changes to the files ticked below.</source>
+        <translation>La remise enregistrera les modifs dans les fichiers suivants.</translation>
+    </message>
+    <message>
+        <source>These changes will then be removed from the working directory.</source>
+        <translation>Les modifications seront ensuite effacées de la copie de travail.</translation>
+    </message>
+    <message>
+        <source>These changes will remain in the working directory.</source>
+        <translation>Les modifications resteront dans la copie de travail.</translation>
+    </message>
+    <message>
+        <source>Warning: Some of the files have both staged and unstaged changes. Those changes will be combined in the stash.</source>
+        <translation>Attention&#xa0;: certains fichiers comprennent des modifications indexées et non-indexées. Ces modifications seront combinées dans la remise.</translation>
+    </message>
+    <message>
+        <source>Stash and Keep Changes</source>
+        <translation>Remiser et conserver modifs</translation>
     </message>
 </context>
 <context>
@@ -2538,10 +3185,56 @@ fetchez le serveur puis réessayez.</translation>
     </message>
 </context>
 <context>
+    <name>UnmergedConflict</name>
+    <message>
+        <source>Merge conflict resolved</source>
+        <translation>Conflit de fusion résolu</translation>
+    </message>
+    <message>
+        <source>It looks like you’ve resolved the merge conflict in &lt;b&gt;“{0}”&lt;/b&gt;.</source>
+        <translation>Le conflit de fusion semble avoir été résolu dans &lt;b&gt;“{0}”&lt;/b&gt;.</translation>
+    </message>
+    <message>
+        <source>Do you want to keep this resolution?</source>
+        <translation>Voulez-vous conserver cette résolution&#xa0;?</translation>
+    </message>
+    <message>
+        <source>Confirm resolution</source>
+        <translation>Confirmer la résolution</translation>
+    </message>
+    <message>
+        <source>Discard resolution</source>
+        <translation>Jeter cette résolution</translation>
+    </message>
+</context>
+<context>
     <name>WelcomeWidget</name>
     <message>
         <source>Welcome to {0} {1}!</source>
         <translation>Bienvenue sur {0} {1}&#xa0;!</translation>
+    </message>
+</context>
+<context>
+    <name>exttools</name>
+    <message>
+        <source>Failed to start {0}</source>
+        <translation>Impossible de lancer {0}</translation>
+    </message>
+    <message>
+        <source>Couldn’t start {0} &lt;b&gt;“{1}”&lt;/b&gt; ({2}). It might not be installed on your machine.</source>
+        <translation>{0} &lt;b&gt;“{1}”&lt;/b&gt; n’a pas pu être lancé ({2}). Il n’est peut-être pas installé sur votre machine.</translation>
+    </message>
+    <message>
+        <source>Pick another program</source>
+        <translation>Choisir un autre programme</translation>
+    </message>
+    <message>
+        <source>“{0}” isn’t set up in your preferences yet.</source>
+        <translation>“{0}” n’est pas encore défini dans vos préférences.</translation>
+    </message>
+    <message>
+        <source>Set up {0}</source>
+        <translation>Définir {0}</translation>
     </message>
 </context>
 </TS>
