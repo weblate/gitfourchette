@@ -27,6 +27,7 @@ def _makeShortcuts(*args) -> MultiShortcut:
 class GlobalShortcuts:
     NO_SHORTCUT = []
 
+    copy: MultiShortcut = NO_SHORTCUT
     refresh: MultiShortcut = NO_SHORTCUT
     newBranch: MultiShortcut = NO_SHORTCUT
     pushBranch: MultiShortcut = NO_SHORTCUT
@@ -47,6 +48,7 @@ class GlobalShortcuts:
     @classmethod
     def initialize(cls):
         assert QApplication.instance(), "QApplication must have been created before instantiating QKeySequence"
+        cls.copy = _makeShortcuts(QKeySequence.StandardKey.Copy)
         cls.refresh = _makeShortcuts(QKeySequence.StandardKey.Refresh, "Ctrl+R", "F5")
         cls.newBranch = _makeShortcuts("Ctrl+B")
         cls.pushBranch = _makeShortcuts("Ctrl+P")

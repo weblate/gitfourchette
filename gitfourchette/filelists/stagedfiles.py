@@ -23,22 +23,57 @@ class StagedFiles(FileList):
                 QStyle.StandardPixmap.SP_ArrowUp,
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
+
+            ActionDef(
+                self.tr("Stas&h Changes..."),
+                self.wantPartialStash,
+                shortcuts=GlobalShortcuts.newStash,
+                icon="vcs-stash",
+            ),
+
             self.revertModeActionDef(n, self.wantUnstageModeChange),
+
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Open in {0}", "", n).format(settings.getExternalEditorName()),
-                      self.openWorkdirFile, QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef(self.tr("Open &Diff in {0}", "", n).format(settings.getDiffToolName()),
-                      self.wantOpenInDiffTool, QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
-            ActionDef(self.tr("&Stash %n File(s)...", "", n), self.wantPartialStash),
+
+            ActionDef(
+                self.tr("Open &Diff(s) in {0}", "", n).format(settings.getDiffToolName()),
+                self.wantOpenInDiffTool,
+                icon="vcs-diff",
+            ),
+
+            ActionDef(
+                self.tr("E&xport Diff(s) As Patch...", "", n),
+                self.savePatchAs,
+            ),
+
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
-            ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
+
+            ActionDef(
+                self.tr("&Open in {0}").format(settings.getExternalEditorName()),
+                self.openWorkdirFile,
+                icon=QStyle.StandardPixmap.SP_FileIcon,
+            ),
+
+            ActionDef(
+                self.tr("Open &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                self.openHeadRevision,
+            ),
+
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Open &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
-                      self.openHeadRevision),
-            ActionDef.SEPARATOR,
-            self.pathDisplayStyleSubmenu()
+
+            ActionDef(
+                self.tr("Open &Path(s)", "", n),
+                self.showInFolder,
+                icon=QStyle.StandardPixmap.SP_DirIcon,
+            ),
+
+            ActionDef(
+                self.tr("&Copy Path(s)", "", n),
+                self.copyPaths,
+                shortcuts=GlobalShortcuts.copy
+            ),
+
+            self.pathDisplayStyleSubmenu(),
         ] + super().createContextMenuActions(n)
 
     def keyPressEvent(self, event: QKeyEvent):

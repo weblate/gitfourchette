@@ -1,3 +1,4 @@
+import contextlib
 import errno
 
 import pygit2
@@ -5,6 +6,7 @@ import pygit2
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.filelists.filelist import FileList, SelectedFileBatchError
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
@@ -17,27 +19,57 @@ class CommittedFiles(FileList):
 
     def createContextMenuActions(self, n):
         return [
-            ActionDef(self.tr("Open Diff in New &Window"), self.wantOpenDiffInNewWindow),
-            ActionDef(self.tr("Open &Diff in {0}", "", n).format(settings.getDiffToolName()),
-                      self.wantOpenInDiffTool, QStyle.StandardPixmap.SP_FileIcon),
-            ActionDef(self.tr("&Open Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
-            [
-                ActionDef(self.tr("&At Commit"), self.openNewRevision),
-                ActionDef(self.tr("&Before Commit"), self.openOldRevision),
-                ActionDef.SEPARATOR,
-                ActionDef(self.tr("&Current (working directory)"), self.openHeadRevision),
-            ]),
-            ActionDef(self.tr("&Save Revision(s)...", "", n), icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
-            [
-                ActionDef(self.tr("&At Commit"), self.saveNewRevision),
-                ActionDef(self.tr("&Before Commit"), self.saveOldRevision),
-            ]),
-            #ActionDef(plur("Save Revision^s As...", n), self.saveRevisionAs, QStyle.StandardPixmap.SP_DialogSaveButton),
-            ActionDef(self.tr("E&xport As Patch..."), self.savePatchAs),
+            ActionDef(
+                self.tr("Open Diff in New &Window"),
+                self.wantOpenDiffInNewWindow,
+            ),
+
+            ActionDef(
+                self.tr("Open &Diff(s) in {0}", "", n).format(settings.getDiffToolName()),
+                self.wantOpenInDiffTool,
+                icon="vcs-diff"
+            ),
+
+            ActionDef(
+                self.tr("E&xport Diff(s) As Patch...", "", n),
+                self.savePatchAs
+            ),
+
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Open &Path(s)", "", n), self.showInFolder, QStyle.StandardPixmap.SP_DirIcon),
-            ActionDef(self.tr("&Copy Path(s)", "", n), self.copyPaths),
+
+            ActionDef(
+                self.tr("&Open in {0}").format(settings.getExternalEditorName()),
+                icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
+                [
+                    ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
+                    ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitOid)), self.openOldRevision),
+                    ActionDef(self.tr("Open &Current Version"), self.openHeadRevision),
+                ]
+            ),
+
+            ActionDef(
+                self.tr("Sa&ve a Copy..."),
+                icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
+                [
+                    ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitOid)), self.saveNewRevision),
+                    ActionDef(self.tr("Save Version &Before {0}".format(shortHash(self.commitOid))), self.saveOldRevision),
+                ]
+            ),
+
             ActionDef.SEPARATOR,
+
+            ActionDef(
+                self.tr("Open &Path(s)", "", n),
+                self.showInFolder,
+                QStyle.StandardPixmap.SP_DirIcon,
+            ),
+
+            ActionDef(
+                self.tr("&Copy Path(s)", "", n),
+                self.copyPaths,
+                shortcuts=GlobalShortcuts.copy,
+            ),
+
             self.pathDisplayStyleSubmenu()
         ]
 
