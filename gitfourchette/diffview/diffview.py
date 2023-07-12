@@ -268,7 +268,12 @@ class DiffView(QPlainTextEdit):
             self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
-        self.doContextMenu(event.globalPos())
+        try:
+            self.doContextMenu(event.globalPos())
+        except Exception as exc:
+            # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
+            excMessageBox(exc, message="Failed to create DiffView context menu")
+            return
 
     def doContextMenu(self, globalPos: QPoint):
         # Don't show the context menu if we're empty

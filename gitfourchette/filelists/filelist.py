@@ -57,7 +57,15 @@ class FileList(QListView):
         if numIndexes == 0:
             return
 
-        menu = ActionDef.makeQMenu(self, self.createContextMenuActions(numIndexes))
+        try:
+            actions = self.createContextMenuActions(numIndexes)
+        except Exception as exc:
+            # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
+            # (endless loop of "This exception was delayed").
+            excMessageBox(exc, message="Failed to create FileList context menu")
+            return
+
+        menu = ActionDef.makeQMenu(self, actions)
         menu.setObjectName("FileListContextMenu")
         menu.exec(event.globalPos())
 
@@ -363,7 +371,13 @@ class FileList(QListView):
     def revertModeActionDef(self, n: int, callback: Callable):
         action = ActionDef(self.tr("Revert Old Mode(s)", "", n), callback, enabled=False)
 
-        for entry in self.selectedEntries():
+        try:
+            entries = self.selectedEntries()
+        except ValueError:
+            # If selectedEntries fails (e.g. due to stale diff), just return the default action
+            return action
+
+        for entry in entries:
             om = entry.delta.old_file.mode
             nm = entry.delta.new_file.mode
             if (entry.delta.status in [pygit2.GIT_DELTA_MODIFIED, pygit2.GIT_DELTA_RENAMED]
