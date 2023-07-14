@@ -374,8 +374,11 @@ class NewTag(RepoTask):
     def effects(self):
         return TaskEffects.Refs
 
-    def flow(self, oid: pygit2.Oid):
+    def flow(self, oid: pygit2.Oid = None):
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
+
+        if not oid:
+            oid = porcelain.getHeadCommitOid(self.repo)
 
         dlg = showTextInputDialog(
             self.parentWidget(),

@@ -265,6 +265,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.newBranchFromLocalBranch, tasks.NewBranchFromLocalBranch)
         self.connectTask(self.sidebar.newRemote,                tasks.NewRemote)
         self.connectTask(self.sidebar.newStash,                 tasks.NewStash)
+        self.connectTask(self.sidebar.newTag,                   tasks.NewTag)
         self.connectTask(self.sidebar.newTrackingBranch,        tasks.NewTrackingBranch)
         self.connectTask(self.sidebar.renameBranch,             tasks.RenameBranch)
         self.connectTask(self.sidebar.renameRemoteBranch,       tasks.RenameRemoteBranch)
