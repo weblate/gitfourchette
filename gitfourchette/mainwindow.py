@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
         self.tabs.tabDoubleClicked.connect(self.onTabDoubleClicked)
 
         self.welcomeWidget = WelcomeWidget(self)
+        self.welcomeWidget.newRepo.connect(self.newRepo)
+        self.welcomeWidget.openRepo.connect(self.openDialog)
+        self.welcomeWidget.cloneRepo.connect(self.cloneDialog)
 
         self.welcomeStack = QStackedWidget()
         self.welcomeStack.addWidget(self.welcomeWidget)
