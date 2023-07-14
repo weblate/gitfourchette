@@ -374,8 +374,9 @@ class NewTag(RepoTask):
     def effects(self):
         return TaskEffects.Refs
 
-    def flow(self, oid: pygit2.Oid = None):
-        yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
+    def flow(self, oid: pygit2.Oid = None, signIt = False):
+        if signIt:
+            yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
 
         if not oid:
             oid = porcelain.getHeadCommitOid(self.repo)
@@ -392,12 +393,11 @@ class NewTag(RepoTask):
         tagName = dlg.lineEdit.text()
 
         yield from self._flowBeginWorkerThread()
-        self.repo.create_tag(
-            tagName,
-            oid,
-            pygit2.GIT_OBJ_COMMIT,
-            self.repo.default_signature,
-            "empty tag message")
+
+        if signIt:
+            self.repo.create_tag(tagName, oid, pygit2.GIT_OBJ_COMMIT, self.repo.default_signature, "")
+        else:
+            self.repo.create_reference(porcelain.TAGS_PREFIX + tagName, oid)
 
 
 class DeleteTag(RepoTask):
