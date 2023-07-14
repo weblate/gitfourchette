@@ -381,12 +381,16 @@ class NewTag(RepoTask):
         if not oid:
             oid = porcelain.getHeadCommitOid(self.repo)
 
+        reservedNames = porcelain.getTagNames(self.repo)
+        nameTaken = self.tr("This name is already taken by another tag.")
+
         dlg = showTextInputDialog(
             self.parentWidget(),
             self.tr("New tag on commit “{0}”").format(shortHash(oid)),
             self.tr("Enter tag name:"),
             okButtonText=self.tr("Create Tag"),
-            deleteOnClose=False)
+            deleteOnClose=False,
+            validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken))
         yield from self._flowDialog(dlg)
 
         dlg.deleteLater()
