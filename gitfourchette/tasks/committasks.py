@@ -400,6 +400,31 @@ class NewTag(RepoTask):
             "empty tag message")
 
 
+class DeleteTag(RepoTask):
+    def name(self):
+        return translate("Operation", "Delete tag")
+
+    def effects(self):
+        return TaskEffects.Refs
+
+    def flow(self, tagName: str):
+        # TODO: This won't delete the tag on remotes
+
+        yield from self._flowConfirm(
+            text=self.tr("Really delete tag <b>“{0}”</b>?").format(tagName),
+            verb=self.tr("Delete tag"),
+            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+
+        yield from self._flowBeginWorkerThread()
+
+        # Stay on this commit after the operation
+        tagTarget = porcelain.getCommitOidFromTagName(self.repo, tagName)
+        if tagTarget:
+            self.jumpTo = NavLocator.inCommit(tagTarget)
+
+        porcelain.deleteTag(self.repo, tagName)
+
+
 class CherrypickCommit(RepoTask):
     def name(self):
         return translate("Operation", "Cherry-pick")

@@ -253,6 +253,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.sidebar.deleteBranch,             tasks.DeleteBranch)
         self.connectTask(self.sidebar.deleteRemote,             tasks.DeleteRemote)
         self.connectTask(self.sidebar.deleteRemoteBranch,       tasks.DeleteRemoteBranch)
+        self.connectTask(self.sidebar.deleteTag,                tasks.DeleteTag)
         self.connectTask(self.sidebar.dropStash,                tasks.DropStash)
         self.connectTask(self.sidebar.editRemote,               tasks.EditRemote)
         self.connectTask(self.sidebar.editTrackingBranch,       tasks.EditTrackedBranch)

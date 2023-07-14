@@ -47,6 +47,7 @@ class Sidebar(QTreeView):
     dropStash = Signal(pygit2.Oid)
 
     newTag = Signal()
+    deleteTag = Signal(str)
 
     openSubmoduleRepo = Signal(str)
     openSubmoduleFolder = Signal(str)
@@ -280,6 +281,13 @@ class Sidebar(QTreeView):
             actions += [
                 ActionDef(self.tr("&New Tag on HEAD Commit..."),
                           self.newTag, ),
+            ]
+
+        elif item == EItem.Tag:
+            actions += [
+                ActionDef(self.tr("&Delete"),
+                          lambda: self.deleteTag.emit(data),
+                          icon=QStyle.StandardPixmap.SP_TrashIcon),
             ]
 
         elif item == EItem.Submodule:

@@ -714,9 +714,8 @@ def getCommitOidFromReferenceName(repo: Repository, refName: str) -> Oid:
 
 
 def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
-    raise NotImplementedError("getCommitOidFromTagName")
-    # tag: git.Tag = next(filter(lambda tag: tag.name == tagName, repo.tags))
-    # return tag.commit.hexsha
+    assert not tagName.startswith("refs/")
+    return getCommitOidFromReferenceName(TAGS_PREFIX + tagName)
 
 
 def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
@@ -1179,3 +1178,10 @@ def getLocalIdentity(repo: pygit2.Repository):
             email = localConfig["user.email"]
 
     return name, email
+
+
+def deleteTag(repo: pygit2.Repository, tagName: str):
+    assert not tagName.startswith("refs/")
+    refName = TAGS_PREFIX + tagName
+    assert refName in repo.references
+    repo.references.delete(refName)
