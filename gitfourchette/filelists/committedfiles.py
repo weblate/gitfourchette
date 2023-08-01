@@ -38,7 +38,7 @@ class CommittedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("&Open in {0}").format(settings.getExternalEditorName()),
+                self.tr("&Open File(s) in {0}", "", n).format(settings.getExternalEditorName()),
                 icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
                 [
                     ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
@@ -59,7 +59,7 @@ class CommittedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("Open &Path(s)", "", n),
+                self.tr("Open &Folder(s)", "", n),
                 self.showInFolder,
                 QStyle.StandardPixmap.SP_DirIcon,
             ),

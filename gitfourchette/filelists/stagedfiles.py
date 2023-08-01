@@ -49,7 +49,7 @@ class StagedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("&Open in {0}").format(settings.getExternalEditorName()),
+                self.tr("&Open File(s) in {0}", "", n).format(settings.getExternalEditorName()),
                 self.openWorkdirFile,
                 icon=QStyle.StandardPixmap.SP_FileIcon,
             ),
@@ -62,7 +62,7 @@ class StagedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("Open &Path(s)", "", n),
+                self.tr("Open &Folder(s)", "", n),
                 self.showInFolder,
                 icon=QStyle.StandardPixmap.SP_DirIcon,
             ),
