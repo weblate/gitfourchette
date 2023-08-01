@@ -55,6 +55,37 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     assert stagedBlob.data == b"line A\n"
 
 
+def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepositoryContextManager(wd) as repo:
+        os.chmod(F"{wd}/master.txt", 0o755)
+        repo.index.add_all(["master.txt"])
+        porcelain.createCommit(repo, "master.txt +x", TEST_SIGNATURE, TEST_SIGNATURE)
+
+    writeFile(F"{wd}/master.txt", "This file is +x now\nOn master\nOn master\nDon't stage this line\n")
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.repo.status() == {"master.txt": pygit2.GIT_STATUS_WT_MODIFIED}
+
+    # Partial patch of first modified line
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.diffView.setFocus()
+    QTest.keyPress(rw.diffView, Qt.Key_Down)    # Skip hunk line (@@...@@)
+    QTest.keyPress(rw.diffView, Qt.Key_Return)  # Stage first modified line
+    assert rw.repo.status() == {"master.txt": pygit2.GIT_STATUS_WT_MODIFIED | pygit2.GIT_STATUS_INDEX_MODIFIED}
+
+    staged: pygit2.Diff = porcelain.getStagedChanges(rw.repo, False)
+    delta: pygit2.DiffDelta = next(staged.deltas)
+    assert delta.new_file.path == "master.txt"
+    assert delta.new_file.mode & 0o777 == 0o755
+
+    unstaged: pygit2.Diff = porcelain.getUnstagedChanges(rw.repo, False)
+    delta: pygit2.DiffDelta = next(unstaged.deltas)
+    assert delta.new_file.path == "master.txt"
+    assert delta.new_file.mode & 0o777 == 0o755
+
+
 def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
     NEW_CONTENTS = "change without eol"
 

@@ -69,12 +69,11 @@ def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
     ofExists = not isZeroId(of.id)
     nfExists = not isZeroId(nf.id)
 
-    if ofExists:
-        if of.mode != nf.mode:
-            preamble += F"old mode {of.mode:06o}\n"
-            preamble += F"new mode {nf.mode:06o}\n"
-    else:
+    if not ofExists:
         preamble += F"new file mode {nf.mode:06o}\n"
+    elif of.mode != nf.mode or nf.mode != pygit2.GIT_FILEMODE_BLOB:
+        preamble += F"old mode {of.mode:06o}\n"
+        preamble += F"new mode {nf.mode:06o}\n"
 
     # Work around libgit2 bug: if a patch lacks the "index" line,
     # libgit2 will fail to parse it if there are "old mode"/"new mode" lines.
