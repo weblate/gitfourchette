@@ -2,7 +2,7 @@
 # Compatibility with additional Qt bindings is provided through qtpy.
 # If qtpy is installed, you can force a specific binding with the QT_API environment variable.
 # Values recognized by QT_API:
-#       pyside6     (recommended, first-class support)
+#       pyside6     (highly recommended, first-class support)
 #       pyqt6       (OK)
 #       pyqt5       (OK if you can't use Qt 6)
 #       pyside2     (avoid this one if possible)
@@ -55,6 +55,7 @@ if not QTPY:
 
 MACOS = QSysInfo.productType() in ["osx", "macos"]  # "osx": Qt5 legacy
 WINDOWS = QSysInfo.productType() in ["windows"]
+FREEDESKTOP = not MACOS and not WINDOWS
 
 if PYSIDE2:  # Patch PySide2's exec_ functions
     def qMenuExec(menu: QMenu, *args, **kwargs):
@@ -81,6 +82,15 @@ if PYQT5 or PYQT6:
 # Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
 if QT5:
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
+
+# Try to import QtDBus on Linux (note: PySide2 doesn't have it)
+HAS_QTDBUS = False
+if FREEDESKTOP and not PYSIDE2:
+    if QTPY:
+        from qtpy.QtDBus import *
+    else:
+        from PySide6.QtDBus import *
+    HAS_QTDBUS = True
 
 
 def tr(s, *args, **kwargs):

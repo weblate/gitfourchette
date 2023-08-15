@@ -21,12 +21,30 @@ def openFolder(path: str):
 def showInFolder(path: str):
     """
     Show a file or folder with explorer/finder.
-    Source: https://stackoverflow.com/a/46019091/3388962
+    Source for Windows & macOS: https://stackoverflow.com/a/46019091/3388962
     """
     path = os.path.abspath(path)
     isdir = os.path.isdir(path)
 
-    if WINDOWS:
+    if FREEDESKTOP and HAS_QTDBUS:
+        # https://www.freedesktop.org/wiki/Specifications/file-manager-interface
+        iface = QDBusInterface("org.freedesktop.FileManager1", "/org/freedesktop/FileManager1")
+        if iface.isValid():
+            if PYQT5 or PYQT6:
+                # PyQt5/6 needs the array of strings to be spelled out explicitly.
+                stringType = QMetaType.QString if PYQT5 else QMetaType.QString.value  # ugh...
+                arg = QDBusArgument()
+                arg.beginArray(stringType)
+                arg.add(path)
+                arg.endArray()
+                iface.call("ShowItems", arg, "")
+            else:
+                # Thankfully, PySide6 is more pythonic here.
+                iface.call("ShowItems", [path], "")
+            iface.deleteLater()
+            return
+
+    elif WINDOWS:
         if not isdir:  # If it's a file, select it within the folder.
             args = ['/select,', path]
         else:
