@@ -12,10 +12,13 @@ GitFourchette strives to provide:
 ## Dependencies
 
 - Python 3.10+
-- pygit2
-- PySide2 or PyQt5 (both will work)
+- [pygit2](https://pypi.org/project/pygit2)
+- [PySide6](https://pypi.org/project/PySide6)\*
 
 The main target OS is Linux. 
+
+\* If you don’t have PySide6, you can install [qtpy](https://pypi.org/project/QtPy) to use another Qt binding.
+However, PySide6 is highly recommended.
 
 ## License
 

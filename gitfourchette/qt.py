@@ -1,5 +1,6 @@
 # GitFourchette's preferred Qt binding is PySide6.
-# Compatibility with additional Qt bindings is provided through qtpy.
+#
+# PySide6 is strongly recommended, but compatibility with other Qt bindings is provided through qtpy.
 # If qtpy is installed, you can force a specific binding with the QT_API environment variable.
 # Values recognized by QT_API:
 #       pyside6     (highly recommended, first-class support)
@@ -25,10 +26,25 @@ MACOS = False
 WINDOWS = False
 PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
 
-if not PYINSTALLER_BUNDLE:
+# If PySide6 is installed, we'll import it directly.
+# If PySide6 is missing, we'll use qtpy.
+# Only use qtpy as a last resort because it tries to pull in QtOpenGL and other bloat.
+
+# Decide whether to use qtpy and import it if needed.
+if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have PySide6
     forcedQtApi = os.environ.get("QT_API", "").lower()
     QTPY = "pyside6" != forcedQtApi
 
+    # Bypass qtpy if we have PySide6 and the user isn't forcing QT_API
+    if not forcedQtApi:
+        try:
+            from PySide6 import __version__ as bogus
+            del bogus
+            QTPY = False
+        except ImportError:
+            pass
+
+    # No dice, we have to use qtpy.
     if QTPY:
         try:
             from qtpy.QtCore import *
@@ -36,16 +52,15 @@ if not PYINSTALLER_BUNDLE:
             from qtpy.QtGui import *
             from qtpy import API_NAME as qtBindingName
             from qtpy.QtCore import __version__ as qtBindingVersion
-        except ModuleNotFoundError:
+        except ImportError:
             assert forcedQtApi in ["", "pyside6"], \
                 "To use any Qt binding other than PySide6, please install qtpy. Or, unset QT_API to use PySide6."
             QTPY = False
 
     del forcedQtApi
 
+# Import PySide6 if we've determined that we can.
 if not QTPY:
-    # If we're making a PyInstaller build, qtpy will try to pull in QtOpenGL and other bloat.
-    # So, bypass qtpy and import PySide6 manually.
     from PySide6.QtCore import *
     from PySide6.QtWidgets import *
     from PySide6.QtGui import *

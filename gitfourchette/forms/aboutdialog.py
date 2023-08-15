@@ -58,11 +58,18 @@ class AboutDialog(QDialog):
 
         tweakWidgetFont(self.ui.plainTextEdit, 90)
 
+        qtBindingSuffix = ""
+        if QTPY:
+            from qtpy import __version__ as qtpyVersion
+            qtBindingSuffix = f" (via qtpy {qtpyVersion})"
+
         self.ui.plainTextEdit.setPlainText(F"""\
 {appName} {appVersion}{'-debug' if __debug__ else ''}
 {buildDate}
-libgit2 {pygit2.LIBGIT2_VERSION} ({', '.join(getPygit2FeatureStrings())}) / pygit2 {pygit2.__version__}
-Qt {qVersion()} / {qtBindingName} {qtBindingVersion}
+libgit2 {pygit2.LIBGIT2_VERSION} ({', '.join(getPygit2FeatureStrings())})
+pygit2 {pygit2.__version__}
+Qt {qVersion()}
+{qtBindingName} {qtBindingVersion}{qtBindingSuffix}
 Python {'.'.join(str(i) for i in sys.version_info)}""")
 
 
