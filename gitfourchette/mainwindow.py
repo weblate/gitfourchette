@@ -6,6 +6,7 @@ from typing import Literal
 import pygit2
 
 from gitfourchette import log
+from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.diffview.diffview import DiffView
@@ -439,7 +440,7 @@ class MainWindow(QMainWindow):
         repo = pygit2.Repository(path)
 
         if repo.is_shallow:
-            raise NotImplementedError(self.tr("Sorry, shallow repositories aren’t supported yet.").format(path))
+            porcelain.libgit2VersionAtLeast("1.7.0", featureName="Shallow clone support")
 
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, bare repositories aren’t supported yet.").format(path))

@@ -186,6 +186,10 @@ class GraphView(QListView):
         parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
+        likelyShallowRoot = len(parentHashes) == 0 and self.repo.is_shallow
+        if likelyShallowRoot:
+            parentTitle += "*"
+
         #childHashes = [shortHash(c) for c in commit.children]
         #childLabelMarkup = escape(fplural('# Child^ren', len(childHashes)))
         #childValueMarkup = escape(', '.join(childHashes))
@@ -236,6 +240,12 @@ class GraphView(QListView):
             details = str(frame) + "\n\n" + details
 
         markup += "</table>"
+
+        if likelyShallowRoot:
+            markup += "<p>* <em>" + self.tr(
+                "You’re working in a shallow clone of the repository; the full commit log isn’t available. "
+                "This commit may actually have parents in the full history."
+            ) + "</em></p>"
 
         title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
 

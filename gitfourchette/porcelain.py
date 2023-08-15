@@ -115,34 +115,55 @@ class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallback
         log.info("porcelain", f"stash apply progress: {pr}")
 
 
-def pygit2VersionAtLeast(requiredVersion: tuple, raiseError=True, featureName="This feature"):
-    requiredVersionString = ".".join(str(n) for n in requiredVersion)
+def _versionAtLeast(
+        packageName: str,
+        requiredVersionString: str,
+        currentVersionString: str,
+        raiseError=True,
+        featureName="This feature"
+):
+    def versionToTuple(s: str):
+        v = []
+        for n in s.split("."):
+            try:
+                v.append(int(n))
+            except ValueError:
+                v.append(0)
+        # Trim trailing zeros to ease comparison
+        while v and v[-1] == 0:
+            v.pop()
+        return tuple(v)
 
-    currentVersionString = pygit2.__version__
-    currentVersion = []
-    for n in currentVersionString.split("."):
-        try:
-            currentVersion.append(int(n))
-        except ValueError:
-            currentVersion.append(0)
-
-    # Trim trailing zeros to ease comparison
-    while currentVersion and currentVersion[-1] == 0:
-        currentVersion.pop()
-
-    requiredVersion = list(requiredVersion)
-    while requiredVersion and requiredVersion[-1] == 0:
-        requiredVersion.pop()
+    requiredVersion = versionToTuple(requiredVersionString)
+    currentVersion = versionToTuple(currentVersionString)
 
     if tuple(currentVersion) < tuple(requiredVersion):
         if not raiseError:
             return False
 
-        message = (f"{featureName} requires pygit2 v{requiredVersionString} or later "
+        message = (f"{featureName} requires {packageName} v{requiredVersionString} or later "
                    f"(you have v{currentVersionString}).")
         raise NotImplementedError(message)
 
     return True
+
+
+def pygit2VersionAtLeast(requiredVersion: str, raiseError=True, featureName="This feature"):
+    return _versionAtLeast(
+        packageName="pygit2",
+        requiredVersionString=requiredVersion,
+        currentVersionString=pygit2.__version__,
+        raiseError=raiseError,
+        featureName=featureName)
+
+
+def libgit2VersionAtLeast(requiredVersion: str, raiseError=True, featureName="This feature"):
+    return _versionAtLeast(
+        packageName="libgit2",
+        requiredVersionString=requiredVersion,
+        currentVersionString=pygit2.LIBGIT2_VERSION,
+        raiseError=raiseError,
+        featureName=featureName)
 
 
 def isZeroId(oid: pygit2.Oid) -> bool:
