@@ -512,6 +512,9 @@ class MainWindow(QMainWindow):
 
         rw.graphView.selectUncommittedChanges(force=True)
 
+        # The RepoWidget may have been disabled if it was previously "unloaded".
+        rw.setEnabled(True)
+
         # Scrolling HEAD into view isn't super intuitive if we boot to Uncommitted Changes
         # if newState.activeCommitOid:
         #     rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
