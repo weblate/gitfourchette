@@ -67,6 +67,7 @@ class RepoWidget(QWidget):
         self.repoTaskRunner = tasks.RepoTaskRunner(self)
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
         self.repoTaskRunner.progress.connect(self.onRepoTaskProgress)
+        self.repoTaskRunner.repoGone.connect(self.onRepoGone)
 
         self.state = None
         self.pathPending = None
@@ -679,6 +680,18 @@ class RepoWidget(QWidget):
             self.setCursor(Qt.CursorShape.ArrowCursor)
         elif not self.busyCursorDelayer.isActive():
             self.busyCursorDelayer.start()
+
+    def onRepoGone(self):
+        # Unload the repo
+        self.cleanup()
+
+        # Surround repo name with parentheses in tab widget and title bar
+        self.nameChange.emit()
+
+        showWarning(
+            self,
+            self.tr("Repository folder missing"),
+            paragraphs(self.tr("The repository folder has gone missing at this location:"), escape(self.pathPending)))
 
     def refreshPrefs(self):
         self.diffView.refreshPrefs()

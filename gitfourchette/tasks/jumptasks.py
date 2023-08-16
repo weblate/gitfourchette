@@ -6,7 +6,7 @@ Unlike most other tasks, jump tasks directly manipulate the UI extensively, via 
 from gitfourchette import log, tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
-from gitfourchette.tasks import RepoTask, TaskEffects
+from gitfourchette.tasks import RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
@@ -322,6 +322,10 @@ class RefreshRepo(tasks.RepoTask):
 
         if effectFlags == TaskEffects.Nothing:
             return
+
+        # Early out if repo has gone missing
+        if not os.path.isdir(self.repo.path):
+            raise RepoGoneError(self.repo.path)
 
         rw.state.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
 

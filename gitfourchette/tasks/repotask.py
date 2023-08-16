@@ -112,6 +112,10 @@ class FlowControlAbort(BaseException):
     pass
 
 
+class RepoGoneError(FileNotFoundError):
+    pass
+
+
 class RepoTask(QObject):
     """
     Task that manipulates a repository.
@@ -328,6 +332,7 @@ class RepoTask(QObject):
 class RepoTaskRunner(QObject):
     refreshPostTask = Signal(RepoTask)
     progress = Signal(str, bool)
+    repoGone = Signal()
 
     _continueFlow = Signal(object)
     "Connected to _iterateFlow"
@@ -494,6 +499,8 @@ class RepoTaskRunner(QObject):
                 elif isinstance(exception, FlowControlAbort):
                     # Controlled exit
                     pass
+                elif isinstance(exception, RepoGoneError):
+                    self.repoGone.emit()
                 else:
                     # Run task's error callback
                     task.onError(exception)

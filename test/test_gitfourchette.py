@@ -124,3 +124,15 @@ def testCommitSearch(qtbot, tempDir, mainWindow):
     # escape closes search bar
     QTest.keySequence(searchEdit, "Escape")
     assert not searchBar.isVisibleTo(rw)
+
+
+def testUnloadRepoWhenFolderGoesMissing(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    assert rw.isLoaded
+
+    os.rename(wd, os.path.normpath(wd) + "-2")
+
+    mainWindow.refreshRepo()
+    assert not rw.isLoaded
+    rejectQMessageBox(rw, "folder.+missing")

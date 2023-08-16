@@ -1,4 +1,5 @@
 from gitfourchette.tasks.repotask import RepoTask, RepoTaskRunner, TaskEffects
+from gitfourchette.tasks.repotask import RepoGoneError
 
 from gitfourchette.tasks.branchtasks import NewTrackingBranch, EditTrackedBranch
 from gitfourchette.tasks.branchtasks import NewBranchFromHead, SwitchBranch, RenameBranch, DeleteBranch
