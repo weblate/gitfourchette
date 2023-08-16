@@ -75,10 +75,6 @@ def main():
     with NonCriticalOperation("Loading language"):
         settings.applyLanguagePref()
 
-    # Initialize global shortcuts
-    from gitfourchette.globalshortcuts import GlobalShortcuts
-    GlobalShortcuts.initialize()
-
     # Initialize session
     session = settings.Session()
     if not settings.TEST_MODE:

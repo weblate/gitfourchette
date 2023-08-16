@@ -42,6 +42,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # Initialize global shortcuts
+        GlobalShortcuts.initialize()
+
         self.setObjectName("GFMainWindow")
 
         self.sharedSplitterStates = {}

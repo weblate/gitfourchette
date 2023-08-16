@@ -45,9 +45,15 @@ class GlobalShortcuts:
     checkoutCommitFromGraphHotkeys = [Qt.Key.Key_Return, Qt.Key.Key_Enter]
     getCommitInfoHotkeys = [Qt.Key.Key_Space]
 
+    _initialized = False
+
     @classmethod
     def initialize(cls):
+        if cls._initialized:
+            return
+
         assert QApplication.instance(), "QApplication must have been created before instantiating QKeySequence"
+
         cls.copy = _makeShortcuts(QKeySequence.StandardKey.Copy)
         cls.refresh = _makeShortcuts(QKeySequence.StandardKey.Refresh, "Ctrl+R", "F5")
         cls.newBranch = _makeShortcuts("Ctrl+B")
@@ -65,3 +71,5 @@ class GlobalShortcuts:
         else:
             cls.navBack = _makeShortcuts("Alt+Left")
             cls.navForward = _makeShortcuts("Alt+Right")
+
+        cls._initialized = True
