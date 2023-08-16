@@ -26,6 +26,12 @@ SHORT_DATE_PRESETS = {
     "American": "M/d/yy h:mm ap",
 }
 
+EDITOR_TOOL_PRESETS = {
+    "GVim": "gvim",
+    "MacVim": "mvim",
+    "VS Code": "code",
+}
+
 DIFF_TOOL_PRESETS = {
     "FileMerge": "opendiff $1 $2",
     "KDiff3": "kdiff3 $1 $2",
@@ -309,7 +315,7 @@ def _getCmdName(command, fallback, presets):
 
 
 def getExternalEditorName():
-    return _getCmdName(prefs.external_editor, translate("Global", "Text Editor"), {})
+    return _getCmdName(prefs.external_editor, translate("Global", "Text Editor"), EDITOR_TOOL_PRESETS)
 
 
 def getDiffToolName():
