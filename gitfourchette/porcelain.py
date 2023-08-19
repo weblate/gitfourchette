@@ -736,7 +736,7 @@ def getCommitOidFromReferenceName(repo: Repository, refName: str) -> Oid:
 
 def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
     assert not tagName.startswith("refs/")
-    return getCommitOidFromReferenceName(TAGS_PREFIX + tagName)
+    return getCommitOidFromReferenceName(repo, TAGS_PREFIX + tagName)
 
 
 def mapRefsToOids(repo: Repository) -> dict[str, Oid]:

@@ -298,3 +298,35 @@ def testCherrypick(qtbot, tempDir, mainWindow):
     assert headCommit.message == "First a/a1"
     rw.graphView.selectCommit(headCommit.oid)
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
+
+
+def testNewTag(qtbot, tempDir, mainWindow):
+    newTag = "cool-tag"
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    assert newTag not in porcelain.getTagNames(rw.repo)
+
+    oid = pygit2.Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
+
+    rw.graphView.selectCommit(oid)
+    rw.graphView.newTagOnCommit.emit(oid)
+
+    dlg: QDialog = findQDialog(rw, "new tag")
+    lineEdit = dlg.findChild(QLineEdit)
+    QTest.keyClicks(lineEdit, newTag)
+    dlg.accept()
+
+    assert newTag in porcelain.getTagNames(rw.repo)
+
+
+def testDeleteTag(qtbot, tempDir, mainWindow):
+    tagToDelete = "annotated_tag"
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    assert tagToDelete in porcelain.getTagNames(rw.repo)
+
+    rw.sidebar.deleteTag.emit(tagToDelete)
+    acceptQMessageBox(rw, "delete tag")
+    assert tagToDelete not in porcelain.getTagNames(rw.repo)
