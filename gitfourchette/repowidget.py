@@ -115,6 +115,7 @@ class RepoWidget(QWidget):
         self.sidebar.uncommittedChangesClicked.connect(lambda: print("UC Clicked in sidebar"))
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
+        self.sidebar.toggleHideStash.connect(self.toggleHideStash)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
@@ -545,6 +546,10 @@ class RepoWidget(QWidget):
     def toggleHideBranch(self, branchName: str):
         assert branchName.startswith("refs/")
         self.state.toggleHideBranch(branchName)
+        self.graphView.setHiddenCommits(self.state.hiddenCommits)
+
+    def toggleHideStash(self, stashOid: pygit2.Oid):
+        self.state.toggleHideStash(stashOid)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
     # -------------------------------------------------------------------------

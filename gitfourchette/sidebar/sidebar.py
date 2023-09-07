@@ -45,6 +45,7 @@ class Sidebar(QTreeView):
     applyStash = Signal(pygit2.Oid)
     exportStashAsPatch = Signal(pygit2.Oid)
     dropStash = Signal(pygit2.Oid)
+    toggleHideStash = Signal(pygit2.Oid)
 
     newTag = Signal()
     deleteTag = Signal(str)
@@ -187,7 +188,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Hide in graph"),
+                ActionDef(self.tr("&Hide in Graph"),
                           lambda: self.toggleHideBranch.emit("refs/heads/" + data),
                           checkState=1 if isBranchHidden else -1),
             ]
@@ -225,7 +226,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Hide in graph"),
+                ActionDef(self.tr("&Hide in Graph"),
                           lambda: self.toggleHideBranch.emit("refs/remotes/" + data),
                           checkState=1 if isBranchHidden else -1),
             ]
@@ -263,6 +264,10 @@ class Sidebar(QTreeView):
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
 
+            isStashHidden = False
+            if index:  # in test mode, we may not have an index
+                isStashHidden = self.model().data(index, ROLE_ISHIDDEN)
+
             actions += [
                 ActionDef(self.tr("&Apply"),
                           lambda: self.applyStash.emit(oid)),
@@ -275,6 +280,12 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("&Delete"),
                           lambda: self.dropStash.emit(oid),
                           QStyle.StandardPixmap.SP_TrashIcon),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("&Hide in Graph"),
+                          lambda: self.toggleHideStash.emit(oid),
+                          checkState=1 if isStashHidden else -1),
             ]
 
         elif item == EItem.TagsHeader:
@@ -316,7 +327,7 @@ class Sidebar(QTreeView):
 
     def refresh(self, repoState: RepoState):
         sidebarModel: SidebarModel = self.model()
-        sidebarModel.refreshCache(repoState.repo, repoState.hiddenBranches, repoState.refCache)
+        sidebarModel.refreshCache(repoState)
         self.expandAll()
 
     def onEntryClicked(self, item: EItem, data: str):

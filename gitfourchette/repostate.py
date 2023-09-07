@@ -39,6 +39,7 @@ class RepoPrefs(PrefsFile):
     draftCommitSignature: pygit2.Signature = None
     draftAmendMessage: str = ""
     hiddenBranches: list = field(default_factory=list)
+    hiddenStashCommits: list = field(default_factory=list)
 
     def getParentDir(self):
         return self._parentDir
@@ -120,10 +121,6 @@ class RepoState:
         self.uiPrefs.load()
 
         self.resolveHiddenCommits()
-
-    @property
-    def hiddenBranches(self):
-        return self.uiPrefs.hiddenBranches
 
     def getDraftCommitMessage(self, forAmending = False) -> str:
         if forAmending:
@@ -355,43 +352,56 @@ class RepoState:
 
     @benchmark
     def toggleHideBranch(self, branchName: str):
-        if branchName not in self.hiddenBranches:
-            self.hideBranch(branchName)
+        if branchName not in self.uiPrefs.hiddenBranches:
+            # Hide
+            self.uiPrefs.hiddenBranches.append(branchName)
         else:
-            self.unhideBranch(branchName)
-
-    def hideBranch(self, branchName: str):
-        if branchName in self.hiddenBranches:
-            return
-        self.uiPrefs.hiddenBranches.append(branchName)
+            # Unhide
+            self.uiPrefs.hiddenBranches.remove(branchName)
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
-    def unhideBranch(self, branchName: str):
-        if branchName not in self.hiddenBranches:
-            return
-        self.uiPrefs.hiddenBranches.remove(branchName)
+    @benchmark
+    def toggleHideStash(self, stashOid: pygit2.Oid):
+        oidHex = stashOid.hex
+        if oidHex not in self.uiPrefs.hiddenStashCommits:
+            # Hide
+            self.uiPrefs.hiddenStashCommits.append(oidHex)
+        else:
+            # Unhide
+            self.uiPrefs.hiddenStashCommits.remove(oidHex)
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
     def getHiddenBranchOids(self):
         seeds = set()
+        hiddenBranches = self.uiPrefs.hiddenBranches[:]
 
         def isSharedByVisibleBranch(oid):
             return any(
                 refName for refName in self.reverseRefCache[oid]
-                if refName not in self.hiddenBranches
+                if refName not in hiddenBranches
                 and not refName.startswith(porcelain.TAGS_PREFIX))
 
-        hiddenBranches = self.hiddenBranches[:]
         for hiddenBranch in hiddenBranches:
             try:
                 oid = self.refCache[hiddenBranch]
                 if not isSharedByVisibleBranch(oid):
                     seeds.add(oid)
             except (KeyError, pygit2.InvalidSpecError):
+                # Remove it from prefs
                 log.info("RepoState", "Skipping missing hidden branch: " + hiddenBranch)
-                self.uiPrefs.hiddenBranches.remove(hiddenBranch)  # Remove it from prefs
+                self.uiPrefs.hiddenBranches.remove(hiddenBranch)
+
+        hiddenStashCommits = self.uiPrefs.hiddenStashCommits[:]
+        for hiddenStash in hiddenStashCommits:
+            oid = pygit2.Oid(hex=hiddenStash)
+            if oid in self.reverseRefCache:
+                seeds.add(oid)
+            else:
+                # Remove it from prefs
+                log.info("RepoState", "Skipping missing hidden stash: " + hiddenStash)
+                self.uiPrefs.hiddenStashCommits.remove(oid)
 
         return seeds
 

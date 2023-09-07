@@ -84,6 +84,7 @@ class SidebarModel(QAbstractItemModel):
     _tags: list[str]
     _submodules: list[str]
     _hiddenBranches: list[str]
+    _hiddenStashCommits: list[str]
 
     @staticmethod
     def packId(eid: EItem, offset: int = 0) -> int:
@@ -126,13 +127,17 @@ class SidebarModel(QAbstractItemModel):
         self._tags = []
         self._submodules = []
         self._hiddenBranches = []
+        self._hiddenStashCommits = []
 
         if emitSignals:
             self.endResetModel()
 
     @benchmark
-    def refreshCache(self, repo: pygit2.Repository, hiddenBranches: list[str], refCache: Iterable[str]):
+    def refreshCache(self, repoState: RepoState):
         self.beginResetModel()
+
+        repo = repoState.repo
+        refCache = repoState.refCache
 
         self.clear(emitSignals=False)
         self.repo = repo
@@ -192,7 +197,8 @@ class SidebarModel(QAbstractItemModel):
         with Benchmark("Sidebar/Submodules"):
             self._submodules = repo.listall_submodules()
 
-        self._hiddenBranches = hiddenBranches
+        self._hiddenBranches = repoState.uiPrefs.hiddenBranches
+        self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
 
         self.endResetModel()
 
@@ -442,8 +448,13 @@ class SidebarModel(QAbstractItemModel):
                 return F"<b>stash@{{{row}}}</b>:<br/>{escape(stash.message)}"
             elif userRole:
                 return stash.commit_id.hex
+            elif fontRole:
+                if stash.commit_id.hex in self._hiddenStashCommits:
+                    return self.hiddenBranchFont()
+                else:
+                    return None
             elif hiddenRole:
-                return False
+                return stash.commit_id.hex in self._hiddenStashCommits
 
         elif item == EItem.Submodule:
             if displayRole:
