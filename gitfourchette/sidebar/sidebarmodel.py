@@ -1,4 +1,5 @@
 from gitfourchette import porcelain
+from gitfourchette import log
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -88,19 +89,31 @@ class SidebarModel(QAbstractItemModel):
 
     @staticmethod
     def packId(eid: EItem, offset: int = 0) -> int:
+        """ Pack an EItem and an offset (row) into an internal ID to be associated with a QModelIndex. """
         return eid.value | (offset << 8)
 
     @staticmethod
     def unpackItem(index: QModelIndex) -> EItem:
+        """ Extract an EItem from the index's internal ID. """
         return EItem(index.internalId() & 0xFF)
 
     @staticmethod
     def unpackOffset(index: QModelIndex) -> int:
+        """ Extract an offset (row) from the index's internal ID. """
         return index.internalId() >> 8
 
     @staticmethod
-    def unpackItemAndData(index: QModelIndex):
-        return SidebarModel.unpackItem(index), index.data(Qt.ItemDataRole.UserRole)
+    def unpackItemAndData(index: QModelIndex) -> tuple[EItem, str]:
+        item = SidebarModel.unpackItem(index)
+        data = index.data(Qt.ItemDataRole.UserRole) or ""
+        assert type(data) is str
+        return item, data
+
+    @staticmethod
+    def getCollapseHash(index: QModelIndex):
+        item, data = SidebarModel.unpackItemAndData(index)
+        h = hash(data) << 8 | item
+        return h
 
     @property
     def _parentWidget(self) -> QWidget:
@@ -155,7 +168,7 @@ class SidebarModel(QAbstractItemModel):
                 if name.startswith(porcelain.HEADS_PREFIX):
                     name = name.removeprefix(porcelain.HEADS_PREFIX)
                     self._localBranches.append(name)
-                    upstream = repo.branches.local[name].upstream
+                    upstream = repo.branches.local[name].upstream  # a bit costly
                     if not upstream:
                         self._tracking.append("")
                     else:
@@ -166,7 +179,7 @@ class SidebarModel(QAbstractItemModel):
                     try:
                         self._remoteBranchesDict[remote].append(name)
                     except KeyError:
-                        print("Oops, missing remote:", remote)
+                        log.warning(f"Sidebar refresh cache: missing remote: {remote}")
                 elif name.startswith(porcelain.TAGS_PREFIX):
                     name = name.removeprefix(porcelain.TAGS_PREFIX)
                     self._tags.append(name)
@@ -200,7 +213,8 @@ class SidebarModel(QAbstractItemModel):
         self._hiddenBranches = repoState.uiPrefs.hiddenBranches
         self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
 
-        self.endResetModel()
+        with Benchmark("Sidebar/endResetModel"):
+            self.endResetModel()
 
     def columnCount(self, parent: QModelIndex) -> int:
         return 1

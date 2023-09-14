@@ -7,8 +7,8 @@ from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
-from gitfourchette.sidebar.sidebarmodel import (SidebarModel, EItem, UNINDENT_ITEMS, ROLE_EITEM, ROLE_ISHIDDEN,
-                                                ROLE_REF, ROLE_USERDATA)
+from gitfourchette.sidebar.sidebarmodel import (SidebarModel, EItem, UNINDENT_ITEMS, LEAF_ITEMS,
+                                                ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA)
 from gitfourchette.toolbox import *
 
 
@@ -72,6 +72,11 @@ class Sidebar(QTreeView):
 
         self.setAnimated(True)
         self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thin spacers
+
+        self.expanded.connect(self.onExpanded)
+        self.collapsed.connect(self.onCollapsed)
+        self.collapseCacheValid = False
+        self.collapseCache = set()
 
     def visualRect(self, index):
         """Required so the theme can properly draw unindented rows.
@@ -326,9 +331,9 @@ class Sidebar(QTreeView):
             menu.deleteLater()
 
     def refresh(self, repoState: RepoState):
-        sidebarModel: SidebarModel = self.model()
-        sidebarModel.refreshCache(repoState)
-        self.expandAll()
+        model: SidebarModel = self.model()
+        model.refreshCache(repoState)
+        self.restoreExpandedItems()
 
     def onEntryClicked(self, item: EItem, data: str):
         if item == EItem.UncommittedChanges:
@@ -381,14 +386,14 @@ class Sidebar(QTreeView):
             self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))
 
     def indicesForItemType(self, item: EItem) -> list[QModelIndex]:
-        """ Unit testing helper """
+        """ Unit testing helper. Not efficient! """
         model: QAbstractItemModel = self.model()
         value = item.value
         indexList: list[QModelIndex] = model.match(model.index(0, 0), ROLE_EITEM, value, hits=-1, flags=Qt.MatchFlag.MatchRecursive)
         return indexList
 
     def datasForItemType(self, item: EItem, role: int = ROLE_USERDATA) -> list[str]:
-        """ Unit testing helper """
+        """ Unit testing helper. Not efficient! """
         model: QAbstractItemModel = self.model()
         indices = self.indicesForItemType(item)
         return [model.data(index, role) for index in indices]
@@ -421,3 +426,36 @@ class Sidebar(QTreeView):
         # There are no indices that match the candidates, so select nothing
         self.clearSelection()
         return None
+
+    def onExpanded(self, index: QModelIndex):
+        h = SidebarModel.getCollapseHash(index)
+        self.collapseCache.discard(h)
+
+    def onCollapsed(self, index: QModelIndex):
+        h = SidebarModel.getCollapseHash(index)
+        self.collapseCache.add(h)
+
+    @benchmark
+    def restoreExpandedItems(self):
+        # If we don't have a valid collapse cache (typically upon opening the repo), expand everything.
+        # This can be pretty expensive, so cache collapsed items for next time.
+        if not self.collapseCacheValid:
+            self.expandAll()
+            self.collapseCache.clear()
+            self.collapseCacheValid = True
+            return
+
+        model: SidebarModel = self.model()
+
+        frontier = [(0, model.index(row, 0)) for row in range(model.rowCount())]
+        while frontier:
+            depth, index = frontier.pop()
+            item, data = SidebarModel.unpackItemAndData(index)
+            if item in LEAF_ITEMS:
+                continue
+            h = SidebarModel.getCollapseHash(index)
+            if h not in self.collapseCache:
+                self.expand(index)
+            if item == EItem.RemotesHeader:  # Only RemotesHeader has children that can themselves be expanded
+                for subrow in range(model.rowCount(index)):
+                    frontier.append((depth+1, model.index(subrow, 0, index)))
