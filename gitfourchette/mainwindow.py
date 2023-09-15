@@ -320,7 +320,7 @@ class MainWindow(QMainWindow):
         helpMenu.setObjectName("MWHelpMenu")
 
         a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
-        a.setMenuRole(QAction.AboutRole)
+        a.setMenuRole(QAction.MenuRole.AboutRole)
 
         # -------------------------------------------------------------
 
@@ -368,8 +368,8 @@ class MainWindow(QMainWindow):
             self.fillRecentMenu()
 
         self.recentMenu.clear()
-        for historic in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
-            self.recentMenu.addAction(compactPath(historic), lambda path=historic: self.openRepo(path))
+        for path in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
+            self.recentMenu.addAction(compactPath(path), lambda path=path: self.openRepo(path))
         self.recentMenu.addSeparator()
         self.recentMenu.addAction(self.tr("Clear"), onClearRecents)
 
@@ -870,7 +870,6 @@ class MainWindow(QMainWindow):
             for i, path in enumerate(session.tabs):
                 try:
                     newRepoWidget = self._openRepo(path, foreground=False, addToHistory=False)
-                    successfulRepos.append(path)
                 except (pygit2.GitError, OSError, NotImplementedError) as exc:
                     # GitError: most errors thrown by pygit2
                     # OSError: e.g. permission denied
@@ -878,7 +877,13 @@ class MainWindow(QMainWindow):
                     errors.append((path, exc))
                     continue
 
-                if i == session.activeTabIndex and newRepoWidget is not None:
+                # _openRepo may still return None without throwing an exception in case of failure
+                if newRepoWidget is None:
+                    continue
+
+                successfulRepos.append(path)
+
+                if i == session.activeTabIndex:
                     activeTab = self.tabs.count()-1
 
             # If we failed to load anything, tell the user about it
