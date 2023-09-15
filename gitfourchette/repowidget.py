@@ -439,6 +439,20 @@ class RepoWidget(QWidget):
     def cleanup(self):
         assert onAppThread()
 
+        hasRepo = self.state and self.state.repo
+
+        # Save sidebar collapse cache
+        if hasRepo:
+            uiPrefs = self.state.uiPrefs
+            if self.sidebar.collapseCacheValid:
+                uiPrefs.collapseCache = list(self.sidebar.collapseCache)
+            else:
+                uiPrefs.collapseCache = []
+            try:
+                uiPrefs.write()
+            except IOError as e:
+                log.warning(TAG, f"IOError when writing prefs: {e}")
+
         # Clear UI
         with QSignalBlockerContext(
                 self.committedFiles, self.dirtyFiles, self.stagedFiles,
@@ -451,7 +465,7 @@ class RepoWidget(QWidget):
             self.clearDiffView()
             self.sidebar.model().clear()
 
-        if self.state and self.state.repo:
+        if hasRepo:
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
 

@@ -112,8 +112,10 @@ class SidebarModel(QAbstractItemModel):
     @staticmethod
     def getCollapseHash(index: QModelIndex):
         item, data = SidebarModel.unpackItemAndData(index)
-        h = hash(data) << 8 | item
-        return h
+        return f"{item}-{data}"
+        # Warning: it's tempting to replace this with something like "hash(data) << 8 | item",
+        # but hash(data) doesn't return stable values across different Python sessions,
+        # so it's not suitable for persistent storage (in history.json).
 
     @property
     def _parentWidget(self) -> QWidget:

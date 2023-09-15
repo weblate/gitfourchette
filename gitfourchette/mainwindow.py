@@ -493,6 +493,10 @@ class MainWindow(QMainWindow):
             rw.graphView.setHiddenCommits(newState.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
             with QSignalBlockerContext(rw.sidebar):
+                collapseCache = newState.uiPrefs.collapseCache
+                if collapseCache:
+                    rw.sidebar.collapseCache = set(collapseCache)
+                    rw.sidebar.collapseCacheValid = True
                 rw.sidebar.refresh(newState)
 
             self.refreshTabText(rw)
@@ -933,6 +937,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, e):
         QApplication.instance().removeEventFilter(self)
+
+        # Save session before closing all tabs.
         self.saveSession()
 
         # Close all tabs so RepoWidgets release all their resources.

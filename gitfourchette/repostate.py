@@ -40,6 +40,7 @@ class RepoPrefs(PrefsFile):
     draftAmendMessage: str = ""
     hiddenBranches: list = field(default_factory=list)
     hiddenStashCommits: list = field(default_factory=list)
+    collapseCache: list = field(default_factory=list)
 
     def getParentDir(self):
         return self._parentDir

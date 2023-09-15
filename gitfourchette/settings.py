@@ -151,7 +151,8 @@ class History(PrefsFile):
         repo['seq'] = self.drawSequenceNumber()
         return repo
 
-    def getRepo(self, path) -> dict:
+    def getRepo(self, path: str) -> dict:
+        path = os.path.normpath(path)
         try:
             repo = self.repos[path]
         except KeyError:
@@ -160,12 +161,11 @@ class History(PrefsFile):
         return repo
 
     def getRepoNickname(self, path):
-        path = os.path.normpath(path)
         repo = self.getRepo(path)
+        path = os.path.normpath(path)
         return repo.get("nickname", os.path.basename(path))
 
     def setRepoNickname(self, path: str, nickname: str):
-        path = os.path.normpath(path)
         repo = self.getRepo(path)
         nickname = nickname.strip()
         if nickname:
@@ -174,12 +174,10 @@ class History(PrefsFile):
             repo.pop('nickname', None)
 
     def getRepoNumCommits(self, path: str):
-        path = os.path.normpath(path)
         repo = self.getRepo(path)
         return repo.get('length', 0)
 
     def setRepoNumCommits(self, path: str, commitCount: int):
-        path = os.path.normpath(path)
         repo = self.getRepo(path)
         if commitCount > 0:
             repo['length'] = commitCount
