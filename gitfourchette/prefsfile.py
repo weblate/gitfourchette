@@ -7,6 +7,8 @@ import pygit2
 from gitfourchette import log
 from gitfourchette.qt import *
 
+TAG = "prefs"
+
 
 class PrefsJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -54,13 +56,7 @@ class PrefsFile:
     def write(self, force=False):
         from gitfourchette.settings import TEST_MODE
         if not force and TEST_MODE:
-            log.info("prefs", "Disabling write prefs")
-            return None
-
-        prefsPath = self._getFullPath(forWriting=True)
-
-        if not prefsPath:
-            log.warning("prefs", "Couldn't get path for writing")
+            log.info(TAG, "Not writing prefs in test mode")
             return None
 
         # Get default values if we're saving a dataclass
@@ -82,11 +78,23 @@ class PrefsFile:
             if (k not in defaults) or (defaults[k] != v):
                 filtered[k] = v
 
+        # If the filtered object comes out empty (all defaults) and the file doesn't exist yet,
+        # avoid cluttering the directory - don't write out an empty object
+        if not filtered and not self._getFullPath(forWriting=False):
+            log.info(TAG, "Not writing empty object")
+            return None
+
+        # Prepare the path
+        prefsPath = self._getFullPath(forWriting=True)
+        if not prefsPath:
+            log.warning(TAG, "Couldn't get path for writing")
+            return None
+
         # Dump the object to disk
         with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
             json.dump(obj=filtered, fp=jsonFile, indent='\t', cls=PrefsJSONEncoder)
 
-        log.info("prefs", f"Wrote {prefsPath}")
+        log.info(TAG, f"Wrote {prefsPath}")
         return prefsPath
 
     def load(self):
@@ -98,15 +106,15 @@ class PrefsFile:
             try:
                 obj = json.load(f, cls=PrefsJSONDecoder)
             except ValueError as loadError:
-                log.warning("prefs", F"{prefsPath}: {loadError}")
+                log.warning(TAG, F"{prefsPath}: {loadError}")
                 return False
 
             for k in obj:
                 if k.startswith('_'):
-                    log.warning("prefs", F"{prefsPath}: skipping illegal key: {k}")
+                    log.warning(TAG, F"{prefsPath}: skipping illegal key: {k}")
                     continue
                 if k not in self.__dict__:
-                    log.warning("prefs", F"{prefsPath}: skipping unknown key: {k}")
+                    log.warning(TAG, F"{prefsPath}: skipping unknown key: {k}")
                     continue
 
                 if obj[k] is None:
