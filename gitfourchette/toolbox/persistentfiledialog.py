@@ -15,59 +15,57 @@ class PersistentFileDialog:
             settings.history.write()
 
     @staticmethod
-    def saveFile(parent: QWidget, key: str, caption: str, initialFilename="", filter="", selectedFilter="", deleteOnClose=True):
-        previousSavePath = PersistentFileDialog.getPath(key)
-        if not previousSavePath:
-            initialPath = initialFilename
-        else:
-            previousSaveDir = os.path.dirname(previousSavePath)
-            initialPath = os.path.join(previousSaveDir, initialFilename)
+    def install(qfd: QFileDialog, key: str):
+        savedPath = PersistentFileDialog.getPath(key)
+        if savedPath:
+            savedPath = os.path.dirname(savedPath)
+            if os.path.exists(savedPath):
+                qfd.setDirectory(savedPath)
+        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
+        return qfd
 
-        qfd = QFileDialog(parent, caption, initialPath, filter)
+    @staticmethod
+    def saveFile(parent: QWidget, key: str, caption: str, initialFilename="", filter="", selectedFilter="", deleteOnClose=True):
+        qfd = QFileDialog(parent, caption, initialFilename, filter)
         qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         qfd.setFileMode(QFileDialog.FileMode.AnyFile)
         if selectedFilter:
             qfd.selectNameFilter(selectedFilter)
-
-        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
-
-        if deleteOnClose:
-            qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-
+        qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, deleteOnClose)
         qfd.setWindowModality(Qt.WindowModality.WindowModal)
+        PersistentFileDialog.install(qfd, key)
         return qfd
 
     @staticmethod
-    def openFile(parent: QWidget, key: str, caption: str, filter="", selectedFilter="", fallbackPath="", deleteOnClose=True):
-        initialDir = PersistentFileDialog.getPath(key, fallbackPath)
-
-        qfd = QFileDialog(parent, caption, initialDir, filter)
+    def openFile(parent: QWidget, key: str, caption: str, fallbackPath="", filter="", selectedFilter="", deleteOnClose=True):
+        qfd = QFileDialog(parent, caption, fallbackPath, filter)
         qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         qfd.setFileMode(QFileDialog.FileMode.AnyFile)
         if selectedFilter:
             qfd.selectNameFilter(selectedFilter)
-
-        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
-
-        if deleteOnClose:
-            qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-
+        qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, deleteOnClose)
         qfd.setWindowModality(Qt.WindowModality.WindowModal)
+        PersistentFileDialog.install(qfd, key)
         return qfd
 
     @staticmethod
     def openDirectory(parent: QWidget, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly, deleteOnClose=True):
-        initialDir = PersistentFileDialog.getPath(key)
-
-        qfd = QFileDialog(parent, caption, initialDir)
+        qfd = QFileDialog(parent, caption)
         qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
         qfd.setFileMode(QFileDialog.FileMode.Directory)
         qfd.setOptions(options)
-
-        qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
-
-        if deleteOnClose:
-            qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-
+        qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, deleteOnClose)
         qfd.setWindowModality(Qt.WindowModality.WindowModal)
+        PersistentFileDialog.install(qfd, key)
+        return qfd
+
+    @staticmethod
+    def saveDirectory(parent: QWidget, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly, deleteOnClose=True):
+        qfd = QFileDialog(parent, caption)
+        qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        qfd.setFileMode(QFileDialog.FileMode.Directory)
+        qfd.setOptions(options)
+        qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, deleteOnClose)
+        qfd.setWindowModality(Qt.WindowModality.WindowModal)
+        PersistentFileDialog.install(qfd, key)
         return qfd
