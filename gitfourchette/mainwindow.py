@@ -695,22 +695,59 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # File menu callbacks
 
-    def newRepo(self):
-        def proceed(path: str):
+    def newRepo(self, path="", detectParentRepo=True):
+        if not path:
+            qfd = PersistentFileDialog.saveDirectory(self, "NewRepo", self.tr("New repository"))
+            qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("&Create repo in this folder"))
+            qfd.fileSelected.connect(self.newRepo)
+            qfd.show()
+            return
+
+        parentRepo: str = ""
+        if detectParentRepo:
+            parentRepo = pygit2.discover_repository(path)
+
+        if not detectParentRepo or not parentRepo:
             try:
                 pygit2.init_repository(path)
                 self.openRepo(path)
             except BaseException as exc:
-                excMessageBox(
-                    exc,
-                    self.tr("New repository"),
-                    self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path)),
-                    parent=self,
-                    icon='warning')
+                message = self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path))
+                excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
 
-        qfd = PersistentFileDialog.saveFile(self, "NewRepo", self.tr("New repository"))
-        qfd.fileSelected.connect(proceed)
-        qfd.show()
+        if parentRepo:
+            parentRepo = os.path.normpath(parentRepo)
+            parentWorkdir = os.path.dirname(parentRepo) if os.path.basename(parentRepo) == ".git" else parentRepo
+
+            if parentRepo == path or parentWorkdir == path:
+                message = paragraphs(
+                    self.tr("A repository already exists here:"),
+                    "\t" + escape(parentWorkdir))
+                qmb = asyncMessageBox(
+                    self, 'information', self.tr("Repository already exists"), message,
+                    QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel)
+                qmb.button(QMessageBox.StandardButton.Open).setText(self.tr("&Open existing repo"))
+                qmb.accepted.connect(lambda: self.openRepo(path))
+                qmb.show()
+            else:
+                message = paragraphs(
+                    self.tr("You want to create a repository in:"),
+                    "\t" + escape(path),
+                    self.tr("A repository already exists in a parent folder:"),
+                    "\t" + escape(parentWorkdir),
+                    self.tr("Do you want to create a new repository in the subfolder anyway?")
+                )
+                qmb = asyncMessageBox(
+                    self, 'information', self.tr("Repository found in parent folder"), message,
+                    QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+                openButton = qmb.button(QMessageBox.StandardButton.Open)
+                openButton.setText(self.tr("&Open parent repo “{0}”").format(os.path.basename(parentWorkdir)))
+                openButton.clicked.connect(lambda: self.openRepo(parentWorkdir))
+                createButton = qmb.button(QMessageBox.StandardButton.Ok)
+                createButton.setText(self.tr("&Create repo in subfolder"))
+                createButton.clicked.connect(lambda: self.newRemote(path, detectParentRepo=False))
+                qmb.show()
+            return
 
     def cloneDialog(self, initialUrl: str = ""):
         dlg = CloneDialog(initialUrl, self)

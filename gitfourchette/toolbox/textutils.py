@@ -1,3 +1,5 @@
+import io
+
 from gitfourchette.qt import *
 from html import escape as escape
 
@@ -25,14 +27,26 @@ def escamp(text: str) -> str:
 def paragraphs(*args) -> str:
     """
     Surrounds each argument string with an HTML "P" tag
-    and returns the concatenated P tags.
+    (or BLOCKQUOTE if the argument starts with the tab character)
+    and returns a concatenated string of HTML tags.
     """
 
     # If passed an actual list object, use that as the argument list.
     if len(args) == 1 and type(args[0]) == list:
         args = args[0]
 
-    return "<p>" + "</p><p>".join(args) + "</p>"
+    builder = io.StringIO()
+    for arg in args:
+        if arg.startswith("\t"):
+            builder.write("<blockquote>")
+            builder.write(arg)
+            builder.write("</blockquote>")
+        else:
+            builder.write("<p>")
+            builder.write(arg)
+            builder.write("</p>")
+
+    return builder.getvalue()
 
 
 def elide(text: str, ems: int = 20):
