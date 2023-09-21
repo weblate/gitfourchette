@@ -608,7 +608,7 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def openRepoFolder(self, rw: RepoWidget):
-        showInFolder(rw.workdir)
+        openFolder(rw.workdir)
 
     @needRepoWidget
     def copyRepoPath(self, rw: RepoWidget):
