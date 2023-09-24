@@ -134,6 +134,7 @@ class SpecialDiffError(Exception):
         def parseSubprojectCommit(match: re.Match):
             hashText = ""
             suffix = ""
+            dirty = False
 
             if not match:
                 suffix = translate("Diff", "N/A")
@@ -142,16 +143,17 @@ class SpecialDiffError(Exception):
                 if hashText.endswith("-dirty"):
                     hashText = hashText.removesuffix("-dirty")
                     suffix = translate("Diff", "(with uncommitted changes)")
+                    dirty = True
                 with contextlib.suppress(ValueError):
                     oid = pygit2.Oid(hex=hashText)
                     hashText = shortHash(oid)
 
-            return hashText, suffix
+            return hashText, suffix, dirty
 
         oldMatch = re.search(r"^-Subproject commit (.+)$", patch.text, re.MULTILINE)
         newMatch = re.search(r"^\+Subproject commit (.+)$", patch.text, re.MULTILINE)
-        oldHash, oldSuffix = parseSubprojectCommit(oldMatch)
-        newHash, newSuffix = parseSubprojectCommit(newMatch)
+        oldHash, oldSuffix, _ = parseSubprojectCommit(oldMatch)
+        newHash, newSuffix, newDirty = parseSubprojectCommit(newMatch)
 
         shortName = os.path.basename(submodule.name)
         localPath = os.path.join(repo.workdir, submodule.path)
@@ -165,5 +167,10 @@ class SpecialDiffError(Exception):
         text2 = f"<a href='{linkHref}'>{linkText}</a>"
         text3 = (f"<table><tr><td>{oldText} </td><td><code>{oldHash}</code> {oldSuffix}</td></tr>"
                  f"<tr><td>{newText} </td><td><code>{newHash}</code> {newSuffix}</td></tr></table>")
+
+        if newDirty:
+            warning = translate("Diff", "You won’t be able to stage this update "
+                                        "as long as the submodule contains uncommitted changes.")
+            text3 += f"<p>\u26a0 <strong>{warning}</strong></p>"
 
         return SpecialDiffError(message=text1, details=text2, longform=text3)
