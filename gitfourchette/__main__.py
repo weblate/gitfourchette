@@ -15,6 +15,7 @@ def makeCommandLineParser() -> QCommandLineParser:
     parser.addHelpOption()
     parser.addVersionOption()
     parser.addOption(QCommandLineOption(["test-mode"], "Prevents loading/saving of user preferences."))
+    parser.addOption(QCommandLineOption(["sync-tasks"], "Run tasks synchronously on UI thread."))
     parser.addPositionalArgument("repos", "Paths to repositories to open on launch.", "[repos...]")
     return parser
 
@@ -57,8 +58,12 @@ def main():
         app.PLATFORM_DEFAULT_STYLE_NAME = app.style().objectName()
 
     # Initialize settings
+    if commandLine.isSet("sync-tasks"):
+        settings.SYNC_TASKS = True
+
     if commandLine.isSet("test-mode"):
         settings.TEST_MODE = True
+        settings.SYNC_TASKS = True
     else:
         # Load settings
         with NonCriticalOperation(F"Loading {settings.prefs.filename}"):

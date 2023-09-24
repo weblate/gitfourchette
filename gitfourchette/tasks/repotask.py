@@ -350,7 +350,7 @@ class RepoTaskRunner(QObject):
         self._currentTaskBenchmark = None
 
         from gitfourchette import settings
-        self.forceSerial = bool(settings.TEST_MODE)
+        self.forceSerial = bool(settings.SYNC_TASKS)
 
         self._threadPool = QThreadPool(parent)
         self._threadPool.setMaxThreadCount(1)

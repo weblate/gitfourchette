@@ -9,6 +9,10 @@ import shlex
 
 
 TEST_MODE = False
+""" Unit testing mode. """
+
+SYNC_TASKS = False
+""" Force tasks to run synchronously on the UI thread. """
 
 REPO_SETTINGS_DIR = "gitfourchette"
 

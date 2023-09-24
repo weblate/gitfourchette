@@ -622,7 +622,12 @@ class RepoWidget(QWidget):
             suffix += qAppName()
             if __debug__:
                 suffix += "-debug"
-            suffix += F" PID {os.getpid()}, {qtBindingName}"
+            suffix += F" (PID {os.getpid()}, {qtBindingName}"
+            if settings.TEST_MODE:
+                suffix += ", TEST_MODE"
+            if settings.SYNC_TASKS:
+                suffix += ", SYNC_TASKS"
+            suffix += ")"
 
         if suffix:
             suffix = " \u2013 " + suffix

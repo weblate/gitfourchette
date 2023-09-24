@@ -20,6 +20,7 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
     settings.TEST_MODE = True
+    settings.SYNC_TASKS = True
 
     # Set up resource search path. Not critical, but prevents spam about missing assets.
     assetsSearchPath = os.path.join(os.path.dirname(__file__), "..", "gitfourchette", "assets")
