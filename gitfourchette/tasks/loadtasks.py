@@ -1,3 +1,5 @@
+import contextlib
+
 import pygit2
 
 from gitfourchette import log
@@ -77,6 +79,12 @@ class LoadPatch(RepoTask):
         if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
             ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]
             return DiffConflict(ancestor, ours, theirs)
+
+        submodule = None
+        with contextlib.suppress(KeyError), Benchmark("Submodule detection"):
+            submodule = self.repo.lookup_submodule(patch.delta.new_file.path)
+        if submodule:
+            return SpecialDiffError.submoduleDiff(self.repo, submodule, patch)
 
         try:
             diffModel = DiffDocument.fromPatch(patch, locator)

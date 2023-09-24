@@ -1,12 +1,14 @@
 """Non-textual diffs"""
-
+import contextlib
+import re
 from dataclasses import dataclass
 
 import pygit2
+from pygit2 import submodule
 
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import isZeroId
+from gitfourchette.porcelain import isZeroId, BLANK_OID
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -76,8 +78,11 @@ class SpecialDiffError(Exception):
         message = translate("Diff", "File contents didn’t change.")
         details = []
 
-        oldFileExists = not isZeroId(delta.old_file.id)
-        newFileExists = not isZeroId(delta.new_file.id)
+        oldFile: pygit2.DiffFile = delta.old_file
+        newFile: pygit2.DiffFile = delta.old_file
+
+        oldFileExists = not isZeroId(oldFile.id)
+        newFileExists = not isZeroId(newFile.id)
 
         if not newFileExists:
             message = translate("Diff", "Empty file was deleted.")
@@ -88,13 +93,13 @@ class SpecialDiffError(Exception):
             else:
                 message = translate("Diff", "File is empty.")
 
-        if delta.old_file.path != delta.new_file.path:
-            details.append(translate("Diff",
-                                     "Renamed:") + f" “{escape(delta.old_file.path)}” &rarr; “{escape(delta.new_file.path)}”.")
+        if oldFile.path != newFile.path:
+            intro = translate("Diff", "Renamed:")
+            details.append(f"{intro} “{escape(oldFile.path)}” &rarr; “{escape(newFile.path)}”.")
 
-        if oldFileExists and delta.old_file.mode != delta.new_file.mode:
-            details.append(translate("Diff",
-                                     "Mode change:") + f" “{delta.old_file.mode:06o}” &rarr; “{delta.new_file.mode:06o}”.")
+        if oldFileExists and oldFile.mode != newFile.mode:
+            intro = translate("Diff", "Mode change:")
+            details.append(f"{intro} “{oldFile.mode:06o}” &rarr; “{newFile.mode:06o}”.")
 
         return SpecialDiffError(message, "\n".join(details))
 
@@ -124,4 +129,41 @@ class SpecialDiffError(Exception):
                 translate("Diff", "File appears to be binary."),
                 f"{oldHumanSize} &rarr; {newHumanSize}")
 
+    @staticmethod
+    def submoduleDiff(repo: pygit2.Repository, submodule: pygit2.Submodule, patch: pygit2.Patch):
+        def parseSubprojectCommit(match: re.Match):
+            hashText = ""
+            suffix = ""
 
+            if not match:
+                suffix = translate("Diff", "N/A")
+            else:
+                hashText = match.group(1)
+                if hashText.endswith("-dirty"):
+                    hashText = hashText.removesuffix("-dirty")
+                    suffix = translate("Diff", "(with uncommitted changes)")
+                with contextlib.suppress(ValueError):
+                    oid = pygit2.Oid(hex=hashText)
+                    hashText = shortHash(oid)
+
+            return hashText, suffix
+
+        oldMatch = re.search(r"^-Subproject commit (.+)$", patch.text, re.MULTILINE)
+        newMatch = re.search(r"^\+Subproject commit (.+)$", patch.text, re.MULTILINE)
+        oldHash, oldSuffix = parseSubprojectCommit(oldMatch)
+        newHash, newSuffix = parseSubprojectCommit(newMatch)
+
+        shortName = os.path.basename(submodule.name)
+        localPath = os.path.join(repo.workdir, submodule.path)
+        linkHref = QUrl.fromLocalFile(localPath).toString()
+        linkText = translate("Diff", "Open submodule “{0}”").format(shortName)
+
+        oldText = translate("Diff", "Old commit:")
+        newText = translate("Diff", "New commit:")
+
+        text1 = translate("Diff", "Submodule “<b>{0}</b>” was updated.").format(shortName)
+        text2 = f"<a href='{linkHref}'>{linkText}</a>"
+        text3 = (f"<table><tr><td>{oldText} </td><td><code>{oldHash}</code> {oldSuffix}</td></tr>"
+                 f"<tr><td>{newText} </td><td><code>{newHash}</code> {newSuffix}</td></tr></table>")
+
+        return SpecialDiffError(message=text1, details=text2, longform=text3)

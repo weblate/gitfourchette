@@ -727,6 +727,10 @@ class RepoWidget(QWidget):
         if not isinstance(url, QUrl):
             url = QUrl(url)
 
+        if url.isLocalFile():
+            self.openRepo.emit(url.toLocalFile())
+            return
+
         if url.scheme() != APP_URL_SCHEME:
             log.warning(TAG, "Unsupported scheme in internal link:", url.toDisplayString())
             return

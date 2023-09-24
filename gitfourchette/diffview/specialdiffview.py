@@ -1,7 +1,8 @@
-from gitfourchette.qt import *
-from gitfourchette.diffview.diffdocument import SpecialDiffError
-import html
 import pygit2
+
+from gitfourchette.diffview.diffdocument import SpecialDiffError
+from gitfourchette.qt import *
+from gitfourchette.toolbox import stockIcon, escape
 
 IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
 
@@ -19,7 +20,8 @@ class SpecialDiffView(QTextBrowser):
     def displaySpecialDiffError(self, err: SpecialDiffError):
         document = QTextDocument()
 
-        pixmap = QApplication.style().standardIcon(err.icon).pixmap(48, 48)
+        icon = stockIcon(err.icon)
+        pixmap = icon.pixmap(48, 48)
         document.addResource(IMAGE_RESOURCE_TYPE, QUrl("icon"), pixmap)
 
         markup = (
@@ -32,7 +34,7 @@ class SpecialDiffView(QTextBrowser):
             "</table>")
 
         if err.preformatted:
-            markup += F"<pre>{html.escape(err.preformatted)}</pre>"
+            markup += F"<pre>{escape(err.preformatted)}</pre>"
 
         markup += err.longform
 
