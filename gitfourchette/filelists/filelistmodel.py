@@ -28,9 +28,11 @@ class FileListModel(QAbstractListModel):
 
     entries: list[Entry]
     fileRows: dict[str, int]
+    skipConflicts: bool
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.skipConflicts = False
         self.clear()
 
     def clear(self):
@@ -46,6 +48,8 @@ class FileListModel(QAbstractListModel):
 
         for diff in diffs:
             for patchNo, delta in enumerate(diff.deltas):
+                if self.skipConflicts and delta.status == pygit2.GIT_DELTA_CONFLICTED:
+                    continue
                 self.fileRows[delta.new_file.path] = len(self.entries)
                 self.entries.append(FileListModel.Entry(delta, diff, patchNo))
 

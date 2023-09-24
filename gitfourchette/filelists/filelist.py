@@ -28,9 +28,16 @@ class FileList(QListView):
 
     def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
+
+        flModel = FileListModel(self)
+        self.setModel(flModel)
+
+        # Hide conflicts from staged file list
+        if navContext == NavContext.STAGED:
+            flModel.skipConflicts = True
+
         self.navContext = navContext
         self.commitOid = BLANK_OID
-        self.setModel(FileListModel(self))
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
@@ -75,7 +82,8 @@ class FileList(QListView):
         # was called" -- I suppose this means the context menu won't be deleted until the FileList has control again.
         menu.deleteLater()
 
-    def createContextMenuActions(self, count) -> list[ActionDef]:
+    def createContextMenuActions(self, count: int) -> list[ActionDef]:
+        """ To be overridden """
         return []
 
     def pathDisplayStyleSubmenu(self):
