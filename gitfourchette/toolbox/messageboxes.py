@@ -1,6 +1,6 @@
 from gitfourchette.qt import *
 from gitfourchette import log
-from gitfourchette.toolbox.qtutils import onAppThread, setWindowModal
+from gitfourchette.toolbox.qtutils import onAppThread, setWindowModal, MakeNonNativeDialog
 from gitfourchette.toolbox.excutils import shortenTracebackPath
 from typing import Callable, Literal
 import traceback
@@ -114,15 +114,16 @@ def asyncMessageBox(
         parent=parent
     )
 
-    # On macOS (since Big Sur?), all QMessageBox text is bold by default
-    if MACOS:
-        qmb.setStyleSheet("QMessageBox QLabel { font-weight: normal; }")
-
     if parent:
         setWindowModal(qmb)
 
     if deleteOnClose:
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+    # macOS hacks to remove "modern" styling
+    if MACOS:
+        qmb.setStyleSheet("QMessageBox QLabel { font-weight: normal; }")
+        MakeNonNativeDialog(qmb)
 
     return qmb
 
