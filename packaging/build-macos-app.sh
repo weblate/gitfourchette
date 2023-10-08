@@ -13,7 +13,10 @@ APP=dist/GitFourchette.app
 # are in English.
 touch $APP/Contents/Resources/empty.lproj
 
-rm -fv $APP/Contents/MacOS/QtDataVisualization
-rm -fv $APP/Contents/MacOS/QtOpenGL{,Widgets}
-rm -fv $APP/Contents/MacOS/QtQml{,Models}
-rm -fv $APP/Contents/MacOS/QtQuick
+for component in QtNetwork QtOpenGL QtQml QtQmlModels QtQuick QtVirtualKeyboard
+do
+    echo "Removing $component"
+    rm -fv $APP/Contents/Resources/$component
+    rm -fv $APP/Contents/Frameworks/$component
+    rm -rfv $APP/Contents/Frameworks/PySide6/Qt/lib/$component.framework
+done
