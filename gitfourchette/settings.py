@@ -277,11 +277,9 @@ def applyLanguagePref():
 
     if prefs.language:
         locale = QLocale(prefs.language)
-        QLocale.setDefault(locale)
     else:
-        # "Automatic" setting: Get system locale
-        locale = QLocale.system()
-        QLocale.setDefault(locale)
+        locale = QLocale()  # "Automatic" setting: Get system locale
+    QLocale.setDefault(locale)
 
     newTranslator = QTranslator()
     if newTranslator.load(locale, "gitfourchette", "_", "assets:", ".qm"):
