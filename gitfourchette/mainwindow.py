@@ -23,12 +23,6 @@ from gitfourchette.repowidget import RepoWidget
 from gitfourchette.toolbox import *
 
 
-class Session:
-    openTabs: list[str]
-    activeTab: int
-    geometry: QRect
-
-
 class MainWindow(QMainWindow):
     styleSheetReloadScheduled = False
 
@@ -116,11 +110,21 @@ class MainWindow(QMainWindow):
             QApplication.instance().setStyleSheet(styleSheet)
             styleSheetFile.close()
 
+    # -------------------------------------------------------------------------
+    # Event filters & handlers
+
     def eventFilter(self, watched, event: QEvent):
         isPress = event.type() == QEvent.Type.MouseButtonPress
         isDblClick = event.type() == QEvent.Type.MouseButtonDblClick
 
-        if event.type() == QEvent.Type.ThemeChange:
+        if event.type() == QEvent.Type.FileOpen:
+            # Called if dragging something to dock icon on macOS.
+            # Ignore in test mode - the test runner may send a bogus FileOpen before we're ready to process it.
+            if not settings.TEST_MODE:
+                outcome = self.getDropOutcomeFromLocalFilePath(event.file())
+                self.handleDrop(*outcome)
+
+        elif event.type() == QEvent.Type.ThemeChange:
             # Reload QSS when the theme changes (e.g. switching between dark/light modes).
             # Delay the reload to next event loop so that it doesn't occur during the fade animation on macOS.
             # We may receive several ThemeChange events during a single theme change, so only schedule one reload.
@@ -153,8 +157,23 @@ class MainWindow(QMainWindow):
         return False
 
     def keyReleaseEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Alt:
+        if event.key() == Qt.Key.Key_Alt and self.autoHideMenuBar.enabled:
             self.autoHideMenuBar.toggle()
+        else:
+            super().keyReleaseEvent(event)
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        action, data = self.getDropOutcomeFromMimeData(event.mimeData())
+        if action:
+            event.acceptProposedAction()
+
+    def dropEvent(self, event: QDropEvent):
+        action, data = self.getDropOutcomeFromMimeData(event.mimeData())
+        event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
+        self.handleDrop(action, data)
+
+    # -------------------------------------------------------------------------
+    # Menu bar
 
     def fillGlobalMenuBar(self):
         menubar = self.globalMenuBar
@@ -326,41 +345,6 @@ class MainWindow(QMainWindow):
 
         self.fillRecentMenu()
 
-    def onAcceptPrefsDialog(self, prefDiff: dict):
-        # Early out if the prefs didn't change
-        if not prefDiff:
-            return
-
-        # Apply changes from prefDiff to the actual prefs
-        for k, v in prefDiff.items():
-            settings.prefs.__dict__[k] = v
-
-        # Write prefs to disk
-        settings.prefs.write()
-
-        # Notify widgets
-        self.refreshPrefs(prefDiff)
-
-        # Warn if changed any setting that requires a reload
-        warnIfChanged = [
-            "graph_chronologicalOrder",  # need to reload entire commit sequence
-            "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
-            "diff_showStrayCRs",  # GF isn't able to re-render a single diff yet
-            "diff_colorblindFriendlyColors",  # ditto
-            "diff_largeFileThresholdKB",  # ditto
-            "diff_imageFileThresholdKB",  # ditto
-        ]
-
-        if any(k in warnIfChanged for k in prefDiff):
-            showInformation(self, self.tr("Apply Settings"),
-                            self.tr("You may need to reload the current repository for all new settings to take effect."))
-
-    def openPrefsDialog(self, focusOn: str = ""):
-        dlg = PrefsDialog(self, focusOn)
-        dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg.prefDiff))
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        dlg.show()
-
     def fillRecentMenu(self):
         def onClearRecents():
             settings.history.clearRepoHistory()
@@ -372,6 +356,9 @@ class MainWindow(QMainWindow):
             self.recentMenu.addAction(compactPath(path), lambda path=path: self.openRepo(path))
         self.recentMenu.addSeparator()
         self.recentMenu.addAction(self.tr("Clear"), onClearRecents)
+
+    # -------------------------------------------------------------------------
+    # Tabs
 
     def currentRepoWidget(self) -> RepoWidget:
         return self.tabs.currentWidget()
@@ -439,6 +426,9 @@ class MainWindow(QMainWindow):
         if settings.prefs.tabs_doubleClickOpensFolder:
             self.openRepoFolder(rw)
 
+    # -------------------------------------------------------------------------
+    # Repo loading
+
     def _constructRepo(self, path: str):
         repo = pygit2.Repository(path)
 
@@ -449,6 +439,7 @@ class MainWindow(QMainWindow):
             raise NotImplementedError(self.tr("Sorry, bare repositories aren’t supported yet.").format(path))
 
         return repo
+
 
     def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | pygit2.Repository):
         assert rw
@@ -988,14 +979,19 @@ class MainWindow(QMainWindow):
     # Drag and drop
 
     @staticmethod
-    def getDropOutcomeFromMimeData(mime: QMimeData) -> tuple[Literal["", "open", "clone"], str]:
+    def getDropOutcomeFromLocalFilePath(path: str) -> tuple[Literal["", "patch", "open"], str]:
+        if path.endswith(".patch"):
+            return "patch", path
+        else:
+            return "open", path
+
+    @staticmethod
+    def getDropOutcomeFromMimeData(mime: QMimeData) -> tuple[Literal["", "patch", "open", "clone"], str]:
         if mime.hasUrls() and len(mime.urls()) > 0:
             url: QUrl = mime.urls()[0]
             if url.isLocalFile():
-                if url.path().endswith(".patch"):
-                    return "patch", url.toLocalFile()
-                else:
-                    return "open", url.toLocalFile()
+                path = url.toLocalFile()
+                return MainWindow.getDropOutcomeFromLocalFilePath(path)
             else:
                 return "clone", url.toString()
 
@@ -1013,26 +1009,15 @@ class MainWindow(QMainWindow):
         else:
             return "", ""
 
-    def dragEnterEvent(self, event: QDragEnterEvent):
-        action, data = self.getDropOutcomeFromMimeData(event.mimeData())
-        if action:
-            event.acceptProposedAction()
-
-    def dropEvent(self, event: QDropEvent):
-        action, data = self.getDropOutcomeFromMimeData(event.mimeData())
+    def handleDrop(self, action: str, data: str):
         if action == "clone":
-            event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
             self.cloneDialog(data)
         elif action == "open":
-            event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
             self.openRepo(data)
         elif action == "patch":
-            event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
             rw = self.currentRepoWidget()
             if rw:
-                print("Import patch", data)
                 rw.runTask(tasks.ApplyPatchFile, False, data)
-                # self.importPatch(rw, data)
             else:
                 showInformation(self, self.tr("No repository"),
                                 self.tr("Please open a repository before importing a patch."))
@@ -1040,7 +1025,7 @@ class MainWindow(QMainWindow):
             log.warning("MainWindow", f"Unsupported drag-and-drop outcome {action}")
 
     # -------------------------------------------------------------------------
-    # Refresh prefs
+    # Prefs
 
     def refreshPrefs(self, prefDiff: dict = dict()):
         # Apply new style
@@ -1064,6 +1049,42 @@ class MainWindow(QMainWindow):
         self.autoHideMenuBar.refreshPrefs()
         for rw in self.tabs.widgets():
             rw.refreshPrefs()
+
+    def onAcceptPrefsDialog(self, prefDiff: dict):
+        # Early out if the prefs didn't change
+        if not prefDiff:
+            return
+
+        # Apply changes from prefDiff to the actual prefs
+        for k, v in prefDiff.items():
+            settings.prefs.__dict__[k] = v
+
+        # Write prefs to disk
+        settings.prefs.write()
+
+        # Notify widgets
+        self.refreshPrefs(prefDiff)
+
+        # Warn if changed any setting that requires a reload
+        warnIfChanged = [
+            "graph_chronologicalOrder",  # need to reload entire commit sequence
+            "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
+            "diff_showStrayCRs",  # GF isn't able to re-render a single diff yet
+            "diff_colorblindFriendlyColors",  # ditto
+            "diff_largeFileThresholdKB",  # ditto
+            "diff_imageFileThresholdKB",  # ditto
+        ]
+
+        if any(k in warnIfChanged for k in prefDiff):
+            showInformation(
+                self, self.tr("Apply Settings"),
+                self.tr("You may need to reload the current repository for all new settings to take effect."))
+
+    def openPrefsDialog(self, focusOn: str = ""):
+        dlg = PrefsDialog(self, focusOn)
+        dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg.prefDiff))
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        dlg.show()
 
     # -------------------------------------------------------------------------
     # Find

@@ -28,24 +28,25 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-    	'PySide6.QtNetwork',
-    	'PySide6.QtOpenGL',
-    	'PySide6.QtQml',
-    	'PySide6.QtQuick',
-    	'PySide6.QtQuick3D',
-    	'PySide6.QtQuickControls2',
-    	'PySide6.QtQuickWidgets',
-    	'PySide6.QtOpenGLWidgets',
-    	'PySide6.QtDataVisualization',
-    	'PyQt6',
-    	'QtPy',
-    	'psutil'
+        'PySide6.QtNetwork',
+        'PySide6.QtOpenGL',
+        'PySide6.QtQml',
+        'PySide6.QtQuick',
+        'PySide6.QtQuick3D',
+        'PySide6.QtQuickControls2',
+        'PySide6.QtQuickWidgets',
+        'PySide6.QtOpenGLWidgets',
+        'PySide6.QtDataVisualization',
+        'PyQt6',
+        'QtPy',
+        'psutil'
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
 )
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
@@ -65,6 +66,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
@@ -75,10 +77,22 @@ coll = COLLECT(
     upx_exclude=[],
     name='GitFourchette',
 )
+
 app = BUNDLE(
     coll,
     name='GitFourchette.app',
     icon='gitfourchette.icns',
     bundle_identifier='io.jor.gitfourchette',
     version=APP_VERSION,
+    info_plist={
+        "NSReadableCopyright": "© 2024 Iliyas Jorio",
+        "LSApplicationCategoryType": "public.app-category.developer-tools",
+        "CFBundleDocumentTypes": [
+            {
+                "CFBundleTypeName": "folder",
+                "CFBundleTypeRole": "Editor",
+                "LSItemContentTypes": ["public.folder", "public.item"],
+            }
+        ]
+    }
 )
