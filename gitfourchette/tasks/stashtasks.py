@@ -51,6 +51,14 @@ class NewStash(RepoTask):
         if not status:
             yield from self._flowAbort(self.tr("There are no changes to stash."), "information")
 
+        # Prevent stashing any submodules
+        with Benchmark("NewStash/Query submodules"):
+            for submo in self.repo.listall_submodules():
+                status.pop(submo, None)
+
+        if not status:
+            yield from self._flowAbort(self.tr("There are no changes to stash (submodules cannot be stashed)."), "information")
+
         dlg = StashDialog(status, paths, self.parentWidget())
         setWindowModal(dlg)
         dlg.show()
