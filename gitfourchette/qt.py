@@ -13,7 +13,7 @@
 import os
 import sys
 
-APP_URL_SCHEME = "gitfourchette"
+from gitfourchette.appconsts import *
 
 QTPY = False
 QT5 = False

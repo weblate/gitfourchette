@@ -2,6 +2,7 @@
 
 import datetime
 import os
+from gitfourchette.appconsts import APP_VERSION
 
 
 # Bypass qtpy when building
@@ -79,4 +80,5 @@ app = BUNDLE(
     name='GitFourchette.app',
     icon='gitfourchette.icns',
     bundle_identifier='io.jor.gitfourchette',
+    version=APP_VERSION,
 )
