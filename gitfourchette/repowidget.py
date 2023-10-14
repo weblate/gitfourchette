@@ -290,7 +290,7 @@ class RepoWidget(QWidget):
         self.repoTaskRunner.put(task, *args, **kwargs)
         return task
 
-    def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1, preamble: Callable = None):
+    def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1):
         def createTask(*args):
             if argc >= 0:
                 args = args[:argc]
@@ -584,7 +584,9 @@ class RepoWidget(QWidget):
 
         self.runTask(tasks.RefreshRepo, flags, jumpTo)
 
-    def onRegainFocus(self):
+    def onRegainForeground(self):
+        """Refresh the repo as soon as possible."""
+
         if not self.state:
             return
 

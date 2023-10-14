@@ -86,8 +86,6 @@ class MainWindow(QMainWindow):
 
         self.refreshPrefs()
 
-        QGuiApplication.instance().applicationStateChanged.connect(self.onApplicationStateChanged)
-
     def goBack(self):
         rw = self.currentRepoWidget()
         if rw:
@@ -123,6 +121,11 @@ class MainWindow(QMainWindow):
             if not settings.TEST_MODE:
                 outcome = self.getDropOutcomeFromLocalFilePath(event.file())
                 self.handleDrop(*outcome)
+
+        elif event.type() == QEvent.Type.ApplicationStateChange:
+            # Refresh current RepoWidget when the app regains the active state (foreground)
+            if QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationActive:
+                QTimer.singleShot(0, self.onRegainForeground)
 
         elif event.type() == QEvent.Type.ThemeChange:
             # Reload QSS when the theme changes (e.g. switching between dark/light modes).
@@ -390,7 +393,7 @@ class MainWindow(QMainWindow):
                 settings.history.write()
         else:
             # Trigger repo refresh.
-            w.onRegainFocus()
+            w.onRegainForeground()
 
         w.refreshWindowTitle()
 
@@ -569,10 +572,15 @@ class MainWindow(QMainWindow):
 
     # -------------------------------------------------------------------------
 
-    def onApplicationStateChanged(self, state: Qt.ApplicationState):
+    def onRegainForeground(self):
         rw = self.currentRepoWidget()
-        if rw and state == Qt.ApplicationState.ApplicationActive and settings.prefs.debug_autoRefresh:
-            rw.onRegainFocus()
+        if not rw:
+            return
+        if QGuiApplication.applicationState() != Qt.ApplicationState.ApplicationActive:
+            return
+        if not settings.prefs.debug_autoRefresh:
+            return
+        rw.onRegainForeground()
 
     # -------------------------------------------------------------------------
     # Repo menu callbacks

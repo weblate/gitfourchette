@@ -129,7 +129,6 @@ class Jump(RepoTask):
         with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
             rw.graphView.selectUncommittedChanges()
             rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
-            yield from self._flowWaitNextEventLoop()
 
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY

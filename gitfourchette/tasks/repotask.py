@@ -87,7 +87,6 @@ class FlowControlToken(QObject):
 
     class Kind(enum.IntEnum):
         CONTINUE_ON_UI_THREAD = enum.auto()
-        CONTINUE_ON_UI_THREAD_LATER = enum.auto()
         CONTINUE_ON_WORK_THREAD = enum.auto()
         WAIT_READY = enum.auto()
 
@@ -240,13 +239,6 @@ class RepoTask(QObject):
         Returns the task to the UI thread.
         """
         yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
-
-    def _flowWaitNextEventLoop(self):
-        """
-        Defers continuation of the coroutine to the next UI event loop.
-        Use this to let UI events be processed during a long operation that cannot be moved to a separate thread.
-        """
-        yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD_LATER)
 
     def _flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
                      ) -> Generator[FlowControlToken, None, RepoTask]:
@@ -474,12 +466,6 @@ class RepoTaskRunner(QObject):
                     # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
                     wrapper = QRunnableFunctionWrapper(lambda: self._emitNextToken(flow))
                     self._threadPool.start(wrapper)
-
-                elif not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_UI_THREAD_LATER:
-                    self.progress.emit(self.tr("In progress: {0}...").format(task.name()), True)
-
-                    # Re-enter on next UI event loop
-                    QTimer.singleShot(0, lambda: self._iterateFlow(task, FlowControlToken()))
 
                 else:
                     # Get next continuation token on this thread then loop to beginning of _iterateFlow
