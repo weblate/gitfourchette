@@ -27,6 +27,11 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     qt.QDir.addSearchPath("assets", assetsSearchPath)
 
     mw = MainWindow()
+
+    # Don't let window linger in memory after this test
+    mw.setAttribute(qt.Qt.WidgetAttribute.WA_DeleteOnClose)
+
+    # Let qtbot track the window and close it at the end of the test
     qtbot.addWidget(mw)
 
     qt.QApplication.setActiveWindow(mw)
