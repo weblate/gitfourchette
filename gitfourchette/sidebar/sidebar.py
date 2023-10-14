@@ -420,14 +420,14 @@ class Sidebar(QTreeView):
     def selectAnyRef(self, *refCandidates: str) -> QModelIndex | None:
         # Early out if any candidate ref is already selected
         with contextlib.suppress(IndexError):
-            currentIndex = self.selectedIndexes()[0]
-            if currentIndex and currentIndex.data(ROLE_REF) in refCandidates:
-                return currentIndex
+            index = self.selectedIndexes()[0]
+            if index and index.data(ROLE_REF) in refCandidates:
+                return index
 
-        # Find an index that matches any of the candidates
+        # Find a visible index that matches any of the candidates
         for ref in refCandidates:
             index = self.indexForRef(ref)
-            if index:
+            if index and self.isAncestryChainExpanded(index):  # Don't force-expand any collapsed indexes
                 self.setCurrentIndex(index)
                 return index
 
@@ -458,7 +458,7 @@ class Sidebar(QTreeView):
         frontier = [(0, model.index(row, 0)) for row in range(model.rowCount())]
         while frontier:
             depth, index = frontier.pop()
-            item, data = SidebarModel.unpackItemAndData(index)
+            item = SidebarModel.unpackItem(index)
             if item in LEAF_ITEMS:
                 continue
             h = SidebarModel.getCollapseHash(index)
@@ -467,3 +467,22 @@ class Sidebar(QTreeView):
             if item == EItem.RemotesHeader:  # Only RemotesHeader has children that can themselves be expanded
                 for subrow in range(model.rowCount(index)):
                     frontier.append((depth+1, model.index(subrow, 0, index)))
+
+    def isAncestryChainExpanded(self, index: QModelIndex):
+        # Assume everything is expanded if collapse cache is missing (see restoreExpandedItems).
+        if not self.collapseCacheValid:
+            return True
+
+        # My collapsed state doesn't matter here - it only affects my children.
+        # So start looking at my parent.
+        index = index.parent()
+
+        # Walk up parent chain until root index (row -1)
+        while index.row() >= 0:
+            h = SidebarModel.getCollapseHash(index)
+            if h in self.collapseCache:
+                return False
+            index = index.parent()
+
+        return True
+
