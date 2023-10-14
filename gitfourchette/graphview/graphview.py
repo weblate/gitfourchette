@@ -298,7 +298,7 @@ class GraphView(QListView):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
         super().selectionChanged(selected, deselected)
 
-        if len(selected.indexes()) == 0:
+        if selected.count() == 0:
             self.onSetCurrent(None)
         else:
             self.onSetCurrent(selected.indexes()[0])

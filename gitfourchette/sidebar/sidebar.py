@@ -374,10 +374,18 @@ class Sidebar(QTreeView):
         elif item == EItem.RemoteBranch:
             self.newTrackingBranch.emit(data)
 
-    def currentChanged(self, current: QModelIndex, previous: QModelIndex):
-        super().currentChanged(current, previous)
-        if current.isValid():
-            self.onEntryClicked(*SidebarModel.unpackItemAndData(current))
+    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
+        super().selectionChanged(selected, deselected)
+
+        if selected.count() == 0:
+            return
+
+        current = selected.indexes()[0]
+        if not current.isValid():
+            return
+
+        unpacked = SidebarModel.unpackItemAndData(current)
+        self.onEntryClicked(*unpacked)
 
     def mouseDoubleClickEvent(self, event):
         # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.

@@ -200,6 +200,11 @@ class Jump(RepoTask):
         if not commitFound:
             yield from self._flowAbort()
 
+        # Attempt to select matching ref in sidebar
+        with QSignalBlockerContext(rw.sidebar):  # Don't emit jump signals
+            refCandidates = rw.state.reverseRefCache.get(locator.commit, [])
+            rw.sidebar.selectAnyRef(*refCandidates)
+
         flv = rw.committedFiles
 
         if flv.commitOid == locator.commit:
@@ -207,10 +212,6 @@ class Jump(RepoTask):
             pass
 
         else:
-            # Attempt to select matching ref in sidebar
-            with QSignalBlockerContext(rw.sidebar):  # Don't emit jump signals
-                rw.sidebar.selectAnyRef(*rw.state.reverseRefCache.get(locator.commit, []))
-
             # Load commit (async)
             subtask: tasks.LoadCommit = yield from self._flowSubtask(tasks.LoadCommit, locator.commit)
 

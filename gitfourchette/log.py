@@ -12,7 +12,7 @@ class Logger:
         self.verbosity = Logger.Verbosity.NORMAL
 
         self.excludeTags = {Logger.Verbosity.BENCHMARK: {"nav", "status", "repotaskrunner"},
-                            Logger.Verbosity.NORMAL: {"nav", "status", "repotaskrunner", "benchmark"},
+                            Logger.Verbosity.NORMAL: {"nav", "status", "repotaskrunner", "benchmark", "jump"},
                             Logger.Verbosity.VERBOSE: {}}
 
     def info(self, tag, *args):
