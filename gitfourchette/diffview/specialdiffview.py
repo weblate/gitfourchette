@@ -18,7 +18,8 @@ class SpecialDiffView(QTextBrowser):
         self.setOpenLinks(False)
 
     def displaySpecialDiffError(self, err: SpecialDiffError):
-        document = QTextDocument()
+        document = QTextDocument(self)
+        document.setObjectName("DiffErrorDocument")
 
         icon = stockIcon(err.icon)
         pixmap = icon.pixmap(48, 48)
@@ -42,7 +43,8 @@ class SpecialDiffView(QTextBrowser):
         self.replaceDocument(document)
 
     def displayImageDiff(self, delta: pygit2.DiffDelta, imageA: QImage, imageB: QImage):
-        document = QTextDocument()
+        document = QTextDocument(self)
+        document.setObjectName("ImageDiffDocument")
 
         imageB.setDevicePixelRatio(self.devicePixelRatio())
 

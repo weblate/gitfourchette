@@ -93,6 +93,7 @@ class DiffDocument:
         style = DiffStyle()
 
         document = QTextDocument()  # recreating a document is faster than clearing the existing one
+        document.setObjectName("DiffPatchDocument")
         document.setDocumentLayout(QPlainTextDocumentLayout(document))
 
         cursor: QTextCursor = QTextCursor(document)

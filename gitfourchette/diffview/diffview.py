@@ -199,6 +199,7 @@ class DiffView(QPlainTextEdit):
         self.currentPatch = patch
         self.currentLocator = locator
 
+        dm.document.setParent(self)
         self.setFont(dm.document.defaultFont())
         self.setDocument(dm.document)
         self.highlighter.setDocument(dm.document)
