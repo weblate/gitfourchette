@@ -80,6 +80,7 @@ class NavLocator:
     diffLineNo: int = 0
     diffCursor: int = 0
     diffScroll: int = 0
+    diffScrollTop: int = 0
     flags: NavFlags = NavFlags.DefaultFlags  # WARNING: Those are not saved in history
 
     URL_AUTHORITY: ClassVar[str] = "jump"
@@ -114,6 +115,7 @@ class NavLocator:
         return NavLocator(context=NavContext.STAGED, path=path)
 
     def isSimilarEnoughTo(self, other: NavLocator):
+        """Coarse equality - Compare context, commit & path (ignores flags & position in diff)"""
         return (self.context == other.context
                 and self.commit == other.commit
                 and self.path == other.path)
@@ -164,6 +166,9 @@ class NavLocator:
 
     def replace(self, **kwargs) -> NavLocator:
         return dataclasses.replace(self, **kwargs)
+
+    def coarse(self, keepFlags=False):
+        return NavLocator(context=self.context, commit=self.commit, path=self.path)
 
     def withExtraFlags(self, extraFlags: NavFlags) -> NavLocator:
         return self.replace(flags=self.flags | extraFlags)

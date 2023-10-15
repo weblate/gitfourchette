@@ -18,6 +18,8 @@ from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.toolbox import *
 
+TAG = "DiffView"
+
 
 def get1FileChangedByDiff(diff: Diff):
     for p in diff:
@@ -244,13 +246,51 @@ class DiffView(QPlainTextEdit):
         if not (sol <= pos < eol):
             pos = sol
 
+        # Unholy kludge to stabilize scrollbar position when QPlainTextEdit has wrapped lines
+        vsb = self.verticalScrollBar()
+        scrollTo = locator.diffScroll
+        if self.lineWrapMode() != QPlainTextEdit.LineWrapMode.NoWrap and locator.diffScroll != 0:
+            topCursor = self.textCursor()
+            topCursor.setPosition(locator.diffScrollTop)
+            self.setTextCursor(topCursor)
+            self.centerCursor()
+            scrolls = 0
+            corner = self.getStableTopLeftCorner()
+            while scrolls < 500 and self.cursorForPosition(corner).position() < locator.diffScrollTop:
+                scrolls += 1
+                scrollTo = vsb.value() + 1
+                vsb.setValue(scrollTo)
+            # log.info(TAG, f"Stabilized in {scrolls} iterations - final scroll {scrollTo} vs {locator.diffScroll})"
+            #               f" - char pos {self.cursorForPosition(corner).position()} vs {locator.diffScrollTop}")
+
         # Move text cursor
         newTextCursor = self.textCursor()
         newTextCursor.setPosition(pos)
         self.setTextCursor(newTextCursor)
 
         # Finally, restore the scrollbar
-        self.verticalScrollBar().setValue(locator.diffScroll)
+        vsb.setValue(scrollTo)
+
+    def getStableTopLeftCorner(self):
+        return QPoint(0, self.fontMetrics().height() // 2)
+
+    def getPreciseLocator(self):
+        corner = self.getStableTopLeftCorner()
+        cfp: QTextCursor = self.cursorForPosition(corner)
+
+        diffCursor = self.textCursor().position()
+        diffLineNo = self.findLineDataIndexAt(diffCursor)
+        diffScroll = self.verticalScrollBar().value()
+        diffScrollTop = cfp.position()
+        locator = self.currentLocator.coarse().replace(
+            diffCursor=diffCursor,
+            diffLineNo=diffLineNo,
+            diffScroll=diffScroll,
+            diffScrollTop=diffScrollTop)
+
+        # log.info("DiffView", f"getPreciseLocator: {diffScrollTop} - {cfp.positionInBlock()}"
+        #                      f" - {cfp.block().text()[cfp.positionInBlock():]}")
+        return locator
 
     def refreshPrefs(self):
         monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
@@ -264,9 +304,10 @@ class DiffView(QPlainTextEdit):
 
     def refreshWordWrap(self):
         if settings.prefs.diff_wordWrap:
-            self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+            wrapMode = QPlainTextEdit.LineWrapMode.WidgetWidth
         else:
-            self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+            wrapMode = QPlainTextEdit.LineWrapMode.NoWrap
+        self.setLineWrapMode(wrapMode)
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         try:

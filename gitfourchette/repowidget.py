@@ -318,44 +318,15 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def saveFilePositions(self):
-        diffCursor = 0
-        diffLineNo = 0
-        diffScroll = 0
-        if self.diffStack.currentWidget() == self.diffView:
-            if not self.diffView.currentLocator.isSimilarEnoughTo(self.navLocator):
-                log.warning(TAG, f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. ({self.diffView.currentLocator})")
-            diffCursor = self.diffView.textCursor().position()
-            diffLineNo = self.diffView.findLineDataIndexAt(diffCursor)
-            diffScroll = self.diffView.verticalScrollBar().value()
-
-        self.navLocator = self.navLocator.replace(
-            diffCursor=diffCursor,
-            diffLineNo=diffLineNo,
-            diffScroll=diffScroll)
-
-        self.navHistory.push(self.navLocator)
-
+        if self.diffStack.currentWidget() is self.diffView:
+            newLocator = self.diffView.getPreciseLocator()
+            if not newLocator.isSimilarEnoughTo(self.navLocator):
+                log.warning(TAG, f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")
+        else:
+            newLocator = self.navLocator.coarse()
+        self.navHistory.push(newLocator)
+        self.navLocator = newLocator
         return self.navLocator
-
-    def restoreSelectedFile(self, locator: NavLocator):
-        # TODO: This should probably go
-
-        if locator.context.isDirty():
-            fl = self.dirtyFiles
-        elif locator.context == NavContext.STAGED:
-            fl = self.stagedFiles
-        elif locator.context == NavContext.COMMITTED:
-            fl = self.committedFiles
-        else:
-            return False
-
-        fl.clearSelectionSilently()
-        if fl.selectFile(locator.path):
-            # self.curLocator = locator  #? loadpatch should do this?
-            # self.navHistory.push(locator)
-            return True
-        else:
-            return False
 
     def jump(self, locator: NavLocator):
         self.runTask(tasks.Jump, locator)
