@@ -189,6 +189,9 @@ class DiffView(QPlainTextEdit):
         self.searchBar.hide()
         self.widgetMoved.connect(self.searchBar.snapToParent)
 
+        # Initialize font
+        self.refreshPrefs()
+
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
 
@@ -202,7 +205,6 @@ class DiffView(QPlainTextEdit):
         self.currentLocator = locator
 
         dm.document.setParent(self)
-        self.setFont(dm.document.defaultFont())
         self.setDocument(dm.document)
         self.highlighter.setDocument(dm.document)
 
@@ -297,6 +299,10 @@ class DiffView(QPlainTextEdit):
         if settings.prefs.diff_font:
             monoFont.fromString(settings.prefs.diff_font)
         self.setFont(monoFont)
+
+        currentDocument = self.document()
+        if currentDocument:
+            currentDocument.setDefaultFont(monoFont)
         tabWidth = settings.prefs.diff_tabSpaces
         self.setTabStopDistance(QFontMetricsF(monoFont).horizontalAdvance(' ' * tabWidth))
         self.refreshWordWrap()
