@@ -173,7 +173,7 @@ class PrefsDialog(QDialog):
                 del self.prefDiff[k]
         else:
             self.prefDiff[k] = v
-        log.info("prefsdialog", f"Assign {k} {v}")
+        log.verbose("prefsdialog", f"Assign {k} {v}")
 
     def getMostRecentValue(self, k):
         if k in self.prefDiff:

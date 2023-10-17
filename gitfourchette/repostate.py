@@ -282,7 +282,7 @@ class RepoState:
                 progress.setValue(rowInt)
                 QCoreApplication.processEvents()
 
-        log.info("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
+        log.verbose("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
 
         self.commitSequence = commitSequence
         self.graph = graph

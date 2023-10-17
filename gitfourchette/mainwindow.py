@@ -98,7 +98,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def reloadStyleSheet():
-        log.info("MainWindow", "Reloading QSS")
+        log.verbose("MainWindow", "Reloading QSS")
         with NonCriticalOperation("Reload application-wide stylesheet"):
             MainWindow.styleSheetReloadScheduled = False
             styleSheetFile = QFile("assets:style.qss")

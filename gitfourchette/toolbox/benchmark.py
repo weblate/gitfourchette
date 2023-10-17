@@ -1,11 +1,13 @@
 from gitfourchette import log
 import os
-import timeit
+import time
+
+TAG = "benchmark"
 
 try:
     import psutil
 except ModuleNotFoundError:
-    log.info("benchmark", "psutil isn't available. Memory pressure estimates won't work.")
+    log.info(TAG, "psutil isn't available. Memory pressure estimates won't work.")
     psutil = None
 
 
@@ -27,13 +29,13 @@ class Benchmark:
     def __enter__(self):
         Benchmark.nesting.append(self.name)
         self.rssAtStart = getRSS()
-        self.start = timeit.default_timer()
+        self.start = time.perf_counter()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        tt = timeit.default_timer() - self.start
+        tt = time.perf_counter() - self.start
         rss = getRSS()
-        log.info("benchmark", F"{int(tt * 1000):6d}ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
+        log.verbose(TAG, F"{int(tt * 1000):6d}ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
         Benchmark.nesting.pop()
 
 

@@ -7,6 +7,8 @@ import os
 import re
 
 
+TAG = "porcelain"
+
 BLANK_OID = pygit2.Oid(raw=b'')
 
 CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
@@ -112,7 +114,7 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
 
 class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallbacks):
     def stash_apply_progress(self, pr):
-        log.info("porcelain", f"stash apply progress: {pr}")
+        log.info(TAG, f"stash apply progress: {pr}")
 
 
 def _versionAtLeast(
@@ -221,7 +223,7 @@ def getUnstagedChanges(repo: Repository, updateIndex: bool = False, showBinary: 
     # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
     # index was stale, but this requires the repo to be writable.
     if updateIndex:
-        log.info("porcelain", "GIT_DIFF_UPDATE_INDEX")
+        log.verbose(TAG, "GIT_DIFF_UPDATE_INDEX")
         flags |= pygit2.GIT_DIFF_UPDATE_INDEX
 
     if showBinary:
@@ -543,7 +545,7 @@ def deleteRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks:
     remoteName, branchName = splitRemoteBranchShorthand(remoteBranchName)
 
     refspec = f":{HEADS_PREFIX}{branchName}"
-    log.info("porcelain", f"Delete remote branch: refspec: \"{refspec}\"")
+    log.info(TAG, f"Delete remote branch: refspec: \"{refspec}\"")
 
     remote = repo.remotes[remoteName]
     remote.push([refspec], callbacks=remoteCallbacks)
@@ -561,7 +563,7 @@ def renameRemoteBranch(repo: Repository, oldRemoteBranchName: str, newBranchName
     # Next, delete the old branch
     refspec2 = f":{HEADS_PREFIX}{oldBranchName}"
 
-    log.info("porcelain", f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
+    log.info(TAG, f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
 
     remote = repo.remotes[remoteName]
     remote.push([refspec1, refspec2], callbacks=remoteCallbacks)
@@ -586,7 +588,7 @@ def deleteStaleRemoteHEADSymbolicRef(repo: Repository, remoteName: str):
         except KeyError:  # pygit2 wraps GIT_ENOTFOUND with KeyError
             # Stale -- nuke it
             repo.references.delete(HEADRefName)
-            log.info("porcelain", "Deleted stale remote HEAD symbolic ref: " + HEADRefName)
+            log.info(TAG, "Deleted stale remote HEAD symbolic ref: " + HEADRefName)
 
 
 def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
@@ -755,7 +757,7 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
             commit: Commit = repo.head.peel(Commit)
             tips.append(("HEAD", commit))
         except pygit2.InvalidSpecError as e:
-            log.info("porcelain", F"{e} - Skipping detached HEAD")
+            log.info(TAG, F"{e} - Skipping detached HEAD")
             pass
 
     for ref in repo.listall_reference_objects():
@@ -768,7 +770,7 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
             tips.append((ref.name, commit))
         except pygit2.InvalidSpecError as e:
             # Some refs might not be committish, e.g. in linux's source repo
-            log.info("porcelain", F"{e} - Skipping ref '{ref.name}'")
+            log.info(TAG, F"{e} - Skipping ref '{ref.name}'")
             pass
 
     for i, stash in enumerate(repo.listall_stashes()):
@@ -776,7 +778,7 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
             commit: Commit = repo[stash.commit_id].peel(pygit2.Commit)
             tips.append((f"stash@{{{i}}}", commit))
         except pygit2.InvalidSpecError as e:
-            log.info("porcelain", F"{e} - Skipping stash '{stash.message}'")
+            log.info(TAG, F"{e} - Skipping stash '{stash.message}'")
             pass
 
     # Reinsert all tips in chronological order
@@ -797,7 +799,7 @@ def refsPointingAtCommit(repo: pygit2.Repository, oid: pygit2.Oid):
 
         if type(ref.target) != pygit2.Oid:
             # Symbolic reference
-            # log.info("porcelain", F"Skipping symbolic reference {refKey} --> {ref.target}")
+            log.verbose(TAG, F"Skipping symbolic reference {refKey} --> {ref.target}")
             continue
 
         if ref.target != oid:
@@ -1078,7 +1080,7 @@ def fastForwardBranch(repo: pygit2.Repository, localBranchName: str, remoteBranc
         pygit2.GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY: "ff only",
         pygit2.GIT_MERGE_PREFERENCE_NO_FASTFORWARD: "no ff"
     }
-    log.info("porcelain", f"Merge analysis: {mergeAnalysis}. Merge preference: {mergePrefNames.get(mergePref, '???')}.")
+    log.info(TAG, f"Merge analysis: {mergeAnalysis}. Merge preference: {mergePrefNames.get(mergePref, '???')}.")
 
     if mergeAnalysis & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
         # Local branch is up-to-date with remote branch, nothing to do.

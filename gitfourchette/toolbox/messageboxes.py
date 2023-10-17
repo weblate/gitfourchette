@@ -91,7 +91,7 @@ def asyncMessageBox(
 
     loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
     if icon in ['information', 'question']:
-        log.info("MessageBox", loggedMessage)
+        log.verbose("MessageBox", loggedMessage)
     else:
         log.warning("MessageBox", loggedMessage)
 
