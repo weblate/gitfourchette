@@ -182,3 +182,26 @@ class QScrollBackupContext:
     def __exit__(self, exc_type, exc_val, exc_tb):
         for o, v in zip(self.scrollBars, self.values):
             o.setValue(v)
+
+
+class QTabBarStyleNoRotatedText(QProxyStyle):
+    """
+    Prevents text from being rotated in a QTabBar's labels with the West or East positions.
+
+    Does not work well with the macOS native theme!
+
+    Adapted from https://forum.qt.io/post/433000
+    """
+
+    def sizeFromContents(self, type: QStyle.ContentsType, option: QStyleOption, size: QSize, widget: QWidget) -> QSize:
+        s = super().sizeFromContents(type, option, size, widget)
+        if type == QStyle.ContentsType.CT_TabBarTab:
+            s.transpose()
+        return s
+
+    def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, widget: QWidget = None):
+        if element == QStyle.ControlElement.CE_TabBarTabLabel:
+            assert isinstance(option, QStyleOptionTab)
+            option: QStyleOptionTab = QStyleOptionTab(option)  # copy
+            option.shape = QTabBar.Shape.RoundedNorth  # override shape
+        super().drawControl(element, option, painter, widget)

@@ -68,7 +68,17 @@ class PrefsDialog(QDialog):
         self.prefDiff = {}
 
         tabWidget = QTabWidget(self)
-        tabWidget.setTabPosition(QTabWidget.TabPosition.North)
+
+        # Make tabs vertical if possible
+        if MACOS and prefs.qtStyle.lower() in ["", "macos"]:
+            # Vertical tabs don't work well with the macOS theme
+            tabWidget.setTabPosition(QTabWidget.TabPosition.North)
+        else:
+            # Pass a string to the proxy's ctor, NOT QApplication.style() as this would transfer the ownership
+            # of the style to the proxy!!!
+            proxyStyle = QTabBarStyleNoRotatedText(prefs.qtStyle)
+            tabWidget.setStyle(proxyStyle)
+            tabWidget.setTabPosition(QTabWidget.TabPosition.West)
 
         pCategory = "~~~dummy~~~"
         form: QFormLayout = None

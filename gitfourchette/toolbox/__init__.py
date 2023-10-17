@@ -23,6 +23,6 @@ from .qtutils import (addComboBoxItem, setWindowModal, isImageFormatSupported,
                       onAppThread, tweakWidgetFont, formatWidgetText,
                       formatWidgetTooltip, stockIcon,
                       openFolder, showInFolder, DisableWidgetContext,
-                      QScrollBackupContext)
+                      QScrollBackupContext, QTabBarStyleNoRotatedText)
 from .textutils import escape, escamp, paragraphs, messageSummary, elide
 from .validatormultiplexer import ValidatorMultiplexer
