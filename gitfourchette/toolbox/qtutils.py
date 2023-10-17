@@ -161,3 +161,24 @@ class MakeNonNativeDialog(QObject):
             watched.removeEventFilter(self)
             self.deleteLater()
         return False
+
+
+class QScrollBackupContext:
+    def __init__(self, *items: QAbstractScrollArea | QScrollBar):
+        self.scrollBars = []
+        self.values = []
+
+        for o in items:
+            if isinstance(o, QAbstractScrollArea):
+                self.scrollBars.append(o.horizontalScrollBar())
+                self.scrollBars.append(o.verticalScrollBar())
+            else:
+                assert isinstance(o, QScrollBar)
+                self.scrollBars.append(o)
+
+    def __enter__(self):
+        self.values = [o.value() for o in self.scrollBars]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for o, v in zip(self.scrollBars, self.values):
+            o.setValue(v)

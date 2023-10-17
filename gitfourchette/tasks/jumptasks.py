@@ -126,7 +126,10 @@ class Jump(RepoTask):
         previousRowStaged = rw.stagedFiles.earliestSelectedRow()
         previousRowDirty = rw.dirtyFiles.earliestSelectedRow()
 
-        with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
+        with (
+            QSignalBlockerContext(rw.graphView, rw.sidebar),  # Don't emit jump signals
+            QScrollBackupContext(rw.sidebar),  # Stabilize scroll bar value
+        ):
             rw.graphView.selectUncommittedChanges()
             rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
@@ -201,7 +204,10 @@ class Jump(RepoTask):
             yield from self._flowAbort()
 
         # Attempt to select matching ref in sidebar
-        with QSignalBlockerContext(rw.sidebar):  # Don't emit jump signals
+        with (
+            QSignalBlockerContext(rw.sidebar),  # Don't emit jump signals
+            QScrollBackupContext(rw.sidebar),  # Stabilize scroll bar value
+        ):
             refCandidates = rw.state.reverseRefCache.get(locator.commit, [])
             rw.sidebar.selectAnyRef(*refCandidates)
 
