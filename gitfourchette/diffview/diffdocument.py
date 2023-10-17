@@ -160,16 +160,19 @@ class DiffDocument:
             insertLineData(hunkHeaderLD, style.arobaseBF, style.arobaseCF)
 
             for hunkLineNum, diffLine in enumerate(hunk.lines):
+                origin = diffLine.origin
+                content = diffLine.content
+
                 # Any lines that aren't +/- break up the current clump
-                if diffLine.origin not in "+-" and numLinesInClump != 0:
+                if origin not in "+-" and numLinesInClump != 0:
                     clumpID += 1
                     numLinesInClump = 0
 
                 # Skip GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
-                if diffLine.origin in "=><":
+                if origin in "=><":
                     continue
 
-                if len(diffLine.content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
+                if len(content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
                     target = locator.withExtraFlags(NavFlags.AllowLongLines)
                     raise SpecialDiffError(
                         translate("Diff", "This file contains very long lines."),
@@ -177,22 +180,22 @@ class DiffDocument:
                         QStyle.StandardPixmap.SP_MessageBoxWarning)
 
                 ld = LineData(
-                    text=diffLine.content,
+                    text=content,
                     cursorStart=cursor.position(),
                     diffLine=diffLine,
                     hunkPos=DiffLinePos(hunkID, hunkLineNum))
 
                 bf = defaultBF
 
-                assert diffLine.origin in " -+", F"diffline origin: '{diffLine.origin}'"
-                if diffLine.origin == '+':
+                assert origin in " -+", F"diffline origin: '{origin}'"
+                if origin == '+':
                     bf = style.plusBF
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == -1
                     newLine += 1
                     ld.clumpID = clumpID
                     numLinesInClump += 1
-                elif diffLine.origin == '-':
+                elif origin == '-':
                     bf = style.minusBF
                     assert diffLine.new_lineno == -1
                     assert diffLine.old_lineno == oldLine

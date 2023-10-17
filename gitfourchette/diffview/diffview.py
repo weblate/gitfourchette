@@ -21,13 +21,6 @@ from gitfourchette.toolbox import *
 TAG = "DiffView"
 
 
-def get1FileChangedByDiff(diff: Diff):
-    for p in diff:
-        if p.delta.status != pygit2.GIT_DELTA_DELETED:
-            return p.delta.new_file.path
-    return ""
-
-
 @enum.unique
 class PatchPurpose(enum.IntFlag):
     STAGE = enum.auto()
@@ -145,8 +138,9 @@ class DiffView(QPlainTextEdit):
     lineCursorStartCache: list[int]
     lineHunkIDCache: list[int]
     currentLocator: NavLocator
-    currentPatch: Patch
-    repo: Repository
+    currentPatch: Patch | None
+    currentWorkdirFileStat: os.stat_result | None
+    repo: Repository | None
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -159,6 +153,7 @@ class DiffView(QPlainTextEdit):
         self.lineCursorStartCache = []
         self.lineHunkIDCache = []
         self.currentLocator = NavLocator()
+        self.currentFileStat = None
         self.currentPatch = None
         self.repo = None
 
@@ -192,23 +187,92 @@ class DiffView(QPlainTextEdit):
         # Initialize font
         self.refreshPrefs()
 
-    def moveEvent(self, event: QMoveEvent):
-        self.widgetMoved.emit()
+    # ---------------------------------------------
+    # Qt events
 
-    def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, dm: DiffDocument):
+    def contextMenuEvent(self, event: QContextMenuEvent):
+        try:
+            self.doContextMenu(event.globalPos())
+        except Exception as exc:
+            # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
+            excMessageBox(exc, message="Failed to create DiffView context menu")
+            return
+
+    def moveEvent(self, event: QMoveEvent):
+        """Emit signal to reposition the search bar"""
+        self.widgetMoved.emit()
+        super().moveEvent(event)
+
+    def resizeEvent(self, event: QResizeEvent):
+        """Update gutter geometry"""
+        super().resizeEvent(event)
+        self.resizeGutter()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+        navContext = self.currentLocator.context
+        if k in GlobalShortcuts.stageHotkeys:
+            if navContext == NavContext.UNSTAGED:
+                self.stageSelection()
+            else:
+                QApplication.beep()
+        elif k in GlobalShortcuts.discardHotkeys:
+            if navContext == NavContext.STAGED:
+                self.unstageSelection()
+            elif navContext == NavContext.UNSTAGED:
+                self.discardSelection()
+            else:
+                QApplication.beep()
+        else:
+            super().keyPressEvent(event)
+
+    # ---------------------------------------------
+    # Document replacement
+
+    def clear(self):  # override
+        # Clear info about the current patch - necessary for document reuse detection to be correct when the user
+        # clears the selection in a FileList and then reselects the last-displayed document.
+        self.currentLocator = NavLocator()
+        self.currentFileStat = None
+        self.currentPatch = None
+
+        # Clear the actual contents
+        super().clear()
+
+    def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, newDoc: DiffDocument):
         oldDocument = self.document()
+
+        newFileStat = None
+        if locator.context.isWorkdir() and repo is not None:
+            fullPath = os.path.join(repo.workdir, locator.path)
+            newFileStat = os.stat(fullPath, follow_symlinks=True)
+
+        # Detect if we're trying to load exactly the same patch - common occurrence when moving the app back to the
+        # foreground. In that case, don't change the document to prevent losing any selected text.
+        if self.canReuseCurrentDocument(locator, newFileStat, newDoc):
+            assert patch.data == self.currentPatch.data  # this check can be pretty expensive!
+
+            # Delete new document
+            assert newDoc.document is not oldDocument  # make sure it's not in use before deleting
+            newDoc.document.deleteLater()
+            newDoc.document = None  # prevent any callers from using a stale object
+
+            # Bail now - don't change the document
+            return
+
         if oldDocument:
             oldDocument.deleteLater()  # avoid leaking memory/objects, even though we do set QTextDocument's parent to this QTextEdit
 
         self.repo = repo
         self.currentPatch = patch
         self.currentLocator = locator
+        self.currentFileStat = newFileStat
 
-        dm.document.setParent(self)
-        self.setDocument(dm.document)
-        self.highlighter.setDocument(dm.document)
+        newDoc.document.setParent(self)
+        self.setDocument(newDoc.document)
+        self.highlighter.setDocument(newDoc.document)
 
-        self.lineData = dm.lineData
+        self.lineData = newDoc.lineData
         self.lineCursorStartCache = [ld.cursorStart for ld in self.lineData]
         self.lineHunkIDCache = [ld.hunkPos.hunkID for ld in self.lineData]
 
@@ -226,6 +290,47 @@ class DiffView(QPlainTextEdit):
 
         # Now restore cursor/scrollbar positions
         self.restorePosition(locator)
+
+    @benchmark
+    def canReuseCurrentDocument(
+            self,
+            newLocator: NavLocator,
+            newFileStat: os.stat_result,
+            newDocument: DiffDocument
+    ) -> bool:
+        """Detect if we're trying to reload the same patch that's already being displayed"""
+
+        if not self.currentLocator.isSimilarEnoughTo(newLocator):
+            return False
+
+        if len(newDocument.lineData) != len(self.lineData):
+            return False
+
+        # If the locator points within a commit, the contents of the patch aren't supposed to ever change
+        if not newLocator.context.isWorkdir():
+            return True
+
+        # Locator is in workdir
+        if self.currentFileStat is None:
+            return False
+
+        # Compare file stats
+        oldFileStat: os.stat_result = self.currentFileStat
+        similarStats = (
+                newFileStat.st_mode == oldFileStat.st_mode
+                and newFileStat.st_size == oldFileStat.st_size
+                and newFileStat.st_ino == oldFileStat.st_ino
+                and newFileStat.st_mtime_ns == oldFileStat.st_mtime_ns
+                and newFileStat.st_ctime_ns == oldFileStat.st_ctime_ns
+        )
+
+        if not similarStats:
+            return False
+
+        return similarStats
+
+    # ---------------------------------------------
+    # Restore position
 
     def restorePosition(self, locator: NavLocator):
         pos = locator.diffCursor
@@ -294,6 +399,9 @@ class DiffView(QPlainTextEdit):
         #                      f" - {cfp.block().text()[cfp.positionInBlock():]}")
         return locator
 
+    # ---------------------------------------------
+    # Prefs
+
     def refreshPrefs(self):
         monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         if settings.prefs.diff_font:
@@ -303,6 +411,7 @@ class DiffView(QPlainTextEdit):
         currentDocument = self.document()
         if currentDocument:
             currentDocument.setDefaultFont(monoFont)
+
         tabWidth = settings.prefs.diff_tabSpaces
         self.setTabStopDistance(QFontMetricsF(monoFont).horizontalAdvance(' ' * tabWidth))
         self.refreshWordWrap()
@@ -315,13 +424,13 @@ class DiffView(QPlainTextEdit):
             wrapMode = QPlainTextEdit.LineWrapMode.NoWrap
         self.setLineWrapMode(wrapMode)
 
-    def contextMenuEvent(self, event: QContextMenuEvent):
-        try:
-            self.doContextMenu(event.globalPos())
-        except Exception as exc:
-            # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
-            excMessageBox(exc, message="Failed to create DiffView context menu")
-            return
+    def toggleWordWrap(self):
+        settings.prefs.diff_wordWrap = not settings.prefs.diff_wordWrap
+        settings.prefs.write()
+        self.refreshWordWrap()
+
+    # ---------------------------------------------
+    # Context menu
 
     def doContextMenu(self, globalPos: QPoint):
         # Don't show the context menu if we're empty
@@ -436,29 +545,6 @@ class DiffView(QPlainTextEdit):
         menu.setObjectName("DiffViewContextMenu")
         menu.exec(globalPos)
         menu.deleteLater()
-
-    def toggleWordWrap(self):
-        settings.prefs.diff_wordWrap = not settings.prefs.diff_wordWrap
-        settings.prefs.write()
-        self.refreshWordWrap()
-
-    def keyPressEvent(self, event: QKeyEvent):
-        k = event.key()
-        navContext = self.currentLocator.context
-        if k in GlobalShortcuts.stageHotkeys:
-            if navContext == NavContext.UNSTAGED:
-                self.stageSelection()
-            else:
-                QApplication.beep()
-        elif k in GlobalShortcuts.discardHotkeys:
-            if navContext == NavContext.STAGED:
-                self.unstageSelection()
-            elif navContext == NavContext.UNSTAGED:
-                self.discardSelection()
-            else:
-                QApplication.beep()
-        else:
-            super().keyPressEvent(event)
 
     # ---------------------------------------------
     # Patch
@@ -597,9 +683,7 @@ class DiffView(QPlainTextEdit):
         paddingString = '0' * (2*self.gutterMaxDigits + 2)
         return self.fontMetrics().horizontalAdvance(paddingString)
 
-    def resizeEvent(self, event: QResizeEvent):
-        super().resizeEvent(event)
-
+    def resizeGutter(self):
         cr: QRect = self.contentsRect()
         self.gutter.setGeometry(QRect(cr.left(), cr.top(), self.gutterWidth(), cr.height()))
 
@@ -702,17 +786,9 @@ class DiffView(QPlainTextEdit):
         return clickedCursor.position()
 
     def replaceCursor(self, cursor: QTextCursor):
-        # Back up horizontal slider position
-        hsb: QScrollBar = self.horizontalScrollBar()
-        if hsb:
-            hsbPos = hsb.sliderPosition()
-
-        # Replace the cursor
-        self.setTextCursor(cursor)
-
-        # Restore horizontal slider position
-        if hsb:
-            hsb.setSliderPosition(hsbPos)
+        """Replace the cursor without moving the horizontal scroll bar"""
+        with QScrollBackupContext(self.horizontalScrollBar()):
+            self.setTextCursor(cursor)
 
     def selectWholeLineAt(self, point: QPoint):
         clickedPosition = self.getStartOfLineAt(point)
@@ -812,7 +888,8 @@ class DiffView(QPlainTextEdit):
         self.contextualHelp.emit("💡 " + help)
 
     # ---------------------------------------------
-    # Clipboard
+    # Clipboard U+2029 fix
+    # TODO: Do we still need this stuff with recent versions of Qt 6?
 
     def onCopyAvailable(self, yes: bool):
         if not WINDOWS and settings.prefs.debug_fixU2029InClipboard:
@@ -840,7 +917,7 @@ class DiffView(QPlainTextEdit):
         clipboard = QApplication.clipboard()
 
         if __debug__ and "\u2029" not in clipboard.text(mode):
-            log.info("DiffView", F"Scrubbing U+2029 would be useless in this buffer!")
+            log.info(TAG, F"Scrubbing U+2029 would be useless in this buffer!")
             return
 
         # Even if we have focus, another process might have modified the clipboard in the background.
@@ -851,7 +928,7 @@ class DiffView(QPlainTextEdit):
         if not ownsData:
             return
 
-        log.info("DiffView", F"Scrubbing U+2029 characters from clipboard ({mode})")
+        log.info(TAG, F"Scrubbing U+2029 characters from clipboard ({mode})")
         text = clipboard.text(mode).replace("\u2029", "\n")
         with QSignalBlockerContext(clipboard):
             clipboard.setText(text, mode)
