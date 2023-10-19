@@ -1,4 +1,5 @@
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
 
 
@@ -20,6 +21,10 @@ class SearchBar(QWidget):
         self.ui.backwardButton.clicked.connect(self.searchPrevious)
 
         self.ui.lineEdit.textChanged.connect(self.onSearchTextChanged)
+
+        appendShortcutToToolTip(self.ui.backwardButton, QKeySequence.StandardKey.FindPrevious)
+        appendShortcutToToolTip(self.ui.forwardButton, QKeySequence.StandardKey.FindNext)
+        appendShortcutToToolTip(self.ui.closeButton, Qt.Key.Key_Escape)
 
         self.sanitizedSearchTerm = ""
 

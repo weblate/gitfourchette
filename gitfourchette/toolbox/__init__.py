@@ -22,6 +22,7 @@ from .qsignalblockercontext import QSignalBlockerContext
 from .qtutils import (addComboBoxItem, setWindowModal, isImageFormatSupported,
                       onAppThread, tweakWidgetFont, formatWidgetText,
                       formatWidgetTooltip, stockIcon,
+                      appendShortcutToToolTip,
                       openFolder, showInFolder, DisableWidgetContext,
                       QScrollBackupContext, QTabBarStyleNoRotatedText)
 from .textutils import escape, escamp, paragraphs, messageSummary, elide

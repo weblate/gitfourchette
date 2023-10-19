@@ -130,6 +130,18 @@ def stockIcon(iconId: QStyle.StandardPixmap | str | None) -> QIcon:
         return QApplication.style().standardIcon(iconId)
 
 
+def appendShortcutToToolTip(widget: QWidget, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
+    if type(shortcut) in [QKeySequence.StandardKey, Qt.Key]:
+        shortcut = QKeySequence(shortcut)
+    hint = shortcut.toString(QKeySequence.SequenceFormat.NativeText)
+    hint = f"<span style='color: palette(mid)'> {hint}</span>"
+    toolTip = widget.toolTip()
+    prefix = ""
+    if singleLine:
+        prefix = "<p style='white-space: pre'>"
+    widget.setToolTip(f"{prefix}{toolTip} {hint}")
+
+
 class DisableWidgetContext:
     def __init__(self, objectToBlock: QWidget):
         self.objectToBlock = objectToBlock
