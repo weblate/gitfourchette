@@ -300,7 +300,7 @@ class FastForwardBranch(RepoTask):
             super().onError(exc)
 
     def effects(self):
-        return TaskEffects.Refs | TaskEffects.Head
+        return TaskEffects.Refs | TaskEffects.Head | TaskEffects.Workdir
 
 
 class RecallCommit(RepoTask):
