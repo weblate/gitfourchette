@@ -443,7 +443,6 @@ class MainWindow(QMainWindow):
 
         return repo
 
-
     def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | pygit2.Repository):
         assert rw
 
@@ -520,7 +519,10 @@ class MainWindow(QMainWindow):
         # if newState.activeCommitOid:
         #     rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
 
-        # rw.saveFilePositions()
+        # Focus on some interesting widget within the RepoWidget after loading the repo.
+        # (delay to next event loop so Qt has time to show the widget first)
+        QTimer.singleShot(0, rw.setInitialFocus)
+
         return True
 
     def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1

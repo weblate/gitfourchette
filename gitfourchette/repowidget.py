@@ -555,6 +555,14 @@ class RepoWidget(QWidget):
 
         self.runTask(tasks.RefreshRepo, flags, jumpTo)
 
+    def setInitialFocus(self):
+        """
+        Focus on some useful widget within RepoWidget.
+        Intended to be called immediately after loading a repo.
+        """
+        if not self.focusWidget():  # only if nothing has the focus yet
+            self.graphView.setFocus()
+
     def onRegainForeground(self):
         """Refresh the repo as soon as possible."""
 
