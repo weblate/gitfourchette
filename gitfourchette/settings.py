@@ -281,22 +281,25 @@ def applyLanguagePref():
         locale = QLocale()  # "Automatic" setting: Get system locale
     QLocale.setDefault(locale)
 
-    newTranslator = QTranslator()
+    newTranslator = QTranslator(app)
     if newTranslator.load(locale, "gitfourchette", "_", "assets:", ".qm"):
         app.installTranslator(newTranslator)
         installedTranslators.append(newTranslator)
     else:
-        print("Failed to load translator.")
+        log.warning("settings", "Failed to load translator.")
+        newTranslator.deleteLater()
 
     # Load Qt base translation
     if not QT5:  # Do this on Qt 6 and up only
         try:
-            baseTranslator = QTranslator()
+            baseTranslator = QTranslator(app)
             if baseTranslator.load(locale, "qtbase", "_", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 app.installTranslator(baseTranslator)
                 installedTranslators.append(baseTranslator)
-        except BaseException:
-            print("Failed to load Qt base translation for language", prefs.language)
+            else:
+                baseTranslator.deleteLater()
+        except BaseException as exc:
+            log.warning("settings", f"Failed to load Qt base translation for language: {prefs.language} - Cause: {exc}")
 
 
 def _getCmdName(command, fallback, presets):
