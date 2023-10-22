@@ -8,6 +8,7 @@ from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from typing import Literal
+import contextlib
 import pygit2
 
 
@@ -54,6 +55,7 @@ class GraphView(QListView):
         self.searchBar.textChanged.connect(lambda: self.model().layoutChanged.emit())  # Redraw graph view (is this efficient?)
         self.searchBar.searchNext.connect(lambda: self.search("next"))
         self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
+        self.searchBar.searchPulse.connect(self.searchPulse)
         self.widgetMoved.connect(self.searchBar.snapToParent)
         self.searchBar.hide()
 
@@ -366,7 +368,7 @@ class GraphView(QListView):
     # -------------------------------------------------------------------------
     # Find text in commit message or hash
 
-    def search(self, op: Literal["start", "next", "previous"]):
+    def search(self, op: Literal["start", "next", "previous"], didWrap=False):
         self.searchBar.popUp(forceSelectAll=op == "start")
 
         if op == "start":
@@ -374,11 +376,13 @@ class GraphView(QListView):
 
         forward = op != "previous"
 
-        if not self.searchBar.sanitizedSearchTerm:
+        message = self.searchBar.sanitizedSearchTerm
+
+        if not message:
             QApplication.beep()
             return
 
-        if len(self.selectedIndexes()) != 0:
+        if not didWrap and len(self.selectedIndexes()) != 0:
             start = self.currentIndex().row()
         elif forward:
             start = 0
@@ -386,47 +390,88 @@ class GraphView(QListView):
             start = self.model().rowCount()
 
         if forward:
-            self.searchCommitInRange(range(1 + start, self.model().rowCount()))
+            searchRange = range(1 + start, self.model().rowCount())
         else:
-            self.searchCommitInRange(range(start - 1, -1, -1))
+            searchRange = range(start - 1, -1, -1)
 
-    def searchCommitInRange(self, searchRange: range):
+        # Perform search within range
+        index = self.searchCommitInRange(message, searchRange)
+
+        # A valid index was found in the range, select it
+        if index:
+            # TODO: What happens if the index is filtered out?
+            self.setCurrentIndex(index)
+            return
+
+        # No valid index from this point on
+        if not didWrap:
+            # Wrap around once
+            self.search(op, didWrap=True)
+        else:
+            showInformation(self, self.tr("Find Commit"),
+                            self.tr("“{0}” not found in commit log.").format(escape(message)))
+
+    def getVisibleRowRange(self) -> range:
+        model = self.model()  # to filter out hidden rows, don't use self.clModel directly
+
+        rect = self.viewport().contentsRect()
+        top = self.indexAt(rect.topLeft())
+        if not top.isValid():
+            return range(-1)
+
+        bottom = self.indexAt(rect.bottomLeft())
+        if not bottom.isValid():
+            bottom = model.index(model.rowCount() - 1, 0)
+
+        return range(top.row(), bottom.row()+1)
+
+    def searchPulse(self):
         message = self.searchBar.sanitizedSearchTerm
         if not message:
-            QApplication.beep()
             return
+
+        self.searchBar.popUp(forceSelectAll=False)
+
+        # First see if in visible range
+        visibleRange = self.getVisibleRowRange()
+        index = self.searchCommitInRange(message, visibleRange)
+        if index:
+            self.setCurrentIndex(index)
+            return
+
+        # It's not visible, so search below visible range first
+        searchRange = range(visibleRange.stop, self.model().rowCount())
+        index = self.searchCommitInRange(message, searchRange)
+        if index:
+            self.setCurrentIndex(index)
+            return
+
+        # Finally, search above the visible range
+        searchRange = range(0, visibleRange.start)
+        index = self.searchCommitInRange(message, searchRange)
+        if index:
+            self.setCurrentIndex(index)
+            return
+
+    def searchCommitInRange(self, message: str, searchRange: range) -> QModelIndex | None:
+        model = self.model()  # to filter out hidden rows, don't use self.clModel directly
+
+        assert message == message.lower(), "search term should have been sanitized"
 
         likelyHash = False
         if len(message) <= 40:
-            try:
+            with contextlib.suppress(ValueError):
                 int(message, 16)
                 likelyHash = True
-            except ValueError:
-                pass
-
-        model = self.model()
 
         for i in searchRange:
-            modelIndex = model.index(i, 0)
-            meta = model.data(modelIndex, CommitLogModel.CommitRole)
-            if meta is None:
+            index = model.index(i, 0)
+            commit = model.data(index, CommitLogModel.CommitRole)
+            if commit is None:
                 continue
-            if (message in meta.message.lower()) or (likelyHash and message in meta.oid.hex):
-                self.setCurrentIndex(modelIndex)
-                return
+            if likelyHash and message in commit.oid.hex:
+                return index
+            if message in commit.message.lower():
+                return index
 
-        forward = searchRange.step > 0
-
-        def wrapAround():
-            if forward:
-                newRange = range(0, self.model().rowCount())
-            else:
-                newRange = range(self.model().rowCount(), 0, -1)
-            self.searchCommitInRange(newRange)
-
-        prompt = [
-            self.tr("End of commit log reached.") if forward else self.tr("Top of commit log reached."),
-            self.tr("No more occurrences of “{0}” found.").format(escape(message))
-        ]
-        askConfirmation(self, self.tr("Find Commit"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
-                        messageBoxIcon="information", callback=wrapAround)
+        return None

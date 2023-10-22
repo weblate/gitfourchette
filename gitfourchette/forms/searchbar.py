@@ -3,9 +3,16 @@ from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
 
 
+SEARCH_PULSE_DELAY = 250
+
+
 class SearchBar(QWidget):
     searchNext = Signal()
     searchPrevious = Signal()
+    searchPulse = Signal()
+
+    sanitizedSearchTerm: str
+    searchPulseTimer: QTimer
 
     def __init__(self, parent: QWidget, help: str):
         super().__init__(parent)
@@ -28,6 +35,11 @@ class SearchBar(QWidget):
 
         self.sanitizedSearchTerm = ""
 
+        self.searchPulseTimer = QTimer(self)
+        self.searchPulseTimer.setSingleShot(True)
+        self.searchPulseTimer.setInterval(SEARCH_PULSE_DELAY)
+        self.searchPulseTimer.timeout.connect(self.searchPulse)
+
     @property
     def textChanged(self):
         return self.ui.lineEdit.textChanged
@@ -49,6 +61,7 @@ class SearchBar(QWidget):
 
         elif event.key() in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
             event.accept()
+            self.ui.lineEdit.selectAll()
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.searchPrevious.emit()
             else:
@@ -68,8 +81,10 @@ class SearchBar(QWidget):
             self.ui.lineEdit.selectAll()
 
     def bail(self):
+        self.searchPulseTimer.stop()
         self.parentWidget().setFocus(Qt.FocusReason.PopupFocusReason)
         self.hide()
 
     def onSearchTextChanged(self, text: str):
         self.sanitizedSearchTerm = text.strip().lower()
+        self.searchPulseTimer.start()

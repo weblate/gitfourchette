@@ -6,6 +6,7 @@ class CommitLogModel(QAbstractListModel):
     CommitRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 0
     OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
 
+    # Reference to RepoState.commitSequence
     _commitSequence: list[pygit2.Commit] | None
 
     def __init__(self, parent):
