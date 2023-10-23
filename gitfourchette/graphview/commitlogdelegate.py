@@ -33,6 +33,16 @@ ELISION = " […]"
 ELISION_LENGTH = len(ELISION)
 
 
+MAX_AUTHOR_CHARS = {
+    AuthorDisplayStyle.INITIALS: 7,
+    AuthorDisplayStyle.FULL_NAME: 20,
+}
+
+
+XMARGIN = 4
+XSPACING = 6
+
+
 class CommitLogDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
@@ -63,10 +73,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
 
-        searchBar: SearchBar = self.parent().searchBar
-        searchTerm = searchBar.searchTerm
-        searchTermLooksLikeHash = searchBar.searchTermLooksLikeHash
-
         # Draw selection background _underneath_ the style's default graphics.
         # This is a workaround for the "windowsvista" style, which does not draw a solid color background for
         # selected items -- instead, it draws a very slight alpha overlay on _top_ of the item.
@@ -78,17 +84,8 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         outlineColor = option.palette.color(QPalette.ColorRole.Base)
 
+        # Draw default background
         super().paint(painter, option, index)
-
-        XMargin = 4
-        ColW_Hash = settings.prefs.shortHashChars + 1
-        ColW_Date = 20
-        if settings.prefs.authorDisplayStyle == AuthorDisplayStyle.INITIALS:
-            ColW_Author = 8
-        elif settings.prefs.authorDisplayStyle == AuthorDisplayStyle.FULL_NAME:
-            ColW_Author = 20
-        else:
-            ColW_Author = 16
 
         painter.save()
 
@@ -100,15 +97,25 @@ class CommitLogDelegate(QStyledItemDelegate):
             #    painter.fillRect(option.rect, palette.color(pcg, QPalette.ColorRole.Highlight))
             painter.setPen(palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
 
-        rect = QRect(option.rect)
-        rect.setLeft(rect.left() + XMargin)
-        rect.setRight(rect.right() - XMargin)
-
         # Get metrics of '0' before setting a custom font,
         # so that alignments are consistent in all commits regardless of bold or italic.
-        if self.hashCharWidth == 0:
+        if self.hashCharWidth == 0:  # is it cached yet?
             self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
+        hcw = self.hashCharWidth
 
+        # Set up rect
+        rect = QRect(option.rect)
+        rect.setLeft(rect.left() + XMARGIN)
+        rect.setRight(rect.right() - XMARGIN)
+
+        # Compute column bounds
+        leftBoundHash = rect.left()
+        leftBoundSummary = leftBoundHash + hcw * settings.prefs.shortHashChars + XSPACING
+        leftBoundDate = rect.width() - hcw * 20
+        leftBoundName = leftBoundDate - hcw * MAX_AUTHOR_CHARS.get(settings.prefs.authorDisplayStyle, 16)
+        rightBound = rect.right()
+
+        # Get the info we need about the commit
         commit: pygit2.Commit | None = index.data(CommitLogModel.CommitRole)
         if commit:
             oid = commit.oid
@@ -121,6 +128,10 @@ class CommitLogDelegate(QStyledItemDelegate):
             dateText = self.repoWidget.locale().toString(qdt, settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
+
+            searchBar: SearchBar = self.parent().searchBar
+            searchTerm: str = searchBar.searchTerm
+            searchTermLooksLikeHash: bool = searchBar.searchTermLooksLikeHash
         else:
             oid = UC_FAKEID
             commit = None
@@ -134,32 +145,40 @@ class CommitLogDelegate(QStyledItemDelegate):
             if draftCommitMessage:
                 summaryText += F" {messageSummary(draftCommitMessage)[0]}"
 
+            searchTerm = ""
+            searchTermLooksLikeHash = False
+
         # Get metrics now so the message gets elided according to the custom font style
         # that may have been just set for this commit.
         metrics: QFontMetrics = painter.fontMetrics()
 
+        def elide(text):
+            return metrics.elidedText(text, Qt.TextElideMode.ElideRight, rect.width())
+
+        def highlight(x1: int, x2: int):
+            if isSelected:
+                painter.drawRect(rect.left() + x1, rect.top() + 1, x2 - x1, rect.height() - 2)
+            else:
+                painter.fillRect(rect.left() + x1, rect.top(), x2 - x1, rect.height(), colors.yellow)
+
         # ------ Highlight searched hash
         if searchTerm and searchTermLooksLikeHash and commit and commit.hex.startswith(searchTerm):
             x1 = 0
-            x2 = min(len(hashText), len(searchTerm)) * self.hashCharWidth
-            if isSelected:
-                painter.drawRect(rect.left()+x1, rect.top()+1, x2-x1, rect.height()-2)
-            else:
-                painter.fillRect(rect.left()+x1, rect.top(), x2-x1, rect.height(), colors.yellow)
+            x2 = min(len(hashText), len(searchTerm)) * hcw
+            highlight(x1, x2)
 
         # ------ Hash
-        rect.setWidth(ColW_Hash * self.hashCharWidth)
-        charRect = QRect(rect.left(), rect.top(), self.hashCharWidth, rect.height())
+        charRect = QRect(leftBoundHash, rect.top(), hcw, rect.height())
         painter.save()
         if not isSelected:  # use muted color for hash if not selected
             painter.setPen(palette.color(colorGroup, QPalette.ColorRole.PlaceholderText))
         for hashChar in hashText:
             painter.drawText(charRect, Qt.AlignmentFlag.AlignCenter, hashChar)
-            charRect.translate(self.hashCharWidth, 0)
+            charRect.translate(hcw, 0)
         painter.restore()
 
         # ------ Graph
-        rect.setLeft(rect.right())
+        rect.setLeft(leftBoundSummary)
         # if commit is not None:
         paintGraphFrame(self.state, oid, painter, rect, outlineColor)
 
@@ -191,15 +210,12 @@ class CommitLogDelegate(QStyledItemDelegate):
                 painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, label)
                 painter.restore()
 
-        def elide(text):
-            return metrics.elidedText(text, Qt.TextElideMode.ElideRight, rect.width())
-
         # ------ Message
         # use muted color for foreign commit messages if not selected
         if not isSelected and commit and commit.oid in self.state.foreignCommits:
             painter.setPen(Qt.GlobalColor.gray)
         rect.setLeft(rect.right())
-        rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
+        rect.setRight(leftBoundName - XMARGIN)
 
         # ------ Highlight search term
         if searchTerm and commit and searchTerm in commit.message.lower():
@@ -211,26 +227,32 @@ class CommitLogDelegate(QStyledItemDelegate):
                 needleLength = len(searchTerm)
             x1 = metrics.horizontalAdvance(summaryText, needleIndex)
             x2 = metrics.horizontalAdvance(summaryText, needleIndex + needleLength)
-            if isSelected:
-                painter.drawRect(rect.left()+x1, rect.top()+1, x2-x1, rect.height()-2)
-            else:
-                painter.fillRect(rect.left()+x1, rect.top(), x2-x1, rect.height(), colors.yellow)
+            highlight(x1, x2)
 
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(summaryText))
 
         # ------ Author
-        rect.setLeft(rect.right())
-        rect.setWidth(ColW_Author * self.hashCharWidth)
+        rect.setLeft(leftBoundName)
+        rect.setRight(leftBoundDate - XMARGIN)
+
+        # Highlight searched author
+        if searchTerm and commit:
+            needleIndex = authorText.lower().find(searchTerm)
+            if needleIndex >= 0:
+                x1 = metrics.horizontalAdvance(authorText, needleIndex)
+                x2 = metrics.horizontalAdvance(authorText, needleIndex + len(searchTerm))
+                highlight(x1, x2)
+
+        # Draw author name
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText))
 
         # ------ Date
-        rect.setLeft(rect.right())
-        rect.setWidth(ColW_Date * self.hashCharWidth)
+        rect.setLeft(leftBoundDate)
+        rect.setRight(rightBound)
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(dateText))
 
         # ----------------
         painter.restore()
-        pass  # QStyledItemDelegate.paint(self, painter, option, index)
 
     def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):
         """Last-resort row drawing routine used if _paint raises an exception."""

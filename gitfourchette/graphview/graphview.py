@@ -7,6 +7,7 @@ from gitfourchette.graphview.commitlogfilter import CommitLogFilter
 from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
+from gitfourchette import settings
 from typing import Literal
 import contextlib
 import pygit2
@@ -457,6 +458,8 @@ class GraphView(QListView):
             if likelyHash and commit.hex.startswith(term):
                 return index
             if term in commit.message.lower():
+                return index
+            if term in abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle).lower():
                 return index
 
         return None
