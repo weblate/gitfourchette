@@ -364,6 +364,7 @@ class GraphView(QListView):
 
     def refreshPrefs(self):
         # Force redraw to reflect changes in row height, flattening, date format, etc.
+        self.itemDelegate().invalidateMetrics()
         self.model().layoutChanged.emit()
 
     # -------------------------------------------------------------------------

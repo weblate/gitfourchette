@@ -46,18 +46,42 @@ XSPACING = 6
 class CommitLogDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
         super().__init__(parent)
-        self.repoWidget = repoWidget
-        self.hashCharWidth = 0
 
+        self.repoWidget = repoWidget
+
+        self.mustRefreshMetrics = True
+        self.hashCharWidth = 0
+        self.dateMaxWidth = 0
         self.activeCommitFont = QFont()
+        self.uncommittedFont = QFont()
+        self.calloutFont = QFont()
+        self.calloutFontMetrics = QFontMetricsF(self.calloutFont)
+
+    def invalidateMetrics(self):
+        self.mustRefreshMetrics = True
+
+    def refreshMetrics(self, option: QStyleOptionViewItem):
+        if not self.mustRefreshMetrics:
+            return
+
+        self.mustRefreshMetrics = False
+
+        self.hashCharWidth = max(option.fontMetrics.horizontalAdvance(c) for c in "0123456789abcdef")
+
+        self.activeCommitFont = QFont(option.font)
         self.activeCommitFont.setBold(True)
 
-        self.uncommittedFont = QFont()
+        self.uncommittedFont = QFont(option.font)
         self.uncommittedFont.setItalic(True)
 
-        self.smallFont = QFont()
-        self.smallFont.setWeight(QFont.Weight.Light)
-        self.smallFontMetrics = QFontMetricsF(self.smallFont)
+        self.calloutFont = QFont(option.font)
+        self.calloutFont.setWeight(QFont.Weight.Light)
+        self.calloutFontMetrics = QFontMetricsF(self.calloutFont)
+
+        wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
+        dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
+        self.dateMaxWidth = QFontMetrics(self.activeCommitFont).horizontalAdvance(dateText + " ")
+        self.dateMaxWidth = int(self.dateMaxWidth)  # make sure it's an int for pyqt5 compat
 
     @property
     def state(self) -> RepoState:
@@ -99,8 +123,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # Get metrics of '0' before setting a custom font,
         # so that alignments are consistent in all commits regardless of bold or italic.
-        if self.hashCharWidth == 0:  # is it cached yet?
-            self.hashCharWidth = max(painter.fontMetrics().horizontalAdvance(c) for c in "0123456789abcdef")
+        self.refreshMetrics(option)
         hcw = self.hashCharWidth
 
         # Set up rect
@@ -111,7 +134,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         # Compute column bounds
         leftBoundHash = rect.left()
         leftBoundSummary = leftBoundHash + hcw * settings.prefs.shortHashChars + XSPACING
-        leftBoundDate = rect.width() - hcw * 20
+        leftBoundDate = rect.width() - self.dateMaxWidth
         leftBoundName = leftBoundDate - hcw * MAX_AUTHOR_CHARS.get(settings.prefs.authorDisplayStyle, 16)
         rightBound = rect.right()
 
@@ -125,7 +148,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             authorText = abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle)
 
             qdt = QDateTime.fromSecsSinceEpoch(commit.author.time)
-            dateText = self.repoWidget.locale().toString(qdt, settings.prefs.shortTimeFormat)
+            dateText = option.locale.toString(qdt, settings.prefs.shortTimeFormat)
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
 
@@ -184,6 +207,8 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Callouts
         if oid in self.state.reverseRefCache:
+            painter.save()
+            painter.setFont(self.calloutFont)
             for refName in self.state.reverseRefCache[oid]:
                 if refName != 'HEAD':
                     calloutText = refName
@@ -201,14 +226,12 @@ class CommitLogDelegate(QStyledItemDelegate):
                         calloutColor = calloutDef.color
                         break
 
-                painter.save()
-                painter.setFont(self.smallFont)
                 painter.setPen(calloutColor)
                 rect.setLeft(rect.right())
                 label = F"[{calloutText}] "
-                rect.setWidth(int(self.smallFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
+                rect.setWidth(int(self.calloutFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
                 painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, label)
-                painter.restore()
+            painter.restore()
 
         # ------ Message
         # use muted color for foreign commit messages if not selected
