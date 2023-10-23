@@ -361,10 +361,11 @@ class RefreshRepo(tasks.RepoTask):
             else:
                 log.info(TAG, "Refresh: No refs changed.")
 
-        if oldActiveCommit != rw.state.activeCommitOid:
-            rw.graphView.repaintCommit(oldActiveCommit)
-            rw.graphView.repaintCommit(rw.state.activeCommitOid)
+        # Schedule a repaint of the entire GraphView if the refs changed
+        if effectFlags & (TaskEffects.Head | TaskEffects.Refs):
+            rw.graphView.viewport().update()
 
+        # Refresh sidebar
         with QSignalBlockerContext(rw.sidebar):
             rw.sidebar.refresh(rw.state)
 
