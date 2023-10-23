@@ -11,8 +11,17 @@ class SearchBar(QWidget):
     searchPrevious = Signal()
     searchPulse = Signal()
 
-    sanitizedSearchTerm: str
+    searchTerm: str
+    "Sanitized search term (lowercase, stripped whitespace)"
+
+    searchTermLooksLikeHash: bool
+    "True if the search term looks like the start of a 40-character SHA-1 hash"
+
     searchPulseTimer: QTimer
+
+    @property
+    def rawSearchTerm(self):
+        return self.ui.lineEdit.text()
 
     def __init__(self, parent: QWidget, help: str):
         super().__init__(parent)
@@ -33,7 +42,8 @@ class SearchBar(QWidget):
         appendShortcutToToolTip(self.ui.forwardButton, QKeySequence.StandardKey.FindNext)
         appendShortcutToToolTip(self.ui.closeButton, Qt.Key.Key_Escape)
 
-        self.sanitizedSearchTerm = ""
+        self.searchTerm = ""
+        self.searchTermLooksLikeHash = False
 
         self.searchPulseTimer = QTimer(self)
         self.searchPulseTimer.setSingleShot(True)
@@ -45,7 +55,8 @@ class SearchBar(QWidget):
         return self.ui.lineEdit.textChanged
 
     def snapToParent(self):
-        pw: QAbstractScrollArea = self.parentWidget()
+        pw: QWidget = self.parentWidget()
+        assert isinstance(pw, QAbstractScrollArea), "search bar parent must be QAbstractScrollArea"
 
         x = pw.width() - self.width() - pw.frameWidth()
         y = pw.frameWidth()
@@ -62,7 +73,9 @@ class SearchBar(QWidget):
         elif event.key() in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
             event.accept()
             self.ui.lineEdit.selectAll()
-            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            if not self.searchTerm:
+                QApplication.beep()
+            elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.searchPrevious.emit()
             else:
                 self.searchNext.emit()
@@ -86,5 +99,16 @@ class SearchBar(QWidget):
         self.hide()
 
     def onSearchTextChanged(self, text: str):
-        self.sanitizedSearchTerm = text.strip().lower()
-        self.searchPulseTimer.start()
+        self.searchTerm = text.strip().lower()
+
+        if 0 < len(self.searchTerm) < 40:
+            try:
+                int(self.searchTerm, 16)
+                self.searchTermLooksLikeHash = True
+            except ValueError:
+                self.searchTermLooksLikeHash = False
+
+        if self.searchTerm:
+            self.searchPulseTimer.start()
+        else:
+            self.searchPulseTimer.stop()

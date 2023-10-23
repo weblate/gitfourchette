@@ -376,12 +376,6 @@ class GraphView(QListView):
 
         forward = op != "previous"
 
-        message = self.searchBar.sanitizedSearchTerm
-
-        if not message:
-            QApplication.beep()
-            return
-
         if not didWrap and len(self.selectedIndexes()) != 0:
             start = self.currentIndex().row()
         elif forward:
@@ -395,7 +389,7 @@ class GraphView(QListView):
             searchRange = range(start - 1, -1, -1)
 
         # Perform search within range
-        index = self.searchCommitInRange(message, searchRange)
+        index = self.searchCommitInRange(searchRange)
 
         # A valid index was found in the range, select it
         if index:
@@ -408,8 +402,8 @@ class GraphView(QListView):
             # Wrap around once
             self.search(op, didWrap=True)
         else:
-            showInformation(self, self.tr("Find Commit"),
-                            self.tr("“{0}” not found in commit log.").format(escape(message)))
+            displayTerm = escape(self.searchBar.rawSearchTerm)
+            showInformation(self, self.tr("Find Commit"), self.tr("“{0}” not found.").format(displayTerm))
 
     def getVisibleRowRange(self) -> range:
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly
@@ -426,52 +420,43 @@ class GraphView(QListView):
         return range(top.row(), bottom.row()+1)
 
     def searchPulse(self):
-        message = self.searchBar.sanitizedSearchTerm
-        if not message:
-            return
-
-        self.searchBar.popUp(forceSelectAll=False)
-
         # First see if in visible range
         visibleRange = self.getVisibleRowRange()
-        index = self.searchCommitInRange(message, visibleRange)
+        index = self.searchCommitInRange(visibleRange)
         if index:
             self.setCurrentIndex(index)
             return
 
         # It's not visible, so search below visible range first
         searchRange = range(visibleRange.stop, self.model().rowCount())
-        index = self.searchCommitInRange(message, searchRange)
+        index = self.searchCommitInRange(searchRange)
         if index:
             self.setCurrentIndex(index)
             return
 
         # Finally, search above the visible range
         searchRange = range(0, visibleRange.start)
-        index = self.searchCommitInRange(message, searchRange)
+        index = self.searchCommitInRange(searchRange)
         if index:
             self.setCurrentIndex(index)
             return
 
-    def searchCommitInRange(self, message: str, searchRange: range) -> QModelIndex | None:
+    def searchCommitInRange(self, searchRange: range) -> QModelIndex | None:
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly
 
-        assert message == message.lower(), "search term should have been sanitized"
-
-        likelyHash = False
-        if len(message) <= 40:
-            with contextlib.suppress(ValueError):
-                int(message, 16)
-                likelyHash = True
+        term = self.searchBar.searchTerm
+        likelyHash = self.searchBar.searchTermLooksLikeHash
+        assert term
+        assert term == term.lower(), "search term should have been sanitized"
 
         for i in searchRange:
             index = model.index(i, 0)
             commit = model.data(index, CommitLogModel.CommitRole)
             if commit is None:
                 continue
-            if likelyHash and message in commit.oid.hex:
+            if likelyHash and commit.hex.startswith(term):
                 return index
-            if message in commit.message.lower():
+            if term in commit.message.lower():
                 return index
 
         return None

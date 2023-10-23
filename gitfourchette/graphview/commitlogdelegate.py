@@ -1,5 +1,6 @@
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.qt import *
@@ -88,6 +89,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
 
+        searchBar: SearchBar = self.parent().searchBar
+        searchTerm = searchBar.searchTerm
+        searchTermLooksLikeHash = searchBar.searchTermLooksLikeHash
+
         # Draw selection background _underneath_ the style's default graphics.
         # This is a workaround for the "windowsvista" style, which does not draw a solid color background for
         # selected items -- instead, it draws a very slight alpha overlay on _top_ of the item.
@@ -159,6 +164,15 @@ class CommitLogDelegate(QStyledItemDelegate):
         # that may have been just set for this commit.
         metrics: QFontMetrics = painter.fontMetrics()
 
+        # ------ Highlight searched hash
+        if searchTerm and searchTermLooksLikeHash and commit and commit.hex.startswith(searchTerm):
+            x1 = 0
+            x2 = min(len(hashText), len(searchTerm)) * self.hashCharWidth
+            if isSelected:
+                painter.drawRect(rect.left()+x1, rect.top()+1, x2-x1, rect.height()-2)
+            else:
+                painter.fillRect(rect.left()+x1, rect.top(), x2-x1, rect.height(), colors.yellow)
+
         # ------ Hash
         rect.setWidth(ColW_Hash * self.hashCharWidth)
         charRect = QRect(rect.left(), rect.top(), self.hashCharWidth, rect.height())
@@ -214,14 +228,13 @@ class CommitLogDelegate(QStyledItemDelegate):
         rect.setRight(option.rect.right() - (ColW_Author + ColW_Date) * self.hashCharWidth - XMargin)
 
         # ------ Highlight search term
-        needle = self.parent().searchBar.sanitizedSearchTerm
-        if needle and commit and needle in commit.message.lower():
-            needleIndex = summaryText.lower().find(needle)
+        if searchTerm and commit and searchTerm in commit.message.lower():
+            needleIndex = summaryText.lower().find(searchTerm)
             if needleIndex < 0:
                 needleIndex = len(summaryText) - ELISION_LENGTH
                 needleLength = ELISION_LENGTH
             else:
-                needleLength = len(needle)
+                needleLength = len(searchTerm)
             x1 = metrics.horizontalAdvance(summaryText, needleIndex)
             x2 = metrics.horizontalAdvance(summaryText, needleIndex + needleLength)
             if isSelected:

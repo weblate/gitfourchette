@@ -111,7 +111,7 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
         self.highlightFormat.setFontWeight(QFont.Weight.Bold)
 
     def highlightBlock(self, text: str):
-        term = self.parent().searchBar.sanitizedSearchTerm
+        term = self.parent().searchBar.searchTerm
         if not term:
             return
         termLength = len(term)
@@ -945,7 +945,7 @@ class DiffView(QPlainTextEdit):
 
         forward = op != "previous"
 
-        message = self.searchBar.sanitizedSearchTerm
+        message = self.searchBar.searchTerm
         if not message:
             QApplication.beep()
             return
