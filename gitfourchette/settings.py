@@ -1,6 +1,8 @@
 from gitfourchette import log
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
+from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
+from gitfourchette.toolbox.pathutils import PathDisplayStyle
 import contextlib
 import dataclasses
 import enum
@@ -74,21 +76,6 @@ for key in externalToolPresetFilter:
         del MERGE_TOOL_PRESETS[key]
 del externalToolPresetFilter
 del key
-
-
-class PathDisplayStyle(enum.IntEnum):
-    FULL_PATHS = 1
-    ABBREVIATE_DIRECTORIES = 2
-    SHOW_FILENAME_ONLY = 3
-
-
-class AuthorDisplayStyle(enum.IntEnum):
-    FULL_NAME = 1
-    FIRST_NAME = 2
-    LAST_NAME = 3
-    INITIALS = 4
-    FULL_EMAIL = 5
-    ABBREVIATED_EMAIL = 6
 
 
 class GraphRowHeight(enum.IntEnum):

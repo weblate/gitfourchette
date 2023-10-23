@@ -9,7 +9,6 @@ from gitfourchette.toolbox import *
 from dataclasses import dataclass
 import contextlib
 import pygit2
-import re
 import traceback
 
 
@@ -30,33 +29,8 @@ CALLOUTS = {
 }
 
 
-INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
-
-
 ELISION = " […]"
 ELISION_LENGTH = len(ELISION)
-
-
-def abbreviatePerson(sig: pygit2.Signature, style: settings.AuthorDisplayStyle = settings.AuthorDisplayStyle.FULL_NAME):
-    if style == settings.AuthorDisplayStyle.FULL_NAME:
-        return sig.name
-    elif style == settings.AuthorDisplayStyle.FIRST_NAME:
-        return sig.name.split(' ')[0]
-    elif style == settings.AuthorDisplayStyle.LAST_NAME:
-        return sig.name.split(' ')[-1]
-    elif style == settings.AuthorDisplayStyle.INITIALS:
-        return re.sub(INITIALS_PATTERN, r"\1", sig.name)
-    elif style == settings.AuthorDisplayStyle.FULL_EMAIL:
-        return sig.email
-    elif style == settings.AuthorDisplayStyle.ABBREVIATED_EMAIL:
-        emailParts = sig.email.split('@', 1)
-        if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
-            # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
-            return emailParts[0].split('+', 1)[-1]
-        else:
-            return emailParts[0]
-    else:
-        return sig.email
 
 
 class CommitLogDelegate(QStyledItemDelegate):
@@ -109,9 +83,9 @@ class CommitLogDelegate(QStyledItemDelegate):
         XMargin = 4
         ColW_Hash = settings.prefs.shortHashChars + 1
         ColW_Date = 20
-        if settings.prefs.authorDisplayStyle == settings.AuthorDisplayStyle.INITIALS:
+        if settings.prefs.authorDisplayStyle == AuthorDisplayStyle.INITIALS:
             ColW_Author = 8
-        elif settings.prefs.authorDisplayStyle == settings.AuthorDisplayStyle.FULL_NAME:
+        elif settings.prefs.authorDisplayStyle == AuthorDisplayStyle.FULL_NAME:
             ColW_Author = 20
         else:
             ColW_Author = 16

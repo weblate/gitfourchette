@@ -1,7 +1,13 @@
-from gitfourchette.settings import PathDisplayStyle
+import enum
 import os
 
 HOME = os.path.abspath(os.path.expanduser('~'))
+
+
+class PathDisplayStyle(enum.IntEnum):
+    FULL_PATHS = 1
+    ABBREVIATE_DIRECTORIES = 2
+    SHOW_FILENAME_ONLY = 3
 
 
 def compactPath(path: str) -> str:

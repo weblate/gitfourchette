@@ -87,7 +87,7 @@ class FileList(QListView):
         return []
 
     def pathDisplayStyleSubmenu(self):
-        def pdsAction(name: str, pds: settings.PathDisplayStyle):
+        def pdsAction(name: str, pds: PathDisplayStyle):
             def setIt():
                 settings.prefs.pathDisplayStyle = pds
             isCurrent = settings.prefs.pathDisplayStyle == pds
@@ -96,9 +96,9 @@ class FileList(QListView):
         return ActionDef(
             translate("Prefs", "Path Display Style"),
             submenu=[
-                pdsAction(translate("Prefs", "Full paths"), settings.PathDisplayStyle.FULL_PATHS),
-                pdsAction(translate("Prefs", "Abbreviate directories"), settings.PathDisplayStyle.ABBREVIATE_DIRECTORIES),
-                pdsAction(translate("Prefs", "Show filename only"), settings.PathDisplayStyle.SHOW_FILENAME_ONLY),
+                pdsAction(translate("Prefs", "Full paths"), PathDisplayStyle.FULL_PATHS),
+                pdsAction(translate("Prefs", "Abbreviate directories"), PathDisplayStyle.ABBREVIATE_DIRECTORIES),
+                pdsAction(translate("Prefs", "Show filename only"), PathDisplayStyle.SHOW_FILENAME_ONLY),
             ])
 
     def confirmBatch(self, callback: Callable[[pygit2.Patch], None], title: str, prompt: str, threshold: int = 3):

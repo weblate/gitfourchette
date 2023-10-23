@@ -7,12 +7,15 @@ from .autohidemenubar import AutoHideMenuBar
 from .customtabwidget import CustomTabWidget, CustomTabBar
 from .benchmark import Benchmark, benchmark
 from .excutils import shortenTracebackPath, excStrings
-from .gitutils import shortHash, dumpTempBlob, nameValidationMessage
+from .gitutils import (
+    shortHash, dumpTempBlob, nameValidationMessage,
+    AuthorDisplayStyle, abbreviatePerson,
+)
 from .memoryindicator import MemoryIndicator
 from .messageboxes import (
     MessageBoxIconName, excMessageBox, asyncMessageBox,
     showWarning, showInformation, askConfirmation, NonCriticalOperation)
-from .pathutils import abbreviatePath, compactPath
+from .pathutils import PathDisplayStyle, abbreviatePath, compactPath
 from .persistentfiledialog import PersistentFileDialog
 from .qbusyspinner import QBusySpinner
 from .qcomboboxwithpreview import QComboBoxWithPreview

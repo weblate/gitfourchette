@@ -1,8 +1,50 @@
 from gitfourchette import porcelain
 from gitfourchette.trtables import translateNameValidationCode
+import enum
 import pygit2
 import os
+import re
 import stat
+
+
+INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
+
+
+class AuthorDisplayStyle(enum.IntEnum):
+    FULL_NAME = 1
+    FIRST_NAME = 2
+    LAST_NAME = 3
+    INITIALS = 4
+    FULL_EMAIL = 5
+    ABBREVIATED_EMAIL = 6
+
+
+def abbreviatePerson(sig: pygit2.Signature, style: AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME):
+    if style == AuthorDisplayStyle.FULL_NAME:
+        return sig.name
+
+    elif style == AuthorDisplayStyle.FIRST_NAME:
+        return sig.name.split(' ')[0]
+
+    elif style == AuthorDisplayStyle.LAST_NAME:
+        return sig.name.split(' ')[-1]
+
+    elif style == AuthorDisplayStyle.INITIALS:
+        return re.sub(INITIALS_PATTERN, r"\1", sig.name)
+
+    elif style == AuthorDisplayStyle.FULL_EMAIL:
+        return sig.email
+
+    elif style == AuthorDisplayStyle.ABBREVIATED_EMAIL:
+        emailParts = sig.email.split('@', 1)
+        if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
+            # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
+            return emailParts[0].split('+', 1)[-1]
+        else:
+            return emailParts[0]
+
+    else:
+        return sig.email
 
 
 def shortHash(oid: pygit2.Oid) -> str:
