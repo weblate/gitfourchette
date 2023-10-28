@@ -46,19 +46,26 @@ class DiscardFiles(_BaseStagingTask):
     def flow(self, patches: list[pygit2.Patch]):
         textPara = []
 
+        verb = self.tr("Discard changes", "Button label")
+
         if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
             yield from self._flowAbort()
         elif len(patches) == 1:
-            path = patches[0].delta.new_file.path
-            textPara.append(self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path)))
+            patch = patches[0]
+            path = patch.delta.new_file.path
+            if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
+                textPara.append(self.tr("Really delete <b>“{0}”</b>?").format(escape(path)))
+                verb = self.tr("Delete file", "Button label")
+            else:
+                textPara.append(self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path)))
         else:
             textPara.append(self.tr("Really discard changes to <b>%n files</b>?", "", len(patches)))
         textPara.append(translate("Global", "This cannot be undone!"))
 
         yield from self._flowConfirm(
             text=paragraphs(textPara),
-            verb=self.tr("Discard changes", "Button label"),
+            verb=verb,
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()

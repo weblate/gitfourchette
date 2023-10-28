@@ -29,7 +29,7 @@ def testDiscardUntrackedFile(qtbot, tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
-    acceptQMessageBox(rw, "really discard changes")
+    acceptQMessageBox(rw, "really delete")
 
     assert rw.dirtyFiles.model().rowCount() == 0
     assert rw.stagedFiles.model().rowCount() == 0

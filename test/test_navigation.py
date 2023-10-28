@@ -173,7 +173,7 @@ def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow
 
     assertHistoryMatches(rw, NavLocator.inUnstaged("c/c2.txt"))
     rw.dirtyFiles.discard()
-    acceptQMessageBox(rw, "really discard changes")
+    acceptQMessageBox(rw, "really delete")
 
     assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
