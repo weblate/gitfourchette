@@ -79,7 +79,7 @@ class SpecialDiffError(Exception):
         details = []
 
         oldFile: pygit2.DiffFile = delta.old_file
-        newFile: pygit2.DiffFile = delta.old_file
+        newFile: pygit2.DiffFile = delta.new_file
 
         oldFileExists = not isZeroId(oldFile.id)
         newFileExists = not isZeroId(newFile.id)

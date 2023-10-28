@@ -143,6 +143,9 @@ class RepositoryContextManager:
         return self.repo
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        # Write any index changes back to disk
+        self.repo.index.write()
+
         # repo.free() is necessary for correct test teardown on Windows
         self.repo.free()
         del self.repo

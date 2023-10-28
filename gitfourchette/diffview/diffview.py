@@ -243,7 +243,11 @@ class DiffView(QPlainTextEdit):
         oldDocument = self.document()
 
         newFileStat = None
-        if locator.context.isWorkdir() and repo is not None:
+        if (
+                locator.context.isWorkdir()
+                and patch.delta.status != pygit2.GIT_DELTA_DELETED
+                and repo is not None
+        ):
             fullPath = os.path.join(repo.workdir, locator.path)
             newFileStat = os.stat(fullPath, follow_symlinks=True)
 

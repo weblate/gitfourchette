@@ -7,7 +7,7 @@ from gitfourchette.diffview.diffview import DiffView
 import pygit2
 
 
-def testSensibleMessageShownForUnstagedEmptyFile(qtbot, tempDir, mainWindow):
+def testEmptyDiffEmptyFile(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/NewEmptyFile.txt")
     rw = mainWindow.openRepo(wd)
@@ -16,7 +16,37 @@ def testSensibleMessageShownForUnstagedEmptyFile(qtbot, tempDir, mainWindow):
 
     assert not rw.diffView.isVisibleTo(rw)
     assert rw.specialDiffView.isVisibleTo(rw)
-    assert "empty" in rw.specialDiffView.toPlainText().lower()
+    assert re.search(r"empty file", rw.specialDiffView.toPlainText(), re.I)
+
+
+def testEmptyDiffWithModeChange(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    os.chmod(f"{wd}/a/a1", 0o755)
+    rw = mainWindow.openRepo(wd)
+
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    assert re.search(r"mode change:.+normal.+executable", rw.specialDiffView.toPlainText(), re.I)
+
+
+def testEmptyDiffWithNameChange(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    os.rename(f"{wd}/master.txt", f"{wd}/mastiff.txt")
+    with RepositoryContextManager(wd) as repo:
+        repo.index.remove("master.txt")
+        repo.index.add("mastiff.txt")
+    rw = mainWindow.openRepo(wd)
+
+    qlvClickNthRow(rw.stagedFiles, 0)
+    assert re.search(r"renamed:.+master\.txt.+mastiff\.txt", rw.specialDiffView.toPlainText(), re.I)
+
+
+def testDiffDeletedFile(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    os.unlink(f"{wd}/master.txt")
+    rw = mainWindow.openRepo(wd)
+
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.diffView.toPlainText().startswith("@@ -1,2 +0,0 @@")
 
 
 def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
