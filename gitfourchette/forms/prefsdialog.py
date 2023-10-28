@@ -55,6 +55,11 @@ class PrefsDialog(QDialog):
 
         self.settingsTranslationTable = trtables.prefsTranslationTable()
 
+        # Hide irrelevant settings
+        skipKeys = {"shortHashChars"}
+        if MACOS:
+            skipKeys.add("autoHideMenuBar")
+
         self.setObjectName("PrefsDialog")
 
         self.setWindowTitle(self.tr("{app} Preferences").format(app=qAppName()))
@@ -86,6 +91,9 @@ class PrefsDialog(QDialog):
         categoryForms = {}
 
         for prefKey in prefs.__dict__:
+            if prefKey in skipKeys:
+                continue
+
             prefValue = prefs.__dict__[prefKey]
             category, caption = splitSettingKey(prefKey)
             prefType = type(prefValue)

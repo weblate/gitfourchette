@@ -39,7 +39,7 @@ def prefsTranslationTable():
         "language": translate("Prefs", "Language"),
         "qtStyle": translate("Prefs", "Theme"),
         "shortHashChars": (translate("Prefs", "Shorten hashes to"), translate("Prefs", "characters")),
-        "shortTimeFormat": translate("Prefs", "Short time format"),
+        "shortTimeFormat": translate("Prefs", "Date/time format"),
         "pathDisplayStyle": translate("Prefs", "Path display style"),
         "authorDisplayStyle": translate("Prefs", "Author display style"),
         "maxRecentRepos": translate("Prefs", "Max recent repos"),
