@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import Any
 
+import contextlib
 import pygit2
 
 from gitfourchette import log
 from gitfourchette import settings
+from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -19,6 +21,82 @@ PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
+def deltaModeText(delta: pygit2.DiffDelta):
+    om = delta.old_file.mode
+    nm = delta.new_file.mode
+
+    if om != 0 and nm != 0 and om != nm:
+        # Mode change
+        if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+            return "+x"
+        elif om == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+            return "-x"
+        else:
+            return ""
+    elif om == 0:
+        # New file
+        if nm in [0, pygit2.GIT_FILEMODE_BLOB]:
+            pass
+        elif nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+            return "+x"
+        else:
+            return translateFileMode(nm)
+
+
+def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: bool):
+    if not delta:
+        return ""
+
+    locale = QLocale()
+    of: pygit2.DiffFile = delta.old_file
+    nf: pygit2.DiffFile = delta.new_file
+
+    sc = delta.status_char()
+    if delta.status == pygit2.GIT_DELTA_CONFLICTED:
+        sc = "!"
+
+    text = "<p style='white-space: pre'>" + escape(nf.path)
+    text += "\n<table>"
+
+    def newLine(heading, caption):
+        return f"<tr><td><b>{heading} </b></tb><td>{caption}</td>"
+
+    # Status caption
+    statusCaption = translateDeltaStatus(sc)
+    if sc not in '?!':  # show status char except for untracked and conflict
+        statusCaption += f" ({sc})"
+    text += newLine(translate("FileList", "status:"), statusCaption)
+
+    # Similarity + Old name
+    if sc == 'R':
+        text += newLine(translate("FileList", "old name:"), escape(of.path))
+        text += newLine(translate("FileList", "new name:"), escape(nf.path))
+        text += newLine(translate("FileList", "similarity:"), f"{delta.similarity}%")
+
+    # File Mode
+    if sc not in 'D!':
+        legend = translate("FileList", "file mode:")
+        if sc in 'A?':
+            text += newLine(legend, translateFileMode(nf.mode))
+        elif of.mode != nf.mode:
+            text += newLine(legend, f"{translateFileMode(of.mode)} &rarr; {translateFileMode(nf.mode)}")
+
+    # Size (if available)
+    if sc not in 'D!' and nf.size != 0 and (nf.mode & pygit2.GIT_FILEMODE_BLOB == pygit2.GIT_FILEMODE_BLOB):
+        text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size))
+
+    # Modified time
+    if isWorkdir and sc not in 'D!':
+        with contextlib.suppress(IOError):
+            fullPath = os.path.join(repo.workdir, nf.path)
+            fileStat = os.stat(fullPath)
+            timeQdt = QDateTime.fromSecsSinceEpoch(int(fileStat.st_mtime))
+            timeText = locale.toString(timeQdt, settings.prefs.shortTimeFormat)
+            text += newLine(translate("FileList", "modified:"), timeText)
+
+    return text
+
+
 class FileListModel(QAbstractListModel):
     @dataclass
     class Entry:
@@ -28,12 +106,21 @@ class FileListModel(QAbstractListModel):
 
     entries: list[Entry]
     fileRows: dict[str, int]
-    skipConflicts: bool
+    navContext: NavContext
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
-        self.skipConflicts = False
+        self.navContext = navContext
         self.clear()
+
+    @property
+    def skipConflicts(self) -> bool:
+        # Hide conflicts from staged file list
+        return self.navContext == NavContext.STAGED
+
+    @property
+    def repo(self) -> pygit2.Repository:
+        return self.parent().repoWidget.state.repo
 
     def clear(self):
         self.entries = []
@@ -91,25 +178,7 @@ class FileListModel(QAbstractListModel):
                 path = abbreviatePath(path, settings.prefs.pathDisplayStyle)
 
                 # Show important mode info in brackets
-                modeInfo = ""
-                om = delta.old_file.mode
-                nm = delta.new_file.mode
-                if om != 0 and nm != 0 and om != nm:
-                    # Mode change
-                    if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
-                        modeInfo = "+x"
-                    elif om == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
-                        modeInfo = "-x"
-                elif om == 0:
-                    # New file
-                    if nm in [0, pygit2.GIT_FILEMODE_BLOB]:
-                        pass
-                    elif nm == pygit2.GIT_FILEMODE_LINK:
-                        modeInfo = "link"
-                    elif nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
-                        modeInfo = "+x"
-                    else:
-                        modeInfo = f"{delta.new_file.mode:o}"
+                modeInfo = deltaModeText(delta)
                 if modeInfo:
                     path = f"[{modeInfo}] {path}"
 
@@ -126,54 +195,7 @@ class FileListModel(QAbstractListModel):
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             delta = self.getDeltaAt(index)
-
-            if not delta:
-                return None
-
-            if delta.status == pygit2.GIT_DELTA_UNTRACKED:
-                return (
-                        "<b>" + translate("FileList", "untracked file") + "</b><br>" +
-                        F"{escape(delta.new_file.path)} ({delta.new_file.mode:o})"
-                )
-            elif delta.status == pygit2.GIT_DELTA_CONFLICTED:
-                conflictedText = translate("FileList", "merge conflict")
-
-                return (
-                    f"<b>{conflictedText}</b><br>"
-                )
-            else:
-                fromText = translate("FileList", "from:")
-                toText = translate("FileList", "to:")
-                opText = translate("FileList", "status:")
-
-                # see git_diff_status_char (diff_print.c)
-                operationCaptions = {
-                    "A": translate("FileList", "(added)"),
-                    "C": translate("FileList", "(copied)"),
-                    "D": translate("FileList", "(deleted)"),
-                    "I": translate("FileList", "(ignored)"),
-                    "M": translate("FileList", "(modified)"),
-                    "R": translate("FileList", "(renamed, {0}% similarity)"),
-                    "T": translate("FileList", "(file type changed)"),
-                    "U": translate("FileList", "(updated but unmerged)"),
-                    "X": translate("FileList", "(unreadable)"),
-                    "?": translate("FileList", "(untracked)"),
-                }
-
-                try:
-                    opCap = operationCaptions[delta.status_char()]
-                    if delta.status == pygit2.GIT_DELTA_RENAMED:
-                        opCap = opCap.format(delta.similarity)
-
-                except KeyError:
-                    opCap = ''
-
-                return (
-                    "<p style='white-space: pre'>"
-                    F"<b>{opText} </b> {delta.status_char()} {opCap}"
-                    F"\n<b>{fromText} </b> {escape(delta.old_file.path)} ({delta.old_file.mode:o})"
-                    F"\n<b>{toText} </b> {escape(delta.new_file.path)} ({delta.new_file.mode:o})"
-                )
+            return fileTooltip(self.repo, delta, self.navContext.isWorkdir())
 
         elif role == Qt.ItemDataRole.SizeHintRole:
             parentWidget: QWidget = self.parent()

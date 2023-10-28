@@ -29,12 +29,8 @@ class FileList(QListView):
     def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
 
-        flModel = FileListModel(self)
+        flModel = FileListModel(self, navContext)
         self.setModel(flModel)
-
-        # Hide conflicts from staged file list
-        if navContext == NavContext.STAGED:
-            flModel.skipConflicts = True
 
         self.navContext = navContext
         self.commitOid = BLANK_OID
@@ -377,7 +373,7 @@ class FileList(QListView):
         self.stashFiles.emit(paths)
 
     def revertModeActionDef(self, n: int, callback: Callable):
-        action = ActionDef(self.tr("Revert Old Mode(s)", "", n), callback, enabled=False)
+        action = ActionDef(self.tr("Revert Mode Change(s)", "", n), callback, enabled=False)
 
         try:
             entries = self.selectedEntries()
@@ -394,8 +390,8 @@ class FileList(QListView):
                 action.enabled = True
                 if n == 1:
                     if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
-                        action.caption = self.tr("Revert Old Mode ({0})").format("-x")
+                        action.caption = self.tr("Revert Mode to Non-Executable")
                     elif nm == pygit2.GIT_FILEMODE_BLOB:
-                        action.caption = self.tr("Revert Old Mode ({0})").format("+x")
+                        action.caption = self.tr("Revert Mode to Executable")
 
         return action

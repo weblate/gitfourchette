@@ -99,7 +99,7 @@ class SpecialDiffError(Exception):
 
         if oldFileExists and oldFile.mode != newFile.mode:
             intro = translate("Diff", "Mode change:")
-            details.append(f"{intro} “{oldFile.mode:06o}” &rarr; “{newFile.mode:06o}”.")
+            details.append(f"{intro} {translateFileMode(oldFile.mode)} &rarr; {translateFileMode(newFile.mode)}.")
 
         return SpecialDiffError(message, "\n".join(details))
 
