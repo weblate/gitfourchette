@@ -152,7 +152,7 @@ class ApplyPatch(RepoTask):
             yield from self._flowConfirm(
                 title,
                 text=paragraphs(textPara),
-                verb=self.tr("Discard lines", "Button label"),
+                verb=title,
                 buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
             Trash(self.repo).backupPatch(subPatch, fullPatch.delta.new_file.path)
