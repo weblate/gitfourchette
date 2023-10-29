@@ -40,7 +40,7 @@ class RepoStatusDisplay(QWidget):
         self.statusLabel.setMaximumHeight(self.statusLabel.fontMetrics().height())
 
         self.statusWarning = QLabel()
-        self.statusWarning.setStyleSheet("QLabel { background-color: yellow; padding-left: 6px; padding-right: 6px; }")
+        self.statusWarning.setStyleSheet("QLabel { color: black; background-color: yellow; padding-left: 6px; padding-right: 6px; }")
         self.statusWarning.setHidden(True)
 
         layout = QHBoxLayout()
