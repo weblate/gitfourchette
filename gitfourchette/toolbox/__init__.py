@@ -28,6 +28,8 @@ from .qtutils import (addComboBoxItem, setWindowModal, isImageFormatSupported,
                       formatWidgetTooltip, stockIcon,
                       appendShortcutToToolTip,
                       openFolder, showInFolder, DisableWidgetContext,
-                      QScrollBackupContext, QTabBarStyleNoRotatedText)
+                      QScrollBackupContext, QTabBarStyleNoRotatedText,
+                      makeInternalLink,
+                      )
 from .textutils import escape, escamp, paragraphs, messageSummary, elide
 from .validatormultiplexer import ValidatorMultiplexer

@@ -217,3 +217,25 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
             option: QStyleOptionTab = QStyleOptionTab(option)  # copy
             option.shape = QTabBar.Shape.RoundedNorth  # override shape
         super().drawControl(element, option, painter, widget)
+
+
+def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **urlQueryItems):
+    url = QUrl()
+    url.setScheme(APP_URL_SCHEME)
+    url.setAuthority(urlAuthority)
+
+    if urlPath:
+        if not urlPath.startswith("/"):
+            urlPath = "/" + urlPath
+        url.setPath(urlPath)
+
+    if urlFragment:
+        url.setFragment(urlFragment)
+
+    query = QUrlQuery()
+    for k, v in urlQueryItems.items():
+        query.addQueryItem(k, v)
+    if query:
+        url.setQuery(query)
+
+    return url

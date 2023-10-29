@@ -138,23 +138,16 @@ class NavLocator:
         return header
 
     def url(self):
-        url = QUrl()
-        url.setScheme(APP_URL_SCHEME)
-        url.setAuthority(NavLocator.URL_AUTHORITY)
-        url.setPath("/" + self.path)
-
         if self.context == NavContext.COMMITTED:
-            url.setFragment(self.commit.hex)
+            fragment = self.commit.hex
         else:
-            url.setFragment(self.context.name)
+            fragment = self.context.name
 
-        query = QUrlQuery()
+        query = {}
         if self.flags != NavFlags.DefaultFlags:
-            query.addQueryItem("flags", str(self.flags.value))
-        if not query.isEmpty():
-            url.setQuery(query)
+            query["flags"] = str(self.flags.value)
 
-        return url
+        return makeInternalLink(NavLocator.URL_AUTHORITY, self.path, fragment, **query)
 
     def toHtml(self, text: str):
         href = self.url().toString()
