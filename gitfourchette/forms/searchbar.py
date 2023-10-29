@@ -38,6 +38,10 @@ class SearchBar(QWidget):
 
         self.ui.lineEdit.textChanged.connect(self.onSearchTextChanged)
 
+        self.ui.forwardButton.setIcon(stockIcon("go-down-search"))
+        self.ui.backwardButton.setIcon(stockIcon("go-up-search"))
+        self.ui.closeButton.setIcon(stockIcon("dialog-close"))
+
         appendShortcutToToolTip(self.ui.backwardButton, QKeySequence.StandardKey.FindPrevious)
         appendShortcutToToolTip(self.ui.forwardButton, QKeySequence.StandardKey.FindNext)
         appendShortcutToToolTip(self.ui.closeButton, Qt.Key.Key_Escape)
