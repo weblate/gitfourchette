@@ -172,7 +172,8 @@ class FileList(QListView):
     def showInFolder(self):
         def run(entry: pygit2.Patch):
             path = os.path.join(self.repo.workdir, entry.delta.new_file.path)
-            if not os.path.isfile(path):
+            path = os.path.normpath(path)  # get rid of any trailing slashes (submodules)
+            if not os.path.exists(path):  # check exists, not isfile, for submodules
                 raise SelectedFileBatchError(self.tr("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
             showInFolder(path)
 
