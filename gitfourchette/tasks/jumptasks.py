@@ -108,6 +108,9 @@ class Jump(RepoTask):
             rw.specialDiffView.displaySpecialDiffError(result)
         elif type(result) == DiffDocument:
             rw.diffStack.setCurrentWidget(rw.diffView)
+            if DEVDEBUG:
+                prefix = shortHash(patch.delta.old_file.id) + ".." + shortHash(patch.delta.new_file.id)
+                rw.diffHeader.setText(f"({prefix}) {rw.diffHeader.text()}")
             rw.diffView.replaceDocument(rw.repo, patch, locator, result)
         elif type(result) == DiffImagePair:
             rw.diffStack.setCurrentWidget(rw.specialDiffView)

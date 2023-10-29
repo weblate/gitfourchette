@@ -9,6 +9,7 @@ from pygit2 import Patch, Repository, Diff
 
 from gitfourchette import colors
 from gitfourchette import log
+from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.diffview.diffdocument import DiffDocument, LineData
 from gitfourchette.forms.searchbar import SearchBar
@@ -153,7 +154,6 @@ class DiffView(QPlainTextEdit):
         self.lineCursorStartCache = []
         self.lineHunkIDCache = []
         self.currentLocator = NavLocator()
-        self.currentFileStat = None
         self.currentPatch = None
         self.repo = None
 
@@ -233,7 +233,6 @@ class DiffView(QPlainTextEdit):
         # Clear info about the current patch - necessary for document reuse detection to be correct when the user
         # clears the selection in a FileList and then reselects the last-displayed document.
         self.currentLocator = NavLocator()
-        self.currentFileStat = None
         self.currentPatch = None
 
         # Clear the actual contents
@@ -242,19 +241,11 @@ class DiffView(QPlainTextEdit):
     def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, newDoc: DiffDocument):
         oldDocument = self.document()
 
-        newFileStat = None
-        if (
-                locator.context.isWorkdir()
-                and patch.delta.status != pygit2.GIT_DELTA_DELETED
-                and repo is not None
-        ):
-            fullPath = os.path.join(repo.workdir, locator.path)
-            newFileStat = os.stat(fullPath, follow_symlinks=True)
-
         # Detect if we're trying to load exactly the same patch - common occurrence when moving the app back to the
         # foreground. In that case, don't change the document to prevent losing any selected text.
-        if self.canReuseCurrentDocument(locator, newFileStat, newDoc):
-            assert patch.data == self.currentPatch.data  # this check can be pretty expensive!
+        if self.canReuseCurrentDocument(locator, patch, newDoc):
+            if DEVDEBUG:  # this check can be pretty expensive!
+                assert patch.data == self.currentPatch.data
 
             # Delete new document
             assert newDoc.document is not oldDocument  # make sure it's not in use before deleting
@@ -271,7 +262,6 @@ class DiffView(QPlainTextEdit):
         self.repo = repo
         self.currentPatch = patch
         self.currentLocator = locator
-        self.currentFileStat = newFileStat
 
         newDoc.document.setParent(self)
         self.setDocument(newDoc.document)
@@ -297,42 +287,28 @@ class DiffView(QPlainTextEdit):
         self.restorePosition(locator)
 
     @benchmark
-    def canReuseCurrentDocument(
-            self,
-            newLocator: NavLocator,
-            newFileStat: os.stat_result,
-            newDocument: DiffDocument
-    ) -> bool:
+    def canReuseCurrentDocument(self, newLocator: NavLocator, newPatch: pygit2.Patch, newDocument: DiffDocument
+                                ) -> bool:
         """Detect if we're trying to reload the same patch that's already being displayed"""
 
         if not self.currentLocator.isSimilarEnoughTo(newLocator):
             return False
 
+        of1: pygit2.DiffFile = self.currentPatch.delta.old_file
+        nf1: pygit2.DiffFile = self.currentPatch.delta.new_file
+        of2: pygit2.DiffFile = newPatch.delta.old_file
+        nf2: pygit2.DiffFile = newPatch.delta.new_file
+
+        if not porcelain.compareDiffFiles(of1, of2):
+            return False
+
+        if not porcelain.compareDiffFiles(nf1, nf2):
+            return False
+
         if len(newDocument.lineData) != len(self.lineData):
             return False
 
-        # If the locator points within a commit, the contents of the patch aren't supposed to ever change
-        if not newLocator.context.isWorkdir():
-            return True
-
-        # Locator is in workdir
-        if self.currentFileStat is None:
-            return False
-
-        # Compare file stats
-        oldFileStat: os.stat_result = self.currentFileStat
-        similarStats = (
-                newFileStat.st_mode == oldFileStat.st_mode
-                and newFileStat.st_size == oldFileStat.st_size
-                and newFileStat.st_ino == oldFileStat.st_ino
-                and newFileStat.st_mtime_ns == oldFileStat.st_mtime_ns
-                and newFileStat.st_ctime_ns == oldFileStat.st_ctime_ns
-        )
-
-        if not similarStats:
-            return False
-
-        return similarStats
+        return True
 
     # ---------------------------------------------
     # Restore position

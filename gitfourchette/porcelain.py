@@ -1208,3 +1208,15 @@ def deleteTag(repo: pygit2.Repository, tagName: str):
     refName = TAGS_PREFIX + tagName
     assert refName in repo.references
     repo.references.delete(refName)
+
+
+def compareDiffFiles(f1: pygit2.DiffFile, f2: pygit2.DiffFile):
+    # TODO: pygit2 ought to implement DiffFile.__eq__
+    same = f1.id == f2.id
+    same &= f1.mode == f2.mode
+    same &= f1.flags == f2.flags
+    same &= f1.raw_path == f2.raw_path
+    if same:
+        assert f1.path == f2.path
+        assert f1.size == f2.size
+    return same

@@ -25,6 +25,7 @@ PYQT6 = False
 MACOS = False
 WINDOWS = False
 PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
+DEVDEBUG = __debug__ and not PYINSTALLER_BUNDLE
 
 # If PySide6 is installed, we'll import it directly.
 # If PySide6 is missing, we'll use qtpy.
