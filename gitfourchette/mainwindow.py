@@ -107,6 +107,7 @@ class MainWindow(QMainWindow):
             styleSheet = styleSheetFile.readAll().data().decode("utf-8")
             QApplication.instance().setStyleSheet(styleSheet)
             styleSheetFile.close()
+            clearStockIconCache()
 
     # -------------------------------------------------------------------------
     # Event filters & handlers

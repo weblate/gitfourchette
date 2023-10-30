@@ -3,7 +3,6 @@ import pygit2
 from gitfourchette import settings
 from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.exttools import PREFKEY_MERGETOOL
-from gitfourchette.filelists.filelistmodel import STATUS_ICONS
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.porcelain import BLANK_OID
 from gitfourchette.qt import *
@@ -26,8 +25,8 @@ class ConflictView(QWidget):
         self.ui = Ui_ConflictView()
         self.ui.setupUi(self)
 
-        self.ui.deletedByUsAdd.setIcon(STATUS_ICONS['A'])
-        self.ui.deletedByUsDelete.setIcon(STATUS_ICONS['D'])
+        self.ui.deletedByUsAdd.setIcon(stockIcon("status_a"))
+        self.ui.deletedByUsDelete.setIcon(stockIcon("status_d"))
         tweakWidgetFont(self.ui.titleLabel, 150, bold=True)
 
         self.ui.mergeToolButton.setText(self.ui.mergeToolButton.text().format(settings.getMergeToolName()))

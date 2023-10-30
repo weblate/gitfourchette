@@ -46,7 +46,7 @@ class StashDialog(QDialog):
                    scrollTo = listItem
             else:
                 listItem.setCheckState(Qt.CheckState.Unchecked)
-            # listItem.setIcon(QIcon("assets:status_m.svg"))
+            # listItem.setIcon(stockIcon("status_m"))
             self.ui.fileList.addItem(listItem)
 
         # Prime checkbox signal connections

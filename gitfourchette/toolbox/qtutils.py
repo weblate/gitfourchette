@@ -1,5 +1,6 @@
 from gitfourchette.qt import *
 _supportedImageFormats = None
+_stockIconCache = {}
 
 
 def setWindowModal(widget: QWidget, modality: Qt.WindowModality = Qt.WindowModality.WindowModal):
@@ -121,13 +122,54 @@ def addComboBoxItem(comboBox: QComboBox, caption: str, userData=None, isCurrent=
     return index
 
 
-def stockIcon(iconId: QStyle.StandardPixmap | str | None) -> QIcon:
-    if iconId is None:
-        return QIcon()
-    elif type(iconId) is str:
-        return QIcon.fromTheme(iconId)
+def isDarkTheme(palette: QPalette | None = None):
+    if palette is None:
+        palette = QApplication.palette()
+    themeBG = palette.color(QPalette.ColorRole.Base)  # standard theme background color
+    themeFG = palette.color(QPalette.ColorRole.Text)  # standard theme foreground color
+    return themeBG.value() < themeFG.value()
+
+
+def stockIcon(iconId: str | QStyle.StandardPixmap) -> QIcon:
+    """
+    If SVG icons don't show up, you may need to install the 'qt6-svg' package.
+    """
+
+    # Attempt to get cached icon
+    if iconId in _stockIconCache:
+        return _stockIconCache[iconId]
+
+    def lookUpNamedIcon(name: str) -> QIcon:
+        # First attempt to get a matching icon from the assets
+        dark = isDarkTheme()
+        prefixes = QDir.searchPaths("assets")
+
+        def assetCandidates():
+            for ext in ".svg", ".png":
+                if dark:  # attempt to get dark mode variant first
+                    yield f"{name}@dark{ext}"
+                yield f"{name}{ext}"
+
+        for candidate in assetCandidates():
+            for prefix in prefixes:
+                fullPath = os.path.join(prefix, candidate)
+                if os.path.isfile(fullPath):
+                    return QIcon(fullPath)
+
+        # Fall back to theme icons
+        return QIcon.fromTheme(name)
+
+    if type(iconId) is str:
+        icon = lookUpNamedIcon(iconId)
     else:
-        return QApplication.style().standardIcon(iconId)
+        icon = QApplication.style().standardIcon(iconId)
+
+    _stockIconCache[iconId] = icon
+    return icon
+
+
+def clearStockIconCache():
+    _stockIconCache.clear()
 
 
 def appendShortcutToToolTip(widget: QWidget, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):

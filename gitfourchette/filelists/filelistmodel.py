@@ -10,13 +10,6 @@ from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
-# If SVG icons don't show up, you may need to install the 'qt6-svg' package.
-STATUS_ICONS = {}
-for status in "ACDMRTUX":
-    STATUS_ICONS[status] = QIcon(F"assets:status_{status.lower()}.svg")
-
-FALLBACK_STATUS_ICON = QIcon("assets:status_fallback.svg")
-
 PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
 
@@ -187,11 +180,14 @@ class FileListModel(QAbstractListModel):
         elif role == Qt.ItemDataRole.DecorationRole:
             delta = self.getDeltaAt(index)
             if not delta:
-                return FALLBACK_STATUS_ICON
+                iconName = "status_x"
             elif delta.status == pygit2.GIT_DELTA_UNTRACKED:
-                return STATUS_ICONS.get('A', FALLBACK_STATUS_ICON)
+                iconName = "status_a"
+            elif delta.status == pygit2.GIT_DELTA_CONFLICTED:
+                iconName = "status_u"
             else:
-                return STATUS_ICONS.get(delta.status_char(), FALLBACK_STATUS_ICON)
+                iconName = "status_" + delta.status_char().lower()
+            return stockIcon(iconName)
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             delta = self.getDeltaAt(index)
@@ -213,5 +209,4 @@ class FileListModel(QAbstractListModel):
 
     def hasFile(self, path):
         return path in self.fileRows
-
 

@@ -23,13 +23,16 @@ from .qcomboboxwithpreview import QComboBoxWithPreview
 from .qelidedlabel import QElidedLabel
 from .qrunnablefunctionwrapper import QRunnableFunctionWrapper
 from .qsignalblockercontext import QSignalBlockerContext
-from .qtutils import (addComboBoxItem, setWindowModal, isImageFormatSupported,
-                      onAppThread, tweakWidgetFont, formatWidgetText,
-                      formatWidgetTooltip, stockIcon,
-                      appendShortcutToToolTip,
-                      openFolder, showInFolder, DisableWidgetContext,
-                      QScrollBackupContext, QTabBarStyleNoRotatedText,
-                      makeInternalLink,
-                      )
+from .qtutils import (
+    addComboBoxItem, setWindowModal, isImageFormatSupported,
+    onAppThread, tweakWidgetFont, formatWidgetText,
+    formatWidgetTooltip,
+    isDarkTheme,
+    stockIcon, clearStockIconCache,
+    appendShortcutToToolTip,
+    openFolder, showInFolder, DisableWidgetContext,
+    QScrollBackupContext, QTabBarStyleNoRotatedText,
+    makeInternalLink,
+)
 from .textutils import escape, escamp, paragraphs, messageSummary, elide
 from .validatormultiplexer import ValidatorMultiplexer

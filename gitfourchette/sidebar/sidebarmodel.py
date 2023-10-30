@@ -416,7 +416,7 @@ class SidebarModel(QAbstractItemModel):
                 if MACOS or WINDOWS:
                     return stockIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
                 else:
-                    return QIcon("assets:achtung.svg")
+                    return stockIcon("achtung")
 
         elif item == EItem.Remote:
             if displayRole or userRole:

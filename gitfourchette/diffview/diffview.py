@@ -679,7 +679,7 @@ class DiffView(QPlainTextEdit):
         palette = self.palette()
         themeBG = palette.color(QPalette.ColorRole.Base)  # standard theme background color
         themeFG = palette.color(QPalette.ColorRole.Text)  # standard theme foreground color
-        if themeBG.value() > themeFG.value():
+        if isDarkTheme(palette):
             gutterColor = themeBG.darker(105)  # light theme
         else:
             gutterColor = themeBG.lighter(140)  # dark theme

@@ -69,13 +69,14 @@ def writeIfDifferent(path, text, ignoreChangedLines=[]):
 
 
 def writeStatusIcon(fill='#ff00ff', char='X', round=2):
-    svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>\n"
-    svg += F"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='white' stroke-width='1' fill='{fill}'/>\n"
-    svg += F"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='white'>{char}</text>\n"
-    svg += F"</svg>"
-    svgFileName = F"{assetsDir}/status_{char.lower()}.svg"
-    print(svgFileName)
-    writeIfDifferent(svgFileName, svg)
+    for suffix, color in (["", "white"], ["@dark", "black"]):
+        svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>\n"
+        svg += f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='{color}' stroke-width='1' fill='{fill}'/>\n"
+        svg += f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='{color}'>{char}</text>\n"
+        svg += f"</svg>"
+        svgFileName = F"{assetsDir}/status_{char.lower()}{suffix}.svg"
+        print(svgFileName)
+        writeIfDifferent(svgFileName, svg)
 
 
 def compileUi(uiPath, pyPath):
@@ -104,15 +105,13 @@ toolVersions += call(LUPDATE, "-version").stdout
 toolVersions += call(LRELEASE, "-version").stdout
 print(toolVersions)
 
-# Generate status icons
-# https://git-scm.com/docs/git-diff#_raw_output_format
+# Generate status icons.
+# 'U' (unmerged) has custom colors/text, so don't generate it automatically.
+# 'C' (copied) and 'T' (typechange) don't appear in GitFourchette.
 writeStatusIcon('#0EDF00', 'A')  # add
-writeStatusIcon('#000000', 'C')
 writeStatusIcon('#FE635F', 'D')  # delete
 writeStatusIcon('#F7C342', 'M')  # modify
-writeStatusIcon('#D18DE1', 'R')  # renamed
-writeStatusIcon('#000000', 'T')
-writeStatusIcon('#90a0b0', 'U')  # unmerged
+writeStatusIcon('#D18DE1', 'R')  # rename
 writeStatusIcon('#ff00ff', 'X')  # unknown
 
 # Generate .py files from .ui files
