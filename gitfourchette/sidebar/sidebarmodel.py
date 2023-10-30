@@ -75,7 +75,6 @@ class SidebarModel(QAbstractItemModel):
     repoState: RepoState | None
     repo: pygit2.Repository | None
     _localBranches: list[str]
-    _tracking: list[str]
     _unbornHead: str
     _detachedHead: str
     _checkedOut: str
@@ -132,7 +131,6 @@ class SidebarModel(QAbstractItemModel):
 
         self.repo = None
         self._localBranches = []
-        self._tracking = []
         self._unbornHead = ""
         self._detachedHead = ""
         self._checkedOut = ""
@@ -144,6 +142,9 @@ class SidebarModel(QAbstractItemModel):
         self._submodules = []
         self._hiddenBranches = []
         self._hiddenStashCommits = []
+
+        self._cachedTooltipIndex = None
+        self._cachedTooltipText = ""
 
         if emitSignals:
             self.endResetModel()
@@ -172,11 +173,11 @@ class SidebarModel(QAbstractItemModel):
                 if name.startswith(porcelain.HEADS_PREFIX):
                     name = name.removeprefix(porcelain.HEADS_PREFIX)
                     self._localBranches.append(name)
-                    upstream = repo.branches.local[name].upstream  # a bit costly
-                    if not upstream:
-                        self._tracking.append("")
-                    else:
-                        self._tracking.append(upstream.shorthand)
+                    # upstream = repo.branches.local[name].upstream  # a bit costly
+                    # if not upstream:
+                    #     self._tracking.append("")
+                    # else:
+                    #     self._tracking.append(upstream.shorthand)
                 elif name.startswith(porcelain.REMOTES_PREFIX):
                     name = name.removeprefix(porcelain.REMOTES_PREFIX)
                     remote, name = porcelain.splitRemoteBranchShorthand(name)
@@ -340,9 +341,18 @@ class SidebarModel(QAbstractItemModel):
         font.setStrikeOut(True)
         return font
 
+    def cacheTooltip(self, index: QModelIndex, text: str):
+        self._cachedTooltipIndex = index
+        self._cachedTooltipText = text
+
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
         if not self.repo:
             return None
+
+        # Tooltips may show information that is expensive to obtain.
+        # Try to reuse any tooltip that we may have cached for the same index.
+        if role == Qt.ItemDataRole.ToolTipRole and index == self._cachedTooltipIndex:
+            return self._cachedTooltipText
 
         row = index.row()
         item = self.unpackItem(index)
@@ -383,9 +393,11 @@ class SidebarModel(QAbstractItemModel):
                 text += self.tr("Local branch <b>“{0}”</b>").format(escape(branchName))
                 if branchName == self._checkedOut:
                     text += "\n" + ACTIVE_BULLET + self.tr("Active branch")
-                if self._tracking[branchNo]:
-                    text += "\n" + self.tr("Tracking remote branch “{0}”").format(escape(self._tracking[branchNo]))
-                text += "<i/>"  # Force HTML
+                # TODO no-GIL: try to lock the repo here - if we can't, skip upstream info and don't cache the tooltip
+                upstream = self.repo.branches.local[branchName].upstream  # a bit costly
+                if upstream:
+                    text += "\n" + self.tr("Tracking remote branch “{0}”").format(escape(upstream.shorthand))
+                self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
                 return F"refs/heads/{branchName}" in self._hiddenBranches
@@ -466,7 +478,11 @@ class SidebarModel(QAbstractItemModel):
                 commit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
                 commitQdt = QDateTime.fromSecsSinceEpoch(commit.commit_time, Qt.TimeSpec.OffsetFromUTC, commit.commit_time_offset * 60)
                 commitTimeStr = QLocale().toString(commitQdt, settings.prefs.shortTimeFormat)
-                return f"<p style='white-space: pre'><b>stash@{{{row}}}</b>: {escape(stash.message)}<br/><b>{self.tr('date:')}</b> {commitTimeStr}"
+                text = "<p style='white-space: pre'>"
+                text += f"<b>stash@{{{row}}}</b>: {escape(stash.message)}<br/>"
+                text += f"<b>{self.tr('date:')}</b> {commitTimeStr}"
+                self.cacheTooltip(index, text)
+                return text
             elif userRole:
                 return stash.commit_id.hex
             elif fontRole:
