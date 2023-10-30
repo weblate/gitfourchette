@@ -1,6 +1,6 @@
-from gitfourchette import porcelain
 from gitfourchette import log
-from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette import porcelain
+from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.repostate import RepoState
@@ -463,7 +463,10 @@ class SidebarModel(QAbstractItemModel):
             elif refRole:
                 return F"stash@{{{row}}}"
             elif toolTipRole:
-                return F"<b>stash@{{{row}}}</b>:<br/>{escape(stash.message)}"
+                commit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
+                commitQdt = QDateTime.fromSecsSinceEpoch(commit.commit_time, Qt.TimeSpec.OffsetFromUTC, commit.commit_time_offset * 60)
+                commitTimeStr = QLocale().toString(commitQdt, settings.prefs.shortTimeFormat)
+                return f"<p style='white-space: pre'><b>stash@{{{row}}}</b>: {escape(stash.message)}<br/><b>{self.tr('date:')}</b> {commitTimeStr}"
             elif userRole:
                 return stash.commit_id.hex
             elif fontRole:
