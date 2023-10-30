@@ -72,6 +72,7 @@ UNINDENT_ITEMS = [
 
 
 class SidebarModel(QAbstractItemModel):
+    repoState: RepoState | None
     repo: pygit2.Repository | None
     _localBranches: list[str]
     _tracking: list[str]
@@ -156,6 +157,7 @@ class SidebarModel(QAbstractItemModel):
 
         self.clear(emitSignals=False)
         self.repo = repo
+        self.repoState = repoState
 
         # Remote list
         with Benchmark("Sidebar/Remotes"):
@@ -484,7 +486,10 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.UncommittedChanges:
             if displayRole:
-                return self.tr("Changes")
+                changesText = self.tr("Changes")
+                if self.repoState.numChanges != 0:
+                    changesText = f"({self.repoState.numChanges}) " + changesText
+                return changesText
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere
                 return "UNCOMMITTED_CHANGES"

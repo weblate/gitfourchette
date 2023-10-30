@@ -78,6 +78,7 @@ class RepoState:
     hiddenCommits: set[pygit2.Oid]
 
     workdirStale: bool
+    numChanges: int
 
     uiPrefs: RepoPrefs
 
@@ -118,6 +119,7 @@ class RepoState:
         self.activeCommitOid = None
 
         self.workdirStale = True
+        self.numChanges = 0
 
         self.uiPrefs.load()
 

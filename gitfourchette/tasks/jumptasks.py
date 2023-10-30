@@ -158,7 +158,15 @@ class Jump(RepoTask):
             rw.dirtyHeader.setText(self.tr("%n dirty file(s):", "", nDirty))
             rw.stagedHeader.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
 
+            newNumChanges = nDirty + nStaged
+            numChangesDifferent = rw.state.numChanges != newNumChanges
+            rw.state.numChanges = newNumChanges
+
             rw.state.workdirStale = False
+
+            # Show number of staged changes in sidebar
+            if numChangesDifferent:
+                rw.sidebar.repaint()
 
         # If jumping to generic workdir context, find a concrete context
         if locator.context == NavContext.WORKDIR:
