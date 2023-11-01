@@ -172,7 +172,7 @@ def isZeroId(oid: pygit2.Oid) -> bool:
     return oid.raw == BLANK_OID.raw
 
 
-def workdirPath(repo: Repository, path: str):
+def workdirPath(repo: Repository, path: str) -> str:
     return os.path.join(repo.workdir, path)
 
 
@@ -1059,9 +1059,31 @@ def applyPatch(
     return diff
 
 
-def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str):
+def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str) -> str:
     submo = repo.lookup_submodule(submoduleKey)
-    return os.path.join(repo.workdir, submo.path)
+    return workdirPath(repo, submo.path)
+
+
+def listAllSubmodulesFast(repo: pygit2.Repository) -> list[str]:
+    """
+    Faster drop-in replacement for pygit2's Repository.listall_submodules (which can be very slow).
+    Returns a list of submodule workdirs within the root repo's workdir.
+    """
+
+    # return repo.listall_submodules()
+
+    configPath = workdirPath(repo, ".gitmodules")
+    if not os.path.isfile(configPath):
+        return []
+
+    config = pygit2.Config(configPath)
+    submodulePaths = []
+    for configEntry in config:
+        key: str = configEntry.name
+        if key.startswith("submodule.") and key.endswith(".path"):
+            submodulePaths.append(configEntry.value)
+
+    return submodulePaths
 
 
 def fastForwardBranch(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):

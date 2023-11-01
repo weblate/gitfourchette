@@ -215,7 +215,7 @@ class SidebarModel(QAbstractItemModel):
 
         # Submodules
         with Benchmark("Sidebar/Submodules"):
-            self._submodules = repo.listall_submodules()
+            self._submodules = porcelain.listAllSubmodulesFast(repo)
 
         self._hiddenBranches = repoState.uiPrefs.hiddenBranches
         self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
