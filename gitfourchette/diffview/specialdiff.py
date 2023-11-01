@@ -78,6 +78,7 @@ class SpecialDiffError(Exception):
     def noChange(delta: pygit2.DiffDelta):
         message = translate("Diff", "File contents didn’t change.")
         details = []
+        longform = []
 
         oldFile: pygit2.DiffFile = delta.old_file
         newFile: pygit2.DiffFile = delta.new_file
@@ -89,7 +90,16 @@ class SpecialDiffError(Exception):
             message = translate("Diff", "Empty file was deleted.")
 
         if not oldFileExists:
-            if delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
+            if delta.new_file.mode == pygit2.GIT_FILEMODE_TREE:
+                treePath = os.path.normpath(delta.new_file.path)
+                treeName = os.path.basename(treePath)
+                message = translate("Diff", "This untracked folder is the root of another Git repository.")
+
+                # TODO: if we had the full path to the root repo, we could just make a standard file link, and we wouldn't need the "opensubfolder" authority
+                prompt1 = translate("Diff", "Open “{0}” in new tab").format(treeName)
+                openUrl = makeInternalLink("opensubfolder", treePath)
+                longform.append(f"<center><p><a href='{openUrl.toString()}'>{prompt1}</a></p></center>")
+            elif delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
                 message = translate("Diff", "New empty file.")
             else:
                 message = translate("Diff", "File is empty.")
@@ -102,7 +112,7 @@ class SpecialDiffError(Exception):
             intro = translate("Diff", "Mode change:")
             details.append(f"{intro} {TrTables.fileMode(oldFile.mode)} &rarr; {TrTables.fileMode(newFile.mode)}.")
 
-        return SpecialDiffError(message, "\n".join(details))
+        return SpecialDiffError(message, "\n".join(details), longform="\n".join(longform))
 
     @staticmethod
     def binaryDiff(delta: pygit2.DiffDelta):

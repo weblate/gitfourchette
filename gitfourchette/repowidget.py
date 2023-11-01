@@ -728,5 +728,10 @@ class RepoWidget(QWidget):
             self.jump(locator)
         elif url.authority() == "refresh":
             self.refreshRepo()
+        elif url.authority() == "opensubfolder":
+            p = url.path()
+            p = p.removeprefix("/")
+            p = os.path.join(self.repo.workdir, p)
+            self.openRepo.emit(p)
         else:
             log.warning(TAG, "Unsupported authority in internal link: ", url.toDisplayString())

@@ -81,7 +81,10 @@ class LoadPatch(RepoTask):
             return DiffConflict(ancestor, ours, theirs)
 
         submodule = None
-        with contextlib.suppress(KeyError), Benchmark("Submodule detection"):
+        with (contextlib.suppress(KeyError),
+              contextlib.suppress(ValueError),  # "submodule <whatever> has not been added yet" (GIT_EEXISTS)
+              Benchmark("Submodule detection")
+              ):
             submodule = self.repo.lookup_submodule(patch.delta.new_file.path)
         if submodule:
             return SpecialDiffError.submoduleDiff(self.repo, submodule, patch)
