@@ -1,8 +1,8 @@
 from gitfourchette import log
-from gitfourchette import trtables
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES, DIFF_TOOL_PRESETS, MERGE_TOOL_PRESETS
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 from gitfourchette.graphview.commitlogdelegate import abbreviatePerson
 import enum
 import pygit2
@@ -53,8 +53,6 @@ class PrefsDialog(QDialog):
     def __init__(self, parent: QWidget, focusOn: str = ""):
         super().__init__(parent)
 
-        self.settingsTranslationTable = trtables.prefsTranslationTable()
-
         # Hide irrelevant settings
         skipKeys = {"shortHashChars"}
         if MACOS:
@@ -62,7 +60,7 @@ class PrefsDialog(QDialog):
 
         self.setObjectName("PrefsDialog")
 
-        self.setWindowTitle(self.tr("{app} Preferences").format(app=qAppName()))
+        self.setWindowTitle(translate("Prefs", "{app} Preferences", "prefs dialog title").format(app=qAppName()))
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -103,11 +101,12 @@ class PrefsDialog(QDialog):
                 form = QFormLayout(formContainer)
                 form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
                 formContainer.setLayout(form)
-                tabWidget.addTab(formContainer, self.translateSetting(category) or self.tr("General"))
+                tabName = TrTables.prefKey(category) if category else translate("Prefs", "General")
+                tabWidget.addTab(formContainer, tabName)
                 categoryForms[category] = form
                 pCategory = category
 
-                headerText = self.translateSetting(f"{category}_HEADER")
+                headerText = TrTables.prefKey(f"{category}_HEADER")
                 if headerText != f"{category}_HEADER":
                     headerText = headerText.format(app=qAppName())
                     explainer = QLabel(headerText)
@@ -117,9 +116,11 @@ class PrefsDialog(QDialog):
 
             suffix = ""
             if caption:
-                caption = self.translateSetting(prefKey)
-                if isinstance(caption, tuple):
-                    caption, suffix = caption
+                caption = TrTables.prefKey(prefKey)
+                if "#" in caption:
+                    caption, suffix = caption.split("#")
+                    caption = caption.rstrip()
+                    suffix = suffix.lstrip()
 
             if prefKey == 'language':
                 control = self.languageControl(prefKey, prefValue)
@@ -202,9 +203,9 @@ class PrefsDialog(QDialog):
             return None
 
     def languageControl(self, prefKey: str, prefValue: str):
+        defaultCaption = translate("Prefs", "System default", "system default language setting")
         control = QComboBox(self)
-
-        control.addItem(self.tr("System default"), userData="")
+        control.addItem(defaultCaption, userData="")
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)
@@ -241,21 +242,23 @@ class PrefsDialog(QDialog):
                 self.assign(prefKey, newFont.toString())
                 refreshFontButton()
 
-        fontButton = QPushButton(self.tr("Font"))
+        fontButton = QPushButton(translate("Prefs", "Font"))
         fontButton.clicked.connect(lambda e: pickFont())
         fontButton.setMinimumWidth(256)
         fontButton.setMaximumWidth(256)
         fontButton.setMaximumHeight(128)
 
         resetButton = QToolButton(self)
-        resetButton.setText(self.tr("Reset"))
+        resetButton.setText(translate("Prefs", "Reset", "reset font"))
         resetButton.clicked.connect(lambda: resetFont())
 
         def refreshFontButton():
             font = currentFont()
             if not self.getMostRecentValue(prefKey):
                 resetButton.setVisible(False)
-                fontButton.setText(self.tr("Default", "as in Default Font") + f" ({font.family()} {font.pointSize()})")
+                caption = translate("Prefs", "Default", "as in Default Font")
+                caption += f" ({font.family()} {font.pointSize()})"
+                fontButton.setText(caption)
             else:
                 resetButton.setVisible(True)
                 fontButton.setText(F"{font.family()} {font.pointSize()}")
@@ -287,6 +290,7 @@ class PrefsDialog(QDialog):
 
     def intControl(self, prefKey, prefValue):
         control = QLineEdit(str(prefValue), self)
+        control.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         control.setValidator(QIntValidator())
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, int(v) if v else 0))
         return control
@@ -301,6 +305,7 @@ class PrefsDialog(QDialog):
 
     def floatControl(self, prefKey, prefValue):
         control = QLineEdit(str(prefValue), self)
+        control.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         control.setValidator(QDoubleValidator())
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, float(v) if v else 0.0))
         return control
@@ -324,9 +329,9 @@ class PrefsDialog(QDialog):
 
         for enumMember in enumType:
             if previewCallback:
-                control.addItemWithPreview(self.translateSetting(enumMember.name), enumMember, previewCallback(enumMember))
+                control.addItemWithPreview(TrTables.prefKey(enumMember.name), enumMember, previewCallback(enumMember))
             else:
-                control.addItem(self.translateSetting(enumMember.name), enumMember)
+                control.addItem(TrTables.prefKey(enumMember.name), enumMember)
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
 
@@ -334,9 +339,9 @@ class PrefsDialog(QDialog):
         return control
 
     def qtStyleControl(self, prefKey, prefValue):
+        defaultCaption = translate("Prefs", "System default", "default Qt style setting")
         control = QComboBox(self)
-
-        control.addItem(self.tr("System default"), userData="")
+        control.addItem(defaultCaption, userData="")
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)
@@ -379,6 +384,3 @@ class PrefsDialog(QDialog):
         control.setEditText(prefValue)
 
         return vBoxWidget(control, preview)
-
-    def translateSetting(self, s: str):
-        return self.settingsTranslationTable.get(s, s)

@@ -11,6 +11,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import isZeroId, BLANK_OID
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 
 @dataclass
@@ -99,7 +100,7 @@ class SpecialDiffError(Exception):
 
         if oldFileExists and oldFile.mode != newFile.mode:
             intro = translate("Diff", "Mode change:")
-            details.append(f"{intro} {translateFileMode(oldFile.mode)} &rarr; {translateFileMode(newFile.mode)}.")
+            details.append(f"{intro} {TrTables.fileMode(oldFile.mode)} &rarr; {TrTables.fileMode(newFile.mode)}.")
 
         return SpecialDiffError(message, "\n".join(details))
 

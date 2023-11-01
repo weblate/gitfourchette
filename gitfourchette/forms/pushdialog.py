@@ -4,7 +4,7 @@ from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
-from gitfourchette.trtables import translateExceptionName
+from gitfourchette.trtables import TrTables
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
 import enum
@@ -357,7 +357,7 @@ class PushDialog(QDialog):
                 QApplication.alert(pushDialog, 500)
                 pushDialog.pushInProgress = False
                 pushDialog.enableInputs(True)
-                pushDialog.ui.statusForm.setBlurb(F"<b>{translateExceptionName(exc)}:</b> {escape(str(exc))}")
+                pushDialog.ui.statusForm.setBlurb(F"<b>{TrTables.exceptionName(exc)}:</b> {escape(str(exc))}")
 
         self.pushInProgress = True
         self.enableInputs(False)

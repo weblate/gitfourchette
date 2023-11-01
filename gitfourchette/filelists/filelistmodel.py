@@ -9,6 +9,7 @@ from gitfourchette import settings
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
@@ -33,7 +34,7 @@ def deltaModeText(delta: pygit2.DiffDelta):
         elif nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
             return "+x"
         else:
-            return translateFileMode(nm)
+            return TrTables.fileMode(nm)
 
 
 def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: bool):
@@ -45,8 +46,8 @@ def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: boo
     nf: pygit2.DiffFile = delta.new_file
 
     sc = delta.status_char()
-    if delta.status == pygit2.GIT_DELTA_CONFLICTED:
-        sc = "!"
+    if delta.status == pygit2.GIT_DELTA_CONFLICTED:  # libgit2 should arguably return "U" (unmerged) for conflicts, but it doesn't
+        sc = "U"
 
     text = "<p style='white-space: pre'>" + escape(nf.path)
     text += "\n<table>"
@@ -55,8 +56,8 @@ def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: boo
         return f"<tr><td><b>{heading} </b></tb><td>{caption}</td>"
 
     # Status caption
-    statusCaption = translateDeltaStatus(sc)
-    if sc not in '?!':  # show status char except for untracked and conflict
+    statusCaption = TrTables.diffStatusChar(sc)
+    if sc not in '?U':  # show status char except for untracked and conflict
         statusCaption += f" ({sc})"
     text += newLine(translate("FileList", "status:"), statusCaption)
 
@@ -67,19 +68,19 @@ def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: boo
         text += newLine(translate("FileList", "similarity:"), f"{delta.similarity}%")
 
     # File Mode
-    if sc not in 'D!':
+    if sc not in 'DU':
         legend = translate("FileList", "file mode:")
         if sc in 'A?':
-            text += newLine(legend, translateFileMode(nf.mode))
+            text += newLine(legend, TrTables.fileMode(nf.mode))
         elif of.mode != nf.mode:
-            text += newLine(legend, f"{translateFileMode(of.mode)} &rarr; {translateFileMode(nf.mode)}")
+            text += newLine(legend, f"{TrTables.fileMode(of.mode)} &rarr; {TrTables.fileMode(nf.mode)}")
 
     # Size (if available)
-    if sc not in 'D!' and nf.size != 0 and (nf.mode & pygit2.GIT_FILEMODE_BLOB == pygit2.GIT_FILEMODE_BLOB):
+    if sc not in 'DU' and nf.size != 0 and (nf.mode & pygit2.GIT_FILEMODE_BLOB == pygit2.GIT_FILEMODE_BLOB):
         text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size))
 
     # Modified time
-    if isWorkdir and sc not in 'D!':
+    if isWorkdir and sc not in 'DU':
         with contextlib.suppress(IOError):
             fullPath = os.path.join(repo.workdir, nf.path)
             fileStat = os.stat(fullPath)

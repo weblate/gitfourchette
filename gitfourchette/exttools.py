@@ -1,8 +1,8 @@
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 from gitfourchette import log
 from gitfourchette import tempdir
-from gitfourchette import trtables
 import os
 import shlex
 
@@ -26,7 +26,7 @@ def onExternalToolProcessError(process: QProcess, prefKey: str):
     programName = process.program()
     programName = os.path.basename(programName)
 
-    translatedPrefKey = trtables.prefsTranslationTable().get(prefKey, prefKey)
+    translatedPrefKey = TrTables.prefKey(prefKey)
 
     title = translate("exttools", "Failed to start {0}").format(translatedPrefKey)
 
@@ -50,7 +50,7 @@ def onExternalToolProcessError(process: QProcess, prefKey: str):
 
 
 def setUpMergeToolPrompt(parent: QWidget, prefKey: str):
-    translatedPrefKey = trtables.prefsTranslationTable().get(prefKey, prefKey)
+    translatedPrefKey = TrTables.prefKey(prefKey)
 
     title = translatedPrefKey
 

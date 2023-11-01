@@ -1,7 +1,7 @@
 from gitfourchette import porcelain
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.trtables import translateNameValidationCode
+from gitfourchette.trtables import TrTables
 from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
 from pygit2 import Signature
 
@@ -15,7 +15,7 @@ class SignatureForm(QWidget):
             porcelain.validateSignatureItem(item)
             return ""
         except porcelain.NameValidationError as exc:
-            return translateNameValidationCode(exc.code)
+            return TrTables.refNameValidation(exc.code)
 
     def __init__(self, parent):
         super().__init__(parent)

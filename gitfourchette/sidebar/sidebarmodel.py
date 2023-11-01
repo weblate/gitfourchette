@@ -3,6 +3,7 @@ from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 from gitfourchette.repostate import RepoState
 from typing import Any, Iterable
 import contextlib
@@ -522,24 +523,7 @@ class SidebarModel(QAbstractItemModel):
 
         else:
             if displayRole:
-                ITEM_NAMES = {
-                    EItem.UncommittedChanges: self.tr("Changes"),
-                    EItem.LocalBranchesHeader: self.tr("Branches"),
-                    EItem.StashesHeader: self.tr("Stashes"),
-                    EItem.RemotesHeader: self.tr("Remotes"),
-                    EItem.TagsHeader: self.tr("Tags"),
-                    EItem.SubmodulesHeader: self.tr("Submodules"),
-                    EItem.LocalBranch: self.tr("Local branch"),
-                    EItem.DetachedHead: self.tr("Detached HEAD"),
-                    EItem.UnbornHead: self.tr("Unborn HEAD"),
-                    EItem.RemoteBranch: self.tr("Remote branch"),
-                    EItem.Stash: self.tr("Stash"),
-                    EItem.Remote: self.tr("Remote"),
-                    EItem.Tag: self.tr("Tag"),
-                    EItem.Submodule: self.tr("Submodules"),
-                    EItem.Spacer: "---",
-                }
-                return ITEM_NAMES[item]
+                return TrTables.sidebarItem(item)
             elif refRole:
                 return ""
             elif fontRole:

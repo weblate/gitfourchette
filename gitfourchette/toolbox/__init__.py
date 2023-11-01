@@ -10,7 +10,7 @@ from .excutils import shortenTracebackPath, excStrings
 from .gitutils import (
     shortHash, dumpTempBlob, nameValidationMessage,
     AuthorDisplayStyle, abbreviatePerson,
-    translateDeltaStatus, translateFileMode, simplifyOctalFileMode,
+    simplifyOctalFileMode,
 )
 from .memoryindicator import MemoryIndicator
 from .messageboxes import (

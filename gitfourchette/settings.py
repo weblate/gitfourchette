@@ -3,6 +3,7 @@ from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
 from gitfourchette.toolbox.pathutils import PathDisplayStyle
+from gitfourchette.trtables import TrTables
 import contextlib
 import dataclasses
 import enum
@@ -287,6 +288,8 @@ def applyLanguagePref():
                 baseTranslator.deleteLater()
         except BaseException as exc:
             log.warning("settings", f"Failed to load Qt base translation for language: {prefs.language} - Cause: {exc}")
+
+    TrTables.retranslateAll()
 
 
 def _getCmdName(command, fallback, presets):

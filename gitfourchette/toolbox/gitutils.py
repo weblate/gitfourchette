@@ -1,6 +1,5 @@
 from gitfourchette import porcelain
-from gitfourchette.trtables import translateNameValidationCode
-from gitfourchette.qt import translate
+from gitfourchette.trtables import TrTables
 import enum
 import pygit2
 import os
@@ -86,7 +85,7 @@ def nameValidationMessage(name: str, reservedNames: list[str], nameTakenMessage:
         if exc.code == porcelain.NameValidationError.NAME_TAKEN and nameTakenMessage:
             return nameTakenMessage
         else:
-            return translateNameValidationCode(exc.code)
+            return TrTables.refNameValidation(exc.code)
 
     return ""  # validation passed, no error
 
@@ -95,33 +94,3 @@ def simplifyOctalFileMode(m: int):
     if m in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]:
         m &= ~0o100000
     return m
-
-
-def translateDeltaStatus(statusChar: str):
-    # see git_diff_status_char (diff_print.c)
-    statusCaptions = {
-        "A": translate("git", "added"),
-        "C": translate("git", "copied"),
-        "D": translate("git", "deleted"),
-        "I": translate("git", "ignored"),
-        "M": translate("git", "modified"),
-        "R": translate("git", "renamed"),
-        "T": translate("git", "file type changed"),
-        "U": translate("git", "updated but unmerged"),
-        "X": translate("git", "unreadable"),
-        "?": translate("git", "untracked"),
-        "!": translate("git", "merge conflict"),  # this char is made up within GitFourchette
-    }
-    return statusCaptions.get(statusChar, f"unknown status {statusChar}")
-
-
-def translateFileMode(m: int):
-    fileModeTable = {
-        0                                  : translate("git", "deleted", "unreadable/deleted file mode 0o000000"),
-        pygit2.GIT_FILEMODE_BLOB           : translate("git", "normal", "default file mode 0o100644"),
-        pygit2.GIT_FILEMODE_BLOB_EXECUTABLE: translate("git", "executable", "executable file mode 0o100755"),
-        pygit2.GIT_FILEMODE_LINK           : translate("git", "link", "as in 'symlink' - file mode 0o120000"),
-        pygit2.GIT_FILEMODE_TREE           : translate("git", "tree", "as in 'directory tree' - file mode 0o40000"),
-        pygit2.GIT_FILEMODE_COMMIT         : translate("git", "commit", "'commit' file mode 0o160000"),
-    }
-    return fileModeTable.get(m, f"{m:o}")
