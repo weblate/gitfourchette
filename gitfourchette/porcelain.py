@@ -746,7 +746,7 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
     Return commit oids at the tip of all branches, tags, etc. in the repository.
 
     To ensure a consistent outcome across multiple walks of the same commit graph,
-    the oids are sorted by descending commit time.
+    the oids are sorted by ascending commit time.
     """
 
     tips: list[tuple[str, Commit]] = []
@@ -783,7 +783,7 @@ def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
 
     # Reinsert all tips in chronological order
     # (In Python 3.7+, dict key order is stable)
-    tips = sorted(tips, key=lambda item: item[1].commit_time, reverse=True)
+    tips.sort(key=lambda item: item[1].commit_time)
     return dict((ref, commit.oid) for ref, commit in tips)
 
 

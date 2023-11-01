@@ -42,6 +42,10 @@ class TrTables:
         return cls._prefKeys.get(key, key)
 
     @classmethod
+    def prefKeyNoDefault(cls, key: str):
+        return cls._prefKeys.get(key, "")
+
+    @classmethod
     def diffStatusChar(cls, c: str):
         return cls._diffStatusChars.get(c, c)
 
@@ -156,9 +160,20 @@ class TrTables:
             "tabs_autoHide": translate("Prefs", "Auto-hide tab bar if there’s just 1 tab"),
             "tabs_doubleClickOpensFolder": translate("Prefs", "Double-click a tab to open repo folder"),
 
-            "graph_chronologicalOrder": translate("Prefs", "Commit order"),
-            "graph_flattenLanes": translate("Prefs", "Flatten lanes"),
+            "graph_chronologicalOrder": translate("Prefs", "Sort commits"),
+            "graph_chronologicalOrder_true": translate("Prefs", "Chronologically – Most recent commits always on top"),
+            "graph_chronologicalOrder_false": translate("Prefs", "Topologically – Neater branches in graph"),
+            "graph_chronologicalOrder_help": translate(
+                "Prefs",
+                "<p><b>Chronological mode</b> lets you stay on top of the latest activity in the repository. "
+                "The most recent commits always show up at the top of the graph. "
+                "However, the graph can get messy when multiple branches receive commits in the same timeframe.</p>"
+                "<p><b>Topological mode</b> makes the graph easier to read. It attempts to present sequences of "
+                "commits within a branch in a linear fashion. Since this is not a strictly chronological "
+                "mode, you may have to do more scrolling to see the latest changes in various branches.</p>"),
+
             "graph_rowHeight": translate("Prefs", "Row spacing"),
+            "graph_flattenLanes": translate("Prefs", "Squeeze branch lanes in graph"),
 
             "trash_maxFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
             "trash_maxFileSizeKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),

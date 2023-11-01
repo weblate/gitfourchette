@@ -128,8 +128,6 @@ class PrefsDialog(QDialog):
                 control = self.qtStyleControl(prefKey, prefValue)
             elif prefKey == 'diff_font':
                 control = self.fontControl(prefKey)
-            elif prefKey == 'graph_chronologicalOrder':
-                control = self.boolRadioControl(prefKey, prefValue, trueName=self.tr("Chronological"), falseName=self.tr("Topological"))
             elif prefKey == 'shortTimeFormat':
                 control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
             elif prefKey == 'pathDisplayStyle':
@@ -153,10 +151,15 @@ class PrefsDialog(QDialog):
             elif prefType is float:
                 control = self.floatControl(prefKey, prefValue)
             elif prefType is bool:
-                control = QCheckBox(caption, self)
-                control.setCheckState(Qt.CheckState.Checked if prefValue else Qt.CheckState.Unchecked)
-                control.stateChanged.connect(lambda v, k=prefKey, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
-                caption = None  # The checkbox contains its own caption
+                trueText = TrTables.prefKeyNoDefault(prefKey + "_true")
+                falseText = TrTables.prefKeyNoDefault(prefKey + "_false")
+                if trueText or falseText:
+                    control = self.boolComboBoxControl(prefKey, prefValue, trueName=trueText, falseName=falseText)
+                else:
+                    control = QCheckBox(caption, self)
+                    control.setCheckState(Qt.CheckState.Checked if prefValue else Qt.CheckState.Unchecked)
+                    control.stateChanged.connect(lambda v, k=prefKey, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
+                    caption = None  # The checkbox contains its own caption
 
             if suffix:
                 hbl = QHBoxLayout()
@@ -164,8 +167,16 @@ class PrefsDialog(QDialog):
                 hbl.addWidget(QLabel(suffix))
                 control = hbl
 
+            toolTip = TrTables.prefKeyNoDefault(prefKey + "_help")
+            if toolTip:
+                control.setToolTip(toolTip)
+
             if caption:
-                form.addRow(caption, control)
+                captionLabel = QLabel(caption)
+                if toolTip:
+                    captionLabel.setToolTip(toolTip)
+                    captionLabel.setCursor(Qt.CursorShape.WhatsThisCursor)
+                form.addRow(captionLabel, control)
             else:
                 form.addRow(control)
 
@@ -320,6 +331,14 @@ class PrefsDialog(QDialog):
         trueButton.toggled.connect(lambda b: self.assign(prefKey, b))
 
         return vBoxWidget(trueButton, falseButton)
+
+    def boolComboBoxControl(self, prefKey: str, prefValue: bool, falseName: str, trueName: str) -> QComboBox:
+        control = QComboBox(self)
+        control.addItem(trueName)  # index 0 --> True
+        control.addItem(falseName)  # index 1 --> False
+        control.setCurrentIndex(int(not prefValue))
+        control.activated.connect(lambda index: self.assign(prefKey, index == 0))
+        return control
 
     def enumControl(self, prefKey, prefValue, enumType, previewCallback=None):
         if previewCallback:

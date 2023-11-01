@@ -196,6 +196,10 @@ class RepoState:
         else:
             self.walker.sort(sorting)  # this resets the walker
 
+        # In topological mode, the order in which the tips are pushed is
+        # significant (last in, first out). The tips should be pre-sorted in
+        # ASCENDING chronological order so that the latest modified branches
+        # come out at the top of the graph in topological mode.
         for tip in tipOids:
             self.walker.push(tip)
 

@@ -171,7 +171,7 @@ class SidebarModel(QAbstractItemModel):
 
         # Refs
         with Benchmark("Sidebar/Refs"):
-            for name in refCache:
+            for name in reversed(refCache):  # reversed because refCache sorts tips by ASCENDING commit time
                 if name.startswith(porcelain.HEADS_PREFIX):
                     name = name.removeprefix(porcelain.HEADS_PREFIX)
                     self._localBranches.append(name)
