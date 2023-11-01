@@ -61,15 +61,16 @@ LEAF_ITEMS = [
     EItem.Submodule,
 ]
 
-UNINDENT_ITEMS = [
-    EItem.LocalBranch,
-    EItem.UnbornHead,
-    EItem.DetachedHead,
-    EItem.Stash,
-    EItem.Tag,
-    EItem.Submodule,
-]
-
+UNINDENT_ITEMS = {
+    EItem.LocalBranch: -1,
+    EItem.UnbornHead: -1,
+    EItem.DetachedHead: -1,
+    EItem.Stash: -1,
+    EItem.Tag: -1,
+    EItem.Submodule: -1,
+    EItem.Remote: -1,
+    EItem.RemoteBranch: -1,
+}
 
 class SidebarModel(QAbstractItemModel):
     repoState: RepoState | None

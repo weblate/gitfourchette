@@ -78,17 +78,23 @@ class Sidebar(QTreeView):
         self.collapseCacheValid = False
         self.collapseCache = set()
 
-    def visualRect(self, index):
+        self.expandTriangleClickIndex = None
+        self.eatDoubleClickTimer = QElapsedTimer()
+
+    def visualRect(self, index: QModelIndex) -> QRect:
         """Required so the theme can properly draw unindented rows.
         The offset should match that in SidebarDelegate."""
 
         vr = super().visualRect(index)
 
-        with contextlib.suppress(ValueError):
-            item = SidebarModel.unpackItem(index)
+        if index.isValid():
+            with contextlib.suppress(ValueError):
+                item = SidebarModel.unpackItem(index)
 
-            if item in UNINDENT_ITEMS:
-                vr.adjust(-self.indentation(), 0, 0, 0)
+                if item in UNINDENT_ITEMS:
+                    unindentLevels = UNINDENT_ITEMS[item]
+                    unindentPixels = unindentLevels * self.indentation()
+                    vr.adjust(unindentPixels, 0, 0, 0)
 
         return vr
 
@@ -387,8 +393,40 @@ class Sidebar(QTreeView):
         unpacked = SidebarModel.unpackItemAndData(current)
         self.onEntryClicked(*unpacked)
 
-    def mouseDoubleClickEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
+        index = self.indexAt(event.pos())
+        rect = self.visualRect(index)
+        if index.isValid() and rect.isValid() and event.x() < rect.left():
+            # Clicking collapse/expand triangle - will react in mouseReleaseEvent
+            self.expandTriangleClickIndex = index
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        index = self.indexAt(event.pos())
+        rect = self.visualRect(index)
+        if index.isValid() and rect.isValid() and event.x() < rect.left() and index == self.expandTriangleClickIndex:
+            # Let user collapse/expand in quick succession without triggering a double click
+            self.eatDoubleClickTimer.restart()
+            # Toggle expanded state
+            if self.isExpanded(index):
+                self.collapse(index)
+            else:
+                self.expand(index)
+        else:
+            self.expandTriangleClickIndex = None
+            super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
         # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.
+
+        # See if we should drop this double click (see mouseReleaseEvent)
+        eatTimer = self.eatDoubleClickTimer
+        if eatTimer.isValid() and eatTimer.elapsed() < QApplication.doubleClickInterval():
+            return
+        eatTimer.invalidate()
+
         index: QModelIndex = self.indexAt(event.pos())
         if event.button() == Qt.MouseButton.LeftButton and index.isValid():
             self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))

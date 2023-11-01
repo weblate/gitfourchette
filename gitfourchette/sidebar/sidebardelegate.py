@@ -2,6 +2,14 @@ from gitfourchette.qt import *
 from gitfourchette.sidebar.sidebarmodel import SidebarModel, EItem, UNINDENT_ITEMS, LEAF_ITEMS
 
 
+PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
+PE_COLLAPSED = QStyle.PrimitiveElement.PE_IndicatorArrowRight
+
+# These metrics are a good compromise for Breeze, macOS, and Fusion.
+EXPAND_TRIANGLE_WIDTH = 6
+EXPAND_TRIANGLE_PADDING = 4
+
+
 class SidebarDelegate(QStyledItemDelegate):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
@@ -25,23 +33,24 @@ class SidebarDelegate(QStyledItemDelegate):
         opt = QStyleOptionViewItem(option)
 
         if item in UNINDENT_ITEMS:
-            opt.rect.adjust(-view.indentation(), 0, 0, 0)
+            unindentLevels = UNINDENT_ITEMS[item]
+            unindentPixels = unindentLevels * view.indentation()
+            opt.rect.adjust(unindentPixels, 0, 0, 0)
 
+        # Draw expanding triangle
         if item not in LEAF_ITEMS:
-            opt2 = QStyleOptionViewItem(option)
-
+            opt2 = QStyleOptionViewItem(opt)
             r: QRect = opt2.rect
 
-            # These metrics are a good compromise for Breeze, macOS, and Fusion.
-            r.adjust(-view.indentation() * 6 // 10, 0, 0, 0)  # args must be integers for pyqt5!
-            r.setWidth(6)
+            r.adjust(-EXPAND_TRIANGLE_WIDTH - EXPAND_TRIANGLE_PADDING, 0, 0, 0)  # args must be integers for pyqt5!
+            r.setWidth(EXPAND_TRIANGLE_WIDTH)
 
             # See QTreeView::drawBranches() in qtreeview.cpp for other interesting states
             opt2.state &= ~QStyle.StateFlag.State_MouseOver
 
             style: QStyle = view.style()
-            arrowPrimitive = QStyle.PrimitiveElement.PE_IndicatorArrowDown if view.isExpanded(
-                index) else QStyle.PrimitiveElement.PE_IndicatorArrowRight
+            arrowPrimitive = PE_EXPANDED if view.isExpanded(index) else PE_COLLAPSED
+            # arrowPrimitive = QStyle.PrimitiveElement.PE_IndicatorSpinPlus
             style.drawPrimitive(arrowPrimitive, opt2, painter, view)
 
         super().paint(painter, opt, index)
