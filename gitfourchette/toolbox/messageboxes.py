@@ -89,6 +89,9 @@ def asyncMessageBox(
         deleteOnClose=True,
 ) -> QMessageBox:
 
+    assert onAppThread()
+    assert parent is None or isinstance(parent, QWidget)
+
     loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
     if icon in ['information', 'question']:
         log.verbose("MessageBox", loggedMessage)

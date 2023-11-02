@@ -32,6 +32,19 @@ class GraphView(QListView):
     clModel: CommitLogModel
     clFilter: CommitLogFilter
 
+    class SelectCommitError(KeyError):
+        def __init__(self, oid: pygit2.Oid, foundButHidden: bool):
+            super().__init__()
+            self.oid = oid
+            self.foundButHidden = foundButHidden
+
+        def __str__(self):
+            h = shortHash(self.oid)
+            if self.foundButHidden:
+                return translate("GraphView", "Cannot jump to commit “{0}” because it is on a hidden branch.").format(h)
+            else:
+                return translate("GraphView", "Commit “{0}” not loaded.").format(h)
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -322,45 +335,44 @@ class GraphView(QListView):
             # TODO: Actual lookup
             self.setCurrentIndex(self.model().index(0, 0))
 
-    def getFilterIndexForCommit(self, oid: pygit2.Oid):
+    def getFilterIndexForCommit(self, oid: pygit2.Oid) -> QModelIndex | None:
         try:
             rawIndex = self.repoWidget.state.graph.getCommitRow(oid)
         except KeyError:
-            return None
+            raise GraphView.SelectCommitError(oid, foundButHidden=False)
 
         newSourceIndex = self.clModel.index(rawIndex, 0)
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)
+
+        if not newFilterIndex.isValid():
+            raise GraphView.SelectCommitError(oid, foundButHidden=True)
+
         return newFilterIndex
 
-    def selectCommit(self, oid: pygit2.Oid, silent=False):
-        newFilterIndex = self.getFilterIndexForCommit(oid)
+    def getFilterIndexError(self, filterIndex: QModelIndex, oid: pygit2.Oid) -> str:
+        if filterIndex is None:
+            return self.tr("Commit “{0}” not found or not loaded.").format(shortHash(oid))
+        elif not filterIndex.isValid():
+            return self.tr("Cannot jump to commit “{0}” because it is on a hidden branch.").format(shortHash(oid))
+        else:
+            return ""
 
-        if not newFilterIndex:
-            if not silent:
-                showWarning(self, self.tr("Commit not found"),
-                            self.tr("Commit not found or not loaded:") + f"<br>{oid.hex}")
-            return False
-        elif newFilterIndex.row() < 0:
-            if not silent:
-                showWarning(self, self.tr("Hidden commit"),
-                            self.tr("This commit is hidden from the log:") + f"<br>{oid.hex}")
-            return False
+    def selectCommit(self, oid: pygit2.Oid, silent=True):
+        with contextlib.suppress(GraphView.SelectCommitError if silent else ()):
+            filterIndex = self.getFilterIndexForCommit(oid)
+            if filterIndex.row() != self.currentIndex().row():
+                self.scrollTo(filterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
+                self.setCurrentIndex(filterIndex)
 
-        if self.currentIndex().row() != newFilterIndex.row():
-            self.scrollTo(newFilterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
-            self.setCurrentIndex(newFilterIndex)
-        return True
-
-    def scrollToCommit(self, oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
-        newFilterIndex = self.getFilterIndexForCommit(oid)
-        if not newFilterIndex:
-            return
-        self.scrollTo(newFilterIndex, scrollHint)
+    def scrollToCommit(self, oid: pygit2.Oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
+        with contextlib.suppress(GraphView.SelectCommitError):
+            filterIndex = self.getFilterIndexForCommit(oid)
+            self.scrollTo(filterIndex, scrollHint)
 
     def repaintCommit(self, oid: pygit2.Oid):
-        newFilterIndex = self.getFilterIndexForCommit(oid)
-        if newFilterIndex:
-            self.update(newFilterIndex)
+        with contextlib.suppress(GraphView.SelectCommitError):
+            filterIndex = self.getFilterIndexForCommit(oid)
+            self.update(filterIndex)
 
     def refreshPrefs(self):
         # Force redraw to reflect changes in row height, flattening, date format, etc.

@@ -105,10 +105,13 @@ class FlowControlToken(QObject):
         return F"FlowControlToken({self.flowControl.name})"
 
 
-class FlowControlAbort(BaseException):
+class FlowControlAbort(Exception):
     """ To bail from a coroutine early, we must raise an exception to ensure that
     any active context managers exit deterministically."""
-    pass
+    def __init__(self, text: str, icon: MessageBoxIconName, asStatusMessage: bool):
+        super().__init__(text)
+        self.icon = icon
+        self.asStatusMessage = asStatusMessage
 
 
 class RepoGoneError(FileNotFoundError):
@@ -209,22 +212,12 @@ class RepoTask(QObject):
         """
         return TaskEffects.Nothing
 
-    def _flowAbort(
-            self,
-            warningText: str = "",
-            warningTextIcon: MessageBoxIconName = "warning"
-    ):
+    def _flowAbort(self, text: str = "", icon: MessageBoxIconName = "warning", asStatusMessage: bool = False):
         """
         Aborts the task with an optional error message.
         The success signal will NOT be emitted.
         """
-
-        if warningText:
-            assert onAppThread()
-            qmb = asyncMessageBox(self.parentWidget(), warningTextIcon, self.name(), warningText)
-            qmb.show()
-
-        raise FlowControlAbort()
+        raise FlowControlAbort(text, icon, asStatusMessage)
         yield  # Dummy yield to make it a generator
 
     def _flowBeginWorkerThread(self):
@@ -483,8 +476,13 @@ class RepoTaskRunner(QObject):
                     task.success.emit()
                     self.refreshPostTask.emit(task)
                 elif isinstance(exception, FlowControlAbort):
-                    # Controlled exit
-                    pass
+                    # Controlled exit, show message (if any)
+                    message = str(exception)
+                    if message and exception.asStatusMessage:
+                        self.progress.emit("\u26a0 " + message, False)
+                    elif message:
+                        qmb = asyncMessageBox(self.parent(), exception.icon, task.name(), message)
+                        qmb.show()
                 elif isinstance(exception, RepoGoneError):
                     self.repoGone.emit()
                 else:

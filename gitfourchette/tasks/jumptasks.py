@@ -4,6 +4,7 @@ Tasks that navigate to a specific area of the repository.
 Unlike most other tasks, jump tasks directly manipulate the UI extensively, via RepoWidget.
 """
 from gitfourchette import log, tasks
+from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskEffects, RepoGoneError
@@ -207,12 +208,11 @@ class Jump(RepoTask):
 
         # Select row in commit log
         with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
-            silent = locator.hasFlags(NavFlags.IgnoreInvalidLocation)
-            commitFound = rw.graphView.selectCommit(locator.commit, silent=silent)
-
-        # Commit is gone (hidden or not loaded yet)
-        if not commitFound:
-            yield from self._flowAbort()
+            try:
+                rw.graphView.selectCommit(locator.commit, silent=False)
+            except GraphView.SelectCommitError as e:
+                # Commit is hidden or not loaded
+                yield from self._flowAbort(str(e), asStatusMessage=True)
 
         # Attempt to select matching ref in sidebar
         with (

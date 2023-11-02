@@ -32,7 +32,7 @@ class ComposePatch(RepoTask):
         yield from self._flowExitWorkerThread()
 
         if not composed:
-            yield from self._flowAbort(self.tr("Nothing to export. The patch is empty."), warningTextIcon="information")
+            yield from self._flowAbort(self.tr("Nothing to export. The patch is empty."), icon="information")
 
         qfd = PersistentFileDialog.saveFile(self.parentWidget(), "SaveFile", self.name(), fileName)
         yield from self._flowDialog(qfd)
