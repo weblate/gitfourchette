@@ -17,7 +17,6 @@ from gitfourchette.filelists.stagedfiles import StagedFiles
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.pushdialog import PushDialog
-from gitfourchette.forms.repostatusdisplay import RepoStatusDisplayCache
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.qt import *
@@ -36,11 +35,18 @@ class RepoWidget(QWidget):
     openRepo = Signal(str)
     openPrefs = Signal(str)
 
+    busyMessage = Signal(str)
+    statusMessage = Signal(str)
+    clearStatus = Signal()
+    statusWarning = Signal(str)
+
     state: RepoState
     pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
 
     navLocator: NavLocator
     navHistory: NavHistory
+
+    splitterStates: dict[str, QByteArray]
 
     @property
     def repo(self) -> pygit2.Repository:
@@ -57,7 +63,7 @@ class RepoWidget(QWidget):
         else:
             return self.pathPending
 
-    def __init__(self, parent, sharedSplitterStates=None):
+    def __init__(self, parent: QWidget):
         super().__init__(parent)
 
         self.setObjectName("RepoWidget")
@@ -71,9 +77,6 @@ class RepoWidget(QWidget):
 
         self.state = None
         self.pathPending = None
-
-        self.statusDisplayCache = RepoStatusDisplayCache(self)
-        self.statusDisplayCache.setStatus(self.tr("Opening repository..."), True)
 
         self.busyCursorDelayer = QTimer(self)
         self.busyCursorDelayer.setSingleShot(True)
@@ -121,7 +124,7 @@ class RepoWidget(QWidget):
 
         # ----------------------------------
 
-        self.splitterStates = sharedSplitterStates or {}
+        self.splitterStates = {}
 
         self.dirtyHeader = QElidedLabel(self.tr("Loading dirty files..."))
         self.stagedHeader = QElidedLabel(self.tr("Loading staged files..."))
@@ -220,7 +223,7 @@ class RepoWidget(QWidget):
         #    w.setFrameStyle(QFrame.Shape.NoFrame)
         self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
-        self.diffView.contextualHelp.connect(self.statusDisplayCache.setStatus)
+        self.diffView.contextualHelp.connect(self.statusMessage)
 
         # ----------------------------------
         # Connect signals to async tasks
@@ -304,6 +307,10 @@ class RepoWidget(QWidget):
             self.state = None
 
     # -------------------------------------------------------------------------
+
+    def setSharedSplitterState(self, splitterStates: dict[str, QByteArray]):
+        self.splitterStates = splitterStates
+        self.restoreSplitterStates()
 
     def saveSplitterState(self, splitter: QSplitter):
         self.splitterStates[splitter.objectName()] = splitter.saveState()
@@ -595,9 +602,9 @@ class RepoWidget(QWidget):
         if repo and repo.index.conflicts:
             inBrackets += ", \u26a0 "
             inBrackets += self.tr("merge conflict")
-            self.statusDisplayCache.setWarning(self.tr("merge conflict in workdir"))
+            self.statusWarning.emit(self.tr("merge conflict in workdir"))
         else:
-            self.statusDisplayCache.setWarning()
+            self.statusWarning.emit("")
 
         if settings.prefs.debug_showPID:
             suffix += qAppName()
@@ -676,9 +683,12 @@ class RepoWidget(QWidget):
         self.refreshRepo(task.effects(), task.jumpTo)
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
-        self.statusDisplayCache.status = progressText
-        self.statusDisplayCache.spinning = withSpinner
-        self.statusDisplayCache.updated.emit(self.statusDisplayCache)
+        if withSpinner:
+            self.busyMessage.emit(progressText)
+        elif progressText:
+            self.statusMessage.emit(progressText)
+        else:
+            self.clearStatus.emit()
 
         if not withSpinner:
             self.busyCursorDelayer.stop()

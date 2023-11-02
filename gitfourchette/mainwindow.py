@@ -14,7 +14,6 @@ from gitfourchette.exttools import openInTextEditor
 from gitfourchette.forms.aboutdialog import showAboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
-from gitfourchette.forms.repostatusdisplay import RepoStatusDisplay
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
@@ -31,7 +30,6 @@ class MainWindow(QMainWindow):
     tabs: CustomTabWidget
     recentMenu: QMenu
     repoMenu: QMenu
-    memoryIndicator: MemoryIndicator
 
     def __init__(self):
         super().__init__()
@@ -70,15 +68,8 @@ class MainWindow(QMainWindow):
         self.fillGlobalMenuBar()
         self.setMenuBar(self.globalMenuBar)
 
-        self.statusDisplay = RepoStatusDisplay(self)
-        self.memoryIndicator = MemoryIndicator(self)
-        self.memoryIndicator.setVisible(False)
-
-        self.statusBar = QStatusBar(self)
-        self.statusBar.setSizeGripEnabled(False)
-        self.statusBar.addPermanentWidget(self.statusDisplay, 1)
-        self.statusBar.addPermanentWidget(self.memoryIndicator)
-        self.setStatusBar(self.statusBar)
+        self.statusBar2 = QStatusBar2(self)
+        self.setStatusBar(self.statusBar2)
 
         self.setAcceptDrops(True)
         self.styleSheetReloadScheduled = False
@@ -189,6 +180,7 @@ class MainWindow(QMainWindow):
         fileMenu.setObjectName("MWFileMenu")
 
         a = fileMenu.addAction(self.tr("&New Repository..."), self.newRepo)
+        a.setStatusTip(self.tr("Create a new empty repository"))
         a.setShortcuts(QKeySequence.StandardKey.New)
 
         a = fileMenu.addAction(self.tr("C&lone Repository..."), self.cloneDialog)
@@ -357,7 +349,9 @@ class MainWindow(QMainWindow):
 
         self.recentMenu.clear()
         for path in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
-            self.recentMenu.addAction(compactPath(path), lambda path=path: self.openRepo(path))
+            shortName = settings.history.getRepoNickname(path)
+            action = self.recentMenu.addAction(shortName, lambda p=path: self.openRepo(p))
+            action.setStatusTip(path)
         self.recentMenu.addSeparator()
         self.recentMenu.addAction(self.tr("Clear"), onClearRecents)
 
@@ -378,8 +372,6 @@ class MainWindow(QMainWindow):
 
         w.refreshWindowTitle()  # Refresh window title before loading
         w.restoreSplitterStates()
-
-        self.statusDisplay.install(w.statusDisplayCache)
 
         # If we don't have a RepoState, then the tab is lazy-loaded.
         # We need to load it now.
@@ -545,7 +537,17 @@ class MainWindow(QMainWindow):
                 self.tabs.setCurrentIndex(i)
                 return existingRW
 
-        newRW = RepoWidget(self, self.sharedSplitterStates)
+        newRW = RepoWidget(self)
+        newRW.setSharedSplitterState(self.sharedSplitterStates)
+
+        newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
+        newRW.openRepo.connect(lambda path: self.openRepoNextTo(newRW, path))
+        newRW.openPrefs.connect(self.openPrefsDialog)
+
+        newRW.statusMessage.connect(self.statusBar2.showMessage)
+        newRW.busyMessage.connect(self.statusBar2.showBusyMessage)
+        newRW.clearStatus.connect(self.statusBar2.clearMessage)
+        newRW.statusWarning.connect(self.statusBar2.showPermanentWarning)
 
         if foreground:
             if not self._loadRepo(newRW, repo):
@@ -561,10 +563,6 @@ class MainWindow(QMainWindow):
 
         if foreground:
             self.tabs.setCurrentIndex(tabIndex)
-
-        newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
-        newRW.openRepo.connect(lambda path: self.openRepoNextTo(newRW, path))
-        newRW.openPrefs.connect(self.openPrefsDialog)
 
         if addToHistory:
             settings.history.addRepo(workdir)
@@ -766,7 +764,7 @@ class MainWindow(QMainWindow):
         qfd.fileSelected.connect(self.openRepo)
         qfd.show()
 
-    def openRepo(self, path):
+    def openRepo(self, path: str) -> RepoWidget | None:
         try:
             rw = self._openRepo(path)
         except BaseException as exc:
@@ -1053,8 +1051,8 @@ class MainWindow(QMainWindow):
         if "maxRecentRepos" in prefDiff:
             self.fillRecentMenu()
 
-        self.statusBar.setVisible(settings.prefs.showStatusBar)
-        self.memoryIndicator.setVisible(settings.prefs.debug_showMemoryIndicator)
+        self.statusBar2.setVisible(settings.prefs.showStatusBar)
+        self.statusBar2.enableMemoryIndicator(settings.prefs.debug_showMemoryIndicator)
 
         self.tabs.refreshPrefs()
         self.autoHideMenuBar.refreshPrefs()

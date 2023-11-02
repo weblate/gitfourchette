@@ -23,6 +23,7 @@ from .qcomboboxwithpreview import QComboBoxWithPreview
 from .qelidedlabel import QElidedLabel
 from .qrunnablefunctionwrapper import QRunnableFunctionWrapper
 from .qsignalblockercontext import QSignalBlockerContext
+from .qstatusbar2 import QStatusBar2
 from .qtutils import (
     addComboBoxItem, setWindowModal, isImageFormatSupported,
     onAppThread, tweakWidgetFont, formatWidgetText,
