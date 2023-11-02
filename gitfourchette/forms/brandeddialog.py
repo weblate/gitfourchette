@@ -62,6 +62,7 @@ def convertToBrandedDialog(
 
     innerContent = QWidget(dialog)
     innerContent.setLayout(dialog.layout())
+    innerContent.layout().setContentsMargins(0,0,0,0)
 
     gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText, multilineSubtitle)
     gridLayout.addWidget(innerContent, 2, 3, 1, 1)

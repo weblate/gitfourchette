@@ -284,6 +284,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def initTask(self, taskClass: Type[tasks.RepoTask]):
+        assert issubclass(taskClass, tasks.RepoTask)
         task = taskClass(self.repoTaskRunner)
         task.setRepo(self.repo)
         return task
@@ -743,5 +744,13 @@ class RepoWidget(QWidget):
             p = p.removeprefix("/")
             p = os.path.join(self.repo.workdir, p)
             self.openRepo.emit(p)
+        elif url.authority() == "exec":
+            query = QUrlQuery(url)
+            allqi = query.queryItems(QUrl.ComponentFormattingOption.FullyDecoded)
+            cmdName = url.path().removeprefix("/")
+            taskClass = tasks.__dict__[cmdName]
+            print("taskClass:", taskClass)
+            kwargs = {k: v for k, v in allqi}
+            self.runTask(taskClass, **kwargs)
         else:
             log.warning(TAG, "Unsupported authority in internal link: ", url.toDisplayString())

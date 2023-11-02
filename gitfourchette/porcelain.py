@@ -1,4 +1,5 @@
 from gitfourchette import log
+from pathlib import Path
 from pygit2 import Commit, Diff, Oid, Repository, Signature
 from typing import Iterable, Literal
 import contextlib
@@ -33,6 +34,20 @@ GIT_STATUS_WT_MASK = (
         | pygit2.GIT_STATUS_WT_TYPECHANGE
         | pygit2.GIT_STATUS_WT_RENAMED
         | pygit2.GIT_STATUS_WT_UNREADABLE)
+
+
+class RepositoryContext:
+    def __init__(self, path: str | Path, flags: int = 0):
+        self.repo = pygit2.Repository(path, flags)
+
+    def __enter__(self) -> pygit2.Repository:
+        return self.repo
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # repo.free() is necessary for correct test teardown on Windows
+        self.repo.free()
+        del self.repo
+        self.repo = None
 
 
 class NameValidationError(ValueError):
@@ -1242,3 +1257,47 @@ def compareDiffFiles(f1: pygit2.DiffFile, f2: pygit2.DiffFile):
         assert f1.path == f2.path
         assert f1.size == f2.size
     return same
+
+
+def addInnerRepoAsSubmodule(repo: pygit2.Repository, innerWStr: str, remoteUrl: str, absorbGitDirs: bool = True):
+    outerW = Path(repo.workdir)
+    innerW = Path(outerW, innerWStr)  # normalize
+
+    if not innerW.is_dir():
+        raise FileNotFoundError(f"Inner workdir not found: {innerW}")
+
+    if not innerW.is_relative_to(outerW):
+        raise ValueError("Subrepo workdir must be relative to superrepo workdir")
+
+    with RepositoryContext(str(innerW)) as innerRepo:
+        innerG = Path(innerRepo.path)
+        innerHeadOid = innerRepo.head.peel(pygit2.Commit).oid
+
+    if not innerG.is_relative_to(outerW):
+        raise ValueError("Subrepo .git dir must be relative to superrepo workdir")
+
+    dotGitmodules = pygit2.Config(str(outerW / ".gitmodules"))
+    dotGitmodules[f"submodule.{innerW.relative_to(outerW)}.path"] = innerW.relative_to(outerW)
+    dotGitmodules[f"submodule.{innerW.relative_to(outerW)}.url"] = remoteUrl
+
+    if absorbGitDirs:
+        innerG2 = Path(repo.path, "modules", innerW.relative_to(outerW))
+        if innerG2.exists():
+            raise FileExistsError(f"Directory already exists: {innerG2}")
+        innerG2.parent.mkdir(parents=True, exist_ok=True)
+        innerG.rename(innerG2)
+        innerG = innerG2
+
+        # TODO: Use Path.relative_to(..., walk_up=True) once we drop support for all versions older than Python 3.13
+        submoduleConfig = pygit2.Config(str(innerG / "config"))
+        submoduleConfig["core.worktree"] = os.path.relpath(innerW, innerG2)
+
+        with open(innerW / ".git", "wt") as submoduleDotGitFile:
+            submoduleDotGitFile.write(f"gitdir: {os.path.relpath(innerG2, innerW)}\n")
+
+    # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
+    entry = pygit2.IndexEntry(innerW.relative_to(outerW), innerHeadOid, pygit2.GIT_FILEMODE_COMMIT)
+    repo.index.add(entry)
+
+    # While we're here also add .gitmodules
+    repo.index.add(".gitmodules")

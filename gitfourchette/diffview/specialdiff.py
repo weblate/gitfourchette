@@ -99,6 +99,10 @@ class SpecialDiffError(Exception):
                 prompt1 = translate("Diff", "Open “{0}” in new tab").format(treeName)
                 openUrl = makeInternalLink("opensubfolder", treePath)
                 longform.append(f"<center><p><a href='{openUrl.toString()}'>{prompt1}</a></p></center>")
+
+                prompt = translate("Diff", "Absorb “{0}” as submodule").format(treeName)
+                taskUrl = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
+                longform.append(f"<center><p><a href='{taskUrl.toString()}'>{prompt}</a></p></center>")
             elif delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
                 message = translate("Diff", "New empty file.")
             else:

@@ -22,3 +22,4 @@ from gitfourchette.tasks.indextasks import ApplyPatch, RevertPatch
 from gitfourchette.tasks.indextasks import HardSolveConflict, MarkConflictSolved, AcceptMergeConflictResolution
 from gitfourchette.tasks.indextasks import ApplyPatchFile
 from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, DropStash
+from gitfourchette.tasks.submoduletasks import AbsorbSubmodule

@@ -281,3 +281,10 @@ def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **u
         url.setQuery(query)
 
     return url
+
+
+def reformatQLabel(label: QLabel, *args, **kwargs):
+    text = label.text()
+    text = text.format(*args, **kwargs)
+    label.setText(text)
+
