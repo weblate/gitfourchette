@@ -313,12 +313,18 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.Submodule:
+            model: SidebarModel = self.model()
+            repo = model.repo
+
             actions += [
-                ActionDef(self.tr("&Open submodule in new tab"),
+                ActionDef(self.tr("&Open Submodule in New Tab"),
                           lambda: self.openSubmoduleRepo.emit(data)),
 
-                ActionDef(self.tr("Open submodule &folder"),
+                ActionDef(self.tr("Open Submodule &Folder"),
                           lambda: self.openSubmoduleFolder.emit(data)),
+
+                ActionDef(self.tr("Copy &Path"),
+                          lambda: QApplication.clipboard().setText(os.path.join(repo.workdir, data))),
             ]
 
         # --------------------
