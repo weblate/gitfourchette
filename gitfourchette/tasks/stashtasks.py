@@ -28,9 +28,6 @@ Original stash message below:
 
 
 class NewStash(RepoTask):
-    def name(self):
-        return translate("Operation", "New stash")
-
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
@@ -78,9 +75,6 @@ class NewStash(RepoTask):
 
 
 class ApplyStash(RepoTask):
-    def name(self):
-        return translate("Operation", "Apply stash")
-
     def effects(self):
         # Refs only change if the stash is deleted after a successful application.
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
@@ -129,9 +123,6 @@ class ApplyStash(RepoTask):
 
 
 class DropStash(RepoTask):
-    def name(self):
-        return translate("Operation", "Drop stash")
-
     def effects(self):
         return TaskEffects.Refs
 

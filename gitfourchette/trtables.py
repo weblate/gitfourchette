@@ -61,6 +61,7 @@ class TrTables:
         return {
             "ConnectionRefusedError": translate("Exception", "Connection refused"),
             "FileNotFoundError": translate("Exception", "File not found"),
+            "PermissionError": translate("Exception", "Permission denied"),
         }
 
     @staticmethod
@@ -181,7 +182,7 @@ class TrTables:
                 "Prefs",
                 "When you discard changes from the working directory, {app} keeps a temporary copy in a hidden "
                 "“trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. "
-                "You can look around this trash folder via <i>“Repo &rarr; Rescue Discarded Changes”</i>."),
+                "You can look around this trash folder via <i>“Repo &rarr; Open Trash”</i>."),
 
             "debug_showMemoryIndicator": translate("Prefs", "Show memory indicator in status bar"),
             "debug_showPID": translate("Prefs", "Show technical info in title bar"),

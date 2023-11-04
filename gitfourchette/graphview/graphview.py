@@ -1,31 +1,23 @@
+from typing import Literal
+
+import contextlib
+import pygit2
+
+from gitfourchette import settings
+from gitfourchette.forms.resetheaddialog import ResetHeadDialog
+from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
+from gitfourchette.graphview.commitlogfilter import CommitLogFilter
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
+from gitfourchette.tasks import *
 from gitfourchette.toolbox import *
-from gitfourchette.graphview.commitlogfilter import CommitLogFilter
-from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
-from gitfourchette.forms.searchbar import SearchBar
-from gitfourchette.forms.resetheaddialog import ResetHeadDialog
-from gitfourchette import settings
-from typing import Literal
-import contextlib
-import pygit2
 
 
 class GraphView(QListView):
     jump = Signal(NavLocator)
-    resetHead = Signal(pygit2.Oid, str, bool)
-    newBranchFromCommit = Signal(pygit2.Oid)
-    newTagOnCommit = Signal(pygit2.Oid)
-    checkoutCommit = Signal(pygit2.Oid)
-    cherrypickCommit = Signal(pygit2.Oid)
-    revertCommit = Signal(pygit2.Oid)
-    exportCommitAsPatch = Signal(pygit2.Oid)
-    exportWorkdirAsPatch = Signal()
-    commitChanges = Signal()
-    amendChanges = Signal()
-    newStash = Signal()
     widgetMoved = Signal()
     linkActivated = Signal(str)
 
@@ -76,30 +68,28 @@ class GraphView(QListView):
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
 
-    def onContextMenuRequested(self, point: QPoint):
-        globalPoint = self.mapToGlobal(point)
-
+    def makeContextMenu(self):
         oid = self.currentCommitOid
 
         if not oid:
             actions = [
-                ActionDef(self.tr("&Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
-                ActionDef(self.tr("&Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+                TaskBook.action(NewCommit, "&C"),
+                TaskBook.action(AmendCommit, "&A"),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("&Stash Uncommitted Changes..."), self.newStash, shortcuts=GlobalShortcuts.newStash),
-                ActionDef(self.tr("E&xport Uncommitted Changes As Patch..."), self.exportWorkdirAsPatch),
+                TaskBook.action(NewStash, "&S"),
+                TaskBook.action(ExportWorkdirAsPatch, "&X"),
             ]
         else:
             actions = [
-                ActionDef(self.tr("Start &Branch from Here..."), lambda: self.newBranchFromCommit.emit(oid), "vcs-branch"),
-                ActionDef(self.tr("&Tag This Commit..."), lambda: self.newTagOnCommit.emit(oid), "tag-new"),
+                TaskBook.action(NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
+                TaskBook.action(NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("&Check Out..."), lambda: self.checkoutCommit.emit(oid)),
+                TaskBook.action(CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid),
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Cherry &Pick..."), lambda: self.cherrypickCommit.emit(oid)),
-                ActionDef(self.tr("Re&vert..."), lambda: self.revertCommit.emit(oid)),
-                ActionDef(self.tr("E&xport As Patch..."), lambda: self.exportCommitAsPatch.emit(oid)),
+                TaskBook.action(CherrypickCommit, self.tr("Cherry &Pick..."), taskArgs=oid),
+                TaskBook.action(RevertCommit, self.tr("Re&vert..."), taskArgs=oid),
+                TaskBook.action(ExportCommitAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard),
                 ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation),
@@ -108,8 +98,12 @@ class GraphView(QListView):
         menu = ActionDef.makeQMenu(self, actions)
         menu.setObjectName("GraphViewCM")
 
-        menu.exec(globalPoint)
+        return menu
 
+    def onContextMenuRequested(self, point: QPoint):
+        globalPoint = self.mapToGlobal(point)
+        menu = self.makeContextMenu()
+        menu.exec(globalPoint)
         menu.deleteLater()
 
     def clear(self):
@@ -138,9 +132,9 @@ class GraphView(QListView):
             event.accept()
             oid = self.currentCommitOid
             if oid:
-                self.checkoutCommit.emit(oid)
+                CheckoutCommit.invoke(oid)
             else:
-                self.commitChanges.emit()
+                NewCommit.invoke()
         else:
             super().mouseDoubleClickEvent(event)
 
@@ -156,9 +150,9 @@ class GraphView(QListView):
 
         elif k in GlobalShortcuts.checkoutCommitFromGraphHotkeys:
             if oid:
-                self.checkoutCommit.emit(self.currentCommitOid)
+                CheckoutCommit.invoke(oid)
             else:
-                self.commitChanges.emit()
+                NewCommit.invoke()
 
         else:
             super().keyPressEvent(event)
@@ -297,7 +291,7 @@ class GraphView(QListView):
         def onAccept():
             resetMode = dlg.activeMode
             recurse = dlg.recurseSubmodules
-            self.resetHead.emit(oid, resetMode, recurse)
+            ResetHead.invoke(oid, resetMode, recurse)
 
         dlg.accepted.connect(onAccept)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog

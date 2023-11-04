@@ -4,7 +4,6 @@ Tasks that navigate to a specific area of the repository.
 Unlike most other tasks, jump tasks directly manipulate the UI extensively, via RepoWidget.
 """
 from gitfourchette import log, tasks
-from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskEffects, RepoGoneError
@@ -21,16 +20,6 @@ class Jump(RepoTask):
 
     Only the Jump task may "cement" the RepoWidget's navLocator.
     """
-
-    def name(self):
-        return self.tr("Navigate in repo")
-
-    @property
-    def rw(self):
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.parentWidget()
-        assert isinstance(rw, RepoWidget)
-        return rw
 
     def canKill(self, task: 'RepoTask'):
         return isinstance(task, (Jump, RefreshRepo))
@@ -207,6 +196,7 @@ class Jump(RepoTask):
         rw = self.rw
 
         # Select row in commit log
+        from gitfourchette.graphview.graphview import GraphView
         with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
             try:
                 rw.graphView.selectCommit(locator.commit, silent=False)
@@ -315,10 +305,17 @@ class JumpBackOrForward(tasks.RepoTask):
         rw.navHistory = history
 
 
-class RefreshRepo(tasks.RepoTask):
-    def name(self):
-        return self.tr("Refresh repo")
+class JumpBack(JumpBackOrForward):
+    def flow(self):
+        yield from JumpBackOrForward.flow(self, -1)
 
+
+class JumpForward(JumpBackOrForward):
+    def flow(self):
+        yield from JumpBackOrForward.flow(self, 1)
+
+
+class RefreshRepo(tasks.RepoTask):
     @staticmethod
     def canKill_static(task: RepoTask):
         return task is None or isinstance(task, (Jump, RefreshRepo))

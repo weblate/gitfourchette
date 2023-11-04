@@ -240,42 +240,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.dirtyFiles.jump,                  tasks.Jump)
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.dirtyFiles.stashFiles,            tasks.NewStash)
-        self.connectTask(self.graphView.amendChanges,           tasks.AmendCommit)
-        self.connectTask(self.graphView.checkoutCommit,         tasks.CheckoutCommit)
-        self.connectTask(self.graphView.cherrypickCommit,       tasks.CherrypickCommit)
-        self.connectTask(self.graphView.commitChanges,          tasks.NewCommit)
-        self.connectTask(self.graphView.exportCommitAsPatch,    tasks.ExportCommitAsPatch)
-        self.connectTask(self.graphView.exportWorkdirAsPatch,   tasks.ExportWorkdirAsPatch)
         self.connectTask(self.graphView.jump,                   tasks.Jump)
-        self.connectTask(self.graphView.newBranchFromCommit,    tasks.NewBranchFromCommit)
-        self.connectTask(self.graphView.newStash,               tasks.NewStash)
-        self.connectTask(self.graphView.newTagOnCommit,         tasks.NewTag)
-        self.connectTask(self.graphView.resetHead,              tasks.ResetHead)
-        self.connectTask(self.graphView.revertCommit,           tasks.RevertCommit)
-        self.connectTask(self.sidebar.amendChanges,             tasks.AmendCommit)
-        self.connectTask(self.sidebar.applyStash,               tasks.ApplyStash)
-        self.connectTask(self.sidebar.commitChanges,            tasks.NewCommit)
-        self.connectTask(self.sidebar.deleteBranch,             tasks.DeleteBranch)
-        self.connectTask(self.sidebar.deleteRemote,             tasks.DeleteRemote)
-        self.connectTask(self.sidebar.deleteRemoteBranch,       tasks.DeleteRemoteBranch)
-        self.connectTask(self.sidebar.deleteTag,                tasks.DeleteTag)
-        self.connectTask(self.sidebar.dropStash,                tasks.DropStash)
-        self.connectTask(self.sidebar.editRemote,               tasks.EditRemote)
-        self.connectTask(self.sidebar.editTrackingBranch,       tasks.EditTrackedBranch)
-        self.connectTask(self.sidebar.exportStashAsPatch,       tasks.ExportStashAsPatch)
-        self.connectTask(self.sidebar.exportWorkdirAsPatch,     tasks.ExportWorkdirAsPatch)
-        self.connectTask(self.sidebar.fastForwardBranch,        tasks.FastForwardBranch)
-        self.connectTask(self.sidebar.fetchRemote,              tasks.FetchRemote)
-        self.connectTask(self.sidebar.fetchRemoteBranch,        tasks.FetchRemoteBranch)
-        self.connectTask(self.sidebar.newBranch,                tasks.NewBranchFromHead)
-        self.connectTask(self.sidebar.newBranchFromLocalBranch, tasks.NewBranchFromLocalBranch)
-        self.connectTask(self.sidebar.newRemote,                tasks.NewRemote)
-        self.connectTask(self.sidebar.newStash,                 tasks.NewStash)
-        self.connectTask(self.sidebar.newTag,                   tasks.NewTag)
-        self.connectTask(self.sidebar.newTrackingBranch,        tasks.NewTrackingBranch)
-        self.connectTask(self.sidebar.renameBranch,             tasks.RenameBranch)
-        self.connectTask(self.sidebar.renameRemoteBranch,       tasks.RenameRemoteBranch)
-        self.connectTask(self.sidebar.switchToBranch,           tasks.SwitchBranch)
         self.connectTask(self.stagedFiles.jump,                 tasks.Jump)
         self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
@@ -669,14 +634,6 @@ class RepoWidget(QWidget):
             callback=lambda: trash.clear(),
             okButtonText=self.tr("Delete permanently"),
             okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
-
-    def recallCommit(self):
-        self.runTask(tasks.RecallCommit)
-
-    # -------------------------------------------------------------------------
-
-    def setUpRepoIdentity(self):
-        self.runTask(tasks.SetUpRepoIdentity)
 
     # -------------------------------------------------------------------------
 

@@ -1,8 +1,8 @@
 import contextlib
-
 import pygit2
 
 from gitfourchette import porcelain
+from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
@@ -16,39 +16,12 @@ class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
     commitClicked = Signal(pygit2.Oid)
+    toggleHideStash = Signal(pygit2.Oid)
+    toggleHideBranch = Signal(str)
 
-    newBranch = Signal()
-    newBranchFromLocalBranch = Signal(str)
-    renameBranch = Signal(str)
-    deleteBranch = Signal(str)
-    switchToBranch = Signal(str, bool)  # bool: ask for confirmation before switching
     mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
-    fastForwardBranch = Signal(str)
-    toggleHideBranch = Signal(str)
-    newTrackingBranch = Signal(str)
-    fetchRemoteBranch = Signal(str)
-    renameRemoteBranch = Signal(str)
-    deleteRemoteBranch = Signal(str)
-    editTrackingBranch = Signal(str)
-    commitChanges = Signal()
-    amendChanges = Signal()
-    exportWorkdirAsPatch = Signal()
-
-    newRemote = Signal()
-    fetchRemote = Signal(str)
-    editRemote = Signal(str)
-    deleteRemote = Signal(str)
-
-    newStash = Signal()
-    applyStash = Signal(pygit2.Oid)
-    exportStashAsPatch = Signal(pygit2.Oid)
-    dropStash = Signal(pygit2.Oid)
-    toggleHideStash = Signal(pygit2.Oid)
-
-    newTag = Signal()
-    deleteTag = Signal(str)
 
     openSubmoduleRepo = Signal(str)
     openSubmoduleFolder = Signal(str)
@@ -110,21 +83,19 @@ class Sidebar(QTreeView):
 
         if item == EItem.UncommittedChanges:
             actions += [
-                ActionDef(self.tr("&Commit Staged Changes..."), self.commitChanges, shortcuts=GlobalShortcuts.commit),
-                ActionDef(self.tr("&Amend Last Commit..."), self.amendChanges, shortcuts=GlobalShortcuts.amendCommit),
+                TaskBook.action(NewCommit, "&C"),
+                TaskBook.action(AmendCommit, "&A"),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("&Stash Uncommitted Changes..."), self.newStash, shortcuts=GlobalShortcuts.newStash),
-                ActionDef(self.tr("E&xport Uncommitted Changes As Patch..."), self.exportWorkdirAsPatch),
+                TaskBook.action(NewStash, "&S"),
+                TaskBook.action(ExportWorkdirAsPatch, "&X"),
             ]
 
         elif item == EItem.LocalBranchesHeader:
             actions += [
-                ActionDef(self.tr("&New Branch..."), lambda: self.newBranch.emit(), shortcuts=GlobalShortcuts.newBranch),
+                TaskBook.action(NewBranchFromHead, self.tr("&New Branch...")),
             ]
 
         elif item == EItem.LocalBranch:
-            fontMetrics = menu.fontMetrics()
-
             model: SidebarModel = self.model()
             repo = model.repo
             branch = repo.branches.local[data]
@@ -145,10 +116,12 @@ class Sidebar(QTreeView):
             upstreamBranchDisplay = elide(upstreamBranchName)
 
             actions += [
-                ActionDef(self.tr("&Switch to “{0}”").format(thisBranchDisplay),
-                          lambda: self.switchToBranch.emit(data, False),  # False: don't ask for confirmation
-                          "document-swap",
-                          enabled=not isCurrentBranch),
+                TaskBook.action(
+                    SwitchBranch,
+                    self.tr("&Switch to “{0}”").format(thisBranchDisplay),
+                    taskArgs=(data, False),  # False: don't ask for confirmation
+                    enabled=not isCurrentBranch,
+                ),
 
                 ActionDef.SEPARATOR,
 
@@ -165,52 +138,47 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("&Push..."),
                           lambda: self.pushBranch.emit(data),
                           "vcs-push",
-                          shortcuts=GlobalShortcuts.pushBranch),
+                          shortcuts=GlobalShortcuts.pushBranch,
+                          statusTip=self.tr("Upload your commits to the remote server")),
 
-                ActionDef(self.tr("&Fetch..."),
-                          lambda: self.fetchRemoteBranch.emit(branch.upstream.shorthand),
-                          QStyle.StandardPixmap.SP_BrowserReload,
-                          enabled=hasUpstream),
+                TaskBook.action(
+                    FetchRemoteBranch,
+                    self.tr("&Fetch..."),
+                    taskArgs=branch.upstream.shorthand if hasUpstream else None,
+                    enabled=hasUpstream,
+                ),
 
-                ActionDef(self.tr("Fast-Forward to “{0}”...").format(upstreamBranchDisplay)
-                          if upstreamBranchName else self.tr("Fast-Forward..."),
-                          lambda: self.fastForwardBranch.emit(data),
-                          "vcs-pull",
-                          enabled=hasUpstream,
-                          shortcuts=GlobalShortcuts.pullBranch),
+                TaskBook.action(
+                    FastForwardBranch,
+                    self.tr("Fast-Forward to “{0}”...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
+                    taskArgs=data,
+                    enabled=hasUpstream,
+                ),
 
-                ActionDef(self.tr("Set &Tracked Branch..."),
-                          lambda: self.editTrackingBranch.emit(data)),
-
-                ActionDef.SEPARATOR,
-
-                ActionDef(self.tr("Re&name..."),
-                          lambda: self.renameBranch.emit(data)),
-
-                ActionDef(self.tr("&Delete..."),
-                          lambda: self.deleteBranch.emit(data),
-                          "vcs-branch-delete"),
+                TaskBook.action(EditTrackedBranch, self.tr("Set &Tracked Branch..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("New &Branch from Here..."),
-                          lambda: self.newBranchFromLocalBranch.emit(data),
-                          "vcs-branch"),
+                TaskBook.action(RenameBranch, self.tr("Re&name..."), taskArgs=data),
+
+                TaskBook.action(DeleteBranch, self.tr("&Delete..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.toggleHideBranch.emit("refs/heads/" + data),
-                          checkState=1 if isBranchHidden else -1),
+                TaskBook.action(NewBranchFromLocalBranch, self.tr("New &Branch from Here..."), taskArgs=data),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(
+                    self.tr("&Hide in Graph"),
+                    lambda: self.toggleHideBranch.emit("refs/heads/" + data),
+                    checkState=1 if isBranchHidden else -1,
+                    statusTip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
+                ),
             ]
 
         elif item == EItem.DetachedHead:
-            actions += [
-                ActionDef(self.tr("New &Branch from Here..."),
-                          lambda: self.newBranch.emit(),
-                          "vcs-branch",
-                          shortcuts=GlobalShortcuts.newBranch),
-            ]
+            actions += [TaskBook.action(NewBranchFromHead, self.tr("New &Branch from Here...")), ]
 
         elif item == EItem.RemoteBranch:
             isBranchHidden = False
@@ -218,22 +186,19 @@ class Sidebar(QTreeView):
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
             actions += [
-                ActionDef(self.tr("New local branch tracking “{0}”...").format(escamp(elide(data))),
-                          lambda: self.newTrackingBranch.emit(data),
-                          "vcs-branch"),
+                TaskBook.action(
+                    NewTrackingBranch,
+                    self.tr("New local branch tracking “{0}”...").format(escamp(elide(data))),
+                    taskArgs=data
+                ),
 
-                ActionDef(self.tr("Fetch this remote branch..."),
-                          lambda: self.fetchRemoteBranch.emit(data),
-                          QStyle.StandardPixmap.SP_BrowserReload),
+                TaskBook.action(FetchRemoteBranch, self.tr("Fetch this remote branch..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("Rename branch on remote..."),
-                          lambda: self.renameRemoteBranch.emit(data)),
+                TaskBook.action(RenameRemoteBranch, self.tr("Rename branch on remote..."), taskArgs=data),
 
-                ActionDef(self.tr("Delete branch on remote..."),
-                          lambda: self.deleteRemoteBranch.emit(data),
-                          QStyle.StandardPixmap.SP_TrashIcon),
+                TaskBook.action(DeleteRemoteBranch, self.tr("Delete branch on remote..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
@@ -244,32 +209,23 @@ class Sidebar(QTreeView):
 
         elif item == EItem.Remote:
             actions += [
-                ActionDef(self.tr("&Edit Remote..."),
-                          lambda: self.editRemote.emit(data),
-                          "document-edit"),
+                TaskBook.action(EditRemote, self.tr("&Edit Remote..."), taskArgs=data),
 
-                ActionDef(self.tr("&Fetch all branches on this remote..."),
-                          lambda: self.fetchRemote.emit(data),
-                          QStyle.StandardPixmap.SP_BrowserReload),
+                TaskBook.action(FetchRemote, self.tr("&Fetch All Remote Branches..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Remove Remote..."),
-                          lambda: self.deleteRemote.emit(data),
-                          QStyle.StandardPixmap.SP_TrashIcon),
+                TaskBook.action(DeleteRemote, self.tr("&Remove Remote..."), taskArgs=data),
             ]
 
         elif item == EItem.RemotesHeader:
             actions += [
-                ActionDef(self.tr("&Add Remote..."),
-                          self.newRemote),
+                TaskBook.action(NewRemote, "&A"),
             ]
 
         elif item == EItem.StashesHeader:
             actions += [
-                ActionDef(self.tr("&New Stash..."),
-                          self.newStash,
-                          shortcuts=GlobalShortcuts.newStash),
+                TaskBook.action(NewStash, "&S"),
             ]
 
         elif item == EItem.Stash:
@@ -280,36 +236,30 @@ class Sidebar(QTreeView):
                 isStashHidden = self.model().data(index, ROLE_ISHIDDEN)
 
             actions += [
-                ActionDef(self.tr("&Apply"),
-                          lambda: self.applyStash.emit(oid)),
+                TaskBook.action(ApplyStash, self.tr("&Apply"), taskArgs=oid),
 
-                ActionDef(self.tr("E&xport As Patch..."),
-                          lambda: self.exportStashAsPatch.emit(oid)),
+                TaskBook.action(ExportStashAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Delete"),
-                          lambda: self.dropStash.emit(oid),
-                          QStyle.StandardPixmap.SP_TrashIcon),
+                TaskBook.action(DropStash, self.tr("&Delete"), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Hide in Graph"),
                           lambda: self.toggleHideStash.emit(oid),
-                          checkState=1 if isStashHidden else -1),
+                          checkState=1 if isStashHidden else -1,
+                          statusTip=self.tr("Hide this stash from the graph")),
             ]
 
         elif item == EItem.TagsHeader:
             actions += [
-                ActionDef(self.tr("&New Tag on HEAD Commit..."),
-                          self.newTag, ),
+                TaskBook.action(NewTag, self.tr("&New Tag on HEAD Commit...")),
             ]
 
         elif item == EItem.Tag:
             actions += [
-                ActionDef(self.tr("&Delete"),
-                          lambda: self.deleteTag.emit(data),
-                          icon=QStyle.StandardPixmap.SP_TrashIcon),
+                TaskBook.action(DeleteTag, self.tr("&Delete Tag"), taskArgs=data),
             ]
 
         elif item == EItem.Submodule:
@@ -329,7 +279,7 @@ class Sidebar(QTreeView):
 
         # --------------------
 
-        ActionDef.addToQMenu(menu, actions)
+        ActionDef.addToQMenu(menu, *actions)
 
         return menu
 
@@ -367,24 +317,32 @@ class Sidebar(QTreeView):
 
     def onEntryDoubleClicked(self, item: EItem, data: str):
         if item == EItem.LocalBranch:
-            self.switchToBranch.emit(data, True)  # ask for confirmation
+            SwitchBranch.invoke(data, True)  # True: ask for confirmation
+
         elif item == EItem.Remote:
-            self.editRemote.emit(data)
+            EditRemote.invoke(data)
+
         elif item == EItem.RemotesHeader:
-            self.newRemote.emit()
+            NewRemote.invoke()
+
         elif item == EItem.LocalBranchesHeader:
-            self.newBranch.emit()
+            NewBranchFromHead.invoke()
+
         elif item == EItem.UncommittedChanges:
-            self.commitChanges.emit()
+            NewCommit.invoke()
+
         elif item == EItem.Submodule:
             self.openSubmoduleRepo.emit(data)
+
         elif item == EItem.StashesHeader:
-            self.newStash.emit()
+            NewStash.invoke()
+
         elif item == EItem.Stash:
             oid = pygit2.Oid(hex=data)
-            self.applyStash.emit(oid)
+            ApplyStash.invoke(oid)
+
         elif item == EItem.RemoteBranch:
-            self.newTrackingBranch.emit(data)
+            NewTrackingBranch.invoke(data)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)

@@ -6,6 +6,7 @@ from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
+from gitfourchette.sidebar.sidebarmodel import EItem
 import pygit2
 
 
@@ -133,11 +134,9 @@ def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
 
-    headOid = porcelain.getHeadCommitOid(rw.repo)
-    rw.graphView.selectCommit(headOid)
-
     # Kick off amend dialog
-    mainWindow.amend()
+    rw.graphView.selectUncommittedChanges()
+    triggerMenuAction(rw.graphView.makeContextMenu(), "amend")
 
     # Amend HEAD commit without any changes, i.e. just change the timestamp.
     dialog: CommitDialog = findQDialog(rw, "amend")
@@ -214,7 +213,7 @@ def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
                 pygit2.Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4"),
                 ]:
         rw.graphView.selectCommit(oid)
-        rw.graphView.checkoutCommit.emit(oid)
+        triggerMenuAction(rw.graphView.makeContextMenu(), r"check.?out")
 
         dlg = findQDialog(rw, "check.?out commit")
         dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)
@@ -264,7 +263,7 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
 
     oid = pygit2.Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     rw.graphView.selectCommit(oid)
-    rw.graphView.revertCommit.emit(oid)
+    triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
 
     rw.graphView.selectUncommittedChanges()
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
@@ -282,7 +281,7 @@ def testCherrypick(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     rw.graphView.selectCommit(oid)
-    rw.graphView.cherrypickCommit.emit(oid)
+    triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
 
     assert rw.stageSplitter.isVisibleTo(rw)
     assert rw.repo.status() == {"a/a1.txt": pygit2.GIT_STATUS_INDEX_NEW}
@@ -310,7 +309,7 @@ def testNewTag(qtbot, tempDir, mainWindow):
     oid = pygit2.Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
 
     rw.graphView.selectCommit(oid)
-    rw.graphView.newTagOnCommit.emit(oid)
+    triggerMenuAction(rw.graphView.makeContextMenu(), "tag this commit")
 
     dlg: QDialog = findQDialog(rw, "new tag")
     lineEdit = dlg.findChild(QLineEdit)
@@ -327,6 +326,8 @@ def testDeleteTag(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     assert tagToDelete in porcelain.getTagNames(rw.repo)
 
-    rw.sidebar.deleteTag.emit(tagToDelete)
+    menu = rw.sidebar.generateMenuForEntry(EItem.Tag, tagToDelete)
+    triggerMenuAction(menu, "delete")
+
     acceptQMessageBox(rw, "delete tag")
     assert tagToDelete not in porcelain.getTagNames(rw.repo)

@@ -3,15 +3,10 @@ from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-import contextlib
-import html
 import pygit2
 
 
 class ComposePatch(RepoTask):
-    def name(self):
-        return translate("Operation", "Export patch file")
-
     def effects(self):
         return TaskEffects.Nothing
 
@@ -44,9 +39,6 @@ class ComposePatch(RepoTask):
 
 
 class ExportCommitAsPatch(ComposePatch):
-    def name(self):
-        return translate("Operation", "Export commit as patch file")
-
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
 
@@ -62,9 +54,6 @@ class ExportCommitAsPatch(ComposePatch):
 
 
 class ExportStashAsPatch(ExportCommitAsPatch):
-    def name(self):
-        return translate("Operation", "Export stash as patch file")
-
     def flow(self, oid: pygit2.Oid):
         yield from self._flowBeginWorkerThread()
 
@@ -79,9 +68,6 @@ class ExportStashAsPatch(ExportCommitAsPatch):
 
 
 class ExportWorkdirAsPatch(ComposePatch):
-    def name(self):
-        return translate("Operation", "Export uncommitted changes as patch file")
-
     def flow(self):
         yield from self._flowBeginWorkerThread()
 

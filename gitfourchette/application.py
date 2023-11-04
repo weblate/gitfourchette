@@ -71,10 +71,11 @@ class GFApplication(QApplication):
         self.initialSession = session
 
         # Boot main window first thing when event loop starts
-        QTimer.singleShot(0, self.bootMainWindow)
+        QTimer.singleShot(0, self.bootUi)
 
-    def bootMainWindow(self):
+    def bootUi(self):
         from gitfourchette.mainwindow import MainWindow
+
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
         self.mainWindow.show()

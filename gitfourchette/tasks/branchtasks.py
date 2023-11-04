@@ -11,9 +11,6 @@ import pygit2
 
 
 class SwitchBranch(RepoTask):
-    def name(self):
-        return translate("Operation", "Switch to branch")
-
     def effects(self):
         return TaskEffects.Refs | TaskEffects.Head
 
@@ -35,9 +32,6 @@ class SwitchBranch(RepoTask):
 
 
 class RenameBranch(RepoTask):
-    def name(self):
-        return translate("Operation", "Rename local branch")
-
     def flow(self, oldBranchName: str):
         assert not oldBranchName.startswith(HEADS_PREFIX)
 
@@ -67,9 +61,6 @@ class RenameBranch(RepoTask):
 
 
 class DeleteBranch(RepoTask):
-    def name(self):
-        return translate("Operation", "Delete local branch")
-
     def flow(self, localBranchName: str):
         assert not localBranchName.startswith(HEADS_PREFIX)
 
@@ -90,9 +81,6 @@ class DeleteBranch(RepoTask):
 
 class _NewBranchBaseTask(RepoTask):
     TRACK_ANY_UPSTREAM = ".ANY"
-
-    def name(self):
-        return translate("Operation", "New local branch")
 
     def _internalFlow(self, tip: pygit2.Oid, localName: str = "", trackUpstream: str = TRACK_ANY_UPSTREAM):
         repo = self.repo
@@ -226,9 +214,6 @@ class NewTrackingBranch(_NewBranchBaseTask):
 
 
 class EditTrackedBranch(RepoTask):
-    def name(self):
-        return translate("Operation", "Change remote branch tracked by local branch")
-
     def effects(self):
         return TaskEffects.Refs
 
@@ -250,9 +235,6 @@ class EditTrackedBranch(RepoTask):
 
 
 class FastForwardBranch(RepoTask):
-    def name(self):
-        return translate("Operation", "Fast-forward branch")
-
     def flow(self, localBranchName: str = ""):
         if not localBranchName:
             localBranchName = porcelain.getActiveBranchShorthand(self.repo)
@@ -304,9 +286,6 @@ class FastForwardBranch(RepoTask):
 
 
 class RecallCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Recall lost commit")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Refs
 

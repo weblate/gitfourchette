@@ -43,9 +43,6 @@ class _BaseNetTask(RepoTask):
 
 
 class DeleteRemoteBranch(_BaseNetTask):
-    def name(self):
-        return translate("Operation", "Delete branch on remote")
-
     def flow(self, remoteBranchShorthand: str):
         assert not remoteBranchShorthand.startswith(porcelain.REMOTES_PREFIX)
 
@@ -70,9 +67,6 @@ class DeleteRemoteBranch(_BaseNetTask):
 
 
 class RenameRemoteBranch(_BaseNetTask):
-    def name(self):
-        return translate("Operation", "Rename branch on remote")
-
     def flow(self, remoteBranchName: str):
         assert not remoteBranchName.startswith(porcelain.REMOTES_PREFIX)
         remoteName, branchName = porcelain.splitRemoteBranchShorthand(remoteBranchName)
@@ -109,9 +103,6 @@ class RenameRemoteBranch(_BaseNetTask):
 
 
 class FetchRemote(_BaseNetTask):
-    def name(self):
-        return translate("Operation", "Fetch remote")
-
     def flow(self, remoteName: str):
         self._showRemoteLinkDialog()
 
@@ -124,10 +115,20 @@ class FetchRemote(_BaseNetTask):
 
 
 class FetchRemoteBranch(_BaseNetTask):
-    def name(self):
-        return translate("Operation", "Fetch remote branch")
+    def flow(self, remoteBranchName: str = ""):
+        if not remoteBranchName:
+            branchName = porcelain.getActiveBranchShorthand(self.repo)
 
-    def flow(self, remoteBranchName: str):
+            try:
+                branch = self.repo.branches.local[branchName]
+            except KeyError:
+                yield from self._flowAbort(self.tr("Please switch to a local branch before performing this action."))
+
+            if not branch.upstream:
+                yield from self._flowAbort(self.tr("Can’t fetch remote changes on “{0}” because it isn’t tracking a remote branch.").format(branch.shorthand))
+
+            remoteBranchName = branch.upstream.shorthand
+
         self._showRemoteLinkDialog()
 
         yield from self._flowBeginWorkerThread()

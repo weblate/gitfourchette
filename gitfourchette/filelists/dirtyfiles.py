@@ -4,6 +4,7 @@ from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.tasks import *
 
 
 class DirtyFiles(FileList):
@@ -21,7 +22,7 @@ class DirtyFiles(FileList):
             ActionDef(
                 self.tr("&Stage %n File(s)", "", n),
                 self.stage,
-                QStyle.StandardPixmap.SP_ArrowDown,
+                icon="list-add",  # QStyle.StandardPixmap.SP_ArrowDown,
                 shortcuts=GlobalShortcuts.stageHotkeys,
             ),
 
@@ -36,7 +37,7 @@ class DirtyFiles(FileList):
                 self.tr("Stas&h Changes..."),
                 self.wantPartialStash,
                 icon="vcs-stash",
-                shortcuts=GlobalShortcuts.newStash
+                shortcuts=TaskBook.shortcuts.get(NewStash, [])
             ),
 
             self.revertModeActionDef(n, self.wantDiscardModeChanges),

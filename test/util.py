@@ -97,10 +97,17 @@ def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
 
 
 def findMenuAction(menu: QMenu, pattern: str):
+    assert menu
     for action in menu.actions():
         actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())
         if re.search(pattern, actionText, re.IGNORECASE):
             return action
+
+
+def triggerMenuAction(menu: QMenu, pattern: str):
+    action = findMenuAction(menu, pattern)
+    assert action is not None, f"did not find menu action matching \"{pattern}\""
+    action.trigger()
 
 
 def findQDialog(parent: QWidget, pattern: str) -> QDialog:

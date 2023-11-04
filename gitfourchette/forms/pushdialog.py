@@ -34,7 +34,7 @@ class PushDialog(QDialog):
             branch = repo.branches.local[branchName]
         except KeyError:
             showWarning(parent, translate("PushDialog", "No branch to push"),
-                        translate("PushDialog", "To push, you must be on a local branch. Try switching to a local branch first."))
+                        translate("PushDialog", "Please switch to a local branch before performing this action."))
             return
 
         dlg = PushDialog(repo, repoTaskRunner, branch, parent)

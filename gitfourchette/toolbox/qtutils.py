@@ -3,6 +3,9 @@ _supportedImageFormats = None
 _stockIconCache = {}
 
 
+MultiShortcut = list[QKeySequence]
+
+
 def setWindowModal(widget: QWidget, modality: Qt.WindowModality = Qt.WindowModality.WindowModal):
     """
     Sets the WindowModal modality on a widget unless we're in test mode.
@@ -288,3 +291,23 @@ def reformatQLabel(label: QLabel, *args, **kwargs):
     text = text.format(*args, **kwargs)
     label.setText(text)
 
+
+def makeMultiShortcut(*args) -> MultiShortcut:
+    shortcuts = []
+
+    for alt in args:
+        if isinstance(alt, str):
+            shortcuts.append(QKeySequence(alt))
+        elif isinstance(alt, QKeySequence.StandardKey):
+            shortcuts.extend(QKeySequence.keyBindings(alt))
+        else:
+            assert isinstance(alt, QKeySequence)
+            shortcuts.append(alt)
+
+    # Ensure no duplicates (stable order since Python 3.7+)
+    if PYSIDE2:  # QKeySequence isn't hashable in PySide2
+        shortcuts = list(dict((str(s), s) for s in shortcuts).values())
+    else:
+        shortcuts = list(dict.fromkeys(shortcuts))
+
+    return shortcuts

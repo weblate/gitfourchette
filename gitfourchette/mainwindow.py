@@ -1,7 +1,6 @@
 import gc
-import os
 import re
-from typing import Literal
+from typing import Literal, Type
 
 import pygit2
 
@@ -19,6 +18,7 @@ from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.repowidget import RepoWidget
+from gitfourchette.tasks import TaskInvoker, TaskBook, RepoTask
 from gitfourchette.toolbox import *
 
 
@@ -36,6 +36,10 @@ class MainWindow(QMainWindow):
 
         # Initialize global shortcuts
         GlobalShortcuts.initialize()
+
+        # Initialize task book
+        TaskBook.initialize()
+        TaskInvoker.instance().invokeSignal.connect(self.onInvokeTask)
 
         self.setObjectName("GFMainWindow")
 
@@ -77,15 +81,21 @@ class MainWindow(QMainWindow):
 
         self.refreshPrefs()
 
-    def goBack(self):
-        rw = self.currentRepoWidget()
-        if rw:
-            rw.navigateBack()
+    # -------------------------------------------------------------------------
 
-    def goForward(self):
+    def close(self) -> bool:
+        TaskInvoker.instance().invokeSignal.disconnect(self.onInvokeTask)
+        return super().close()
+
+    def onInvokeTask(self, taskType: Type[RepoTask], taskArgs: tuple):
         rw = self.currentRepoWidget()
         if rw:
-            rw.navigateForward()
+            rw.runTask(taskType, *taskArgs)
+        else:
+            showInformation(self, TaskBook.names.get(taskType, taskType.name()),
+                            self.tr("Please open a repository before performing this action."))
+
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def reloadStyleSheet():
@@ -179,59 +189,80 @@ class MainWindow(QMainWindow):
         fileMenu = menubar.addMenu(self.tr("&File"))
         fileMenu.setObjectName("MWFileMenu")
 
-        a = fileMenu.addAction(self.tr("&New Repository..."), self.newRepo)
-        a.setStatusTip(self.tr("Create a new empty repository"))
-        a.setShortcuts(QKeySequence.StandardKey.New)
+        ActionDef.addToQMenu(
+            fileMenu,
 
-        a = fileMenu.addAction(self.tr("C&lone Repository..."), self.cloneDialog)
-        a.setShortcut("Ctrl+Shift+N")
+            ActionDef(self.tr("&New Repository..."), self.newRepo,
+                      shortcuts=QKeySequence.StandardKey.New, icon="folder-new",
+                      statusTip=self.tr("Create an empty Git repo")),
 
-        fileMenu.addSeparator()
+            ActionDef(self.tr("C&lone Repository..."), self.cloneDialog,
+                      shortcuts="Ctrl+Shift+N", icon="folder-download",
+                      statusTip=self.tr("Download a Git repo and open it")),
 
-        a = fileMenu.addAction(self.tr("&Open Repository..."), self.openDialog)
-        a.setShortcuts(QKeySequence.StandardKey.Open)
+            ActionDef.SEPARATOR,
 
-        self.recentMenu = fileMenu.addMenu(self.tr("Open &Recent"))
-        self.recentMenu.setObjectName("RecentMenu")
+            ActionDef(self.tr("&Open Repository..."), self.openDialog,
+                      shortcuts=QKeySequence.StandardKey.Open, icon="folder-open",
+                      statusTip=self.tr("Open a Git repo on your machine")),
 
-        a = fileMenu.addAction(self.tr("&Close Tab"), self.dispatchCloseCommand)
-        a.setShortcuts(GlobalShortcuts.closeTab)
+            ActionDef(self.tr("Open &Recent"),
+                      icon="folder-open-recent",
+                      statusTip=self.tr("List of recently opened Git repos"),
+                      objectName="RecentMenuPlaceholder"),
 
-        fileMenu.addSeparator()
+            ActionDef.SEPARATOR,
 
-        a = fileMenu.addAction(self.tr("Apply Patch..."), self.importPatch)
-        a.setShortcut("Ctrl+I")
+            TaskBook.action(tasks.NewCommit, "&C"),
+            TaskBook.action(tasks.AmendCommit, "&A"),
+            TaskBook.action(tasks.NewStash),
 
-        fileMenu.addAction(self.tr("Reverse Patch..."), self.importPatchReverse)
+            ActionDef.SEPARATOR,
 
-        fileMenu.addSeparator()
+            TaskBook.action(tasks.ApplyPatchFile),
+            TaskBook.action(tasks.ApplyPatchFileReverse),
 
-        a = fileMenu.addAction(self.tr("&Preferences..."), self.openPrefsDialog)
-        a.setMenuRole(QAction.MenuRole.PreferencesRole)
-        a.setShortcuts(QKeySequence.StandardKey.Preferences)
+            ActionDef.SEPARATOR,
 
-        a = fileMenu.addAction(self.tr("Set Up Git &Identity..."), self.setUpIdentity)
-        a.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
+            ActionDef(self.tr("&Preferences..."), self.openPrefsDialog,
+                      shortcuts=QKeySequence.StandardKey.Preferences, icon="configure",
+                      menuRole=QAction.MenuRole.PreferencesRole,
+                      statusTip=self.tr("Edit {app} settings").format(app=qAppName())),
 
-        fileMenu.addSeparator()
+            TaskBook.action(tasks.SetUpRepoIdentity, menuRole=QAction.MenuRole.ApplicationSpecificRole),
 
-        a = fileMenu.addAction(self.tr("&Quit"), self.close)
-        a.setMenuRole(QAction.MenuRole.QuitRole)
-        a.setShortcuts(QKeySequence.StandardKey.Quit)
+            ActionDef.SEPARATOR,
+
+            ActionDef(self.tr("&Close Tab"), self.dispatchCloseCommand,
+                      shortcuts=QKeySequence.StandardKey.Close, icon="document-close",
+                      statusTip=self.tr("Close current repository tab")),
+
+            ActionDef(self.tr("&Quit"), self.close,
+                      shortcuts=QKeySequence.StandardKey.Quit, icon="application-exit",
+                      statusTip=self.tr("Quit {app}").format(app=qAppName()),
+                      menuRole=QAction.MenuRole.QuitRole),
+        )
 
         # -------------------------------------------------------------
 
         editMenu: QMenu = menubar.addMenu(self.tr("&Edit"))
         editMenu.setObjectName("MWEditMenu")
 
-        a = editMenu.addAction(self.tr("&Find..."), lambda: self.dispatchSearchCommand("start"))
-        a.setShortcuts(QKeySequence.StandardKey.Find)
+        ActionDef.addToQMenu(
+            editMenu,
 
-        a = editMenu.addAction(self.tr("Find Next"), lambda: self.dispatchSearchCommand("next"))
-        a.setShortcuts(QKeySequence.StandardKey.FindNext)
+            ActionDef(self.tr("&Find..."), lambda: self.dispatchSearchCommand("start"),
+                      shortcuts=QKeySequence.StandardKey.Find, icon="edit-find",
+                      statusTip=self.tr("Search for a piece of text in commit messages or in the current diff")),
 
-        a = editMenu.addAction(self.tr("Find Previous"), lambda: self.dispatchSearchCommand("previous"))
-        a.setShortcuts(QKeySequence.StandardKey.FindPrevious)
+            ActionDef(self.tr("Find Next"), lambda: self.dispatchSearchCommand("next"),
+                      shortcuts=QKeySequence.StandardKey.FindNext,
+                      statusTip=self.tr("Find next occurrence")),
+
+            ActionDef(self.tr("Find Previous"), lambda: self.dispatchSearchCommand("previous"),
+                      shortcuts=QKeySequence.StandardKey.FindPrevious,
+                      statusTip=self.tr("Find previous occurrence"))
+        )
 
         # -------------------------------------------------------------
 
@@ -240,26 +271,10 @@ class MainWindow(QMainWindow):
         # repoMenu.setEnabled(False)
         self.repoMenu = repoMenu
 
-        a = repoMenu.addAction(self.tr("&Refresh"), self.refreshRepo)
-        a.setShortcuts(GlobalShortcuts.refresh)
-
-        a = repoMenu.addAction(self.tr("&Hard Refresh"), self.hardRefresh)
-        a.setShortcut("Ctrl+F5")
-
         repoMenu.addSeparator()
 
-        a = repoMenu.addAction(self.tr("&Commit..."), self.commit)
-        a.setShortcuts(GlobalShortcuts.commit)
-
-        a = repoMenu.addAction(self.tr("&Amend Last Commit..."), self.amend)
-        a.setShortcuts(GlobalShortcuts.amendCommit)
-
-        a = repoMenu.addAction(self.tr("Stash Changes..."), self.newStash)
-        a.setShortcuts(GlobalShortcuts.newStash)
-
-        repoMenu.addSeparator()
-
-        repoMenu.addAction(self.tr("Add Re&mote..."), self.newRemote)
+        a = repoMenu.addAction(self.tr("Add Re&mote..."))
+        TaskBook.fillAction(a, tasks.NewRemote)
 
         repoMenu.addSeparator()
 
@@ -267,13 +282,36 @@ class MainWindow(QMainWindow):
 
         a = repoMenu.addAction(self.tr("&Open Repo Folder"), self.openRepoFolder)
         a.setShortcuts(GlobalShortcuts.openRepoFolder)
+        a.setStatusTip(self.tr("Open this repo’s working directory in the system’s file manager"))
 
-        repoMenu.addAction(self.tr("Cop&y Repo Path"), self.copyRepoPath)
-        repoMenu.addAction(self.tr("Rename Repo..."), self.renameRepo)
+        a = repoMenu.addAction(self.tr("Cop&y Repo Path"), self.copyRepoPath)
+        a.setStatusTip(self.tr("Copy the absolute path to this repo’s working directory to the clipboard"))
+
+        a = repoMenu.addAction(self.tr("Rename Repo..."), self.renameRepo)
+        a.setStatusTip(self.tr("Give this repo a nickname (within {app} only)").format(app=qAppName()))
+
         repoMenu.addSeparator()
-        repoMenu.addAction(self.tr("Resc&ue Discarded Changes..."), self.openRescueFolder)
-        repoMenu.addAction(self.tr("Clear Discarded Changes..."), self.clearRescueFolder)
-        repoMenu.addAction(self.tr("Recall Lost Commit..."), self.recallCommit)
+
+        a = repoMenu.addAction(self.tr("Open Trash..."), self.openRescueFolder)
+        a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        a.setStatusTip(self.tr("Explore changes that you may have discarded by mistake"))
+
+        a = repoMenu.addAction(self.tr("Empty Trash..."), self.clearRescueFolder)
+        a.setStatusTip(self.tr("Delete all discarded changes from the trash folder"))
+
+        a = repoMenu.addAction(self.tr("Recall Lost Commit..."))
+        TaskBook.fillAction(a, tasks.RecallCommit)
+
+        repoMenu.addSeparator()
+
+        a = repoMenu.addAction(self.tr("&Refresh"), self.refreshRepo)
+        a.setShortcuts(GlobalShortcuts.refresh)
+        a.setIcon(stockIcon(QStyle.StandardPixmap.SP_BrowserReload))
+        a.setStatusTip(self.tr("Check for changes in the repo on the local filesystem only"))
+
+        a = repoMenu.addAction(self.tr("Reloa&d"), self.hardRefresh)
+        a.setShortcut("Ctrl+F5")
+        a.setStatusTip(self.tr("Reopen the repo from scratch"))
 
         configFilesMenu.addAction(".gitignore", self.openGitignore)
         configFilesMenu.addAction("config", self.openLocalConfig)
@@ -284,48 +322,48 @@ class MainWindow(QMainWindow):
         branchMenu = menubar.addMenu(self.tr("&Branch"))
         branchMenu.setObjectName("MWBranchMenu")
 
-        a = branchMenu.addAction(self.tr("New &Branch..."), self.newBranch)
-        a.setShortcuts(GlobalShortcuts.newBranch)
+        ActionDef.addToQMenu(
+            branchMenu,
 
-        a = branchMenu.addAction(self.tr("&Push Branch..."), self.push)
-        a.setShortcuts(GlobalShortcuts.pushBranch)
+            TaskBook.action(tasks.NewBranchFromHead, "&B"),
 
-        a = branchMenu.addAction(self.tr("&Fast-Forward to Remote Branch..."), self.fastForward)
-        # a.setShortcuts(GlobalShortcuts.pullBranch)
+            ActionDef.SEPARATOR,
+
+            ActionDef(
+                self.tr("&Push Branch..."),
+                self.pushBranch,
+                "vcs-push",
+                shortcuts=GlobalShortcuts.pushBranch,
+                statusTip=self.tr("Upload your commits on the current branch to the remote server"),
+            ),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(tasks.FetchRemoteBranch, "&F"),
+
+            TaskBook.action(tasks.FastForwardBranch, "&d"),
+        )
 
         # -------------------------------------------------------------
 
         goMenu: QMenu = menubar.addMenu(self.tr("&Go"))
         goMenu.setObjectName("MWGoMenu")
 
-        a = goMenu.addAction(self.tr("&Uncommitted Changes"), self.selectUncommittedChanges)
-        a.setShortcut("Ctrl+U")
+        ActionDef.addToQMenu(
+            goMenu,
+            ActionDef(self.tr("&Uncommitted Changes"), self.selectUncommittedChanges, shortcuts="Ctrl+U"),
+            ActionDef.SEPARATOR,
+            ActionDef(self.tr("&Next Tab"), self.nextTab, shortcuts="Ctrl+Tab"),
+            ActionDef(self.tr("&Previous Tab"), self.previousTab, shortcuts="Ctrl+Shift+Tab"),
+            ActionDef.SEPARATOR,
+            ActionDef(self.tr("Next File"), self.nextFile, shortcuts="Ctrl+]"),
+            ActionDef(self.tr("Previous File"), self.previousFile, shortcuts="Ctrl+["),
+            ActionDef.SEPARATOR,
+            TaskBook.action(tasks.JumpBack),
+            TaskBook.action(tasks.JumpForward),
+        )
 
-        goMenu.addSeparator()
-
-        a = goMenu.addAction(self.tr("&Next Tab"), self.nextTab)
-        a.setShortcut("Ctrl+Tab")
-
-        a = goMenu.addAction(self.tr("&Previous Tab"), self.previousTab)
-        a.setShortcut("Ctrl+Shift+Tab")
-
-        goMenu.addSeparator()
-
-        a = goMenu.addAction(self.tr("Next File"), self.nextFile)
-        a.setShortcut("Ctrl+]")
-
-        a = goMenu.addAction(self.tr("Previous File"), self.previousFile)
-        a.setShortcut("Ctrl+[")
-
-        goMenu.addSeparator()
-
-        a = goMenu.addAction(self.tr("Navigate Back"), self.goBack)
-        a.setShortcuts(GlobalShortcuts.navBack)
-
-        a = goMenu.addAction(self.tr("Navigate Forward"), self.goForward)
-        a.setShortcuts(GlobalShortcuts.navForward)
-
-        if __debug__:
+        if DEVDEBUG:
             a = goMenu.addAction(self.tr("Navigation Log"), lambda: print(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
 
@@ -336,9 +374,14 @@ class MainWindow(QMainWindow):
 
         a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
         a.setMenuRole(QAction.MenuRole.AboutRole)
+        a.setIcon(QIcon("assets:gitfourchette-simple.png"))
 
         # -------------------------------------------------------------
 
+        recentAction = fileMenu.findChild(QAction, "RecentMenuPlaceholder")
+        self.recentMenu = QMenu(fileMenu)
+        recentAction.setMenu(self.recentMenu)
+        self.recentMenu.setObjectName("RecentMenu")
         self.fillRecentMenu()
 
     def fillRecentMenu(self):
@@ -353,7 +396,10 @@ class MainWindow(QMainWindow):
             action = self.recentMenu.addAction(shortName, lambda p=path: self.openRepo(p))
             action.setStatusTip(path)
         self.recentMenu.addSeparator()
-        self.recentMenu.addAction(self.tr("Clear"), onClearRecents)
+
+        clearAction = self.recentMenu.addAction(self.tr("Clear List", "clear list of recently opened repositories"), onClearRecents)
+        clearAction.setStatusTip(self.tr("Clear the list of recently opened repositories"))
+        clearAction.setIcon(stockIcon("edit-clear-history"))
 
     # -------------------------------------------------------------------------
     # Tabs
@@ -396,21 +442,22 @@ class MainWindow(QMainWindow):
         rw: RepoWidget = self.tabs.widget(i)
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
-        closeTabAction = menu.addAction(self.tr("Close Tab"), lambda: self.closeTab(i))
-        menu.addAction(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i))
-        menu.addSeparator()
-        openRepoFolderAction = menu.addAction(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw))
-        menu.addAction(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw))
-        menu.addAction(self.tr("Rename", "RepoTabCM"), lambda: self.renameRepo(rw))
-        menu.addSeparator()
-        if rw.state:
-            menu.addAction(self.tr("Unload", "RepoTabCM"), lambda: self.unloadTab(i))
-        else:
-            menu.addAction(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i))
 
-        if i == self.tabs.currentIndex():
-            closeTabAction.setShortcuts(GlobalShortcuts.closeTab)
-            openRepoFolderAction.setShortcuts(GlobalShortcuts.openRepoFolder)
+        ActionDef.addToQMenu(
+            menu,
+            ActionDef(self.tr("Close Tab"), lambda: self.closeTab(i), shortcuts=QKeySequence.StandardKey.Close),
+            ActionDef(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i)),
+            ActionDef.SEPARATOR,
+            ActionDef(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw), shortcuts=GlobalShortcuts.openRepoFolder),
+            ActionDef(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw)),
+            ActionDef(self.tr("Rename", "RepoTabCM"), lambda: self.renameRepo(rw)),
+            ActionDef.SEPARATOR,
+        )
+
+        if rw.state:
+            ActionDef.addToQMenu(menu, ActionDef(self.tr("Unload", "RepoTabCM"), lambda: self.unloadTab(i)))
+        else:
+            ActionDef.addToQMenu(menu, ActionDef(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i)))
 
         menu.exec(globalPoint)
         menu.deleteLater()
@@ -595,7 +642,7 @@ class MainWindow(QMainWindow):
                 callback(self, rw)
             else:
                 showInformation(self, self.tr("No repository"),
-                                self.tr("Please open a repository before triggering this operation."))
+                                self.tr("Please open a repository before performing this action."))
         return wrapper
 
     @needRepoWidget
@@ -615,36 +662,12 @@ class MainWindow(QMainWindow):
         QApplication.clipboard().setText(rw.workdir)
 
     @needRepoWidget
-    def commit(self, rw: RepoWidget):
-        rw.runTask(tasks.NewCommit)
-
-    @needRepoWidget
-    def amend(self, rw: RepoWidget):
-        rw.runTask(tasks.AmendCommit)
-
-    @needRepoWidget
-    def newStash(self, rw: RepoWidget):
-        rw.runTask(tasks.NewStash)
-
-    @needRepoWidget
-    def newBranch(self, rw: RepoWidget):
-        rw.runTask(tasks.NewBranchFromHead)
-
-    @needRepoWidget
-    def newRemote(self, rw: RepoWidget):
-        rw.runTask(tasks.NewRemote)
-
-    @needRepoWidget
     def renameRepo(self, rw: RepoWidget):
         rw.renameRepo()
 
     @needRepoWidget
-    def push(self, rw: RepoWidget):
+    def pushBranch(self, rw: RepoWidget):
         rw.startPushFlow()
-
-    @needRepoWidget
-    def fastForward(self, rw: RepoWidget):
-        rw.runTask(tasks.FastForwardBranch)
 
     @needRepoWidget
     def openRescueFolder(self, rw: RepoWidget):
@@ -653,14 +676,6 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def clearRescueFolder(self, rw: RepoWidget):
         rw.clearRescueFolder()
-
-    @needRepoWidget
-    def recallCommit(self, rw: RepoWidget):
-        rw.recallCommit()
-
-    @needRepoWidget
-    def setUpIdentity(self, rw: RepoWidget):
-        rw.setUpRepoIdentity()
 
     def _openLocalConfigFile(self, fullPath: str):
         def createAndOpen():
@@ -691,6 +706,21 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def openLocalExclude(self, rw: RepoWidget):
         self._openLocalConfigFile(os.path.join(rw.repo.path, "info", "exclude"))
+
+    # -------------------------------------------------------------------------
+    # Go menu
+
+    @needRepoWidget
+    def selectUncommittedChanges(self, rw: RepoWidget):
+        rw.graphView.selectUncommittedChanges()
+
+    @needRepoWidget
+    def nextFile(self, rw: RepoWidget):
+        rw.selectNextFile(True)
+
+    @needRepoWidget
+    def previousFile(self, rw: RepoWidget):
+        rw.selectNextFile(False)
 
     # -------------------------------------------------------------------------
     # File menu callbacks
@@ -745,7 +775,7 @@ class MainWindow(QMainWindow):
                 openButton.clicked.connect(lambda: self.openRepo(parentWorkdir))
                 createButton = qmb.button(QMessageBox.StandardButton.Ok)
                 createButton.setText(self.tr("&Create repo in subfolder"))
-                createButton.clicked.connect(lambda: self.newRemote(path, detectParentRepo=False))
+                createButton.clicked.connect(lambda: self.newRepo(path, detectParentRepo=False))
                 qmb.show()
             return
 
@@ -778,14 +808,6 @@ class MainWindow(QMainWindow):
 
         self.saveSession()
         return rw
-
-    @needRepoWidget
-    def importPatch(self, rw: RepoWidget):
-        rw.runTask(tasks.ApplyPatchFile, False)
-
-    @needRepoWidget
-    def importPatchReverse(self, rw: RepoWidget):
-        rw.runTask(tasks.ApplyPatchFile, True)
 
     # -------------------------------------------------------------------------
     # Tab management
@@ -874,18 +896,6 @@ class MainWindow(QMainWindow):
         index += self.tabs.count() - 1
         index %= self.tabs.count()
         self.tabs.setCurrentIndex(index)
-
-    # -------------------------------------------------------------------------
-    # Go menu
-
-    def selectUncommittedChanges(self):
-        self.currentRepoWidget().graphView.selectUncommittedChanges()
-
-    def nextFile(self):
-        self.currentRepoWidget().selectNextFile(True)
-
-    def previousFile(self):
-        self.currentRepoWidget().selectNextFile(False)
 
     # -------------------------------------------------------------------------
     # Session management
@@ -1046,6 +1056,7 @@ class MainWindow(QMainWindow):
 
         if "language" in prefDiff:
             settings.applyLanguagePref()
+            TaskBook.initialize()
             self.fillGlobalMenuBar()
 
         if "maxRecentRepos" in prefDiff:

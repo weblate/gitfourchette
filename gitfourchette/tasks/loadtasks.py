@@ -16,9 +16,6 @@ TAG = "LoadTasks"
 
 
 class LoadWorkdir(RepoTask):
-    def name(self):
-        return translate("Operation", "Refresh working directory")
-
     def canKill(self, task: RepoTask):
         if type(task) is LoadWorkdir:
             log.warning(TAG, "LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
@@ -41,9 +38,6 @@ class LoadWorkdir(RepoTask):
 
 
 class LoadCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Load commit")
-
     def canKill(self, task: RepoTask):
         return type(task) in [LoadWorkdir, LoadCommit, LoadPatch]
 
@@ -56,9 +50,6 @@ class LoadCommit(RepoTask):
 class LoadPatch(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Nothing  # let custom callback in RepoWidget do it
-
-    def name(self):
-        return translate("Operation", "Load diff")
 
     def canKill(self, task: RepoTask):
         return type(task) in [LoadPatch]

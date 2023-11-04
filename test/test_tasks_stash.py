@@ -19,7 +19,7 @@ def testNewStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/untracked.txt"]
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
-    findMenuAction(menu, "new stash").trigger()
+    triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
     dlg.ui.messageEdit.setText("helloworld")
@@ -54,7 +54,7 @@ def testNewPartialStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == dirtyFiles
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
-    findMenuAction(menu, "new stash").trigger()
+    triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
     dlg.ui.messageEdit.setText("helloworld")
@@ -84,7 +84,7 @@ def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
     repo = rw.repo
 
     menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
-    findMenuAction(menu, "new stash").trigger()
+    triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
     dlg.ui.messageEdit.setText("helloworld")

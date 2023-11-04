@@ -14,9 +14,6 @@ from pathlib import Path
 
 
 class AbsorbSubmodule(RepoTask):
-    def name(self):
-        return translate("Operation", "Absorb existing repository as submodule")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
 

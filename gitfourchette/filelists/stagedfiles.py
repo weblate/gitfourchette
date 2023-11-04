@@ -4,6 +4,7 @@ from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.tasks import *
 
 
 class StagedFiles(FileList):
@@ -20,14 +21,14 @@ class StagedFiles(FileList):
             ActionDef(
                 self.tr("&Unstage %n File(s)", "", n),
                 self.unstage,
-                QStyle.StandardPixmap.SP_ArrowUp,
+                icon="list-remove",  # QStyle.StandardPixmap.SP_ArrowUp,
                 shortcuts=GlobalShortcuts.discardHotkeys,
             ),
 
             ActionDef(
                 self.tr("Stas&h Changes..."),
                 self.wantPartialStash,
-                shortcuts=GlobalShortcuts.newStash,
+                shortcuts=TaskBook.shortcuts.get(NewStash, []),
                 icon="vcs-stash",
             ),
 

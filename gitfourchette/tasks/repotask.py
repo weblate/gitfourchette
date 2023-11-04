@@ -4,7 +4,7 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette import log
 from gitfourchette import porcelain
-from typing import Any, Generator, Literal, Type
+from typing import Any, Generator, Type
 import enum
 import pygit2
 
@@ -137,6 +137,15 @@ class RepoTask(QObject):
     _currentFlow: FlowGeneratorType
     _currentIteration: int
 
+    @classmethod
+    def name(cls) -> str:
+        from gitfourchette.tasks.taskbook import TaskBook
+        return TaskBook.names.get(cls, cls.__name__)
+
+    @classmethod
+    def invoke(cls, *args):
+        TaskInvoker.invoke(cls, *args)
+
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.repo = None
@@ -155,11 +164,16 @@ class RepoTask(QObject):
             p = p.parent()
         raise ValueError(F"RepoTask {self} has no parent widget")
 
+    @property
+    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
+        pw = self.parentWidget()
+        if DEVDEBUG:
+            from gitfourchette.repowidget import RepoWidget
+            assert isinstance(pw, RepoWidget)
+        return pw
+
     def setRepo(self, repo: pygit2.Repository):
         self.repo = repo
-
-    def name(self):
-        return str(self)
 
     def __str__(self):
         return self.objectName()
@@ -525,3 +539,23 @@ class RepoTaskRunner(QObject):
             self._zombieTask = None
         else:
             assert False
+
+
+class TaskInvoker(QObject):
+    """Singleton that lets you dispatch tasks from anywhere in the application."""
+
+    invokeSignal = Signal(object, tuple)
+    _instance: TaskInvoker | None = None
+
+    @staticmethod
+    def instance():
+        if TaskInvoker._instance is None:
+            TaskInvoker._instance = TaskInvoker(None)
+            TaskInvoker._instance.setObjectName("RepoTaskInvoker")
+        return TaskInvoker._instance
+
+    @staticmethod
+    def invoke(taskType: Type[RepoTask], *taskArgs):
+        TaskInvoker.instance().invokeSignal.emit(taskType, taskArgs)
+
+

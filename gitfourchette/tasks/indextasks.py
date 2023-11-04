@@ -24,9 +24,6 @@ class _BaseStagingTask(RepoTask):
 
 
 class StageFiles(_BaseStagingTask):
-    def name(self):
-        return translate("Operation", "Stage files")
-
     def flow(self, patches: list[pygit2.Patch]):
         if not patches:  # Nothing to stage (may happen if user keeps pressing Enter in file list view)
             QApplication.beep()
@@ -37,9 +34,6 @@ class StageFiles(_BaseStagingTask):
 
 
 class DiscardFiles(_BaseStagingTask):
-    def name(self):
-        return translate("Operation", "Discard files")
-
     def effects(self):
         return TaskEffects.Workdir
 
@@ -75,9 +69,6 @@ class DiscardFiles(_BaseStagingTask):
 
 
 class UnstageFiles(_BaseStagingTask):
-    def name(self):
-        return translate("Operation", "Unstage files")
-
     def flow(self, patches: list[pygit2.Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
@@ -88,9 +79,6 @@ class UnstageFiles(_BaseStagingTask):
 
 
 class DiscardModeChanges(_BaseStagingTask):
-    def name(self):
-        return translate("Operation", "Discard mode changes")
-
     def flow(self, patches: list[pygit2.Patch]):
         textPara = []
 
@@ -115,9 +103,6 @@ class DiscardModeChanges(_BaseStagingTask):
 
 
 class UnstageModeChanges(_BaseStagingTask):
-    def name(self):
-        return translate("Operation", "Unstage mode changes")
-
     def flow(self, patches: list[pygit2.Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
@@ -128,9 +113,6 @@ class UnstageModeChanges(_BaseStagingTask):
 
 
 class ApplyPatch(RepoTask):
-    def name(self):
-        return translate("Operation", "Apply patch")
-
     def effects(self) -> TaskEffects:
         # Patched file stays dirty
         # TODO: Show Patched File In Workdir
@@ -201,9 +183,6 @@ class ApplyPatch(RepoTask):
 
 
 class RevertPatch(RepoTask):
-    def name(self):
-        return translate("Operation", "Revert patch")
-
     def effects(self) -> TaskEffects:
         # Patched file stays dirty
         # TODO: Show Patched File In Workdir
@@ -229,9 +208,6 @@ class RevertPatch(RepoTask):
 
 
 class HardSolveConflict(RepoTask):
-    def name(self):
-        return translate("Operation", "Hard solve conflict")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
@@ -268,9 +244,6 @@ class HardSolveConflict(RepoTask):
 
 
 class MarkConflictSolved(RepoTask):
-    def name(self):
-        return translate("Operation", "Mark conflict solved")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
@@ -287,9 +260,6 @@ class MarkConflictSolved(RepoTask):
 
 
 class AcceptMergeConflictResolution(RepoTask):
-    def name(self):
-        return translate("Operation", "Accept merge conflict resolution")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
@@ -309,13 +279,10 @@ class AcceptMergeConflictResolution(RepoTask):
 
 
 class ApplyPatchFile(RepoTask):
-    def name(self):
-        return translate("Operation", "Apply patch file")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
-    def flow(self, reverse: bool, path: str = ""):
+    def flow(self, reverse: bool = False, path: str = ""):
         if reverse:
             title = self.tr("Import patch file (to apply in reverse)")
         else:
@@ -356,8 +323,13 @@ class ApplyPatchFile(RepoTask):
         numDeltas = len(deltas)
         numListed = min(numDeltas, 10)
         numUnlisted = numDeltas - numListed
-        text = self.tr("Patch file <b>“{0}”</b> can be applied cleanly to your working directory. "
-                       "It will modify <b>%n</b> files:", "", numDeltas).format(os.path.basename(path))
+        if reverse:
+            text = self.tr("Patch file <b>“{0}”</b>, <b>reversed</b>, can be applied cleanly to your working directory.")
+        else:
+            text = self.tr("Patch file <b>“{0}”</b> can be applied cleanly to your working directory.")
+        text = text.format(os.path.basename(path))
+        text += " "
+        text += self.tr("It will modify <b>%n</b> files:", "", numDeltas)
         text += "<ul>"
         for delta in deltas[:numListed]:
             text += F"<li>({delta.status_char()}) {escape(delta.new_file.path)}</li>"
@@ -369,3 +341,8 @@ class ApplyPatchFile(RepoTask):
         yield from self._flowConfirm(title, text, verb=self.tr("Apply patch"))
 
         porcelain.applyPatch(self.repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)
+
+
+class ApplyPatchFileReverse(ApplyPatchFile):
+    def flow(self, path: str = ""):
+        yield from ApplyPatchFile.flow(self, reverse=True, path=path)

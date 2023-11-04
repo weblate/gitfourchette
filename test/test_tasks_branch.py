@@ -158,7 +158,7 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
     oid1 = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
 
     rw.graphView.selectCommit(oid1)
-    rw.graphView.newBranchFromCommit.emit(rw.graphView.currentCommitOid)
+    triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
 
     dlg: NewBranchDialog = findQDialog(rw, "new branch")
     assert dlg.ui.nameEdit.text() == "first-merge"  # nameEdit should be pre-filled with name of a (remote) branch pointing to this commit

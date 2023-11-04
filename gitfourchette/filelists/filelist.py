@@ -9,6 +9,7 @@ from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import BLANK_OID, isZeroId
 from gitfourchette.qt import *
+from gitfourchette.tasks import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.toolbox import *
 
@@ -368,10 +369,8 @@ class FileList(QListView):
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
     def wantPartialStash(self):
-        paths = []
-        for patch in self.selectedEntries():
-            paths.append(patch.delta.old_file.path)
-        self.stashFiles.emit(paths)
+        paths = [patch.delta.old_file.path for patch in self.selectedEntries()]
+        NewStash.invoke(paths)
 
     def revertModeActionDef(self, n: int, callback: Callable):
         action = ActionDef(self.tr("Revert Mode Change(s)", "", n), callback, enabled=False)

@@ -16,15 +16,8 @@ import pygit2
 
 
 class NewCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Commit")
-
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
-
-    @property
-    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parentWidget()
 
     def flow(self):
         if self.repo.index.conflicts:
@@ -85,15 +78,8 @@ class NewCommit(RepoTask):
 
 
 class AmendCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Amend commit")
-
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
-
-    @property
-    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parentWidget()
 
     def getDraftMessage(self):
         return self.rw.state.getDraftCommitMessage(forAmending=True)
@@ -145,9 +131,6 @@ class AmendCommit(RepoTask):
 
 
 class SetUpIdentityFirstRun(RepoTask):
-    def name(self):
-        return translate("Operation", "Set up identity")
-
     def effects(self):
         return TaskEffects.Nothing
 
@@ -205,9 +188,6 @@ class SetUpIdentityFirstRun(RepoTask):
 
 
 class SetUpRepoIdentity(RepoTask):
-    def name(self):
-        return translate("Operation", "Set up identity")
-
     def effects(self):
         return TaskEffects.Nothing
 
@@ -294,9 +274,6 @@ class SetUpRepoIdentity(RepoTask):
 
 
 class CheckoutCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Check out commit")
-
     def effects(self):
         return TaskEffects.Refs | TaskEffects.Head
 
@@ -344,9 +321,6 @@ class CheckoutCommit(RepoTask):
 
 
 class RevertCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Revert commit")
-
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
@@ -356,9 +330,6 @@ class RevertCommit(RepoTask):
 
 
 class ResetHead(RepoTask):
-    def name(self):
-        return translate("Operation", "Reset HEAD")
-
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
@@ -368,13 +339,10 @@ class ResetHead(RepoTask):
 
 
 class NewTag(RepoTask):
-    def name(self):
-        return translate("Operation", "New tag")
-
     def effects(self):
         return TaskEffects.Refs
 
-    def flow(self, oid: pygit2.Oid = None, signIt = False):
+    def flow(self, oid: pygit2.Oid = None, signIt: bool = False):
         if signIt:
             yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
 
@@ -405,9 +373,6 @@ class NewTag(RepoTask):
 
 
 class DeleteTag(RepoTask):
-    def name(self):
-        return translate("Operation", "Delete tag")
-
     def effects(self):
         return TaskEffects.Refs
 
@@ -430,18 +395,11 @@ class DeleteTag(RepoTask):
 
 
 class CherrypickCommit(RepoTask):
-    def name(self):
-        return translate("Operation", "Cherry-pick")
-
     def effects(self):
         effects = TaskEffects.Workdir | TaskEffects.ShowWorkdir
         if self.didCommit:
             effects |= TaskEffects.Refs | TaskEffects.Head
         return effects
-
-    @property
-    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
-        return self.parentWidget()
 
     def flow(self, oid: pygit2.Oid):
         self.didCommit = False

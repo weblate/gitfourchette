@@ -11,9 +11,6 @@ from gitfourchette.forms.remotedialog import RemoteDialog
 
 
 class NewRemote(RepoTask):
-    def name(self):
-        return translate("Operation", "Add remote")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Refs | TaskEffects.Remotes
 
@@ -42,9 +39,6 @@ class NewRemote(RepoTask):
 
 
 class EditRemote(RepoTask):
-    def name(self):
-        return translate("Operation", "Edit remote")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Refs | TaskEffects.Remotes
 
@@ -78,9 +72,6 @@ class EditRemote(RepoTask):
 
 
 class DeleteRemote(RepoTask):
-    def name(self):
-        return translate("Operation", "Remove remote")
-
     def effects(self) -> TaskEffects:
         return TaskEffects.Refs | TaskEffects.Remotes
 
