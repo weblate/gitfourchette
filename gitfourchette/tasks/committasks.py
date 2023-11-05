@@ -288,16 +288,21 @@ class CheckoutCommit(RepoTask):
 
         ui = Ui_CheckoutCommitDialog()
         ui.setupUi(dlg)
+        ok = ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setText(self.tr("Detach HEAD")))
+        ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Switch Branch")))
+        ui.createBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Create Branch...")))
         if refs:
             ui.switchToLocalBranchComboBox.addItems(refs)
-            ui.switchToLocalBranchRadioButton.setChecked(True)
+            ui.switchToLocalBranchRadioButton.click()
         else:
-            ui.detachedHeadRadioButton.setChecked(True)
+            ui.detachedHeadRadioButton.click()
             ui.switchToLocalBranchComboBox.setVisible(False)
             ui.switchToLocalBranchRadioButton.setVisible(False)
 
         dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=f"“{commitMessage}”")
+        setWindowModal(dlg)
         yield from self._flowDialog(dlg)
 
         # Make sure to copy user input from dialog UI *before* starting worker thread

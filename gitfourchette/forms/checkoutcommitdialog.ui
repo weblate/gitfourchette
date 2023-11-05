@@ -66,7 +66,7 @@
    <item>
     <widget class="QRadioButton" name="createBranchRadioButton">
      <property name="text">
-      <string>Start &amp;new branch here</string>
+      <string>Start &amp;new branch here...</string>
      </property>
     </widget>
    </item>

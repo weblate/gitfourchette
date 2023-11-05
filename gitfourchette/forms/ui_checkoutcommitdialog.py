@@ -76,4 +76,4 @@ class Ui_CheckoutCommitDialog(object):
         self.label.setText(QCoreApplication.translate("CheckoutCommitDialog", u"How do you want to check out this commit?", None))
         self.switchToLocalBranchRadioButton.setText(QCoreApplication.translate("CheckoutCommitDialog", u"Switch to a &branch that points here:", None))
         self.detachedHeadRadioButton.setText(QCoreApplication.translate("CheckoutCommitDialog", u"Enter &detached HEAD here", None))
-        self.createBranchRadioButton.setText(QCoreApplication.translate("CheckoutCommitDialog", u"Start &new branch here", None))
+        self.createBranchRadioButton.setText(QCoreApplication.translate("CheckoutCommitDialog", u"Start &new branch here...", None))
