@@ -37,4 +37,4 @@ def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
 
     assert not rw.repo.index.conflicts
     assert not rw.conflictView.isVisibleTo(rw)
-    assert rw.repo.status() == {"a/a2.txt": pygit2.GIT_STATUS_WT_NEW}
+    assert rw.repo.status() == {"a/a2.txt": pygit2.GIT_STATUS_INDEX_NEW}
