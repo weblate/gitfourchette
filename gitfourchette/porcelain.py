@@ -235,6 +235,9 @@ def getUnstagedChanges(repo: Repository, updateIndex: bool = False, showBinary: 
              | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT
              )
 
+    # Don't attempt to update the index if the repo is locked for writing
+    updateIndex &= os.access(repo.path, os.W_OK)
+
     # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
     # index was stale, but this requires the repo to be writable.
     if updateIndex:
