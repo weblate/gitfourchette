@@ -91,7 +91,7 @@ class Jump(RepoTask):
         result = patchTask.result
 
         if type(result) == DiffConflict:
-            rw.diffStack.setCurrentWidget(rw.conflictView)
+            rw.diffStack.setCurrentWidget(rw.conflictViewScrollArea)
             rw.conflictView.displayConflict(result)
         elif type(result) == SpecialDiffError:
             rw.diffStack.setCurrentWidget(rw.specialDiffView)

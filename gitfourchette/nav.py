@@ -150,7 +150,7 @@ class NavLocator:
         return makeInternalLink(NavLocator.URL_AUTHORITY, self.path, fragment, **query)
 
     def toHtml(self, text: str):
-        href = self.url().toString()
+        href = self.url()
         assert '"' not in href
         if "[" in text:
             return text.replace("[", f"<a href=\"{href}\">").replace("]", "</a>")

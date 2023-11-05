@@ -97,12 +97,12 @@ class SpecialDiffError(Exception):
 
                 # TODO: if we had the full path to the root repo, we could just make a standard file link, and we wouldn't need the "opensubfolder" authority
                 prompt1 = translate("Diff", "Open “{0}” in new tab").format(treeName)
-                openUrl = makeInternalLink("opensubfolder", treePath)
-                longform.append(f"<center><p><a href='{openUrl.toString()}'>{prompt1}</a></p></center>")
+                openLink = makeInternalLink("opensubfolder", treePath)
+                longform.append(f"<center><p><a href='{openLink}'>{prompt1}</a></p></center>")
 
                 prompt = translate("Diff", "Absorb “{0}” as submodule").format(treeName)
-                taskUrl = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
-                longform.append(f"<center><p><a href='{taskUrl.toString()}'>{prompt}</a></p></center>")
+                taskLink = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
+                longform.append(f"<center><p><a href='{taskLink}'>{prompt}</a></p></center>")
             elif delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
                 message = translate("Diff", "New empty file.")
             else:

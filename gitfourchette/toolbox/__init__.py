@@ -34,7 +34,6 @@ from .qtutils import (
     openFolder, showInFolder, DisableWidgetContext,
     QScrollBackupContext, QTabBarStyleNoRotatedText,
     makeInternalLink,
-    reformatQLabel,
     MultiShortcut, makeMultiShortcut
 )
 from .textutils import escape, escamp, paragraphs, messageSummary, elide

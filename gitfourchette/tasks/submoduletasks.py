@@ -52,8 +52,8 @@ class AbsorbSubmodule(RepoTask):
         ui.setupUi(dlg)
         dlg.ui = ui  # for easier access in unit testing
         dlg.setWindowTitle(self.name())
-        reformatQLabel(ui.label1, sub=escape(subName), super=escape(thisName))
-        reformatQLabel(ui.label2, sub=escape(subName), super=escape(thisName))
+        formatWidgetText(ui.label1, sub=escape(subName), super=escape(thisName))
+        formatWidgetText(ui.label2, sub=escape(subName), super=escape(thisName))
         ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(self.tr("Absorb submodule"))
 
         ui.comboBox.parent().layout().addWidget(qcb)

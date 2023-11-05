@@ -264,7 +264,7 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
         super().drawControl(element, option, painter, widget)
 
 
-def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **urlQueryItems):
+def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **urlQueryItems) -> str:
     url = QUrl()
     url.setScheme(APP_URL_SCHEME)
     url.setAuthority(urlAuthority)
@@ -283,13 +283,7 @@ def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **u
     if query:
         url.setQuery(query)
 
-    return url
-
-
-def reformatQLabel(label: QLabel, *args, **kwargs):
-    text = label.text()
-    text = text.format(*args, **kwargs)
-    label.setText(text)
+    return url.toString()
 
 
 def makeMultiShortcut(*args) -> MultiShortcut:

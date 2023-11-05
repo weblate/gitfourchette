@@ -97,6 +97,8 @@ class RepoWidget(QWidget):
         self.specialDiffView = SpecialDiffView(self)
         self.conflictView = ConflictView(self)
 
+        self.diffView.contextualHelp.connect(self.statusMessage)
+
         self.specialDiffView.anchorClicked.connect(self.processInternalLink)
         self.graphView.linkActivated.connect(self.processInternalLink)
 
@@ -111,6 +113,7 @@ class RepoWidget(QWidget):
 
         self.conflictView.openMergeTool.connect(self.openConflictInMergeTool)
         self.conflictView.openPrefs.connect(self.openPrefs)
+        self.conflictView.linkActivated.connect(self.processInternalLink)
 
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
@@ -123,6 +126,7 @@ class RepoWidget(QWidget):
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
         # ----------------------------------
+        # Build files stack
 
         self.splitterStates = {}
 
@@ -174,9 +178,16 @@ class RepoWidget(QWidget):
         self.filesStack.addWidget(self.stageSplitter)
         self.filesStack.setCurrentWidget(self.committedFilesContainer)
 
+        # ----------------------------------
+        # Build diff stack
+
+        self.conflictViewScrollArea = QScrollArea()
+        self.conflictViewScrollArea.setWidget(self.conflictView)
+        self.conflictViewScrollArea.setWidgetResizable(True)
+
         self.diffStack.addWidget(self.diffView)
         self.diffStack.addWidget(self.specialDiffView)
-        self.diffStack.addWidget(self.conflictView)
+        self.diffStack.addWidget(self.conflictViewScrollArea)
         self.diffStack.setCurrentWidget(self.diffView)
 
         diffViewContainer = QWidget()
@@ -185,6 +196,9 @@ class RepoWidget(QWidget):
         diffViewContainer.layout().setSpacing(1)
         diffViewContainer.layout().addWidget(self.diffHeader)
         diffViewContainer.layout().addWidget(self.diffStack)
+
+        # ----------------------------------
+        # Main splitters
 
         bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
         bottomSplitter.addWidget(self.filesStack)
@@ -223,16 +237,12 @@ class RepoWidget(QWidget):
         #    w.setFrameStyle(QFrame.Shape.NoFrame)
         self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
-        self.diffView.contextualHelp.connect(self.statusMessage)
-
         # ----------------------------------
         # Connect signals to async tasks
 
         self.connectTask(self.amendButton.clicked,              tasks.AmendCommit, argc=0)
         self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
         self.connectTask(self.committedFiles.jump,              tasks.Jump)
-        self.connectTask(self.conflictView.hardSolve,           tasks.HardSolveConflict)
-        self.connectTask(self.conflictView.markSolved,          tasks.MarkConflictSolved)
         self.connectTask(self.diffView.applyPatch,              tasks.ApplyPatch)
         self.connectTask(self.diffView.revertPatch,             tasks.RevertPatch)
         self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
@@ -701,6 +711,9 @@ class RepoWidget(QWidget):
             p = p.removeprefix("/")
             p = os.path.join(self.repo.workdir, p)
             self.openRepo.emit(p)
+        elif url.authority() == "prefs":
+            p = url.path().removeprefix("/")
+            self.openPrefs.emit(p)
         elif url.authority() == "exec":
             query = QUrlQuery(url)
             allqi = query.queryItems(QUrl.ComponentFormattingOption.FullyDecoded)
