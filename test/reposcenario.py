@@ -1,10 +1,11 @@
 from .util import *
+from gitfourchette.porcelain import RepositoryContext
 import os
 import pygit2
 
 
 def fileWithStagedAndUnstagedChanges(path):
-    with RepositoryContextManager(path) as repo:
+    with RepositoryContext(path) as repo:
         writeFile(F"{path}/a/a1.txt", "a1\nstaged change\n")
         repo.index.read()
         repo.index.add("a/a1.txt")
@@ -14,7 +15,7 @@ def fileWithStagedAndUnstagedChanges(path):
 
 
 def stagedNewEmptyFile(path):
-    with RepositoryContextManager(path) as repo:
+    with RepositoryContext(path) as repo:
         writeFile(F"{path}/SomeNewFile.txt", "")
         repo.index.read()
         repo.index.add("SomeNewFile.txt")
@@ -23,7 +24,7 @@ def stagedNewEmptyFile(path):
 
 
 def stashedChange(path):
-    with RepositoryContextManager(path) as repo:
+    with RepositoryContext(path) as repo:
         writeFile(F"{path}/a/a1.txt", "a1\nPENDING CHANGE\n")
         sig = pygit2.Signature("toto", "toto@example.com", 0, 0)
         repo.stash(sig, "helloworld")

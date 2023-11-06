@@ -19,7 +19,7 @@ def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):
 def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         porcelain.checkoutCommit(repo, pygit2.Oid(hex="7f822839a2fe9760f386cbbbcb3f92c5fe81def7"))
 
     rw = mainWindow.openRepo(wd)

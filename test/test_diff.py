@@ -31,7 +31,7 @@ def testEmptyDiffWithModeChange(qtbot, tempDir, mainWindow):
 def testEmptyDiffWithNameChange(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     os.rename(f"{wd}/master.txt", f"{wd}/mastiff.txt")
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         repo.index.remove("master.txt")
         repo.index.add("mastiff.txt")
     rw = mainWindow.openRepo(wd)
@@ -88,7 +88,7 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
 def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         os.chmod(F"{wd}/master.txt", 0o755)
         repo.index.add_all(["master.txt"])
         porcelain.createCommit(repo, "master.txt +x", TEST_SIGNATURE, TEST_SIGNATURE)
@@ -136,7 +136,7 @@ def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
 def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         # Commit a file WITHOUT a newline at end
         writeFile(F"{wd}/master.txt", "hello")
         repo.index.add_all(["master.txt"])

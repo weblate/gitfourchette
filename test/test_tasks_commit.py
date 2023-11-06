@@ -230,7 +230,7 @@ def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
 
     oid = pygit2.Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
 
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         porcelain.checkoutCommit(repo, oid)
 
     rw = mainWindow.openRepo(wd)
@@ -273,7 +273,7 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
 def testCherrypick(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         porcelain.checkoutLocalBranch(repo, "no-parent")
 
     oid = pygit2.Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"

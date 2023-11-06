@@ -8,7 +8,7 @@ import pygit2
 def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContextManager(wd) as repo:
+    with RepositoryContext(wd) as repo:
         writeFile(f"{wd}/a/a1.txt", "we'll delete this")
         writeFile(f"{wd}/a/a2.txt", "we'll keep this")
         repo.index.add_all(["a/a1.txt", "a/a2.txt"])

@@ -50,7 +50,7 @@ def testFetchRemote(qtbot, tempDir, mainWindow):
     # Make some modifications to the bare repository that serves as a remote.
     # We're going to create a new branch and delete another.
     # The client must pick up on those modifications once it fetches the remote.
-    with RepositoryContextManager(barePath) as bareRepo:
+    with RepositoryContext(barePath) as bareRepo:
         assert bareRepo.is_bare
         porcelain.newBranch(bareRepo, "new-remote-branch")
         porcelain.deleteBranch(bareRepo, "no-parent")
@@ -78,7 +78,7 @@ def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
 
     # Modify the master branch in the bare repository that serves as a remote.
     # The client must pick up on this modification once it fetches the remote branch.
-    with RepositoryContextManager(barePath) as bareRepo:
+    with RepositoryContext(barePath) as bareRepo:
         assert bareRepo.is_bare
         assert bareRepo.head.target == oldHead
         porcelain.resetHead(bareRepo, newHead, resetMode="soft")  # can't reset hard in bare repos, whatever...

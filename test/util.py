@@ -4,6 +4,7 @@ import os
 import re
 import tarfile
 import shutil
+from gitfourchette.porcelain import RepositoryContext
 
 
 TEST_SIGNATURE = pygit2.Signature("Test Person", "toto@example.com", 1672600000, 0)
@@ -44,7 +45,7 @@ def makeBareCopy(path: str, addAsRemote: str, preFetch: bool):
     del conf
 
     if addAsRemote:
-        with RepositoryContextManager(path) as repo:
+        with RepositoryContext(path) as repo:
             remote = repo.remotes.create(addAsRemote, barePath)  # TODO: Should we add file:// ?
             if preFetch:
                 remote.fetch()
@@ -140,20 +141,3 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
 def hexToOid(hexstr: str):
     assert len(hexstr) == 40
     return pygit2.Oid(hex=hexstr)
-
-
-class RepositoryContextManager:
-    def __init__(self, path: str):
-        self.repo = pygit2.Repository(path)
-
-    def __enter__(self) -> pygit2.Repository:
-        return self.repo
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # Write any index changes back to disk
-        self.repo.index.write()
-
-        # repo.free() is necessary for correct test teardown on Windows
-        self.repo.free()
-        del self.repo
-        self.repo = None
