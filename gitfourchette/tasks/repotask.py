@@ -125,9 +125,6 @@ class RepoTask(QObject):
 
     FlowGeneratorType = Generator[FlowControlToken, None, Any]
 
-    success = Signal()
-    "Emitted when the task has successfully run to completion."
-
     _globalTaskCounter = 0
 
     repo: pygit2.Repository | None
@@ -136,6 +133,10 @@ class RepoTask(QObject):
 
     _currentFlow: FlowGeneratorType
     _currentIteration: int
+
+    _taskStack: list[RepoTask]
+    """Stack of active tasks in the chain of flowSubtask calls, including the root task at index 0.
+    The reference to the list object is shared by all tasks in the same flowSubtask chain."""
 
     @classmethod
     def name(cls) -> str:
@@ -155,6 +156,17 @@ class RepoTask(QObject):
         RepoTask._globalTaskCounter += 1
         self.setObjectName(f"task{self.__class__.__name__}")
         self.jumpTo = None
+        self._taskStack = [self]
+
+    @property
+    def rootTask(self) -> RepoTask:
+        assert self._taskStack
+        return self._taskStack[0]
+
+    @property
+    def isRootTask(self) -> bool:
+        return self.rootTask is self
+
 
     def parentWidget(self) -> QWidget:
         p = self.parent()
@@ -179,13 +191,14 @@ class RepoTask(QObject):
         return self.objectName()
 
     def canKill(self, task: RepoTask):
+        """
+        Return true if this task is allowed to take precedence over the given running task.
+        """
         return False
 
     def flow(self, *args, **kwargs) -> FlowGeneratorType:
         """
         Generator that performs the task. You can think of this as a coroutine.
-
-        When then generator is exhausted, the `success` signal is emitted.
 
         You can control the flow of the coroutine by yielding a `FlowControlToken` object.
         This lets you wait for you user input via dialog boxes, abort the task, or move long
@@ -201,12 +214,24 @@ class RepoTask(QObject):
             yield from self._flowExitWorkerThread()
             if not expensiveComputationCorrect:
                 yield from self._flowAbort("Sorry, computer says no.")
+
+        You can assume that the coroutine starts on the UI thread.
         """
         pass
 
-    def onError(self, exc):
+    def cleanup(self):
         """
-        Runs if flow() was interrupted by an error.
+        Clean up any resources used by the task on completion or failure.
+        Meant to be overridden by your task.
+        Called from UI thread.
+        """
+        assert onAppThread()
+
+    def onError(self, exc: Exception):
+        """
+        Report an error to the user if flow() was interrupted by an exception.
+        Can be overridden by your task, but you should call super().onError() if you can't handle the exception.
+        Called from the UI thread, after cleanup().
         """
         if isinstance(exc, porcelain.ConflictError):
             showConflictErrorMessage(self.parentWidget(), exc, self.name())
@@ -252,19 +277,34 @@ class RepoTask(QObject):
         """
         Runs a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
+        You must be on the UI thread before starting a subtask.
         """
-        assert onAppThread(), "Subtask must start on UI thread"
+
+        assert onAppThread(), "Subtask must be started start on UI thread"
 
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
         subtask = subtaskClass(self)
         subtask.setRepo(self.repo)
         subtask.setObjectName(f"{self.objectName()}:sub{subtask.objectName()}")
         log.info(TAG, f"{self}: Entering subtask {subtask}")
+
+        # Push subtask onto stack
+        subtask._taskStack = self._taskStack  # share reference to task stack
+        self._taskStack.append(subtask)
+
+        # Actually perform the subtask
         yield from subtask.flow(*args, **kwargs)
 
         # Make sure we're back on the UI thread before re-entering the root task
         if not onAppThread():
             yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
+
+        # Clean up subtask (on UI thread)
+        subtask.cleanup()
+
+        # Pop subtask off stack
+        assert self._taskStack[-1] is subtask
+        self._taskStack.pop()
 
         return subtask
 
@@ -273,6 +313,9 @@ class RepoTask(QObject):
         Re-enters the flow when the QDialog is accepted or rejected.
         If abortTaskIfRejected is True, the task is aborted if the dialog was rejected.
         """
+
+        assert onAppThread()  # we'll touch the UI
+
         waitToken = FlowControlToken(FlowControlToken.Kind.WAIT_READY)
         didReject = False
 
@@ -304,6 +347,8 @@ class RepoTask(QObject):
         Asks the user to confirm the operation via a message box.
         Interrupts flow() if the user denies.
         """
+
+        assert onAppThread()  # we'll touch the UI
 
         if not title:
             title = self.name()
@@ -337,9 +382,15 @@ class RepoTaskRunner(QObject):
     "Connected to _iterateFlow"
 
     _threadPool: QThreadPool
+
     _currentTask: RepoTask | None
+    "Task that is currently running"
+
     _zombieTask: RepoTask | None
+    "Task that is being interrupted"
+
     _currentTaskBenchmark = Benchmark | None
+    "Context manager"
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
@@ -447,10 +498,13 @@ class RepoTaskRunner(QObject):
             assert not isinstance(result, Generator), \
                 "You're trying to yield a nested generator. Did you mean 'yield from'?"
 
+            # Wrap up zombie task (task that was interrupted earlier)
             if task is self._zombieTask:
                 assert task is not self._currentTask
                 self._releaseTask(task)
                 task.deleteLater()
+
+                # Another task is queued up, start it now
                 if self._currentTask:
                     self._startTask(self._currentTask)
                 return
@@ -487,7 +541,6 @@ class RepoTaskRunner(QObject):
                 if isinstance(exception, StopIteration):
                     # No more steps in the flow
                     log.info(TAG, f"Task successful: {task}")
-                    task.success.emit()
                     self.refreshPostTask.emit(task)
                 elif isinstance(exception, FlowControlAbort):
                     # Controlled exit, show message (if any)
@@ -528,6 +581,13 @@ class RepoTaskRunner(QObject):
 
         assert onAppThread()
         assert task is self._currentTask or task is self._zombieTask
+        assert task.isRootTask
+
+        # Clean up all tasks in the stack (remember, we're the root stack)
+        assert task in task._taskStack
+        while task._taskStack:
+            subtask = task._taskStack.pop()
+            subtask.cleanup()
 
         self._continueFlow.disconnect()
 
