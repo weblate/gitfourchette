@@ -27,6 +27,7 @@ def testNewRemote(qtbot, tempDir, mainWindow):
     q: RemoteDialog = findQDialog(rw, "add remote")
     q.ui.nameEdit.setText("otherremote")
     q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
+    q.ui.fetchAfterAddCheckBox.setChecked(False)
     q.accept()
 
     assert len(repo.remotes) == 2

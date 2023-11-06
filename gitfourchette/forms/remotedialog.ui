@@ -2,9 +2,6 @@
 <ui version="4.0">
  <class>RemoteDialog</class>
  <widget class="QDialog" name="RemoteDialog">
-  <property name="windowModality">
-   <enum>Qt::NonModal</enum>
-  </property>
   <property name="enabled">
    <bool>true</bool>
   </property>
@@ -16,12 +13,6 @@
     <height>296</height>
    </rect>
   </property>
-  <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-    <horstretch>0</horstretch>
-    <verstretch>0</verstretch>
-   </sizepolicy>
-  </property>
   <property name="windowTitle">
    <string>Edit remote</string>
   </property>
@@ -32,25 +23,6 @@
    <property name="fieldGrowthPolicy">
     <enum>QFormLayout::ExpandingFieldsGrow</enum>
    </property>
-   <item row="6" column="0" colspan="2">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-     <property name="centerButtons">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1">
-    <widget class="QLineEdit" name="nameEdit"/>
-   </item>
-   <item row="1" column="1">
-    <widget class="QLineEdit" name="urlEdit"/>
-   </item>
    <item row="0" column="0">
     <widget class="QLabel" name="nameLabel">
      <property name="text">
@@ -60,6 +32,9 @@
       <cstring>urlEdit</cstring>
      </property>
     </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QLineEdit" name="nameEdit"/>
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="urlLabel">
@@ -71,21 +46,8 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="0">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeType">
-      <enum>QSizePolicy::Fixed</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
+   <item row="1" column="1">
+    <widget class="QLineEdit" name="urlEdit"/>
    </item>
    <item row="3" column="0" colspan="2">
     <widget class="QGroupBox" name="keyFileGroupBox">
@@ -102,13 +64,6 @@
       <bool>true</bool>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="0">
-       <widget class="QLineEdit" name="keyFilePathEdit">
-        <property name="placeholderText">
-         <string>Path to public or private key</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="1">
        <widget class="QPushButton" name="keyFileBrowseButton">
         <property name="text">
@@ -116,7 +71,69 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="0">
+       <widget class="QLineEdit" name="keyFilePathEdit">
+        <property name="placeholderText">
+         <string>Path to public or private key</string>
+        </property>
+       </widget>
+      </item>
      </layout>
+    </widget>
+   </item>
+   <item row="6" column="0" colspan="2">
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::MinimumExpanding</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>8</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="4" column="0">
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::MinimumExpanding</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>8</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="5" column="0" colspan="2">
+    <widget class="QCheckBox" name="fetchAfterAddCheckBox">
+     <property name="text">
+      <string>Fetch remote branches after adding</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
   </layout>

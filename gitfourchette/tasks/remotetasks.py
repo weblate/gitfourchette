@@ -32,10 +32,17 @@ class NewRemote(RepoTask):
 
         newRemoteName = dlg.ui.nameEdit.text()
         newRemoteUrl = dlg.ui.urlEdit.text()
+        fetchAfterAdd = dlg.ui.fetchAfterAddCheckBox.isChecked()
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
         porcelain.newRemote(self.repo, newRemoteName, newRemoteUrl)
+
+        if fetchAfterAdd:
+            yield from self._flowExitWorkerThread()
+
+            from gitfourchette.tasks import FetchRemote
+            yield from self._flowSubtask(FetchRemote, newRemoteName)
 
 
 class EditRemote(RepoTask):
@@ -57,6 +64,7 @@ class EditRemote(RepoTask):
             parent=self.parentWidget())
 
         setWindowModal(dlg)
+        dlg.resize(512, 128)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self._flowDialog(dlg)

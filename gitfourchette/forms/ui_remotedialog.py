@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'remotedialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.4.2
+## Created by: Qt User Interface Compiler version 6.6.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -12,18 +12,55 @@ class Ui_RemoteDialog(object):
     def setupUi(self, RemoteDialog):
         if not RemoteDialog.objectName():
             RemoteDialog.setObjectName(u"RemoteDialog")
-        RemoteDialog.setWindowModality(Qt.NonModal)
         RemoteDialog.setEnabled(True)
         RemoteDialog.resize(500, 296)
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(RemoteDialog.sizePolicy().hasHeightForWidth())
-        RemoteDialog.setSizePolicy(sizePolicy)
         RemoteDialog.setModal(True)
         self.formLayout = QFormLayout(RemoteDialog)
         self.formLayout.setObjectName(u"formLayout")
         self.formLayout.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        self.nameLabel = QLabel(RemoteDialog)
+        self.nameLabel.setObjectName(u"nameLabel")
+
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.nameLabel)
+
+        self.nameEdit = QLineEdit(RemoteDialog)
+        self.nameEdit.setObjectName(u"nameEdit")
+
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.nameEdit)
+
+        self.urlLabel = QLabel(RemoteDialog)
+        self.urlLabel.setObjectName(u"urlLabel")
+
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.urlLabel)
+
+        self.urlEdit = QLineEdit(RemoteDialog)
+        self.urlEdit.setObjectName(u"urlEdit")
+
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.urlEdit)
+
+        self.keyFileGroupBox = QGroupBox(RemoteDialog)
+        self.keyFileGroupBox.setObjectName(u"keyFileGroupBox")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.keyFileGroupBox.sizePolicy().hasHeightForWidth())
+        self.keyFileGroupBox.setSizePolicy(sizePolicy)
+        self.keyFileGroupBox.setCheckable(True)
+        self.gridLayout = QGridLayout(self.keyFileGroupBox)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.keyFileBrowseButton = QPushButton(self.keyFileGroupBox)
+        self.keyFileBrowseButton.setObjectName(u"keyFileBrowseButton")
+
+        self.gridLayout.addWidget(self.keyFileBrowseButton, 0, 1, 1, 1)
+
+        self.keyFilePathEdit = QLineEdit(self.keyFileGroupBox)
+        self.keyFilePathEdit.setObjectName(u"keyFilePathEdit")
+
+        self.gridLayout.addWidget(self.keyFilePathEdit, 0, 0, 1, 1)
+
+
+        self.formLayout.setWidget(3, QFormLayout.SpanningRole, self.keyFileGroupBox)
+
         self.buttonBox = QDialogButtonBox(RemoteDialog)
         self.buttonBox.setObjectName(u"buttonBox")
         self.buttonBox.setOrientation(Qt.Horizontal)
@@ -32,49 +69,19 @@ class Ui_RemoteDialog(object):
 
         self.formLayout.setWidget(6, QFormLayout.SpanningRole, self.buttonBox)
 
-        self.nameEdit = QLineEdit(RemoteDialog)
-        self.nameEdit.setObjectName(u"nameEdit")
-
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.nameEdit)
-
-        self.urlEdit = QLineEdit(RemoteDialog)
-        self.urlEdit.setObjectName(u"urlEdit")
-
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.urlEdit)
-
-        self.nameLabel = QLabel(RemoteDialog)
-        self.nameLabel.setObjectName(u"nameLabel")
-
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.nameLabel)
-
-        self.urlLabel = QLabel(RemoteDialog)
-        self.urlLabel.setObjectName(u"urlLabel")
-
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.urlLabel)
-
-        self.verticalSpacer = QSpacerItem(20, 20, QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.verticalSpacer = QSpacerItem(20, 8, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
 
         self.formLayout.setItem(2, QFormLayout.LabelRole, self.verticalSpacer)
 
-        self.keyFileGroupBox = QGroupBox(RemoteDialog)
-        self.keyFileGroupBox.setObjectName(u"keyFileGroupBox")
-        sizePolicy.setHeightForWidth(self.keyFileGroupBox.sizePolicy().hasHeightForWidth())
-        self.keyFileGroupBox.setSizePolicy(sizePolicy)
-        self.keyFileGroupBox.setCheckable(True)
-        self.gridLayout = QGridLayout(self.keyFileGroupBox)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.keyFilePathEdit = QLineEdit(self.keyFileGroupBox)
-        self.keyFilePathEdit.setObjectName(u"keyFilePathEdit")
+        self.verticalSpacer_2 = QSpacerItem(20, 8, QSizePolicy.Minimum, QSizePolicy.MinimumExpanding)
 
-        self.gridLayout.addWidget(self.keyFilePathEdit, 0, 0, 1, 1)
+        self.formLayout.setItem(4, QFormLayout.LabelRole, self.verticalSpacer_2)
 
-        self.keyFileBrowseButton = QPushButton(self.keyFileGroupBox)
-        self.keyFileBrowseButton.setObjectName(u"keyFileBrowseButton")
+        self.fetchAfterAddCheckBox = QCheckBox(RemoteDialog)
+        self.fetchAfterAddCheckBox.setObjectName(u"fetchAfterAddCheckBox")
+        self.fetchAfterAddCheckBox.setChecked(True)
 
-        self.gridLayout.addWidget(self.keyFileBrowseButton, 0, 1, 1, 1)
-
-
-        self.formLayout.setWidget(3, QFormLayout.SpanningRole, self.keyFileGroupBox)
+        self.formLayout.setWidget(5, QFormLayout.SpanningRole, self.fetchAfterAddCheckBox)
 
 #if QT_CONFIG(shortcut)
         self.nameLabel.setBuddy(self.urlEdit)
@@ -96,5 +103,6 @@ class Ui_RemoteDialog(object):
         self.nameLabel.setText(QCoreApplication.translate("RemoteDialog", u"&Name:", None))
         self.urlLabel.setText(QCoreApplication.translate("RemoteDialog", u"&URL:", None))
         self.keyFileGroupBox.setTitle(QCoreApplication.translate("RemoteDialog", u"Use a custom &key file to access this remote", None))
-        self.keyFilePathEdit.setPlaceholderText(QCoreApplication.translate("RemoteDialog", u"Path to public or private key", None))
         self.keyFileBrowseButton.setText(QCoreApplication.translate("RemoteDialog", u"&Browse...", None))
+        self.keyFilePathEdit.setPlaceholderText(QCoreApplication.translate("RemoteDialog", u"Path to public or private key", None))
+        self.fetchAfterAddCheckBox.setText(QCoreApplication.translate("RemoteDialog", u"Fetch remote branches after adding", None))
