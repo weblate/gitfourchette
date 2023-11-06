@@ -26,16 +26,12 @@ class _BaseNetTask(RepoTask):
         assert onAppThread()
         self.remoteLinkDialog = RemoteLinkProgressDialog(self.parentWidget())
 
-    def _closeRemoteLinkDialog(self):
+    def cleanup(self):
         assert onAppThread()
         if self.remoteLinkDialog:
             self.remoteLinkDialog.close()
             self.remoteLinkDialog.deleteLater()
             self.remoteLinkDialog = None
-
-    def onError(self, exc):
-        self._closeRemoteLinkDialog()
-        super().onError(exc)
 
     @property
     def remoteLink(self):
@@ -61,9 +57,6 @@ class DeleteRemoteBranch(_BaseNetTask):
         yield from self._flowBeginWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.deleteRemoteBranch(self.repo, remoteBranchShorthand, self.remoteLink)
-
-        yield from self._flowExitWorkerThread()
-        self._closeRemoteLinkDialog()
 
 
 class RenameRemoteBranch(_BaseNetTask):
@@ -98,9 +91,6 @@ class RenameRemoteBranch(_BaseNetTask):
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.renameRemoteBranch(self.repo, remoteBranchName, newBranchName, self.remoteLink)
 
-        yield from self._flowExitWorkerThread()
-        self._closeRemoteLinkDialog()
-
 
 class FetchRemote(_BaseNetTask):
     def flow(self, remoteName: str):
@@ -109,9 +99,6 @@ class FetchRemote(_BaseNetTask):
         yield from self._flowBeginWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.fetchRemote(self.repo, remoteName, self.remoteLink)
-
-        yield from self._flowExitWorkerThread()
-        self._closeRemoteLinkDialog()
 
 
 class FetchRemoteBranch(_BaseNetTask):
@@ -136,6 +123,3 @@ class FetchRemoteBranch(_BaseNetTask):
         remoteName, _ = porcelain.splitRemoteBranchShorthand(remoteBranchName)
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         porcelain.fetchRemoteBranch(self.repo, remoteBranchName, self.remoteLink)
-
-        yield from self._flowExitWorkerThread()
-        self._closeRemoteLinkDialog()
