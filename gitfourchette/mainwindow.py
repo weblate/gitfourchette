@@ -27,7 +27,7 @@ class MainWindow(QMainWindow):
 
     welcomeStack: QStackedWidget
     welcomeWidget: WelcomeWidget
-    tabs: CustomTabWidget
+    tabs: QTabWidget2
     recentMenu: QMenu
     repoMenu: QMenu
 
@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         self.resize(QSize(800, 600))
         self.move(QPoint(50, 50))
 
-        self.tabs = CustomTabWidget(self)
+        self.tabs = QTabWidget2(self)
         self.tabs.currentWidgetChanged.connect(self.onTabCurrentWidgetChanged)
         self.tabs.tabCloseRequested.connect(self.closeTab)
         self.tabs.tabContextMenuRequested.connect(self.onTabContextMenu)

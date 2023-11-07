@@ -4,7 +4,6 @@ Library of widgets and utilities that aren't specifically tied to GitFourchette'
 
 from .actiondef import ActionDef
 from .autohidemenubar import AutoHideMenuBar
-from .customtabwidget import CustomTabWidget, CustomTabBar
 from .benchmark import Benchmark, benchmark
 from .excutils import shortenTracebackPath, excStrings
 from .gitutils import (
@@ -24,6 +23,7 @@ from .qelidedlabel import QElidedLabel
 from .qrunnablefunctionwrapper import QRunnableFunctionWrapper
 from .qsignalblockercontext import QSignalBlockerContext
 from .qstatusbar2 import QStatusBar2
+from .qtabwidget2 import QTabWidget2, QTabBar2
 from .qtutils import (
     addComboBoxItem, setWindowModal, isImageFormatSupported,
     onAppThread, tweakWidgetFont, formatWidgetText,

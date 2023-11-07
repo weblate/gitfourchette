@@ -2,12 +2,18 @@ from gitfourchette.qt import *
 from gitfourchette import settings
 
 
-class CustomTabBar(QTabBar):
+class QTabBar2(QTabBar):
     tabMiddleClicked = Signal(int)
     tabDoubleClicked = Signal(int)
+    visibilityChanged = Signal(bool)
+    wheelDelta = Signal(QPoint)
 
-    def __init__(self, parent):
+    middleClickedIndex: int
+    doubleClickedIndex: int
+
+    def __init__(self, parent: QWidget):
         super().__init__(parent)
+
         self.middleClickedIndex = -1
         self.doubleClickedIndex = -1
 
@@ -31,6 +37,13 @@ class CustomTabBar(QTabBar):
         self.doubleClickedIndex = -1
         super().mouseMoveEvent(event)
 
+    def wheelEvent(self, event: QWheelEvent):
+        self.wheelDelta.emit(event.angleDelta())
+
+        # DO NOT forward mouse wheel events to superclass
+        # (avoid default Qt behavior that switches tabs via scroll wheel)
+        event.accept()
+
     def mouseReleaseEvent(self, event: QMouseEvent):
         if event.buttons() != Qt.MouseButton.NoButton:
             # Signals will only fire if clicking a single button at a time
@@ -51,8 +64,13 @@ class CustomTabBar(QTabBar):
 
         super().mouseReleaseEvent(event)
 
+    def setVisible(self, visible: bool):
+        """Forward setVisible to parent scroll area"""
+        super().setVisible(visible)
+        self.visibilityChanged.emit(visible)
 
-class CustomTabWidget(QWidget):
+
+class QTabWidget2(QWidget):
     currentChanged: Signal = Signal(int)
     tabCloseRequested: Signal = Signal(int)
     tabDoubleClicked: Signal = Signal(int)
@@ -68,7 +86,13 @@ class CustomTabWidget(QWidget):
         self.stacked = QStackedWidget(self)
         self.shadowCurrentWidget = None
 
-        self.tabs = CustomTabBar(self)
+        self.tabScrollArea = QScrollArea(parent=self, widgetResizable=True)
+        self.tabScrollArea.setFrameStyle(QFrame.Shape.NoFrame)
+        self.tabScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.tabScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.tabScrollArea.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)  # works ok but tries to expand the window width when opening a new tab?
+
+        self.tabs = QTabBar2(self.tabScrollArea)
         self.tabs.tabMoved.connect(self.onTabMoved)
         self.tabs.currentChanged.connect(self.onCurrentChanged)
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
@@ -76,11 +100,16 @@ class CustomTabWidget(QWidget):
         self.tabs.tabDoubleClicked.connect(self.tabDoubleClicked)
         self.tabs.setMovable(True)
         self.tabs.setDocumentMode(True)  # dramatically improves the tabs' appearance on macOS
+        self.tabs.setUsesScrollButtons(False)  # needed with scroll area
+
+        self.tabScrollArea.setWidget(self.tabs)
+        self.tabs.visibilityChanged.connect(self.tabScrollArea.setVisible)
+        self.tabs.wheelDelta.connect(self.scrollTabs)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self.tabs)
+        layout.addWidget(self.tabScrollArea)
         layout.addWidget(self.stacked)
         self.setLayout(layout)
 
@@ -93,6 +122,8 @@ class CustomTabWidget(QWidget):
         self.tabs.setExpanding(settings.prefs.tabs_expanding)
         self.tabs.setAutoHide(settings.prefs.tabs_autoHide)
         self.tabs.setTabsClosable(settings.prefs.tabs_closeButton)
+        self.tabs.update()
+        self.syncBarSize()
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.tabs.mapToGlobal(localPoint)
@@ -121,12 +152,14 @@ class CustomTabWidget(QWidget):
     def addTab(self, w: QWidget, name: str) -> int:
         i1 = self.stacked.addWidget(w)
         i2 = self.tabs.addTab(name)
+        self.syncBarSize()
         assert i1 == i2
         return i1
 
     def insertTab(self, index: int, w: QWidget, name: str) -> int:
         i1 = self.stacked.insertWidget(index, w)
         i2 = self.tabs.insertTab(index, name)
+        self.syncBarSize()
         assert i1 == i2
         return i1
 
@@ -161,7 +194,18 @@ class CustomTabWidget(QWidget):
         # because removing the tab may send a tab change event
         self.stacked.removeWidget(widget)
         self.tabs.removeTab(i)
+        self.syncBarSize()
 
     def widgets(self):
         for i in range(self.stacked.count()):
             yield self.stacked.widget(i)
+
+    def syncBarSize(self):
+        h = self.tabs.sizeHint().height()
+        if h != 0:
+            self.tabScrollArea.setFixedHeight(self.tabs.sizeHint().height())
+
+    def scrollTabs(self, delta: QPoint):
+        scrollBar = self.tabScrollArea.horizontalScrollBar()
+        # TODO: Horizontal mouse scrolling?
+        scrollBar.setValue(scrollBar.value() - delta.y())
