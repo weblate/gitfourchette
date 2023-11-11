@@ -32,11 +32,12 @@ DEVDEBUG = __debug__ and not PYINSTALLER_BUNDLE
 # Only use qtpy as a last resort because it tries to pull in QtOpenGL and other bloat.
 
 # Decide whether to use qtpy and import it if needed.
+qtBindingBootPref = ""
 if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have PySide6
-    forcedQtApi = os.environ.get("QT_API", "").lower()
+    qtBindingBootPref = os.environ.get("QT_API", "").lower()
 
     # If QT_API isn't set, see if the app's prefs file specifies a preferred Qt binding
-    if not forcedQtApi:
+    if not qtBindingBootPref:
         import json
         prefsPath = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
         prefsPath = os.path.join(prefsPath, "GitFourchette", "prefs.json")
@@ -44,27 +45,34 @@ if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have P
         try:
             with open(prefsPath, 'rt', encoding='utf-8') as f:
                 jsonPrefs = json.load(f)
-            forcedQtApi = jsonPrefs.get("debug_forceQtApi", "")
+            qtBindingBootPref = jsonPrefs.get("debug_forceQtApi", "").lower()
         except (IOError, ValueError):
             pass
         del json, prefsPath, jsonPrefs
 
+    # Sanitize value so that qtpy doesn't crash if user passed in junk
+    if qtBindingBootPref not in ["pyqt5", "pyqt6", "pyside2", "pyside6", ""]:
+        sys.stderr.write(f"Unrecognized Qt binding name: '{qtBindingBootPref}'\n")
+        qtBindingBootPref = ""
+
     # Our code targets PySide6 natively, so we need qtpy for all other bindings
-    QTPY = "pyside6" != forcedQtApi
+    QTPY = "pyside6" != qtBindingBootPref
 
     # Bypass qtpy if we have PySide6 and the user isn't forcing QT_API
-    if not forcedQtApi:
+    if not qtBindingBootPref:
         try:
+            # Attempt to import PySide6
             from PySide6 import __version__ as bogus
             del bogus
             QTPY = False
         except ImportError:
+            # Importing PySide6 didn't work, we'll have to use qtpy
             pass
 
     # No dice, we have to use qtpy.
     if QTPY:
         # Make sure we forward the desired Qt api to qtpy
-        os.environ["QT_API"] = forcedQtApi
+        os.environ["QT_API"] = qtBindingBootPref
 
         try:
             from qtpy.QtCore import *
@@ -73,11 +81,9 @@ if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have P
             from qtpy import API_NAME as qtBindingName
             from qtpy.QtCore import __version__ as qtBindingVersion
         except ImportError:
-            assert forcedQtApi in ["", "pyside6"], \
+            assert qtBindingBootPref in ["", "pyside6"], \
                 "To use any Qt binding other than PySide6, please install qtpy. Or, unset QT_API to use PySide6."
             QTPY = False
-
-    del forcedQtApi
 
 # Import PySide6 directly if we've determined that we can.
 if not QTPY:

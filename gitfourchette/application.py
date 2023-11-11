@@ -84,6 +84,13 @@ class GFApplication(QApplication):
             self.mainWindow.restoreSession(self.initialSession)
             self.initialSession = None
 
+        if qtBindingBootPref and qtBindingBootPref.lower() != qtBindingName.lower():
+            QMessageBox.information(
+                self.mainWindow,
+                translate("Prefs", "Qt binding unavailable"),
+                translate("Prefs", "Your preferred Qt binding “{0}” is not available.\nUsing “{1}” instead."
+                          ).format(qtBindingBootPref, qtBindingName.lower()))
+
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:
         parser = QCommandLineParser()
