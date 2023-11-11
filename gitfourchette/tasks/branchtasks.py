@@ -85,12 +85,16 @@ class _NewBranchBaseTask(RepoTask):
     def _internalFlow(self, tip: pygit2.Oid, localName: str = "", trackUpstream: str = TRACK_ANY_UPSTREAM):
         repo = self.repo
 
-        # If we're creating a branch at the tip of the current branch, default to its name
-        if (not localName
-                and not repo.head_is_unborn
-                and not repo.head_is_detached
-                and repo.head.target == tip):
-            localName = repo.head.shorthand
+        tipHashText = shortHash(tip)
+
+        # Are we creating a branch at the tip of the current branch?
+        if not repo.head_is_unborn and not repo.head_is_detached and repo.head.target == tip:
+            # Let user know that's the HEAD
+            tipHashText = f"HEAD ({tipHashText})"
+
+            # Default to the current branch's name (if no name given)
+            if not localName:
+                localName = repo.head.shorthand
 
         # Collect upstream names and set initial localName (if we haven't been able to set it above).
         refsPointingHere = porcelain.refsPointingAtCommit(repo, tip)
@@ -123,7 +127,7 @@ class _NewBranchBaseTask(RepoTask):
 
         dlg = NewBranchDialog(
             initialName=localName,
-            target=shortHash(tip),
+            target=tipHashText,
             targetSubtitle=commitMessage,
             upstreams=upstreams,
             reservedNames=forbiddenBranchNames,
