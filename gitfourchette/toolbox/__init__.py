@@ -33,7 +33,8 @@ from .qtutils import (
     openFolder, showInFolder, DisableWidgetContext,
     QScrollBackupContext, QTabBarStyleNoRotatedText,
     makeInternalLink,
-    MultiShortcut, makeMultiShortcut
+    MultiShortcut, makeMultiShortcut,
+    CallbackAccumulator,
 )
 from .textutils import escape, escamp, paragraphs, messageSummary, elide
 from .validatormultiplexer import ValidatorMultiplexer

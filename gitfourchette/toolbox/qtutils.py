@@ -1,3 +1,4 @@
+from typing import Callable
 from gitfourchette.qt import *
 _supportedImageFormats = None
 _stockIconCache = {}
@@ -264,6 +265,29 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
             option: QStyleOptionTab = QStyleOptionTab(option)  # copy
             option.shape = QTabBar.Shape.RoundedNorth  # override shape
         super().drawControl(element, option, painter, widget)
+
+
+class CallbackAccumulator(QTimer):
+    def __init__(self, parent: QObject, callback: Callable, delay: int = 0):
+        super().__init__(parent)
+        self.setObjectName("CallbackAccumulator")
+        self.setSingleShot(True)
+        self.setInterval(delay)
+        self.timeout.connect(callback)
+
+    @staticmethod
+    def deferredMethod(callback: Callable):
+        attr = f"__callbackaccumulator_{id(callback)}"
+
+        def wrapper(obj):
+            try:
+                defer = getattr(obj, attr)
+            except AttributeError:
+                defer = CallbackAccumulator(obj, lambda: callback(obj))
+                setattr(obj, attr, defer)
+            defer.start()
+
+        return wrapper
 
 
 def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **urlQueryItems) -> str:

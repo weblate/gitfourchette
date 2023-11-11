@@ -1,5 +1,6 @@
 from gitfourchette.qt import *
 from gitfourchette import settings
+from gitfourchette.toolbox.qtutils import CallbackAccumulator
 
 
 class QTabBar2(QTabBar):
@@ -7,15 +8,19 @@ class QTabBar2(QTabBar):
     tabDoubleClicked = Signal(int)
     visibilityChanged = Signal(bool)
     wheelDelta = Signal(QPoint)
+    layoutChanged = Signal()
+    suggestScrollToCurrentTab = Signal()
 
     middleClickedIndex: int
     doubleClickedIndex: int
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
-
         self.middleClickedIndex = -1
         self.doubleClickedIndex = -1
+
+    def tabLayoutChange(self):
+        self.layoutChanged.emit()
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.MiddleButton:
@@ -64,8 +69,13 @@ class QTabBar2(QTabBar):
 
         super().mouseReleaseEvent(event)
 
+    def focusInEvent(self, event: QFocusEvent):
+        """Suggest scrolling to current tab when we receive keyboard focus"""
+        super().focusInEvent(event)
+        self.suggestScrollToCurrentTab.emit()
+
     def setVisible(self, visible: bool):
-        """Forward setVisible to parent scroll area"""
+        """Forward setVisible to parent scroll area (when we get hidden due to only 1 tab remaining)"""
         super().setVisible(visible)
         self.visibilityChanged.emit(visible)
 
@@ -98,23 +108,45 @@ class QTabWidget2(QWidget):
         self.tabs.tabCloseRequested.connect(self.tabCloseRequested)
         self.tabs.tabMiddleClicked.connect(self.tabCloseRequested)
         self.tabs.tabDoubleClicked.connect(self.tabDoubleClicked)
+        self.tabs.suggestScrollToCurrentTab.connect(self.ensureCurrentTabVisible)
         self.tabs.setMovable(True)
         self.tabs.setDocumentMode(True)  # dramatically improves the tabs' appearance on macOS
-        self.tabs.setUsesScrollButtons(False)  # needed with scroll area
+        self.tabs.setUsesScrollButtons(False)  # can't have those with scroll area
+
+        self.overflowButton = QToolButton(self)
+        self.overflowButton.setArrowType(Qt.ArrowType.DownArrow)
+        self.overflowButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.overflowButton.setToolTip(self.tr("List all tabs"))
+        self.overflowButton.clicked.connect(self.onOverflowButtonClicked)
+        self.overflowButton.setCheckable(True)
+        self.overflowButton.setFixedWidth(16)
+        self.overflowButton.setAutoRaise(True)
 
         self.tabScrollArea.setWidget(self.tabs)
         self.tabs.visibilityChanged.connect(self.tabScrollArea.setVisible)
         self.tabs.wheelDelta.connect(self.scrollTabs)
+        self.tabs.layoutChanged.connect(self.updateOverflowDropdown)
 
-        layout = QVBoxLayout()
+        topWidget = QWidget(self)
+        self.topWidget = topWidget
+        topLayout = QHBoxLayout()
+        topLayout.setContentsMargins(0, 0, 0, 0)
+        topLayout.addWidget(self.tabScrollArea)
+        topLayout.addWidget(self.overflowButton)
+        topWidget.setLayout(topLayout)
+
+        layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(self.tabScrollArea)
+        layout.addWidget(topWidget)
         layout.addWidget(self.stacked)
         self.setLayout(layout)
 
         self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabs.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
+
+        self.overflowMenu = QMenu(self)
+        self.overflowMenu.setObjectName("QTW2OverflowMenu")
 
         self.refreshPrefs()
 
@@ -139,6 +171,9 @@ class QTabWidget2(QWidget):
     def onCurrentChanged(self, i: int):
         # Keep QStackedWidget in sync with QTabBar
         self.stacked.setCurrentIndex(i)
+
+        # Make sure the tab is visible within the scrollable area
+        self.ensureCurrentTabVisible()
 
         # See if we should emit the currentWidgetChanged signal
         currentWidget = self.currentWidget()
@@ -166,6 +201,7 @@ class QTabWidget2(QWidget):
     def setCurrentIndex(self, i: int):
         self.tabs.setCurrentIndex(i)
         self.stacked.setCurrentIndex(i)
+        self.tabs.update()
 
     def indexOf(self, widget: QWidget):
         return self.stacked.indexOf(widget)
@@ -205,7 +241,47 @@ class QTabWidget2(QWidget):
         if h != 0:
             self.tabScrollArea.setFixedHeight(self.tabs.sizeHint().height())
 
+    # I don't like deferring ensureCurrentTabVisible to the next event loop,
+    # but the new tabbar width doesn't seem to be refreshed immediately in onCurrentChanged.
+    @CallbackAccumulator.deferredMethod
+    def ensureCurrentTabVisible(self):
+        i = self.currentIndex()
+        if i < 0:
+            return
+        rect = self.tabs.tabRect(i)
+
+        vr = self.tabScrollArea.viewport().contentsRect()
+        vr.translate(self.tabScrollArea.horizontalScrollBar().value(), self.tabScrollArea.verticalScrollBar().value())
+
+        if rect.left() < vr.left():
+            p = QPoint(rect.left(), rect.center().y())
+        else:
+            p = QPoint(rect.right(), rect.center().y())
+        self.tabScrollArea.ensureVisible(p.x(), p.y())
+
     def scrollTabs(self, delta: QPoint):
         scrollBar = self.tabScrollArea.horizontalScrollBar()
         # TODO: Horizontal mouse scrolling?
         scrollBar.setValue(scrollBar.value() - delta.y())
+
+    @CallbackAccumulator.deferredMethod  # don't update overflow button too often
+    def updateOverflowDropdown(self):
+        isOverflowing = self.topWidget.width() < self.tabs.width()
+        self.overflowButton.setVisible(isOverflowing)
+
+    def onOverflowButtonClicked(self):
+        self.overflowMenu.clear()
+        for i in range(self.count()):
+            action = QAction(self.overflowMenu)
+            action.setText(self.tabs.tabText(i))
+            action.setStatusTip(self.tabs.tabToolTip(i))
+            action.triggered.connect(lambda i=i: self.setCurrentIndex(i))
+            self.overflowMenu.addAction(action)
+
+        pos = self.mapToGlobal(self.overflowButton.pos() + self.overflowButton.rect().bottomLeft())
+        self.overflowMenu.exec(pos)
+        self.overflowButton.setChecked(False)
+
+    def resizeEvent(self, event: QResizeEvent):
+        super().resizeEvent(event)
+        self.ensureCurrentTabVisible()
