@@ -18,8 +18,14 @@ def excMessageBox(
         parent=None,
         printExc=True,
         showExcSummary=True,
-        icon: MessageBoxIconName = 'critical'
+        icon: MessageBoxIconName = 'critical',
+        abortUnitTest=True,
 ):
+    if abortUnitTest:
+        from gitfourchette.settings import TEST_MODE
+        if TEST_MODE:
+            raise exc
+
     try:
         if printExc:
             traceback.print_exception(exc.__class__, exc, exc.__traceback__)
