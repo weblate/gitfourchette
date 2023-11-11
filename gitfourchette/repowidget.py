@@ -382,7 +382,8 @@ class RepoWidget(QWidget):
         if self.state:
             return self.state.shortName
         elif self.pathPending:
-            return F"({settings.history.getRepoNickname(self.pathPending)})"
+            name = settings.history.getRepoTabName(self.pathPending)
+            return f"({name})"
         else:
             return "???"
 

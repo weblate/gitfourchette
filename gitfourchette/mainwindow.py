@@ -392,7 +392,7 @@ class MainWindow(QMainWindow):
 
         self.recentMenu.clear()
         for path in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
-            shortName = settings.history.getRepoNickname(path)
+            shortName = settings.history.getRepoTabName(path)
             action = self.recentMenu.addAction(shortName, lambda p=path: self.openRepo(p))
             action.setStatusTip(path)
         self.recentMenu.addSeparator()
@@ -613,6 +613,8 @@ class MainWindow(QMainWindow):
 
         if addToHistory:
             settings.history.addRepo(workdir)
+            if newRW.state:
+                settings.history.setRepoSuperproject(workdir, newRW.state.superproject)
             settings.history.write()
             self.fillRecentMenu()
 

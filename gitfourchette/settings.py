@@ -185,6 +185,28 @@ class History(PrefsFile):
         else:
             repo.pop('length', None)
 
+    def getRepoSuperproject(self, path: str):
+        repo = self.getRepo(path)
+        return repo.get('superproject', "")
+
+    def setRepoSuperproject(self, path: str, superprojectPath: str):
+        repo = self.getRepo(path)
+        if superprojectPath:
+            repo['superproject'] = superprojectPath
+        else:
+            repo.pop('superprojectPath', None)
+
+    def getRepoTabName(self, path: str):
+        name = self.getRepoNickname(path)
+
+        while path:
+            path = self.getRepoSuperproject(path)
+            if path:
+                superprojectName = self.getRepoNickname(path)
+                name = f"{superprojectName}: {name}"
+
+        return name
+
     def removeRepo(self, path: str):
         path = os.path.normpath(path)
         self.repos.pop(path, None)
