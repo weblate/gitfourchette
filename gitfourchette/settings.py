@@ -87,6 +87,14 @@ class GraphRowHeight(enum.IntEnum):
     SPACIOUS = 175
 
 
+class QtApiNames(enum.StrEnum):
+    QTAPI_AUTOMATIC = ""
+    QTAPI_PYSIDE6 = "pyside6"
+    QTAPI_PYQT6 = "pyqt6"
+    QTAPI_PYQT5 = "pyqt5"
+    QTAPI_PYSIDE2 = "pyside2"
+
+
 @dataclasses.dataclass
 class Prefs(PrefsFile):
     filename = "prefs.json"
@@ -125,6 +133,7 @@ class Prefs(PrefsFile):
     debug_hideStashJunkParents  : bool          = True
     debug_autoRefresh           : bool          = True
     debug_verbosity             : log.Logger.Verbosity = log.Logger.Verbosity.QUIET
+    debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
 
 
 @dataclasses.dataclass

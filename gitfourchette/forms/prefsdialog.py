@@ -57,6 +57,8 @@ class PrefsDialog(QDialog):
         skipKeys = {"shortHashChars"}
         if MACOS:
             skipKeys.add("autoHideMenuBar")
+        if not FREEDESKTOP:
+            skipKeys.add("debug_forceQtApi")
 
         self.setObjectName("PrefsDialog")
 
@@ -169,6 +171,7 @@ class PrefsDialog(QDialog):
 
             toolTip = TrTables.prefKeyNoDefault(prefKey + "_help")
             if toolTip:
+                toolTip = toolTip.format(app=qAppName())
                 control.setToolTip(toolTip)
 
             if caption:

@@ -123,10 +123,13 @@ class PrefsFile:
                 originalType = self.__dataclass_fields__[k].type
                 if issubclass(originalType, enum.IntEnum):
                     acceptedType = int
+                elif issubclass(originalType, enum.StrEnum):
+                    acceptedType = str
                 else:
                     acceptedType = originalType
 
                 if acceptedType is not originalType:
+                    assert isinstance(obj[k], acceptedType)
                     self.__dict__[k] = originalType(obj[k])
                 else:
                     self.__dict__[k] = obj[k]

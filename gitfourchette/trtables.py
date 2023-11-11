@@ -190,6 +190,12 @@ class TrTables:
             "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
             "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
             "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
+            "debug_forceQtApi": translate("Prefs", "Preferred Qt binding"),
+            "debug_forceQtApi_help": translate(
+                "Prefs",
+                "<p>After restarting, {app} will use this Qt binding if available. You can also run {app} with the "
+                "QTAPI environment variable to override this setting.</p>"
+                "<p>To use any binding other than PySide6, you must also install the  “qtpy” Python module.</p>"),
 
             "external_editor": translate("Prefs", "Text editor"),
             "external_diff": translate("Prefs", "Diff tool"),
@@ -211,4 +217,10 @@ class TrTables:
             "RELAXED": translate("Prefs", "Relaxed"),
             "ROOMY": translate("Prefs", "Roomy"),
             "SPACIOUS": translate("Prefs", "Spacious"),
+
+            "QTAPI_AUTOMATIC": translate("Prefs", "Automatic (recommended)", "automatic choice of qt binding"),
+            "QTAPI_PYSIDE6": "PySide6",
+            "QTAPI_PYSIDE2": "PySide2 + qtpy " + translate("Prefs", "(not recommended)"),
+            "QTAPI_PYQT6": "PyQt6 + qtpy",
+            "QTAPI_PYQT5": "PyQt5 + qtpy",
         }

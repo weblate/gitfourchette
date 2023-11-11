@@ -1095,7 +1095,15 @@ class MainWindow(QMainWindow):
             "diff_imageFileThresholdKB",  # ditto
         ]
 
-        if any(k in warnIfChanged for k in prefDiff):
+        warnIfNeedRestart = [
+            "debug_forceQtApi",
+        ]
+
+        if any(k in warnIfNeedRestart for k in prefDiff):
+            showInformation(
+                self, self.tr("Apply Settings"),
+                self.tr("You may need to restart {app} for all new settings to take effect.").format(app=qAppName()))
+        elif any(k in warnIfChanged for k in prefDiff):
             showInformation(
                 self, self.tr("Apply Settings"),
                 self.tr("You may need to reload the current repository for all new settings to take effect."))

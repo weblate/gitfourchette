@@ -34,6 +34,22 @@ DEVDEBUG = __debug__ and not PYINSTALLER_BUNDLE
 # Decide whether to use qtpy and import it if needed.
 if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have PySide6
     forcedQtApi = os.environ.get("QT_API", "").lower()
+
+    # If QT_API isn't set, see if the app's prefs file specifies a preferred Qt binding
+    if not forcedQtApi:
+        import json
+        prefsPath = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+        prefsPath = os.path.join(prefsPath, "GitFourchette", "prefs.json")
+        jsonPrefs = None
+        try:
+            with open(prefsPath, 'rt', encoding='utf-8') as f:
+                jsonPrefs = json.load(f)
+            forcedQtApi = jsonPrefs.get("debug_forceQtApi", "")
+        except (IOError, ValueError):
+            pass
+        del json, prefsPath, jsonPrefs
+
+    # Our code targets PySide6 natively, so we need qtpy for all other bindings
     QTPY = "pyside6" != forcedQtApi
 
     # Bypass qtpy if we have PySide6 and the user isn't forcing QT_API
@@ -47,6 +63,9 @@ if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have P
 
     # No dice, we have to use qtpy.
     if QTPY:
+        # Make sure we forward the desired Qt api to qtpy
+        os.environ["QT_API"] = forcedQtApi
+
         try:
             from qtpy.QtCore import *
             from qtpy.QtWidgets import *
