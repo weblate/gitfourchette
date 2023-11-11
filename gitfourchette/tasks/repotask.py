@@ -525,7 +525,7 @@ class RepoTaskRunner(QObject):
 
                     # Wrapper around `next(flow)`.
                     # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
-                    wrapper = QRunnableFunctionWrapper(lambda: self._emitNextToken(flow))
+                    wrapper = QRunnable.create(lambda: self._emitNextToken(flow))
                     self._threadPool.start(wrapper)
 
                 else:

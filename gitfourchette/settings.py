@@ -252,6 +252,12 @@ history = History()
 installedTranslators = []
 
 
+def qtIsNativeMacosStyle():
+    if not MACOS:
+        return False
+    return (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
+
+
 def applyQtStylePref(forceApplyDefault: bool):
     app = QApplication.instance() 
 
@@ -261,8 +267,7 @@ def applyQtStylePref(forceApplyDefault: bool):
         app.setStyle(app.PLATFORM_DEFAULT_STYLE_NAME)
 
     if MACOS:
-        isDefaultMacStyle = (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
-        app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, isDefaultMacStyle)
+        app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, qtIsNativeMacosStyle())
 
 
 def applyLanguagePref():

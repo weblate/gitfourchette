@@ -130,7 +130,10 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
 
 
 class DiffView(QPlainTextEdit):
-    applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
+    if PYSIDE2:  # SIGSEGV when a Signal has an IntEnum arg
+        applyPatch = Signal(pygit2.Patch, bytes, int)
+    else:
+        applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
     revertPatch = Signal(pygit2.Patch, bytes)
     widgetMoved = Signal()
     contextualHelp = Signal(str)

@@ -246,6 +246,7 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
     Prevents text from being rotated in a QTabBar's labels with the West or East positions.
 
     Does not work well with the macOS native theme!
+    Does not work at all with PySide2!
 
     Adapted from https://forum.qt.io/post/433000
     """
@@ -258,6 +259,7 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
 
     def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, widget: QWidget = None):
         if element == QStyle.ControlElement.CE_TabBarTabLabel:
+            assert not PYSIDE2, "don't use QTabBarStyleNoRotatedText with PySide2"
             assert isinstance(option, QStyleOptionTab)
             option: QStyleOptionTab = QStyleOptionTab(option)  # copy
             option.shape = QTabBar.Shape.RoundedNorth  # override shape

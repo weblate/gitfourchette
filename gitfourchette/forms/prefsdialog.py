@@ -1,9 +1,12 @@
 from gitfourchette import log
 from gitfourchette.qt import *
-from gitfourchette.settings import prefs, SHORT_DATE_PRESETS, LANGUAGES, DIFF_TOOL_PRESETS, MERGE_TOOL_PRESETS
+from gitfourchette.settings import (
+    prefs,
+    SHORT_DATE_PRESETS, LANGUAGES, DIFF_TOOL_PRESETS, MERGE_TOOL_PRESETS,
+    qtIsNativeMacosStyle,
+)
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-from gitfourchette.graphview.commitlogdelegate import abbreviatePerson
 import enum
 import pygit2
 
@@ -74,9 +77,8 @@ class PrefsDialog(QDialog):
 
         tabWidget = QTabWidget(self)
 
-        # Make tabs vertical if possible
-        if MACOS and prefs.qtStyle.lower() in ["", "macos"]:
-            # Vertical tabs don't work well with the macOS theme
+        # Make tabs vertical if possible (PySide2: broken; macOS style: too messy)
+        if PYSIDE2 or qtIsNativeMacosStyle():
             tabWidget.setTabPosition(QTabWidget.TabPosition.North)
         else:
             # Pass a string to the proxy's ctor, NOT QApplication.style() as this would transfer the ownership

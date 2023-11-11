@@ -79,7 +79,7 @@ if not PYINSTALLER_BUNDLE:  # in PyInstaller bundles, we're guaranteed to have P
 
     del forcedQtApi
 
-# Import PySide6 if we've determined that we can.
+# Import PySide6 directly if we've determined that we can.
 if not QTPY:
     from PySide6.QtCore import *
     from PySide6.QtWidgets import *
@@ -88,16 +88,12 @@ if not QTPY:
     qtBindingName = "PySide6"
     QT6 = PYSIDE6 = True
 
-MACOS = QSysInfo.productType() in ["osx", "macos"]  # "osx": Qt5 legacy
-WINDOWS = QSysInfo.productType() in ["windows"]
+# Set up platform constants
+MACOS = QSysInfo.productType().lower() in ["osx", "macos"]  # "osx": Qt5 legacy
+WINDOWS = QSysInfo.productType().lower() in ["windows"]
 FREEDESKTOP = not MACOS and not WINDOWS
 
-if PYSIDE2:  # Patch PySide2's exec_ functions
-    def qMenuExec(menu: QMenu, *args, **kwargs):
-        menu.exec_(*args, **kwargs)
-    QApplication.exec = QApplication.exec_
-    QMenu.exec = qMenuExec
-
+# Exclude some known bad PySide6 versions
 if PYSIDE6:
     badPyside6Versions = [
         "6.4.0",  # PYSIDE-2104
@@ -110,9 +106,32 @@ if PYSIDE6:
                                        f"Please upgrade to the latest version of PySide6.")
         exit(1)
 
+
+# -----------------------------------------------------------------------------
+# Patch some holes in Qt bindings with stuff that qtpy doesn't provide
+
 # QEvent::ThemeChange is still undocumented. It only seems to work in Qt 6.
 if PYQT5 or PYQT6:
     QEvent.Type.ThemeChange = 0xD2
+
+# Patch PySide2's exec_ functions
+if PYSIDE2:
+    def qMenuExec(menu: QMenu, *args, **kwargs):
+        menu.exec_(*args, **kwargs)
+    QApplication.exec = QApplication.exec_
+    QMenu.exec = qMenuExec
+
+# Work around PYSIDE-2234 for PySide2 and PySide6. PySide6 6.5.0+ does implement QRunnable.create,
+# but its implementation sometimes causes random QRunnable objects to bubble up to MainWindow.eventFilter
+# as the 'event' arg, somehow. So just replace PySide6's implementation.
+if PYSIDE2 or PYSIDE6:
+    class QRunnableFunctionWrapper(QRunnable):
+        def __init__(self, func):
+            super().__init__()
+            self._func = func
+        def run(self):
+            self._func()
+    QRunnable.create = lambda func: QRunnableFunctionWrapper(func)
 
 # Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
 if QT5:
@@ -127,6 +146,9 @@ if FREEDESKTOP and not PYSIDE2:
         from PySide6.QtDBus import *
     HAS_QTDBUS = True
 
+
+# -----------------------------------------------------------------------------
+# Utility functions
 
 def tr(s, *args, **kwargs):
     return QCoreApplication.translate("", s, *args, **kwargs)
