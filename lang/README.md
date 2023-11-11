@@ -47,12 +47,12 @@ There are two kinds of translation files:
 - `.qm` files in `gitfourchette/assets` are “compiled” binary files that GitFourchette reads from.
 
 To update an existing translation:
-- Run `update_resources.py --translate` to sync the `.ts` files with any new translatable contents in the source code.
+- Run `update_resources.py --lang` to sync the `.ts` files with any new translatable contents in the source code.
 - Edit the `.ts` file for your language in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html).
-- When you’re done editing the `.ts` file, run `update_resources.py` again to update the `.qm` file.
+- When you’re done editing the `.ts` file, run `update_resources.py --lang` again to update the `.qm` file.
 
 When you‘re ready to commit your changes:
-- Run `update_resources.py` (without `--translate` this time) to clean up the `.ts` files.
+- Run `update_resources.py --clean-lang` to clean up the `.ts` files.
 - Commit both the `.ts` file and the `.qm` file.
 
 ### Warning! Avoid updating .qm files while GitFourchette is running
