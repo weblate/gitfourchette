@@ -1,6 +1,6 @@
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import tasks
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
@@ -8,7 +8,6 @@ from gitfourchette.trtables import TrTables
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
 import enum
-import pygit2
 import traceback
 
 
@@ -19,7 +18,7 @@ class ERemoteItem(enum.Enum):
 
 class PushDialog(QDialog):
     @staticmethod
-    def startPushFlow(parent, repo: pygit2.Repository, repoTaskRunner: tasks.RepoTaskRunner, branchName: str = ""):
+    def startPushFlow(parent, repo: Repo, repoTaskRunner: tasks.RepoTaskRunner, branchName: str = ""):
         if len(repo.remotes) == 0:
             text = paragraphs(
                 translate("PushDialog", "To push a local branch to a remote, you must first add a remote to your repo."),
@@ -28,7 +27,7 @@ class PushDialog(QDialog):
             return
 
         if not branchName:
-            branchName = porcelain.getActiveBranchShorthand(repo)
+            branchName = repo.head_branch_shorthand
 
         try:
             branch = repo.branches.local[branchName]
@@ -68,7 +67,7 @@ class PushDialog(QDialog):
 
         if remoteItem != ERemoteItem.ExistingRef:
             self.ui.remoteNameLabel.setText("\u21AA " + remoteData + "/")
-            newRBN = porcelain.generateUniqueBranchNameOnRemote(self.repo, remoteData, localBranch.branch_name)
+            newRBN = self.repo.generate_unique_branch_name_on_remote(remoteData, localBranch.branch_name)
             self.ui.newRemoteBranchStackedWidget.setCurrentIndex(0)
             self.ui.newRemoteBranchNameEdit.setText(newRBN)
             self.ui.newRemoteBranchNameEdit.setFocus(Qt.FocusReason.TabFocusReason)
@@ -128,7 +127,7 @@ class PushDialog(QDialog):
         return self.ui.localBranchEdit.currentData()
 
     @property
-    def currentLocalBranch(self) -> pygit2.Branch:
+    def currentLocalBranch(self) -> Branch:
         return self.repo.branches.local[self.currentLocalBranchName]
 
     @property
@@ -145,7 +144,7 @@ class PushDialog(QDialog):
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
 
         if remoteItem == ERemoteItem.ExistingRef:
-            rbr: pygit2.Branch = remoteData
+            rbr: Branch = remoteData
             return rbr.remote_name
         elif remoteItem == ERemoteItem.NewRef:
             return remoteData
@@ -160,7 +159,7 @@ class PushDialog(QDialog):
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
 
         if remoteItem == ERemoteItem.ExistingRef:
-            rbr: pygit2.Branch = remoteData
+            rbr: Branch = remoteData
             return rbr.shorthand.removeprefix(rbr.remote_name + "/")
         elif remoteItem == ERemoteItem.NewRef:
             return self.ui.newRemoteBranchNameEdit.text()
@@ -175,7 +174,7 @@ class PushDialog(QDialog):
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
 
         if remoteItem == ERemoteItem.ExistingRef:
-            rbr: pygit2.Branch = remoteData
+            rbr: Branch = remoteData
             return rbr.shorthand
         elif remoteItem == ERemoteItem.NewRef:
             return remoteData + "/" + self.ui.newRemoteBranchNameEdit.text()
@@ -196,7 +195,7 @@ class PushDialog(QDialog):
             comboBox.clear()
             firstRemote = True
 
-            for remoteName, remoteBranches in porcelain.getRemoteBranchNames(self.repo).items():
+            for remoteName, remoteBranches in self.repo.listall_remote_branches().items():
                 if not firstRemote:
                     comboBox.insertSeparator(comboBox.count())
 
@@ -232,11 +231,11 @@ class PushDialog(QDialog):
 
                 firstRemote = False
 
-    def __init__(self, repo: pygit2.Repository, repoTaskRunner: tasks.RepoTaskRunner, branch: pygit2.Branch, parent: QWidget):
+    def __init__(self, repo: Repo, repoTaskRunner: tasks.RepoTaskRunner, branch: Branch, parent: QWidget):
         super().__init__(parent)
         self.repo = repo
         self.repoTaskRunner = repoTaskRunner
-        self.reservedRemoteBranchNames = porcelain.getRemoteBranchNames(self.repo)
+        self.reservedRemoteBranchNames = self.repo.listall_remote_branches()
 
         self.fallbackAutoNewIndex = 0
         self.trackedBranchIndex = -1
@@ -345,7 +344,7 @@ class PushDialog(QDialog):
                 link.discoverKeyFiles(remote)
                 remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
-                    porcelain.editTrackingBranch(self.repo, pushDialog.currentLocalBranchName, resetTrackingReference)
+                    self.repo.edit_tracking_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
 
                 yield from self._flowExitWorkerThread()
                 pushDialog.pushInProgress = False

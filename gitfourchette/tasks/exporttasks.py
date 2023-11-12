@@ -1,9 +1,7 @@
-from gitfourchette import porcelain
-from gitfourchette import exttools
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-import pygit2
 
 
 class ComposePatch(RepoTask):
@@ -39,30 +37,30 @@ class ComposePatch(RepoTask):
 
 
 class ExportCommitAsPatch(ComposePatch):
-    def flow(self, oid: pygit2.Oid):
+    def flow(self, oid: Oid):
         yield from self._flowBeginWorkerThread()
 
-        diffs = porcelain.loadCommitDiffs(self.repo, oid, showBinary=True)
+        diffs = self.repo.commit_diffs(oid, show_binary=True)
 
-        commit: pygit2.Commit = self.repo[oid].peel(pygit2.Commit)
+        commit = self.repo.peel_commit(oid)
         summary, _ = messageSummary(commit.message, elision="")
         summary = "".join(c for c in summary if c.isalnum() or c in " ._-")
         summary = summary.strip()[:50].strip()
-        initialName = f"{porcelain.repoName(self.repo)} {shortHash(oid)} - {summary}.patch"
+        initialName = f"{self.repo.repo_name()} {shortHash(oid)} - {summary}.patch"
 
         yield from self.composePatch(diffs, initialName)
 
 
 class ExportStashAsPatch(ExportCommitAsPatch):
-    def flow(self, oid: pygit2.Oid):
+    def flow(self, oid: Oid):
         yield from self._flowBeginWorkerThread()
 
-        diffs = porcelain.loadCommitDiffs(self.repo, oid, showBinary=True)
+        diffs = self.repo.commit_diffs(oid, show_binary=True)
 
-        commit: pygit2.Commit = self.repo[oid].peel(pygit2.Commit)
-        coreMessage = porcelain.getCoreStashMessage(commit.message)
+        commit = self.repo.peel_commit(oid)
+        coreMessage = strip_stash_message(commit.message)
 
-        initialName = f"{porcelain.repoName(self.repo)} - {coreMessage} [stashed on {shortHash(commit.parent_ids[0])}].patch"
+        initialName = f"{self.repo.repo_name()} - {coreMessage} [stashed on {shortHash(commit.parent_ids[0])}].patch"
 
         yield from self.composePatch(diffs, initialName)
 
@@ -71,9 +69,9 @@ class ExportWorkdirAsPatch(ComposePatch):
     def flow(self):
         yield from self._flowBeginWorkerThread()
 
-        diff = porcelain.getWorkdirChanges(self.repo, showBinary=True)
+        diff = self.repo.get_uncommitted_changes(show_binary=True)
 
-        headOid = porcelain.getHeadCommitOid(self.repo)
-        initialName = f"{porcelain.repoName(self.repo)} - uncommitted changes on {shortHash(headOid)}.patch"
+        headOid = self.repo.head_commit_oid
+        initialName = f"{self.repo.repo_name()} - uncommitted changes on {shortHash(headOid)}.patch"
 
         yield from self.composePatch([diff], initialName)

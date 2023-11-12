@@ -1,13 +1,11 @@
 import contextlib
 
-import pygit2
-
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
                                                 DiffConflict)
 from gitfourchette.nav import NavLocator, NavFlags
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
@@ -26,25 +24,25 @@ class LoadWorkdir(RepoTask):
         yield from self._flowBeginWorkerThread()
 
         with Benchmark("LoadWorkdir/Index"):
-            porcelain.refreshIndex(self.repo)
+            self.repo.refresh_index()
 
         yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Staged"):
-            self.stageDiff = porcelain.getStagedChanges(self.repo)
+            self.stageDiff = self.repo.get_staged_changes()
 
         yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Unstaged"):
-            self.dirtyDiff = porcelain.getUnstagedChanges(self.repo, allowWriteIndex)
+            self.dirtyDiff = self.repo.get_unstaged_changes(allowWriteIndex)
 
 
 class LoadCommit(RepoTask):
     def canKill(self, task: RepoTask):
         return type(task) in [LoadWorkdir, LoadCommit, LoadPatch]
 
-    def flow(self, oid: pygit2.Oid):
+    def flow(self, oid: Oid):
         yield from self._flowBeginWorkerThread()
-        self.diffs = porcelain.loadCommitDiffs(self.repo, oid)
-        self.message = porcelain.getCommitMessage(self.repo, oid)
+        self.diffs = self.repo.commit_diffs(oid)
+        self.message = self.repo.get_commit_message(oid)
 
 
 class LoadPatch(RepoTask):
@@ -54,7 +52,7 @@ class LoadPatch(RepoTask):
     def canKill(self, task: RepoTask):
         return type(task) in [LoadPatch]
 
-    def _processPatch(self, patch: pygit2.Patch, locator: NavLocator
+    def _processPatch(self, patch: Patch, locator: NavLocator
                       ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:
         if not patch:
             locator = locator.withExtraFlags(NavFlags.ForceRefreshWorkdir)
@@ -67,7 +65,7 @@ class LoadPatch(RepoTask):
             # Rare libgit2 bug, should be fixed in 1.6.0
             return SpecialDiffError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
-        if patch.delta.status == pygit2.GIT_DELTA_CONFLICTED:
+        if patch.delta.status == GIT_DELTA_CONFLICTED:
             ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]
             return DiffConflict(ancestor, ours, theirs)
 
@@ -92,6 +90,6 @@ class LoadPatch(RepoTask):
             summary, details = excStrings(exc)
             return SpecialDiffError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
-    def flow(self, patch: pygit2.Patch, locator: NavLocator):
+    def flow(self, patch: Patch, locator: NavLocator):
         yield from self._flowBeginWorkerThread()
         self.result = self._processPatch(patch, locator)

@@ -2,7 +2,7 @@
 Remote access tasks.
 """
 
-from gitfourchette import porcelain
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
@@ -40,9 +40,9 @@ class _BaseNetTask(RepoTask):
 
 class DeleteRemoteBranch(_BaseNetTask):
     def flow(self, remoteBranchShorthand: str):
-        assert not remoteBranchShorthand.startswith(porcelain.REMOTES_PREFIX)
+        assert not remoteBranchShorthand.startswith(GIT_REMOTES_PREFIX)
 
-        remoteName, _ = porcelain.splitRemoteBranchShorthand(remoteBranchShorthand)
+        remoteName, _ = split_remote_branch_shorthand(remoteBranchShorthand)
 
         text = paragraphs(
             self.tr("Really delete branch <b>“{0}”</b> "
@@ -56,16 +56,16 @@ class DeleteRemoteBranch(_BaseNetTask):
 
         yield from self._flowBeginWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
-        porcelain.deleteRemoteBranch(self.repo, remoteBranchShorthand, self.remoteLink)
+        self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
 
 
 class RenameRemoteBranch(_BaseNetTask):
     def flow(self, remoteBranchName: str):
-        assert not remoteBranchName.startswith(porcelain.REMOTES_PREFIX)
-        remoteName, branchName = porcelain.splitRemoteBranchShorthand(remoteBranchName)
+        assert not remoteBranchName.startswith(GIT_REMOTES_PREFIX)
+        remoteName, branchName = split_remote_branch_shorthand(remoteBranchName)
         newBranchName = branchName  # naked name, NOT prefixed with the name of the remote
 
-        reservedNames = porcelain.getRemoteBranchNames(self.repo).get(remoteName, [])
+        reservedNames = self.repo.listall_remote_branches().get(remoteName, [])
         with contextlib.suppress(ValueError):
             reservedNames.remove(branchName)
         nameTaken = self.tr("This name is already taken by another branch on this remote.")
@@ -89,7 +89,7 @@ class RenameRemoteBranch(_BaseNetTask):
 
         yield from self._flowBeginWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
-        porcelain.renameRemoteBranch(self.repo, remoteBranchName, newBranchName, self.remoteLink)
+        self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
 
 
 class FetchRemote(_BaseNetTask):
@@ -98,13 +98,13 @@ class FetchRemote(_BaseNetTask):
 
         yield from self._flowBeginWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
-        porcelain.fetchRemote(self.repo, remoteName, self.remoteLink)
+        self.repo.fetch_remote(remoteName, self.remoteLink)
 
 
 class FetchRemoteBranch(_BaseNetTask):
     def flow(self, remoteBranchName: str = ""):
         if not remoteBranchName:
-            branchName = porcelain.getActiveBranchShorthand(self.repo)
+            branchName = self.repo.head_branch_shorthand
 
             try:
                 branch = self.repo.branches.local[branchName]
@@ -120,6 +120,6 @@ class FetchRemoteBranch(_BaseNetTask):
 
         yield from self._flowBeginWorkerThread()
 
-        remoteName, _ = porcelain.splitRemoteBranchShorthand(remoteBranchName)
+        remoteName, _ = split_remote_branch_shorthand(remoteBranchName)
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
-        porcelain.fetchRemoteBranch(self.repo, remoteBranchName, self.remoteLink)
+        self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)

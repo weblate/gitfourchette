@@ -1,13 +1,11 @@
-import contextlib
 import errno
-
-import pygit2
 
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.filelists.filelist import FileList, SelectedFileBatchError
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.toolbox import *
@@ -73,7 +71,7 @@ class CommittedFiles(FileList):
             self.pathDisplayStyleSubmenu()
         ]
 
-    def setCommit(self, oid: pygit2.Oid):
+    def setCommit(self, oid: Oid):
         self.commitOid = oid
 
     def openNewRevision(self):
@@ -102,7 +100,7 @@ class CommittedFiles(FileList):
         return tempPath
 
     def openRevision(self, beforeCommit: bool = False):
-        def run(patch: pygit2.Patch):
+        def run(patch: Patch):
             tempPath = self.saveRevisionAsTempFile(patch, beforeCommit)
             openInTextEditor(self, tempPath)
 
@@ -142,17 +140,17 @@ class CommittedFiles(FileList):
 
         self.confirmBatch(run, title, self.tr("Really export <b>{0} files</b>?"))
 
-    def getFileRevisionInfo(self, patch: pygit2.Patch, beforeCommit: bool = False) -> tuple[str, pygit2.Blob, pygit2.DiffFile]:
+    def getFileRevisionInfo(self, patch: Patch, beforeCommit: bool = False) -> tuple[str, Blob, DiffFile]:
         if beforeCommit:
             diffFile = patch.delta.old_file
-            if patch.delta.status == pygit2.GIT_DELTA_ADDED:
+            if patch.delta.status == GIT_DELTA_ADDED:
                 raise FileNotFoundError(errno.ENOENT, self.tr("This file didn’t exist before the commit."), diffFile.path)
         else:
             diffFile = patch.delta.new_file
-            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+            if patch.delta.status == GIT_DELTA_DELETED:
                 raise FileNotFoundError(errno.ENOENT, self.tr("This file was deleted by the commit."), diffFile.path)
 
-        blob: pygit2.Blob = self.repo[diffFile.id].peel(pygit2.Blob)
+        blob = self.repo.peel_blob(diffFile.id)
 
         atSuffix = shortHash(self.commitOid)
         if beforeCommit:
@@ -164,7 +162,7 @@ class CommittedFiles(FileList):
         return name, blob, diffFile
 
     def openHeadRevision(self):
-        def run(patch: pygit2.Patch):
+        def run(patch: Patch):
             diffFile = patch.delta.new_file
             path = os.path.join(self.repo.workdir, diffFile.path)
             if os.path.isfile(path):
@@ -175,7 +173,7 @@ class CommittedFiles(FileList):
         self.confirmBatch(run, self.tr("Open revision at HEAD"), self.tr("Really open <b>{0} files</b>?"))
 
     def wantOpenDiffInNewWindow(self):
-        def run(patch: pygit2.Patch):
+        def run(patch: Patch):
             self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitOid, patch.delta.new_file.path))
 
         self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} files</b>?"))

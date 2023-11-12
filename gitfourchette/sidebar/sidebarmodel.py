@@ -1,6 +1,6 @@
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import settings
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
@@ -8,7 +8,6 @@ from gitfourchette.repostate import RepoState
 from typing import Any, Iterable
 import contextlib
 import enum
-import pygit2
 
 ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
 ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
@@ -75,12 +74,12 @@ UNINDENT_ITEMS = {
 
 class SidebarModel(QAbstractItemModel):
     repoState: RepoState | None
-    repo: pygit2.Repository | None
+    repo: Repo | None
     _localBranches: list[str]
     _unbornHead: str
     _detachedHead: str
     _checkedOut: str
-    _stashes: list[pygit2.Stash]
+    _stashes: list[Stash]
     _remotes: list[str]
     _remoteURLs: list[str]
     _remoteBranchesDict: dict[str, list[str]]
@@ -172,23 +171,23 @@ class SidebarModel(QAbstractItemModel):
         # Refs
         with Benchmark("Sidebar/Refs"):
             for name in reversed(refCache):  # reversed because refCache sorts tips by ASCENDING commit time
-                if name.startswith(porcelain.HEADS_PREFIX):
-                    name = name.removeprefix(porcelain.HEADS_PREFIX)
+                if name.startswith(GIT_HEADS_PREFIX):
+                    name = name.removeprefix(GIT_HEADS_PREFIX)
                     self._localBranches.append(name)
                     # upstream = repo.branches.local[name].upstream  # a bit costly
                     # if not upstream:
                     #     self._tracking.append("")
                     # else:
                     #     self._tracking.append(upstream.shorthand)
-                elif name.startswith(porcelain.REMOTES_PREFIX):
-                    name = name.removeprefix(porcelain.REMOTES_PREFIX)
-                    remote, name = porcelain.splitRemoteBranchShorthand(name)
+                elif name.startswith(GIT_REMOTES_PREFIX):
+                    name = name.removeprefix(GIT_REMOTES_PREFIX)
+                    remote, name = split_remote_branch_shorthand(name)
                     try:
                         self._remoteBranchesDict[remote].append(name)
                     except KeyError:
                         log.warning(f"Sidebar refresh cache: missing remote: {remote}")
-                elif name.startswith(porcelain.TAGS_PREFIX):
-                    name = name.removeprefix(porcelain.TAGS_PREFIX)
+                elif name.startswith(GIT_TAGS_PREFIX):
+                    name = name.removeprefix(GIT_TAGS_PREFIX)
                     self._tags.append(name)
 
             # Sort remote branches
@@ -215,7 +214,7 @@ class SidebarModel(QAbstractItemModel):
 
         # Submodules
         with Benchmark("Sidebar/Submodules"):
-            self._submodules = porcelain.listAllSubmodulesFast(repo)
+            self._submodules = repo.listall_submodules_fast()
 
         self._hiddenBranches = repoState.uiPrefs.hiddenBranches
         self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
@@ -473,11 +472,11 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.Stash:
             stash = self._stashes[row]
             if displayRole:
-                return porcelain.getCoreStashMessage(stash.message)
+                return strip_stash_message(stash.message)
             elif refRole:
                 return F"stash@{{{row}}}"
             elif toolTipRole:
-                commit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
+                commit = self.repo.peel_commit(stash.commit_id)
                 commitQdt = QDateTime.fromSecsSinceEpoch(commit.commit_time, Qt.TimeSpec.OffsetFromUTC, commit.commit_time_offset * 60)
                 commitTimeStr = QLocale().toString(commitQdt, settings.prefs.shortTimeFormat)
                 text = "<p style='white-space: pre'>"

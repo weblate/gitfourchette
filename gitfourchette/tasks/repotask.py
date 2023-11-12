@@ -1,18 +1,17 @@
 from __future__ import annotations
+from gitfourchette.porcelain import Repo, ConflictError, MultiFileError
 from gitfourchette.nav import NavLocator
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette import log
-from gitfourchette import porcelain
 from typing import Any, Generator, Type
 import enum
-import pygit2
 
 
 TAG = "RepoTaskRunner"
 
 
-def showConflictErrorMessage(parent: QWidget, exc: porcelain.ConflictError, opName="Operation"):
+def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operation"):
     maxConflicts = 10
     numConflicts = len(exc.conflicts)
 
@@ -127,7 +126,7 @@ class RepoTask(QObject):
 
     _globalTaskCounter = 0
 
-    repo: pygit2.Repository | None
+    repo: Repo | None
     taskID: int
     jumpTo: NavLocator | None
 
@@ -184,7 +183,7 @@ class RepoTask(QObject):
             assert isinstance(pw, RepoWidget)
         return pw
 
-    def setRepo(self, repo: pygit2.Repository):
+    def setRepo(self, repo: Repo):
         self.repo = repo
 
     def __str__(self):
@@ -233,12 +232,12 @@ class RepoTask(QObject):
         Can be overridden by your task, but you should call super().onError() if you can't handle the exception.
         Called from the UI thread, after cleanup().
         """
-        if isinstance(exc, porcelain.ConflictError):
+        if isinstance(exc, ConflictError):
             showConflictErrorMessage(self.parentWidget(), exc, self.name())
-        elif isinstance(exc, porcelain.MultiFileError):
+        elif isinstance(exc, MultiFileError):
             # Patch doesn't apply
             message = self.tr("Operation failed: {0}.").format(escape(self.name()))
-            for filePath, fileException in exc.fileExceptions.items():
+            for filePath, fileException in exc.file_exceptions.items():
                 message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
             showWarning(self.parentWidget(), self.name(), message)
         else:

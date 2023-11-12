@@ -3,12 +3,12 @@ from gitfourchette import settings
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.graphview.graphpaint import paintGraphFrame
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState, UC_FAKEID
 from gitfourchette.toolbox import *
 from dataclasses import dataclass
 import contextlib
-import pygit2
 import traceback
 
 
@@ -24,7 +24,7 @@ CALLOUTS = {
     "refs/heads/": RefCallout(QColor(Qt.GlobalColor.darkMagenta)),
     "stash@{": RefCallout(QColor(Qt.GlobalColor.darkGreen), keepPrefix=True),
 
-    # detached HEAD as returned by porcelain.mapCommitsToReferences/getOidsForAllReferences
+    # detached HEAD as returned by Repo.map_commits_to_refs
     "HEAD": RefCallout(QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
 }
 
@@ -139,7 +139,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         rightBound = rect.right()
 
         # Get the info we need about the commit
-        commit: pygit2.Commit | None = index.data(CommitLogModel.CommitRole)
+        commit: Commit | None = index.data(CommitLogModel.CommitRole)
         if commit:
             oid = commit.oid
             # TODO: If is stash, getCoreStashMessage
@@ -282,7 +282,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         text = "?" * 7
         with contextlib.suppress(BaseException):
-            commit: pygit2.Commit = index.data(CommitLogModel.CommitRole)
+            commit: Commit = index.data(CommitLogModel.CommitRole)
             text = commit.oid.hex[:7]
         with contextlib.suppress(BaseException):
             details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)

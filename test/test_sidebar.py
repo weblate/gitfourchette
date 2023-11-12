@@ -2,7 +2,6 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
-from gitfourchette import porcelain
 
 
 def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):
@@ -19,8 +18,8 @@ def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):
 def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContext(wd) as repo:
-        porcelain.checkoutCommit(repo, pygit2.Oid(hex="7f822839a2fe9760f386cbbbcb3f92c5fe81def7"))
+    with RepoContext(wd) as repo:
+        repo.checkout_commit(Oid(hex="7f822839a2fe9760f386cbbbcb3f92c5fe81def7"))
 
     rw = mainWindow.openRepo(wd)
 

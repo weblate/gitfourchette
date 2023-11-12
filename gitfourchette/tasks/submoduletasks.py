@@ -2,13 +2,11 @@
 Submodule management tasks.
 """
 
-from gitfourchette import porcelain
-from gitfourchette import repoconfig
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.forms.ui_absorbsubmodule import Ui_AbsorbSubmodule
 from pathlib import Path
 
@@ -25,7 +23,7 @@ class AbsorbSubmodule(RepoTask):
         subRemotes = {}
         subIsBare = False
 
-        with porcelain.RepositoryContext(thisWD / subWD) as subRepo:
+        with RepoContext(thisWD / subWD) as subRepo:
             subIsBare = subRepo.is_bare
             for remote in subRepo.remotes:
                 subRemotes[remote.name] = remote.url
@@ -74,4 +72,4 @@ class AbsorbSubmodule(RepoTask):
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        subrepo = porcelain.addInnerRepoAsSubmodule(self.repo, str(subWD.relative_to(thisWD)), remoteUrl)
+        subrepo = self.repo.add_inner_repo_as_submodule(str(subWD.relative_to(thisWD)), remoteUrl)

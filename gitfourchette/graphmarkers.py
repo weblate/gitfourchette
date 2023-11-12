@@ -1,7 +1,5 @@
 import enum
-import pygit2
-
-Oid = pygit2.Oid
+from gitfourchette.porcelain import Oid
 
 
 class HiddenCommitSolver:
@@ -15,7 +13,7 @@ class HiddenCommitSolver:
     def __init__(self):
         self.tags = {}
 
-    def tagCommit(self, commit: pygit2.Oid, tag: Tag):
+    def tagCommit(self, commit: Oid, tag: Tag):
         self.tags[commit] = tag
 
     @property

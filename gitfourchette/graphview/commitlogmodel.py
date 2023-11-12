@@ -1,5 +1,5 @@
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-import pygit2
 
 
 class CommitLogModel(QAbstractListModel):
@@ -7,7 +7,7 @@ class CommitLogModel(QAbstractListModel):
     OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
 
     # Reference to RepoState.commitSequence
-    _commitSequence: list[pygit2.Commit] | None
+    _commitSequence: list[Commit] | None
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -20,12 +20,12 @@ class CommitLogModel(QAbstractListModel):
     def clear(self):
         self.setCommitSequence(None)
 
-    def setCommitSequence(self, newCommitSequence: list[pygit2.Commit] | None):
+    def setCommitSequence(self, newCommitSequence: list[Commit] | None):
         self.beginResetModel()
         self._commitSequence = newCommitSequence
         self.endResetModel()
 
-    def refreshTopOfCommitSequence(self, nRemovedRows, nAddedRows, newCommitSequence: list[pygit2.Commit]):
+    def refreshTopOfCommitSequence(self, nRemovedRows, nAddedRows, newCommitSequence: list[Commit]):
         parent = QModelIndex()  # it's not a tree model so there's no parent
 
         self._commitSequence = newCommitSequence

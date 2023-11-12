@@ -1,53 +1,144 @@
-from gitfourchette import log
-from pathlib import Path
-from pygit2 import Commit, Diff, Oid, Repository, Signature
-from typing import Iterable, Literal
-import contextlib
-import pygit2
-import os
-import re
+from gitfourchette import log as _log
+from pathlib import Path as _Path
+
+from pygit2 import (
+    Blob,
+    Branch,
+    CheckoutCallbacks,
+    Commit,
+    Config as GitConfig,
+    Diff,
+    DiffDelta,
+    DiffFile,
+    DiffLine,
+    DiffHunk,
+    GitError,
+    Keypair,
+    IndexEntry,
+    InvalidSpecError,
+    Oid,
+    Patch,
+    Remote,
+    RemoteCallbacks,
+    Repository as _VanillaRepository,
+    Signature,
+    Stash,
+    StashApplyCallbacks,
+    Submodule,
+    Tree,
+    Walker,
+)
+
+from pygit2 import (
+    __version__ as PYGIT2_VERSION,
+    LIBGIT2_VERSION,
+)
+
+from pygit2 import (
+    GIT_APPLY_LOCATION_BOTH,
+    GIT_APPLY_LOCATION_INDEX,
+    GIT_APPLY_LOCATION_WORKDIR,
+    GIT_BRANCH_ALL,
+    GIT_BRANCH_LOCAL,
+    GIT_BRANCH_REMOTE,
+    GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH,
+    GIT_CHECKOUT_FORCE,
+    GIT_CHECKOUT_NOTIFY_CONFLICT,
+    GIT_CHECKOUT_REMOVE_UNTRACKED,
+    GIT_CREDENTIAL_DEFAULT,
+    GIT_CREDENTIAL_SSH_CUSTOM,
+    GIT_CREDENTIAL_SSH_INTERACTIVE,
+    GIT_CREDENTIAL_SSH_KEY,
+    GIT_CREDENTIAL_SSH_MEMORY,
+    GIT_CREDENTIAL_USERNAME,
+    GIT_CREDENTIAL_USERPASS_PLAINTEXT,
+    GIT_DELTA_ADDED,
+    GIT_DELTA_CONFLICTED,
+    GIT_DELTA_DELETED,
+    GIT_DELTA_IGNORED,
+    GIT_DELTA_MODIFIED,
+    GIT_DELTA_RENAMED,
+    GIT_DELTA_TYPECHANGE,
+    GIT_DELTA_UNMODIFIED,
+    GIT_DELTA_UNTRACKED,
+    GIT_DIFF_INCLUDE_UNTRACKED,
+    GIT_DIFF_NORMAL,
+    GIT_DIFF_RECURSE_UNTRACKED_DIRS,
+    GIT_DIFF_SHOW_BINARY,
+    GIT_DIFF_SHOW_UNTRACKED_CONTENT,
+    GIT_DIFF_UPDATE_INDEX,
+    GIT_FETCH_NO_PRUNE,
+    GIT_FETCH_PRUNE,
+    GIT_FILEMODE_BLOB,
+    GIT_FILEMODE_BLOB_EXECUTABLE,
+    GIT_FILEMODE_COMMIT,
+    GIT_FILEMODE_LINK,
+    GIT_FILEMODE_TREE,
+    GIT_MERGE_ANALYSIS_FASTFORWARD,
+    GIT_MERGE_ANALYSIS_NORMAL,
+    GIT_MERGE_ANALYSIS_UP_TO_DATE,
+    GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY,
+    GIT_MERGE_PREFERENCE_NONE,
+    GIT_MERGE_PREFERENCE_NO_FASTFORWARD,
+    GIT_OBJ_COMMIT,
+    GIT_REF_OID,
+    GIT_REF_SYMBOLIC,
+    GIT_RESET_HARD,
+    GIT_RESET_MIXED,
+    GIT_RESET_SOFT,
+    GIT_SORT_NONE,
+    GIT_SORT_REVERSE,
+    GIT_SORT_TIME,
+    GIT_SORT_TOPOLOGICAL,
+    GIT_STATUS_INDEX_DELETED,
+    GIT_STATUS_INDEX_MODIFIED,
+    GIT_STATUS_INDEX_NEW,
+    GIT_STATUS_INDEX_RENAMED,
+    GIT_STATUS_INDEX_TYPECHANGE,
+    GIT_STATUS_WT_DELETED,
+    GIT_STATUS_WT_MODIFIED,
+    GIT_STATUS_WT_NEW,
+    GIT_STATUS_WT_RENAMED,
+    GIT_STATUS_WT_TYPECHANGE,
+    GIT_STATUS_WT_UNREADABLE,
+)
+
+from pygit2.remote import (
+    TransferProgress
+)
+
+import contextlib as _contextlib
+import os as _os
+import re as _re
+import typing as _typing
 
 
-TAG = "porcelain"
+_TAG = "porcelain"
 
-BLANK_OID = pygit2.Oid(raw=b'')
+NULL_OID = Oid(raw=b'')
 
-CORE_STASH_MESSAGE_PATTERN = re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
-WINDOWS_RESERVED_FILENAMES_PATTERN = re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", re.IGNORECASE)
-DIFF_HEADER_PATTERN = re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
+CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
+WINDOWS_RESERVED_FILENAMES_PATTERN = _re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", _re.IGNORECASE)
+DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
 
-HEADS_PREFIX = "refs/heads/"
-REMOTES_PREFIX = "refs/remotes/"
-TAGS_PREFIX = "refs/tags/"
+GIT_HEADS_PREFIX = "refs/heads/"
+GIT_REMOTES_PREFIX = "refs/remotes/"
+GIT_TAGS_PREFIX = "refs/tags/"
 
 GIT_STATUS_INDEX_MASK = (
-        pygit2.GIT_STATUS_INDEX_NEW
-        | pygit2.GIT_STATUS_INDEX_MODIFIED
-        | pygit2.GIT_STATUS_INDEX_DELETED
-        | pygit2.GIT_STATUS_INDEX_RENAMED
-        | pygit2.GIT_STATUS_INDEX_TYPECHANGE)
+        GIT_STATUS_INDEX_NEW
+        | GIT_STATUS_INDEX_MODIFIED
+        | GIT_STATUS_INDEX_DELETED
+        | GIT_STATUS_INDEX_RENAMED
+        | GIT_STATUS_INDEX_TYPECHANGE)
 
 GIT_STATUS_WT_MASK = (
-        pygit2.GIT_STATUS_WT_NEW
-        | pygit2.GIT_STATUS_WT_MODIFIED
-        | pygit2.GIT_STATUS_WT_DELETED
-        | pygit2.GIT_STATUS_WT_TYPECHANGE
-        | pygit2.GIT_STATUS_WT_RENAMED
-        | pygit2.GIT_STATUS_WT_UNREADABLE)
-
-
-class RepositoryContext:
-    def __init__(self, path: str | Path, flags: int = 0):
-        self.repo = pygit2.Repository(path, flags)
-
-    def __enter__(self) -> pygit2.Repository:
-        return self.repo
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # repo.free() is necessary for correct test teardown on Windows
-        self.repo.free()
-        del self.repo
-        self.repo = None
+        GIT_STATUS_WT_NEW
+        | GIT_STATUS_WT_MODIFIED
+        | GIT_STATUS_WT_DELETED
+        | GIT_STATUS_WT_TYPECHANGE
+        | GIT_STATUS_WT_RENAMED
+        | GIT_STATUS_WT_UNREADABLE)
 
 
 class NameValidationError(ValueError):
@@ -66,13 +157,13 @@ class NameValidationError(ValueError):
 
 
 class DivergentBranchesError(Exception):
-    def __init__(self, localBranch: pygit2.Branch, remoteBranch: pygit2.Branch):
+    def __init__(self, local_branch: Branch, remote_branch: Branch):
         super().__init__()
-        self.localBranch = localBranch
-        self.remoteBranch = remoteBranch
+        self.local_branch = local_branch
+        self.remote_branch = remote_branch
 
     def __str__(self):
-        return f"DivergentBranchesError(local: {self.localBranch.shorthand}, remote: {self.remoteBranch.shorthand})"
+        return f"DivergentBranchesError(local: {self.local_branch.shorthand}, remote: {self.remote_branch.shorthand})"
 
 
 class ConflictError(Exception):
@@ -86,19 +177,19 @@ class ConflictError(Exception):
 
 
 class MultiFileError(Exception):
-    fileExceptions: dict[str, Exception]
+    file_exceptions: dict[str, Exception]
 
     def __init__(self):
-        self.fileExceptions = {}
+        self.file_exceptions = {}
 
-    def addFileError(self, path: str, exc: Exception):
-        self.fileExceptions[path] = exc
+    def add_file_error(self, path: str, exc: Exception):
+        self.file_exceptions[path] = exc
 
     def __bool__(self):
-        return bool(self.fileExceptions)
+        return bool(self.file_exceptions)
 
 
-class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
+class CheckoutBreakdown(CheckoutCallbacks):
     status: dict[str, int]
 
     def __init__(self):
@@ -110,7 +201,7 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
 
     def get_conflicts(self):
         return [path for path in self.status
-                if self.status[path] == pygit2.GIT_CHECKOUT_NOTIFY_CONFLICT]
+                if self.status[path] == GIT_CHECKOUT_NOTIFY_CONFLICT]
 
     def __enter__(self):
         return self
@@ -118,7 +209,7 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_type:
             return False
-        if issubclass(exc_type, pygit2.GitError):
+        if issubclass(exc_type, GitError):
             message = str(exc_val)
             if "prevents checkout" in message or "prevent checkout" in message:
                 conflicts = self.get_conflicts()
@@ -127,19 +218,19 @@ class CheckoutTraceCallbacks(pygit2.CheckoutCallbacks):
         return False  # let error propagate
 
 
-class StashApplyTraceCallbacks(pygit2.StashApplyCallbacks, CheckoutTraceCallbacks):
+class StashApplyBreakdown(StashApplyCallbacks, CheckoutBreakdown):
     def stash_apply_progress(self, pr):
-        log.info(TAG, f"stash apply progress: {pr}")
+        _log.info(_TAG, f"stash apply progress: {pr}")
 
 
-def _versionAtLeast(
-        packageName: str,
-        requiredVersionString: str,
-        currentVersionString: str,
-        raiseError=True,
-        featureName="This feature"
+def _version_at_least(
+        package_name: str,
+        required_version_string: str,
+        current_version_string: str,
+        raise_error=True,
+        feature_name="This feature"
 ):
-    def versionToTuple(s: str):
+    def version_to_tuple(s: str):
         v = []
         for n in s.split("."):
             try:
@@ -151,278 +242,61 @@ def _versionAtLeast(
             v.pop()
         return tuple(v)
 
-    requiredVersion = versionToTuple(requiredVersionString)
-    currentVersion = versionToTuple(currentVersionString)
+    required_version = version_to_tuple(required_version_string)
+    current_version = version_to_tuple(current_version_string)
 
-    if tuple(currentVersion) < tuple(requiredVersion):
-        if not raiseError:
+    if tuple(current_version) < tuple(required_version):
+        if not raise_error:
             return False
 
-        message = (f"{featureName} requires {packageName} v{requiredVersionString} or later "
-                   f"(you have v{currentVersionString}).")
+        message = (f"{feature_name} requires {package_name} v{required_version_string} or later "
+                   f"(you have v{current_version_string}).")
         raise NotImplementedError(message)
 
     return True
 
 
-def pygit2VersionAtLeast(requiredVersion: str, raiseError=True, featureName="This feature"):
-    return _versionAtLeast(
-        packageName="pygit2",
-        requiredVersionString=requiredVersion,
-        currentVersionString=pygit2.__version__,
-        raiseError=raiseError,
-        featureName=featureName)
+def pygit2_version_at_least(required_version: str, raise_error=True, feature_name="This feature"):
+    return _version_at_least(
+        package_name="pygit2",
+        required_version_string=required_version,
+        current_version_string=PYGIT2_VERSION,
+        raise_error=raise_error,
+        feature_name=feature_name)
 
 
-def libgit2VersionAtLeast(requiredVersion: str, raiseError=True, featureName="This feature"):
-    return _versionAtLeast(
-        packageName="libgit2",
-        requiredVersionString=requiredVersion,
-        currentVersionString=pygit2.LIBGIT2_VERSION,
-        raiseError=raiseError,
-        featureName=featureName)
+def libgit2_version_at_least(required_version: str, raise_error=True, feature_name="This feature"):
+    return _version_at_least(
+        package_name="libgit2",
+        required_version_string=required_version,
+        current_version_string=LIBGIT2_VERSION,
+        raise_error=raise_error,
+        feature_name=feature_name)
 
 
-def isZeroId(oid: pygit2.Oid) -> bool:
-    return oid.raw == BLANK_OID.raw
-
-
-def workdirPath(repo: Repository, path: str) -> str:
-    return os.path.join(repo.workdir, path)
-
-
-def refreshIndex(repo: Repository, force: bool = False):
+def split_remote_branch_shorthand(remote_branch_name: str) -> tuple[str, str]:
     """
-    Reload the index. Call this before manipulating the staging area
-    to ensure any external modifications are taken into account.
+    Extract the remote name and branch name from a remote branch shorthand
+    string such as "origin/master".
 
-    This is a fairly cheap operation if the index hasn't changed on disk,
-    unless you pass force=True.
-    """
-    repo.index.read(force)
+    The input string must not start with "refs/remotes/".
 
-
-def getWorkdirChanges(repo: Repository, showBinary: bool = False) -> Diff:
-    """
-    Get a Diff of all uncommitted changes in the working directory,
-    compared to the commit at HEAD.
-
-    In other words, this function compares the workdir to HEAD.
+    Note: results can be flaky if the remote contains a slash in its name.
     """
 
-    flags = (pygit2.GIT_DIFF_INCLUDE_UNTRACKED
-             | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
-             | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT
-             )
+    if remote_branch_name.startswith("refs/"):
+        raise ValueError("splitRemoteBranchName: remote branch shorthand name mustn't start with refs/")
 
-    if showBinary:
-        flags |= pygit2.GIT_DIFF_SHOW_BINARY
-
-    dirtyDiff = repo.diff('HEAD', None, cached=False, flags=flags)
-    dirtyDiff.find_similar()
-    return dirtyDiff
-
-
-def getUnstagedChanges(repo: Repository, updateIndex: bool = False, showBinary: bool = False) -> Diff:
-    """
-    Get a Diff of unstaged changes in the working directory.
-
-    In other words, this function compares the workdir to the index.
-    """
-
-    flags = (pygit2.GIT_DIFF_INCLUDE_UNTRACKED
-             | pygit2.GIT_DIFF_RECURSE_UNTRACKED_DIRS
-             | pygit2.GIT_DIFF_SHOW_UNTRACKED_CONTENT
-             )
-
-    # Don't attempt to update the index if the repo is locked for writing
-    updateIndex &= os.access(repo.path, os.W_OK)
-
-    # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
-    # index was stale, but this requires the repo to be writable.
-    if updateIndex:
-        log.verbose(TAG, "GIT_DIFF_UPDATE_INDEX")
-        flags |= pygit2.GIT_DIFF_UPDATE_INDEX
-
-    if showBinary:
-        flags |= pygit2.GIT_DIFF_SHOW_BINARY
-
-    dirtyDiff = repo.diff(None, None, flags=flags)
-    # dirtyDiff.find_similar()  #-- it seems that find_similar cannot find renames in unstaged changes, so don't bother
-    return dirtyDiff
+    # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
+    try:
+        remote_name, branchName = remote_branch_name.split("/", 1)
+        return remote_name, branchName
+    except ValueError:
+        # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
+        return remote_branch_name, ""
 
 
-def getStagedChanges(repo: Repository, fast: bool = False, showBinary: bool = False) -> Diff:
-    """
-    Get a Diff of staged changes.
-
-    In other words, this function compares the index to HEAD.
-    """
-
-    flags = pygit2.GIT_DIFF_NORMAL
-
-    if showBinary:
-        flags |= pygit2.GIT_DIFF_SHOW_BINARY
-
-    if repo.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
-        indexTreeOid = repo.index.write_tree()
-        tree: pygit2.Tree = repo[indexTreeOid].peel(pygit2.Tree)
-        return tree.diff_to_tree(swap=True, flags=flags)
-    else:
-        stageDiff: Diff = repo.diff('HEAD', None, cached=True, flags=flags)  # compare HEAD to index
-        if not fast:
-            stageDiff.find_similar()
-        return stageDiff
-
-
-def hasAnyStagedChanges(repo: Repository) -> bool:
-    return 0 != len(getStagedChanges(repo, fast=True))
-    """
-    # This also works, but it's kinda slow...
-    status = repo.status(untracked_files="no")
-    mask = (pygit2.GIT_STATUS_INDEX_NEW
-            | pygit2.GIT_STATUS_INDEX_MODIFIED
-            | pygit2.GIT_STATUS_INDEX_DELETED
-            | pygit2.GIT_STATUS_INDEX_RENAMED
-            | pygit2.GIT_STATUS_INDEX_TYPECHANGE)
-    return any(0 != (flag & mask) for flag in status.values())
-    """
-
-
-def loadCommitDiffs(repo: Repository, oid: Oid, showBinary: bool = False) -> list[Diff]:
-    """
-    Get a list of Diffs of a commit compared to all of its parents.
-    """
-    flags = pygit2.GIT_DIFF_NORMAL
-
-    if showBinary:
-        flags |= pygit2.GIT_DIFF_SHOW_BINARY
-
-    commit: pygit2.Commit = repo.get(oid)
-
-    if commit.parents:
-        allDiffs = []
-
-        parent: pygit2.Commit
-        for i, parent in enumerate(commit.parents):
-            if i == 0:
-                diff = repo.diff(parent, commit, flags=flags)
-                diff.find_similar()
-                allDiffs.append(diff)
-            elif not parent.parents:
-                # This parent is parentless: assume merging in new files from this parent
-                # (e.g. "untracked files on ..." parents of stash commits)
-                tree: pygit2.Tree = parent.peel(pygit2.Tree)
-                diff = tree.diff_to_tree(swap=True, flags=flags)
-                allDiffs.append(diff)
-            else:
-                # Skip non-parentless parent in merge commits
-                pass
-
-        return allDiffs
-
-    else:
-        # Parentless commit: diff with empty tree
-        # (no tree passed to diff_to_tree == force diff against empty tree)
-        diff = commit.tree.diff_to_tree(swap=True, flags=flags)
-        return [diff]
-
-
-def checkoutLocalBranch(repo: Repository, localBranchName: str):
-    branch = repo.branches.local[localBranchName]
-    with CheckoutTraceCallbacks() as callbacks:
-        repo.checkout(branch.raw_name, callbacks=callbacks)
-
-
-def checkoutRef(repo: Repository, refName: str):
-    with CheckoutTraceCallbacks() as callbacks:
-        repo.checkout(refName, callbacks=callbacks)
-
-
-def checkoutCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
-    commit: pygit2.Commit = repo[commitOid].peel(pygit2.Commit)
-    with CheckoutTraceCallbacks() as callbacks:
-        repo.checkout_tree(commit.tree, callbacks=callbacks)
-        repo.set_head(commitOid)
-
-
-def revertCommit(repo: pygit2.Repository, commitOid: pygit2.Oid):
-    trashCommit = repo[commitOid].peel(pygit2.Commit)
-    headCommit = getHeadCommit(repo)
-    revertIndex = repo.revert_commit(trashCommit, headCommit)
-
-    if revertIndex.conflicts:
-        earlyConflicts = []
-        for commonAncestor, ours, theirs in revertIndex.conflicts:
-            # Figure out a path to display (note that elements of the 3-tuple may be None!)
-            for candidate in [commonAncestor, ours, theirs]:
-                if candidate and candidate.path:
-                    earlyConflicts.append(candidate.path)
-                    break
-        raise ConflictError(earlyConflicts, "HEAD")
-
-    with CheckoutTraceCallbacks() as callbacks:
-        repo.checkout_index(revertIndex, callbacks=callbacks)
-
-
-def renameBranch(repo: Repository, oldName: str, newName: str):
-    # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
-    branch = repo.branches.local[oldName]
-    branch.rename(newName)
-
-
-def deleteBranch(repo: Repository, localBranchName: str):
-    # TODO: if remote-tracking, let user delete upstream too?
-    repo.branches.local.delete(localBranchName)
-
-
-def newBranch(repo: Repository, localBranchName: str) -> pygit2.Branch:
-    return repo.create_branch(localBranchName, getHeadCommit(repo))
-
-
-def newTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str) -> pygit2.Branch:
-    remoteBranch = repo.branches.remote[remoteBranchName]
-    commit: pygit2.Commit = remoteBranch.peel(pygit2.Commit)
-    branch = repo.create_branch(localBranchName, commit)
-    branch.upstream = remoteBranch
-    return branch
-
-
-def newBranchFromCommit(repo: Repository, localBranchName: str, commitOid: Oid, switchTo: bool):
-    commit: Commit = repo[commitOid].peel(Commit)
-    branch = repo.create_branch(localBranchName, commit)
-    if switchTo:
-        checkoutRef(repo, branch.name)  # branch.name is inherited from Reference
-
-
-def getRemoteBranchNames(repo: Repository) -> dict[str, list[str]]:
-    nameDict = {}
-
-    # Create empty lists for all remotes (including branchless remotes)
-    for remote in repo.remotes:
-        nameDict[remote.name] = []
-
-    for refName in repo.listall_references():
-        if not refName.startswith(REMOTES_PREFIX):
-            continue
-
-        if refName.endswith("/HEAD"):
-            # Skip refs/remotes/*/HEAD (the remote's default branch).
-            # The ref file (.git/refs/remotes/*/HEAD) is created ONCE when first cloning the repository,
-            # and it's never updated again automatically, even if the default branch has changed on the remote.
-            # It's a symbolic branch, so looking up a stale version of the remote's HEAD may raise KeyError.
-            # It's just not worth the trouble.
-            # See: https://stackoverflow.com/questions/8839958
-            continue
-
-        shorthand = refName.removeprefix(REMOTES_PREFIX)
-        remoteName, branchName = splitRemoteBranchShorthand(shorthand)
-        nameDict[remoteName].append(branchName)
-
-    return nameDict
-
-
-def validateRefName(name: str, reservedNames: list[str]):
+def validate_refname(name: str, reserved_names: list[str]):
     """
     Checks the validity of a ref name according to `man git-check-ref-format`.
     Raises NameValidationError if the name is incorrect.
@@ -466,11 +340,11 @@ def validateRefName(name: str, reservedNames: list[str]):
     elif WINDOWS_RESERVED_FILENAMES_PATTERN.match(name):
         raise E(E.NOT_WINDOWS_FRIENDLY)
 
-    elif name.lower() in (n.lower() for n in reservedNames):
+    elif name.lower() in (n.lower() for n in reserved_names):
         raise E(E.NAME_TAKEN)
 
 
-def validateSignatureItem(s: str):
+def validate_signature_item(s: str):
     """
     Checks the validity of the name or email in a signature according to `libgit2/signature.c`.
     Raises NameValidationError if the item is incorrect.
@@ -483,14 +357,14 @@ def validateSignatureItem(s: str):
         raise E(E.CONTAINS_ILLEGAL_CHAR)
 
     # Trim crud from name
-    def isCrud(c: str):
+    def is_crud(c: str):
         return ord(c) <= 32 or c in ".,:;<>\"\\'"
 
     start = 0
     end = len(s)
-    while end > 0 and isCrud(s[end-1]):
+    while end > 0 and is_crud(s[end-1]):
         end -= 1
-    while start < end and isCrud(s[start]):
+    while start < end and is_crud(s[start]):
         start += 1
     trimmed = s[start:end]
 
@@ -499,703 +373,7 @@ def validateSignatureItem(s: str):
         raise E(E.CANNOT_BE_EMPTY)
 
 
-def generateUniqueLocalBranchName(repo: pygit2.Repository, seedBranchName: str):
-    """ Generate a name that doesn't clash with any existing branches on the remote """
-
-    i = 1
-    newBranchName = seedBranchName
-    allLocalBranches = list(repo.branches.local)
-
-    while newBranchName in allLocalBranches:
-        i += 1
-        newBranchName = F"{seedBranchName}-{i}"
-
-    return newBranchName
-
-
-def generateUniqueBranchNameOnRemote(repo: pygit2.Repository, remoteName: str, seedBranchName: str):
-    """ Generate a name that doesn't clash with any existing branches on the remote """
-
-    i = 1
-    newBranchName = seedBranchName
-    allRemoteBranches = list(repo.branches.remote)
-
-    while F"{remoteName}/{newBranchName}" in allRemoteBranches:
-        i += 1
-        newBranchName = F"{seedBranchName}-{i}"
-
-    return newBranchName
-
-
-def getTagNames(repo: Repository) -> list[str]:
-    return [
-        name.removeprefix(TAGS_PREFIX)
-        for name in repo.listall_references()
-        if name.startswith(TAGS_PREFIX)
-    ]
-
-
-def editTrackingBranch(repo: Repository, localBranchName: str, remoteBranchName: str):
-    localBranch = repo.branches.local[localBranchName]
-    if remoteBranchName:
-        remoteBranch = repo.branches.remote[remoteBranchName]
-        localBranch.upstream = remoteBranch
-    else:
-        if localBranch.upstream is not None:
-            localBranch.upstream = None
-
-
-def newRemote(repo: Repository, name: str, url: str):
-    repo.remotes.create(name, url)
-
-
-def editRemote(repo: Repository, remoteName: str, newName: str, newURL: str):
-    repo.remotes.set_url(remoteName, newURL)
-    if remoteName != newName:
-        repo.remotes.rename(remoteName, newName)  # rename AFTER setting everything else!
-
-
-def deleteRemote(repo: Repository, remoteName: str):
-    repo.remotes.delete(remoteName)
-
-
-def deleteRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks):
-    remoteName, branchName = splitRemoteBranchShorthand(remoteBranchName)
-
-    refspec = f":{HEADS_PREFIX}{branchName}"
-    log.info(TAG, f"Delete remote branch: refspec: \"{refspec}\"")
-
-    remote = repo.remotes[remoteName]
-    remote.push([refspec], callbacks=remoteCallbacks)
-
-
-def renameRemoteBranch(repo: Repository, oldRemoteBranchName: str, newBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks):
-    """
-    Warning: this function does not refresh the state of the remote branch before renaming it!
-    """
-    remoteName, oldBranchName = splitRemoteBranchShorthand(oldRemoteBranchName)
-
-    # First, make a new branch pointing to the same ref as the old one
-    refspec1 = f"{REMOTES_PREFIX}{oldRemoteBranchName}:{HEADS_PREFIX}{newBranchName}"
-
-    # Next, delete the old branch
-    refspec2 = f":{HEADS_PREFIX}{oldBranchName}"
-
-    log.info(TAG, f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
-
-    remote = repo.remotes[remoteName]
-    remote.push([refspec1, refspec2], callbacks=remoteCallbacks)
-
-
-def deleteStaleRemoteHEADSymbolicRef(repo: Repository, remoteName: str):
-    """
-    Delete `refs/remotes/{remoteName}/HEAD` to work around a bug in libgit2
-    where `git_revwalk__push_glob` errors out on that symbolic ref
-    if it points to a branch that doesn't exist anymore.
-
-    This bug may prevent fetching.
-    """
-
-    HEADRefName = F"{REMOTES_PREFIX}{remoteName}/HEAD"
-    HEADRef = repo.references.get(HEADRefName)
-
-    # Only risk deleting remote HEAD if it's symbolic
-    if HEADRef and HEADRef.type == pygit2.GIT_REF_SYMBOLIC:
-        try:
-            HEADRef.resolve()
-        except KeyError:  # pygit2 wraps GIT_ENOTFOUND with KeyError
-            # Stale -- nuke it
-            repo.references.delete(HEADRefName)
-            log.info(TAG, "Deleted stale remote HEAD symbolic ref: " + HEADRefName)
-
-
-def fetchRemote(repo: Repository, remoteName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
-    # Delete `refs/remotes/{remoteName}/HEAD` before fetching.
-    # See docstring for that function for why.
-    deleteStaleRemoteHEADSymbolicRef(repo, remoteName)
-
-    remote = repo.remotes[remoteName]
-    transfer = remote.fetch(callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_PRUNE)
-    return transfer
-
-
-def splitRemoteBranchShorthand(remoteBranchName: str) -> tuple[str, str]:
-    """
-    Extract the remote name and branch name from a remote branch shorthand
-    string such as "origin/master".
-
-    The input string must not start with "refs/remotes/".
-
-    Note: results can be flaky if the remote contains a slash in its name.
-    """
-
-    if remoteBranchName.startswith("refs/"):
-        raise ValueError("splitRemoteBranchName: remote branch shorthand name mustn't start with refs/")
-
-    # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
-    try:
-        remoteName, branchName = remoteBranchName.split("/", 1)
-        return remoteName, branchName
-    except ValueError:
-        # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
-        return remoteBranchName, ""
-
-
-def fetchRemoteBranch(repo: Repository, remoteBranchName: str, remoteCallbacks: pygit2.RemoteCallbacks) -> pygit2.remote.TransferProgress:
-    remoteName, branchName = splitRemoteBranchShorthand(remoteBranchName)
-
-    # Delete .git/refs/{remoteName}/HEAD to work around a bug in libgit2
-    # where git_revwalk__push_glob chokes on refs/remotes/{remoteName}/HEAD
-    # if it points to a branch that doesn't exist anymore.
-    deleteStaleRemoteHEADSymbolicRef(repo, remoteName)
-
-    remote = repo.remotes[remoteName]
-    transfer = remote.fetch(refspecs=[branchName], callbacks=remoteCallbacks, prune=pygit2.GIT_FETCH_NO_PRUNE)
-    return transfer
-
-
-def resetHead(repo: Repository, onto: Oid, resetMode: str, recurseSubmodules: bool=False):
-    modes = {
-        "soft": pygit2.GIT_RESET_SOFT,
-        "mixed": pygit2.GIT_RESET_MIXED,
-        "hard": pygit2.GIT_RESET_HARD,
-    }
-    repo.reset(onto, modes[resetMode])
-    if recurseSubmodules:
-        raise NotImplementedError("reset HEAD + recurse submodules not implemented yet!")
-
-
-def getHeadCommit(repo: Repository) -> Commit:
-    return repo.head.peel(Commit)
-
-
-def getHeadCommitOid(repo: Repository) -> Oid:
-    return getHeadCommit(repo).oid
-
-
-def getHeadCommitMessage(repo: Repository) -> str:
-    return getHeadCommit(repo).message
-
-
-def getCommitMessage(repo: Repository, oid: Oid) -> str:
-    commit: Commit = repo[oid].peel(Commit)
-    return commit.message
-
-
-def createCommit(
-        repo: Repository,
-        message: str,
-        overrideAuthor: Signature | None = None,
-        overrideCommitter: Signature | None = None
-) -> Oid:
-    if repo.head_is_detached:
-        refToUpdate = "HEAD"
-    else:
-        # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
-        # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
-        # so we should always have a ref name, even though it might not point to anything.
-        refToUpdate = repo.lookup_reference("HEAD").target
-
-    if repo.head_is_unborn:
-        parents = []
-    else:
-        parents = [getHeadCommitOid(repo)]
-
-    indexTreeOid = repo.index.write_tree()
-    fallbackSignature = repo.default_signature
-
-    newCommitOid = repo.create_commit(
-        refToUpdate,
-        overrideAuthor or fallbackSignature,
-        overrideCommitter or fallbackSignature,
-        message,
-        indexTreeOid,
-        parents
-    )
-
-    # Repository.create_commit flushes the staged changes from the in-memory index.
-    # Write the index to disk so that other applications can pick up the updated staging area.
-    repo.index.write()
-
-    assert not repo.head_is_unborn, "HEAD is still unborn after we have committed!"
-
-    return newCommitOid
-
-
-def amendCommit(
-        repo: Repository,
-        message: str,
-        overrideAuthor: Signature | None = None,
-        overrideCommitter: Signature | None = None
-) -> Oid:
-    indexTreeOid = repo.index.write_tree(repo)
-    newCommitOid = repo.amend_commit(
-        getHeadCommit(repo),
-        'HEAD',
-        message=message,
-        author=overrideAuthor,
-        committer=overrideCommitter or repo.default_signature,
-        tree=indexTreeOid
-    )
-    return newCommitOid
-
-
-def getActiveBranchFullName(repo: Repository) -> str:
-    return repo.head.name
-
-
-def getActiveBranchShorthand(repo: Repository) -> str:
-    return repo.head.shorthand
-
-
-def getCommitOidFromReferenceName(repo: Repository, refName: str) -> Oid:
-    reference = repo.references[refName]
-    commit: Commit = reference.peel(Commit)
-    return commit.oid
-
-
-def getCommitOidFromTagName(repo: Repository, tagName: str) -> Oid:
-    assert not tagName.startswith("refs/")
-    return getCommitOidFromReferenceName(repo, TAGS_PREFIX + tagName)
-
-
-def mapRefsToOids(repo: Repository) -> dict[str, Oid]:
-    """
-    Return commit oids at the tip of all branches, tags, etc. in the repository.
-
-    To ensure a consistent outcome across multiple walks of the same commit graph,
-    the oids are sorted by ascending commit time.
-    """
-
-    tips: list[tuple[str, Commit]] = []
-
-    # Always add 'HEAD' if we have one
-    if not repo.head_is_unborn:
-        try:
-            commit: Commit = repo.head.peel(Commit)
-            tips.append(("HEAD", commit))
-        except pygit2.InvalidSpecError as e:
-            log.info(TAG, F"{e} - Skipping detached HEAD")
-            pass
-
-    for ref in repo.listall_reference_objects():
-        if (ref.type != pygit2.GIT_REF_OID  # Skip symbolic references
-                or ref.name == "refs/stash"):  # Stashes are dealt with separately
-            continue
-
-        try:
-            commit: Commit = ref.peel(Commit)
-            tips.append((ref.name, commit))
-        except pygit2.InvalidSpecError as e:
-            # Some refs might not be committish, e.g. in linux's source repo
-            log.info(TAG, F"{e} - Skipping ref '{ref.name}'")
-            pass
-
-    for i, stash in enumerate(repo.listall_stashes()):
-        try:
-            commit: Commit = repo[stash.commit_id].peel(pygit2.Commit)
-            tips.append((f"stash@{{{i}}}", commit))
-        except pygit2.InvalidSpecError as e:
-            log.info(TAG, F"{e} - Skipping stash '{stash.message}'")
-            pass
-
-    # Reinsert all tips in chronological order
-    # (In Python 3.7+, dict key order is stable)
-    tips.sort(key=lambda item: item[1].commit_time)
-    return dict((ref, commit.oid) for ref, commit in tips)
-
-
-def refsPointingAtCommit(repo: pygit2.Repository, oid: pygit2.Oid):
-    refs = []
-
-    # Detached HEAD isn't in repo.references
-    if repo.head_is_detached and type(repo.head.target) == pygit2.Oid and repo.head.target == oid:
-        refs.append('HEAD')
-
-    for ref in repo.references.objects:
-        refKey = ref.name
-
-        if type(ref.target) != pygit2.Oid:
-            # Symbolic reference
-            log.verbose(TAG, F"Skipping symbolic reference {refKey} --> {ref.target}")
-            continue
-
-        if ref.target != oid:
-            continue
-
-        assert refKey.startswith("refs/")
-
-        if refKey == "refs/stash":
-            # Stashes must be dealt with separately
-            continue
-
-        refs.append(refKey)
-
-    for stashIndex, stash in enumerate(repo.listall_stashes()):
-        if stash.commit_id == oid:
-            refs.append(F"stash@{{{stashIndex}}}")
-
-    return refs
-
-
-def stageFiles(repo: Repository, patches: list[pygit2.Patch]):
-    index = repo.index
-    for patch in patches:
-        if patch.delta.status == pygit2.GIT_DELTA_DELETED:
-            index.remove(patch.delta.new_file.path)
-        else:
-            index.add(patch.delta.new_file.path)
-    index.write()
-
-
-def restoreFiles(repo: Repository, paths: list[str]):
-    """
-    Resets the given files to their state at the HEAD commit.
-    Any staged, unstaged, or untracked changes in those files will be lost.
-    NOTE: This will not
-    """
-
-    assert not repo.head_is_unborn, "restoreFiles doesn't support unborn HEAD"
-
-    strategy = (pygit2.GIT_CHECKOUT_FORCE
-                | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
-                | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
-
-    headTree: pygit2.Tree = repo.head.peel(pygit2.Tree)
-    repo.checkout_tree(headTree, paths=paths, strategy=strategy)
-
-
-def getStagedTree(repo: Repository) -> pygit2.Tree:
-    # refresh index before getting indexTree in case an external program modified the staging area
-    repo.index.read(force=False)
-
-    # get tree with staged changes
-    indexTreeId = repo.index.write_tree()
-    indexTree = repo[indexTreeId]
-
-    return indexTree
-
-
-def discardFiles(repo: Repository, paths: list[str]):
-    """
-    Discards unstaged changes in the given files.
-    Does not discard any changes that are staged.
-    """
-
-    strategy = (pygit2.GIT_CHECKOUT_FORCE
-                | pygit2.GIT_CHECKOUT_REMOVE_UNTRACKED
-                | pygit2.GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
-
-    # get tree with staged changes
-    indexTree = getStagedTree(repo)
-
-    # reset files to their state in the staged tree
-    repo.checkout_tree(indexTree, paths=paths, strategy=strategy)
-
-
-def discardModeChanges(repo: Repository, paths: list[str]):
-    """
-    Discards mode changes in the given files.
-    """
-
-    # get tree with staged changes
-    indexTree = getStagedTree(repo)
-
-    # reset files to their mode in the staged tree
-    for p in paths:
-        try:
-            mode = indexTree[p].filemode
-        except KeyError:
-            continue
-        if mode in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]:
-            os.chmod(workdirPath(repo, p), mode)
-
-
-def unstageFiles(repo: Repository, patches: list[pygit2.Patch]):
-    index = repo.index
-
-    headTree: pygit2.Tree | None
-    if repo.head_is_unborn:
-        headTree = None
-    else:
-        headTree = repo.head.peel(pygit2.Tree)
-
-    for patch in patches:
-        delta = patch.delta
-        old_path = delta.old_file.path
-        new_path = delta.new_file.path
-        if delta.status == pygit2.GIT_DELTA_ADDED:
-            assert (not headTree) or (old_path not in headTree)
-            index.remove(old_path)
-        elif delta.status == pygit2.GIT_DELTA_RENAMED:
-            # TODO: Two-step removal to completely unstage a rename -- is this what we want?
-            assert new_path in index
-            index.remove(new_path)
-        else:
-            assert headTree
-            assert old_path in headTree
-            obj = headTree[old_path]
-            index.add(pygit2.IndexEntry(old_path, obj.oid, obj.filemode))
-    index.write()
-
-
-def unstageModeChanges(repo: Repository, patches: list[pygit2.Patch]):
-    index = repo.index
-
-    for patch in patches:
-        of = patch.delta.old_file
-        nf = patch.delta.new_file
-        if (of.mode != nf.mode
-                and patch.delta.status not in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_DELETED, pygit2.GIT_DELTA_UNTRACKED]
-                and of.mode in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]):
-            index.add(pygit2.IndexEntry(nf.path, nf.id, of.mode))
-
-    index.write()
-
-
-def newStash(repo: Repository, message: str, paths: list[str]) -> pygit2.Oid:
-    """
-    Creates a stash that backs up all changes to the given files.
-    Does NOT remove the changes from the workdir (you can use resetFiles afterwards).
-    """
-
-    assert paths, "path list cannot be empty"
-
-    try:
-        signature = repo.default_signature
-    except ValueError:
-        # Allow creating a stash if the identity isn't set
-        signature = Signature(name="UNKNOWN", email="UNKNOWN")
-
-    oid = repo.stash(
-        stasher=signature,
-        message=message,
-        keep_index=False,
-        keep_all=True,
-        include_untracked=False,
-        include_ignored=False,
-        paths=paths)
-
-    return oid
-
-
-def findStashIndex(repo: Repository, commitOid: pygit2.Oid):
-    """
-    Libgit2 takes an index number to apply/pop/drop stashes. However, it's
-    unsafe to cache such an index for the GUI. Instead, we cache the commit ID
-    of the stash, and we only convert that to an index when we need to perform
-    an operation on the stash. This way, we'll always manipulate the stash
-    intended by the user, even if the indices change outside our control.
-    """
-    try:
-        return next(i
-                    for i, stash in enumerate(repo.listall_stashes())
-                    if stash.commit_id == commitOid)
-    except StopIteration:
-        raise KeyError(f"Stash not found: {commitOid.hex}")
-
-
-def applyStash(repo: Repository, commitId: pygit2.Oid):
-    with StashApplyTraceCallbacks() as callbacks:
-        repo.stash_apply(findStashIndex(repo, commitId), callbacks=callbacks)
-
-
-def popStash(repo: Repository, commitId: pygit2.Oid):
-    with StashApplyTraceCallbacks() as callbacks:
-        repo.stash_pop(findStashIndex(repo, commitId), callbacks=callbacks)
-
-
-def dropStash(repo: Repository, commitId: pygit2.Oid):
-    repo.stash_drop(findStashIndex(repo, commitId))
-
-
-def getCoreStashMessage(stashMessage: str) -> str:
-    m = CORE_STASH_MESSAGE_PATTERN.match(stashMessage)
-    if m:
-        return m.group(2)
-    else:
-        return stashMessage
-
-
-def patchApplies(
-        repo: pygit2.Repository,
-        patchData: bytes | str,
-        location: int = pygit2.GIT_APPLY_LOCATION_WORKDIR
-) -> pygit2.Diff:
-    diff = pygit2.Diff.parse_diff(patchData)
-    error = MultiFileError()
-
-    # Attempt to apply every patch in the diff separately, so we can report which file an error pertains to
-    for patch in diff:
-        patchData = patch.data
-
-        # Work around libgit2 bug: If a patch lacks the "index" line (as our partial patches do),
-        # then libgit2 fails to recreate the "---" and "+++" lines. Then it can't parse its own output.
-        patchLines = patchData.splitlines(True)
-        if len(patchLines) >= 2 and patchLines[0].startswith(b"diff --git ") and patchLines[1].startswith(b"@@"):
-            header = patchLines[0].strip().decode("utf-8")
-            match = re.match(DIFF_HEADER_PATTERN, header)
-            if match:
-                patchLines.insert(1, ("--- " + match[1] + "\n").encode("utf-8"))
-                patchLines.insert(2, ("+++ " + match[2] + "\n").encode("utf-8"))
-                patchData = b"".join(patchLines)
-
-        patchDiff = pygit2.Diff.parse_diff(patchData)  # can we extract a diff from the patch without re-parsing it?
-        try:
-            repo.applies(patchDiff, location, raise_error=True)
-        except (pygit2.GitError, OSError) as exc:
-            error.addFileError(patch.delta.old_file.path, exc)
-
-    if error:
-        raise error
-    else:
-        return diff
-
-
-def loadPatch(patchDataOrDiff: bytes | str | pygit2.Diff) -> pygit2.Diff:
-    if type(patchDataOrDiff) in [bytes, str]:
-        return pygit2.Diff.parse_diff(patchDataOrDiff)
-    elif type(patchDataOrDiff) is pygit2.Diff:
-        return patchDataOrDiff
-    else:
-        raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
-
-
-def applyPatch(
-        repo: pygit2.Repository,
-        patchDataOrDiff: bytes | str | pygit2.Diff,
-        location: int = pygit2.GIT_APPLY_LOCATION_WORKDIR
-) -> pygit2.Diff:
-    if type(patchDataOrDiff) in [bytes, str]:
-        diff = pygit2.Diff.parse_diff(patchDataOrDiff)
-    elif type(patchDataOrDiff) is pygit2.Diff:
-        diff = patchDataOrDiff
-    else:
-        raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
-
-    repo.apply(diff, location)
-    return diff
-
-
-def getSubmoduleWorkdir(repo: pygit2.Repository, submoduleKey: str) -> str:
-    submo = repo.lookup_submodule(submoduleKey)
-    return workdirPath(repo, submo.path)
-
-
-def listAllSubmodulesFast(repo: pygit2.Repository) -> list[str]:
-    """
-    Faster drop-in replacement for pygit2's Repository.listall_submodules (which can be very slow).
-    Returns a list of submodule workdirs within the root repo's workdir.
-    """
-
-    # return repo.listall_submodules()
-
-    configPath = workdirPath(repo, ".gitmodules")
-    if not os.path.isfile(configPath):
-        return []
-
-    config = pygit2.Config(configPath)
-    submodulePaths = []
-    for configEntry in config:
-        key: str = configEntry.name
-        if key.startswith("submodule.") and key.endswith(".path"):
-            submodulePaths.append(configEntry.value)
-
-    return submodulePaths
-
-
-def fastForwardBranch(repo: pygit2.Repository, localBranchName: str, remoteBranchName: str):
-    """
-    Fast-forwards a local branch to a remote branch.
-    Returns True if the local branch was up-to-date.
-    Raises DivergentBranchesError if fast-forwarding is impossible.
-    """
-    lb = repo.branches.local[localBranchName]
-    rb = repo.branches.remote[remoteBranchName]
-
-    mergeAnalysis, mergePref = repo.merge_analysis(rb.target, HEADS_PREFIX + localBranchName)
-
-    mergePrefNames = {
-        pygit2.GIT_MERGE_PREFERENCE_NONE: "none",
-        pygit2.GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY: "ff only",
-        pygit2.GIT_MERGE_PREFERENCE_NO_FASTFORWARD: "no ff"
-    }
-    log.info(TAG, f"Merge analysis: {mergeAnalysis}. Merge preference: {mergePrefNames.get(mergePref, '???')}.")
-
-    if mergeAnalysis & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
-        # Local branch is up-to-date with remote branch, nothing to do.
-        return True
-
-    elif mergeAnalysis == (pygit2.GIT_MERGE_ANALYSIS_NORMAL | pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD):
-        # Go ahead and fast-forward.
-
-        # First, we need to check out the tree pointed to by the remote branch. This step is necessary,
-        # otherwise the contents of the commits we're pulling will spill into the unstaged area.
-        # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
-        # affect any of the files that are involved in the pull.
-        with CheckoutTraceCallbacks() as callbacks:
-            repo.checkout_tree(rb.peel(pygit2.Tree), callbacks=callbacks)
-
-        # Then make the local branch point to the same commit as the remote branch.
-        lb.set_target(rb.target)
-
-    elif mergeAnalysis == pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-        # Can't FF. Divergent branches?
-        raise DivergentBranchesError(lb, rb)
-
-    else:
-        # Unborn or something...
-        raise NotImplementedError(F"Unsupported merge analysis {mergeAnalysis}.")
-
-
-def cherrypick(repo: pygit2.Repository, oid: pygit2.Oid):
-    repo.cherrypick(oid)
-
-
-def getSuperproject(repo: pygit2.Repository):
-    """
-    If `repo` is a submodule, returns the path to the superproject's working directory,
-    otherwise returns None.
-    Equivalent to `git rev-parse --show-superproject-working-tree`.
-    """
-
-    repoPath = repo.path  # e.g. "/home/user/superproj/.git/modules/src/extern/subproj/"
-    gitModules = "/.git/"
-    gitModulesPos = repoPath.rfind(gitModules)
-
-    if gitModulesPos < 0:
-        return ""
-
-    superWD = repoPath[:gitModulesPos]  # e.g. "/home/user/superproj"
-
-    try:
-        tentativeWorktree = repo.config['core.worktree']
-        if not os.path.isabs(tentativeWorktree):
-            tentativeWorktree = repoPath + "/" + tentativeWorktree
-        tentativeWorktree = os.path.normpath(tentativeWorktree)
-        realWorktree = os.path.normpath(repo.workdir)
-        if realWorktree == tentativeWorktree:
-            return superWD
-    except KeyError:
-        pass
-
-    return ""
-
-
-def refNameToBranch(repo: pygit2.Repository, refName: str) -> tuple[pygit2.Branch, bool]:
-    if refName.startswith(HEADS_PREFIX):
-        return repo.branches.local[refName.removeprefix(HEADS_PREFIX)], False
-    elif refName.startswith(REMOTES_PREFIX):
-        return repo.branches.remote[refName.removeprefix(REMOTES_PREFIX)], True
-    else:
-        assert False, f"refName must start with {HEADS_PREFIX} or {REMOTES_PREFIX}"
-
-
-def repoName(repo: pygit2.Repository):
-    return os.path.basename(os.path.normpath(repo.workdir))
-
-
-def getGlobalIdentity():
+def get_git_global_identity() -> tuple[str, str]:
     """
     Returns the name and email set in the global `.gitconfig` file.
     If the global identity isn't set, this function returns blank strings.
@@ -1205,52 +383,21 @@ def getGlobalIdentity():
     email = ""
 
     try:
-        globalConfig = pygit2.Config.get_global_config()
+        global_config = GitConfig.get_global_config()
     except OSError:
         # "The global file '.gitconfig' doesn't exist: No such file or directory
         return name, email
 
-    with contextlib.suppress(KeyError):
-        name = globalConfig["user.name"]
+    with _contextlib.suppress(KeyError):
+        name = global_config["user.name"]
 
-    with contextlib.suppress(KeyError):
-        email = globalConfig["user.email"]
-
-    return name, email
-
-
-def getLocalIdentity(repo: pygit2.Repository):
-    """
-    Returns the name and email set in the repository's `.git/config` file.
-    If an identity isn't set specifically for this repo, this function returns blank strings.
-    """
-
-    # Don't use repo.config because it merges global and local configs
-    localConfigPath = os.path.join(repo.path, "config")
-
-    name = ""
-    email = ""
-
-    if os.path.isfile(localConfigPath):
-        localConfig = pygit2.Config(localConfigPath)
-
-        with contextlib.suppress(KeyError):
-            name = localConfig["user.name"]
-
-        with contextlib.suppress(KeyError):
-            email = localConfig["user.email"]
+    with _contextlib.suppress(KeyError):
+        email = global_config["user.email"]
 
     return name, email
 
 
-def deleteTag(repo: pygit2.Repository, tagName: str):
-    assert not tagName.startswith("refs/")
-    refName = TAGS_PREFIX + tagName
-    assert refName in repo.references
-    repo.references.delete(refName)
-
-
-def compareDiffFiles(f1: pygit2.DiffFile, f2: pygit2.DiffFile):
+def DiffFile_compare(f1: DiffFile, f2: DiffFile):
     # TODO: pygit2 ought to implement DiffFile.__eq__
     same = f1.id == f2.id
     same &= f1.mode == f2.mode
@@ -1262,45 +409,1004 @@ def compareDiffFiles(f1: pygit2.DiffFile, f2: pygit2.DiffFile):
     return same
 
 
-def addInnerRepoAsSubmodule(repo: pygit2.Repository, innerWStr: str, remoteUrl: str, absorbGitDirs: bool = True):
-    outerW = Path(repo.workdir)
-    innerW = Path(outerW, innerWStr)  # normalize
+def strip_stash_message(stash_message: str) -> str:
+    m = CORE_STASH_MESSAGE_PATTERN.match(stash_message)
+    if m:
+        return m.group(2)
+    else:
+        return stash_message
 
-    if not innerW.is_dir():
-        raise FileNotFoundError(f"Inner workdir not found: {innerW}")
 
-    if not innerW.is_relative_to(outerW):
-        raise ValueError("Subrepo workdir must be relative to superrepo workdir")
+class Repo(_VanillaRepository):
+    """
+    Drop-in replacement for pygit2.Repository with convenient front-ends to common git operations.
+    """
 
-    with RepositoryContext(str(innerW)) as innerRepo:
-        innerG = Path(innerRepo.path)
-        innerHeadOid = innerRepo.head.peel(pygit2.Commit).oid
+    @property
+    def head_tree(self) -> Tree:
+        return self.head.peel(Tree)
 
-    if not innerG.is_relative_to(outerW):
-        raise ValueError("Subrepo .git dir must be relative to superrepo workdir")
+    @property
+    def head_commit(self) -> Commit:
+        return self.head.peel(Commit)
 
-    dotGitmodules = pygit2.Config(str(outerW / ".gitmodules"))
-    dotGitmodules[f"submodule.{innerW.relative_to(outerW)}.path"] = innerW.relative_to(outerW)
-    dotGitmodules[f"submodule.{innerW.relative_to(outerW)}.url"] = remoteUrl
+    @property
+    def head_commit_oid(self) -> Oid:
+        return self.head_commit.oid
 
-    if absorbGitDirs:
-        innerG2 = Path(repo.path, "modules", innerW.relative_to(outerW))
-        if innerG2.exists():
-            raise FileExistsError(f"Directory already exists: {innerG2}")
-        innerG2.parent.mkdir(parents=True, exist_ok=True)
-        innerG.rename(innerG2)
-        innerG = innerG2
+    @property
+    def head_commit_message(self) -> str:
+        return self.head_commit.message
 
-        # TODO: Use Path.relative_to(..., walk_up=True) once we drop support for all versions older than Python 3.13
-        submoduleConfig = pygit2.Config(str(innerG / "config"))
-        submoduleConfig["core.worktree"] = os.path.relpath(innerW, innerG2)
+    @property
+    def head_branch_shorthand(self) -> str:
+        return self.head.shorthand
 
-        with open(innerW / ".git", "wt") as submoduleDotGitFile:
-            submoduleDotGitFile.write(f"gitdir: {os.path.relpath(innerG2, innerW)}\n")
+    @property
+    def head_branch_fullname(self) -> str:
+        return self.head.name
 
-    # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
-    entry = pygit2.IndexEntry(innerW.relative_to(outerW), innerHeadOid, pygit2.GIT_FILEMODE_COMMIT)
-    repo.index.add(entry)
+    def peel_commit(self, oid: Oid) -> Commit:
+        return self[oid].peel(Commit)
 
-    # While we're here also add .gitmodules
-    repo.index.add(".gitmodules")
+    def peel_blob(self, oid: Oid) -> Blob:
+        return self[oid].peel(Blob)
+
+    def peel_tree(self, oid: Oid) -> Tree:
+        return self[oid].peel(Tree)
+
+    def in_workdir(self, path: str) -> str:
+        """Return an absolutized version of `path` within this repo's workdir."""
+        assert not _os.path.isabs(path)
+        return _os.path.join(self.workdir, path)
+
+    def refresh_index(self, force: bool = False):
+        """
+        Reload the index. Call this before manipulating the staging area
+        to ensure any external modifications are taken into account.
+
+        This is a fairly cheap operation if the index hasn't changed on disk,
+        unless you pass force=True.
+        """
+        self.index.read(force)
+
+    def get_uncommitted_changes(self, show_binary: bool = False) -> Diff:
+        """
+        Get a Diff of all uncommitted changes in the working directory,
+        compared to the commit at HEAD.
+
+        In other words, this function compares the workdir to HEAD.
+        """
+
+        flags = (GIT_DIFF_INCLUDE_UNTRACKED
+                 | GIT_DIFF_RECURSE_UNTRACKED_DIRS
+                 | GIT_DIFF_SHOW_UNTRACKED_CONTENT
+                 )
+
+        if show_binary:
+            flags |= GIT_DIFF_SHOW_BINARY
+
+        dirty_diff = self.diff('HEAD', None, cached=False, flags=flags)
+        dirty_diff.find_similar()
+        return dirty_diff
+
+    def get_unstaged_changes(self, update_index: bool = False, show_binary: bool = False) -> Diff:
+        """
+        Get a Diff of unstaged changes in the working directory.
+
+        In other words, this function compares the workdir to the index.
+        """
+
+        flags = (GIT_DIFF_INCLUDE_UNTRACKED
+                 | GIT_DIFF_RECURSE_UNTRACKED_DIRS
+                 | GIT_DIFF_SHOW_UNTRACKED_CONTENT
+                 )
+
+        # Don't attempt to update the index if the repo is locked for writing
+        update_index &= _os.access(self.path, _os.W_OK)
+
+        # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
+        # index was stale, but this requires the repo to be writable.
+        if update_index:
+            _log.verbose(_TAG, "GIT_DIFF_UPDATE_INDEX")
+            flags |= GIT_DIFF_UPDATE_INDEX
+
+        if show_binary:
+            flags |= GIT_DIFF_SHOW_BINARY
+
+        dirty_diff = self.diff(None, None, flags=flags)
+        # dirty_diff.find_similar()  #-- it seems that find_similar cannot find renames in unstaged changes, so don't bother
+        return dirty_diff
+
+    def get_staged_changes(self, fast: bool = False, show_binary: bool = False) -> Diff:
+        """
+        Get a Diff of the staged changes.
+
+        In other words, this function compares the index to HEAD.
+        """
+
+        flags = GIT_DIFF_NORMAL
+
+        if show_binary:
+            flags |= GIT_DIFF_SHOW_BINARY
+
+        if self.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
+            index_tree_oid = self.index.write_tree()
+            tree = self.peel_tree(index_tree_oid)
+            return tree.diff_to_tree(swap=True, flags=flags)
+        else:
+            stage_diff: Diff = self.diff('HEAD', None, cached=True, flags=flags)  # compare HEAD to index
+            if not fast:
+                stage_diff.find_similar()
+            return stage_diff
+
+    @property
+    def any_conflicts(self) -> bool:
+        """True if there are any conflicts in the index."""
+        return bool(self.index.conflicts)
+
+    @property
+    def any_staged_changes(self) -> bool:
+        """True if there are any staged changes in the index."""
+        return 0 != len(self.get_staged_changes(fast=True))
+        # ---This also works, but it's slower.
+        # status = repo.status(untracked_files="no")
+        # return any(0 != (flag & GIT_STATUS_INDEX_MASK) for flag in status.values())
+
+    def commit_diffs(self, oid: Oid, show_binary: bool = False) -> list[Diff]:
+        """
+        Get a list of Diffs of a commit compared to its parents.
+        """
+        flags = GIT_DIFF_NORMAL
+
+        if show_binary:
+            flags |= GIT_DIFF_SHOW_BINARY
+
+        commit: Commit = self.get(oid)
+
+        if commit.parents:
+            all_diffs = []
+
+            parent: Commit
+            for i, parent in enumerate(commit.parents):
+                if i == 0:
+                    diff = self.diff(parent, commit, flags=flags)
+                    diff.find_similar()
+                    all_diffs.append(diff)
+                elif not parent.parents:
+                    # This parent is parentless: assume merging in new files from this parent
+                    # (e.g. "untracked files on ..." parents of stash commits)
+                    tree: Tree = parent.peel(Tree)
+                    diff = tree.diff_to_tree(swap=True, flags=flags)
+                    all_diffs.append(diff)
+                else:
+                    # Skip non-parentless parent in merge commits
+                    pass
+
+            return all_diffs
+
+        else:
+            # Parentless commit: diff with empty tree
+            # (no tree passed to diff_to_tree == force diff against empty tree)
+            diff = commit.tree.diff_to_tree(swap=True, flags=flags)
+            return [diff]
+
+    def checkout_local_branch(self, name: str):
+        """Switch to a local branch."""
+        branch = self.branches.local[name]
+        with CheckoutBreakdown() as callbacks:
+            self.checkout(branch.raw_name, callbacks=callbacks)
+
+    def checkout_ref(self, refname: str):
+        """Enter detached HEAD on the commit pointed to by a ref."""
+        with CheckoutBreakdown() as callbacks:
+            self.checkout(refname, callbacks=callbacks)
+
+    def checkout_commit(self, oid: Oid):
+        """Enter detached HEAD on a commit."""
+        commit = self.peel_commit(oid)
+        with CheckoutBreakdown() as callbacks:
+            self.checkout_tree(commit.tree, callbacks=callbacks)
+            self.set_head(oid)
+
+    def revert_commit_in_workdir(self, oid: Oid):
+        """Revert a commit and check out the reverted index if there are no conflicts
+        with the workdir."""
+
+        trash_commit = self.peel_commit(oid)
+        head_commit = self.head_commit
+        revert_index = self.revert_commit(trash_commit, head_commit)
+
+        if revert_index.conflicts:
+            early_conflicts = []
+            for common_ancestor, ours, theirs in revert_index.conflicts:
+                # Figure out a path to display (note that elements of the 3-tuple may be None!)
+                for candidate in [common_ancestor, ours, theirs]:
+                    if candidate and candidate.path:
+                        early_conflicts.append(candidate.path)
+                        break
+            raise ConflictError(early_conflicts, "HEAD")
+
+        with CheckoutBreakdown() as callbacks:
+            self.checkout_index(revert_index, callbacks=callbacks)
+
+    def rename_local_branch(self, name: str, new_name: str) -> Branch:
+        """Rename a local branch."""
+        # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
+        branch = self.branches.local[name]
+        branch.rename(new_name)
+        return branch
+
+    def delete_local_branch(self, name: str):
+        """Delete a local branch."""
+        # TODO: if remote-tracking, let user delete upstream too?
+        self.branches.local.delete(name)
+
+    def create_branch_on_head(self, name: str) -> Branch:
+        """Create a local branch pointing to the commit at the current HEAD."""
+        return self.create_branch(name, self.head_commit)
+
+    def create_branch_tracking(self, name: str, remote_branch_name: str) -> Branch:
+        """Create a local branch pointing to the commit at the tip of a remote branch,
+        and set up the local branch to track the remote branch."""
+        remote_branch = self.branches.remote[remote_branch_name]
+        commit: Commit = remote_branch.peel(Commit)
+        branch = self.create_branch(name, commit)
+        branch.upstream = remote_branch
+        return branch
+
+    def create_branch_from_commit(self, name: str, oid: Oid) -> Branch:
+        """Create a local branch pointing to the given commit oid."""
+        commit = self.peel_commit(oid)
+        branch = self.create_branch(name, commit)
+        return branch
+
+    def listall_remote_branches(self) -> dict[str, list[str]]:
+        names = {}
+
+        # Create empty lists for all remotes (including branchless remotes)
+        for remote in self.remotes:
+            names[remote.name] = []
+
+        for refName in self.listall_references():
+            if not refName.startswith(GIT_REMOTES_PREFIX):
+                continue
+
+            if refName.endswith("/HEAD"):
+                # Skip refs/remotes/*/HEAD (the remote's default branch).
+                # The ref file (.git/refs/remotes/*/HEAD) is created ONCE when first cloning the repository,
+                # and it's never updated again automatically, even if the default branch has changed on the remote.
+                # It's a symbolic branch, so looking up a stale version of the remote's HEAD may raise KeyError.
+                # It's just not worth the trouble.
+                # See: https://stackoverflow.com/questions/8839958
+                continue
+
+            shorthand = refName.removeprefix(GIT_REMOTES_PREFIX)
+            remoteName, branchName = split_remote_branch_shorthand(shorthand)
+            names[remoteName].append(branchName)
+
+        return names
+
+    def generate_unique_local_branch_name(self, seed: str):
+        """Generate a name that doesn't clash with any existing local branches."""
+
+        i = 1
+        name = seed
+        all_local_branches = list(self.branches.local)
+
+        while name in all_local_branches:
+            i += 1
+            name = F"{seed}-{i}"
+
+        return name
+
+    def generate_unique_branch_name_on_remote(self, remote: str, seed: str):
+        """Generate a name that doesn't clash with any existing branches on the remote."""
+
+        i = 1
+        name = seed
+        all_remote_branches = list(self.branches.remote)
+
+        while f"{remote}/{name}" in all_remote_branches:
+            i += 1
+            name = F"{seed}-{i}"
+
+        return name
+
+    def listall_tags(self) -> list[str]:
+        return [
+            name.removeprefix(GIT_TAGS_PREFIX)
+            for name in self.listall_references()
+            if name.startswith(GIT_TAGS_PREFIX)
+        ]
+
+    def edit_tracking_branch(self, local_branch_name: str, remote_branch_name: str):
+        local_branch = self.branches.local[local_branch_name]
+        if remote_branch_name:
+            remote_branch = self.branches.remote[remote_branch_name]
+            local_branch.upstream = remote_branch
+        else:
+            if local_branch.upstream is not None:
+                local_branch.upstream = None
+
+    def create_remote(self, name: str, url: str):
+        self.remotes.create(name, url)
+
+    def edit_remote(self, name: str, new_name: str, new_url: str):
+        self.remotes.set_url(name, new_url)
+        if name != new_name:
+            self.remotes.rename(name, new_name)  # rename AFTER setting everything else!
+
+    def delete_remote(self, name: str):
+        self.remotes.delete(name)
+
+    def delete_remote_branch(self, remote_branch_name: str, remoteCallbacks: RemoteCallbacks):
+        remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
+
+        refspec = f":{GIT_HEADS_PREFIX}{branchName}"
+        _log.info(_TAG, f"Delete remote branch: refspec: \"{refspec}\"")
+
+        remote = self.remotes[remoteName]
+        remote.push([refspec], callbacks=remoteCallbacks)
+
+    def rename_remote_branch(self, old_remote_branch_name: str, new_name: str, remote_callbacks: RemoteCallbacks):
+        """
+        Warning: this function does not refresh the state of the remote branch before renaming it!
+        """
+        remoteName, oldBranchName = split_remote_branch_shorthand(old_remote_branch_name)
+
+        # First, make a new branch pointing to the same ref as the old one
+        refspec1 = f"{GIT_REMOTES_PREFIX}{old_remote_branch_name}:{GIT_HEADS_PREFIX}{new_name}"
+
+        # Next, delete the old branch
+        refspec2 = f":{GIT_HEADS_PREFIX}{oldBranchName}"
+
+        _log.info(_TAG, f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
+
+        remote = self.remotes[remoteName]
+        remote.push([refspec1, refspec2], callbacks=remote_callbacks)
+
+    def delete_stale_remote_head_symbolic_ref(self, remote_name: str):
+        """
+        Delete `refs/remotes/{remoteName}/HEAD` to work around a bug in libgit2
+        where `git_revwalk__push_glob` errors out on that symbolic ref
+        if it points to a branch that doesn't exist anymore.
+
+        This bug may prevent fetching.
+        """
+
+        head_refname = f"{GIT_REMOTES_PREFIX}{remote_name}/HEAD"
+        head_ref = self.references.get(head_refname)
+
+        # Only risk deleting remote HEAD if it's symbolic
+        if head_ref and head_ref.type == GIT_REF_SYMBOLIC:
+            try:
+                head_ref.resolve()
+            except KeyError:  # pygit2 wraps GIT_ENOTFOUND with KeyError
+                # Stale -- nuke it
+                self.references.delete(head_refname)
+                _log.info(_TAG, "Deleted stale remote HEAD symbolic ref: " + head_refname)
+
+    def fetch_remote(self, remote_name: str, remote_callbacks: RemoteCallbacks) -> TransferProgress:
+        # Delete `refs/remotes/{remoteName}/HEAD` before fetching.
+        # See docstring for that function for why.
+        self.delete_stale_remote_head_symbolic_ref(remote_name)
+
+        remote = self.remotes[remote_name]
+        transfer = remote.fetch(callbacks=remote_callbacks, prune=GIT_FETCH_PRUNE)
+        return transfer
+
+    def fetch_remote_branch(
+            self, remote_branch_name: str, remote_callbacks: RemoteCallbacks
+    ) -> TransferProgress:
+        remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
+
+        # Delete .git/refs/{remoteName}/HEAD to work around a bug in libgit2
+        # where git_revwalk__push_glob chokes on refs/remotes/{remoteName}/HEAD
+        # if it points to a branch that doesn't exist anymore.
+        self.delete_stale_remote_head_symbolic_ref(remoteName)
+
+        remote = self.remotes[remoteName]
+        transfer = remote.fetch(refspecs=[branchName], callbacks=remote_callbacks, prune=GIT_FETCH_NO_PRUNE)
+        return transfer
+
+    def reset_head2(self, onto: Oid, mode: _typing.Literal["soft", "mixed", "hard"], recurse_submodules: bool = False):
+        modes = {
+            "soft": GIT_RESET_SOFT,
+            "mixed": GIT_RESET_MIXED,
+            "hard": GIT_RESET_HARD,
+        }
+        self.reset(onto, modes[mode])
+        if recurse_submodules:
+            raise NotImplementedError("reset HEAD + recurse submodules not implemented yet!")
+
+    def get_commit_message(self, oid: Oid) -> str:
+        commit = self.peel_commit(oid)
+        return commit.message
+
+    def create_commit_on_head(
+            self,
+            message: str,
+            author: Signature | None = None,
+            committer: Signature | None = None
+    ) -> Oid:
+        """
+        Create a commit with the contents of the index tree.
+        Use the commit at HEAD as the new commit's parent.
+        If `author` or `committer` are not overridden, use the repository's default_signature.
+        """
+
+        if self.head_is_detached:
+            ref_to_update = "HEAD"
+        else:
+            # Get the ref name pointed to by HEAD, but DON'T use repo.head! It won't work if HEAD is unborn.
+            # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
+            # so we should always have a ref name, even though it might not point to anything.
+            ref_to_update = self.lookup_reference("HEAD").target
+
+        if self.head_is_unborn:
+            parents = []
+        else:
+            parents = [self.head_commit_oid]
+
+        index_tree_oid = self.index.write_tree()
+
+        # Take default signature now to prevent any timestamp diff between author and committer
+        fallback_signature = self.default_signature
+
+        new_commit_oid = self.create_commit(
+            ref_to_update,
+            author or fallback_signature,
+            committer or fallback_signature,
+            message,
+            index_tree_oid,
+            parents
+        )
+
+        # Repository.create_commit flushes the staged changes from the in-memory index.
+        # Write the index to disk so that other applications can pick up the updated staging area.
+        self.index.write()
+
+        assert not self.head_is_unborn, "HEAD is still unborn after we have committed!"
+
+        return new_commit_oid
+
+    def amend_commit_on_head(
+            self,
+            message: str,
+            author: Signature | None = None,
+            committer: Signature | None = None
+    ) -> Oid:
+        """
+        Amend the commit at HEAD with the contents of the index tree.
+        If `author` is None, don't replace the original commit's author.
+        If `committer` is None, use default_signature for the committer's signature.
+        """
+        index_tree_oid = self.index.write_tree(self)
+        new_commit_oid = self.amend_commit(
+            self.head_commit,
+            'HEAD',
+            message=message,
+            author=author,
+            committer=committer or self.default_signature,
+            tree=index_tree_oid
+        )
+        return new_commit_oid
+
+    def get_commit_oid_from_refname(self, refname: str) -> Oid:
+        reference = self.references[refname]
+        commit: Commit = reference.peel(Commit)
+        return commit.oid
+
+    def get_commit_oid_from_tag_name(self, tagname: str) -> Oid:
+        assert not tagname.startswith("refs/")
+        return self.get_commit_oid_from_refname(GIT_TAGS_PREFIX + tagname)
+
+    def map_refs_to_oids(self) -> dict[str, Oid]:
+        """
+        Return commit oids at the tip of all branches, tags, etc. in the repository.
+
+        To ensure a consistent outcome across multiple walks of the same commit graph,
+        the oids are sorted by ascending commit time.
+        """
+
+        tips: list[tuple[str, Commit]] = []
+
+        # Always add 'HEAD' if we have one
+        if not self.head_is_unborn:
+            try:
+                tips.append(("HEAD", self.head_commit))
+            except InvalidSpecError as e:
+                _log.info(_TAG, F"{e} - Skipping detached HEAD")
+                pass
+
+        for ref in self.listall_reference_objects():
+            if (ref.type != GIT_REF_OID  # Skip symbolic references
+                    or ref.name == "refs/stash"):  # Stashes are dealt with separately
+                continue
+
+            try:
+                commit: Commit = ref.peel(Commit)
+                tips.append((ref.name, commit))
+            except InvalidSpecError as e:
+                # Some refs might not be committish, e.g. in linux's source repo
+                _log.info(_TAG, F"{e} - Skipping ref '{ref.name}'")
+                pass
+
+        for i, stash in enumerate(self.listall_stashes()):
+            try:
+                commit = self.peel_commit(stash.commit_id)
+                tips.append((f"stash@{{{i}}}", commit))
+            except InvalidSpecError as e:
+                _log.info(_TAG, F"{e} - Skipping stash '{stash.message}'")
+                pass
+
+        # Reinsert all tips in chronological order
+        # (In Python 3.7+, dict key order is stable)
+        tips.sort(key=lambda item: item[1].commit_time)
+        return dict((ref, commit.oid) for ref, commit in tips)
+
+    def listall_refs_pointing_at(self, oid: Oid):
+        refs = []
+
+        # Detached HEAD isn't in repo.references
+        if self.head_is_detached and type(self.head.target) == Oid and self.head.target == oid:
+            refs.append('HEAD')
+
+        for ref in self.references.objects:
+            ref_key = ref.name
+
+            if type(ref.target) != Oid:
+                # Symbolic reference
+                _log.verbose(_TAG, F"Skipping symbolic reference {ref_key} --> {ref.target}")
+                continue
+
+            if ref.target != oid:
+                continue
+
+            assert ref_key.startswith("refs/")
+
+            if ref_key == "refs/stash":
+                # Stashes must be dealt with separately
+                continue
+
+            refs.append(ref_key)
+
+        for stash_index, stash in enumerate(self.listall_stashes()):
+            if stash.commit_id == oid:
+                refs.append(F"stash@{{{stash_index}}}")
+
+        return refs
+
+    def stage_files(self, patches: list[Patch]):
+        index = self.index
+        for patch in patches:
+            if patch.delta.status == GIT_DELTA_DELETED:
+                index.remove(patch.delta.new_file.path)
+            else:
+                index.add(patch.delta.new_file.path)
+        index.write()
+
+    def restore_files(self, paths: list[str]):
+        """
+        Resets the given files to their state at the HEAD commit.
+        Any staged, unstaged, or untracked changes in those files will be lost.
+        NOTE: This will not
+        """
+
+        assert not self.head_is_unborn, "restoreFiles doesn't support unborn HEAD"
+
+        strategy = (GIT_CHECKOUT_FORCE
+                    | GIT_CHECKOUT_REMOVE_UNTRACKED
+                    | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
+
+        self.checkout_tree(self.head_tree, paths=paths, strategy=strategy)
+
+    def get_staged_tree(self) -> Tree:
+        # refresh index before getting indexTree in case an external program modified the staging area
+        self.refresh_index(force=False)
+
+        # get tree with staged changes
+        index_tree_id = self.index.write_tree()
+        index_tree = self[index_tree_id]
+
+        return index_tree
+
+    def discard_files(self, paths: list[str]):
+        """
+        Discards unstaged changes in the given files.
+        Does not discard any changes that are staged.
+        """
+
+        strategy = (GIT_CHECKOUT_FORCE
+                    | GIT_CHECKOUT_REMOVE_UNTRACKED
+                    | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
+
+        # get tree with staged changes
+        index_tree = self.get_staged_tree()
+
+        # reset files to their state in the staged tree
+        self.checkout_tree(index_tree, paths=paths, strategy=strategy)
+
+    def discard_mode_changes(self, paths: list[str]):
+        """
+        Discards mode changes in the given files.
+        """
+
+        # get tree with staged changes
+        index_tree = self.get_staged_tree()
+
+        # reset files to their mode in the staged tree
+        for p in paths:
+            try:
+                mode = index_tree[p].filemode
+            except KeyError:
+                continue
+            if mode in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]:
+                _os.chmod(self.in_workdir(p), mode)
+
+    def unstage_files(self, patches: list[Patch]):
+        index = self.index
+
+        head_tree: Tree | None
+        if self.head_is_unborn:
+            head_tree = None
+        else:
+            head_tree = self.head_tree
+
+        for patch in patches:
+            delta = patch.delta
+            old_path = delta.old_file.path
+            new_path = delta.new_file.path
+            if delta.status == GIT_DELTA_ADDED:
+                assert (not head_tree) or (old_path not in head_tree)
+                index.remove(old_path)
+            elif delta.status == GIT_DELTA_RENAMED:
+                # TODO: Two-step removal to completely unstage a rename -- is this what we want?
+                assert new_path in index
+                index.remove(new_path)
+            else:
+                assert head_tree
+                assert old_path in head_tree
+                obj = head_tree[old_path]
+                index.add(IndexEntry(old_path, obj.oid, obj.filemode))
+        index.write()
+
+    def unstage_mode_changes(self, patches: list[Patch]):
+        index = self.index
+
+        for patch in patches:
+            of = patch.delta.old_file
+            nf = patch.delta.new_file
+            if (of.mode != nf.mode
+                    and patch.delta.status not in [GIT_DELTA_ADDED, GIT_DELTA_DELETED, GIT_DELTA_UNTRACKED]
+                    and of.mode in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]):
+                index.add(IndexEntry(nf.path, nf.id, of.mode))
+
+        index.write()
+
+    def create_stash(self, message: str, paths: list[str]) -> Oid:
+        """
+        Creates a stash that backs up all changes to the given files.
+        Does NOT remove the changes from the workdir (you can use resetFiles afterwards).
+        """
+
+        assert paths, "path list cannot be empty"
+
+        try:
+            signature = self.default_signature
+        except ValueError:
+            # Allow creating a stash if the identity isn't set
+            signature = Signature(name="UNKNOWN", email="UNKNOWN")
+
+        oid = self.stash(
+            stasher=signature,
+            message=message,
+            keep_index=False,
+            keep_all=True,
+            include_untracked=False,
+            include_ignored=False,
+            paths=paths)
+
+        return oid
+
+    def find_stash_index(self, commitOid: Oid) -> int:
+        """
+        Libgit2 takes an index number to apply/pop/drop stashes. However, it's
+        unsafe to cache such an index for the GUI. Instead, we cache the commit ID
+        of the stash, and we only convert that to an index when we need to perform
+        an operation on the stash. This way, we'll always manipulate the stash
+        intended by the user, even if the indices change outside our control.
+        """
+        try:
+            return next(i
+                        for i, stash in enumerate(self.listall_stashes())
+                        if stash.commit_id == commitOid)
+        except StopIteration:
+            raise KeyError(f"Stash not found: {commitOid.hex}")
+
+    def stash_apply_oid(self, oid: Oid):
+        i = self.find_stash_index(oid)
+        with StashApplyBreakdown() as callbacks:
+            self.stash_apply(i, callbacks=callbacks)
+
+    def stash_pop_oid(self, oid: Oid):
+        i = self.find_stash_index(oid)
+        with StashApplyBreakdown() as callbacks:
+            self.stash_pop(i, callbacks=callbacks)
+
+    def stash_drop_oid(self, oid: Oid):
+        i = self.find_stash_index(oid)
+        self.stash_drop(self.find_stash_index(oid))
+
+    def applies_breakdown(self, patch_data: bytes | str, location: int = GIT_APPLY_LOCATION_WORKDIR) -> Diff:
+        diff = Diff.parse_diff(patch_data)
+        error = MultiFileError()
+
+        # Attempt to apply every patch in the diff separately, so we can report which file an error pertains to
+        for patch in diff:
+            patch_data = patch.data
+
+            # Work around libgit2 bug: If a patch lacks the "index" line (as our partial patches do),
+            # then libgit2 fails to recreate the "---" and "+++" lines. Then it can't parse its own output.
+            patch_lines = patch_data.splitlines(True)
+            if len(patch_lines) >= 2 and patch_lines[0].startswith(b"diff --git ") and patch_lines[1].startswith(b"@@"):
+                header = patch_lines[0].strip().decode("utf-8")
+                match = _re.match(DIFF_HEADER_PATTERN, header)
+                if match:
+                    patch_lines.insert(1, ("--- " + match[1] + "\n").encode("utf-8"))
+                    patch_lines.insert(2, ("+++ " + match[2] + "\n").encode("utf-8"))
+                    patch_data = b"".join(patch_lines)
+
+            patch_diff = Diff.parse_diff(patch_data)  # can we extract a diff from the patch without re-parsing it?
+            try:
+                self.applies(patch_diff, location, raise_error=True)
+            except (GitError, OSError) as exc:
+                error.add_file_error(patch.delta.old_file.path, exc)
+
+        if error:
+            raise error
+        else:
+            return diff
+
+    def apply(self,
+              patch_data_or_diff: bytes | str | Diff,
+              location: int = GIT_APPLY_LOCATION_WORKDIR
+              ) -> Diff:
+        if type(patch_data_or_diff) in [bytes, str]:
+            diff = Diff.parse_diff(patch_data_or_diff)
+        elif type(patch_data_or_diff) is Diff:
+            diff = patch_data_or_diff
+        else:
+            raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
+
+        super().apply(diff, location)
+        return diff
+
+    def get_submodule_workdir(self, submo_key: str) -> str:
+        submo = self.lookup_submodule(submo_key)
+        return self.in_workdir(submo.path)
+
+    def listall_submodules_fast(self) -> list[str]:
+        """
+        Faster drop-in replacement for pygit2's Repository.listall_submodules (which can be very slow).
+        Returns a list of submodule workdirs within the root repo's workdir.
+        """
+
+        # return self.listall_submodules()
+
+        config_path = self.in_workdir(".gitmodules")
+        if not _os.path.isfile(config_path):
+            return []
+
+        config = GitConfig(config_path)
+        submo_paths = []
+        for configEntry in config:
+            key: str = configEntry.name
+            if key.startswith("submodule.") and key.endswith(".path"):
+                submo_paths.append(configEntry.value)
+
+        return submo_paths
+
+    def fast_forward_branch(self, local_branch_name: str, remote_branch_name: str = ""):
+        """
+        Fast-forwards a local branch to a remote branch.
+        Returns True if the local branch was up-to-date.
+        Raises DivergentBranchesError if fast-forwarding is impossible.
+        """
+        lb = self.branches.local[local_branch_name]
+
+        if not remote_branch_name:
+            rb = lb.upstream
+            if not rb:
+                raise ValueError("Local branch does not track a remote branch")
+        else:
+            rb = self.branches.remote[remote_branch_name]
+
+        merge_analysis, merge_pref = self.merge_analysis(rb.target, GIT_HEADS_PREFIX + local_branch_name)
+
+        merge_pref_names = {
+            GIT_MERGE_PREFERENCE_NONE: "none",
+            GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY: "ff only",
+            GIT_MERGE_PREFERENCE_NO_FASTFORWARD: "no ff"
+        }
+        _log.info(_TAG, f"Merge analysis: {merge_analysis}. Merge preference: {merge_pref_names.get(merge_pref, '???')}.")
+
+        if merge_analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE:
+            # Local branch is up-to-date with remote branch, nothing to do.
+            return True
+
+        elif merge_analysis == (GIT_MERGE_ANALYSIS_NORMAL | GIT_MERGE_ANALYSIS_FASTFORWARD):
+            # Go ahead and fast-forward.
+
+            # First, we need to check out the tree pointed to by the remote branch. This step is necessary,
+            # otherwise the contents of the commits we're pulling will spill into the unstaged area.
+            # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
+            # affect any of the files that are involved in the pull.
+            with CheckoutBreakdown() as callbacks:
+                self.checkout_tree(rb.peel(Tree), callbacks=callbacks)
+
+            # Then make the local branch point to the same commit as the remote branch.
+            lb.set_target(rb.target)
+
+        elif merge_analysis == GIT_MERGE_ANALYSIS_NORMAL:
+            # Can't FF. Divergent branches?
+            raise DivergentBranchesError(lb, rb)
+
+        else:
+            # Unborn or something...
+            raise NotImplementedError(F"Unsupported merge analysis {merge_analysis}.")
+
+    def cherrypick(self, oid: Oid):
+        super().cherrypick(oid)
+
+    def get_superproject(self) -> str:
+        """
+        If this repo is a submodule, returns the path to the superproject's working directory,
+        otherwise returns None.
+        Equivalent to `git rev-parse --show-superproject-working-tree`.
+        """
+
+        repo_path = self.path  # e.g. "/home/user/superproj/.git/modules/src/extern/subproj/"
+        git_modules_pos = repo_path.rfind("/.git/")
+
+        if git_modules_pos < 0:
+            return ""
+
+        outer_wd = repo_path[:git_modules_pos]  # e.g. "/home/user/superproj"
+
+        try:
+            tentative_wd = self.config['core.worktree']
+            if not _os.path.isabs(tentative_wd):
+                tentative_wd = repo_path + "/" + tentative_wd
+            tentative_wd = _os.path.normpath(tentative_wd)
+            actual_wd = _os.path.normpath(self.workdir)
+            if actual_wd == tentative_wd:
+                return outer_wd
+        except KeyError:
+            pass
+
+        return ""
+
+    def get_branch_from_refname(self, refname: str) -> tuple[Branch, bool]:
+        if refname.startswith(GIT_HEADS_PREFIX):
+            return self.branches.local[refname.removeprefix(GIT_HEADS_PREFIX)], False
+        elif refname.startswith(GIT_REMOTES_PREFIX):
+            return self.branches.remote[refname.removeprefix(GIT_REMOTES_PREFIX)], True
+        else:
+            assert False, f"refName must start with {GIT_HEADS_PREFIX} or {GIT_REMOTES_PREFIX}"
+
+    def repo_name(self):
+        return _os.path.basename(_os.path.normpath(self.workdir))
+
+    def get_local_identity(self) -> tuple[str, str]:
+        """
+        Return the name and email set in the repository's `.git/config` file.
+        If an identity isn't set specifically for this repo, this function returns blank strings.
+        """
+
+        # Don't use repo.config because it merges global and local configs
+        local_config_path = _os.path.join(self.path, "config")
+
+        name = ""
+        email = ""
+
+        if _os.path.isfile(local_config_path):
+            local_config = GitConfig(local_config_path)
+
+            with _contextlib.suppress(KeyError):
+                name = local_config["user.name"]
+
+            with _contextlib.suppress(KeyError):
+                email = local_config["user.email"]
+
+        return name, email
+
+    def delete_tag(self, tagname: str):
+        assert not tagname.startswith("refs/")
+        refname = GIT_TAGS_PREFIX + tagname
+        assert refname in self.references
+        self.references.delete(refname)
+
+    def add_inner_repo_as_submodule(self, inner_w: str, remote_url: str, absorb_git_dirs: bool = True):
+        outer_w = _Path(self.workdir)
+        inner_w = _Path(outer_w, inner_w)  # normalize
+
+        if not inner_w.is_dir():
+            raise FileNotFoundError(f"Inner workdir not found: {inner_w}")
+
+        if not inner_w.is_relative_to(outer_w):
+            raise ValueError("Subrepo workdir must be relative to superrepo workdir")
+
+        with RepoContext(str(inner_w)) as inner_repo:
+            inner_g = _Path(inner_repo.path)
+            inner_head_oid = inner_repo.head_commit.oid
+
+        if not inner_g.is_relative_to(outer_w):
+            raise ValueError("Subrepo .git dir must be relative to superrepo workdir")
+
+        dot_gitmodules = GitConfig(str(outer_w / ".gitmodules"))
+        dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.path"] = inner_w.relative_to(outer_w)
+        dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.url"] = remote_url
+
+        if absorb_git_dirs:
+            inner_g2 = _Path(self.path, "modules", inner_w.relative_to(outer_w))
+            if inner_g2.exists():
+                raise FileExistsError(f"Directory already exists: {inner_g2}")
+            inner_g2.parent.mkdir(parents=True, exist_ok=True)
+            inner_g.rename(inner_g2)
+            inner_g = inner_g2
+
+            # TODO: Use Path.relative_to(..., walk_up=True) once we drop support for all versions older than Python 3.13
+            submodule_config = GitConfig(str(inner_g / "config"))
+            submodule_config["core.worktree"] = _os.path.relpath(inner_w, inner_g2)
+
+            with open(inner_w / ".git", "wt") as submodule_dotgit_file:
+                submodule_dotgit_file.write(f"gitdir: {_os.path.relpath(inner_g2, inner_w)}\n")
+
+        # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
+        entry = IndexEntry(inner_w.relative_to(outer_w), inner_head_oid, GIT_FILEMODE_COMMIT)
+        self.index.add(entry)
+
+        # While we're here also add .gitmodules
+        self.index.add(".gitmodules")
+
+    @staticmethod
+    def _sanitize_config_key(key: str | tuple) -> str:
+        if type(key) is tuple:
+            key = ".".join(key)
+        assert type(key) is str
+        return key
+
+    def get_config_value(self, key: str | tuple):
+        key = self._sanitize_config_key(key)
+        try:
+            return self.config[key]
+        except KeyError:
+            return ""
+
+    def set_config_value(self, key: str | tuple, value: str):
+        key = self._sanitize_config_key(key)
+        if value:
+            self.config[key] = value
+        else:
+            with _contextlib.suppress(KeyError):
+                del self.config[key]
+
+
+class RepoContext:
+    def __init__(self, path: str | _Path, flags: int = 0):
+        self.repo = Repo(path, flags)
+
+    def __enter__(self) -> Repo:
+        return self.repo
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # repo.free() is necessary for correct test teardown on Windows
+        self.repo.free()
+        del self.repo
+        self.repo = None
+
+
+# Remove symbols starting with underscore from public export (for "from porcelain import *")
+__all__ = [x for x in dir() if not x.startswith("_")]

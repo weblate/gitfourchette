@@ -1,9 +1,8 @@
-from gitfourchette import porcelain
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
-from pygit2 import Signature
 
 
 class SignatureForm(QWidget):
@@ -12,9 +11,9 @@ class SignatureForm(QWidget):
     @staticmethod
     def validateInput(item: str) -> str:
         try:
-            porcelain.validateSignatureItem(item)
+            validate_signature_item(item)
             return ""
-        except porcelain.NameValidationError as exc:
+        except NameValidationError as exc:
             return TrTables.refNameValidation(exc.code)
 
     def __init__(self, parent):

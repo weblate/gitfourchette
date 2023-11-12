@@ -1,13 +1,12 @@
-from gitfourchette import porcelain
 from gitfourchette import trash
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.stashdialog import StashDialog
-import pygit2
 
 
-def backupStash(repo: pygit2.Repository, stashCommitId: pygit2.Oid):
+def backupStash(repo: Repo, stashCommitId: Oid):
     repoTrash = trash.Trash(repo)
     trashFile = repoTrash.newFile(ext=".txt", originalPath="DELETED_STASH")
 
@@ -20,7 +19,7 @@ To recover this stash, paste the hash below into "Repo > Recall Lost Commit" in 
 
 Original stash message below:
 
-{repo[stashCommitId].peel(pygit2.Commit).message}
+{repo.peel_commit(stashCommitId).message}
 """
 
     with open(trashFile, 'wt', encoding="utf-8") as f:
@@ -69,9 +68,9 @@ class NewStash(RepoTask):
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.newStash(self.repo, stashMessage, paths=tickedFiles)
+        self.repo.create_stash(stashMessage, paths=tickedFiles)
         if not keepIntact:
-            porcelain.restoreFiles(self.repo, tickedFiles)
+            self.repo.restore_files(tickedFiles)
 
 
 class ApplyStash(RepoTask):
@@ -79,9 +78,9 @@ class ApplyStash(RepoTask):
         # Refs only change if the stash is deleted after a successful application.
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
-    def flow(self, stashCommitId: pygit2.Oid, tickDelete=True):
-        stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)
-        stashMessage = porcelain.getCoreStashMessage(stashCommit.message)
+    def flow(self, stashCommitId: Oid, tickDelete=True):
+        stashCommit: Commit = self.repo.peel_commit(stashCommitId)
+        stashMessage = strip_stash_message(stashCommit.message)
 
         question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
                            ).format(escape(stashMessage))
@@ -105,7 +104,7 @@ class ApplyStash(RepoTask):
         qmb.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.applyStash(self.repo, stashCommitId)
+        self.repo.stash_apply_oid(stashCommitId)
 
         if self.repo.index.conflicts:
             yield from self._flowExitWorkerThread()
@@ -119,16 +118,16 @@ class ApplyStash(RepoTask):
 
         if deleteAfterApply:
             backupStash(self.repo, stashCommitId)
-            porcelain.dropStash(self.repo, stashCommitId)
+            self.repo.stash_drop_oid(stashCommitId)
 
 
 class DropStash(RepoTask):
     def effects(self):
         return TaskEffects.Refs
 
-    def flow(self, stashCommitId: pygit2.Oid):
-        stashCommit: pygit2.Commit = self.repo[stashCommitId].peel(pygit2.Commit)
-        stashMessage = porcelain.getCoreStashMessage(stashCommit.message)
+    def flow(self, stashCommitId: Oid):
+        stashCommit = self.repo.peel_commit(stashCommitId)
+        stashMessage = strip_stash_message(stashCommit.message)
         yield from self._flowConfirm(
             text=self.tr("Really delete stash <b>“{0}”</b>?").format(stashMessage),
             verb=self.tr("Delete stash"),
@@ -136,4 +135,4 @@ class DropStash(RepoTask):
 
         yield from self._flowBeginWorkerThread()
         backupStash(self.repo, stashCommitId)
-        porcelain.dropStash(self.repo, stashCommitId)
+        self.repo.stash_drop_oid(stashCommitId)

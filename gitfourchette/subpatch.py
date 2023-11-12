@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from gitfourchette.porcelain import isZeroId
+from gitfourchette.porcelain import *
 from typing import Iterable
 import io
-import pygit2
 
 
 REVERSE_ORIGIN_MAP = {
@@ -55,7 +54,7 @@ def quotePath(path: bytes):
         return safePath
 
 
-def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
+def getPatchPreamble(delta: DiffDelta, reverse=False):
     if not reverse:
         of = delta.old_file
         nf = delta.new_file
@@ -66,12 +65,12 @@ def getPatchPreamble(delta: pygit2.DiffDelta, reverse=False):
     bQuoted = quotePath(b"b/" + nf.raw_path)
     preamble = F"diff --git {aQuoted} {bQuoted}\n"
 
-    ofExists = not isZeroId(of.id)
-    nfExists = not isZeroId(nf.id)
+    ofExists = of.id != NULL_OID
+    nfExists = nf.id != NULL_OID
 
     if not ofExists:
         preamble += F"new file mode {nf.mode:06o}\n"
-    elif of.mode != nf.mode or nf.mode != pygit2.GIT_FILEMODE_BLOB:
+    elif of.mode != nf.mode or nf.mode != GIT_FILEMODE_BLOB:
         preamble += F"old mode {of.mode:06o}\n"
         preamble += F"new mode {nf.mode:06o}\n"
 
@@ -108,7 +107,7 @@ def reverseOrigin(origin):
     return REVERSE_ORIGIN_MAP.get(origin, origin)
 
 
-def writeContext(subpatch: io.BytesIO, reverse: bool, lines: Iterable[pygit2.DiffLine]):
+def writeContext(subpatch: io.BytesIO, reverse: bool, lines: Iterable[DiffLine]):
     skipOrigin = '-' if reverse else '+'
     for line in lines:
         if line.origin == skipOrigin:
@@ -127,7 +126,7 @@ def writeContext(subpatch: io.BytesIO, reverse: bool, lines: Iterable[pygit2.Dif
 
 
 def extractSubpatch(
-        masterPatch: pygit2.Patch,
+        masterPatch: Patch,
         startPos: DiffLinePos,  # index of first selected line in master patch
         endPos: DiffLinePos,  # index of last selected line in master patch
         reverse: bool

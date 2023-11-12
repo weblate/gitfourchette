@@ -1,7 +1,7 @@
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
-from pygit2 import Signature
 
 
 class CommitDialog(QDialog):

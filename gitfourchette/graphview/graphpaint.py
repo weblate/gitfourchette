@@ -2,10 +2,10 @@ from gitfourchette import colors
 from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.graph import Frame, Graph
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState, UC_FAKEID
 from itertools import zip_longest
-from pygit2 import Commit, Oid
 
 
 LANE_WIDTH = 10

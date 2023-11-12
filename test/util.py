@@ -1,13 +1,12 @@
 from . import *
-import pygit2
 import os
 import re
 import tarfile
 import shutil
-from gitfourchette.porcelain import RepositoryContext
+from gitfourchette.porcelain import *
 
 
-TEST_SIGNATURE = pygit2.Signature("Test Person", "toto@example.com", 1672600000, 0)
+TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
 
 
 def unpackRepo(
@@ -40,12 +39,12 @@ def makeBareCopy(path: str, addAsRemote: str, preFetch: bool):
     barePath = os.path.normpath(F"{path}/../{basename}-bare.git")  # create bare repo besides real repo in temporary directory
     shutil.copytree(F"{path}/.git", barePath)
 
-    conf = pygit2.Config(F"{barePath}/config")
+    conf = GitConfig(F"{barePath}/config")
     conf['core.bare'] = True
     del conf
 
     if addAsRemote:
-        with RepositoryContext(path) as repo:
+        with RepoContext(path) as repo:
             remote = repo.remotes.create(addAsRemote, barePath)  # TODO: Should we add file:// ?
             if preFetch:
                 remote.fetch()
@@ -136,8 +135,3 @@ def acceptQMessageBox(parent: QWidget, textPattern: str):
 
 def rejectQMessageBox(parent: QWidget, textPattern: str):
     findQMessageBox(parent, textPattern).reject()
-
-
-def hexToOid(hexstr: str):
-    assert len(hexstr) == 40
-    return pygit2.Oid(hex=hexstr)

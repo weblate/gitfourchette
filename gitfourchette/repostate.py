@@ -1,16 +1,16 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from gitfourchette import log
-from gitfourchette import porcelain, tempdir
+from gitfourchette import tempdir
 from gitfourchette import settings
 from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
 from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
+from gitfourchette.porcelain import *
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from typing import Iterable
 import os
-import pygit2
 
 
 UC_FAKEID = "UC_FAKEID"
@@ -36,7 +36,7 @@ class RepoPrefs(PrefsFile):
     _parentDir = ""
 
     draftCommitMessage: str = ""
-    draftCommitSignature: pygit2.Signature = None
+    draftCommitSignature: Signature = None
     draftAmendMessage: str = ""
     hiddenBranches: list = field(default_factory=list)
     hiddenStashCommits: list = field(default_factory=list)
@@ -47,42 +47,43 @@ class RepoPrefs(PrefsFile):
 
 
 class RepoState:
-    repo: pygit2.Repository
+    repo: Repo
 
     # May be None; call initializeWalker before use.
     # Keep it around to speed up refreshing.
-    walker: pygit2.Walker | None
+    walker: Walker | None
 
     # ordered list of commits
-    commitSequence: list[pygit2.Commit]
+    commitSequence: list[Commit]
     # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
 
     graph: Graph | None
 
-    refCache: dict[str, pygit2.Oid]
+    refCache: dict[str, Oid]
     "Maps reference names to commit oids"
 
-    reverseRefCache: dict[pygit2.Oid, list[str]]
+    reverseRefCache: dict[Oid, list[str]]
     "Maps commit oids to reference names pointing to this commit"
 
     # path of superproject if this is a submodule
     superproject: str
 
     # oid of the active commit (to make it bold)
-    activeCommitOid: pygit2.Oid | None
+    activeCommitOid: Oid | None
 
-    foreignCommits: set[pygit2.Oid]
+    foreignCommits: set[Oid]
     """Use this to look up which commits are part of local branches,
     and which commits are 'foreign'."""
 
-    hiddenCommits: set[pygit2.Oid]
+    hiddenCommits: set[Oid]
 
     workdirStale: bool
     numChanges: int
 
     uiPrefs: RepoPrefs
 
-    def __init__(self, repo: pygit2.Repository):
+    def __init__(self, repo: Repo):
+        assert isinstance(repo, Repo)
         self.repo = repo
 
         uiConfigPath = os.path.join(self.repo.path, settings.REPO_SETTINGS_DIR)
@@ -97,7 +98,7 @@ class RepoState:
         if WINDOWS and "core.autocrlf" not in self.repo.config:
             tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
             log.info("RepoState", "Forcing core.autocrlf=true in: " + tempConfigPath)
-            tempConfig = pygit2.Config(tempConfigPath)
+            tempConfig = GitConfig(tempConfigPath)
             tempConfig["core.autocrlf"] = "true"
             self.repo.config.add_file(tempConfigPath, level=1)
 
@@ -114,7 +115,7 @@ class RepoState:
         self.reverseRefCache = {}
         self.refreshRefCache()
 
-        self.superproject = porcelain.getSuperproject(self.repo)
+        self.superproject = repo.get_superproject()
 
         self.activeCommitOid = None
 
@@ -131,13 +132,13 @@ class RepoState:
         else:
             return self.uiPrefs.draftCommitMessage
 
-    def getDraftCommitAuthor(self) -> pygit2.Signature:
+    def getDraftCommitAuthor(self) -> Signature:
         return self.uiPrefs.draftCommitSignature
 
     def setDraftCommitMessage(
             self,
             message: str | None,
-            author: pygit2.Signature | None = None,
+            author: Signature | None = None,
             forAmending: bool = False):
         if not message:
             message = ""
@@ -157,7 +158,7 @@ class RepoState:
         """
         self.headIsDetached = self.repo.head_is_detached
 
-        refCache = porcelain.mapRefsToOids(self.repo)
+        refCache = self.repo.map_refs_to_oids()
 
         if refCache == self.refCache:
             # Nothing to do!
@@ -181,15 +182,15 @@ class RepoState:
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
     @benchmark
-    def initializeWalker(self, tipOids: Iterable[pygit2.Oid]) -> pygit2.Walker:
-        sorting = pygit2.GIT_SORT_TOPOLOGICAL
+    def initializeWalker(self, tipOids: Iterable[Oid]) -> Walker:
+        sorting = GIT_SORT_TOPOLOGICAL
 
         if settings.prefs.graph_chronologicalOrder:
             # In strictly chronological ordering, a commit may appear before its
             # children if it was "created" later than its children. The graph
             # generator produces garbage in this case. So, for chronological
             # ordering, keep GIT_SORT_TOPOLOGICAL in addition to GIT_SORT_TIME.
-            sorting |= pygit2.GIT_SORT_TIME
+            sorting |= GIT_SORT_TIME
 
         if self.walker is None:
             self.walker = self.repo.walk(None, sorting)
@@ -208,7 +209,7 @@ class RepoState:
     def updateActiveCommitOid(self):
         try:
             self.activeCommitOid = self.repo.head.target
-        except pygit2.GitError:
+        except GitError:
             self.activeCommitOid = None
 
     def _uncommittedChangesFakeCommitParents(self):
@@ -227,7 +228,7 @@ class RepoState:
 
         bench = Benchmark("GRAND TOTAL"); bench.__enter__()
 
-        commitSequence: list[pygit2.Commit | None] = []
+        commitSequence: list[Commit | None] = []
         graph = Graph()
 
         # Retrieve the number of commits that we loaded last time we opened this repo
@@ -298,7 +299,7 @@ class RepoState:
         return commitSequence
 
     @benchmark
-    def loadChangedRefs(self, oldRefCache: dict[str, pygit2.Oid]):
+    def loadChangedRefs(self, oldRefCache: dict[str, Oid]):
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
@@ -369,7 +370,7 @@ class RepoState:
         self.resolveHiddenCommits()
 
     @benchmark
-    def toggleHideStash(self, stashOid: pygit2.Oid):
+    def toggleHideStash(self, stashOid: Oid):
         oidHex = stashOid.hex
         if oidHex not in self.uiPrefs.hiddenStashCommits:
             # Hide
@@ -388,21 +389,21 @@ class RepoState:
             return any(
                 refName for refName in self.reverseRefCache[oid]
                 if refName not in hiddenBranches
-                and not refName.startswith(porcelain.TAGS_PREFIX))
+                and not refName.startswith(GIT_TAGS_PREFIX))
 
         for hiddenBranch in hiddenBranches:
             try:
                 oid = self.refCache[hiddenBranch]
                 if not isSharedByVisibleBranch(oid):
                     seeds.add(oid)
-            except (KeyError, pygit2.InvalidSpecError):
+            except (KeyError, InvalidSpecError):
                 # Remove it from prefs
                 log.info("RepoState", "Skipping missing hidden branch: " + hiddenBranch)
                 self.uiPrefs.hiddenBranches.remove(hiddenBranch)
 
         hiddenStashCommits = self.uiPrefs.hiddenStashCommits[:]
         for hiddenStash in hiddenStashCommits:
-            oid = pygit2.Oid(hex=hiddenStash)
+            oid = Oid(hex=hiddenStash)
             if oid in self.reverseRefCache:
                 seeds.add(oid)
             else:
@@ -424,7 +425,7 @@ class RepoState:
 
         if settings.prefs.debug_hideStashJunkParents:
             for stash in self.repo.listall_stashes():
-                stashCommit: pygit2.Commit = self.repo[stash.commit_id].peel(pygit2.Commit)
+                stashCommit = self.repo.peel_commit(stash.commit_id)
                 if len(stashCommit.parents) >= 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):
                     solver.tagCommit(stashCommit.parents[1].id, T.HARDHIDE)
                 if len(stashCommit.parents) >= 3 and stashCommit.parents[2].raw_message.startswith(b"untracked files on "):

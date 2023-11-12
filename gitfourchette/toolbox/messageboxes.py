@@ -50,6 +50,9 @@ def excMessageBox(
         if showExcSummary:
             summary = traceback.format_exception_only(exc.__class__, exc)
             summary = ''.join(summary).strip()
+            if summary.startswith("_pygit2.GitError:"):
+                summary = summary.removeprefix("_pygit2.GitError:")
+                summary = tr("Git error:") + summary
             message += "<br><br>" + html.escape(summary)
 
         details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)

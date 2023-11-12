@@ -1,5 +1,4 @@
-from gitfourchette import porcelain
-from gitfourchette import exttools
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
@@ -33,7 +32,7 @@ class StashDialog(QDialog):
         self.ui.fileList.setUniformItemSizes(True)
         scrollTo = None
         for filePath, fileStatus in repoStatus.items():
-            if (fileStatus & porcelain.GIT_STATUS_INDEX_MASK) and (fileStatus & porcelain.GIT_STATUS_WT_MASK):
+            if (fileStatus & GIT_STATUS_INDEX_MASK) and (fileStatus & GIT_STATUS_WT_MASK):
                 self.ui.indexAndWtWarning.setVisible(True)
 
             listItem = QListWidgetItem(filePath, self.ui.fileList)

@@ -1,7 +1,6 @@
-from gitfourchette import porcelain
+from gitfourchette.porcelain import *
 from gitfourchette.trtables import TrTables
 import enum
-import pygit2
 import os
 import re
 import stat
@@ -19,7 +18,7 @@ class AuthorDisplayStyle(enum.IntEnum):
     ABBREVIATED_EMAIL = 6
 
 
-def abbreviatePerson(sig: pygit2.Signature, style: AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME):
+def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME):
     if style == AuthorDisplayStyle.FULL_NAME:
         return sig.name
 
@@ -47,15 +46,15 @@ def abbreviatePerson(sig: pygit2.Signature, style: AuthorDisplayStyle = AuthorDi
         return sig.email
 
 
-def shortHash(oid: pygit2.Oid) -> str:
+def shortHash(oid: Oid) -> str:
     from gitfourchette.settings import prefs
     return oid.hex[:prefs.shortHashChars]
 
 
 def dumpTempBlob(
-        repo: pygit2.Repository,
+        repo: Repo,
         dir: str,
-        entry: pygit2.DiffFile | pygit2.IndexEntry | None,
+        entry: DiffFile | IndexEntry | None,
         inBrackets: str):
 
     # In merge conflicts, the IndexEntry may be None (for the ancestor, etc.)
@@ -63,7 +62,7 @@ def dumpTempBlob(
         return ""
 
     blobId = entry.id
-    blob: pygit2.Blob = repo[blobId].peel(pygit2.Blob)
+    blob = repo.peel_blob(blobId)
     name, ext = os.path.splitext(os.path.basename(entry.path))
     name = F"[{inBrackets}]{name}{ext}"
     path = os.path.join(dir, name)
@@ -80,9 +79,9 @@ def dumpTempBlob(
 
 def nameValidationMessage(name: str, reservedNames: list[str], nameTakenMessage: str = "") -> str:
     try:
-        porcelain.validateRefName(name, reservedNames)
-    except porcelain.NameValidationError as exc:
-        if exc.code == porcelain.NameValidationError.NAME_TAKEN and nameTakenMessage:
+        validate_refname(name, reservedNames)
+    except NameValidationError as exc:
+        if exc.code == NameValidationError.NAME_TAKEN and nameTakenMessage:
             return nameTakenMessage
         else:
             return TrTables.refNameValidation(exc.code)
@@ -91,6 +90,6 @@ def nameValidationMessage(name: str, reservedNames: list[str], nameTakenMessage:
 
 
 def simplifyOctalFileMode(m: int):
-    if m in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]:
+    if m in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]:
         m &= ~0o100000
     return m

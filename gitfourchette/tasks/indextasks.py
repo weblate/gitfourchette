@@ -1,14 +1,13 @@
-from gitfourchette import porcelain
 from gitfourchette import reverseunidiff
 from gitfourchette.diffview.diffview import PatchPurpose
 from gitfourchette.nav import NavLocator
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
 import os
-import pygit2
 
 
 class _BaseStagingTask(RepoTask):
@@ -24,20 +23,20 @@ class _BaseStagingTask(RepoTask):
 
 
 class StageFiles(_BaseStagingTask):
-    def flow(self, patches: list[pygit2.Patch]):
+    def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to stage (may happen if user keeps pressing Enter in file list view)
             QApplication.beep()
             yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.stageFiles(self.repo, patches)
+        self.repo.stage_files(patches)
 
 
 class DiscardFiles(_BaseStagingTask):
     def effects(self):
         return TaskEffects.Workdir
 
-    def flow(self, patches: list[pygit2.Patch]):
+    def flow(self, patches: list[Patch]):
         textPara = []
 
         verb = self.tr("Discard changes", "Button label")
@@ -48,7 +47,7 @@ class DiscardFiles(_BaseStagingTask):
         elif len(patches) == 1:
             patch = patches[0]
             path = patch.delta.new_file.path
-            if patch.delta.status == pygit2.GIT_DELTA_UNTRACKED:
+            if patch.delta.status == GIT_DELTA_UNTRACKED:
                 textPara.append(self.tr("Really delete <b>“{0}”</b>?").format(escape(path)))
                 verb = self.tr("Delete file", "Button label")
             else:
@@ -65,21 +64,21 @@ class DiscardFiles(_BaseStagingTask):
         yield from self._flowBeginWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
         Trash(self.repo).backupPatches(patches)
-        porcelain.discardFiles(self.repo, paths)
+        self.repo.discard_files(paths)
 
 
 class UnstageFiles(_BaseStagingTask):
-    def flow(self, patches: list[pygit2.Patch]):
+    def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
             yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.unstageFiles(self.repo, patches)
+        self.repo.unstage_files(patches)
 
 
 class DiscardModeChanges(_BaseStagingTask):
-    def flow(self, patches: list[pygit2.Patch]):
+    def flow(self, patches: list[Patch]):
         textPara = []
 
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
@@ -99,17 +98,17 @@ class DiscardModeChanges(_BaseStagingTask):
 
         yield from self._flowBeginWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
-        porcelain.discardModeChanges(self.repo, paths)
+        self.repo.discard_mode_changes(paths)
 
 
 class UnstageModeChanges(_BaseStagingTask):
-    def flow(self, patches: list[pygit2.Patch]):
+    def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
             yield from self._flowAbort()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.unstageModeChanges(self.repo, patches)
+        self.repo.unstage_mode_changes(patches)
 
 
 class ApplyPatch(RepoTask):
@@ -118,7 +117,7 @@ class ApplyPatch(RepoTask):
         # TODO: Show Patched File In Workdir
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
-    def flow(self, fullPatch: pygit2.Patch, subPatch: bytes, purpose: PatchPurpose):
+    def flow(self, fullPatch: Patch, subPatch: bytes, purpose: PatchPurpose):
         if not subPatch:
             yield from self._applyFullPatch(fullPatch, purpose)
             return
@@ -138,14 +137,14 @@ class ApplyPatch(RepoTask):
                 buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
             Trash(self.repo).backupPatch(subPatch, fullPatch.delta.new_file.path)
-            applyLocation = pygit2.GIT_APPLY_LOCATION_WORKDIR
+            applyLocation = GIT_APPLY_LOCATION_WORKDIR
         else:
-            applyLocation = pygit2.GIT_APPLY_LOCATION_INDEX
+            applyLocation = GIT_APPLY_LOCATION_INDEX
 
         yield from self._flowBeginWorkerThread()
-        porcelain.applyPatch(self.repo, subPatch, applyLocation)
+        self.repo.apply(subPatch, applyLocation)
 
-    def _applyFullPatch(self, fullPatch: pygit2.Patch, purpose: PatchPurpose):
+    def _applyFullPatch(self, fullPatch: Patch, purpose: PatchPurpose):
         action = PatchPurpose.getName(purpose)
         verb = PatchPurpose.getName(purpose, verbOnly=True).lower()
         shortPath = os.path.basename(fullPatch.delta.new_file.path)
@@ -172,12 +171,12 @@ class ApplyPatch(RepoTask):
 
         yield from self._flowBeginWorkerThread()
         if purpose & PatchPurpose.UNSTAGE:
-            porcelain.unstageFiles(self.repo, [fullPatch])
+            self.repo.unstage_files([fullPatch])
         elif purpose & PatchPurpose.STAGE:
-            porcelain.stageFiles(self.repo, [fullPatch])
+            self.repo.stage_files([fullPatch])
         elif purpose & PatchPurpose.DISCARD:
             Trash(self.repo).backupPatches([fullPatch])
-            porcelain.discardFiles(self.repo, [fullPatch.delta.new_file.path])
+            self.repo.discard_files([fullPatch.delta.new_file.path])
         else:
             raise KeyError(f"applyFullPatch: unsupported purpose {purpose}")
 
@@ -188,21 +187,21 @@ class RevertPatch(RepoTask):
         # TODO: Show Patched File In Workdir
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
-    def flow(self, fullPatch: pygit2.Patch, patchData: bytes):
+    def flow(self, fullPatch: Patch, patchData: bytes):
         if not patchData:
             yield from self._flowAbort(self.tr("There’s nothing to revert in the selection."))
 
-        diff = porcelain.patchApplies(self.repo, patchData, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
+        diff = self.repo.applies_breakdown(patchData, location=GIT_APPLY_LOCATION_WORKDIR)
         if not diff:
             yield from self._flowAbort(
                 self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
 
         yield from self._flowBeginWorkerThread()
-        diff = porcelain.applyPatch(self.repo, diff, location=pygit2.GIT_APPLY_LOCATION_WORKDIR)
+        diff = self.repo.apply(diff, location=GIT_APPLY_LOCATION_WORKDIR)
 
         # After the task, jump to a NavLocator that points to any file that was modified by the patch
         for p in diff:
-            if p.delta.status != pygit2.GIT_DELTA_DELETED:
+            if p.delta.status != GIT_DELTA_DELETED:
                 self.jumpTo = NavLocator.inUnstaged(p.delta.new_file.path)
                 break
 
@@ -211,29 +210,29 @@ class HardSolveConflict(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
-    def flow(self, path: str, keepOid: pygit2.Oid):
+    def flow(self, path: str, keepOid: Oid):
         yield from self._flowBeginWorkerThread()
         repo = self.repo
         fullPath = os.path.join(repo.workdir, path)
 
-        porcelain.refreshIndex(repo)
+        repo.refresh_index()
         assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
 
         trash = Trash(repo)
         trash.backupFile(path)
 
         # TODO: we should probably set the modes correctly and stuff as well
-        if keepOid == porcelain.BLANK_OID:
+        if keepOid == NULL_OID:
             os.unlink(fullPath)
         else:
-            blob: pygit2.Blob = repo[keepOid].peel(pygit2.Blob)
+            blob = repo.peel_blob(keepOid)
             with open(fullPath, "wb") as f:
                 f.write(blob.data)
 
         del repo.index.conflicts[path]
         assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
 
-        if keepOid != porcelain.BLANK_OID:
+        if keepOid != NULL_OID:
             # Stage the file so it doesn't show up in both file lists
             repo.index.add(path)
 
@@ -252,7 +251,7 @@ class MarkConflictSolved(RepoTask):
         yield from self._flowBeginWorkerThread()
         repo = self.repo
 
-        porcelain.refreshIndex(repo)
+        repo.refresh_index()
         assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
 
         del repo.index.conflicts[path]
@@ -269,7 +268,7 @@ class AcceptMergeConflictResolution(RepoTask):
         repo = self.repo
 
         with open(umc.scratchPath, "rb") as scratchFile, \
-                open(porcelain.workdirPath(repo, umc.conflict.ours.path), "wb") as ourFile:
+                open(repo.in_workdir(umc.conflict.ours.path), "wb") as ourFile:
             data = scratchFile.read()
             ourFile.write(data)
 
@@ -305,18 +304,21 @@ class ApplyPatchFile(RepoTask):
         with open(path, 'rt', encoding='utf-8') as patchFile:
             patchData = patchFile.read()
 
-        # May raise: IOError, GitError,
-        # UnicodeDecodeError (if passing in a random binary file), KeyError ('no patch found')
-        loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
+        # May raise:
+        # - IOError
+        # - GitError
+        # - UnicodeDecodeError (if passing in a random binary file)
+        # - KeyError ('no patch found')
+        loadedDiff: Diff = Diff.parse_diff(patchData)
 
         # Reverse the patch if user wants to.
         if reverse:
             patchData = reverseunidiff.reverseUnidiff(loadedDiff.patch)
-            loadedDiff: pygit2.Diff = porcelain.loadPatch(patchData)
+            loadedDiff: Diff = Diff.parse_diff(patchData)
 
         # Do a dry run first so we don't litter the workdir with a patch that failed halfway through.
         # If the patch doesn't apply, this raises a MultiFileError.
-        diff = porcelain.patchApplies(self.repo, patchData)
+        diff = self.repo.applies_breakdown(patchData)
         deltas = list(diff.deltas)
 
         yield from self._flowExitWorkerThread()
@@ -341,7 +343,7 @@ class ApplyPatchFile(RepoTask):
 
         yield from self._flowConfirm(title, text, verb=self.tr("Apply patch"))
 
-        porcelain.applyPatch(self.repo, loadedDiff, pygit2.GIT_APPLY_LOCATION_WORKDIR)
+        self.repo.apply(loadedDiff, GIT_APPLY_LOCATION_WORKDIR)
 
 
 class ApplyPatchFileReverse(ApplyPatchFile):

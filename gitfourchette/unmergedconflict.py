@@ -1,14 +1,12 @@
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import tempdir
-from gitfourchette.forms.prefsdialog import PrefsDialog
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.exttools import openInMergeTool, PREFKEY_MERGETOOL
 from gitfourchette.diffview.specialdiff import DiffConflict
 import filecmp
 import os
-import pygit2
 import shutil
 import tempfile
 
@@ -22,7 +20,7 @@ class UnmergedConflict(QObject):
 
     process: QProcess | None
 
-    def __init__(self, parent: QWidget, repo: pygit2.Repository, conflict: DiffConflict):
+    def __init__(self, parent: QWidget, repo: Repo, conflict: DiffConflict):
         super().__init__(parent)
 
         self.conflict = conflict
@@ -39,7 +37,7 @@ class UnmergedConflict(QObject):
         self.scratchPath = os.path.join(mergeDirPath, "[MERGED]" + os.path.basename(conflict.ours.path))
 
         # Make sure the output path exists so the FSW can begin watching it
-        shutil.copyfile(porcelain.workdirPath(repo, self.conflict.ours.path), self.scratchPath)
+        shutil.copyfile(repo.in_workdir(self.conflict.ours.path), self.scratchPath)
 
         self.process = None
 
@@ -59,7 +57,7 @@ class UnmergedConflict(QObject):
 
         # If output file still contains original contents,
         # the merge tool probably hasn't done anything
-        if filecmp.cmp(self.scratchPath, porcelain.workdirPath(self.repo, self.conflict.ours.path)):
+        if filecmp.cmp(self.scratchPath, self.repo.in_workdir(self.conflict.ours.path)):
             self.mergeFailed.emit()
             return
 

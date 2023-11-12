@@ -1,13 +1,11 @@
 from pathlib import Path
 from typing import Callable, Generator
 
-import pygit2
-
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
 from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.porcelain import BLANK_OID, isZeroId
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
@@ -21,11 +19,11 @@ class SelectedFileBatchError(Exception):
 class FileList(QListView):
     jump = Signal(NavLocator)
     nothingClicked = Signal()
-    openDiffInNewWindow = Signal(pygit2.Patch, NavLocator)
+    openDiffInNewWindow = Signal(Patch, NavLocator)
     stashFiles = Signal(list)  # list[str]
 
     navContext: NavContext
-    commitOid: pygit2.Oid
+    commitOid: Oid
 
     def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
@@ -34,7 +32,7 @@ class FileList(QListView):
         self.setModel(flModel)
 
         self.navContext = navContext
-        self.commitOid = BLANK_OID
+        self.commitOid = NULL_OID
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
@@ -49,12 +47,12 @@ class FileList(QListView):
     def isEmpty(self):
         return self.model().rowCount() == 0
 
-    def setContents(self, diffs: list[pygit2.Diff]):
+    def setContents(self, diffs: list[Diff]):
         self.flModel.setDiffs(diffs)
 
     def clear(self):
         self.flModel.clear()
-        self.commitOid = BLANK_OID
+        self.commitOid = NULL_OID
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         numIndexes = len(self.selectedIndexes())
@@ -98,7 +96,7 @@ class FileList(QListView):
                 pdsAction(translate("Prefs", "Show filename only"), PathDisplayStyle.SHOW_FILENAME_ONLY),
             ])
 
-    def confirmBatch(self, callback: Callable[[pygit2.Patch], None], title: str, prompt: str, threshold: int = 3):
+    def confirmBatch(self, callback: Callable[[Patch], None], title: str, prompt: str, threshold: int = 3):
         entries = list(self.selectedEntries())
 
         def runBatch():
@@ -130,7 +128,7 @@ class FileList(QListView):
             qmb.show()
 
     def openWorkdirFile(self):
-        def run(patch: pygit2.Patch):
+        def run(patch: Patch):
             entryPath = os.path.join(self.repo.workdir, patch.delta.new_file.path)
             openInTextEditor(self, entryPath)
 
@@ -141,12 +139,12 @@ class FileList(QListView):
         self.confirmBatch(self._openInDiffTool, self.tr("Open in external diff tool"),
                           self.tr("Really open <b>{0} files</b> in external diff tool?"))
 
-    def _openInDiffTool(self, patch: pygit2.Patch):
-        if isZeroId(patch.delta.new_file.id):
+    def _openInDiffTool(self, patch: Patch):
+        if patch.delta.new_file.id == NULL_OID:
             raise SelectedFileBatchError(
                 self.tr("{0}: Can’t open external diff tool on a deleted file.").format(patch.delta.new_file.path))
 
-        if isZeroId(patch.delta.old_file.id):
+        if patch.delta.old_file.id == NULL_OID:
             raise SelectedFileBatchError(
                 self.tr("{0}: Can’t open external diff tool on a new file.").format(patch.delta.new_file.path))
 
@@ -171,7 +169,7 @@ class FileList(QListView):
         openInDiffTool(self, oldPath, newPath)
 
     def showInFolder(self):
-        def run(entry: pygit2.Patch):
+        def run(entry: Patch):
             path = os.path.join(self.repo.workdir, entry.delta.new_file.path)
             path = os.path.normpath(path)  # get rid of any trailing slashes (submodules)
             if not os.path.exists(path):  # check exists, not isfile, for submodules
@@ -251,17 +249,17 @@ class FileList(QListView):
         else:
             super().mouseMoveEvent(event)
 
-    def selectedEntries(self) -> Generator[pygit2.Patch, None, None]:
+    def selectedEntries(self) -> Generator[Patch, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():
-            patch: pygit2.Patch = index.data(Qt.ItemDataRole.UserRole)
+            patch: Patch = index.data(Qt.ItemDataRole.UserRole)
             if not patch or not patch.delta:
                 raise ValueError(self.tr("This file appears to have changed since we last read it. Try refreshing the window."))
-            assert isinstance(patch, pygit2.Patch)
+            assert isinstance(patch, Patch)
             yield patch
 
     @property
-    def repo(self) -> pygit2.Repository:
+    def repo(self) -> Repo:
         return self.repoWidget.state.repo
 
     def earliestSelectedRow(self):
@@ -295,7 +293,7 @@ class FileList(QListView):
 
         bigpatch = b""
         for patch in entries:
-            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+            if patch.delta.status == GIT_DELTA_DELETED:
                 diffFile = patch.delta.old_file
             else:
                 diffFile = patch.delta.new_file
@@ -361,7 +359,7 @@ class FileList(QListView):
             return None
 
     def openHeadRevision(self):
-        def run(patch: pygit2.Patch):
+        def run(patch: Patch):
             tempPath = dumpTempBlob(self.repo, getSessionTemporaryDirectory(), patch.delta.old_file, "HEAD")
             openInTextEditor(self, tempPath)
 
@@ -384,14 +382,14 @@ class FileList(QListView):
         for entry in entries:
             om = entry.delta.old_file.mode
             nm = entry.delta.new_file.mode
-            if (entry.delta.status in [pygit2.GIT_DELTA_MODIFIED, pygit2.GIT_DELTA_RENAMED]
+            if (entry.delta.status in [GIT_DELTA_MODIFIED, GIT_DELTA_RENAMED]
                     and om != nm
-                    and nm in [pygit2.GIT_FILEMODE_BLOB, pygit2.GIT_FILEMODE_BLOB_EXECUTABLE]):
+                    and nm in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]):
                 action.enabled = True
                 if n == 1:
-                    if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+                    if nm == GIT_FILEMODE_BLOB_EXECUTABLE:
                         action.caption = self.tr("Revert Mode to Non-Executable")
-                    elif nm == pygit2.GIT_FILEMODE_BLOB:
+                    elif nm == GIT_FILEMODE_BLOB:
                         action.caption = self.tr("Revert Mode to Executable")
 
         return action

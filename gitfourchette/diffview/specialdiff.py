@@ -3,12 +3,9 @@ import contextlib
 import re
 from dataclasses import dataclass
 
-import pygit2
-from pygit2 import submodule
-
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import isZeroId, BLANK_OID
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
@@ -16,9 +13,9 @@ from gitfourchette.trtables import TrTables
 
 @dataclass
 class DiffConflict:
-    ancestor: pygit2.IndexEntry | None
-    ours: pygit2.IndexEntry | None
-    theirs: pygit2.IndexEntry | None
+    ancestor: IndexEntry | None
+    ours: IndexEntry | None
+    theirs: IndexEntry | None
 
     @property
     def deletedByUs(self):
@@ -33,21 +30,21 @@ class DiffImagePair:
     oldImage: QImage
     newImage: QImage
 
-    def __init__(self, repo: pygit2.Repository, delta: pygit2.DiffDelta, locator: NavLocator):
-        if not isZeroId(delta.old_file.id):
-            imageDataA = repo[delta.old_file.id].peel(pygit2.Blob).data
+    def __init__(self, repo: Repo, delta: DiffDelta, locator: NavLocator):
+        if delta.old_file.id != NULL_OID:
+            imageDataA = repo.peel_blob(delta.old_file.id).data
         else:
             imageDataA = b''
 
-        if isZeroId(delta.new_file.id):
+        if delta.new_file.id == NULL_OID:
             imageDataB = b''
         elif locator.context.isDirty():
-            fullPath = os.path.join(repo.workdir, delta.new_file.path)
+            fullPath = repo.in_workdir(delta.new_file.path)
             assert os.lstat(fullPath).st_size == delta.new_file.size, "Size mismatch in unstaged image file"
             with open(fullPath, 'rb') as file:
                 imageDataB = file.read()
         else:
-            imageDataB = repo[delta.new_file.id].peel(pygit2.Blob).data
+            imageDataB = repo.peel_blob(delta.new_file.id).data
 
         self.oldImage = QImage.fromData(imageDataA)
         self.newImage = QImage.fromData(imageDataB)
@@ -75,22 +72,22 @@ class SpecialDiffError(Exception):
         self.longform = longform
 
     @staticmethod
-    def noChange(delta: pygit2.DiffDelta):
+    def noChange(delta: DiffDelta):
         message = translate("Diff", "File contents didn’t change.")
         details = []
         longform = []
 
-        oldFile: pygit2.DiffFile = delta.old_file
-        newFile: pygit2.DiffFile = delta.new_file
+        oldFile: DiffFile = delta.old_file
+        newFile: DiffFile = delta.new_file
 
-        oldFileExists = not isZeroId(oldFile.id)
-        newFileExists = not isZeroId(newFile.id)
+        oldFileExists = oldFile.id != NULL_OID
+        newFileExists = newFile.id != NULL_OID
 
         if not newFileExists:
             message = translate("Diff", "Empty file was deleted.")
 
         if not oldFileExists:
-            if delta.new_file.mode == pygit2.GIT_FILEMODE_TREE:
+            if delta.new_file.mode == GIT_FILEMODE_TREE:
                 treePath = os.path.normpath(delta.new_file.path)
                 treeName = os.path.basename(treePath)
                 message = translate("Diff", "This untracked folder is the root of another Git repository.")
@@ -103,7 +100,7 @@ class SpecialDiffError(Exception):
                 prompt = translate("Diff", "Absorb “{0}” as submodule").format(treeName)
                 taskLink = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
                 longform.append(f"<center><p><a href='{taskLink}'>{prompt}</a></p></center>")
-            elif delta.status in [pygit2.GIT_DELTA_ADDED, pygit2.GIT_DELTA_UNTRACKED]:
+            elif delta.status in [GIT_DELTA_ADDED, GIT_DELTA_UNTRACKED]:
                 message = translate("Diff", "New empty file.")
             else:
                 message = translate("Diff", "File is empty.")
@@ -119,7 +116,7 @@ class SpecialDiffError(Exception):
         return SpecialDiffError(message, "\n".join(details), longform="\n".join(longform))
 
     @staticmethod
-    def binaryDiff(delta: pygit2.DiffDelta):
+    def binaryDiff(delta: DiffDelta):
         locale = QLocale()
         of = delta.old_file
         nf = delta.new_file
@@ -145,7 +142,7 @@ class SpecialDiffError(Exception):
                 f"{oldHumanSize} &rarr; {newHumanSize}")
 
     @staticmethod
-    def submoduleDiff(repo: pygit2.Repository, submodule: pygit2.Submodule, patch: pygit2.Patch):
+    def submoduleDiff(repo: Repo, submodule: Submodule, patch: Patch):
         def parseSubprojectCommit(match: re.Match):
             hashText = ""
             suffix = ""
@@ -160,7 +157,7 @@ class SpecialDiffError(Exception):
                     suffix = translate("Diff", "(with uncommitted changes)")
                     dirty = True
                 with contextlib.suppress(ValueError):
-                    oid = pygit2.Oid(hex=hashText)
+                    oid = Oid(hex=hashText)
                     hashText = shortHash(oid)
 
             return hashText, suffix, dirty

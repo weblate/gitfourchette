@@ -1,10 +1,10 @@
 from gitfourchette import log
 from gitfourchette import repoconfig
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 import base64
 import os.path
-import pygit2
 import re
 
 
@@ -12,13 +12,13 @@ DLRATE_REFRESH_INTERVAL = 1000
 
 
 AUTH_NAMES = {
-    pygit2.GIT_CREDENTIAL_USERPASS_PLAINTEXT: "userpass_plaintext",
-    pygit2.GIT_CREDENTIAL_SSH_KEY: "ssh_key",
-    pygit2.GIT_CREDENTIAL_SSH_CUSTOM: "ssh_custom",
-    pygit2.GIT_CREDENTIAL_DEFAULT: "default",
-    pygit2.GIT_CREDENTIAL_SSH_INTERACTIVE: "ssh_interactive",
-    pygit2.GIT_CREDENTIAL_USERNAME: "username",
-    pygit2.GIT_CREDENTIAL_SSH_MEMORY: "ssh_memory"
+    GIT_CREDENTIAL_USERPASS_PLAINTEXT: "userpass_plaintext",
+    GIT_CREDENTIAL_SSH_KEY: "ssh_key",
+    GIT_CREDENTIAL_SSH_CUSTOM: "ssh_custom",
+    GIT_CREDENTIAL_DEFAULT: "default",
+    GIT_CREDENTIAL_SSH_INTERACTIVE: "ssh_interactive",
+    GIT_CREDENTIAL_USERNAME: "username",
+    GIT_CREDENTIAL_SSH_MEMORY: "ssh_memory"
 }
 
 
@@ -48,7 +48,7 @@ def isPrivateKeyPassphraseProtected(path: str):
     return b"bcrypt" in keyContents
 
 
-class RemoteLink(QObject, pygit2.RemoteCallbacks):
+class RemoteLink(QObject, RemoteCallbacks):
     userAbort = Signal()
     message = Signal(str)
     progress = Signal(int, int)
@@ -64,7 +64,7 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
 
     def __init__(self, parent: QObject):
         QObject.__init__(self, parent)
-        pygit2.RemoteCallbacks.__init__(self)
+        RemoteCallbacks.__init__(self)
 
         self.setObjectName("RemoteLink")
 
@@ -85,7 +85,7 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
         self.anyKeyIsPassphraseProtected = False
         self.anyKeyIsUnreadable = False
 
-    def discoverKeyFiles(self, remote: pygit2.Remote | None = None):
+    def discoverKeyFiles(self, remote: Remote | None = None):
         # Find remote-specific key files
         if remote:
             privkey = repoconfig.getRemoteKeyFile(remote._repo, remote.name)
@@ -167,7 +167,7 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
         if self.attempts == 1:
             log.info("RemoteLink", "Auths accepted by server:", getAuthNamesFromFlags(allowed_types))
 
-        if self.keypairFiles and (allowed_types & pygit2.credentials.GIT_CREDENTIAL_SSH_KEY):
+        if self.keypairFiles and (allowed_types & GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
             log.info("RemoteLink", "Attempting login with:", compactPath(pubkey))
 
@@ -176,8 +176,8 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
             else:
                 self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
 
-            return pygit2.Keypair(username_from_url, pubkey, privkey, "")
-            # return pygit2.KeypairFromAgent(username_from_url)
+            return Keypair(username_from_url, pubkey, privkey, "")
+            # return KeypairFromAgent(username_from_url)
         elif self.attempts == 0:
             raise NotImplementedError(
                 self.tr("Unsupported authentication type.") + " " +
@@ -201,7 +201,7 @@ class RemoteLink(QObject, pygit2.RemoteCallbacks):
             raise ConnectionRefusedError(self.tr("Credentials rejected by remote."))
 
     @mayAbortNetworkOperation
-    def transfer_progress(self, stats: pygit2.remote.TransferProgress):
+    def transfer_progress(self, stats: TransferProgress):
         if not self.downloadRateTimer.isValid():
             self.downloadRateTimer.start()
             self.receivedBytesOnTimerStart = stats.received_bytes

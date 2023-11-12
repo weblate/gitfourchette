@@ -50,10 +50,10 @@ def testFetchRemote(qtbot, tempDir, mainWindow):
     # Make some modifications to the bare repository that serves as a remote.
     # We're going to create a new branch and delete another.
     # The client must pick up on those modifications once it fetches the remote.
-    with RepositoryContext(barePath) as bareRepo:
+    with RepoContext(barePath) as bareRepo:
         assert bareRepo.is_bare
-        porcelain.newBranch(bareRepo, "new-remote-branch")
-        porcelain.deleteBranch(bareRepo, "no-parent")
+        bareRepo.create_branch_on_head("new-remote-branch")
+        bareRepo.delete_local_branch("no-parent")
 
     rw = mainWindow.openRepo(wd)
 
@@ -69,8 +69,8 @@ def testFetchRemote(qtbot, tempDir, mainWindow):
 
 
 def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
-    oldHead = pygit2.Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
-    newHead = pygit2.Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
+    oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    newHead = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
 
     wd = unpackRepo(tempDir)
 
@@ -78,10 +78,10 @@ def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
 
     # Modify the master branch in the bare repository that serves as a remote.
     # The client must pick up on this modification once it fetches the remote branch.
-    with RepositoryContext(barePath) as bareRepo:
+    with RepoContext(barePath) as bareRepo:
         assert bareRepo.is_bare
         assert bareRepo.head.target == oldHead
-        porcelain.resetHead(bareRepo, newHead, resetMode="soft")  # can't reset hard in bare repos, whatever...
+        bareRepo.reset_head2(newHead, mode="soft")  # can't reset hard in bare repos, whatever...
         assert bareRepo.head.target == newHead
 
     rw = mainWindow.openRepo(wd)

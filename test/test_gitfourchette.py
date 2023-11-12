@@ -2,7 +2,6 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette.forms.commitdialog import CommitDialog
-import pygit2
 
 
 def testEmptyRepo(qtbot, tempDir, mainWindow):
@@ -41,7 +40,7 @@ def testParentlessCommitFileList(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    commitOid = hexToOid("42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+    commitOid = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
     rw.graphView.selectCommit(commitOid)
     assert qlvGetRowData(rw.committedFiles) == ["c/c1.txt"]
 
@@ -50,7 +49,7 @@ def testSaveOldRevision(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    commitOid = hexToOid("6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
+    commitOid = Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
 
     rw.graphView.selectCommit(commitOid)
     assert qlvGetRowData(rw.committedFiles) == ["c/c2.txt"]
@@ -66,7 +65,7 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    commitOid = hexToOid("c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    commitOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     rw.graphView.selectCommit(commitOid)
     assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
@@ -81,12 +80,12 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
 def testCommitSearch(qtbot, tempDir, mainWindow):
     # Commits that contain "first" in their summary
     matchingCommits = [
-        pygit2.Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4"),
-        pygit2.Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"),
-        pygit2.Oid(hex="d31f5a60d406e831d056b8ac2538d515100c2df2"),
-        pygit2.Oid(hex="83d2f0431bcdc9c2fd2c17b828143be6ee4fbe80"),
-        pygit2.Oid(hex="2c349335b7f797072cf729c4f3bb0914ecb6dec9"),
-        pygit2.Oid(hex="ac7e7e44c1885efb472ad54a78327d66bfc4ecef"),
+        Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4"),
+        Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"),
+        Oid(hex="d31f5a60d406e831d056b8ac2538d515100c2df2"),
+        Oid(hex="83d2f0431bcdc9c2fd2c17b828143be6ee4fbe80"),
+        Oid(hex="2c349335b7f797072cf729c4f3bb0914ecb6dec9"),
+        Oid(hex="ac7e7e44c1885efb472ad54a78327d66bfc4ecef"),
     ]
 
     wd = unpackRepo(tempDir)

@@ -1,5 +1,5 @@
-from gitfourchette import porcelain
 from gitfourchette.nav import NavLocator
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.jumptasks import RefreshRepo
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
@@ -12,7 +12,6 @@ from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.forms.ui_identitydialog2 import Ui_IdentityDialog2
 import contextlib
 import html
-import pygit2
 
 
 class NewCommit(RepoTask):
@@ -25,7 +24,7 @@ class NewCommit(RepoTask):
                 self.tr("Please fix merge conflicts in the working directory before committing."))
 
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
-        if not porcelain.hasAnyStagedChanges(self.repo):
+        if not self.repo.any_staged_changes:
             yield from self._flowConfirm(
                 title=self.tr("Create empty commit"),
                 text=paragraphs(
@@ -71,7 +70,7 @@ class NewCommit(RepoTask):
         if not author:
             author = sig
 
-        porcelain.createCommit(self.repo, message, author, committer)
+        self.repo.create_commit_on_head(message, author, committer)
 
         yield from self._flowExitWorkerThread()
         self.rw.state.setDraftCommitMessage(None, None)  # Clear draft message
@@ -93,7 +92,7 @@ class AmendCommit(RepoTask):
                 self.tr("Please fix merge conflicts in the working directory before amending the commit."))
 
         yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
-        headCommit = porcelain.getHeadCommit(self.repo)
+        headCommit = self.repo.head_commit
 
         # TODO: Retrieve draft message
         cd = CommitDialog(
@@ -124,7 +123,7 @@ class AmendCommit(RepoTask):
         cd.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.amendCommit(self.repo, message, author, committer)
+        self.repo.amend_commit_on_head(message, author, committer)
 
         yield from self._flowExitWorkerThread()
         self.setDraftMessage(None)  # Clear draft message
@@ -147,7 +146,7 @@ class SetUpIdentityFirstRun(RepoTask):
         dlg.ui = ui  # for easier access in unit testing
 
         # Initialize with global identity values (if any)
-        initialName, initialEmail = porcelain.getGlobalIdentity()
+        initialName, initialEmail = get_git_global_identity()
         ui.nameEdit.setText(initialName)
         ui.emailEdit.setText(initialEmail)
 
@@ -180,7 +179,7 @@ class SetUpIdentityFirstRun(RepoTask):
 
         yield from self._flowBeginWorkerThread()
         if setGlobally:
-            configObject = pygit2.config.Config.get_global_config()
+            configObject = GitConfig.get_global_config()
         else:
             configObject = self.repo.config
         configObject['user.name'] = name
@@ -192,9 +191,9 @@ class SetUpRepoIdentity(RepoTask):
         return TaskEffects.Nothing
 
     def flow(self):
-        repoName = porcelain.repoName(self.repo)
+        repoName = self.repo.repo_name()
 
-        localName, localEmail = porcelain.getLocalIdentity(self.repo)
+        localName, localEmail = self.repo.get_local_identity()
         useLocalIdentity = bool(localName or localEmail)
 
         dlg = QDialog(self.parentWidget())
@@ -209,7 +208,7 @@ class SetUpRepoIdentity(RepoTask):
         def onLocalIdentityCheckBoxChanged(newState):
             if newState:
                 try:
-                    sig: pygit2.Signature = self.repo.default_signature
+                    sig: Signature = self.repo.default_signature
                     initialName = sig.name
                     initialEmail = sig.email
                 except (KeyError, ValueError):
@@ -222,7 +221,7 @@ class SetUpRepoIdentity(RepoTask):
                 groupBoxTitle = translate("IdentityDialog2", "Custom identity for “{0}”").format(html.escape(repoName))
                 okButtonText = translate("IdentityDialog2", "Set custom identity")
             else:
-                initialName, initialEmail = porcelain.getGlobalIdentity()
+                initialName, initialEmail = get_git_global_identity()
 
                 groupBoxTitle = translate("IdentityDialog2", "Global identity (for “{0}” and other repos)").format(html.escape(repoName))
                 okButtonText = translate("IdentityDialog2", "Set global identity")
@@ -255,11 +254,11 @@ class SetUpRepoIdentity(RepoTask):
 
         if setGlobally:
             try:
-                configObject = pygit2.Config.get_global_config()
+                configObject = GitConfig.get_global_config()
             except OSError:
                 # Last resort, create file
                 # TODO: pygit2 should expose git_config_global or git_config_open_global to python code
-                configObject = pygit2.Config(os.path.expanduser("~/.gitconfig"))
+                configObject = GitConfig(os.path.expanduser("~/.gitconfig"))
 
             # Nuke repo-specific identity
             with contextlib.suppress(KeyError):
@@ -277,11 +276,11 @@ class CheckoutCommit(RepoTask):
     def effects(self):
         return TaskEffects.Refs | TaskEffects.Head
 
-    def flow(self, oid: pygit2.Oid):
-        refs = porcelain.refsPointingAtCommit(self.repo, oid)
-        refs = [r.removeprefix(porcelain.HEADS_PREFIX) for r in refs if r.startswith(porcelain.HEADS_PREFIX)]
+    def flow(self, oid: Oid):
+        refs = self.repo.listall_refs_pointing_at(oid)
+        refs = [r.removeprefix(GIT_HEADS_PREFIX) for r in refs if r.startswith(GIT_HEADS_PREFIX)]
 
-        commitMessage = porcelain.getCommitMessage(self.repo, oid)
+        commitMessage = self.repo.get_commit_message(oid)
         commitMessage, junk = messageSummary(commitMessage)
 
         dlg = QDialog(self.parentWidget())
@@ -310,7 +309,7 @@ class CheckoutCommit(RepoTask):
 
         if ui.detachedHeadRadioButton.isChecked():
             yield from self._flowBeginWorkerThread()
-            porcelain.checkoutCommit(self.repo, oid)
+            self.repo.checkout_commit(oid)
 
         elif ui.switchToLocalBranchRadioButton.isChecked():
             branchName = ui.switchToLocalBranchComboBox.currentText()
@@ -329,32 +328,32 @@ class RevertCommit(RepoTask):
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
-    def flow(self, oid: pygit2.Oid):
+    def flow(self, oid: Oid):
         yield from self._flowBeginWorkerThread()
-        porcelain.revertCommit(self.repo, oid)
+        self.repo.revert_commit_in_workdir(oid)
 
 
 class ResetHead(RepoTask):
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
-    def flow(self, onto: pygit2.Oid, resetMode: str, recurseSubmodules: bool):
+    def flow(self, onto: Oid, resetMode: str, recurseSubmodules: bool):
         yield from self._flowBeginWorkerThread()
-        porcelain.resetHead(self.repo, onto, resetMode, recurseSubmodules)
+        self.repo.reset_head2(onto, resetMode, recurseSubmodules)
 
 
 class NewTag(RepoTask):
     def effects(self):
         return TaskEffects.Refs
 
-    def flow(self, oid: pygit2.Oid = None, signIt: bool = False):
+    def flow(self, oid: Oid = None, signIt: bool = False):
         if signIt:
             yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
 
         if not oid:
-            oid = porcelain.getHeadCommitOid(self.repo)
+            oid = self.repo.head_commit_oid
 
-        reservedNames = porcelain.getTagNames(self.repo)
+        reservedNames = self.repo.listall_tags()
         nameTaken = self.tr("This name is already taken by another tag.")
 
         dlg = showTextInputDialog(
@@ -372,9 +371,9 @@ class NewTag(RepoTask):
         yield from self._flowBeginWorkerThread()
 
         if signIt:
-            self.repo.create_tag(tagName, oid, pygit2.GIT_OBJ_COMMIT, self.repo.default_signature, "")
+            self.repo.create_tag(tagName, oid, GIT_OBJ_COMMIT, self.repo.default_signature, "")
         else:
-            self.repo.create_reference(porcelain.TAGS_PREFIX + tagName, oid)
+            self.repo.create_reference(GIT_TAGS_PREFIX + tagName, oid)
 
 
 class DeleteTag(RepoTask):
@@ -392,11 +391,11 @@ class DeleteTag(RepoTask):
         yield from self._flowBeginWorkerThread()
 
         # Stay on this commit after the operation
-        tagTarget = porcelain.getCommitOidFromTagName(self.repo, tagName)
+        tagTarget = self.repo.get_commit_oid_from_tag_name(tagName)
         if tagTarget:
             self.jumpTo = NavLocator.inCommit(tagTarget)
 
-        porcelain.deleteTag(self.repo, tagName)
+        self.repo.delete_tag(tagName)
 
 
 class CherrypickCommit(RepoTask):
@@ -406,19 +405,19 @@ class CherrypickCommit(RepoTask):
             effects |= TaskEffects.Refs | TaskEffects.Head
         return effects
 
-    def flow(self, oid: pygit2.Oid):
+    def flow(self, oid: Oid):
         self.didCommit = False
 
         yield from self._flowBeginWorkerThread()
-        porcelain.cherrypick(self.repo, oid)
-        anyConflicts = bool(self.repo.index.conflicts)
-        commit = self.repo[oid].peel(pygit2.Commit)
+        self.repo.cherrypick(oid)
+        anyConflicts = self.repo.any_conflicts
+        commit = self.repo.peel_commit(oid)
 
         self.repo.state_cleanup()  # also cleans up .git/MERGE_MSG
 
         yield from self._flowExitWorkerThread()
 
-        if not anyConflicts and not porcelain.hasAnyStagedChanges(self.repo):
+        if not anyConflicts and not self.repo.any_staged_changes:
             info = self.tr("There’s nothing to cherry-pick from “{0}” "
                            "that the current branch doesn’t already have.").format(shortHash(oid))
             yield from self._flowAbort(info, "information")

@@ -7,7 +7,6 @@ from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.sidebar.sidebarmodel import EItem
-import pygit2
 
 
 def testCommit(qtbot, tempDir, mainWindow):
@@ -32,16 +31,15 @@ def testCommit(qtbot, tempDir, mainWindow):
 
     dialog.accept()
 
-    headCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
-
+    headCommit = rw.repo.head_commit
     assert headCommit.message == "Some New Commit"
     assert headCommit.author.name == "Custom Author"
     assert headCommit.author.email == "custom.author@example.com"
     assert headCommit.author.time == enteredDate.toSecsSinceEpoch()
 
     assert len(headCommit.parents) == 1
-    diff: pygit2.Diff = rw.repo.diff(headCommit.parents[0], headCommit)
-    patches: list[pygit2.Patch] = list(diff)
+    diff = rw.repo.diff(headCommit.parents[0], headCommit)
+    patches: list[Patch] = list(diff)
     assert len(patches) == 1
     assert patches[0].delta.new_file.path == "a/a1.txt"
 
@@ -63,7 +61,7 @@ def testCommitUntrackedFileInEmptyRepo(qtbot, tempDir, mainWindow):
     dialog.accept()
 
     rows = qlvGetRowData(rw.graphView, CommitLogModel.CommitRole)
-    commit: pygit2.Commit = rows[-1].peel(pygit2.Commit)
+    commit: Commit = rows[-1].peel(Commit)
     assert commit.message == "Initial commit"
 
 
@@ -115,7 +113,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     with qtbot.waitSignal(dialog.destroyed):  # upon exiting context, wait for dialog to be gone
         dialog.accept()
 
-    headCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
+    headCommit = rw.repo.head_commit
     assert headCommit.message == newMessage
     assert headCommit.author.name == newAuthorName
     assert headCommit.author.email == newAuthorEmail
@@ -178,7 +176,7 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
     commitDialog.ui.summaryEditor.setText("ca geht's mol?")
     commitDialog.accept()
 
-    headCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
+    headCommit = rw.repo.head_commit
     assert headCommit.message == "ca geht's mol?"
     assert headCommit.author.name == "Archibald Haddock"
     assert headCommit.author.email == "1e15sabords@example.com"
@@ -188,7 +186,7 @@ def testResetHeadToCommit(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    oid1 = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
 
     assert rw.repo.head.target != oid1  # make sure we're not starting from this commit
     assert rw.repo.branches.local['master'].target != oid1
@@ -209,8 +207,8 @@ def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    for oid in [pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6"),
-                pygit2.Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4"),
+    for oid in [Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6"),
+                Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4"),
                 ]:
         rw.graphView.selectCommit(oid)
         triggerMenuAction(rw.graphView.makeContextMenu(), r"check.?out")
@@ -220,7 +218,7 @@ def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
         dlg.accept()
 
         assert repo.head_is_detached
-        assert repo.head.peel(pygit2.Commit).oid == oid
+        assert repo.head_commit_oid == oid
 
         assert rw.graphView.currentCommitOid == oid, "graphview's selected commit has jumped around"
 
@@ -228,10 +226,10 @@ def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
 def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    oid = pygit2.Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
+    oid = Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
 
-    with RepositoryContext(wd) as repo:
-        porcelain.checkoutCommit(repo, oid)
+    with RepoContext(wd) as repo:
+        repo.checkout_commit(oid)
 
     rw = mainWindow.openRepo(wd)
 
@@ -239,7 +237,7 @@ def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
     assert rw.repo.head.target == oid
 
     displayedCommits = qlvGetRowData(rw.graphView, Qt.ItemDataRole.UserRole)
-    assert rw.repo.head.peel(pygit2.Commit) in displayedCommits
+    assert rw.repo.head_commit in displayedCommits
 
     rw.commitButton.click()
     acceptQMessageBox(rw, "create.+empty commit")
@@ -250,7 +248,7 @@ def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
     assert rw.repo.head_is_detached
     assert rw.repo.head.target != oid  # detached HEAD should no longer point to initial commit
 
-    newHeadCommit: pygit2.Commit = rw.repo.head.peel(pygit2.Commit)
+    newHeadCommit = rw.repo.head_commit
     assert newHeadCommit.message == "les chenilles et les chevaux"
 
     displayedCommits = qlvGetRowData(rw.graphView, Qt.ItemDataRole.UserRole)
@@ -261,22 +259,22 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    oid = pygit2.Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     rw.graphView.selectCommit(oid)
     triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
 
     rw.graphView.selectUncommittedChanges()
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
-    assert rw.repo.status() == {"c/c2-2.txt": pygit2.GIT_STATUS_INDEX_NEW}
+    assert rw.repo.status() == {"c/c2-2.txt": GIT_STATUS_INDEX_NEW}
 
 
 def testCherrypick(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    with RepositoryContext(wd) as repo:
-        porcelain.checkoutLocalBranch(repo, "no-parent")
+    with RepoContext(wd) as repo:
+        repo.checkout_local_branch("no-parent")
 
-    oid = pygit2.Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
+    oid = Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
 
     rw = mainWindow.openRepo(wd)
 
@@ -284,7 +282,7 @@ def testCherrypick(qtbot, tempDir, mainWindow):
     triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
 
     assert rw.stageSplitter.isVisibleTo(rw)
-    assert rw.repo.status() == {"a/a1.txt": pygit2.GIT_STATUS_INDEX_NEW}
+    assert rw.repo.status() == {"a/a1.txt": GIT_STATUS_INDEX_NEW}
 
     acceptQMessageBox(rw, "cherry.+success.+commit")
 
@@ -293,7 +291,7 @@ def testCherrypick(qtbot, tempDir, mainWindow):
 
     dialog.accept()
 
-    headCommit = porcelain.getHeadCommit(rw.repo)
+    headCommit = rw.repo.head_commit
     assert headCommit.message == "First a/a1"
     rw.graphView.selectCommit(headCommit.oid)
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
@@ -304,9 +302,9 @@ def testNewTag(qtbot, tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    assert newTag not in porcelain.getTagNames(rw.repo)
+    assert newTag not in rw.repo.listall_tags()
 
-    oid = pygit2.Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
+    oid = Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
 
     rw.graphView.selectCommit(oid)
     triggerMenuAction(rw.graphView.makeContextMenu(), "tag this commit")
@@ -316,7 +314,7 @@ def testNewTag(qtbot, tempDir, mainWindow):
     QTest.keyClicks(lineEdit, newTag)
     dlg.accept()
 
-    assert newTag in porcelain.getTagNames(rw.repo)
+    assert newTag in rw.repo.listall_tags()
 
 
 def testDeleteTag(qtbot, tempDir, mainWindow):
@@ -324,10 +322,10 @@ def testDeleteTag(qtbot, tempDir, mainWindow):
 
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    assert tagToDelete in porcelain.getTagNames(rw.repo)
+    assert tagToDelete in rw.repo.listall_tags()
 
     menu = rw.sidebar.generateMenuForEntry(EItem.Tag, tagToDelete)
     triggerMenuAction(menu, "delete")
 
     acceptQMessageBox(rw, "delete tag")
-    assert tagToDelete not in porcelain.getTagNames(rw.repo)
+    assert tagToDelete not in rw.repo.listall_tags()

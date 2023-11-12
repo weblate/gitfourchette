@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from typing import Any
 
 import contextlib
-import pygit2
 
 from gitfourchette import log
 from gitfourchette import settings
+from gitfourchette.porcelain import *
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -15,38 +15,38 @@ PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
 
 
-def deltaModeText(delta: pygit2.DiffDelta):
+def deltaModeText(delta: DiffDelta):
     om = delta.old_file.mode
     nm = delta.new_file.mode
 
     if om != 0 and nm != 0 and om != nm:
         # Mode change
-        if nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+        if nm == GIT_FILEMODE_BLOB_EXECUTABLE:
             return "+x"
-        elif om == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+        elif om == GIT_FILEMODE_BLOB_EXECUTABLE:
             return "-x"
         else:
             return ""
     elif om == 0:
         # New file
-        if nm in [0, pygit2.GIT_FILEMODE_BLOB]:
+        if nm in [0, GIT_FILEMODE_BLOB]:
             pass
-        elif nm == pygit2.GIT_FILEMODE_BLOB_EXECUTABLE:
+        elif nm == GIT_FILEMODE_BLOB_EXECUTABLE:
             return "+x"
         else:
             return TrTables.fileMode(nm)
 
 
-def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: bool):
+def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
     if not delta:
         return ""
 
     locale = QLocale()
-    of: pygit2.DiffFile = delta.old_file
-    nf: pygit2.DiffFile = delta.new_file
+    of: DiffFile = delta.old_file
+    nf: DiffFile = delta.new_file
 
     sc = delta.status_char()
-    if delta.status == pygit2.GIT_DELTA_CONFLICTED:  # libgit2 should arguably return "U" (unmerged) for conflicts, but it doesn't
+    if delta.status == GIT_DELTA_CONFLICTED:  # libgit2 should arguably return "U" (unmerged) for conflicts, but it doesn't
         sc = "U"
 
     text = "<p style='white-space: pre'>" + escape(nf.path)
@@ -76,7 +76,7 @@ def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: boo
             text += newLine(legend, f"{TrTables.fileMode(of.mode)} &rarr; {TrTables.fileMode(nf.mode)}")
 
     # Size (if available)
-    if sc not in 'DU' and nf.size != 0 and (nf.mode & pygit2.GIT_FILEMODE_BLOB == pygit2.GIT_FILEMODE_BLOB):
+    if sc not in 'DU' and nf.size != 0 and (nf.mode & GIT_FILEMODE_BLOB == GIT_FILEMODE_BLOB):
         text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size))
 
     # Modified time
@@ -94,8 +94,8 @@ def fileTooltip(repo: pygit2.Repository, delta: pygit2.DiffDelta, isWorkdir: boo
 class FileListModel(QAbstractListModel):
     @dataclass
     class Entry:
-        delta: pygit2.DiffDelta
-        diff: pygit2.Diff
+        delta: DiffDelta
+        diff: Diff
         patchNo: int
 
     entries: list[Entry]
@@ -113,7 +113,7 @@ class FileListModel(QAbstractListModel):
         return self.navContext == NavContext.STAGED
 
     @property
-    def repo(self) -> pygit2.Repository:
+    def repo(self) -> Repo:
         return self.parent().repoWidget.state.repo
 
     def clear(self):
@@ -121,7 +121,7 @@ class FileListModel(QAbstractListModel):
         self.fileRows = {}
         self.modelReset.emit()
 
-    def setDiffs(self, diffs: list[pygit2.Diff]):
+    def setDiffs(self, diffs: list[Diff]):
         self.beginResetModel()
 
         self.entries.clear()
@@ -129,7 +129,7 @@ class FileListModel(QAbstractListModel):
 
         for diff in diffs:
             for patchNo, delta in enumerate(diff.deltas):
-                if self.skipConflicts and delta.status == pygit2.GIT_DELTA_CONFLICTED:
+                if self.skipConflicts and delta.status == GIT_DELTA_CONFLICTED:
                     continue
                 self.fileRows[delta.new_file.path] = len(self.entries)
                 self.entries.append(FileListModel.Entry(delta, diff, patchNo))
@@ -139,13 +139,13 @@ class FileListModel(QAbstractListModel):
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.entries)
 
-    def getPatchAt(self, index: QModelIndex) -> pygit2.Patch:
+    def getPatchAt(self, index: QModelIndex) -> Patch:
         row = index.row()
         entry = self.entries[row]
         try:
-            patch: pygit2.Patch = entry.diff[entry.patchNo]
+            patch: Patch = entry.diff[entry.patchNo]
             return patch
-        except pygit2.GitError as e:
+        except GitError as e:
             log.warning("FileList", "GitError when attempting to get patch:", type(e).__name__, e)
             return None
         except OSError as e:
@@ -154,7 +154,7 @@ class FileListModel(QAbstractListModel):
             log.warning("FileList", "UI attempting to update during async operation?", type(e).__name__, e)
             return None
 
-    def getDeltaAt(self, index: QModelIndex) -> pygit2.DiffDelta:
+    def getDeltaAt(self, index: QModelIndex) -> DiffDelta:
         return self.entries[index.row()].delta
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
@@ -182,9 +182,9 @@ class FileListModel(QAbstractListModel):
             delta = self.getDeltaAt(index)
             if not delta:
                 iconName = "status_x"
-            elif delta.status == pygit2.GIT_DELTA_UNTRACKED:
+            elif delta.status == GIT_DELTA_UNTRACKED:
                 iconName = "status_a"
-            elif delta.status == pygit2.GIT_DELTA_CONFLICTED:
+            elif delta.status == GIT_DELTA_CONFLICTED:
                 iconName = "status_u"
             else:
                 iconName = "status_" + delta.status_char().lower()

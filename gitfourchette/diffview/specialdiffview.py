@@ -1,6 +1,5 @@
-import pygit2
-
 from gitfourchette.diffview.diffdocument import SpecialDiffError
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import stockIcon, escape
 
@@ -42,7 +41,7 @@ class SpecialDiffView(QTextBrowser):
         document.setHtml(markup)
         self.replaceDocument(document)
 
-    def displayImageDiff(self, delta: pygit2.DiffDelta, imageA: QImage, imageB: QImage):
+    def displayImageDiff(self, delta: DiffDelta, imageA: QImage, imageB: QImage):
         document = QTextDocument(self)
         document.setObjectName("ImageDiffDocument")
 

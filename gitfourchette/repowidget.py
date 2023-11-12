@@ -1,16 +1,12 @@
 from typing import Literal, Type, Callable
 
-import pygit2
-
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
-from gitfourchette.exttools import openInTextEditor
 from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles
 from gitfourchette.filelists.stagedfiles import StagedFiles
@@ -19,6 +15,7 @@ from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
@@ -49,7 +46,7 @@ class RepoWidget(QWidget):
     splitterStates: dict[str, QByteArray]
 
     @property
-    def repo(self) -> pygit2.Repository:
+    def repo(self) -> Repo:
         return self.state.repo
 
     @property
@@ -468,7 +465,7 @@ class RepoWidget(QWidget):
 
         self.clearDiffView()
 
-    def loadPatchInNewWindow(self, patch: pygit2.Patch, locator: NavLocator):
+    def loadPatchInNewWindow(self, patch: Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
             diffWindow.replaceDocument(self.repo, patch, locator, DiffDocument.fromPatch(patch, locator))
@@ -483,11 +480,11 @@ class RepoWidget(QWidget):
         pushDialog = PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
 
     def openSubmoduleRepo(self, submoduleKey: str):
-        path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
+        path = self.repo.get_submodule_workdir(submoduleKey)
         self.openRepo.emit(path)
 
     def openSubmoduleFolder(self, submoduleKey: str):
-        path = porcelain.getSubmoduleWorkdir(self.repo, submoduleKey)
+        path = self.repo.get_submodule_workdir(submoduleKey)
         openFolder(path)
 
     # -------------------------------------------------------------------------
@@ -517,7 +514,7 @@ class RepoWidget(QWidget):
         self.state.toggleHideBranch(branchName)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
-    def toggleHideStash(self, stashOid: pygit2.Oid):
+    def toggleHideStash(self, stashOid: Oid):
         self.state.toggleHideStash(stashOid)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
@@ -571,12 +568,12 @@ class RepoWidget(QWidget):
         elif repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
             inBrackets = self.tr("repo is empty")
         elif repo.head_is_detached:
-            oid = porcelain.getHeadCommitOid(repo)
+            oid = repo.head_commit_oid
             inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
         else:
-            inBrackets = porcelain.getActiveBranchShorthand(repo)
+            inBrackets = repo.head_branch_shorthand
 
-        if repo and repo.index.conflicts:
+        if repo and repo.any_conflicts:
             inBrackets += ", \u26a0 "
             inBrackets += self.tr("merge conflict")
             self.statusWarning.emit(self.tr("merge conflict in workdir"))
@@ -605,7 +602,7 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def selectRef(self, refName: str):
-        oid = porcelain.getCommitOidFromReferenceName(self.repo, refName)
+        oid = self.repo.get_commit_oid_from_refname(refName)
         self.jump(NavLocator(NavContext.COMMITTED, commit=oid))
 
     # -------------------------------------------------------------------------

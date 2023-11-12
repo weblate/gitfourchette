@@ -1,3 +1,4 @@
+from gitfourchette.porcelain import *
 from gitfourchette.qt import translate
 
 
@@ -117,14 +118,13 @@ class TrTables:
 
     @staticmethod
     def _init_fileModes():
-        import pygit2
         return {
             0: translate("git", "deleted", "unreadable/deleted file mode 0o000000"),
-            pygit2.GIT_FILEMODE_BLOB: translate("git", "normal", "default file mode 0o100644"),
-            pygit2.GIT_FILEMODE_BLOB_EXECUTABLE: translate("git", "executable", "executable file mode 0o100755"),
-            pygit2.GIT_FILEMODE_LINK: translate("git", "link", "as in 'symlink' - file mode 0o120000"),
-            pygit2.GIT_FILEMODE_TREE: translate("git", "tree", "as in 'directory tree' - file mode 0o40000"),
-            pygit2.GIT_FILEMODE_COMMIT: translate("git", "commit", "'commit' file mode 0o160000"),
+            GIT_FILEMODE_BLOB: translate("git", "normal", "default file mode 0o100644"),
+            GIT_FILEMODE_BLOB_EXECUTABLE: translate("git", "executable", "executable file mode 0o100755"),
+            GIT_FILEMODE_LINK: translate("git", "link", "as in 'symlink' - file mode 0o120000"),
+            GIT_FILEMODE_TREE: translate("git", "tree", "as in 'directory tree' - file mode 0o40000"),
+            GIT_FILEMODE_COMMIT: translate("git", "commit", "'commit' file mode 0o160000"),
         }
 
     @staticmethod

@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 
-import pygit2
-
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.diffview.specialdiff import SpecialDiffError
 from gitfourchette.nav import NavLocator, NavFlags
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import DiffLinePos
 
@@ -17,7 +16,7 @@ class LineData:
     text: str
     "Line text for visual representation."
 
-    diffLine: pygit2.DiffLine | None
+    diffLine: DiffLine | None
     "pygit2 diff line data."
 
     cursorStart: int
@@ -68,7 +67,7 @@ class DiffDocument:
     style: DiffStyle
 
     @staticmethod
-    def fromPatch(patch: pygit2.Patch, locator: NavLocator):
+    def fromPatch(patch: Patch, locator: NavLocator):
         if patch.delta.similarity == 100:
             raise SpecialDiffError.noChange(patch.delta)
 

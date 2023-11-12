@@ -4,17 +4,14 @@ import re
 from bisect import bisect_left, bisect_right
 from typing import Literal
 
-import pygit2
-from pygit2 import Patch, Repository, Diff
-
 from gitfourchette import colors
 from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.diffview.diffdocument import DiffDocument, LineData
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.toolbox import *
@@ -131,10 +128,10 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
 
 class DiffView(QPlainTextEdit):
     if PYSIDE2:  # SIGSEGV when a Signal has an IntEnum arg
-        applyPatch = Signal(pygit2.Patch, bytes, int)
+        applyPatch = Signal(Patch, bytes, int)
     else:
-        applyPatch = Signal(pygit2.Patch, bytes, PatchPurpose)
-    revertPatch = Signal(pygit2.Patch, bytes)
+        applyPatch = Signal(Patch, bytes, PatchPurpose)
+    revertPatch = Signal(Patch, bytes)
     widgetMoved = Signal()
     contextualHelp = Signal(str)
 
@@ -144,7 +141,7 @@ class DiffView(QPlainTextEdit):
     currentLocator: NavLocator
     currentPatch: Patch | None
     currentWorkdirFileStat: os.stat_result | None
-    repo: Repository | None
+    repo: Repo | None
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -241,7 +238,7 @@ class DiffView(QPlainTextEdit):
         # Clear the actual contents
         super().clear()
 
-    def replaceDocument(self, repo: Repository, patch: Patch, locator: NavLocator, newDoc: DiffDocument):
+    def replaceDocument(self, repo: Repo, patch: Patch, locator: NavLocator, newDoc: DiffDocument):
         oldDocument = self.document()
 
         # Detect if we're trying to load exactly the same patch - common occurrence when moving the app back to the
@@ -290,22 +287,22 @@ class DiffView(QPlainTextEdit):
         self.restorePosition(locator)
 
     @benchmark
-    def canReuseCurrentDocument(self, newLocator: NavLocator, newPatch: pygit2.Patch, newDocument: DiffDocument
+    def canReuseCurrentDocument(self, newLocator: NavLocator, newPatch: Patch, newDocument: DiffDocument
                                 ) -> bool:
         """Detect if we're trying to reload the same patch that's already being displayed"""
 
         if not self.currentLocator.isSimilarEnoughTo(newLocator):
             return False
 
-        of1: pygit2.DiffFile = self.currentPatch.delta.old_file
-        nf1: pygit2.DiffFile = self.currentPatch.delta.new_file
-        of2: pygit2.DiffFile = newPatch.delta.old_file
-        nf2: pygit2.DiffFile = newPatch.delta.new_file
+        of1: DiffFile = self.currentPatch.delta.old_file
+        nf1: DiffFile = self.currentPatch.delta.new_file
+        of2: DiffFile = newPatch.delta.old_file
+        nf2: DiffFile = newPatch.delta.new_file
 
-        if not porcelain.compareDiffFiles(of1, of2):
+        if not DiffFile_compare(of1, of2):
             return False
 
-        if not porcelain.compareDiffFiles(nf1, nf2):
+        if not DiffFile_compare(nf1, nf2):
             return False
 
         if len(newDocument.lineData) != len(self.lineData):
@@ -431,7 +428,7 @@ class DiffView(QPlainTextEdit):
         clickedHunkID = self.findHunkIDAt(clickedPosition)
         shortHunkHeader = ""
         if clickedHunkID >= 0:
-            hunk: pygit2.DiffHunk = self.currentPatch.hunks[clickedHunkID]
+            hunk: DiffHunk = self.currentPatch.hunks[clickedHunkID]
             headerMatch = re.match(r"@@ ([^@]+) @@.*", hunk.header)
             shortHunkHeader = headerMatch.group(1) if headerMatch else f"#{clickedHunkID}"
 

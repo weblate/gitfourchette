@@ -155,7 +155,7 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
     assert "first-merge" not in localBranches
     assert "first-merge" not in rw.sidebar.datasForItemType(EItem.LocalBranch)
 
-    oid1 = pygit2.Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
 
     rw.graphView.selectCommit(oid1)
     triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")

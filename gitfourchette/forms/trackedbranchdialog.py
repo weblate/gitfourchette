@@ -1,14 +1,13 @@
-from gitfourchette import porcelain
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import makeBrandedDialog
-import pygit2
 
 
 class TrackedBranchDialog(QDialog):
     newTrackingBranchName: str
 
-    def __init__(self, repo: pygit2.Repository, localBranchName: str, parent):
+    def __init__(self, repo: Repo, localBranchName: str, parent):
         super().__init__(parent)
 
         self.setWindowTitle(self.tr("Edit Tracked Branch"))
@@ -17,8 +16,8 @@ class TrackedBranchDialog(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-        localBranch: pygit2.Branch = repo.branches.local[localBranchName]
-        trackedBranch: pygit2.Branch = localBranch.upstream
+        localBranch: Branch = repo.branches.local[localBranchName]
+        trackedBranch: Branch = localBranch.upstream
 
         comboBox = QComboBox(self)
         comboBox.setInsertPolicy(QComboBox.NoInsert)  # Prevent QComboBox from stealing enter keypresses on Linux
@@ -30,7 +29,7 @@ class TrackedBranchDialog(QDialog):
 
         addComboBoxItem(comboBox, self.tr("[don’t track any remote branch]"), userData=None, isCurrent=not trackedBranch)
 
-        for remoteName, remoteBranches in porcelain.getRemoteBranchNames(repo).items():
+        for remoteName, remoteBranches in repo.listall_remote_branches().items():
             if not remoteBranches:
                 continue
             comboBox.insertSeparator(comboBox.count())

@@ -1,7 +1,6 @@
 from . import reposcenario
 from .fixtures import *
 from .util import *
-import pygit2
 
 
 def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow):
@@ -17,7 +16,7 @@ def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow):
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
-    assert rw.repo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_INDEX_NEW}
+    assert rw.repo.status() == {"SomeNewFile.txt": GIT_STATUS_INDEX_NEW}
 
 
 def testDiscardUntrackedFile(qtbot, tempDir, mainWindow):
@@ -67,7 +66,7 @@ def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, main
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
-    assert rw.repo.status() == {"a/a1.txt": pygit2.GIT_STATUS_INDEX_MODIFIED}
+    assert rw.repo.status() == {"a/a1.txt": GIT_STATUS_INDEX_MODIFIED}
 
 
 def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
@@ -83,4 +82,4 @@ def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
 
-    assert rw.repo.status() == {"SomeNewFile.txt": pygit2.GIT_STATUS_WT_NEW}
+    assert rw.repo.status() == {"SomeNewFile.txt": GIT_STATUS_WT_NEW}

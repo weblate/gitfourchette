@@ -1,7 +1,6 @@
 from typing import Literal
 
 import contextlib
-import pygit2
 
 from gitfourchette import settings
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
@@ -11,6 +10,7 @@ from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.graphview.commitlogfilter import CommitLogFilter
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks import *
 from gitfourchette.toolbox import *
@@ -25,7 +25,7 @@ class GraphView(QListView):
     clFilter: CommitLogFilter
 
     class SelectCommitError(KeyError):
-        def __init__(self, oid: pygit2.Oid, foundButHidden: bool):
+        def __init__(self, oid: Oid, foundButHidden: bool):
             super().__init__()
             self.oid = oid
             self.foundButHidden = foundButHidden
@@ -110,7 +110,7 @@ class GraphView(QListView):
         self.setCommitSequence(None)
 
     @benchmark
-    def setHiddenCommits(self, hiddenCommits: set[pygit2.Oid]):
+    def setHiddenCommits(self, hiddenCommits: set[Oid]):
         # Invalidating the filter can be costly, so avoid if possible
         if self.clFilter.hiddenOids == hiddenCommits:
             return
@@ -119,12 +119,12 @@ class GraphView(QListView):
         self.clFilter.invalidateFilter()
 
     @benchmark
-    def setCommitSequence(self, commitSequence: list[pygit2.Commit] | None):
+    def setCommitSequence(self, commitSequence: list[Commit] | None):
         self.clModel.setCommitSequence(commitSequence)
         self.onSetCurrent()
 
     @benchmark
-    def refreshTopOfCommitSequence(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[pygit2.Commit]):
+    def refreshTopOfCommitSequence(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[Commit]):
         self.clModel.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, commitSequence)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
@@ -158,11 +158,11 @@ class GraphView(QListView):
             super().keyPressEvent(event)
 
     @property
-    def repo(self) -> pygit2.Repository:
+    def repo(self) -> Repo:
         return self.repoWidget.state.repo
 
     @property
-    def currentCommitOid(self) -> pygit2.Oid | None:
+    def currentCommitOid(self) -> Oid | None:
         if not self.currentIndex().isValid():
             return
         oid = self.currentIndex().data(CommitLogModel.OidRole)
@@ -175,14 +175,14 @@ class GraphView(QListView):
 
         debugInfoRequested = QGuiApplication.keyboardModifiers() & (Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ShiftModifier)
 
-        def formatSignature(sig: pygit2.Signature):
+        def formatSignature(sig: Signature):
             qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
             return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
                    + "<small>" + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat)) + "</small>"
 
         # TODO: we should probably run this as a task
 
-        commit: pygit2.Commit = self.currentIndex().data(CommitLogModel.CommitRole)
+        commit: Commit = self.currentIndex().data(CommitLogModel.CommitRole)
 
         summary, contd = messageSummary(commit.message)
         details = commit.message if contd else ""
@@ -213,7 +213,7 @@ class GraphView(QListView):
             committerMarkup = formatSignature(commit.committer)
 
         '''
-        diffs = porcelain.loadCommitDiffs(self.repo, oid)
+        diffs = self.repo.commit_diffs(oid)
         statsMarkup = (
                 fplural("<b>#</b> changed file^s", sum(diff.stats.files_changed for diff in diffs)) +
                 fplural("<br/><b>#</b> insertion^s", sum(diff.stats.insertions for diff in diffs)) +
@@ -329,7 +329,7 @@ class GraphView(QListView):
             # TODO: Actual lookup
             self.setCurrentIndex(self.model().index(0, 0))
 
-    def getFilterIndexForCommit(self, oid: pygit2.Oid) -> QModelIndex | None:
+    def getFilterIndexForCommit(self, oid: Oid) -> QModelIndex | None:
         try:
             rawIndex = self.repoWidget.state.graph.getCommitRow(oid)
         except KeyError:
@@ -343,7 +343,7 @@ class GraphView(QListView):
 
         return newFilterIndex
 
-    def getFilterIndexError(self, filterIndex: QModelIndex, oid: pygit2.Oid) -> str:
+    def getFilterIndexError(self, filterIndex: QModelIndex, oid: Oid) -> str:
         if filterIndex is None:
             return self.tr("Commit “{0}” not found or not loaded.").format(shortHash(oid))
         elif not filterIndex.isValid():
@@ -351,19 +351,19 @@ class GraphView(QListView):
         else:
             return ""
 
-    def selectCommit(self, oid: pygit2.Oid, silent=True):
+    def selectCommit(self, oid: Oid, silent=True):
         with contextlib.suppress(GraphView.SelectCommitError if silent else ()):
             filterIndex = self.getFilterIndexForCommit(oid)
             if filterIndex.row() != self.currentIndex().row():
                 self.scrollTo(filterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
                 self.setCurrentIndex(filterIndex)
 
-    def scrollToCommit(self, oid: pygit2.Oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
+    def scrollToCommit(self, oid: Oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
         with contextlib.suppress(GraphView.SelectCommitError):
             filterIndex = self.getFilterIndexForCommit(oid)
             self.scrollTo(filterIndex, scrollHint)
 
-    def repaintCommit(self, oid: pygit2.Oid):
+    def repaintCommit(self, oid: Oid):
         with contextlib.suppress(GraphView.SelectCommitError):
             filterIndex = self.getFilterIndexForCommit(oid)
             self.update(filterIndex)

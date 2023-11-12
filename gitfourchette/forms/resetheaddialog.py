@@ -1,6 +1,6 @@
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-import pygit2
 
 
 DEFAULT_MODE = "mixed"
@@ -59,7 +59,7 @@ MODE_TEXT = {
 
 
 class ResetHeadDialog(QDialog):
-    oid: pygit2.Oid
+    oid: Oid
     activeMode: str
     recurseSubmodules: bool
     helpLabel: QLabel
@@ -86,7 +86,7 @@ class ResetHeadDialog(QDialog):
         self.recurseCheckbox.setEnabled(mode not in ['soft', 'mixed'])
         self.setHelp()
 
-    def __init__(self, oid: pygit2.Oid, parent: QWidget):
+    def __init__(self, oid: Oid, parent: QWidget):
         super().__init__(parent)
 
         self.activeMode = "???"

@@ -1,9 +1,8 @@
 import contextlib
-import pygit2
 
-from gitfourchette import porcelain
 from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
@@ -15,8 +14,8 @@ from gitfourchette.toolbox import *
 class Sidebar(QTreeView):
     uncommittedChangesClicked = Signal()
     refClicked = Signal(str)
-    commitClicked = Signal(pygit2.Oid)
-    toggleHideStash = Signal(pygit2.Oid)
+    commitClicked = Signal(Oid)
+    toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
 
     mergeBranchIntoActive = Signal(str)
@@ -100,7 +99,7 @@ class Sidebar(QTreeView):
             repo = model.repo
             branch = repo.branches.local[data]
 
-            activeBranchName = porcelain.getActiveBranchShorthand(repo)
+            activeBranchName = repo.head_branch_shorthand
             isCurrentBranch = branch and branch.is_checked_out()
             hasUpstream = bool(branch.upstream)
             upstreamBranchName = ""
@@ -229,7 +228,7 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.Stash:
-            oid = pygit2.Oid(hex=data)
+            oid = Oid(hex=data)
 
             isStashHidden = False
             if index:  # in test mode, we may not have an index
@@ -305,13 +304,13 @@ class Sidebar(QTreeView):
         elif item == EItem.DetachedHead:
             self.refClicked.emit("HEAD")
         elif item == EItem.LocalBranch:
-            self.refClicked.emit(porcelain.HEADS_PREFIX + data)
+            self.refClicked.emit(GIT_HEADS_PREFIX + data)
         elif item == EItem.RemoteBranch:
-            self.refClicked.emit(porcelain.REMOTES_PREFIX + data)
+            self.refClicked.emit(GIT_REMOTES_PREFIX + data)
         elif item == EItem.Tag:
-            self.refClicked.emit(porcelain.TAGS_PREFIX + data)
+            self.refClicked.emit(GIT_TAGS_PREFIX + data)
         elif item == EItem.Stash:
-            self.commitClicked.emit(pygit2.Oid(hex=data))
+            self.commitClicked.emit(Oid(hex=data))
         else:
             pass
 
@@ -338,7 +337,7 @@ class Sidebar(QTreeView):
             NewStash.invoke()
 
         elif item == EItem.Stash:
-            oid = pygit2.Oid(hex=data)
+            oid = Oid(hex=data)
             ApplyStash.invoke(oid)
 
         elif item == EItem.RemoteBranch:

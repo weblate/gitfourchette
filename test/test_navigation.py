@@ -2,7 +2,6 @@ from gitfourchette.nav import NavContext, NavLocator
 from . import reposcenario
 from .fixtures import *
 from .util import *
-import pygit2
 
 
 def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
@@ -29,10 +28,10 @@ def testNavigation(qtbot, tempDir, mainWindow):
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
     rw = mainWindow.openRepo(wd)
 
-    oid1 = pygit2.Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
-    oid2 = pygit2.Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
-    oid3 = pygit2.Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
-    oid4 = pygit2.Oid(hex="58be4659bb571194ed4562d04b359d26216f526e")
+    oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
+    oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
+    oid3 = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+    oid4 = Oid(hex="58be4659bb571194ed4562d04b359d26216f526e")
 
     # ..........................................# -9 select a1.txt in UNSTAGED
     rw.graphView.selectCommit(oid1)             # -8 select a1.txt in 83834a7
@@ -201,8 +200,8 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
     writeFile(F"{wd}/c/c2.txt", "blah blah c2")
     rw = mainWindow.openRepo(wd)
 
-    oid1 = pygit2.Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
-    oid2 = pygit2.Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
+    oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
+    oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
 
     # Stage c1 and c2
     qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()

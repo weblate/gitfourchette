@@ -1,4 +1,5 @@
 from gitfourchette import log
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.settings import (
     prefs,
@@ -8,10 +9,9 @@ from gitfourchette.settings import (
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 import enum
-import pygit2
 
 
-SAMPLE_SIGNATURE = pygit2.Signature("Jean-Michel Tartempion", "jm.tarte@example.com", 0, 0)
+SAMPLE_SIGNATURE = Signature("Jean-Michel Tartempion", "jm.tarte@example.com", 0, 0)
 SAMPLE_FILE_PATH = "spam/.ham/eggs/hello.c"
 
 

@@ -1,8 +1,8 @@
 from gitfourchette import log
 from gitfourchette import settings
+from gitfourchette.porcelain import *
 import datetime
 import os
-import pygit2
 import shutil
 
 
@@ -10,7 +10,7 @@ class Trash:
     DIR_NAME = "trash"
     TIME_FORMAT = '%Y%m%dT%H%M%S'
 
-    def __init__(self, repo: pygit2.Repository):
+    def __init__(self, repo: Repo):
         self.repo = repo
         self.trashDir = os.path.join(repo.path, settings.REPO_SETTINGS_DIR, Trash.DIR_NAME)
         self.trashFiles = []
@@ -72,15 +72,15 @@ class Trash:
         with open(trashFile, 'wb') as f:
             f.write(data)
 
-    def backupPatches(self, patches: list[pygit2.Patch]):
+    def backupPatches(self, patches: list[Patch]):
         for patch in patches:
             path = patch.delta.new_file.path
 
-            if patch.delta.status == pygit2.GIT_DELTA_DELETED:
+            if patch.delta.status == GIT_DELTA_DELETED:
                 # It doesn't make sense to back up a file deletion
                 continue
 
-            elif patch.delta.status == pygit2.GIT_DELTA_UNTRACKED or patch.delta.is_binary:
+            elif patch.delta.status == GIT_DELTA_UNTRACKED or patch.delta.is_binary:
                 self.backupFile(path)
 
             else:

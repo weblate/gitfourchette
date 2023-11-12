@@ -2,7 +2,7 @@ from gitfourchette import settings
 from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
-from gitfourchette.porcelain import BLANK_OID
+from gitfourchette.porcelain import NULL_OID
 from gitfourchette.qt import *
 from gitfourchette.tasks import HardSolveConflict
 from gitfourchette.toolbox import *
@@ -56,14 +56,14 @@ class ConflictView(QWidget):
             elif b is self.ui.radioDbuTheirs:
                 self.hardSolve(conflict.theirs.path, conflict.theirs.id)
             elif b is self.ui.radioDbuOurs:  # ignore incoming change, keep deletion
-                self.hardSolve(conflict.theirs.path, BLANK_OID)
+                self.hardSolve(conflict.theirs.path, NULL_OID)
 
         elif conflict.deletedByThem:
             b = self.ui.radioGroupDbt.checkedButton()
             if not b:
                 pass
             elif b is self.ui.radioDbtTheirs:  # accept deletion
-                self.hardSolve(conflict.ours.path, BLANK_OID)
+                self.hardSolve(conflict.ours.path, NULL_OID)
             elif b is self.ui.radioDbtOurs:  # ignore incoming deletion
                 self.hardSolve(conflict.ours.path, conflict.ours.id)
 
@@ -77,7 +77,7 @@ class ConflictView(QWidget):
                 self.openMergeTool.emit(conflict)
 
     @staticmethod
-    def hardSolve(path: str, oid=BLANK_OID):
+    def hardSolve(path: str, oid=NULL_OID):
         HardSolveConflict.invoke(path, oid)
 
     def clear(self):

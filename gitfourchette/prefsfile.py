@@ -2,9 +2,8 @@ import dataclasses
 import enum
 import json
 
-import pygit2
-
 from gitfourchette import log
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 
 TAG = "prefs"
@@ -14,7 +13,7 @@ class PrefsJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, bytes):
             return {"_type": "bytes", "data": obj.hex()}
-        elif isinstance(obj, pygit2.Signature):
+        elif isinstance(obj, Signature):
             return { "_type": "Signature", "name": obj.name, "email": obj.email, "time": obj.time, "offset": obj.offset }
         return super(self).default(obj)
 
@@ -30,7 +29,7 @@ class PrefsJSONDecoder(json.JSONDecoder):
         if type == "bytes":
             return bytes.fromhex(j["data"])
         elif type == "Signature":
-            return pygit2.Signature(j["name"], j["email"], j["time"], j["offset"])
+            return Signature(j["name"], j["email"], j["time"], j["offset"])
         return j
 
 

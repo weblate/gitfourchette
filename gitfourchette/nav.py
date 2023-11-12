@@ -1,8 +1,8 @@
 from __future__ import annotations
 from gitfourchette import log
+from gitfourchette.porcelain import NULL_OID, Oid
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from pygit2 import Oid
 from typing import ClassVar
 import dataclasses
 import enum
@@ -10,7 +10,6 @@ import time
 
 
 TAG = "nav"
-BLANK_OID = Oid(raw=b'')
 PUSH_INTERVAL = 0.5
 
 
@@ -75,7 +74,7 @@ class NavLocator:
     """
 
     context: NavContext = NavContext.EMPTY
-    commit: Oid = BLANK_OID
+    commit: Oid = NULL_OID
     path: str = ""
     diffLineNo: int = 0
     diffCursor: int = 0
@@ -176,7 +175,7 @@ class NavLocator:
         path = path.removeprefix("/")
         try:
             context = NavContext[frag]
-            commit = BLANK_OID
+            commit = NULL_OID
         except KeyError:
             context = NavContext.COMMITTED
             commit = Oid(hex=frag)

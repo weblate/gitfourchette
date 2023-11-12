@@ -36,7 +36,7 @@ class NewRemote(RepoTask):
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.newRemote(self.repo, newRemoteName, newRemoteUrl)
+        self.repo.create_remote(newRemoteName, newRemoteUrl)
 
         if fetchAfterAdd:
             yield from self._flowExitWorkerThread()
@@ -75,7 +75,7 @@ class EditRemote(RepoTask):
         dlg.deleteLater()
 
         yield from self._flowBeginWorkerThread()
-        porcelain.editRemote(self.repo, oldRemoteName, newRemoteName, newRemoteUrl)
+        self.repo.edit_remote(oldRemoteName, newRemoteName, newRemoteUrl)
         repoconfig.setRemoteKeyFile(self.repo, newRemoteName, newRemoteKeyfile)
 
 
@@ -93,4 +93,4 @@ class DeleteRemote(RepoTask):
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self._flowBeginWorkerThread()
-        porcelain.deleteRemote(self.repo, remoteName)
+        self.repo.delete_remote(remoteName)

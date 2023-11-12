@@ -2,12 +2,12 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from gitfourchette import log
+from gitfourchette.porcelain import Oid as _RealOidType
 from gitfourchette.toolbox import *
 from typing import Iterable, ClassVar
 import bisect
 import contextlib
 import itertools
-import pygit2
 
 
 KF_INTERVAL = 5000
@@ -24,7 +24,7 @@ ABRIDGMENT_THRESHOLD = 25
 
 DEAD_VALUE = "!DEAD"
 
-Oid = pygit2.Oid | str
+Oid = _RealOidType | str
 
 
 @dataclass(frozen=True)

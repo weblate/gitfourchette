@@ -15,6 +15,7 @@ from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.repowidget import RepoWidget
@@ -472,31 +473,31 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Repo loading
 
-    def _constructRepo(self, path: str):
-        repo = pygit2.Repository(path)
+    def _constructRepo(self, path: str) -> Repo:
+        repo = Repo(path)
 
         if repo.is_shallow:
-            porcelain.libgit2VersionAtLeast("1.7.0", featureName="Shallow clone support")
+            porcelain.libgit2_version_at_least("1.7.0", feature_name="Shallow clone support")
 
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, bare repositories aren’t supported yet.").format(path))
 
         return repo
 
-    def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | pygit2.Repository):
+    def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | Repo):
         assert rw
 
-        repo: pygit2.Repository
+        repo: Repo
         path: str
 
-        if type(pathOrRepo) is pygit2.Repository:
+        if type(pathOrRepo) is Repo:
             repo = pathOrRepo
             path = repo.workdir
         elif type(pathOrRepo) is str:
             path = pathOrRepo
             repo = self._constructRepo(path)
         else:
-            raise TypeError("pathOrRepo must either be an str or a Repository")
+            raise TypeError("pathOrRepo must either be an str or a Repo2")
 
         assert repo is not None
 
@@ -567,7 +568,7 @@ class MainWindow(QMainWindow):
 
     def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1
                   ) -> RepoWidget | None:
-        # Construct a pygit2.Repository so we can get the workdir
+        # Construct a Repo2 so we can get the workdir
         repo = self._constructRepo(path)
 
         if not repo:
@@ -923,7 +924,7 @@ class MainWindow(QMainWindow):
             for i, path in enumerate(session.tabs):
                 try:
                     newRepoWidget = self._openRepo(path, foreground=False, addToHistory=False)
-                except (pygit2.GitError, OSError, NotImplementedError) as exc:
+                except (GitError, OSError, NotImplementedError) as exc:
                     # GitError: most errors thrown by pygit2
                     # OSError: e.g. permission denied
                     # NotImplementedError: e.g. shallow/bare repos
