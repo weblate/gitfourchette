@@ -87,7 +87,7 @@ class Jump(RepoTask):
 
         # Load patch in DiffView
         patch = flv.getPatchForFile(locator.path)
-        patchTask: tasks.LoadPatch = yield from self._flowSubtask(tasks.LoadPatch, patch, locator)
+        patchTask: tasks.LoadPatch = yield from self.flowSubtask(tasks.LoadPatch, patch, locator)
         result = patchTask.result
 
         if type(result) == DiffConflict:
@@ -135,7 +135,7 @@ class Jump(RepoTask):
             rw.state.workdirStale = True
 
             # Load workdir (async)
-            workdirTask: tasks.LoadWorkdir = yield from self._flowSubtask(
+            workdirTask: tasks.LoadWorkdir = yield from self.flowSubtask(
                 tasks.LoadWorkdir, allowWriteIndex=locator.hasFlags(NavFlags.AllowWriteIndex))
 
             # Fill FileListViews
@@ -202,7 +202,7 @@ class Jump(RepoTask):
                 rw.graphView.selectCommit(locator.commit, silent=False)
             except GraphView.SelectCommitError as e:
                 # Commit is hidden or not loaded
-                yield from self._flowAbort(str(e), asStatusMessage=True)
+                yield from self.flowAbort(str(e), asStatusMessage=True)
 
         # Attempt to select matching ref in sidebar
         with (
@@ -220,7 +220,7 @@ class Jump(RepoTask):
 
         else:
             # Load commit (async)
-            subtask: tasks.LoadCommit = yield from self._flowSubtask(tasks.LoadCommit, locator.commit)
+            subtask: tasks.LoadCommit = yield from self.flowSubtask(tasks.LoadCommit, locator.commit)
 
             # Get data from subtask
             diffs = subtask.diffs
@@ -290,7 +290,7 @@ class JumpBackOrForward(tasks.RepoTask):
                 continue
 
             # Jump
-            yield from self._flowSubtask(Jump, locator)
+            yield from self.flowSubtask(Jump, locator)
 
             # The jump was successful if the RepoWidget's locator
             # comes out similar enough to the one from the history.
@@ -404,4 +404,4 @@ class RefreshRepo(tasks.RepoTask):
                 # Old commit is gone - jump to HEAD
                 jumpTo = NavLocator.inCommit(rw.state.activeCommitOid)
 
-        yield from self._flowSubtask(Jump, jumpTo)
+        yield from self.flowSubtask(Jump, jumpTo)

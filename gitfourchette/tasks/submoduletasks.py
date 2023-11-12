@@ -32,13 +32,13 @@ class AbsorbSubmodule(RepoTask):
             message = paragraphs(
                 self.tr("“{0}” is a bare repository.").format(subName),
                 self.tr("This operation does not support bare repositories."))
-            yield from self._flowAbort(message)
+            yield from self.flowAbort(message)
 
         if not subRemotes:
             message = paragraphs(
                 self.tr("“{0}” has no remotes.").format(subName),
                 self.tr("Please open “{0}” and add a remote to it before absorbing it as a submodule of “{1}”.").format(subName, thisName))
-            yield from self._flowAbort(message)
+            yield from self.flowAbort(message)
 
         dlg = QDialog(self.parentWidget())
 
@@ -66,10 +66,10 @@ class AbsorbSubmodule(RepoTask):
         dlg.setMaximumHeight(dlg.height())
 
         # yield from self._flowConfirm(text=prompt)
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         remoteUrl = qcb.currentData(Qt.ItemDataRole.UserRole)
         dlg.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         subrepo = self.repo.add_inner_repo_as_submodule(str(subWD.relative_to(thisWD)), remoteUrl)

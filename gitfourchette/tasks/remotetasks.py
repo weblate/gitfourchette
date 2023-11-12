@@ -28,21 +28,21 @@ class NewRemote(RepoTask):
         setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         newRemoteName = dlg.ui.nameEdit.text()
         newRemoteUrl = dlg.ui.urlEdit.text()
         fetchAfterAdd = dlg.ui.fetchAfterAddCheckBox.isChecked()
         dlg.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.create_remote(newRemoteName, newRemoteUrl)
 
         if fetchAfterAdd:
-            yield from self._flowExitWorkerThread()
+            yield from self.flowEnterUiThread()
 
             from gitfourchette.tasks import FetchRemote
-            yield from self._flowSubtask(FetchRemote, newRemoteName)
+            yield from self.flowSubtask(FetchRemote, newRemoteName)
 
 
 class EditRemote(RepoTask):
@@ -67,14 +67,14 @@ class EditRemote(RepoTask):
         dlg.resize(512, 128)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         newRemoteName = dlg.ui.nameEdit.text()
         newRemoteUrl = dlg.ui.urlEdit.text()
         newRemoteKeyfile = dlg.privateKeyFilePath
         dlg.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.edit_remote(oldRemoteName, newRemoteName, newRemoteUrl)
         repoconfig.setRemoteKeyFile(self.repo, newRemoteName, newRemoteKeyfile)
 
@@ -84,7 +84,7 @@ class DeleteRemote(RepoTask):
         return TaskEffects.Refs | TaskEffects.Remotes
 
     def flow(self, remoteName: str):
-        yield from self._flowConfirm(
+        yield from self.flowConfirm(
             text=paragraphs(
                 self.tr("Really remove remote <b>“{0}”</b>?").format(escape(remoteName)),
                 self.tr("This will merely detach the remote from your local repository. "
@@ -92,5 +92,5 @@ class DeleteRemote(RepoTask):
             verb=self.tr("Remove remote", "Button label"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.delete_remote(remoteName)

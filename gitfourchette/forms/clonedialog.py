@@ -115,11 +115,11 @@ class CloneDialog(QDialog):
                 return translate("Operation", "Clone repository")
 
             def flow(self):
-                yield from self._flowBeginWorkerThread()
+                yield from self.flowEnterWorkerThread()
                 link.discoverKeyFiles()
                 pygit2.clone_repository(url, path, callbacks=link)
 
-                yield from self._flowExitWorkerThread()
+                yield from self.flowEnterUiThread()
                 cloneDialog.cloneInProgress = False
                 settings.history.addCloneUrl(url)
                 settings.history.write()

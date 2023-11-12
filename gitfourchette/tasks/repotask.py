@@ -203,18 +203,18 @@ class RepoTask(QObject):
         This lets you wait for you user input via dialog boxes, abort the task, or move long
         computations to a separate thread.
 
-        It is recommended to `yield from` one of the `_flowXXX` methods instead of instantiating
+        It is recommended to `yield from` one of the `flowXXX` methods instead of instantiating
         a FlowControlToken directly. For example::
 
             meaning = QInputDialog.getInt(self.parentWidget(), "Hello",
                                           "What's the meaning of life?")
-            yield from self._flowBeginWorkerThread()
+            yield from self.flowEnterWorkerThread()
             expensiveComputationCorrect = meaning == 42
-            yield from self._flowExitWorkerThread()
+            yield from self.flowEnterUiThread()
             if not expensiveComputationCorrect:
-                yield from self._flowAbort("Sorry, computer says no.")
+                yield from self.flowAbort("Sorry, computer says no.")
 
-        You can assume that the coroutine starts on the UI thread.
+        The coroutine always starts on the UI thread.
         """
         pass
 
@@ -250,33 +250,42 @@ class RepoTask(QObject):
         """
         return TaskEffects.Nothing
 
-    def _flowAbort(self, text: str = "", icon: MessageBoxIconName = "warning", asStatusMessage: bool = False):
+    def flowAbort(self, text: str = "", icon: MessageBoxIconName = "warning", asStatusMessage: bool = False):
         """
         Aborts the task with an optional error message.
         The success signal will NOT be emitted.
+
+        This function is intended to be called by flow() with "yield from".
         """
         raise FlowControlAbort(text, icon, asStatusMessage)
         yield  # Dummy yield to make it a generator
 
-    def _flowBeginWorkerThread(self):
+    def flowEnterWorkerThread(self):
         """
         Moves the task to a non-UI thread.
         (Note that the flow always starts on the UI thread.)
+
+        This function is intended to be called by flow() with "yield from".
         """
         yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD)
 
-    def _flowExitWorkerThread(self):
+    def flowEnterUiThread(self):
         """
         Returns the task to the UI thread.
+        (Note that the flow always starts on the UI thread.)
+
+        This function is intended to be called by flow() with "yield from".
         """
         yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
 
-    def _flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
-                     ) -> Generator[FlowControlToken, None, RepoTask]:
+    def flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
+                    ) -> Generator[FlowControlToken, None, RepoTask]:
         """
         Runs a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
         You must be on the UI thread before starting a subtask.
+
+        This function is intended to be called by flow() with "yield from".
         """
 
         assert onAppThread(), "Subtask must be started start on UI thread"
@@ -307,10 +316,12 @@ class RepoTask(QObject):
 
         return subtask
 
-    def _flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
+    def flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """
         Re-enters the flow when the QDialog is accepted or rejected.
         If abortTaskIfRejected is True, the task is aborted if the dialog was rejected.
+
+        This function is intended to be called by flow() with "yield from".
         """
 
         assert onAppThread()  # we'll touch the UI
@@ -332,9 +343,9 @@ class RepoTask(QObject):
 
         if abortTaskIfRejected and didReject:
             dialog.deleteLater()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
-    def _flowConfirm(
+    def flowConfirm(
             self,
             title: str = "",
             text: str = "",
@@ -345,6 +356,8 @@ class RepoTask(QObject):
         """
         Asks the user to confirm the operation via a message box.
         Interrupts flow() if the user denies.
+
+        This function is intended to be called by flow() with "yield from".
         """
 
         assert onAppThread()  # we'll touch the UI
@@ -369,7 +382,7 @@ class RepoTask(QObject):
             qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        yield from self._flowDialog(qmb)
+        yield from self.flowDialog(qmb)
 
 
 class RepoTaskRunner(QObject):

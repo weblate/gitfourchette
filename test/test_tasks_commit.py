@@ -160,6 +160,7 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
     assert not rw.repo.config['user.email']
 
     rw.commitButton.click()
+    acceptQMessageBox(rw, "create.+empty commit")
 
     identityDialog = findQDialog(rw, "identity")
     assert isinstance(identityDialog.ui, Ui_IdentityDialog1)
@@ -168,8 +169,6 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
     identityDialog.ui.emailEdit.setText("1e15sabords@example.com")
     identityDialog.ui.setLocalIdentity.setChecked(True)
     identityOK.click()
-
-    acceptQMessageBox(rw, "create.+empty commit")
 
     commitDialog = findQDialog(rw, "commit")
     assert isinstance(commitDialog, CommitDialog)

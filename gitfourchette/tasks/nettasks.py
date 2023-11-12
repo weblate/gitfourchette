@@ -50,11 +50,11 @@ class DeleteRemoteBranch(_BaseNetTask):
             self.tr("The remote branch will disappear for all users of remote “{0}”.").format(escape(remoteName))
             + " " + translate("Global", "This cannot be undone!"))
         verb = self.tr("Delete on remote")
-        yield from self._flowConfirm(text=text, verb=verb, buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+        yield from self.flowConfirm(text=text, verb=verb, buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         self._showRemoteLinkDialog()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
 
@@ -79,7 +79,7 @@ class RenameRemoteBranch(_BaseNetTask):
             validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken),
             deleteOnClose=False)
 
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
         dlg.deleteLater()
 
         # Naked name, NOT prefixed with the name of the remote
@@ -87,7 +87,7 @@ class RenameRemoteBranch(_BaseNetTask):
 
         self._showRemoteLinkDialog()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
 
@@ -96,7 +96,7 @@ class FetchRemote(_BaseNetTask):
     def flow(self, remoteName: str):
         self._showRemoteLinkDialog()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         self.repo.fetch_remote(remoteName, self.remoteLink)
 
@@ -109,16 +109,16 @@ class FetchRemoteBranch(_BaseNetTask):
             try:
                 branch = self.repo.branches.local[branchName]
             except KeyError:
-                yield from self._flowAbort(self.tr("Please switch to a local branch before performing this action."))
+                yield from self.flowAbort(self.tr("Please switch to a local branch before performing this action."))
 
             if not branch.upstream:
-                yield from self._flowAbort(self.tr("Can’t fetch remote changes on “{0}” because it isn’t tracking a remote branch.").format(branch.shorthand))
+                yield from self.flowAbort(self.tr("Can’t fetch remote changes on “{0}” because it isn’t tracking a remote branch.").format(branch.shorthand))
 
             remoteBranchName = branch.upstream.shorthand
 
         self._showRemoteLinkDialog()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         remoteName, _ = split_remote_branch_shorthand(remoteBranchName)
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])

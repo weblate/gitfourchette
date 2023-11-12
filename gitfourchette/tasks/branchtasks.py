@@ -15,16 +15,16 @@ class SwitchBranch(RepoTask):
         assert not newBranch.startswith(GIT_HEADS_PREFIX)
 
         if self.repo.branches.local[newBranch].is_checked_out():
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Branch <b>“{0}”</b> is already checked out.").format(escape((newBranch))),
                 'information')
 
         if askForConfirmation:
             text = self.tr("Do you want to switch to branch <b>“{0}”</b>?").format(escape(newBranch))
             verb = self.tr("Switch")
-            yield from self._flowConfirm(text=text, verb=verb)
+            yield from self.flowConfirm(text=text, verb=verb)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.checkout_local_branch(newBranch)
 
 
@@ -46,11 +46,11 @@ class RenameBranch(RepoTask):
             validate=lambda name: nameValidationMessage(name, forbiddenBranchNames, nameTaken),
             deleteOnClose=False)
 
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
         dlg.deleteLater()
         newBranchName = dlg.lineEdit.text()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.rename_local_branch(oldBranchName, newBranchName)
 
     def effects(self):
@@ -64,12 +64,12 @@ class DeleteBranch(RepoTask):
         text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
                           translate("Global", "This cannot be undone!"))
 
-        yield from self._flowConfirm(
+        yield from self.flowConfirm(
             text=text,
             verb=self.tr("Delete branch", "Button label"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.delete_local_branch(localBranchName)
 
     def effects(self):
@@ -143,7 +143,7 @@ class _NewBranchBaseTask(RepoTask):
         setWindowModal(dlg)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
         dlg.deleteLater()
 
         localName = dlg.ui.nameEdit.text()
@@ -152,7 +152,7 @@ class _NewBranchBaseTask(RepoTask):
         if dlg.ui.upstreamCheckBox.isChecked():
             trackUpstream = dlg.ui.upstreamComboBox.currentText()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         # Create local branch
         repo.create_branch_from_commit(localName, tip)
@@ -172,7 +172,7 @@ class _NewBranchBaseTask(RepoTask):
 class NewBranchFromHead(_NewBranchBaseTask):
     def flow(self):
         if self.repo.head_is_unborn:
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Cannot create a local branch when HEAD is unborn.")
                 + " " + translate("Global", "Please create the initial commit in this repository first."))
 
@@ -221,16 +221,16 @@ class EditTrackedBranch(RepoTask):
     def flow(self, localBranchName: str):
         dlg = TrackedBranchDialog(self.repo, localBranchName, self.parentWidget())
         setWindowModal(dlg)
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         remoteBranchName = dlg.newTrackedBranchName
         dlg.deleteLater()
 
         # Bail if no-op
         if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         self.repo.edit_tracking_branch(localBranchName, remoteBranchName)
 
@@ -243,17 +243,17 @@ class FastForwardBranch(RepoTask):
         try:
             branch = self.repo.branches.local[localBranchName]
         except KeyError:
-            yield from self._flowAbort(self.tr("To fast-forward a branch, a local branch must be checked out. "
+            yield from self.flowAbort(self.tr("To fast-forward a branch, a local branch must be checked out. "
                                                "Try switching to a local branch before fast-forwarding it."))
 
         upstream: Branch = branch.upstream
         if not upstream:
-            yield from self._flowAbort(self.tr("Can’t fast-forward “{0}” because it isn’t tracking a remote branch."
-                                               ).format(escape(branch.shorthand)))
+            yield from self.flowAbort(self.tr("Can’t fast-forward “{0}” because it isn’t tracking a remote branch."
+                                              ).format(escape(branch.shorthand)))
 
         remoteBranchName = upstream.shorthand
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         upToDate = self.repo.fast_forward_branch(localBranchName, remoteBranchName)
 
@@ -261,7 +261,7 @@ class FastForwardBranch(RepoTask):
         if upToDate:
             ahead = upstream.target != branch.target
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
 
         if upToDate:
             message = [self.tr("No fast-forwarding necessary.")]
@@ -299,13 +299,13 @@ class RecallCommit(RepoTask):
             okButtonText=self.tr("Recall"),
             deleteOnClose=False)
 
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
         dlg.deleteLater()
 
         # Naked name, NOT prefixed with the name of the remote
         needle = dlg.lineEdit.text()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         obj = self.repo[needle]
         commit: Commit = obj.peel(Commit)
@@ -313,7 +313,7 @@ class RecallCommit(RepoTask):
         branchName = f"recall-{commit.hex}"
         self.repo.create_branch_from_commit(branchName, commit.oid)
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
 
         showInformation(
             self.parentWidget(),

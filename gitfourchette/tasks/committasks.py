@@ -20,16 +20,17 @@ class NewCommit(RepoTask):
 
     def flow(self):
         if self.repo.index.conflicts:
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Please fix merge conflicts in the working directory before committing."))
 
-        yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
         if not self.repo.any_staged_changes:
-            yield from self._flowConfirm(
+            yield from self.flowConfirm(
                 title=self.tr("Create empty commit"),
                 text=paragraphs(
                     self.tr("No files are staged for commit."),
                     self.tr("Do you want to create an empty commit anyway?")))
+
+        yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
 
         sig = self.repo.default_signature
         initialMessage = self.rw.state.getDraftCommitMessage()
@@ -48,7 +49,7 @@ class NewCommit(RepoTask):
         setWindowModal(cd)
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
-        yield from self._flowDialog(cd, abortTaskIfRejected=False)
+        yield from self.flowDialog(cd, abortTaskIfRejected=False)
 
         message = cd.getFullMessage()
         author = cd.getOverriddenAuthorSignature()
@@ -61,18 +62,18 @@ class NewCommit(RepoTask):
 
         if cd.result() == QDialog.DialogCode.Rejected:
             cd.deleteLater()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
         cd.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         if not author:
             author = sig
 
         self.repo.create_commit_on_head(message, author, committer)
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
         self.rw.state.setDraftCommitMessage(None, None)  # Clear draft message
 
 
@@ -88,10 +89,10 @@ class AmendCommit(RepoTask):
 
     def flow(self):
         if self.repo.index.conflicts:
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Please fix merge conflicts in the working directory before amending the commit."))
 
-        yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
+        yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = self.repo.head_commit
 
         # TODO: Retrieve draft message
@@ -106,7 +107,7 @@ class AmendCommit(RepoTask):
         setWindowModal(cd)
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
-        yield from self._flowDialog(cd, abortTaskIfRejected=False)
+        yield from self.flowDialog(cd, abortTaskIfRejected=False)
         cd.deleteLater()
 
         message = cd.getFullMessage()
@@ -116,16 +117,16 @@ class AmendCommit(RepoTask):
 
         if cd.result() == QDialog.DialogCode.Rejected:
             cd.deleteLater()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
         author = cd.getOverriddenAuthorSignature()
         committer = cd.getOverriddenCommitterSignature()
         cd.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.amend_commit_on_head(message, author, committer)
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
         self.setDraftMessage(None)  # Clear draft message
 
 
@@ -170,14 +171,14 @@ class SetUpIdentityFirstRun(RepoTask):
         convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
 
         setWindowModal(dlg)
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         name = ui.nameEdit.text()
         email = ui.emailEdit.text()
         setGlobally = ui.setGlobalIdentity.isChecked()
         dlg.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         if setGlobally:
             configObject = GitConfig.get_global_config()
         else:
@@ -243,14 +244,14 @@ class SetUpRepoIdentity(RepoTask):
 
         convertToBrandedDialog(dlg)
         setWindowModal(dlg)
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         name = ui.nameEdit.text()
         email = ui.emailEdit.text()
         setGlobally = not ui.localIdentityCheckBox.isChecked()
         dlg.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         if setGlobally:
             try:
@@ -302,23 +303,23 @@ class CheckoutCommit(RepoTask):
         dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=f"“{commitMessage}”")
         setWindowModal(dlg)
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         # Make sure to copy user input from dialog UI *before* starting worker thread
         dlg.deleteLater()
 
         if ui.detachedHeadRadioButton.isChecked():
-            yield from self._flowBeginWorkerThread()
+            yield from self.flowEnterWorkerThread()
             self.repo.checkout_commit(oid)
 
         elif ui.switchToLocalBranchRadioButton.isChecked():
             branchName = ui.switchToLocalBranchComboBox.currentText()
             from gitfourchette.tasks.branchtasks import SwitchBranch
-            yield from self._flowSubtask(SwitchBranch, branchName, False)
+            yield from self.flowSubtask(SwitchBranch, branchName, False)
 
         elif ui.createBranchRadioButton.isChecked():
             from gitfourchette.tasks.branchtasks import NewBranchFromCommit
-            yield from self._flowSubtask(NewBranchFromCommit, oid)
+            yield from self.flowSubtask(NewBranchFromCommit, oid)
 
         else:
             raise NotImplementedError("Unsupported CheckoutCommitDialog outcome")
@@ -329,7 +330,7 @@ class RevertCommit(RepoTask):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def flow(self, oid: Oid):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.revert_commit_in_workdir(oid)
 
 
@@ -338,7 +339,7 @@ class ResetHead(RepoTask):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def flow(self, onto: Oid, resetMode: str, recurseSubmodules: bool):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.reset_head2(onto, resetMode, recurseSubmodules)
 
 
@@ -348,7 +349,7 @@ class NewTag(RepoTask):
 
     def flow(self, oid: Oid = None, signIt: bool = False):
         if signIt:
-            yield from self._flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
+            yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
 
         if not oid:
             oid = self.repo.head_commit_oid
@@ -363,12 +364,12 @@ class NewTag(RepoTask):
             okButtonText=self.tr("Create Tag"),
             deleteOnClose=False,
             validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken))
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         dlg.deleteLater()
         tagName = dlg.lineEdit.text()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         if signIt:
             self.repo.create_tag(tagName, oid, GIT_OBJ_COMMIT, self.repo.default_signature, "")
@@ -383,12 +384,12 @@ class DeleteTag(RepoTask):
     def flow(self, tagName: str):
         # TODO: This won't delete the tag on remotes
 
-        yield from self._flowConfirm(
+        yield from self.flowConfirm(
             text=self.tr("Really delete tag <b>“{0}”</b>?").format(tagName),
             verb=self.tr("Delete tag"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         # Stay on this commit after the operation
         tagTarget = self.repo.get_commit_oid_from_tag_name(tagName)
@@ -408,28 +409,28 @@ class CherrypickCommit(RepoTask):
     def flow(self, oid: Oid):
         self.didCommit = False
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.cherrypick(oid)
         anyConflicts = self.repo.any_conflicts
         commit = self.repo.peel_commit(oid)
 
         self.repo.state_cleanup()  # also cleans up .git/MERGE_MSG
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
 
         if not anyConflicts and not self.repo.any_staged_changes:
             info = self.tr("There’s nothing to cherry-pick from “{0}” "
                            "that the current branch doesn’t already have.").format(shortHash(oid))
-            yield from self._flowAbort(info, "information")
+            yield from self.flowAbort(info, "information")
 
         self.rw.state.setDraftCommitMessage(commit.message, author=commit.author)
 
         if not anyConflicts:
-            yield from self._flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
-            yield from self._flowConfirm(
+            yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
+            yield from self.flowConfirm(
                 text=self.tr("Cherry-picking “{0}” was successful. "
                              "Do you want to commit the result now?").format(shortHash(oid)),
                 verb=self.tr("Commit"),
                 cancelText=self.tr("Review changes"))
-            yield from self._flowSubtask(NewCommit)
+            yield from self.flowSubtask(NewCommit)
             self.didCommit = True

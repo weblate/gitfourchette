@@ -21,16 +21,16 @@ class LoadWorkdir(RepoTask):
         return type(task) in [LoadCommit, LoadPatch]
 
     def flow(self, allowWriteIndex: bool):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         with Benchmark("LoadWorkdir/Index"):
             self.repo.refresh_index()
 
-        yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
+        yield from self.flowEnterWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Staged"):
             self.stageDiff = self.repo.get_staged_changes()
 
-        yield from self._flowBeginWorkerThread()  # let task thread be interrupted here
+        yield from self.flowEnterWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Unstaged"):
             self.dirtyDiff = self.repo.get_unstaged_changes(allowWriteIndex)
 
@@ -40,7 +40,7 @@ class LoadCommit(RepoTask):
         return type(task) in [LoadWorkdir, LoadCommit, LoadPatch]
 
     def flow(self, oid: Oid):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.diffs = self.repo.commit_diffs(oid)
         self.message = self.repo.get_commit_message(oid)
 
@@ -91,5 +91,5 @@ class LoadPatch(RepoTask):
             return SpecialDiffError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
     def flow(self, patch: Patch, locator: NavLocator):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.result = self._processPatch(patch, locator)

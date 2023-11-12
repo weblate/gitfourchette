@@ -26,9 +26,9 @@ class StageFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to stage (may happen if user keeps pressing Enter in file list view)
             QApplication.beep()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.stage_files(patches)
 
 
@@ -43,7 +43,7 @@ class DiscardFiles(_BaseStagingTask):
 
         if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
         elif len(patches) == 1:
             patch = patches[0]
             path = patch.delta.new_file.path
@@ -56,12 +56,12 @@ class DiscardFiles(_BaseStagingTask):
             textPara.append(self.tr("Really discard changes to <b>%n files</b>?", "", len(patches)))
         textPara.append(translate("Global", "This cannot be undone!"))
 
-        yield from self._flowConfirm(
+        yield from self.flowConfirm(
             text=paragraphs(textPara),
             verb=verb,
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
         Trash(self.repo).backupPatches(patches)
         self.repo.discard_files(paths)
@@ -71,9 +71,9 @@ class UnstageFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.unstage_files(patches)
 
 
@@ -83,7 +83,7 @@ class DiscardModeChanges(_BaseStagingTask):
 
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
         elif len(patches) == 1:
             path = patches[0].delta.new_file.path
             textPara.append(self.tr("Really discard mode change in <b>“{0}”</b>?").format(escape(path)))
@@ -91,12 +91,12 @@ class DiscardModeChanges(_BaseStagingTask):
             textPara.append(self.tr("Really discard mode changes in <b>%n files</b>?", "", len(patches)))
         textPara.append(translate("Global", "This cannot be undone!"))
 
-        yield from self._flowConfirm(
+        yield from self.flowConfirm(
             text=paragraphs(textPara),
             verb=self.tr("Discard mode changes", "Button label"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
         self.repo.discard_mode_changes(paths)
 
@@ -105,9 +105,9 @@ class UnstageModeChanges(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self._flowAbort()
+            yield from self.flowAbort()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.unstage_mode_changes(patches)
 
 
@@ -130,7 +130,7 @@ class ApplyPatch(RepoTask):
             else:
                 textPara.append(self.tr("Really discard the selected lines?"))
             textPara.append(translate("Global", "This cannot be undone!"))
-            yield from self._flowConfirm(
+            yield from self.flowConfirm(
                 title,
                 text=paragraphs(textPara),
                 verb=title,
@@ -141,7 +141,7 @@ class ApplyPatch(RepoTask):
         else:
             applyLocation = GIT_APPLY_LOCATION_INDEX
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.apply(subPatch, applyLocation)
 
     def _applyFullPatch(self, fullPatch: Patch, purpose: PatchPurpose):
@@ -166,10 +166,10 @@ class ApplyPatch(RepoTask):
 
         # We want the user to pay attention here. Don't let them press enter to stage/unstage the entire file.
         qmb.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        yield from self._flowDialog(qmb)
+        yield from self.flowDialog(qmb)
         qmb.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         if purpose & PatchPurpose.UNSTAGE:
             self.repo.unstage_files([fullPatch])
         elif purpose & PatchPurpose.STAGE:
@@ -189,14 +189,14 @@ class RevertPatch(RepoTask):
 
     def flow(self, fullPatch: Patch, patchData: bytes):
         if not patchData:
-            yield from self._flowAbort(self.tr("There’s nothing to revert in the selection."))
+            yield from self.flowAbort(self.tr("There’s nothing to revert in the selection."))
 
         diff = self.repo.applies_breakdown(patchData, location=GIT_APPLY_LOCATION_WORKDIR)
         if not diff:
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         diff = self.repo.apply(diff, location=GIT_APPLY_LOCATION_WORKDIR)
 
         # After the task, jump to a NavLocator that points to any file that was modified by the patch
@@ -211,7 +211,7 @@ class HardSolveConflict(RepoTask):
         return TaskEffects.Workdir
 
     def flow(self, path: str, keepOid: Oid):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         repo = self.repo
         fullPath = os.path.join(repo.workdir, path)
 
@@ -248,7 +248,7 @@ class MarkConflictSolved(RepoTask):
         return TaskEffects.Workdir
 
     def flow(self, path: str):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         repo = self.repo
 
         repo.refresh_index()
@@ -264,7 +264,7 @@ class AcceptMergeConflictResolution(RepoTask):
         return TaskEffects.Workdir
 
     def flow(self, umc: UnmergedConflict):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         repo = self.repo
 
         with open(umc.scratchPath, "rb") as scratchFile, \
@@ -295,11 +295,11 @@ class ApplyPatchFile(RepoTask):
             qfd = PersistentFileDialog.openFile(
                 self.parentWidget(), "OpenPatch", title, filter=F"{patchFileCaption} (*.patch);;{allFilesCaption} (*)")
 
-            yield from self._flowDialog(qfd)
+            yield from self.flowDialog(qfd)
 
             path = qfd.selectedFiles()[0]
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         with open(path, 'rt', encoding='utf-8') as patchFile:
             patchData = patchFile.read()
@@ -321,7 +321,7 @@ class ApplyPatchFile(RepoTask):
         diff = self.repo.applies_breakdown(patchData)
         deltas = list(diff.deltas)
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
 
         numDeltas = len(deltas)
         numListed = min(numDeltas, 10)
@@ -341,7 +341,7 @@ class ApplyPatchFile(RepoTask):
 
         text += "</ul>"
 
-        yield from self._flowConfirm(title, text, verb=self.tr("Apply patch"))
+        yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"))
 
         self.repo.apply(loadedDiff, GIT_APPLY_LOCATION_WORKDIR)
 

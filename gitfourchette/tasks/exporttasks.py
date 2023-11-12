@@ -9,7 +9,7 @@ class ComposePatch(RepoTask):
         return TaskEffects.Nothing
 
     def composePatch(self, diffs, fileName):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         composed = b""
 
@@ -22,23 +22,23 @@ class ComposePatch(RepoTask):
                 composed += diffPatchData
                 assert composed.endswith(b"\n")
 
-        yield from self._flowExitWorkerThread()
+        yield from self.flowEnterUiThread()
 
         if not composed:
-            yield from self._flowAbort(self.tr("Nothing to export. The patch is empty."), icon="information")
+            yield from self.flowAbort(self.tr("Nothing to export. The patch is empty."), icon="information")
 
         qfd = PersistentFileDialog.saveFile(self.parentWidget(), "SaveFile", self.name(), fileName)
-        yield from self._flowDialog(qfd)
+        yield from self.flowDialog(qfd)
         savePath = qfd.selectedFiles()[0]
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         with open(savePath, "wb") as f:
             f.write(composed)
 
 
 class ExportCommitAsPatch(ComposePatch):
     def flow(self, oid: Oid):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         diffs = self.repo.commit_diffs(oid, show_binary=True)
 
@@ -53,7 +53,7 @@ class ExportCommitAsPatch(ComposePatch):
 
 class ExportStashAsPatch(ExportCommitAsPatch):
     def flow(self, oid: Oid):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         diffs = self.repo.commit_diffs(oid, show_binary=True)
 
@@ -67,7 +67,7 @@ class ExportStashAsPatch(ExportCommitAsPatch):
 
 class ExportWorkdirAsPatch(ComposePatch):
     def flow(self):
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
 
         diff = self.repo.get_uncommitted_changes(show_binary=True)
 

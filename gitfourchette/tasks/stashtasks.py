@@ -33,19 +33,19 @@ class NewStash(RepoTask):
     def flow(self, paths: list[str] | None = None):
         # libgit2 will refuse to create a stash if there are conflicts
         if self.repo.index.conflicts:
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Before creating a stash, please fix merge conflicts in the working directory."))
 
         # libgit2 will refuse to create a stash if there are no commits at all
         if self.repo.head_is_unborn:
-            yield from self._flowAbort(
+            yield from self.flowAbort(
                 self.tr("Cannot create a stash when HEAD is unborn.")
                 + " " + translate("Global", "Please create the initial commit in this repository first."))
 
         status = self.repo.status(untracked_files="all", ignored=False)
 
         if not status:
-            yield from self._flowAbort(self.tr("There are no changes to stash."), "information")
+            yield from self.flowAbort(self.tr("There are no changes to stash."), "information")
 
         # Prevent stashing any submodules
         with Benchmark("NewStash/Query submodules"):
@@ -53,13 +53,13 @@ class NewStash(RepoTask):
                 status.pop(submo, None)
 
         if not status:
-            yield from self._flowAbort(self.tr("There are no changes to stash (submodules cannot be stashed)."), "information")
+            yield from self.flowAbort(self.tr("There are no changes to stash (submodules cannot be stashed)."), "information")
 
         dlg = StashDialog(status, paths, self.parentWidget())
         setWindowModal(dlg)
         dlg.show()
         # dlg.setMaximumHeight(dlg.height())
-        yield from self._flowDialog(dlg)
+        yield from self.flowDialog(dlg)
 
         tickedFiles = dlg.tickedPaths()
 
@@ -67,7 +67,7 @@ class NewStash(RepoTask):
         keepIntact = not dlg.ui.cleanupCheckBox.isChecked()
         dlg.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.create_stash(stashMessage, paths=tickedFiles)
         if not keepIntact:
             self.repo.restore_files(tickedFiles)
@@ -98,16 +98,16 @@ class ApplyStash(RepoTask):
         deleteCheckBox.setChecked(tickDelete)
         qmb.setCheckBox(deleteCheckBox)
         updateButtonText(tickDelete)
-        yield from self._flowDialog(qmb)
+        yield from self.flowDialog(qmb)
 
         deleteAfterApply = deleteCheckBox.isChecked()
         qmb.deleteLater()
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         self.repo.stash_apply_oid(stashCommitId)
 
         if self.repo.index.conflicts:
-            yield from self._flowExitWorkerThread()
+            yield from self.flowEnterUiThread()
             message = [self.tr("Applying the stash “{0}” has caused merge conflicts "
                                "because your files have diverged since they were stashed."
                                ).format(escape(stashMessage))]
@@ -128,11 +128,11 @@ class DropStash(RepoTask):
     def flow(self, stashCommitId: Oid):
         stashCommit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
-        yield from self._flowConfirm(
+        yield from self.flowConfirm(
             text=self.tr("Really delete stash <b>“{0}”</b>?").format(stashMessage),
             verb=self.tr("Delete stash"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-        yield from self._flowBeginWorkerThread()
+        yield from self.flowEnterWorkerThread()
         backupStash(self.repo, stashCommitId)
         self.repo.stash_drop_oid(stashCommitId)

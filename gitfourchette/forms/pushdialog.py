@@ -340,13 +340,13 @@ class PushDialog(QDialog):
                 return tasks.TaskEffects.Remotes
 
             def flow(self):
-                yield from self._flowBeginWorkerThread()
+                yield from self.flowEnterWorkerThread()
                 link.discoverKeyFiles(remote)
                 remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
                     self.repo.edit_tracking_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
 
-                yield from self._flowExitWorkerThread()
+                yield from self.flowEnterUiThread()
                 pushDialog.pushInProgress = False
                 pushDialog.accept()
 
