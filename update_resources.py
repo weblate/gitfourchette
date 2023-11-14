@@ -16,6 +16,7 @@ parser.add_argument("--clean-lang", action="store_true", default=False, help="up
 parser.add_argument("--lrelease", default="pyside6-lrelease", help="path to lrelease tool")
 parser.add_argument("--lupdate", default="pyside6-lupdate", help="path to lupdate tool")
 parser.add_argument("--uic", default="pyside6-uic", help="path to uic tool")
+parser.add_argument("--no-uic-cleanup", action="store_true", help="don't postprocess uic output")
 parser.add_argument("--version", action="store_true", default=False, help="show tool versions and exit")
 cliArgs = parser.parse_args()
 
@@ -103,23 +104,34 @@ def compileUi(uiPath, pyPath):
         if pyStat.st_mtime > uiStat.st_mtime:
             return
 
-    result = call(UIC, "--generator", "python", uiPath)
+    result = call(UIC, os.path.basename(uiPath), cwd=os.path.dirname(uiPath))
     text = result.stdout
+    ignoreDiffs = []
 
-    text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.MULTILINE)
-    text = re.sub(r"^from PySide2.* import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
-    text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.MULTILINE)
-    for nukePattern in [
-            r"^# -\*- coding:.*$",
-            r"^from PySide2.* import .+$\n",
-            r"^from PySide6.* import \([^\)]+\)$\n",
-            r"^ {4}# (setupUi|retranslateUi)$\n"]:
-        text = re.sub(nukePattern, "", text, flags=re.MULTILINE)
-    text = text.strip() + "\n"
+    if cliArgs.no_uic_cleanup:
+        pass
+    elif "from PyQt" in text:
+        text = re.sub(r"^from PyQt[56] import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
+        text = re.sub(r"(?<!\w)Qt(Core|Gui|Widgets)\.", "", text, flags=re.M)
+        text = text.strip() + "\n"
+        ignoreDiffs = ["# Created by: PyQt5 UI code generator",
+                       "# Created by: PyQt6 UI code generator",]
+    elif "from PySide" in text:
+        text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.M)
+        text = re.sub(r"^from PySide2.* import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
+        text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
+        for nukePattern in [
+                r"^# -\*- coding:.*$",
+                r"^from PySide2.* import .+$\n",
+                r"^from PySide6.* import \([^\)]+\)$\n",
+                r"^ {4}# (setupUi|retranslateUi)$\n",
+        ]:
+            text = re.sub(nukePattern, "", text, flags=re.M)
+        ignoreDiffs = ["## Created by: Qt User Interface Compiler version"]
+    else:
+        print("Unknown uic output")
 
-    basename = os.path.splitext(file)[0]
-    writeIfDifferent(pyPath, text,
-                     ["## Created by: Qt User Interface Compiler version"])
+    writeIfDifferent(pyPath, text, ignoreDiffs)
 
 
 # Generate status icons.
