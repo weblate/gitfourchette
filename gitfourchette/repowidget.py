@@ -1,4 +1,6 @@
-from typing import Literal, Type, Callable
+import contextlib
+import typing
+from typing import Literal, Type
 
 from gitfourchette import log
 from gitfourchette import settings
@@ -9,22 +11,27 @@ from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
 from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles
+from gitfourchette.filelists.filelist import FileList
 from gitfourchette.filelists.stagedfiles import StagedFiles
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
-from gitfourchette.tasks import TaskEffects
+from gitfourchette.tasks import TaskEffects, TaskBook
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
 
 TAG = "RepoWidget"
+
+FileStackPage = Literal["workdir", "commit"]
+DiffStackPage = Literal["text", "special", "conflict"]
 
 
 class RepoWidget(QWidget):
@@ -37,12 +44,15 @@ class RepoWidget(QWidget):
     clearStatus = Signal()
     statusWarning = Signal(str)
 
-    state: RepoState
-    pathPending: str | None  # path of the repository if it isn't loaded yet (state=None)
+    state: RepoState | None
+
+    pathPending: str
+    "Path of the repository if it isn't loaded yet (state=None)"
 
     navLocator: NavLocator
     navHistory: NavHistory
 
+    splittersToSave: list[QSplitter]
     splitterStates: dict[str, QByteArray]
 
     @property
@@ -65,15 +75,14 @@ class RepoWidget(QWidget):
 
         self.setObjectName("RepoWidget")
 
-        # Use RepoTaskRunner to schedule operations on the repository
-        # to run on a thread separate from the UI thread.
+        # Use RepoTaskRunner to schedule git operations to run on a separate thread.
         self.repoTaskRunner = tasks.RepoTaskRunner(self)
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
         self.repoTaskRunner.progress.connect(self.onRepoTaskProgress)
         self.repoTaskRunner.repoGone.connect(self.onRepoGone)
 
         self.state = None
-        self.pathPending = None
+        self.pathPending = ""
 
         self.busyCursorDelayer = QTimer(self)
         self.busyCursorDelayer.setSingleShot(True)
@@ -83,28 +92,72 @@ class RepoWidget(QWidget):
         self.navLocator = NavLocator()
         self.navHistory = NavHistory()
 
+        # ----------------------------------
+        # Build widgets
+
         self.sidebar = Sidebar(self)
         self.graphView = GraphView(self)
-        self.filesStack = QStackedWidget()
-        self.diffStack = QStackedWidget()
-        self.committedFiles = CommittedFiles(self)
-        self.dirtyFiles = DirtyFiles(self)
-        self.stagedFiles = StagedFiles(self)
-        self.diffView = DiffView(self)
-        self.specialDiffView = SpecialDiffView(self)
-        self.conflictView = ConflictView(self)
+        self.filesStack = self._makeFilesStack()
+        diffViewContainer = self._makeDiffContainer()
 
-        self.diffView.contextualHelp.connect(self.statusMessage)
+        # ----------------------------------
+        # Splitters
 
-        self.specialDiffView.anchorClicked.connect(self.processInternalLink)
-        self.graphView.linkActivated.connect(self.processInternalLink)
+        bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
+        bottomSplitter.setObjectName("BottomSplitter")
+        bottomSplitter.addWidget(self.filesStack)
+        bottomSplitter.addWidget(diffViewContainer)
+        bottomSplitter.setSizes([100, 300])
+
+        mainSplitter = QSplitter(Qt.Orientation.Vertical)
+        mainSplitter.setObjectName("MainSplitter")
+        mainSplitter.addWidget(self.graphView)
+        mainSplitter.addWidget(bottomSplitter)
+        mainSplitter.setSizes([100, 150])
+
+        sideSplitter = QSplitter(Qt.Orientation.Horizontal)
+        sideSplitter.setObjectName("SideSplitter")
+        sideSplitter.addWidget(self.sidebar)
+        sideSplitter.addWidget(mainSplitter)
+        sideSplitter.setSizes([100, 500])
+        sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
+        sideSplitter.setStretchFactor(1, 1)
+
+        mainLayout = QVBoxLayout()
+        mainLayout.setSpacing(0)
+        mainLayout.setContentsMargins(0, 0, 0, 0)
+        mainLayout.addWidget(sideSplitter)
+        self.setLayout(mainLayout)
+
+        self.splitterStates = {}
+
+        splitters = self.findChildren(QSplitter)
+        assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
+        self.splittersToSave = splitters
+
+        # ----------------------------------
+        # Styling
+
+        self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
+
+        # ----------------------------------
+        # Connect signals
+
+        # save splitter state in splitterMoved signal
+        for splitter in self.splittersToSave:
+            splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
 
         for fileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             # File list view selections are mutually exclusive.
             for otherFileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
                 if fileList != otherFileList:
-                    fileList.jump.connect(otherFileList.clearSelectionSilently)
-            fileList.nothingClicked.connect(self.clearDiffView)
+                    fileList.jump.connect(otherFileList.clearSelection)
+            fileList.nothingClicked.connect(lambda fl=fileList: self.clearDiffView(fl))
+
+        self.diffView.contextualHelp.connect(self.statusMessage)
+
+        self.specialDiffView.anchorClicked.connect(self.processInternalLink)
+        self.graphView.linkActivated.connect(self.processInternalLink)
 
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
@@ -115,124 +168,11 @@ class RepoWidget(QWidget):
         self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
         self.sidebar.refClicked.connect(self.selectRef)
-        self.sidebar.uncommittedChangesClicked.connect(lambda: print("UC Clicked in sidebar"))
         self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
         self.sidebar.toggleHideStash.connect(self.toggleHideStash)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
-
-        # ----------------------------------
-        # Build files stack
-
-        self.splitterStates = {}
-
-        self.dirtyHeader = QElidedLabel(self.tr("Loading dirty files..."))
-        self.stagedHeader = QElidedLabel(self.tr("Loading staged files..."))
-        self.committedHeader = QElidedLabel(" ")
-        self.diffHeader = QElidedLabel(" ")
-        self.diffHeader.setElideMode(Qt.TextElideMode.ElideMiddle)
-        self.diffHeader.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
-        for headerLabel in self.dirtyHeader, self.stagedHeader, self.diffHeader, self.committedHeader:
-            tweakWidgetFont(headerLabel, 90)
-
-        dirtyContainer = QWidget()
-        dirtyContainer.setLayout(QVBoxLayout())
-        dirtyContainer.layout().setSpacing(1)
-        dirtyContainer.layout().setContentsMargins(0, 0, 0, 0)
-        dirtyContainer.layout().addWidget(self.dirtyHeader)
-        dirtyContainer.layout().addWidget(self.dirtyFiles)
-        stageContainer = QWidget()
-        stageContainer.setLayout(QVBoxLayout())
-        stageContainer.layout().setContentsMargins(0, 0, 0, 0)
-        stageContainer.layout().setSpacing(1)
-        stageContainer.layout().addWidget(self.stagedHeader)
-        stageContainer.layout().addWidget(self.stagedFiles)
-        commitButtonsContainer = QWidget()
-        commitButtonsContainer.setLayout(QHBoxLayout())
-        commitButtonsContainer.layout().setContentsMargins(0, 0, 0, 0)
-        stageContainer.layout().addWidget(commitButtonsContainer)
-        self.commitButton = QPushButton(self.tr("&Commit"))
-        self.amendButton = QPushButton(self.tr("&Amend"))
-        commitButtonsContainer.layout().addWidget(self.commitButton)
-        commitButtonsContainer.layout().addWidget(self.amendButton)
-        self.stageSplitter = QSplitter(Qt.Orientation.Vertical)
-        self.stageSplitter.addWidget(dirtyContainer)
-        self.stageSplitter.addWidget(stageContainer)
-
-        self.dirtyHeader.setBuddy(self.dirtyFiles)
-        self.stagedHeader.setBuddy(self.stagedFiles)
-
-        self.committedFilesContainer = QWidget()
-        self.committedFilesContainer.setLayout(QVBoxLayout())
-        self.committedFilesContainer.layout().setContentsMargins(0,0,0,0)
-        self.committedFilesContainer.layout().setSpacing(1)
-        self.committedFilesContainer.layout().addWidget(self.committedHeader)
-        self.committedFilesContainer.layout().addWidget(self.committedFiles)
-
-        self.filesStack.addWidget(self.committedFilesContainer)
-        self.filesStack.addWidget(self.stageSplitter)
-        self.filesStack.setCurrentWidget(self.committedFilesContainer)
-
-        # ----------------------------------
-        # Build diff stack
-
-        self.conflictViewScrollArea = QScrollArea()
-        self.conflictViewScrollArea.setWidget(self.conflictView)
-        self.conflictViewScrollArea.setWidgetResizable(True)
-
-        self.diffStack.addWidget(self.diffView)
-        self.diffStack.addWidget(self.specialDiffView)
-        self.diffStack.addWidget(self.conflictViewScrollArea)
-        self.diffStack.setCurrentWidget(self.diffView)
-
-        diffViewContainer = QWidget()
-        diffViewContainer.setLayout(QVBoxLayout())
-        diffViewContainer.layout().setContentsMargins(0,0,0,0)
-        diffViewContainer.layout().setSpacing(1)
-        diffViewContainer.layout().addWidget(self.diffHeader)
-        diffViewContainer.layout().addWidget(self.diffStack)
-
-        # ----------------------------------
-        # Main splitters
-
-        bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
-        bottomSplitter.addWidget(self.filesStack)
-        bottomSplitter.addWidget(diffViewContainer)
-        bottomSplitter.setSizes([100, 300])
-
-        mainSplitter = QSplitter(Qt.Orientation.Vertical)
-        mainSplitter.addWidget(self.graphView)
-        mainSplitter.addWidget(bottomSplitter)
-        mainSplitter.setSizes([100, 150])
-
-        sideSplitter = QSplitter(Qt.Orientation.Horizontal)
-        sideSplitter.addWidget(self.sidebar)
-        sideSplitter.addWidget(mainSplitter)
-        sideSplitter.setSizes([100, 500])
-        sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
-        sideSplitter.setStretchFactor(1, 1)
-
-        self.setLayout(QVBoxLayout())
-        self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0, 0, 0, 0)
-        self.layout().addWidget(sideSplitter)
-
-        # object names are required for state saving to work
-        mainSplitter.setObjectName("MainSplitter")
-        bottomSplitter.setObjectName("BottomSplitter")
-        self.stageSplitter.setObjectName("StageSplitter")
-        sideSplitter.setObjectName("SideSplitter")
-        self.splittersToSave = [mainSplitter, bottomSplitter, self.stageSplitter, sideSplitter]
-        # save splitter state in splitterMoved signal
-        for splitter in self.splittersToSave:
-            splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
-
-        # remove frames for a cleaner look
-        #for w in self.graphView, self.diffView, self.dirtyView, self.stageView, self.changedFilesView, self.sidebar:
-        #    w.setFrameStyle(QFrame.Shape.NoFrame)
-        self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
         # ----------------------------------
         # Connect signals to async tasks
@@ -252,8 +192,196 @@ class RepoWidget(QWidget):
         self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
         self.connectTask(self.stagedFiles.unstageModeChanges,   tasks.UnstageModeChanges)
+        self.connectTask(self.unifiedCommitButton.clicked,      tasks.NewCommit, argc=0)
 
     # -------------------------------------------------------------------------
+    # Initial layout
+
+    def _makeFilesStack(self):
+        dirtyContainer = self._makeDirtyContainer()
+        stageContainer = self._makeStageContainer()
+        committedFilesContainer = self._makeCommittedFilesContainer()
+
+        workdirSplitter = QSplitter(Qt.Orientation.Vertical)
+        workdirSplitter.addWidget(dirtyContainer)
+        workdirSplitter.addWidget(stageContainer)
+        workdirSplitter.setObjectName("WorkdirSplitter")
+
+        filesStack = QStackedWidget()
+        filesStack.addWidget(workdirSplitter)
+        filesStack.addWidget(committedFilesContainer)
+
+        return filesStack
+
+    def _makeDirtyContainer(self):
+        header = QElidedLabel(" ")
+
+        dirtyFiles = DirtyFiles(self)
+
+        stageButton = QToolButton()
+        stageButton.setText(self.tr("Stage"))
+        stageButton.setToolTip(self.tr("Stage selected files"))
+        stageButton.setMaximumHeight(24)
+        stageButton.setEnabled(False)
+        appendShortcutToToolTip(stageButton, GlobalShortcuts.stageHotkeys[0])
+
+        stageMenu = ActionDef.makeQMenu(stageButton, [ActionDef(self.tr("Discard..."), dirtyFiles.discard)])
+        stageButton.setMenu(stageMenu)
+        stageButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+
+        layout = QGridLayout()
+        layout.setSpacing(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(header, 0, 0)
+        layout.addWidget(stageButton, 0, 1)
+        layout.addWidget(dirtyFiles, 1, 0, 1, 2)
+
+        header.setBuddy(dirtyFiles)
+
+        stageButton.clicked.connect(dirtyFiles.stage)
+        dirtyFiles.selectedCountChanged.connect(lambda n: stageButton.setEnabled(n > 0))
+
+        container = QWidget()
+        container.setLayout(layout)
+
+        self.dirtyFiles = dirtyFiles
+        self.dirtyHeader = header
+        self.stageButton = stageButton
+
+        return container
+
+    def _makeStageContainer(self):
+        header = QElidedLabel(" ")
+
+        stagedFiles = StagedFiles(self)
+
+        unstageButton = QToolButton()
+        unstageButton.setText(self.tr("Unstage"))
+        unstageButton.setToolTip(self.tr("Unstage selected files"))
+        unstageButton.setMaximumHeight(24)
+        unstageButton.setEnabled(False)
+        appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
+
+        commitButtonsLayout = QHBoxLayout()
+        commitButtonsLayout.setContentsMargins(0, 0, 0, 0)
+        commitButton = QPushButton(self.tr("Commit"))
+        amendButton = QPushButton(self.tr("Amend"))
+        commitButtonsLayout.addWidget(commitButton)
+        commitButtonsLayout.addWidget(amendButton)
+        commitButtonsContainer = QWidget()
+        commitButtonsContainer.setLayout(commitButtonsLayout)
+
+        unifiedCommitButton = QToolButton()
+        unifiedCommitButton.setText(self.tr("Commit..."))
+        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [TaskBook.action(tasks.AmendCommit)])
+        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [ActionDef(self.tr("Amend..."), amendButton.click)])
+
+        def unifiedCommitButtonMenuAboutToShow():
+            unifiedCommitButtonMenu.setMinimumWidth(unifiedCommitButton.width())
+            unifiedCommitButtonMenu.setMaximumWidth(unifiedCommitButton.width())
+
+        def unifiedCommitButtonMenuAboutToHide():
+            unifiedCommitButtonMenu.setMinimumWidth(0)
+
+        unifiedCommitButtonMenu.aboutToShow.connect(unifiedCommitButtonMenuAboutToShow)
+        unifiedCommitButtonMenu.aboutToHide.connect(unifiedCommitButtonMenuAboutToHide)
+        unifiedCommitButton.setMenu(unifiedCommitButtonMenu)
+        unifiedCommitButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        unifiedCommitButton.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
+        commitButtonsStack = QStackedWidget()
+        commitButtonsStack.addWidget(commitButtonsContainer)
+        commitButtonsStack.addWidget(unifiedCommitButton)
+
+        # QToolButtons are unsightly on macOS
+        commitButtonsStack.setCurrentIndex(0 if settings.qtIsNativeMacosStyle() else 1)
+
+        # Connect signals and buddies
+        header.setBuddy(stagedFiles)
+        unstageButton.clicked.connect(stagedFiles.unstage)
+        stagedFiles.selectedCountChanged.connect(lambda n: unstageButton.setEnabled(n > 0))
+
+        # Lay out container
+        layout = QGridLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(header, 0, 0)
+        layout.addWidget(unstageButton, 0, 1)
+        layout.addWidget(stagedFiles, 1, 0, 1, 2)
+        layout.addWidget(commitButtonsStack, 2, 0, 1, 2)
+        layout.setRowStretch(1, 100)
+        container = QWidget()
+        container.setLayout(layout)
+
+        # Save references
+        self.stagedHeader = header
+        self.stagedFiles = stagedFiles
+        self.unstageButton = unstageButton
+        self.commitButton = commitButton
+        self.amendButton = amendButton
+        self.unifiedCommitButton = unifiedCommitButton
+
+        return container
+
+    def _makeCommittedFilesContainer(self):
+        committedFiles = CommittedFiles(self)
+
+        header = QElidedLabel(" ")
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(1)
+        layout.addWidget(header)
+        layout.addWidget(committedFiles)
+
+        container = QWidget()
+        container.setLayout(layout)
+
+        self.committedFiles = committedFiles
+        self.committedHeader = header
+        return container
+
+    def _makeDiffContainer(self):
+        header = QElidedLabel(" ")
+        header.setElideMode(Qt.TextElideMode.ElideMiddle)
+        header.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        header.setMinimumHeight(24)
+
+        diff = DiffView()
+
+        specialDiff = SpecialDiffView()
+
+        conflict = ConflictView()
+        conflictScroll = QScrollArea()
+        conflictScroll.setWidget(conflict)
+        conflictScroll.setWidgetResizable(True)
+
+        stack = QStackedWidget()
+        # Add widgets in same order as DiffStackPage
+        stack.addWidget(diff)
+        stack.addWidget(specialDiff)
+        stack.addWidget(conflictScroll)
+        stack.setCurrentWidget(diff)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0,0,0,0)
+        layout.setSpacing(1)
+        layout.addWidget(header)
+        layout.addWidget(stack)
+
+        container = QWidget()
+        container.setLayout(layout)
+
+        self.diffHeader = header
+        self.diffStack = stack
+        self.conflictView = conflict
+        self.specialDiffView = specialDiff
+        self.diffView = diff
+
+        return container
+
+    # -------------------------------------------------------------------------
+    # Tasks
 
     def initTask(self, taskClass: Type[tasks.RepoTask]):
         assert issubclass(taskClass, tasks.RepoTask)
@@ -280,20 +408,24 @@ class RepoWidget(QWidget):
             self.state = None
 
     # -------------------------------------------------------------------------
+    # Splitter state
 
     def setSharedSplitterState(self, splitterStates: dict[str, QByteArray]):
         self.splitterStates = splitterStates
         self.restoreSplitterStates()
 
     def saveSplitterState(self, splitter: QSplitter):
-        self.splitterStates[splitter.objectName()] = splitter.saveState()
+        name = splitter.objectName()
+        state = splitter.saveState()
+        self.splitterStates[name] = state
 
     def restoreSplitterStates(self):
         for splitter in self.splittersToSave:
-            try:
-                splitter.restoreState(self.splitterStates[splitter.objectName()])
-            except KeyError:
-                pass
+            with contextlib.suppress(KeyError):
+                name = splitter.objectName()
+                state = self.splitterStates[name]
+                splitter.restoreState(state)
+            splitter.setHandleWidth(-1)  # reset default splitter width
 
     # -------------------------------------------------------------------------
 
@@ -320,11 +452,13 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
 
     def selectNextFile(self, down=True):
-        if self.filesStack.currentWidget() == self.committedFilesContainer:
+        page = self.fileStackPage()
+        if page == "commit":
             widgets = [self.committedFiles]
-        elif self.filesStack.currentWidget() == self.stageSplitter:
+        elif page == "workdir":
             widgets = [self.dirtyFiles, self.stagedFiles]
         else:
+            log.warning(TAG, f"Unknown FileStackPage {page})")
             return
 
         numWidgets = len(widgets)
@@ -365,7 +499,8 @@ class RepoWidget(QWidget):
         # if we have a new valid selection, apply it, otherwise bail
         if 0 <= leader < numWidgets and 0 <= row < lengths[leader]:
             widgets[leader].setFocus()
-            widgets[leader].clearSelectionSilently()
+            with QSignalBlockerContext(widgets[leader]):
+                widgets[leader].clearSelection()
             widgets[leader].selectRow(row)
         else:
             QApplication.beep()
@@ -435,9 +570,13 @@ class RepoWidget(QWidget):
         # Clean up status bar if there were repo-specific warnings in it
         self.refreshWindowTitle()
 
-    def clearDiffView(self):
+    def clearDiffView(self, sourceFileList: FileList | None = None):
+        # Ignore clear request if it comes from a widget that doesn't have focus
+        if sourceFileList and not sourceFileList.hasFocus():
+            return
+
+        self.setDiffStackPage("text")
         self.diffView.clear()
-        self.diffStack.setCurrentWidget(self.diffView)
         self.diffHeader.setText(" ")
 
     def setPendingWorkdir(self, path):
@@ -460,7 +599,7 @@ class RepoWidget(QWidget):
         self.saveFilePositions()
         self.navLocator = NavLocator()
 
-        self.filesStack.setCurrentWidget(self.stageSplitter)
+        self.setFileStackPage("workdir")
         self.committedFiles.clear()
 
         self.clearDiffView()
@@ -522,7 +661,7 @@ class RepoWidget(QWidget):
 
     @property
     def isWorkdirShown(self):
-        return self.filesStack.currentWidget() == self.stageSplitter
+        return self.fileStackPage() == "workdir"
 
     def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
         if not self.state:
@@ -722,3 +861,25 @@ class RepoWidget(QWidget):
             self.runTask(taskClass, **kwargs)
         else:
             log.warning(TAG, "Unsupported authority in internal link: ", url.toDisplayString())
+
+    # -------------------------------------------------------------------------
+
+    @property
+    def _fileStackPageValues(self):
+        return typing.get_args(FileStackPage)
+
+    def fileStackPage(self) -> FileStackPage:
+        return self._fileStackPageValues[self.filesStack.currentIndex()]
+
+    def setFileStackPage(self, p: FileStackPage):
+        self.filesStack.setCurrentIndex(self._fileStackPageValues.index(p))
+
+    @property
+    def _diffStackPageValues(self):
+        return typing.get_args(DiffStackPage)
+
+    def diffStackPage(self) -> DiffStackPage:
+        return self._diffStackPageValues[self.diffStack.currentIndex()]
+
+    def setDiffStackPage(self, p: DiffStackPage):
+        self.diffStack.setCurrentIndex(self._diffStackPageValues.index(p))

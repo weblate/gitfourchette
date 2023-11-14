@@ -280,7 +280,7 @@ def testCherrypick(qtbot, tempDir, mainWindow):
     rw.graphView.selectCommit(oid)
     triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
 
-    assert rw.stageSplitter.isVisibleTo(rw)
+    assert rw.fileStackPage() == "workdir"
     assert rw.repo.status() == {"a/a1.txt": GIT_STATUS_INDEX_NEW}
 
     acceptQMessageBox(rw, "cherry.+success.+commit")

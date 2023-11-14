@@ -19,6 +19,7 @@ class SelectedFileBatchError(Exception):
 class FileList(QListView):
     jump = Signal(NavLocator)
     nothingClicked = Signal()
+    selectedCountChanged = Signal(int)
     openDiffInNewWindow = Signal(Patch, NavLocator)
     stashFiles = Signal(list)  # list[str]
 
@@ -194,10 +195,6 @@ class FileList(QListView):
         if text:
             QApplication.clipboard().setText(text)
 
-    def clearSelectionSilently(self):
-        with QSignalBlockerContext(self):
-            self.clearSelection()
-
     def selectRow(self, rowNumber=0):
         if self.model().rowCount() == 0:
             self.nothingClicked.emit()
@@ -205,23 +202,27 @@ class FileList(QListView):
         else:
             self.setCurrentIndex(self.model().index(rowNumber or 0, 0))
 
-    def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
-        super().selectionChanged(selected, deselected)
+    def selectionChanged(self, justSelected: QItemSelection, justDeselected: QItemSelection):
+        super().selectionChanged(justSelected, justDeselected)
 
-        indexes = list(selected.indexes())
-        if indexes:
-            current = indexes[0]
+        selectedIndexes = self.selectedIndexes()
+        numSelectedTotal = len(selectedIndexes)
+
+        justSelectedIndexes = list(justSelected.indexes())
+        if justSelectedIndexes:
+            current = justSelectedIndexes[0]
         else:
             # Deselecting (e.g. with shift/ctrl) doesn't necessarily mean that the selection has been emptied.
             # Find an index that is still selected to keep the DiffView in sync with the selection.
             current = self.currentIndex()
-            selectedIndexes = self.selectedIndexes()
 
             if current.isValid() and selectedIndexes:
                 # currentIndex may be outside the selection, find the selected index that is closest to currentIndex.
                 current = min(selectedIndexes, key=lambda index: abs(index.row() - current.row()))
             else:
                 current = None
+
+        self.selectedCountChanged.emit(numSelectedTotal)
 
         if current and current.isValid():
             locator = self.getNavLocatorForIndex(current)

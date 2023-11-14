@@ -28,7 +28,10 @@ class Jump(RepoTask):
         if not locator:
             return
 
-        rw = self.rw
+        from gitfourchette.repowidget import RepoWidget
+        rw: RepoWidget = self.rw
+        assert isinstance(rw, RepoWidget)
+
         log.info(TAG, locator)
 
         # Back up current locator
@@ -71,11 +74,19 @@ class Jump(RepoTask):
             if locator.path:
                 anyFile = flv.selectFile(locator.path)
 
+            rw.stageButton.setEnabled(False)
+            rw.unstageButton.setEnabled(False)
+            if anyFile:
+                if flv is rw.stagedFiles:
+                    rw.unstageButton.setEnabled(True)
+                elif flv is rw.dirtyFiles:
+                    rw.stageButton.setEnabled(True)
+
             # Set correct card in filesStack (after selecting the file to avoid flashing)
             if locator.context == NavContext.COMMITTED:
-                rw.filesStack.setCurrentWidget(rw.committedFilesContainer)
+                rw.setFileStackPage("commit")
             else:
-                rw.filesStack.setCurrentWidget(rw.stageSplitter)
+                rw.setFileStackPage("workdir")
 
             if not anyFile:
                 flv.clearSelection()
@@ -91,28 +102,31 @@ class Jump(RepoTask):
         result = patchTask.result
 
         if type(result) == DiffConflict:
-            rw.diffStack.setCurrentWidget(rw.conflictViewScrollArea)
+            rw.setDiffStackPage("conflict")
             rw.conflictView.displayConflict(result)
         elif type(result) == SpecialDiffError:
-            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.setDiffStackPage("special")
             rw.specialDiffView.displaySpecialDiffError(result)
         elif type(result) == DiffDocument:
-            rw.diffStack.setCurrentWidget(rw.diffView)
+            rw.setDiffStackPage("text")
             if DEVDEBUG:
                 prefix = shortHash(patch.delta.old_file.id) + ".." + shortHash(patch.delta.new_file.id)
                 rw.diffHeader.setText(f"({prefix}) {rw.diffHeader.text()}")
             rw.diffView.replaceDocument(rw.repo, patch, locator, result)
         elif type(result) == DiffImagePair:
-            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.setDiffStackPage("special")
             rw.specialDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
         else:
-            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.setDiffStackPage("special")
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
                 icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
     def showWorkdir(self, locator: NavLocator):
-        rw = self.rw
+        from gitfourchette.repowidget import RepoWidget
+        rw: RepoWidget = self.rw
+        assert isinstance(rw, RepoWidget)
+
         previousLocator = rw.navLocator
 
         # Save selected row number for the end of the function
@@ -145,8 +159,8 @@ class Jump(RepoTask):
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
-            rw.dirtyHeader.setText(self.tr("%n dirty file(s):", "", nDirty))
-            rw.stagedHeader.setText(self.tr("%n file(s) staged for commit:", "", nStaged))
+            rw.dirtyHeader.setText(self.tr("%n dirty:", "", nDirty))
+            rw.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
 
             newNumChanges = nDirty + nStaged
             numChangesDifferent = rw.state.numChanges != newNumChanges
@@ -168,8 +182,8 @@ class Jump(RepoTask):
 
         # Special case if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
-            rw.filesStack.setCurrentWidget(rw.stageSplitter)
-            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.setFileStackPage("workdir")
+            rw.setDiffStackPage("special")
             rw.diffHeader.setText(self.tr("Working directory clean"))
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("The working directory is clean."),
@@ -193,7 +207,9 @@ class Jump(RepoTask):
         return locator
 
     def showCommit(self, locator: NavLocator):
-        rw = self.rw
+        from gitfourchette.repowidget import RepoWidget
+        rw: RepoWidget = self.rw
+        assert isinstance(rw, RepoWidget)
 
         # Select row in commit log
         from gitfourchette.graphview.graphview import GraphView
@@ -220,7 +236,8 @@ class Jump(RepoTask):
 
         else:
             # Load commit (async)
-            subtask: tasks.LoadCommit = yield from self.flowSubtask(tasks.LoadCommit, locator.commit)
+            subtask = yield from self.flowSubtask(tasks.LoadCommit, locator.commit)
+            assert isinstance(subtask, tasks.LoadCommit)
 
             # Get data from subtask
             diffs = subtask.diffs
@@ -235,7 +252,7 @@ class Jump(RepoTask):
 
             # Show message if commit is empty
             if flv.isEmpty():
-                rw.diffStack.setCurrentWidget(rw.specialDiffView)
+                rw.setDiffStackPage("special")
                 rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(self.tr("Empty commit.")))
 
             # Set header text
@@ -245,8 +262,8 @@ class Jump(RepoTask):
 
         # Special case if there are no changes
         if flv.isEmpty():
-            rw.filesStack.setCurrentWidget(rw.committedFilesContainer)
-            rw.diffStack.setCurrentWidget(rw.specialDiffView)
+            rw.setFileStackPage("commit")
+            rw.setDiffStackPage("special")
             rw.diffHeader.setText(self.tr("Empty commit"))
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("This commit is empty."),
@@ -258,7 +275,10 @@ class Jump(RepoTask):
         return locator
 
     def setFinalLocator(self, locator: NavLocator):
-        rw = self.rw
+        from gitfourchette.repowidget import RepoWidget
+        rw: RepoWidget = self.rw
+        assert isinstance(rw, RepoWidget)
+
         rw.navLocator = locator
         rw.navHistory.push(locator)
         log.info(TAG, "locator set to:", locator)
@@ -271,8 +291,7 @@ class JumpBackOrForward(tasks.RepoTask):
 
     def flow(self, delta: int):
         from gitfourchette.repowidget import RepoWidget
-
-        rw: RepoWidget = self.parentWidget()
+        rw: RepoWidget = self.rw
         assert isinstance(rw, RepoWidget)
 
         start = rw.saveFilePositions()
@@ -329,8 +348,7 @@ class RefreshRepo(tasks.RepoTask):
 
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
         from gitfourchette.repowidget import RepoWidget
-
-        rw: RepoWidget = self.parentWidget()
+        rw: RepoWidget = self.rw
         assert isinstance(rw, RepoWidget)
         assert onAppThread()
 
