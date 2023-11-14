@@ -208,7 +208,7 @@ class PrefsDialog(QDialog):
                 del self.prefDiff[k]
         else:
             self.prefDiff[k] = v
-        log.verbose("prefsdialog", f"Assign {k} {v}")
+        log.verbose("prefsdialog", f"Assign {k} {v} ({type(v)})")
 
     def getMostRecentValue(self, k):
         if k in self.prefDiff:
@@ -352,14 +352,20 @@ class PrefsDialog(QDialog):
             control = QComboBox(self)
 
         for enumMember in enumType:
+            # PySide2/PySide6 demotes StrEnum to str when stored with QComboBox.setItemData().
+            # Wrap the value in a tuple to preserve the type. (PyQt5 & PyQt6 do the right thing here)
+            data = (enumMember,)
+            name = TrTables.prefKey(enumMember.name)
+
             if previewCallback:
-                control.addItemWithPreview(TrTables.prefKey(enumMember.name), enumMember, previewCallback(enumMember))
+                control.addItemWithPreview(name, data, previewCallback(enumMember))
             else:
-                control.addItem(TrTables.prefKey(enumMember.name), enumMember)
+                control.addItem(name, data)
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
 
-        control.activated.connect(lambda index: self.assign(prefKey, control.currentData(Qt.ItemDataRole.UserRole)))
+        control.activated.connect(lambda i: self.assign(prefKey, control.itemData(i)[0]))  # unpack the tuple!
+
         return control
 
     def qtStyleControl(self, prefKey, prefValue):
