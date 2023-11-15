@@ -23,14 +23,14 @@ class DirtyFiles(FileList):
                 self.tr("&Stage %n File(s)", "", n),
                 self.stage,
                 icon="list-add",  # QStyle.StandardPixmap.SP_ArrowDown,
-                shortcuts=GlobalShortcuts.stageHotkeys,
+                shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
             ),
 
             ActionDef(
                 self.tr("&Discard Changes"),
                 self.discard,
                 icon=QStyle.StandardPixmap.SP_TrashIcon,
-                shortcuts=GlobalShortcuts.discardHotkeys,
+                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
             ),
 
             ActionDef(

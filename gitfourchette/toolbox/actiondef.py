@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Type, ClassVar, Callable, Union
 
 from gitfourchette.qt import *
-from gitfourchette.toolbox.qtutils import stockIcon
+from gitfourchette.toolbox.qtutils import stockIcon, MultiShortcut
 
 
 @dataclass
@@ -19,7 +19,7 @@ class ActionDef:
     checkState: int = 0
     enabled: bool = True
     submenu: list['ActionDef'] = field(default_factory=list)
-    shortcuts: str | QKeySequence | QKeySequence.StandardKey | list[QKeySequence] = ""
+    shortcuts: MultiShortcut = field(default_factory=list)
     statusTip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole

@@ -22,7 +22,7 @@ class StagedFiles(FileList):
                 self.tr("&Unstage %n File(s)", "", n),
                 self.unstage,
                 icon="list-remove",  # QStyle.StandardPixmap.SP_ArrowUp,
-                shortcuts=GlobalShortcuts.discardHotkeys,
+                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
             ),
 
             ActionDef(

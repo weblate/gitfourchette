@@ -313,15 +313,21 @@ def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **u
 
 
 def makeMultiShortcut(*args) -> MultiShortcut:
+    if len(args) == 1 and type(args[0]) is list:
+        args = args[0]
+
     shortcuts = []
 
     for alt in args:
-        if isinstance(alt, str):
+        t = type(alt)
+        if t is str:
             shortcuts.append(QKeySequence(alt))
-        elif isinstance(alt, QKeySequence.StandardKey):
+        elif t is QKeySequence.StandardKey:
             shortcuts.extend(QKeySequence.keyBindings(alt))
+        elif t is Qt.Key:  # for PySide2 compat
+            shortcuts.append(QKeySequence(alt))
         else:
-            assert isinstance(alt, QKeySequence)
+            assert t is QKeySequence
             shortcuts.append(alt)
 
     # Ensure no duplicates (stable order since Python 3.7+)
