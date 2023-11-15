@@ -31,7 +31,7 @@ class QElidedLabel(QLabel):
         qp = QPainter(self)
         opt = QStyleOptionFrame()
         self.initStyleOption(opt)
-        self.style().drawControl(QStyle.CE_ShapedFrame, opt, qp, self)
+        self.style().drawControl(QStyle.ControlElement.CE_ShapedFrame, opt, qp, self)
 
         elideMode = self.elideMode()
         metrics = self.fontMetrics()

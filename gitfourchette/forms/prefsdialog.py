@@ -306,7 +306,7 @@ class PrefsDialog(QDialog):
 
     def intControl(self, prefKey, prefValue):
         control = QLineEdit(str(prefValue), self)
-        control.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        control.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         control.setValidator(QIntValidator())
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, int(v) if v else 0))
         return control
@@ -321,7 +321,7 @@ class PrefsDialog(QDialog):
 
     def floatControl(self, prefKey, prefValue):
         control = QLineEdit(str(prefValue), self)
-        control.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        control.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         control.setValidator(QDoubleValidator())
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, float(v) if v else 0.0))
         return control

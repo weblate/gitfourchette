@@ -37,7 +37,7 @@ def showInFolder(path: str):
         if iface.isValid():
             if PYQT5 or PYQT6:
                 # PyQt5/6 needs the array of strings to be spelled out explicitly.
-                stringType = QMetaType.QString if PYQT5 else QMetaType.QString.value  # ugh...
+                stringType = QMetaType.QString if PYQT5 else QMetaType.fromName(b"QString")
                 arg = QDBusArgument()
                 arg.beginArray(stringType)
                 arg.add(path)
