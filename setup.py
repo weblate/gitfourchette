@@ -20,18 +20,17 @@ setup(
     python_requires='>= 3.10',
     install_requires=[
         'pygit2 >= 1.12',
-        'PySide6>=6.4.1',
-        'PySide6 !=6.4.0, !=6.4.0.1, !=6.5.1',
+        'pyqt6',
     ],
     extras_require={
-        'pyqt6': ['qtpy', 'pyqt6'],
-        'pyqt5': ['qtpy', 'pyqt5'],
-        'pyside2': ['qtpy', 'PySide2'],
+        'pyqt5': ['pyqt5'],
+        'pyside6': ['PySide6 !=6.4.0, !=6.4.0.1, !=6.5.1'],
+        'pyside2': ['PySide2'],
+        'qtpy': ['qtpy'],  # compatibility layer for older versions of Qt bindings
         'memory-indicator': ['psutil'],
     },
     tests_require=[
         'pytest',
         'pytest-qt',
-        'qtpy',
     ],
 )

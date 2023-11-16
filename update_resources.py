@@ -1,28 +1,45 @@
 #! /usr/bin/env python3
-import argparse, difflib, os, re, subprocess, sys
+import argparse, contextlib, difflib, os, re, subprocess, sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-repoRootDir = os.path.dirname(os.path.realpath(sys.argv[0]))
-repoRootDir = os.path.relpath(repoRootDir)
-srcDir = os.path.join(repoRootDir, "gitfourchette")
-langDir = os.path.join(repoRootDir, "lang")
-assetsDir = os.path.join(srcDir, "assets")
+REPO_ROOTDIR = os.path.dirname(os.path.realpath(sys.argv[0]))
+REPO_ROOTDIR = os.path.relpath(REPO_ROOTDIR)
+SRC_DIR = os.path.join(REPO_ROOTDIR, "gitfourchette")
+LANG_DIR = os.path.join(REPO_ROOTDIR, "lang")
+ASSETS_DIR = os.path.join(SRC_DIR, "assets")
 
-parser = argparse.ArgumentParser(description="Update GitFourchette assets")
-parser.add_argument("--force", action="store_true", help="skip mtime and equality checks before regenerating an asset")
-parser.add_argument("--lang", action="store_true", default=False, help="update .ts/.qm files")
-parser.add_argument("--clean-lang", action="store_true", default=False, help="update .ts/.qm files without source code info")
-parser.add_argument("--lrelease", default="pyside6-lrelease", help="path to lrelease tool")
-parser.add_argument("--lupdate", default="pyside6-lupdate", help="path to lupdate tool")
-parser.add_argument("--uic", default="pyside6-uic", help="path to uic tool")
-parser.add_argument("--no-uic-cleanup", action="store_true", help="don't postprocess uic output")
-parser.add_argument("--version", action="store_true", default=False, help="show tool versions and exit")
-cliArgs = parser.parse_args()
+FORCE = False
 
-UIC = cliArgs.uic
-LUPDATE = cliArgs.lupdate
-LRELEASE = cliArgs.lrelease
+
+def makeParser():
+    parser = argparse.ArgumentParser(description="Update GitFourchette assets")
+
+    parser.add_argument("--force", action="store_true",
+                        help="skip mtime and equality checks before regenerating an asset")
+
+    parser.add_argument("--lang", action="store_true", default=False,
+                        help="update .ts/.qm files")
+
+    parser.add_argument("--clean-lang", action="store_true", default=False,
+                        help="update .ts/.qm files without source code info")
+
+    parser.add_argument("--lupdate", default="pyside6-lupdate",
+                        help="path to Python-compatible lupdate tool ('pyside6-lupdate' by default, 'pylupdate6' NOT supported)")
+
+    parser.add_argument("--lrelease", default="lrelease",
+                        help="path to lrelease tool ('lrelease' by default, 'pyside6-lrelease' also supported)")
+
+    parser.add_argument("--uic", default="pyuic6",
+                        help="path to Python-compatible uic tool ('pyuic6' by default, 'pyside6-uic' also supported)")
+
+    parser.add_argument("--no-uic-cleanup", action="store_true",
+                        help="don't postprocess uic output")
+
+    parser.add_argument("--version", action="store_true", default=False,
+                        help="show tool versions and exit")
+
+    return parser
 
 
 def call(*args, **kwargs) -> subprocess.CompletedProcess:
@@ -44,19 +61,11 @@ def call(*args, **kwargs) -> subprocess.CompletedProcess:
         sys.exit(1)
 
 
-if cliArgs.version:
-    toolVersions = ""
-    toolVersions += call(UIC, "--version").stdout
-    toolVersions += call(LUPDATE, "-version").stdout
-    toolVersions += call(LRELEASE, "-version").stdout
-    print(toolVersions)
-    sys.exit(0)
-
-
-def writeIfDifferent(path, text, ignoreChangedLines=[]):
+def writeIfDifferent(path, text, ignoreChangedLines=None):
+    ignoreChangedLines = ignoreChangedLines or []
     needRewrite = True
 
-    if not cliArgs.force:
+    if not FORCE:
         ignoreList = []
         for icl in ignoreChangedLines:
             ignoreList.append("+ " + icl)
@@ -93,22 +102,23 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
         svg += f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='{color}' stroke-width='1' fill='{fill}'/>\n"
         svg += f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='{color}'>{char}</text>\n"
         svg += f"</svg>"
-        svgFileName = F"{assetsDir}/status_{char.lower()}{suffix}.svg"
+        svgFileName = F"{ASSETS_DIR}/status_{char.lower()}{suffix}.svg"
         writeIfDifferent(svgFileName, svg)
 
 
-def compileUi(uiPath, pyPath):
-    if not cliArgs.force:
-        uiStat = os.stat(uiPath)
-        pyStat = os.stat(pyPath)
-        if pyStat.st_mtime > uiStat.st_mtime:
-            return
+def compileUi(uic, uiPath, pyPath, force=False, cleanupOutput=True):
+    if not force:
+        with contextlib.suppress(FileNotFoundError):
+            uiStat = os.stat(uiPath)
+            pyStat = os.stat(pyPath)
+            if pyStat.st_mtime > uiStat.st_mtime:
+                return
 
-    result = call(UIC, os.path.basename(uiPath), cwd=os.path.dirname(uiPath))
+    result = call(uic, os.path.basename(uiPath), cwd=os.path.dirname(uiPath))
     text = result.stdout
     ignoreDiffs = []
 
-    if cliArgs.no_uic_cleanup:
+    if not cleanupOutput:
         pass
     elif "from PyQt" in text:
         text = re.sub(r"^from PyQt[56] import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
@@ -134,56 +144,44 @@ def compileUi(uiPath, pyPath):
     writeIfDifferent(pyPath, text, ignoreDiffs)
 
 
-# Generate status icons.
-# 'U' (unmerged) has custom colors/text, so don't generate it automatically.
-# 'C' (copied) and 'T' (typechange) don't appear in GitFourchette.
-writeStatusIcon('#0EDF00', 'A')  # add
-writeStatusIcon('#FE635F', 'D')  # delete
-writeStatusIcon('#F7C342', 'M')  # modify
-writeStatusIcon('#D18DE1', 'R')  # rename
-writeStatusIcon('#ff00ff', 'X')  # unknown
-
-# Generate .py files from .ui files
-for root, dirs, files in os.walk(srcDir):
-    for file in files:
-        basename = os.path.splitext(file)[0]
-        fullpath = os.path.join(root, file)
-
-        if re.match(r"^ui_.+\.py$", file) and \
-                not os.path.isfile(F"{root}/{basename.removeprefix('ui_')}.ui"):
-            print("[!] Removing generated UI source file because there's no matching designer file:", fullpath)
-            os.unlink(fullpath)
-            continue
-
-        if file.endswith(".ui"):
-            compileUi(fullpath, F"{root}/ui_{basename}.py")
-
-
-if cliArgs.lang or cliArgs.clean_lang:
-    # Update .ts files from strings contained in the source code
-    for file in os.listdir(langDir):
+def updateTsFiles(lupdate, clean):
+    """ Update .ts files from strings contained in the source code """
+    for file in os.listdir(LANG_DIR):
         if not file.endswith(".ts"):
             continue
-        filePath = os.path.join(langDir, file)
-        basename = os.path.splitext(file)[0]
+
+        filePath = os.path.join(LANG_DIR, file)
 
         opts = "-extensions py,ui"
-        if cliArgs.clean_lang:
+        if clean:
             opts += " -no-ui-lines -no-obsolete -locations none"
         if file == "gitfourchette_en.ts":
             opts += " -pluralonly"
 
-        call(LUPDATE, *opts.split(), srcDir, "-ts", filePath, capture_output=False)
+        call(lupdate, *opts.split(), SRC_DIR, "-ts", filePath, capture_output=False)
 
-    # Generate .qm files from .ts files
+    if not clean:
+        print("""
+    *******************************************************************************
+    You are using --lang, which generates extra info in the .ts files.
+    Before committing the .ts files, please clean them up by running
+    this script again with --clean-lang.
+    *******************************************************************************
+    """)
+
+
+def updateQmFiles(lrelease):
+    """Generate .qm files from .ts files"""
+
     anyPlaceholderMismatches = False
-    for file in os.listdir(langDir):
+    for file in os.listdir(LANG_DIR):
         if not file.endswith(".ts"):
             continue
-        filePath = os.path.join(langDir, file)
+
+        filePath = os.path.join(LANG_DIR, file)
         basename = os.path.splitext(file)[0]
-        qmPath = os.path.join(assetsDir, F"{basename}.qm")
-        call(LRELEASE, "-removeidentical", filePath, "-qm", qmPath)
+        qmPath = os.path.join(ASSETS_DIR, F"{basename}.qm")
+        call(lrelease, "-removeidentical", filePath, "-qm", qmPath)
 
         # Check placeholders in .ts files
         for messageTag in ET.parse(filePath).getroot().findall('context/message'):
@@ -208,15 +206,6 @@ if cliArgs.lang or cliArgs.clean_lang:
                         f"in: \"{tt}\"")
 
 
-    if not cliArgs.clean_lang:
-        print("""
-    *******************************************************************************
-    You are using --lang, which generates extra info in the .ts files.
-    Before committing the .ts files, please clean them up by running
-    this script again with --clean-lang.
-    *******************************************************************************
-    """)
-
     if anyPlaceholderMismatches:
         print("""
     *******************************************************************************
@@ -224,3 +213,43 @@ if cliArgs.lang or cliArgs.clean_lang:
     PLEASE REVIEW THE TRANSLATIONS BEFORE COMMITTING!
     *******************************************************************************
     """)
+
+
+if __name__ == '__main__':
+    args = makeParser().parse_args()
+
+    FORCE = args.force
+
+    if args.version:
+        toolVersions = ""
+        toolVersions += call(args.uic, "--version").stdout
+        toolVersions += call(args.lupdate, "-version").stdout
+        toolVersions += call(args.lrelease, "-version").stdout
+        print(toolVersions)
+        sys.exit(0)
+
+    # Generate status icons.
+    # 'U' (unmerged) has custom colors/text, so don't generate it automatically.
+    # 'C' (copied) and 'T' (typechange) don't appear in GitFourchette.
+    writeStatusIcon('#0EDF00', 'A')  # add
+    writeStatusIcon('#FE635F', 'D')  # delete
+    writeStatusIcon('#F7C342', 'M')  # modify
+    writeStatusIcon('#D18DE1', 'R')  # rename
+    writeStatusIcon('#ff00ff', 'X')  # unknown
+
+    # Generate .py files from .ui files
+    for root, dirs, files in os.walk(SRC_DIR):
+        for file in files:
+            basename = os.path.splitext(file)[0]
+            fullpath = os.path.join(root, file)
+
+            if file.endswith(".ui"):
+                compileUi(args.uic, fullpath, F"{root}/ui_{basename}.py", force=args.force, cleanupOutput=not args.no_uic_cleanup)
+            elif re.match(r"^ui_.+\.py$", file) and \
+                    not os.path.isfile(F"{root}/{basename.removeprefix('ui_')}.ui"):
+                print("[!] Removing generated UI source file because there's no matching designer file:", fullpath)
+                os.unlink(fullpath)
+
+    if args.lang or args.clean_lang:
+        updateTsFiles(args.lupdate, args.clean_lang)
+        updateQmFiles(args.lrelease)

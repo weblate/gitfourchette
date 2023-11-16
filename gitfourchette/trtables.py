@@ -192,10 +192,8 @@ class TrTables:
             "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
             "debug_forceQtApi": translate("Prefs", "Preferred Qt binding"),
             "debug_forceQtApi_help": translate(
-                "Prefs",
-                "<p>After restarting, {app} will use this Qt binding if available. You can also run {app} with the "
-                "QTAPI environment variable to override this setting.</p>"
-                "<p>To use any binding other than PySide6, you must also install the  “qtpy” Python module.</p>"),
+                "Prefs", "<p>After restarting, {app} will use this Qt binding if available.</p><p>You can also pass "
+                         "the name of a Qt binding via the “QT_API” environment variable.</p>"),
 
             "external_editor": translate("Prefs", "Text editor"),
             "external_diff": translate("Prefs", "Diff tool"),
@@ -220,7 +218,7 @@ class TrTables:
 
             "QTAPI_AUTOMATIC": translate("Prefs", "Automatic (recommended)", "automatic choice of qt binding"),
             "QTAPI_PYSIDE6": "PySide6",
-            "QTAPI_PYSIDE2": "PySide2 + qtpy " + translate("Prefs", "(not recommended)"),
-            "QTAPI_PYQT6": "PyQt6 + qtpy",
-            "QTAPI_PYQT5": "PyQt5 + qtpy",
+            "QTAPI_PYSIDE2": "PySide2 " + translate("Prefs", "(not recommended)"),
+            "QTAPI_PYQT6": "PyQt6",
+            "QTAPI_PYQT5": "PyQt5",
         }
