@@ -28,7 +28,7 @@ def testNewStash(qtbot, tempDir, mainWindow):
     assert not os.path.isfile(f"{wd}/a/untracked.txt"), "untracked file must be gone after stashing"
     assert qlvGetRowData(rw.dirtyFiles) == [], "workdir must be clean after stashing"
     assert len(repo.listall_stashes()) == 1, "there must be one stash in the repo"
-    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)], "stash must be in sidebar"
+    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.ItemDataRole.DisplayRole)], "stash must be in sidebar"
 
     rw.selectRef("refs/stash")
     assert rw.committedFiles.isVisibleTo(rw)
@@ -92,7 +92,7 @@ def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
 
     assert not os.path.isfile(f"{wd}/a/untracked.txt")
     assert len(repo.listall_stashes()) == 1
-    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.DisplayRole)]
+    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.ItemDataRole.DisplayRole)]
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 

@@ -359,7 +359,7 @@ class Sidebar(QTreeView):
     def mousePressEvent(self, event: QMouseEvent):
         index = self.indexAt(event.pos())
         rect = self.visualRect(index)
-        if index.isValid() and rect.isValid() and event.x() < rect.left():
+        if index.isValid() and rect.isValid() and event.pos().x() < rect.left():
             # Clicking collapse/expand triangle - will react in mouseReleaseEvent
             self.expandTriangleClickIndex = index
             event.accept()
@@ -369,7 +369,7 @@ class Sidebar(QTreeView):
     def mouseReleaseEvent(self, event: QMouseEvent):
         index = self.indexAt(event.pos())
         rect = self.visualRect(index)
-        if index.isValid() and rect.isValid() and event.x() < rect.left() and index == self.expandTriangleClickIndex:
+        if index.isValid() and rect.isValid() and event.pos().x() < rect.left() and index == self.expandTriangleClickIndex:
             # Let user collapse/expand in quick succession without triggering a double click
             self.eatDoubleClickTimer.restart()
             # Toggle expanded state

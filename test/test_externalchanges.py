@@ -14,7 +14,7 @@ def testExternalUnstage(qtbot, tempDir, mainWindow):
     # Stage master.txt
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == ([], ["master.txt"])
 
     # Unstage master.txt with git itself, outside of GF
@@ -58,7 +58,7 @@ def testStayOnFileAfterPartialPatchDespiteExternalChange(qtbot, tempDir, mainWin
     # Stage a single line
     qlvClickNthRow(rw.dirtyFiles, 1)
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     # This was a partial patch, so b2 is both dirty and staged;
     # also, a1 should appear among the dirty files now

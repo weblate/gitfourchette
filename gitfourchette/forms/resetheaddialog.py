@@ -100,7 +100,7 @@ class ResetHeadDialog(QDialog):
 
         self.helpLabel = QLabel()
         self.helpLabel.setWordWrap(True)
-        self.helpLabel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.helpLabel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.helpLabel.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -108,8 +108,8 @@ class ResetHeadDialog(QDialog):
         buttonBox.rejected.connect(self.reject)
 
         vbar = QFrame()
-        vbar.setFrameShape(QFrame.VLine)
-        vbar.setFrameShadow(QFrame.Sunken)
+        vbar.setFrameShape(QFrame.Shape.VLine)
+        vbar.setFrameShadow(QFrame.Shadow.Sunken)
 
         mainVBL = QVBoxLayout()
         centerHBL = QHBoxLayout()

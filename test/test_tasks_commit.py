@@ -15,7 +15,7 @@ def testCommit(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     rw.commitButton.click()
@@ -50,7 +50,7 @@ def testCommitUntrackedFileInEmptyRepo(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
@@ -71,7 +71,7 @@ def testCommitMessageDraftSavedOnCancel(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
@@ -99,7 +99,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 0)
 
     # Stage it
-    QTest.keyPress(rw.dirtyFiles, Qt.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     # Kick off amend dialog
     rw.amendButton.click()
@@ -164,7 +164,7 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
 
     identityDialog = findQDialog(rw, "identity")
     assert isinstance(identityDialog.ui, Ui_IdentityDialog1)
-    identityOK = identityDialog.ui.buttonBox.button(QDialogButtonBox.Ok)
+    identityOK = identityDialog.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
     identityDialog.ui.nameEdit.setText("Archibald Haddock")
     identityDialog.ui.emailEdit.setText("1e15sabords@example.com")
     identityDialog.ui.setLocalIdentity.setChecked(True)

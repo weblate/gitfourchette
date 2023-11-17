@@ -106,7 +106,7 @@ class RemoteLink(QObject, RemoteCallbacks):
 
         # Find user key files
         if not self.usingCustomKeyFile:
-            sshDirectory = QStandardPaths.locate(QStandardPaths.HomeLocation, ".ssh", QStandardPaths.LocateDirectory)
+            sshDirectory = QStandardPaths.locate(QStandardPaths.StandardLocation.HomeLocation, ".ssh", QStandardPaths.LocateOption.LocateDirectory)
             if sshDirectory:
                 for file in os.listdir(sshDirectory):
                     pubkey = os.path.join(sshDirectory, file)

@@ -50,7 +50,7 @@ def testTrashFull(qtbot, tempDir, mainWindow):
             junk.write(F"test{i}")
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key_Delete)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "really discard changes")
 
     # Trash should have been purged to make room for new patch

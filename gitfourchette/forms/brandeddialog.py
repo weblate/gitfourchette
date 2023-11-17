@@ -18,7 +18,7 @@ def makeBrandedDialogLayout(
     iconLabel.setScaledContents(True)
     iconLabel.setMargin(8)
 
-    horizontalSpacer = QSpacerItem(0, 1, QSizePolicy.Fixed, QSizePolicy.Minimum)
+    horizontalSpacer = QSpacerItem(0, 1, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
 
     titleLayout = QVBoxLayout()
     titleLayout.setSpacing(0)

@@ -21,7 +21,7 @@ class CloneDialog(QDialog):
                 self.ui.urlEdit.addItem(url)
             self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
             self.ui.urlEdit.addItem(stockIcon("edit-clear-history"), self.tr("Clear history"), "CLEAR")
-        self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
 
     def onComboBoxItemActivated(self, index):
         itemData = self.ui.urlEdit.itemData(index, Qt.ItemDataRole.UserRole)

@@ -56,7 +56,7 @@ def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"NewFile.txt": GIT_STATUS_WT_NEW}
 
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"NewFile.txt": GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED}
 
@@ -74,7 +74,7 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"file with spaces.txt": GIT_STATUS_WT_NEW}
 
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"file with spaces.txt": GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED}
 
@@ -99,8 +99,8 @@ def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
     # Partial patch of first modified line
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key_Down)    # Skip hunk line (@@...@@)
-    QTest.keyPress(rw.diffView, Qt.Key_Return)  # Stage first modified line
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Down)    # Skip hunk line (@@...@@)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
     assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED}
 
     staged = rw.repo.get_staged_changes()
