@@ -394,7 +394,7 @@ class MainWindow(QMainWindow):
         self.recentMenu.clear()
         for path in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
             shortName = settings.history.getRepoTabName(path)
-            action = self.recentMenu.addAction(shortName, lambda p=path: self.openRepo(p))
+            action = self.recentMenu.addAction(shortName, lambda p=path: self.openRepo(p, exactMatch=True))
             action.setStatusTip(path)
         self.recentMenu.addSeparator()
 
@@ -473,8 +473,12 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Repo loading
 
-    def _constructRepo(self, path: str) -> Repo:
-        repo = Repo(path)
+    def _constructRepo(self, path: str, exactMatch: bool = False) -> Repo:
+        flags = 0
+        if exactMatch:
+            flags |= GIT_REPOSITORY_OPEN_NO_SEARCH
+
+        repo = Repo(path, flags)
 
         if repo.is_shallow:
             porcelain.libgit2_version_at_least("1.7.0", feature_name="Shallow clone support")
@@ -566,10 +570,10 @@ class MainWindow(QMainWindow):
 
         return True
 
-    def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1
+    def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1, exactMatch=False
                   ) -> RepoWidget | None:
         # Construct a Repo2 so we can get the workdir
-        repo = self._constructRepo(path)
+        repo = self._constructRepo(path, exactMatch=exactMatch)
 
         if not repo:
             return None
@@ -797,9 +801,9 @@ class MainWindow(QMainWindow):
         qfd.fileSelected.connect(self.openRepo)
         qfd.show()
 
-    def openRepo(self, path: str) -> RepoWidget | None:
+    def openRepo(self, path: str, exactMatch: bool = False) -> RepoWidget | None:
         try:
-            rw = self._openRepo(path)
+            rw = self._openRepo(path, exactMatch=exactMatch)
         except BaseException as exc:
             excMessageBox(
                 exc,
@@ -880,7 +884,7 @@ class MainWindow(QMainWindow):
         index = self.tabs.indexOf(rw)
         if index >= 0:
             index += 1
-        return self._openRepo(path, tabIndex=index)
+        return self._openRepo(path, tabIndex=index, exactMatch=True)
 
     def nextTab(self):
         if self.tabs.count() == 0:
