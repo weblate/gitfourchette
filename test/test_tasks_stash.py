@@ -3,6 +3,7 @@ from .fixtures import *
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.forms.stashdialog import StashDialog
+from gitfourchette.tasks import DropStash
 import os
 
 
@@ -164,3 +165,35 @@ def testDropStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
+def testHideStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        touchFile(f"{wd}/stashthis.txt")
+        stashOid = repo.create_stash("purr", ["stashthis.txt"])
+
+    rw = mainWindow.openRepo(wd)
+    assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
+    rw.graphView.selectCommit(stashOid, silent=False)  # must not raise
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashOid.hex)
+    findMenuAction(menu, "^hide").trigger()
+
+    assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
+    with pytest.raises(Exception):
+        rw.graphView.selectCommit(stashOid, silent=False)
+
+
+def testDropHiddenStash(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        touchFile(f"{wd}/stashthis.txt")
+        stashOid = repo.create_stash("purr", ["stashthis.txt"])
+
+    rw = mainWindow.openRepo(wd)
+    rw.toggleHideStash(stashOid)
+    assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
+    DropStash.invoke(stashOid)
+    acceptQMessageBox(rw, "really delete.+stash")
+    assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits

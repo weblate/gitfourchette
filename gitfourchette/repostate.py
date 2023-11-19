@@ -409,7 +409,7 @@ class RepoState:
             else:
                 # Remove it from prefs
                 log.info("RepoState", "Skipping missing hidden stash: " + hiddenStash)
-                self.uiPrefs.hiddenStashCommits.remove(oid)
+                self.uiPrefs.hiddenStashCommits.remove(hiddenStash)
 
         return seeds
 
