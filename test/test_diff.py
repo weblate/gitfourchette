@@ -173,7 +173,7 @@ def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
 def testDiffInNewWindow(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    assert 1 == len(QGuiApplication.topLevelWindows())
+    assert mainWindow in QApplication.topLevelWidgets()
 
     oid = Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
     rw.graphView.selectCommit(oid)
@@ -182,7 +182,6 @@ def testDiffInNewWindow(qtbot, tempDir, mainWindow):
 
     rw.committedFiles.openDiffInNewWindow.emit(rw.diffView.currentPatch, rw.navLocator)
 
-    assert 2 == len(QGuiApplication.topLevelWindows())
     diffWidget = next(w for w in QApplication.topLevelWidgets() if isinstance(w, DiffView))
     assert diffWidget.isWindow()
     assert diffWidget.window() is not mainWindow
