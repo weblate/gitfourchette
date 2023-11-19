@@ -70,9 +70,6 @@ def testCommitMessageDraftSavedOnCancel(qtbot, tempDir, mainWindow):
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
 
-    qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
-
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
@@ -94,12 +91,6 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
-
-    # Select file
-    qlvClickNthRow(rw.dirtyFiles, 0)
-
-    # Stage it
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     # Kick off amend dialog
     rw.amendButton.click()

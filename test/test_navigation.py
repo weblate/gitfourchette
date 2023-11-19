@@ -204,8 +204,8 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
     oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
 
     # Stage c1 and c2
-    qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()
-    qlvClickNthRow(rw.dirtyFiles, 4); rw.dirtyFiles.stage()
+    assert "c/c2.txt" == qlvClickNthRow(rw.dirtyFiles, 4); rw.dirtyFiles.stage()
+    assert "c/c1.txt" == qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()
 
     # Select b1.txt in UNSTAGED context
     qlvClickNthRow(rw.dirtyFiles, 2)

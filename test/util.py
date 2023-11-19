@@ -78,20 +78,24 @@ def qlvGetRowData(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     data = []
     for row in range(model.rowCount()):
         index = model.index(row, 0)
+        assert index.isValid()
         data.append(index.data(role))
     return data
 
 
 def qlvClickNthRow(view: QListView, n: int):
     index = view.model().index(n, 0)
+    assert index.isValid()
     view.scrollTo(index)
     rect = view.visualRect(index)
     QTest.mouseClick(view.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
+    return index.data(Qt.ItemDataRole.DisplayRole)
 
 
 def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     data = []
     for index in view.selectedIndexes():
+        assert index.isValid()
         data.append(index.data(role))
     return data
 

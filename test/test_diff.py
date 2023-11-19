@@ -32,6 +32,7 @@ def testEmptyDiffWithNameChange(qtbot, tempDir, mainWindow):
     with RepoContext(wd) as repo:
         repo.index.remove("master.txt")
         repo.index.add("mastiff.txt")
+        repo.index.write()
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.stagedFiles, 0)
