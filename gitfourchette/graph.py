@@ -187,7 +187,7 @@ class Arc:
     "Row number in which this arc was opened"
 
     closedAt: BatchRow
-    "Row number in which this arc was closed"
+    "Row number in which this arc was closed (may be BATCHROW_UNDEF until resolved)"
 
     chain: ChainHandle
     "Row number of the tip of the arc chain (topmost commit in branch)"
@@ -245,7 +245,14 @@ class Arc:
         return self.openedAt >= row and self.closedAt >= row
 
     def isStale(self, row: int):
-        return 0 <= self.closedAt < row
+        """
+        Return True if this arc is considered stale at a given row in the graph.
+        An arc is stale at row 'R' if it is closed above 'R',
+        or if it is a ParentlessCommitBogusArc appearing at or above 'R',
+        or if it is dangling (its closedAt row hasn't been resolved yet).
+        """
+        ca = int(self.closedAt)
+        return (0 <= ca < row) or (0 <= ca == self.openedAt <= row)
 
 
 @dataclass
@@ -637,6 +644,7 @@ class GeneratorState(Frame):
                          openedBy=me, closedBy=me, junctions=[])
             self.lastArc.nextArc = newArc
             self.lastArc = newArc
+            assert newArc.isParentlessCommitBogusArc()
 
         assert not handOffHomeLane
         assert myHomeChain.topRow != BATCHROW_UNDEF
@@ -1185,9 +1193,12 @@ class GraphSplicer:
 
     @staticmethod
     def isEquilibriumReached(frameA: Frame, frameB: Frame):
+        rowA = frameA.row
+        rowB = frameB.row
+
         for arcA, arcB in itertools.zip_longest(frameA.openArcs, frameB.openArcs):
-            isStaleA = (not arcA) or (0 <= arcA.closedAt < frameA.row)
-            isStaleB = (not arcB) or (0 <= arcB.closedAt < frameB.row)
+            isStaleA = (not arcA) or arcA.isStale(rowA)
+            isStaleB = (not arcB) or arcB.isStale(rowB)
 
             if isStaleA != isStaleB:
                 return False
