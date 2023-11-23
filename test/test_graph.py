@@ -62,7 +62,7 @@ def testGraph1():
     a4
 
     """
-    sequence, parentMap, heads = parseAncestryOneLiner("a1,a2 a2,a3 b1,b2 b2,a3 a3,a4 a4")
+    sequence, parentMap, heads = parseAncestryOneLiner("a1-a2:a3 b1-b2-a3-a4")
 
     g = Graph()
     g.generateFullSequence(sequence, parentMap)
@@ -94,7 +94,7 @@ def testGapBetweenBranches():
 
     """
 
-    sequence, parentMap, heads = parseAncestryOneLiner("a1,a2 b1,a2 c1,c2 a2,f c2,f f")
+    sequence, parentMap, heads = parseAncestryOneLiner("a1:a2 b1:a2 c1:c2 a2:f c2-f")
 
     g = Graph()
     g.generateFullSequence(sequence, parentMap)
@@ -135,7 +135,7 @@ def testNewBranchInGap():
 
     """
 
-    sequence, parentMap, heads = parseAncestryOneLiner("a1,a2 b1,a2 c1,c2 a2,a3 c2,f d1,f a3,f f")
+    sequence, parentMap, heads = parseAncestryOneLiner("a1:a2 b1:a2 c1:c2 a2:a3 c2:f d1:f a3-f")
 
     g = Graph()
     g.generateFullSequence(sequence, parentMap)

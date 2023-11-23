@@ -15,86 +15,86 @@ our test graphs are tiny.
 # [2]: Should splicing find an equilibrium (i.e. recycle part of the old graph)
 SCENARIOS = {
     "one branch, one new commit": (
-        "    a,b b,c c,d d,e e",
-        "n,a a,b b,c c,d d,e e",
+        "  a-b-c-d-e",
+        "n-a-b-c-d-e",
         True,
     ),
 
     "one new commit": (
-        "    a,b b,e c,d d,e e,f f,g g",
-        "n,a a,b b,e c,d d,e e,f f,g g",
+        "  a-b:e c-d-e-f-g",
+        "n-a-b:e c-d-e-f-g",
         True,
     ),
 
     "new parentless branch appears": (
-        "                     a1,a2 b1,b2 c1,c2 a2 b2 c2",
-        "a0,a1 b0,b1 d0,d1 d1 a1,a2 b1,b2 c1,c2 a2 b2 c2",
+        "                     a1:a2 b1:b2 c1:c2 a2 b2 c2",
+        "a0:a1 b0:b1 d0:d1 d1 a1:a2 b1:b2 c1:c2 a2 b2 c2",
         True
     ),
 
     "several new commits": (
-        "              a,b b,e c,d d,e e,f f,g g",
-        "m,n n,a o,e,a a,b b,e c,d d,e e,f f,g g",
+        "            a-b:e c-d-e-f-g",
+        "m-n:a o:e,a a-b:e c-d-e-f-g",
         True,
     ),
 
     "change order of branches": (
-        "a,b b,e   c,d d,e   e,f f,g g",
-        "c,d d,e   a,b b,e   e,f f,g g",
+        "a-b:e c-d-e-f-g",
+        "c-d:e a-b-e-f-g",
         True,
     ),
 
     "delete top commit": (
-        "x,a a,b b,e c,d d,e e,f f,g g",
-        "    a,b b,e c,d d,e e,f f,g g",
+        "x-a-b:e c-d-e-f-g",
+        "  a-b:e c-d-e-f-g",
         True,
     ),
 
     "amend top commit": (
-        "x,a   a,b b,e c,d d,e e,f f,g g",
-        "y,a   a,b b,e c,d d,e e,f f,g g",
+        "x:a   a-b:e c-d-e-f-g",
+        "y:a   a-b:e c-d-e-f-g",
         True,
     ),
 
     "amend non-top commit": (
-        "x,a a,b b,e   c,d   d,e e,f f,g g",
-        "x,a a,b b,e   y,d   d,e e,f f,g g",
+        "x-a-b:e   c-d-e-f-g",
+        "x-a-b:e   y-d-e-f-g",
         True,
     ),
 
     "identical with 1 head": (
-        "a,b b,c c,d d",
-        "a,b b,c c,d d",
+        "a-b-c-d",
+        "a-b-c-d",
         True,
     ),
 
     "identical with 2 heads": (
-        "a,b b,e c,d d,e e,f f,g g",
-        "a,b b,e c,d d,e e,f f,g g",
+        "a-b:e c-d-e-f-g",
+        "a-b:e c-d-e-f-g",
         True,
     ),
 
     "non-top head rises to top after amending": (
-        "    a,b b,e c,d d,e e,f f,g g",
-        "c,d a,b b,e     d,e e,f f,g g",
+        "    a-b:e c-d-e-f-g",
+        "c:d a-b:e   d-e-f-g",
         True,
     ),
 
     "lone commit appears at top": (
-        "  a,b b,c c,d d",
-        "x a,b b,c c,d d",
+        "  a-b-c-d",
+        "x a-b-c-d",
         True,
     ),
 
     "lone commit appears in middle": (
-        "a,b b,c   c,d d",
-        "a,b b,c x c,d d",
+        "a-b:c   c-d",
+        "a-b:c x c-d",
         True,
     ),
 
     "lone commit appears at bottom": (
-        "a,b b,c c,d d  ",
-        "a,b b,c c,d d x",
+        "a-b-c-d  ",
+        "a-b-c-d x",
         False,
     ),
 
@@ -112,44 +112,44 @@ SCENARIOS = {
     #  9 q │ ┿ │ │
     # 10 z ┷─╯─╯─╯
     "octopus": (
-        "a,b b,c,d,e,f c,p d,q,f e,r f,s s,z r,z p,z q,z z",
-        "a,b b,c,d,e,f c,p d,q,f e,r f,s s,z r,z p,z q,z z",
+        "a-b:c,d,e,f c:p d:q,f e:r f-s:z r:z p:z q:z z",
+        "a-b:c,d,e,f c:p d:q,f e:r f-s:z r:z p:z q:z z",
         True,
     ),
 
     "parentless commit appears at top; other branches don't need to be reviewed": (
-        "  a,b b,c c,d d,e e,q f,g g,h h,i t,u i,r u,v v,s q,r r,s s x,y y,z z",
-        "n a,b b,c c,d d,e e,q f,g g,h h,i t,u i,r u,v v,s q,r r,s s x,y y,z z",
+        "  a-b-c-d-e:q f-g-h:i t:u i:r u-v:s q-r-s x-y-z",
+        "n a-b-c-d-e:q f-g-h:i t:u i:r u-v:s q-r-s x-y-z",
         True,
     ),
 
     "neverending line due to unresolved arc": (
-        "    a,b b,c c",
-        "x,z a,b b,c c",
+        "    a-b-c",
+        "x:z a-b-c",
         False,
     ),
 
     "multiple new commits appear in middle": (
-        "a,b b,c c,d d,e             e,f f,g g",
-        "a,b b,c c,d d,e x,y y,z z,e e,f f,g g",
+        "a-b-c-d:e         e-f-g",
+        "a-b-c-d:e x-y-z:e e-f-g",
         True,
     ),
 
     "multiple commits disappear in middle": (
-        "a,b b,c c,d d,e x,y y,z z,e e,f f,g g",
-        "a,b b,c c,d d,e         z,e e,f f,g g",
+        "a-b-c-d:e x-y-z-e-f-g",
+        "a-b-c-d:e     z-e-f-g",
         True,
     ),
 
     "commits disappear at top": (
-        "a,b b,c c,d d,e x,y y,z z,e e,f f,g g",
-        "    b,c c,d d,e x,y y,z z,e e,f f,g g",
+        "a-b-c-d:e x-y-z-e-f-g",
+        "  b-c-d:e x-y-z-e-f-g",
         True,
     ),
 
     "branch disappears": (
-        "a,b b,c p,q q,r r,c c,d d,e e",
-        "a,b b,c             c,d d,e e",
+        "a-b:c p-q-r-c-d-e",
+        "a-b:c       c-d-e",
         True,
     ),
 
@@ -167,19 +167,19 @@ SCENARIOS = {
 
     "0 to 2": (
         "",
-        "a,b b",
+        "a-b",
         False,
     ),
 
     "1 to 2": (
         "b",
-        "a,b b",
+        "a-b",
         True,
     ),
 
     "1 to 2b": (
-        "y,x x,c c",
-        "a,b b,c c",
+        "y-x-c",
+        "a-b-c",
         True,
     ),
 
@@ -190,98 +190,98 @@ SCENARIOS = {
     ),
 
     "many to 0": (
-        "m,n n,a o,e,a a,b b,e c,d d,e e,f f,g g",
+        "m-n:a o:e,a a-b:e c-d-e-f-g",
         "",
         False,
     ),
 
     "0 to many": (
         "",
-        "m,n n,a o,e,a a,b b,e c,d d,e e,f f,g g",
+        "m-n:a o:e,a a-b:e c-d-e-f-g",
         False,
     ),
 
     "completely different, newer is shorter": (
-        "a,b b,c c,d d,e e,f f",
-        "p,q q,r r",
+        "a-b-c-d-e-f",
+        "p-q-r",
         False,
     ),
 
     "completely different, newer is longer": (
-        "p,q q,r r",
-        "a,b b,c c,d d,e e,f f",
+        "p-q-r",
+        "a-b-c-d-e-f",
         False,
     ),
 
     "completely different, newer is longer, 1 commitless 'loop'": (
-        "p,q q,r r",
-        "a,b,f b,c c,d d,e e,f f",
+        "p-q-r",
+        "a:b,f b-c-d-e-f",
         False,
     ),
 
     "completely different, newer is longer, 2 commitless 'loops'": (
-        "p,q q,r r",
-        "a,b,f,g b,c c,d d,e e,f f g",
+        "p-q-r",
+        "a:b,f,g b-c-d-e-f g",
         False,
     ),
 
     "messy junctions": (
-        "a,b b,c k,l c,c',l                c',d l,e d,e e,f f",
-        "a,b b,c k,l c,c',l p,q q,r,l r,c' c',d l,e d,e e,f f",
+        "a-b:c k:l c:c',l           c':d l:e d-e-f",
+        "a-b:c k:l c:c',l p-q:r,l r-c':d l:e d-e-f",
         True,
     ),
 
     "super messy junctions - shifted rows + existing junctions before & after equilibrium + 1 new junction": (
-        "            a,b b,c k,l c,c',l                c',m m,n n,o o,d,l l,e d,e e,f f",
-        "x,y y,z z,a a,b b,c k,l c,c',l p,q q,r,l r,c' c',m m,n n,o o,d,l l,e d,e e,f f",
+        "      a-b:c k:l c:c',l           c'-m-n-o:d,l l:e d-e-f",
+        "x-y-z-a-b:c k:l c:c',l p-q:r,l r-c'-m-n-o:d,l l:e d-e-f",
         True,
     ),
 
     "super messy junctions reversed": (
-        "x,y y,z z,a a,b b,c k,l c,c',l p,q q,r,l r,c' c',m m,n n,o o,d,l l,e d,e e,f f",
-        "            a,b b,c k,l c,c',l                c',m m,n n,o o,d,l l,e d,e e,f f",
+        "x-y-z-a-b:c k:l c:c',l p-q:r,l r-c'-m-n-o:d,l l:e d-e-f",
+        "      a-b:c k:l c:c',l           c'-m-n-o:d,l l:e d-e-f",
         True,
     ),
 
     "stash at top": (
-        "             a,b b,c c",
-        "s1,a,s2 s2,a a,b b,c c",
+        "           a-b-c",
+        "s1:a,s2 s2-a-b-c",
         True,
     ),
 
     "truncated graph with junctions (fork points) pointing outside the graph": (
-        "c9e,ce1 493,6e1,f73,d01 d01,6db f73,6db 6e1,120,7f8 120,bab bab,838 838,646,6db 646,42e 42e 7f8,597 597,c07",
-        "c9e,ce1 493,6e1,f73,d01 d01,6db f73,6db 6e1,120,7f8 120,bab bab,838 838,646,6db 646,42e 42e 7f8,597 597,c07",
+        "c9e:ce1 493:6e1,f73,d01 d01:6db f73:6db 6e1:120,7f8 120-bab-838:646,6db 646-42e 7f8-597:c07",
+        "c9e:ce1 493:6e1,f73,d01 d01:6db f73:6db 6e1:120,7f8 120-bab-838:646,6db 646-42e 7f8-597:c07",
         True,
     ),
 
     "careful not to rewire main dead branch into LL of branches after splicing": (
-        "a,d b,d,c c,d d,f f",
-        "m,d b,d,c c,d d,f f",
+        "a:d b:d,c c-d-f",
+        "m:d b:d,c c-d-f",
         True
     ),
 
     "careful not to rewire main dead branch into LL of branches after splicing 2": (
-        "a1,a2 b1,b2,b' b',b2 b2,a2 c,a2,c' c',a2 a2,a3 a3,a4 d1,d2 d2,a4 a4,f f",
-        "am,a2 b1,b2,b' b',b2 b2,a2 c,a2,c' c',a2 a2,a3 a3,a4 d1,d2 d2,a4 a4,f f",
+        "a1:a2 b1:b2,b' b'-b2:a2 c:a2,c' c'-a2-a3:a4 d1-d2-a4-f",
+        "am:a2 b1:b2,b' b'-b2:a2 c:a2,c' c'-a2-a3:a4 d1-d2-a4-f",
         True,
     ),
 
     "equilibrium in between disjoint branches 1": (
-        "a,b b c,d d",
-        "x,b b c,d d",
+        "a-b c-d",
+        "x-b c-d",
         True,
     ),
 
     "equilibrium in between disjoint branches 2": (
-        "a,b b c,d d",
-        "x,y y c,d d",
+        "a-b c-d",
+        "x-y c-d",
         True,
     ),
 
     "equilibrium in between disjoint branches 3": (
-        "a,b b c",
-        "x,b b c",
+        "a-b c",
+        "x-b c",
         True,
     ),
 }
@@ -292,18 +292,36 @@ def parseAncestryDefinition(text):
     parentsOf = {}
     seen = set()
     heads = set()
+
     for line in text:
         line = line.strip()
         if not line:
             continue
-        split = line.strip().split(",")
-        commit = split[0]
-        assert commit not in parentsOf, f"Commit hash appears twice in sequence! {commit}"
-        sequence.append(commit)
-        parentsOf[commit] = split[1:]
-        if commit not in seen:
-            heads.add(commit)
-        seen.update(parentsOf[commit])
+
+        split = line.strip().split(":")
+        assert 1 <= len(split) <= 2
+
+        chainStr = split[0]
+        assert chainStr
+        assert "," not in chainStr
+
+        try:
+            assert "-" not in split[1]
+            rootParents = split[1].split(",")
+        except IndexError:
+            rootParents = []
+
+        chain = chainStr.split("-")
+        parents = [[c] for c in chain[1:]] + [rootParents]
+
+        for commit, commitParents in zip(chain, parents):
+            assert commit not in parentsOf, f"Commit hash appears twice in sequence! {commit}"
+            sequence.append(commit)
+            parentsOf[commit] = commitParents
+            if commit not in seen:
+                heads.add(commit)
+            seen.update(parentsOf[commit])
+
     return sequence, parentsOf, heads
 
 

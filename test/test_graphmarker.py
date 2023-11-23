@@ -50,7 +50,7 @@ allFixtures = [
     # g1   ┷
     ChainMarkerFixture(
         graphName="typical",
-        graphDef="a1,a2 b1,a2 c1,c2 a2,a3 c2,f d1,f a3,f f,f1,g1 f1 g1",
+        graphDef="a1:a2 b1:a2 c1:c2 a2:a3 c2:f d1:f a3-f:f1,g1 f1 g1",
         headsDef="a1 b1 c1 d1",
 
         hiddenCommits={
@@ -106,7 +106,7 @@ allFixtures = [
     #  c ┷
     ChainMarkerFixture(
         graphName="stash",
-        graphDef="a,b sc,b,si,su si,b su b,c c",
+        graphDef="a:b sc:b,si,su si:b su b-c",
         headsDef="a sc",
 
         hiddenCommits={
@@ -134,7 +134,7 @@ allFixtures = [
     # c ┿─╯  (intentionally incomplete)
     ChainMarkerFixture(
         graphName="incomplete",
-        graphDef="a,c b,c c,missingparent",
+        graphDef="a:c b-c:missingparent",
         headsDef="a b",
 
         hiddenCommits={
@@ -162,7 +162,7 @@ allFixtures = [
     # e ┷─╯
     ChainMarkerFixture(
         graphName="nojunction",
-        graphDef="a,c c,e,d d,e e",
+        graphDef="a:c c:e,d d-e",
         headsDef="a",
         hiddenCommits={
             "": "",
@@ -181,7 +181,7 @@ allFixtures = [
     # e ┷─╯
     ChainMarkerFixture(
         graphName="junction",
-        graphDef="a,c b,d c,e,d d,e e",
+        graphDef="a:c b:d c:e,d d-e",
         headsDef="a b",
         hiddenCommits={
             "": "",
@@ -207,7 +207,7 @@ allFixtures = [
     # af ┷
     ChainMarkerFixture(
         graphName="2 junctions on 1 branch",
-        graphDef="a,j b,bf c,cf j,k,bf k,af,cf bf cf af",
+        graphDef="a:j b:bf c:cf j:k,bf k:af,cf bf cf af",
         headsDef="a b c",
         hiddenCommits={
             "": "",
@@ -231,7 +231,7 @@ allFixtures = [
     # e ┷
     ChainMarkerFixture(
         graphName="deep propagation",
-        graphDef="a,d,c b,c c,d d,e e",
+        graphDef="a:d,c b:c c-d-e",
         headsDef="a b",
         hiddenCommits={
             "": "",
@@ -246,7 +246,7 @@ allFixtures = [
 
     ChainMarkerFixture(
         graphName="deep propagation with junctions",
-        graphDef="a,f b,d c,j j,e,d d,e e,f f,g g",
+        graphDef="a:f b:d c:j j:e,d d:e e-f-g",
         headsDef="a b c",
         hiddenCommits={
             "": "",
@@ -264,7 +264,7 @@ allFixtures = [
 
     ChainMarkerFixture(
         graphName="non-tip head should stay visible",
-        graphDef="a,b b,e,c c,d d,e e,f f",
+        graphDef="a-b:e,c c-d-e-f",
         headsDef="a c",  # note the extra head "c" here. We want it to stay visible when hiding "a"
         hiddenCommits={
             "": "",
