@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Type, Union
 
+from gitfourchette import log
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskInvoker
@@ -144,7 +145,13 @@ class TaskBook:
     @classmethod
     def autoActionName(cls, t: Type[RepoTask]):
         assert cls.names
-        name = cls.names[t]
+        try:
+            name = cls.names[t]
+        except KeyError:
+            name = t.__name__
+            cls.names[t] = name
+            log.warning("TaskBook", f"Missing name for task '{name}'")
+
         if QLocale().language() in [QLocale.Language.C, QLocale.Language.English]:
             name = name.title()
         if t not in cls.noEllipsis:
