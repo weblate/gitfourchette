@@ -122,9 +122,10 @@ else:
 # -----------------------------------------------------------------------------
 # Set up platform constants
 
-MACOS = QSysInfo.productType().lower() in ["osx", "macos"]  # "osx": Qt5 legacy
-WINDOWS = QSysInfo.productType().lower() in ["windows"]
-FREEDESKTOP = not MACOS and not WINDOWS
+KERNEL = QSysInfo.kernelType().lower()
+MACOS = KERNEL == "darwin"
+WINDOWS = KERNEL == "winnt"
+FREEDESKTOP = (KERNEL == "linux") or ("bsd" in KERNEL)
 
 # -----------------------------------------------------------------------------
 # Exclude some known bad PySide6 versions

@@ -37,7 +37,7 @@ class StagedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("Open &Diff(s) in {0}", "", n).format(settings.getDiffToolName()),
+                self.tr("Compare in {0}").format(settings.getDiffToolName()),
                 self.wantOpenInDiffTool,
                 icon="vcs-diff",
             ),
@@ -50,13 +50,13 @@ class StagedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("&Open File(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
                 self.openWorkdirFile,
                 icon=QStyle.StandardPixmap.SP_FileIcon,
             ),
 
             ActionDef(
-                self.tr("Open &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                self.tr("Edit &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
                 self.openHeadRevision,
             ),
 

@@ -34,19 +34,29 @@ SHORT_DATE_PRESETS = {
 }
 
 EDITOR_TOOL_PRESETS = {
+    "System default": "",
+    "BBEdit": "bbedit",
     "GVim": "gvim",
+    "KWrite": "kwrite",
+    "Kate": "kate",
     "MacVim": "mvim",
-    "VS Code": "code",
+    "Visual Studio Code": "code",
 }
 
 DIFF_TOOL_PRESETS = {
+    "Beyond Compare": "bcompare $1 $2",
     "FileMerge": "opendiff $1 $2",
-    "KDiff3": "kdiff3 $1 $2",
-    "Meld": "meld $1 $2",
-    "WinMerge": "winmergeu /u /wl /wr $1 $2",
     "GVim": "gvim -f -d $1 $2",
+    "JetBrains CLion": "clion diff $1 $2",
+    "JetBrains IDEA": "idea diff $1 $2",
+    "JetBrains PyCharm": "pycharm diff $1 $2",
+    "KDiff3": "kdiff3 $1 $2",
     "MacVim": "mvim -f -d $1 $2",
-    "VS Code": "code --diff $1 $2 --wait",
+    "Meld": "meld $1 $2",
+    "P4Merge": "p4merge $1 $2",
+    "SourceGear DiffMerge": "diffmerge $1 $2",
+    "Visual Studio Code": "code --diff $1 $2 --wait",
+    "WinMerge": "winmergeu /u /wl /wr $1 $2",
 }
 
 # $1: ANCESTOR/BASE
@@ -54,29 +64,45 @@ DIFF_TOOL_PRESETS = {
 # $3: THEIRS/REMOTE
 # $4: MERGED
 MERGE_TOOL_PRESETS = {
+    "Beyond Compare": "bcompare $1 $2 $3 $4",
     "FileMerge": "opendiff -ancestor $1 $2 $3 -merge $4",
-    "KDiff3": "kdiff3 --merge $1 $2 $3 --output $4",
-    "WinMerge": "winmergeu /u /wl /wm /wr /am $1 $2 $3 /o $4",
-    "Meld": "meld --auto-merge $1 $2 $3 -o $4",
     "GVim": "gvim -f -d -c 'wincmd J' $4 $2 $1 $3",
+    "Helix P4Merge": "p4merge $1 $2 $3 $4",
+    "JetBrains CLion": "clion merge $2 $3 $1 $4",
+    "JetBrains IDEA": "idea merge $2 $3 $1 $4",
+    "JetBrains PyCharm": "pycharm merge $2 $3 $1 $4",
+    "KDiff3": "kdiff3 --merge $1 $2 $3 --output $4",
     "MacVim": "mvim -f -d -c 'wincmd J' $4 $2 $1 $3",
-    "VS Code": "code --merge $2 $3 $1 $4 --wait",
+    "Meld": "meld --auto-merge $1 $2 $3 -o $4",
+    "SourceGear DiffMerge": "diffmerge --merge --result $4 $1 $2 $3",
+    "Visual Studio Code": "code --merge $2 $3 $1 $4 --wait",
+    "WinMerge": "winmergeu /u /wl /wm /wr /am $1 $2 $3 /o $4",
 }
 
-externalToolPresetFilter = []
-if MACOS:
-    externalToolPresetFilter = ["WinMerge", "GVim"]
-elif WINDOWS:
-    externalToolPresetFilter = ["FileMerge", "MacVim"]
-else:
-    externalToolPresetFilter = ["FileMerge", "WinMerge", "MacVim"]
-for key in externalToolPresetFilter:
-    with contextlib.suppress(KeyError):
-        del DIFF_TOOL_PRESETS[key]
-    with contextlib.suppress(KeyError):
-        del MERGE_TOOL_PRESETS[key]
-del externalToolPresetFilter
-del key
+
+def _filterToolPresets():
+    freedesktopTools = ["Kate", "KWrite"]
+    macTools = ["FileMerge", "MacVim", "BBEdit"]
+    winTools = ["WinMerge"]
+
+    if MACOS:
+        excludeTools = winTools + freedesktopTools
+    elif WINDOWS:
+        excludeTools = macTools + freedesktopTools
+    else:
+        excludeTools = macTools + winTools
+
+    for key in excludeTools:
+        with contextlib.suppress(KeyError):
+            del DIFF_TOOL_PRESETS[key]
+        with contextlib.suppress(KeyError):
+            del DIFF_TOOL_PRESETS[key]
+        with contextlib.suppress(KeyError):
+            del MERGE_TOOL_PRESETS[key]
+
+
+_filterToolPresets()
+del _filterToolPresets
 
 
 class GraphRowHeight(enum.IntEnum):

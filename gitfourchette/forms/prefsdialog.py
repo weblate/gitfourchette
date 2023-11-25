@@ -2,8 +2,12 @@ from gitfourchette import log
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.settings import (
+    DIFF_TOOL_PRESETS,
+    EDITOR_TOOL_PRESETS,
+    LANGUAGES,
+    MERGE_TOOL_PRESETS,
+    SHORT_DATE_PRESETS,
     prefs,
-    SHORT_DATE_PRESETS, LANGUAGES, DIFF_TOOL_PRESETS, MERGE_TOOL_PRESETS,
     qtIsNativeMacosStyle,
 )
 from gitfourchette.toolbox import *
@@ -142,6 +146,8 @@ class PrefsDialog(QDialog):
                 control = self.boundedIntControl(prefKey, prefValue, 0, 40)
             elif prefKey == 'maxRecentRepos':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 50)
+            elif prefKey == 'external_editor':
+                control = self.strControlWithPresets(prefKey, prefValue, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
             elif prefKey == 'external_diff':
                 control = self.strControlWithPresets(prefKey, prefValue, DIFF_TOOL_PRESETS)
             elif prefKey == 'external_merge':
@@ -289,12 +295,15 @@ class PrefsDialog(QDialog):
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, v))
         return control
 
-    def strControlWithPresets(self, prefKey, prefValue, presets):
+    def strControlWithPresets(self, prefKey, prefValue, presets, leaveBlankHint=False):
         control = QComboBoxWithPreview(self)
         control.setEditable(True)
 
         for k in presets:
-            control.addItemWithPreview(k, presets[k], presets[k])
+            preview = presets[k]
+            if not preview and leaveBlankHint:
+                preview = "- " + translate("Prefs", "leave blank", "hint user to leave the field blank") + " -"
+            control.addItemWithPreview(k, presets[k], preview)
             if prefValue == presets[k]:
                 control.setCurrentIndex(control.count()-1)
 

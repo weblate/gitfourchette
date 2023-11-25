@@ -23,7 +23,7 @@ class CommittedFiles(FileList):
             ),
 
             ActionDef(
-                self.tr("Open &Diff(s) in {0}", "", n).format(settings.getDiffToolName()),
+                self.tr("Compare in {0}").format(settings.getDiffToolName()),
                 self.wantOpenInDiffTool,
                 icon="vcs-diff"
             ),
@@ -36,7 +36,7 @@ class CommittedFiles(FileList):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("&Open File(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
                 icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
                 [
                     ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
