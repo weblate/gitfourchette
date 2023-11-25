@@ -5,17 +5,10 @@ import os
 from gitfourchette.appconsts import APP_VERSION
 
 
-# Bypass qtpy when building
-os.environ["QT_API"] = "pyside6"
-
-
 # Write _buildconstants.py
 buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
 with open('gitfourchette/_buildconstants.py', 'wt') as f:
-	f.write(f"buildDate = \"{buildDate}\"\n")
-
-
-block_cipher = None
+    f.write(f"buildDate = \"{buildDate}\"\n")
 
 
 a = Analysis(
@@ -28,26 +21,25 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'PySide6.QtNetwork',
-        'PySide6.QtOpenGL',
-        'PySide6.QtQml',
-        'PySide6.QtQuick',
-        'PySide6.QtQuick3D',
-        'PySide6.QtQuickControls2',
-        'PySide6.QtQuickWidgets',
-        'PySide6.QtOpenGLWidgets',
-        'PySide6.QtDataVisualization',
-        'PyQt6',
+        # 'PySide6.QtNetwork',
+        # 'PySide6.QtOpenGL',
+        # 'PySide6.QtQml',
+        # 'PySide6.QtQuick',
+        # 'PySide6.QtQuick3D',
+        # 'PySide6.QtQuickControls2',
+        # 'PySide6.QtQuickWidgets',
+        # 'PySide6.QtOpenGLWidgets',
+        # 'PySide6.QtDataVisualization',
+        # 'PyQt6',
+        'PyQt6.QtDBus',
+        'PySide6',
         'QtPy',
         'psutil'
     ],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
+    noarchive=False,  # True: keep pyc files
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data)
 
 exe = EXE(
     pyz,
