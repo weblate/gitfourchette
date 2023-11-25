@@ -9,6 +9,8 @@ from typing import Any, Iterable
 import contextlib
 import enum
 
+TAG = "sidebar"
+
 ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
 ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
@@ -171,24 +173,26 @@ class SidebarModel(QAbstractItemModel):
         # Refs
         with Benchmark("Sidebar/Refs"):
             for name in reversed(refCache):  # reversed because refCache sorts tips by ASCENDING commit time
-                if name.startswith(GIT_HEADS_PREFIX):
-                    name = name.removeprefix(GIT_HEADS_PREFIX)
-                    self._localBranches.append(name)
+                prefix, shorthand = RefPrefix.split(name)
+                if prefix == RefPrefix.HEADS:
+                    self._localBranches.append(shorthand)
                     # upstream = repo.branches.local[name].upstream  # a bit costly
                     # if not upstream:
                     #     self._tracking.append("")
                     # else:
                     #     self._tracking.append(upstream.shorthand)
-                elif name.startswith(GIT_REMOTES_PREFIX):
-                    name = name.removeprefix(GIT_REMOTES_PREFIX)
-                    remote, name = split_remote_branch_shorthand(name)
+                elif prefix == RefPrefix.REMOTES:
+                    remote, branchName = split_remote_branch_shorthand(shorthand)
                     try:
-                        self._remoteBranchesDict[remote].append(name)
+                        self._remoteBranchesDict[remote].append(branchName)
                     except KeyError:
-                        log.warning(f"Sidebar refresh cache: missing remote: {remote}")
-                elif name.startswith(GIT_TAGS_PREFIX):
-                    name = name.removeprefix(GIT_TAGS_PREFIX)
-                    self._tags.append(name)
+                        log.warning(TAG, f"Refresh cache: missing remote: {remote}")
+                elif prefix == RefPrefix.TAGS:
+                    self._tags.append(shorthand)
+                elif name == "HEAD" or name.startswith("stash@{"):
+                    pass  # handled separately
+                else:
+                    log.warning(TAG, f"Refresh cache: unsupported ref prefix: {name}")
 
             # Sort remote branches
             for remote in self._remoteBranchesDict:

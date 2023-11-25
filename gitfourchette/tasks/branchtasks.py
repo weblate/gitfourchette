@@ -12,7 +12,7 @@ class SwitchBranch(RepoTask):
         return TaskEffects.Refs | TaskEffects.Head
 
     def flow(self, newBranch: str, askForConfirmation: bool):
-        assert not newBranch.startswith(GIT_HEADS_PREFIX)
+        assert not newBranch.startswith(RefPrefix.HEADS)
 
         if self.repo.branches.local[newBranch].is_checked_out():
             yield from self.flowAbort(
@@ -30,7 +30,7 @@ class SwitchBranch(RepoTask):
 
 class RenameBranch(RepoTask):
     def flow(self, oldBranchName: str):
-        assert not oldBranchName.startswith(GIT_HEADS_PREFIX)
+        assert not oldBranchName.startswith(RefPrefix.HEADS)
 
         forbiddenBranchNames = self.repo.listall_branches(GIT_BRANCH_LOCAL)
         forbiddenBranchNames.remove(oldBranchName)
@@ -59,7 +59,7 @@ class RenameBranch(RepoTask):
 
 class DeleteBranch(RepoTask):
     def flow(self, localBranchName: str):
-        assert not localBranchName.startswith(GIT_HEADS_PREFIX)
+        assert not localBranchName.startswith(RefPrefix.HEADS)
 
         text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
                           translate("Global", "This cannot be undone!"))
@@ -97,16 +97,14 @@ class _NewBranchBaseTask(RepoTask):
         refsPointingHere = repo.listall_refs_pointing_at(tip)
         upstreams = []
         for r in refsPointingHere:
-            if r.startswith(GIT_HEADS_PREFIX):
-                branchName = r.removeprefix(GIT_HEADS_PREFIX)
+            prefix, shorthand = RefPrefix.split(r)
+            if prefix == RefPrefix.HEADS:
                 if not localName:
-                    localName = branchName
-                branch = repo.branches[branchName]
+                    localName = shorthand
+                branch = repo.branches[shorthand]
                 if branch.upstream:
                     upstreams.append(branch.upstream.shorthand)
-
-            elif r.startswith(GIT_REMOTES_PREFIX):
-                shorthand = r.removeprefix(GIT_REMOTES_PREFIX)
+            elif prefix == RefPrefix.REMOTES:
                 if not localName:
                     _, localName = split_remote_branch_shorthand(shorthand)
                 upstreams.append(shorthand)
@@ -196,7 +194,7 @@ class NewBranchFromCommit(_NewBranchBaseTask):
 
 class NewBranchFromLocalBranch(_NewBranchBaseTask):
     def flow(self, localBranchName: str):
-        assert not localBranchName.startswith(GIT_HEADS_PREFIX)
+        assert not localBranchName.startswith(RefPrefix.HEADS)
         branch = self.repo.branches.local[localBranchName]
         tip = branch.target
         localName = localBranchName
@@ -206,7 +204,7 @@ class NewBranchFromLocalBranch(_NewBranchBaseTask):
 
 class NewTrackingBranch(_NewBranchBaseTask):
     def flow(self, remoteBranchName: str):
-        assert not remoteBranchName.startswith(GIT_REMOTES_PREFIX)
+        assert not remoteBranchName.startswith(RefPrefix.REMOTES)
         branch = self.repo.branches.remote[remoteBranchName]
         tip = branch.target
         localName = remoteBranchName.removeprefix(branch.remote_name + "/")

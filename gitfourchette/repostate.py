@@ -389,7 +389,7 @@ class RepoState:
             return any(
                 refName for refName in self.reverseRefCache[oid]
                 if refName not in hiddenBranches
-                and not refName.startswith(GIT_TAGS_PREFIX))
+                and not refName.startswith(RefPrefix.TAGS))
 
         for hiddenBranch in hiddenBranches:
             try:

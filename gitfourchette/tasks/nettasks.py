@@ -40,7 +40,7 @@ class _BaseNetTask(RepoTask):
 
 class DeleteRemoteBranch(_BaseNetTask):
     def flow(self, remoteBranchShorthand: str):
-        assert not remoteBranchShorthand.startswith(GIT_REMOTES_PREFIX)
+        assert not remoteBranchShorthand.startswith(RefPrefix.REMOTES)
 
         remoteName, _ = split_remote_branch_shorthand(remoteBranchShorthand)
 
@@ -61,7 +61,7 @@ class DeleteRemoteBranch(_BaseNetTask):
 
 class RenameRemoteBranch(_BaseNetTask):
     def flow(self, remoteBranchName: str):
-        assert not remoteBranchName.startswith(GIT_REMOTES_PREFIX)
+        assert not remoteBranchName.startswith(RefPrefix.REMOTES)
         remoteName, branchName = split_remote_branch_shorthand(remoteBranchName)
         newBranchName = branchName  # naked name, NOT prefixed with the name of the remote
 

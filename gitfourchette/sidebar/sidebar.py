@@ -304,11 +304,11 @@ class Sidebar(QTreeView):
         elif item == EItem.DetachedHead:
             self.refClicked.emit("HEAD")
         elif item == EItem.LocalBranch:
-            self.refClicked.emit(GIT_HEADS_PREFIX + data)
+            self.refClicked.emit(RefPrefix.HEADS + data)
         elif item == EItem.RemoteBranch:
-            self.refClicked.emit(GIT_REMOTES_PREFIX + data)
+            self.refClicked.emit(RefPrefix.REMOTES + data)
         elif item == EItem.Tag:
-            self.refClicked.emit(GIT_TAGS_PREFIX + data)
+            self.refClicked.emit(RefPrefix.TAGS + data)
         elif item == EItem.Stash:
             self.commitClicked.emit(Oid(hex=data))
         else:

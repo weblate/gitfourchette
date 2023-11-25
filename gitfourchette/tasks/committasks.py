@@ -279,7 +279,7 @@ class CheckoutCommit(RepoTask):
 
     def flow(self, oid: Oid):
         refs = self.repo.listall_refs_pointing_at(oid)
-        refs = [r.removeprefix(GIT_HEADS_PREFIX) for r in refs if r.startswith(GIT_HEADS_PREFIX)]
+        refs = [r.removeprefix(RefPrefix.HEADS) for r in refs if r.startswith(RefPrefix.HEADS)]
 
         commitMessage = self.repo.get_commit_message(oid)
         commitMessage, junk = messageSummary(commitMessage)
@@ -374,7 +374,7 @@ class NewTag(RepoTask):
         if signIt:
             self.repo.create_tag(tagName, oid, GIT_OBJ_COMMIT, self.repo.default_signature, "")
         else:
-            self.repo.create_reference(GIT_TAGS_PREFIX + tagName, oid)
+            self.repo.create_reference(RefPrefix.TAGS + tagName, oid)
 
 
 class DeleteTag(RepoTask):

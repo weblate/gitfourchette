@@ -122,10 +122,6 @@ CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = _re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", _re.IGNORECASE)
 DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
 
-GIT_HEADS_PREFIX = "refs/heads/"
-GIT_REMOTES_PREFIX = "refs/remotes/"
-GIT_TAGS_PREFIX = "refs/tags/"
-
 GIT_STATUS_INDEX_MASK = (
         GIT_STATUS_INDEX_NEW
         | GIT_STATUS_INDEX_MODIFIED
@@ -140,6 +136,19 @@ GIT_STATUS_WT_MASK = (
         | GIT_STATUS_WT_TYPECHANGE
         | GIT_STATUS_WT_RENAMED
         | GIT_STATUS_WT_UNREADABLE)
+
+
+class RefPrefix:
+    HEADS = "refs/heads/"
+    REMOTES = "refs/remotes/"
+    TAGS = "refs/tags/"
+
+    @classmethod
+    def split(cls, refname: str):
+        for prefix in cls.HEADS, cls.REMOTES, cls.TAGS:
+            if refname.startswith(prefix):
+                return prefix, refname[len(prefix):]
+        return "", refname
 
 
 class NameValidationError(ValueError):
@@ -286,7 +295,7 @@ def split_remote_branch_shorthand(remote_branch_name: str) -> tuple[str, str]:
     """
 
     if remote_branch_name.startswith("refs/"):
-        raise ValueError("splitRemoteBranchName: remote branch shorthand name mustn't start with refs/")
+        raise ValueError("remote branch shorthand name must not start with refs/")
 
     # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
     try:
@@ -669,11 +678,13 @@ class Repo(_VanillaRepository):
         for remote in self.remotes:
             names[remote.name] = []
 
-        for refName in self.listall_references():
-            if not refName.startswith(GIT_REMOTES_PREFIX):
+        for refname in self.listall_references():
+            prefix, shorthand = RefPrefix.split(refname)
+
+            if prefix != RefPrefix.REMOTES:
                 continue
 
-            if refName.endswith("/HEAD"):
+            if refname.endswith("/HEAD"):
                 # Skip refs/remotes/*/HEAD (the remote's default branch).
                 # The ref file (.git/refs/remotes/*/HEAD) is created ONCE when first cloning the repository,
                 # and it's never updated again automatically, even if the default branch has changed on the remote.
@@ -682,7 +693,6 @@ class Repo(_VanillaRepository):
                 # See: https://stackoverflow.com/questions/8839958
                 continue
 
-            shorthand = refName.removeprefix(GIT_REMOTES_PREFIX)
             remoteName, branchName = split_remote_branch_shorthand(shorthand)
             names[remoteName].append(branchName)
 
@@ -716,9 +726,9 @@ class Repo(_VanillaRepository):
 
     def listall_tags(self) -> list[str]:
         return [
-            name.removeprefix(GIT_TAGS_PREFIX)
+            name.removeprefix(RefPrefix.TAGS)
             for name in self.listall_references()
-            if name.startswith(GIT_TAGS_PREFIX)
+            if name.startswith(RefPrefix.TAGS)
         ]
 
     def edit_tracking_branch(self, local_branch_name: str, remote_branch_name: str):
@@ -744,7 +754,7 @@ class Repo(_VanillaRepository):
     def delete_remote_branch(self, remote_branch_name: str, remoteCallbacks: RemoteCallbacks):
         remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
 
-        refspec = f":{GIT_HEADS_PREFIX}{branchName}"
+        refspec = f":{RefPrefix.HEADS}{branchName}"
         _log.info(_TAG, f"Delete remote branch: refspec: \"{refspec}\"")
 
         remote = self.remotes[remoteName]
@@ -757,10 +767,10 @@ class Repo(_VanillaRepository):
         remoteName, oldBranchName = split_remote_branch_shorthand(old_remote_branch_name)
 
         # First, make a new branch pointing to the same ref as the old one
-        refspec1 = f"{GIT_REMOTES_PREFIX}{old_remote_branch_name}:{GIT_HEADS_PREFIX}{new_name}"
+        refspec1 = f"{RefPrefix.REMOTES}{old_remote_branch_name}:{RefPrefix.HEADS}{new_name}"
 
         # Next, delete the old branch
-        refspec2 = f":{GIT_HEADS_PREFIX}{oldBranchName}"
+        refspec2 = f":{RefPrefix.HEADS}{oldBranchName}"
 
         _log.info(_TAG, f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
 
@@ -776,7 +786,7 @@ class Repo(_VanillaRepository):
         This bug may prevent fetching.
         """
 
-        head_refname = f"{GIT_REMOTES_PREFIX}{remote_name}/HEAD"
+        head_refname = f"{RefPrefix.REMOTES}{remote_name}/HEAD"
         head_ref = self.references.get(head_refname)
 
         # Only risk deleting remote HEAD if it's symbolic
@@ -901,7 +911,7 @@ class Repo(_VanillaRepository):
 
     def get_commit_oid_from_tag_name(self, tagname: str) -> Oid:
         assert not tagname.startswith("refs/")
-        return self.get_commit_oid_from_refname(GIT_TAGS_PREFIX + tagname)
+        return self.get_commit_oid_from_refname(RefPrefix.TAGS + tagname)
 
     def map_refs_to_oids(self) -> dict[str, Oid]:
         """
@@ -1224,7 +1234,7 @@ class Repo(_VanillaRepository):
         else:
             rb = self.branches.remote[remote_branch_name]
 
-        merge_analysis, merge_pref = self.merge_analysis(rb.target, GIT_HEADS_PREFIX + local_branch_name)
+        merge_analysis, merge_pref = self.merge_analysis(rb.target, RefPrefix.HEADS + local_branch_name)
 
         merge_pref_names = {
             GIT_MERGE_PREFERENCE_NONE: "none",
@@ -1290,12 +1300,12 @@ class Repo(_VanillaRepository):
         return ""
 
     def get_branch_from_refname(self, refname: str) -> tuple[Branch, bool]:
-        if refname.startswith(GIT_HEADS_PREFIX):
-            return self.branches.local[refname.removeprefix(GIT_HEADS_PREFIX)], False
-        elif refname.startswith(GIT_REMOTES_PREFIX):
-            return self.branches.remote[refname.removeprefix(GIT_REMOTES_PREFIX)], True
-        else:
-            assert False, f"refName must start with {GIT_HEADS_PREFIX} or {GIT_REMOTES_PREFIX}"
+        prefix, shorthand = RefPrefix.split(refname)
+        if prefix == RefPrefix.HEADS:
+            return self.branches.local[shorthand], False
+        elif prefix == RefPrefix.REMOTES:
+            return self.branches.remote[shorthand], True
+        raise ValueError("ref is not a local or remote branch")
 
     def repo_name(self):
         return _os.path.basename(_os.path.normpath(self.workdir))
@@ -1325,7 +1335,7 @@ class Repo(_VanillaRepository):
 
     def delete_tag(self, tagname: str):
         assert not tagname.startswith("refs/")
-        refname = GIT_TAGS_PREFIX + tagname
+        refname = RefPrefix.TAGS + tagname
         assert refname in self.references
         self.references.delete(refname)
 
