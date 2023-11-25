@@ -1,12 +1,15 @@
-from gitfourchette.porcelain import *
-from gitfourchette.trtables import TrTables
+import contextlib
 import enum
 import os
 import re
 import stat
 
+from gitfourchette.porcelain import *
+from gitfourchette.trtables import TrTables
+
 
 INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
+FIRST_NAME_PATTERN = re.compile(r"(\w(\.?-|\.\s?|\s))*[\w.-]+")
 
 
 class AuthorDisplayStyle(enum.IntEnum):
@@ -19,31 +22,31 @@ class AuthorDisplayStyle(enum.IntEnum):
 
 
 def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME):
-    if style == AuthorDisplayStyle.FULL_NAME:
-        return sig.name
+    with contextlib.suppress(IndexError):
+        if style == AuthorDisplayStyle.FULL_NAME:
+            return sig.name
 
-    elif style == AuthorDisplayStyle.FIRST_NAME:
-        return sig.name.split(' ')[0]
+        elif style == AuthorDisplayStyle.FIRST_NAME:
+            return re.match(FIRST_NAME_PATTERN, sig.name)[0]
 
-    elif style == AuthorDisplayStyle.LAST_NAME:
-        return sig.name.split(' ')[-1]
+        elif style == AuthorDisplayStyle.LAST_NAME:
+            return sig.name.split(' ')[-1]
 
-    elif style == AuthorDisplayStyle.INITIALS:
-        return re.sub(INITIALS_PATTERN, r"\1", sig.name)
+        elif style == AuthorDisplayStyle.INITIALS:
+            return re.sub(INITIALS_PATTERN, r"\1", sig.name)
 
-    elif style == AuthorDisplayStyle.FULL_EMAIL:
-        return sig.email
+        elif style == AuthorDisplayStyle.FULL_EMAIL:
+            return sig.email
 
-    elif style == AuthorDisplayStyle.ABBREVIATED_EMAIL:
-        emailParts = sig.email.split('@', 1)
-        if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
-            # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
-            return emailParts[0].split('+', 1)[-1]
-        else:
-            return emailParts[0]
+        elif style == AuthorDisplayStyle.ABBREVIATED_EMAIL:
+            emailParts = sig.email.split('@', 1)
+            if len(emailParts) == 2 and emailParts[1] == "users.noreply.github.com":
+                # Strip ID from GitHub noreply addresses (1234567+username@users.noreply.github.com)
+                return emailParts[0].split('+', 1)[-1]
+            else:
+                return emailParts[0]
 
-    else:
-        return sig.email
+    return sig.email
 
 
 def shortHash(oid: Oid) -> str:
