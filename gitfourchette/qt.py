@@ -31,8 +31,9 @@ PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
 DEVDEBUG = __debug__ and not PYINSTALLER_BUNDLE
 
 if PYINSTALLER_BUNDLE:  # in PyInstaller bundles, target a fixed API
+    from ._buildconstants import qtBinding as QT_BINDING_FIXED
+    QT_BINDING_ORDER = [QT_BINDING_FIXED]
     qtBindingBootPref = QT_BINDING_ORDER[0]
-    QT_BINDING_ORDER = QT_BINDING_ORDER[:1]
 else:
     qtBindingBootPref = os.environ.get("QT_API", "").lower()
 
@@ -74,8 +75,10 @@ else:
 
     qtBindingName = ""
     for _tentative in QT_BINDING_ORDER:
+        assert _tentative.islower()
+
         try:
-            if qtBindingBootPref == "pyside6":
+            if _tentative == "pyside6":
                 from PySide6.QtCore import *
                 from PySide6.QtWidgets import *
                 from PySide6.QtGui import *
@@ -83,7 +86,7 @@ else:
                 qtBindingName = "PySide6"
                 QT6 = PYSIDE6 = True
 
-            elif qtBindingBootPref == "pyqt6":
+            elif _tentative == "pyqt6":
                 from PyQt6.QtCore import *
                 from PyQt6.QtWidgets import *
                 from PyQt6.QtGui import *
@@ -93,7 +96,7 @@ else:
                 Signal = pyqtSignal
                 Slot = pyqtSlot
 
-            elif qtBindingBootPref == "pyqt5":
+            elif _tentative == "pyqt5":
                 from PyQt5.QtCore import *
                 from PyQt5.QtWidgets import *
                 from PyQt5.QtGui import *
@@ -103,7 +106,7 @@ else:
                 Signal = pyqtSignal
                 Slot = pyqtSlot
 
-            elif qtBindingBootPref == "pyside2":
+            elif _tentative == "pyside2":
                 from PySide2.QtCore import *
                 from PySide2.QtWidgets import *
                 from PySide2.QtGui import *
@@ -112,12 +115,19 @@ else:
                 QT5 = PYSIDE2 = True
 
             else:
-                print("Unsupported binding", qtBindingBootPref)
+                print("Unsupported binding", _tentative)
+                continue
 
             break
 
         except ImportError:
             continue
+
+    del _tentative
+
+if not qtBindingName:
+    sys.stderr.write("No Qt binding found. Please install either PyQt5, PyQt6, or PySide6.\n")
+    sys.exit(1)
 
 # -----------------------------------------------------------------------------
 # Set up platform constants

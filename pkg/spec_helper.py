@@ -1,0 +1,46 @@
+import datetime
+from pathlib import Path
+
+ROOT = Path().resolve()
+
+if not (ROOT/'gitfourchette/qt.py').is_file():
+    raise ValueError("Please cd to the root of the GitFourchette repo")
+
+EXCLUDES = [
+    'psutil',
+    'cached_property',  # optionally imported by pygit2 (this pulls in asyncio)
+    'qtpy',
+    'PySide6',
+    'PySide2',
+    'PyQt5',
+    'PyQt6',
+    'PySide6.QtNetwork',
+    'PySide6.QtOpenGL',
+    'PySide6.QtQml',
+    'PySide6.QtQuick',
+    'PySide6.QtQuick3D',
+    'PySide6.QtQuickControls2',
+    'PySide6.QtQuickWidgets',
+]
+
+
+def getExcludeList(api):
+    excludes = EXCLUDES[:]
+    api = api.lower()
+    if api == 'pyside6':
+        excludes.remove('PySide6')
+    elif api == 'pyqt6':
+        excludes.remove('PyQt6')
+    elif api == 'pyqt5':
+        excludes.remove('PyQt5')
+    else:
+        raise NotImplementedError(f"Unsupported Qt binding for Pyinstaller bundle: {api}")
+    return excludes
+
+
+def writeBuildConstants(api):
+    # Write _buildconstants.py
+    buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
+    with open(ROOT/'gitfourchette/_buildconstants.py', 'wt') as f:
+        f.write(f"buildDate = \"{buildDate}\"\n")
+        f.write(f"qtBinding = \"{api.lower()}\"")

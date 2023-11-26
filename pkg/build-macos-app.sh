@@ -2,7 +2,10 @@
 
 set -e
 
-QT_API=pyqt6 python3.12 -m PyInstaller packaging/gitfourchette-macos.spec --noconfirm
+here="$(dirname "$(realpath "$0")")"
+cd "$here/.."
+
+python3.12 -m PyInstaller pkg/gitfourchette-macos.spec --noconfirm
 
 APP=dist/GitFourchette.app
 

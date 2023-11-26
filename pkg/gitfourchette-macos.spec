@@ -1,41 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-import datetime
-import os
+from pkg import spec_helper
 from gitfourchette.appconsts import APP_VERSION
 
+QT_API = "pyqt6"
+spec_helper.writeBuildConstants(QT_API)
 
-# Write _buildconstants.py
-buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
-with open('gitfourchette/_buildconstants.py', 'wt') as f:
-    f.write(f"buildDate = \"{buildDate}\"\n")
-
+MAC_EXCLUDES = [
+    'PyQt6.QtDBus',
+]
 
 a = Analysis(
-    ['../gitfourchette/__main__.py'],
+    [spec_helper.ROOT / 'gitfourchette/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[('../gitfourchette/assets', 'assets')],
+    datas=[(spec_helper.ROOT / 'gitfourchette/assets', 'assets')],
     hiddenimports=['_cffi_backend'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        # 'PySide6.QtNetwork',
-        # 'PySide6.QtOpenGL',
-        # 'PySide6.QtQml',
-        # 'PySide6.QtQuick',
-        # 'PySide6.QtQuick3D',
-        # 'PySide6.QtQuickControls2',
-        # 'PySide6.QtQuickWidgets',
-        # 'PySide6.QtOpenGLWidgets',
-        # 'PySide6.QtDataVisualization',
-        # 'PyQt6',
-        'PyQt6.QtDBus',
-        'PySide6',
-        'QtPy',
-        'psutil'
-    ],
+    excludes=spec_helper.getExcludeList(QT_API) + MAC_EXCLUDES,
     noarchive=False,  # True: keep pyc files
 )
 
@@ -50,7 +34,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -65,8 +49,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
-    upx_exclude=[],
+    upx=False,
     name='GitFourchette',
 )
 
