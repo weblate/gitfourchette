@@ -15,6 +15,7 @@ from gitfourchette.filelists.filelist import FileList
 from gitfourchette.filelists.stagedfiles import StagedFiles
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
+from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
@@ -23,7 +24,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
-from gitfourchette.tasks import TaskEffects, TaskBook
+from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
@@ -57,11 +58,17 @@ class RepoWidget(QWidget):
 
     @property
     def repo(self) -> Repo:
-        return self.state.repo
+        return self.state.repo if self.state is not None else None
 
     @property
     def isLoaded(self):
         return self.state is not None
+
+    @property
+    def isPriming(self):
+        task = self.repoTaskRunner.currentTask
+        priming = isinstance(task, tasks.PrimeRepo)
+        return priming
 
     @property
     def workdir(self):
@@ -95,6 +102,7 @@ class RepoWidget(QWidget):
         # ----------------------------------
         # Build widgets
 
+        self.openProgress = OpenRepoProgress(self)
         self.sidebar = Sidebar(self)
         self.graphView = GraphView(self)
         self.filesStack = self._makeFilesStack()
@@ -123,10 +131,12 @@ class RepoWidget(QWidget):
         sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
         sideSplitter.setStretchFactor(1, 1)
 
-        mainLayout = QVBoxLayout()
+        mainLayout = QStackedLayout()
         mainLayout.setSpacing(0)
         mainLayout.setContentsMargins(0, 0, 0, 0)
         mainLayout.addWidget(sideSplitter)
+        mainLayout.addWidget(self.openProgress)
+        mainLayout.setCurrentIndex(0)
         self.setLayout(mainLayout)
 
         self.splitterStates = {}
@@ -193,6 +203,11 @@ class RepoWidget(QWidget):
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
         self.connectTask(self.stagedFiles.unstageModeChanges,   tasks.UnstageModeChanges)
         self.connectTask(self.unifiedCommitButton.clicked,      tasks.NewCommit, argc=0)
+
+    def showBlockingProgress(self, on: bool):
+        stack = self.layout()
+        assert isinstance(stack, QStackedLayout)
+        stack.setCurrentIndex(int(on))
 
     # -------------------------------------------------------------------------
     # Initial layout
@@ -383,29 +398,40 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
     # Tasks
 
-    def initTask(self, taskClass: Type[tasks.RepoTask]):
-        assert issubclass(taskClass, tasks.RepoTask)
+    def initTask(self, taskClass: Type[RepoTask]):
+        assert issubclass(taskClass, RepoTask)
         task = taskClass(self.repoTaskRunner)
         task.setRepo(self.repo)
         return task
 
-    def runTask(self, taskClass: Type[tasks.RepoTask], *args, **kwargs):
+    def runTask(self, taskClass: Type[RepoTask], *args, **kwargs) -> RepoTask:
         task = self.initTask(taskClass)
         self.repoTaskRunner.put(task, *args, **kwargs)
         return task
 
-    def connectTask(self, signal: Signal, taskClass: Type[tasks.RepoTask], argc: int = -1):
+    def connectTask(self, signal: Signal, taskClass: Type[RepoTask], argc: int = -1):
         def createTask(*args):
             if argc >= 0:
                 args = args[:argc]
             return self.runTask(taskClass, *args)
         signal.connect(createTask)
 
-    def setRepoState(self, state: RepoState):
-        if state:
-            self.state = state
-        else:
-            self.state = None
+    # -------------------------------------------------------------------------
+    # Initial repo priming
+
+    def primeRepo(self, path: str = "", force: bool = False):
+        if not force and self.isLoaded:
+            log.warning(TAG, f"Repo already primed! {path}")
+            return None
+
+        primingTask = self.repoTaskRunner.currentTask
+        if isinstance(primingTask, tasks.PrimeRepo):
+            log.verbose(TAG, f"Repo is being primed: {path}")
+            return primingTask
+
+        path = path or self.pathPending
+        assert path
+        return self.runTask(tasks.PrimeRepo, path)
 
     # -------------------------------------------------------------------------
     # Splitter state
@@ -565,7 +591,7 @@ class RepoWidget(QWidget):
             self.state.repo = None
             log.info(TAG, "Repository freed:", self.pathPending)
 
-        self.setRepoState(None)
+        self.state = None
 
         # Clean up status bar if there were repo-specific warnings in it
         self.refreshWindowTitle()
@@ -686,7 +712,7 @@ class RepoWidget(QWidget):
     def onRegainForeground(self):
         """Refresh the repo as soon as possible."""
 
-        if not self.state:
+        if (not self.isLoaded) or self.isPriming:
             return
 
         if self.isVisible() and not self.repoTaskRunner.isBusy():

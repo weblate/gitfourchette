@@ -59,6 +59,6 @@ def testOpenSameRepoTwice(qtbot, tempDir, mainWindow):
     assert mainWindow.tabs.count() == 1  # don't create a new tab
     assert mainWindow.currentRepoWidget() == rw3
 
-    rw4 = mainWindow.openRepo(os.path.join(wd, "master.txt"))  # some file within workdir
+    rw4 = mainWindow.openRepo(os.path.join(wd, "master.txt"), exactMatch=False)  # some file within workdir
     assert mainWindow.tabs.count() == 1  # don't create a new tab
     assert mainWindow.currentRepoWidget() == rw4

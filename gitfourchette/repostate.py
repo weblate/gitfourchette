@@ -17,19 +17,6 @@ UC_FAKEID = "UC_FAKEID"
 PROGRESS_INTERVAL = 5000
 
 
-def progressTick(progress, i, numCommitsBallpark=0):
-    if i != 0 and i % PROGRESS_INTERVAL == 0:
-        if numCommitsBallpark > 0 and i <= numCommitsBallpark:
-            # Updating the text too often prevents progress bar from updating on macOS theme,
-            # so don't use setLabelText if we're changing the progress value
-            progress.setValue(i)
-        else:
-            progress.setLabelText(tr("{0} commits processed.").format(progress.locale().toString(i)))
-        QCoreApplication.processEvents()
-        if progress.wasCanceled():
-            raise StopIteration()
-
-
 @dataclass
 class RepoPrefs(PrefsFile):
     filename = "prefs.json"
@@ -46,7 +33,9 @@ class RepoPrefs(PrefsFile):
         return self._parentDir
 
 
-class RepoState:
+class RepoState(QObject):
+    loadingProgress: Signal()
+
     repo: Repo
 
     # May be None; call initializeWalker before use.
@@ -82,7 +71,9 @@ class RepoState:
 
     uiPrefs: RepoPrefs
 
-    def __init__(self, repo: Repo):
+    def __init__(self, parent: QObject, repo: Repo):
+        super().__init__(parent)
+
         assert isinstance(repo, Repo)
         self.repo = repo
 
@@ -217,86 +208,6 @@ class RepoState:
             return [self.refCache["HEAD"]]
         except KeyError:  # Unborn HEAD
             return []
-
-    def loadCommitSequence(self, progress: QProgressDialog):
-        progress.setLabelText(tr("Processing commit log..."))
-        QCoreApplication.processEvents()
-
-        walker = self.initializeWalker(self.refCache.values())
-
-        self.updateActiveCommitOid()
-
-        bench = Benchmark("GRAND TOTAL"); bench.__enter__()
-
-        commitSequence: list[Commit | None] = []
-        graph = Graph()
-
-        # Retrieve the number of commits that we loaded last time we opened this repo
-        # so we can estimate how long it'll take to load it again
-        numCommitsBallpark = settings.history.getRepoNumCommits(self.repo.workdir)
-        if numCommitsBallpark != 0:
-            progress.setMinimum(0)
-            progress.setMaximum(2 * numCommitsBallpark)  # reserve second half of progress bar for graph progress
-
-
-        try:
-            for offsetFromTop, commit in enumerate(walker):
-                progressTick(progress, offsetFromTop, numCommitsBallpark)
-                commitSequence.append(commit)
-        except StopIteration:
-            pass
-
-        log.info("loadCommitSequence", F"{self.shortName}: loaded {len(commitSequence):,} commits")
-        progress.setLabelText(tr("Preparing graph..."))
-
-        if numCommitsBallpark != 0:
-            progress.setMinimum(-len(commitSequence))  # first half of progress bar was for commit log
-        progress.setMaximum(len(commitSequence))
-
-        graphGenerator = graph.startGenerator()
-
-        # Generate fake "Uncommitted Changes" with HEAD as parent
-        commitSequence.insert(0, None)
-
-        self.hiddenCommits = set()
-        self.foreignCommits = set()
-        hiddenCommitSolver = self.newHiddenCommitSolver()
-        foreignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
-
-        for commit in commitSequence:
-            if not commit:
-                oid = UC_FAKEID
-                parents = self._uncommittedChangesFakeCommitParents()
-            else:
-                oid = commit.oid
-                parents = commit.parent_ids
-
-            graphGenerator.newCommit(oid, parents)
-
-            foreignCommitSolver.newCommit(oid, parents, self.foreignCommits)
-            hiddenCommitSolver.newCommit(oid, parents, self.hiddenCommits)
-
-            row = graphGenerator.row
-            rowInt = int(row)
-
-            assert type(row) == BatchRow
-            assert rowInt >= 0
-            graph.commitRows[oid] = row
-
-            # Save keyframes at regular intervals for faster random access.
-            if rowInt % KF_INTERVAL == 0:
-                graph.saveKeyframe(graphGenerator)
-                progress.setValue(rowInt)
-                QCoreApplication.processEvents()
-
-        log.verbose("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
-
-        self.commitSequence = commitSequence
-        self.graph = graph
-
-        bench.__exit__(None, None, None)
-
-        return commitSequence
 
     @benchmark
     def loadChangedRefs(self, oldRefCache: dict[str, Oid]):

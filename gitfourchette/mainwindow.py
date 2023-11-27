@@ -423,19 +423,11 @@ class MainWindow(QMainWindow):
         # If we don't have a RepoState, then the tab is lazy-loaded.
         # We need to load it now.
         if not w.isLoaded:
-            # Disable tabs widget while we're loading the repo to prevent tabs
-            # from accidentally being dragged while the UI is locking up
-            with DisableWidgetContext(self.tabs):
-                # Load repo
-                success = self._loadRepo(w, w.workdir)
-                if not success:
-                    return
-                settings.history.write()
+            w.primeRepo()
         else:
             # Trigger repo refresh.
             w.onRegainForeground()
-
-        w.refreshWindowTitle()
+            w.refreshWindowTitle()
 
     def onTabContextMenu(self, globalPoint: QPoint, i: int):
         if i < 0:  # Right mouse button released outside tabs
@@ -473,157 +465,72 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Repo loading
 
-    def _constructRepo(self, path: str, exactMatch: bool = False) -> Repo:
-        flags = 0
-        if exactMatch:
-            flags |= GIT_REPOSITORY_OPEN_NO_SEARCH
-
-        repo = Repo(path, flags)
-
-        if repo.is_shallow:
-            porcelain.libgit2_version_at_least("1.7.0", feature_name="Shallow clone support")
-
-        if repo.is_bare:
-            raise NotImplementedError(self.tr("Sorry, bare repositories aren’t supported yet.").format(path))
-
-        return repo
-
-    def _loadRepo(self, rw: RepoWidget, pathOrRepo: str | Repo):
-        assert rw
-
-        repo: Repo
-        path: str
-
-        if type(pathOrRepo) is Repo:
-            repo = pathOrRepo
-            path = repo.workdir
-        elif type(pathOrRepo) is str:
-            path = pathOrRepo
-            repo = self._constructRepo(path)
-        else:
-            raise TypeError("pathOrRepo must either be an str or a Repo2")
-
-        assert repo is not None
-
-        shortname = settings.history.getRepoNickname(path)
-
-        progress = QProgressDialog(self.tr("Opening repository..."), self.tr("Abort"), 0, 0, self)
-        progress.setWindowTitle(shortname)
-        progress.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)  # hide close button
-        progress.setMinimumWidth(2 * progress.fontMetrics().horizontalAdvance("000,000,000 commits loaded."))
-        progress.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-
-        # On macOS, WindowModal triggers a slow animation that makes loading a repo feel gratuitously sluggish.
-        # ApplicationModal isn't as bad.
-        modality = Qt.WindowModality.ApplicationModal if MACOS else Qt.WindowModality.WindowModal
-        setWindowModal(progress, modality)
-
-        if not settings.TEST_MODE:
-            progress.show()
-        QCoreApplication.processEvents()
-
+    def openRepo(self, path: str, exactMatch=True) -> RepoWidget | None:
         try:
-            newState = RepoState(repo)
-            commitSequence = newState.loadCommitSequence(progress)
-
-            rw.setRepoState(newState)
-
-            rw.graphView.setHiddenCommits(newState.hiddenCommits)
-            rw.graphView.setCommitSequence(commitSequence)
-            with QSignalBlockerContext(rw.sidebar):
-                collapseCache = newState.uiPrefs.collapseCache
-                if collapseCache:
-                    rw.sidebar.collapseCache = set(collapseCache)
-                    rw.sidebar.collapseCacheValid = True
-                rw.sidebar.refresh(newState)
-
-            self.refreshTabText(rw)
-
+            rw = self._openRepo(path, exactMatch=exactMatch)
         except BaseException as exc:
-            # In test mode, we really want this to fail
-            if settings.TEST_MODE:
-                raise exc
-
             excMessageBox(
                 exc,
-                message=self.tr("An exception was raised while opening “{0}”").format(escape(path)),
-                parent=self)
-            return False
-
-        finally:
-            progress.close()
-
-        settings.history.setRepoNumCommits(repo.workdir, len(commitSequence))
-
-        rw.graphView.selectUncommittedChanges(force=True)
-
-        # The RepoWidget may have been disabled if it was previously "unloaded".
-        rw.setEnabled(True)
-
-        # Scrolling HEAD into view isn't super intuitive if we boot to Uncommitted Changes
-        # if newState.activeCommitOid:
-        #     rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
-
-        # Focus on some interesting widget within the RepoWidget after loading the repo.
-        # (delay to next event loop so Qt has time to show the widget first)
-        QTimer.singleShot(0, rw.setInitialFocus)
-
-        return True
-
-    def _openRepo(self, path: str, foreground=True, addToHistory=True, tabIndex=-1, exactMatch=False
-                  ) -> RepoWidget | None:
-        # Construct a Repo2 so we can get the workdir
-        repo = self._constructRepo(path, exactMatch=exactMatch)
-
-        if not repo:
+                self.tr("Open repository"),
+                self.tr("Couldn’t open the repository at “{0}”.").format(escape(path)),
+                parent=self,
+                icon='warning')
             return None
 
-        workdir = repo.workdir
+        self.saveSession()
+        return rw
+
+    def _openRepo(self, path: str, foreground=True, tabIndex=-1, exactMatch=True) -> RepoWidget:
+        # Make sure the path exists
+        if not os.path.exists(path):
+            raise FileNotFoundError(self.tr("There’s nothing at this path."))
+
+        # Get the workdir
+        if exactMatch:
+            workdir = path
+        else:
+            with RepoContext(path) as repo:
+                workdir = repo.workdir
 
         # First check that we don't have a tab for this repo already
         for i in range(self.tabs.count()):
             existingRW: RepoWidget = self.tabs.widget(i)
             if os.path.samefile(workdir, existingRW.workdir):
-                repo.free()
-                del repo
                 self.tabs.setCurrentIndex(i)
                 return existingRW
 
-        newRW = RepoWidget(self)
-        newRW.setSharedSplitterState(self.sharedSplitterStates)
+        # Create a RepoWidget
+        rw = RepoWidget(self)
+        rw.setPendingWorkdir(workdir)
 
-        newRW.nameChange.connect(lambda: self.refreshTabText(newRW))
-        newRW.openRepo.connect(lambda path: self.openRepoNextTo(newRW, path))
-        newRW.openPrefs.connect(self.openPrefsDialog)
+        # Hook RepoWidget signals
+        rw.setSharedSplitterState(self.sharedSplitterStates)
 
-        newRW.statusMessage.connect(self.statusBar2.showMessage)
-        newRW.busyMessage.connect(self.statusBar2.showBusyMessage)
-        newRW.clearStatus.connect(self.statusBar2.clearMessage)
-        newRW.statusWarning.connect(self.statusBar2.showPermanentWarning)
+        rw.nameChange.connect(lambda: self.refreshTabText(rw))
+        rw.nameChange.connect(lambda: rw.refreshWindowTitle())
+        rw.openRepo.connect(lambda path: self.openRepoNextTo(rw, path))
+        rw.openPrefs.connect(self.openPrefsDialog)
 
+        rw.statusMessage.connect(self.statusBar2.showMessage)
+        rw.busyMessage.connect(self.statusBar2.showBusyMessage)
+        rw.clearStatus.connect(self.statusBar2.clearMessage)
+        rw.statusWarning.connect(self.statusBar2.showPermanentWarning)
+
+        # Create a tab for the RepoWidget
+        with QSignalBlockerContext(self.tabs):
+            tabIndex = self.tabs.insertTab(tabIndex, rw, rw.getTitle())
+            self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
+            if foreground:
+                self.tabs.setCurrentIndex(tabIndex)
+
+        # Switch away from WelcomeWidget
+        self.welcomeStack.setCurrentWidget(self.tabs)
+
+        # Load repo now
         if foreground:
-            if not self._loadRepo(newRW, repo):
-                newRW.destroy()
-                return None  # don't create the tab if opening the repo failed
-        else:
-            newRW.setPendingWorkdir(workdir)
-            repo.free()
-            del repo
+            rw.primeRepo()
 
-        tabIndex = self.tabs.insertTab(tabIndex, newRW, newRW.getTitle())
-        self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
-
-        if foreground:
-            self.tabs.setCurrentIndex(tabIndex)
-
-        if addToHistory:
-            settings.history.addRepo(workdir)
-            if newRW.state:
-                settings.history.setRepoSuperproject(workdir, newRW.state.superproject)
-            settings.history.write()
-            self.fillRecentMenu()
-
-        return newRW
+        return rw
 
     # -------------------------------------------------------------------------
 
@@ -658,7 +565,7 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def hardRefresh(self, rw: RepoWidget):
-        self._loadRepo(rw, rw.workdir)
+        rw.primeRepo(force=True)
 
     @needRepoWidget
     def openRepoFolder(self, rw: RepoWidget):
@@ -747,7 +654,7 @@ class MainWindow(QMainWindow):
         if not detectParentRepo or not parentRepo:
             try:
                 pygit2.init_repository(path)
-                self.openRepo(path)
+                self.openRepo(path, exactMatch=True)
             except BaseException as exc:
                 message = self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path))
                 excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
@@ -764,7 +671,7 @@ class MainWindow(QMainWindow):
                     self, 'information', self.tr("Repository already exists"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel)
                 qmb.button(QMessageBox.StandardButton.Open).setText(self.tr("&Open existing repo"))
-                qmb.accepted.connect(lambda: self.openRepo(path))
+                qmb.accepted.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
                 qmb.show()
             else:
                 message = paragraphs(
@@ -779,7 +686,7 @@ class MainWindow(QMainWindow):
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
                 openButton = qmb.button(QMessageBox.StandardButton.Open)
                 openButton.setText(self.tr("&Open parent repo “{0}”").format(os.path.basename(parentWorkdir)))
-                openButton.clicked.connect(lambda: self.openRepo(parentWorkdir))
+                openButton.clicked.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
                 createButton = qmb.button(QMessageBox.StandardButton.Ok)
                 createButton.setText(self.tr("&Create repo in subfolder"))
                 createButton.clicked.connect(lambda: self.newRepo(path, detectParentRepo=False))
@@ -798,23 +705,8 @@ class MainWindow(QMainWindow):
     def openDialog(self):
         qfd = PersistentFileDialog.openDirectory(self, "NewRepo", self.tr("Open repository"))
         qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        qfd.fileSelected.connect(self.openRepo)
+        qfd.fileSelected.connect(lambda path: self.openRepo(path, exactMatch=False))
         qfd.show()
-
-    def openRepo(self, path: str, exactMatch: bool = False) -> RepoWidget | None:
-        try:
-            rw = self._openRepo(path, exactMatch=exactMatch)
-        except BaseException as exc:
-            excMessageBox(
-                exc,
-                self.tr("Open repository"),
-                self.tr("Couldn’t open the repository at “{0}”.").format(escape(path)),
-                parent=self,
-                icon='warning')
-            return None
-
-        self.saveSession()
-        return rw
 
     # -------------------------------------------------------------------------
     # Tab management
@@ -878,7 +770,7 @@ class MainWindow(QMainWindow):
 
     def loadTab(self, index: int):
         rw : RepoWidget = self.tabs.widget(index)
-        self._loadRepo(rw, rw.workdir)
+        rw.primeRepo()
 
     def openRepoNextTo(self, rw, path: str):
         index = self.tabs.indexOf(rw)
@@ -927,7 +819,7 @@ class MainWindow(QMainWindow):
             # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
             for i, path in enumerate(session.tabs):
                 try:
-                    newRepoWidget = self._openRepo(path, foreground=False, addToHistory=False)
+                    newRepoWidget = self._openRepo(path, foreground=False)
                 except (GitError, OSError, NotImplementedError) as exc:
                     # GitError: most errors thrown by pygit2
                     # OSError: e.g. permission denied
@@ -1039,7 +931,7 @@ class MainWindow(QMainWindow):
         if action == "clone":
             self.cloneDialog(data)
         elif action == "open":
-            self.openRepo(data)
+            self.openRepo(data, exactMatch=False)
         elif action == "patch":
             rw = self.currentRepoWidget()
             if rw:
