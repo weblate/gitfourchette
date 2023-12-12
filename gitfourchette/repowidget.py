@@ -17,6 +17,7 @@ from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
@@ -102,7 +103,6 @@ class RepoWidget(QWidget):
         # ----------------------------------
         # Build widgets
 
-        self.openProgress = OpenRepoProgress(self)
         self.sidebar = Sidebar(self)
         self.graphView = GraphView(self)
         self.filesStack = self._makeFilesStack()
@@ -118,7 +118,7 @@ class RepoWidget(QWidget):
         bottomSplitter.setSizes([100, 300])
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical)
-        mainSplitter.setObjectName("MainSplitter")
+        mainSplitter.setObjectName("CentralSplitter")
         mainSplitter.addWidget(self.graphView)
         mainSplitter.addWidget(bottomSplitter)
         mainSplitter.setSizes([100, 150])
@@ -132,11 +132,7 @@ class RepoWidget(QWidget):
         sideSplitter.setStretchFactor(1, 1)
 
         mainLayout = QStackedLayout()
-        mainLayout.setSpacing(0)
-        mainLayout.setContentsMargins(0, 0, 0, 0)
         mainLayout.addWidget(sideSplitter)
-        mainLayout.addWidget(self.openProgress)
-        mainLayout.setCurrentIndex(0)
         self.setLayout(mainLayout)
 
         self.splitterStates = {}
@@ -203,11 +199,6 @@ class RepoWidget(QWidget):
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
         self.connectTask(self.stagedFiles.unstageModeChanges,   tasks.UnstageModeChanges)
         self.connectTask(self.unifiedCommitButton.clicked,      tasks.NewCommit, argc=0)
-
-    def showBlockingProgress(self, on: bool):
-        stack = self.layout()
-        assert isinstance(stack, QStackedLayout)
-        stack.setCurrentIndex(int(on))
 
     # -------------------------------------------------------------------------
     # Initial layout
@@ -454,6 +445,33 @@ class RepoWidget(QWidget):
             splitter.setHandleWidth(-1)  # reset default splitter width
 
     # -------------------------------------------------------------------------
+    # Placeholder widgets
+
+    @property
+    def mainStack(self) -> QStackedLayout:
+        layout = self.layout()
+        assert isinstance(layout, QStackedLayout)
+        return layout
+
+    def removePlaceholderWidget(self):
+        self.mainStack.setCurrentIndex(0)
+        while self.mainStack.count() > 1:
+            i = self.mainStack.count() - 1
+            w = self.mainStack.widget(i)
+            log.verbose(TAG, f"Removing modal placeholder widget: {w.objectName()}")
+            self.mainStack.removeWidget(w)
+            w.deleteLater()
+        assert self.mainStack.count() <= 1
+
+    def setPlaceholderWidget(self, w):
+        self.removePlaceholderWidget()
+        self.mainStack.addWidget(w)
+        self.mainStack.setCurrentWidget(w)
+        assert self.mainStack.currentIndex() != 0
+        assert self.mainStack.count() <= 2
+
+    # -------------------------------------------------------------------------
+    # Navigation
 
     def saveFilePositions(self):
         if self.diffStack.currentWidget() is self.diffView:
@@ -536,12 +554,11 @@ class RepoWidget(QWidget):
     def __repr__(self):
         return f"RepoWidget({self.getTitle()})"
 
-    def getTitle(self):
+    def getTitle(self) -> str:
         if self.state:
             return self.state.shortName
         elif self.pathPending:
-            name = settings.history.getRepoTabName(self.pathPending)
-            return f"({name})"
+            return settings.history.getRepoTabName(self.pathPending)
         else:
             return "???"
 
@@ -570,7 +587,6 @@ class RepoWidget(QWidget):
         with QSignalBlockerContext(
                 self.committedFiles, self.dirtyFiles, self.stagedFiles,
                 self.graphView, self.sidebar):
-            self.setEnabled(False)
             self.committedFiles.clear()
             self.dirtyFiles.clear()
             self.stagedFiles.clear()
@@ -585,6 +601,13 @@ class RepoWidget(QWidget):
             # Kill any ongoing task then block UI thread until the task dies cleanly
             self.repoTaskRunner.killCurrentTask()
             self.repoTaskRunner.joinZombieTask()
+
+            # Install placeholder widget
+            placeholder = UnloadedRepoPlaceholder(self)
+            placeholder.ui.nameLabel.setText(self.getTitle())
+            placeholder.ui.loadButton.clicked.connect(lambda: self.primeRepo())
+            placeholder.ui.loadButton.clicked.connect(lambda: placeholder.deleteLater())
+            self.setPlaceholderWidget(placeholder)
 
             # Free the repository
             self.state.repo.free()

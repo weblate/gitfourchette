@@ -2,6 +2,7 @@ import contextlib
 
 from gitfourchette import log
 from gitfourchette import settings
+from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.graph import Graph, BatchRow
 from gitfourchette.graphmarkers import ForeignCommitSolver
 from gitfourchette.diffview.diffdocument import DiffDocument
@@ -35,13 +36,16 @@ class PrimeRepo(RepoTask):
         rw = self.rw
         assert isinstance(rw, RepoWidget)
 
+        progressWidget = OpenRepoProgress(rw)
+        rw.setPlaceholderWidget(progressWidget)
+
         self._wantAbort = False
-        self.progressRange.connect(rw.openProgress.ui.progressBar.setRange)
-        self.progressValue.connect(rw.openProgress.ui.progressBar.setValue)
-        self.progressMessage.connect(rw.openProgress.ui.label.setText)
-        self.progressAbortable.connect(rw.openProgress.ui.abortButton.setEnabled)
-        rw.openProgress.ui.abortButton.clicked.connect(self._onAbortButtonClicked)
-        rw.openProgress.ui.abortButton.setEnabled(False)
+        self.progressRange.connect(progressWidget.ui.progressBar.setRange)
+        self.progressValue.connect(progressWidget.ui.progressBar.setValue)
+        self.progressMessage.connect(progressWidget.ui.label.setText)
+        self.progressAbortable.connect(progressWidget.ui.abortButton.setEnabled)
+        progressWidget.ui.abortButton.clicked.connect(self._onAbortButtonClicked)
+        progressWidget.ui.abortButton.setEnabled(False)
 
         # Create the repo
         repo = Repo(path, GIT_REPOSITORY_OPEN_NO_SEARCH)
@@ -53,7 +57,6 @@ class PrimeRepo(RepoTask):
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
 
-        rw.showBlockingProgress(True)
         self.progressMessage.emit(self.tr("Opening “{0}”...").format(settings.history.getRepoNickname(path)))
 
         # Create repo state
@@ -196,8 +199,11 @@ class PrimeRepo(RepoTask):
 
             rw.graphView.selectUncommittedChanges(force=True)
 
-        rw.showBlockingProgress(False)  # Show main UI
-        rw.nameChange.emit()  # Refresh tab text
+        # Restore main UI
+        rw.removePlaceholderWidget()
+
+        # Refresh tab text
+        rw.nameChange.emit()
 
         # Scrolling HEAD into view isn't super intuitive if we boot to Uncommitted Changes
         # if newState.activeCommitOid:
