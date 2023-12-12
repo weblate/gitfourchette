@@ -402,6 +402,8 @@ class MainWindow(QMainWindow):
         clearAction.setStatusTip(self.tr("Clear the list of recently opened repositories"))
         clearAction.setIcon(stockIcon("edit-clear-history"))
 
+        self.welcomeWidget.ui.recentReposButton.setMenu(self.recentMenu)
+
     # -------------------------------------------------------------------------
     # Tabs
 
