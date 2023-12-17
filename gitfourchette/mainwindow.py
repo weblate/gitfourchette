@@ -431,12 +431,20 @@ class MainWindow(QMainWindow):
             w.onRegainForeground()
             w.refreshWindowTitle()
 
-    def onTabContextMenu(self, globalPoint: QPoint, i: int):
+    def generateTabContextMenu(self, i: int):
         if i < 0:  # Right mouse button released outside tabs
-            return
+            return None
+
         rw: RepoWidget = self.tabs.widget(i)
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
+
+        superproject = rw.state.superproject if rw.state else settings.history.getRepoSuperproject(rw.workdir)
+        if superproject:
+            superprojectName = escamp(settings.history.getRepoTabName(superproject))
+            superprojectLabel = self.tr("Open Superproject “{0}”").format(superprojectName)
+        else:
+            superprojectLabel = self.tr("Open Superproject")
 
         ActionDef.addToQMenu(
             menu,
@@ -447,6 +455,8 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw)),
             ActionDef(self.tr("Rename", "RepoTabCM"), lambda: self.renameRepo(rw)),
             ActionDef.SEPARATOR,
+            ActionDef(superprojectLabel, lambda: self.openRepoNextTo(rw, superproject), enabled=bool(superproject)),
+            ActionDef.SEPARATOR
         )
 
         if rw.state:
@@ -454,6 +464,13 @@ class MainWindow(QMainWindow):
         else:
             ActionDef.addToQMenu(menu, ActionDef(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i)))
 
+        return menu
+
+    def onTabContextMenu(self, globalPoint: QPoint, i: int):
+        if i < 0:  # Right mouse button released outside tabs
+            return
+
+        menu = self.generateTabContextMenu(i)
         menu.exec(globalPoint)
         menu.deleteLater()
 
