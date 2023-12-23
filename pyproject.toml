@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools >= 61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitfourchette"
+dynamic = ["version"]  # see [tool.setuptools.dynamic]
+description = "The comfortable Git UI"
+keywords = ["git"]
+authors = [
+    {name = "Iliyas Jorio"},
+]
+classifiers = [
+    "Topic :: Software Development :: Version Control :: Git",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: Developers",
+]
+readme = "README.md"
+requires-python = ">= 3.10"
+dependencies = ["pygit2 >= 1.12"]
+
+[project.urls]
+Homepage = "https://github.com/jorio/gitfourchette"
+Issues = "https://github.com/jorio/gitfourchette/issues"
+
+[project.gui-scripts]
+gitfourchette = "gitfourchette.__main__:main"
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-qt"]
+pyqt6 = ["pyqt6"]
+pyqt5 = ["pyqt5"]
+pyside6 = ["PySide6 !=6.4.0, !=6.4.0.1, !=6.5.1"]
+pyside2 = ["PySide2"]
+qtpy = ["qtpy"]  # compatibility layer for older versions of Qt bindings
+memory-indicator = ["psutil"]
+
+[tool.setuptools]
+package-dir = {gitfourchette = "gitfourchette"}
+package-data = {"gitfourchette.assets" = ['*']}
+
+[tool.setuptools.dynamic]
+version = {attr = "gitfourchette.appconsts.APP_VERSION"}
