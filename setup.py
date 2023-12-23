@@ -17,6 +17,9 @@ setup(
     package_data={
         'gitfourchette.assets': ['*']
     },
+    entry_points={
+        'console_scripts': ['gitfourchette=gitfourchette.__main__:main']
+    },
     python_requires='>= 3.10',
     install_requires=[
         'pygit2 >= 1.12',
