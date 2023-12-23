@@ -61,6 +61,12 @@ class DeleteBranch(RepoTask):
     def flow(self, localBranchName: str):
         assert not localBranchName.startswith(RefPrefix.HEADS)
 
+        if localBranchName == self.repo.head_branch_shorthand:
+            text = paragraphs(
+                self.tr("Cannot delete “{0}” because it is the current branch.").format(escape(localBranchName)),
+                self.tr("Before you try again, switch to another branch."))
+            yield from self.flowAbort(text)
+
         text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
                           translate("Global", "This cannot be undone!"))
 

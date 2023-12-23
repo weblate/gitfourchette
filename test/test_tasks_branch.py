@@ -108,6 +108,19 @@ def testDeleteBranch(qtbot, tempDir, mainWindow):
     assert "somebranch" not in repo.branches.local
 
 
+def testDeleteCurrentBranch(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    assert "master" in repo.branches.local
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
+    findMenuAction(menu, "delete").trigger()
+    acceptQMessageBox(rw, "can.+t delete.+current branch")
+    assert "master" in repo.branches.local  # still there
+
+
 def testNewRemoteTrackingBranch(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
