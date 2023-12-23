@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-from pkg import spec_helper
+from pkg.pyinstaller import spec_helper
 from gitfourchette.appconsts import APP_VERSION
 
 QT_API = "pyqt6"

@@ -61,11 +61,11 @@ if QTPY:
     from qtpy.QtCore import __version__ as qtBindingVersion
 else:
     if not qtBindingBootPref:
-        qtBindingBootPref = QT_BINDING_ORDER[0]
+        pass
     elif qtBindingBootPref not in QT_BINDING_ORDER:
         # Sanitize value if user passed in junk
         sys.stderr.write(f"Unrecognized Qt binding name: '{qtBindingBootPref}'\n")
-        qtBindingBootPref = QT_BINDING_ORDER[0]
+        qtBindingBootPref = ""
     else:
         # Move preferred binding to front of list
         QT_BINDING_ORDER.remove(qtBindingBootPref)

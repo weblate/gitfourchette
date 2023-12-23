@@ -3,9 +3,9 @@
 set -e
 
 here="$(dirname "$(realpath "$0")")"
-cd "$here/.."
+cd "$here/../.."
 
-python3.12 -m PyInstaller pkg/gitfourchette-macos.spec --noconfirm
+python3.12 -m PyInstaller pkg/pyinstaller/gitfourchette-macos.spec --noconfirm
 
 APP=dist/GitFourchette.app
 
