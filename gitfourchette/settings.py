@@ -1,4 +1,5 @@
 from gitfourchette import log
+from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle

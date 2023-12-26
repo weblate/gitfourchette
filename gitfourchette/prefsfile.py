@@ -3,6 +3,7 @@ import enum
 import json
 
 from gitfourchette import log
+from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 
