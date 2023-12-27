@@ -828,51 +828,47 @@ class MainWindow(QMainWindow):
 
         errors = []
 
-        # Normally, changing the current tab will load the corresponding repo in the background.
-        # But we don't want to load every repo as we're creating tabs, so temporarily disconnect the signal.
-        with QSignalBlockerContext(self.tabs):
-            # We might not be able to load all tabs, so we may have to adjust session.activeTabIndex.
-            activeTab = -1
-            successfulRepos = []
+        # We might not be able to load all tabs, so we may have to adjust the active tab index.
+        activeTab = -1
+        successfulRepos = []
 
-            # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
-            for i, path in enumerate(session.tabs):
-                try:
-                    newRepoWidget = self._openRepo(path, foreground=False)
-                except (GitError, OSError, NotImplementedError) as exc:
-                    # GitError: most errors thrown by pygit2
-                    # OSError: e.g. permission denied
-                    # NotImplementedError: e.g. shallow/bare repos
-                    errors.append((path, exc))
-                    continue
+        # Lazy-loading: prepare all tabs, but don't load the repos (foreground=False).
+        for i, path in enumerate(session.tabs):
+            try:
+                newRepoWidget = self._openRepo(path, exactMatch=True, foreground=False)
+            except (GitError, OSError, NotImplementedError) as exc:
+                # GitError: most errors thrown by pygit2
+                # OSError: e.g. permission denied
+                # NotImplementedError: e.g. shallow/bare repos
+                errors.append((path, exc))
+                continue
 
-                # _openRepo may still return None without throwing an exception in case of failure
-                if newRepoWidget is None:
-                    continue
+            # _openRepo may still return None without throwing an exception in case of failure
+            if newRepoWidget is None:
+                continue
 
-                successfulRepos.append(path)
+            successfulRepos.append(path)
 
-                if i == session.activeTabIndex:
-                    activeTab = self.tabs.count()-1
+            if i == session.activeTabIndex:
+                activeTab = self.tabs.count()-1
 
-            # If we failed to load anything, tell the user about it
-            if errors:
-                self._reportSessionErrors(errors)
+        # If we failed to load anything, tell the user about it
+        if errors:
+            self._reportSessionErrors(errors)
 
-            # Update history (don't write it yet - onTabCurrentWidgetChanged will do it below)
-            for path in reversed(successfulRepos):
-                settings.history.addRepo(path)
-            self.fillRecentMenu()
+        # Update history (don't write it yet - onTabCurrentWidgetChanged will do it below)
+        for path in reversed(successfulRepos):
+            settings.history.addRepo(path)
+        self.fillRecentMenu()
 
-            # Fall back to tab #0 if the previously active tab couldn't be restored
-            # (Otherwise welcome page will stick around)
-            if activeTab < 0 and len(successfulRepos):
-                activeTab = 0
+        # Fall back to tab #0 if desired tab couldn't be restored (otherwise welcome page will stick around)
+        if activeTab < 0 and len(successfulRepos) >= 1:
+            activeTab = 0
 
-            # Set current tab and load its repo.
-            if activeTab >= 0:
-                self.tabs.setCurrentIndex(session.activeTabIndex)
-                self.onTabCurrentWidgetChanged()
+        # Set current tab and load its repo.
+        if activeTab >= 0:
+            self.tabs.setCurrentIndex(activeTab)
+            self.onTabCurrentWidgetChanged()  # needed to trigger loading on tab #0
 
     def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):
         numErrors = len(errors)

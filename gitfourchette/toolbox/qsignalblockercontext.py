@@ -13,7 +13,7 @@ class QSignalBlockerContext:
     def __enter__(self):
         for o in self.objectsToBlock:
             if o.signalsBlocked():
-                log.warning("QSignalBlockerContext", "Nesting QSignalBlockerContexts isn't a great idea!")
+                log.warning("QSignalBlockerContext", "Nesting QSignalBlockerContexts isn't a great idea!", o)
             o.blockSignals(True)
 
     def __exit__(self, excType, excValue, excTraceback):
