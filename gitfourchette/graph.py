@@ -3,6 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from gitfourchette import log
 from gitfourchette.porcelain import Oid as _RealOidType
+from gitfourchette.qt import DEVDEBUG
 from gitfourchette.toolbox import *
 from typing import Iterable, ClassVar
 import bisect
@@ -88,7 +89,11 @@ class BatchRow:
                 cls.globalOffsets[b] += shift
 
     def isValid(self):
-        return self.b >= 0 and self.y >= 0
+        """
+        A BatchRow is considered valid if it is part of a valid batch, it has a
+        positive offset in the batch, and it resolves to a positive int.
+        """
+        return self.b >= 0 and self.y >= 0 and int(self) >= 0
 
     def __repr__(self):
         offset = -1 if self.b < 0 else BatchRow.BatchManager.globalOffsets[self.b]
@@ -153,6 +158,15 @@ class ChainHandle:
     topRow: BatchRow = BATCHROW_UNDEF
     bottomRow: BatchRow = BATCHROW_UNDEF
 
+    def isValid(self):
+        # It's OK for bottomRow to be dangling, but not topRow.
+        return self.topRow.isValid()
+
+    def __repr__(self):
+        tr = int(self.topRow)
+        br = int(self.bottomRow)
+        return f"Chain({tr}\u2192{br})"
+
 
 @dataclass
 class ArcJunction:
@@ -208,10 +222,12 @@ class Arc:
     "Next node in the arc linked list"
 
     def __repr__(self):
-        s = F"Arc(chain: {self.chain.topRow}, oa: {self.openedAt}, ob: {str(self.openedBy)[:5]} \u2192 ca: {self.closedAt}, cb: {str(self.closedBy)[:5]})"
-        if self.closedAt == BATCHROW_UNDEF:
-            s += "?"
-        return s
+        oa = int(self.openedAt)
+        ca = int(self.closedAt)
+        ob = str(self.openedBy)[:5]
+        cb = str(self.closedBy)[:5]
+        dangling = "?" if not self.closedAt.isValid() else ""
+        return f"Arc({self.chain} {ob}\u2192{cb}{dangling} {oa}\u2192{ca})"
 
     def length(self):
         assert type(self.openedAt) == BatchRow
@@ -807,6 +823,18 @@ class Graph:
             if int(generator.row) % keyframeInterval == 0:
                 self.saveKeyframe(generator)
 
+    def spliceTop(self, oldHeads: set[Oid], newHeads: set[Oid],
+                  sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
+                  keyframeInterval: int = KF_INTERVAL
+                  ) -> GraphSplicer:
+        splicer = GraphSplicer(self, oldHeads, newHeads)
+        for commit in sequence:
+            splicer.spliceNewCommit(commit, parentsOf[commit], keyframeInterval)
+            if not splicer.keepGoing:
+                break
+        splicer.finish()
+        return splicer
+
     def saveKeyframe(self, frame: Frame) -> int:
         assert len(self.keyframes) == len(self.keyframeRows)
 
@@ -906,9 +934,6 @@ class Graph:
 
         assert frame.row == row, f"frame({int(frame.row)})/row({row}) mismatch"
         return frame
-
-    def startSplicing(self, oldHeads: set[Oid], newHeads: set[Oid]) -> GraphSplicer:
-        return GraphSplicer(self, oldHeads, newHeads)
 
     def initialKeyframe(self):
         return Frame(
@@ -1021,6 +1046,23 @@ class Graph:
                 break
 
         return text
+
+    def testConsistency(self):
+        """ Very expensive consistency check for unit testing """
+
+        # Verify chains
+        if self.startArc.nextArc:
+            for a in self.startArc.nextArc:
+                log.info("Graph", f"{a}")
+                assert a.chain.isValid()
+
+        # Verify keyframes
+        playback = self.startPlayback(0)
+        for row, keyframe in zip(self.keyframeRows, self.keyframes):
+            playback.advanceToCommit(keyframe.commit)
+            frame1 = playback.sealCopy()
+            frame2 = keyframe.sealCopy()
+            assert frame1 == frame2, f"Keyframe at row {row} doesn't match actual graph state"
 
 
 class GraphSplicer:

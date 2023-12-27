@@ -231,6 +231,22 @@ SCENARIOS = {
         True,
     ),
 
+    # Start from first graph, splice second graph, then splice first graph again.
+    # The ChainHandle in Arc x-z must still be valid.
+    "need chainhandle alias after multiple splicings 1": (
+        "a-b-c:d,x       d-e:y x:z y-z",
+        "a-b-c:d,x i-j-k-d-e:y x:z y-z",
+        True,
+    ),
+
+    # Start from first graph, splice second graph, then splice first graph again.
+    # The ChainHandle in Arc x-z must still be valid (at least the top row).
+    "need chainhandle alias after multiple splicings 2": (
+        "a-b-c:d,x       d-e:y x:z y",
+        "a-b-c:d,x i-j-k-d-e:y x:z y",
+        True,
+    ),
+
     "super messy junctions - shifted rows + existing junctions before & after equilibrium + 1 new junction": (
         "      a-b:c k:l c:c',l           c'-m-n-o:d,l l:e d-e-f",
         "x-y-z-a-b:c k:l c:c',l p-q:r,l r-c'-m-n-o:d,l l:e d-e-f",
@@ -359,24 +375,18 @@ def testGraphSplicing(scenarioKey):
     print("Keyframes BEFORE REFRESH:", g.keyframeRows)
     print("Num arcs total BEFORE REFRESH:", g.startArc.getNumberOfArcsFromHere())
 
+    print("Initial consistency check...")
+    g.testConsistency()
+
     # verify that row cache is consistent
     assert list(range(len(sequence1))) == [g.getCommitRow(c) for c in sequence1]
 
-    # verify that all keyframes are correct
-    print("Verifying keyframes...")
-    verifyKeyframes(g)
-
     print("---------------------------------------------------")
-    print("Start splicing...")
+    print("Splice...")
 
     # modify top of history
-    splicer = g.startSplicing(heads1, heads2)
-    for commit2 in sequence2:
-        splicer.spliceNewCommit(commit2, parentsOf2[commit2], keyframeInterval=KF_INTERVAL_TEST)
-        if not splicer.keepGoing:
-            print("Equilibrium found at:", commit2)
-            break
-    splicer.finish()
+    splicer = g.spliceTop(heads1, heads2, sequence2, parentsOf2, KF_INTERVAL_TEST)
+    g.testConsistency()
 
     assert expectEquilibrium == splicer.foundEquilibrium
 
@@ -401,5 +411,11 @@ def testGraphSplicing(scenarioKey):
     # verify that row cache is consistent
     assert list(range(len(sequence2))) == [g.getCommitRow(c) for c in sequence2]
 
-    # verify that all keyframes are correct
-    verifyKeyframes(g)
+    # verify that all the keyframes are correct after re-creating them
+    g.testConsistency()
+
+    # Stress test: go back to first graph
+    print("---------------------------------------------------")
+    print("Revert to first graph...")
+    splicer = g.spliceTop(heads2, heads1, sequence1, parentsOf1, KF_INTERVAL_TEST)
+    g.testConsistency()

@@ -29,6 +29,7 @@ MACOS = False
 WINDOWS = False
 PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
 DEVDEBUG = __debug__ and not PYINSTALLER_BUNDLE
+""" Enable expensive debug assertions """
 
 if PYINSTALLER_BUNDLE:  # in PyInstaller bundles, target a fixed API
     from ._buildconstants import qtBinding as QT_BINDING_FIXED
