@@ -5,11 +5,13 @@ from gitfourchette import log
 from gitfourchette.porcelain import Oid as _RealOidType
 from gitfourchette.qt import DEVDEBUG
 from gitfourchette.toolbox import *
-from typing import Iterable, ClassVar
+from typing import ClassVar, Iterable, Iterator
 import bisect
 import contextlib
 import itertools
 
+
+TAG = "graph"
 
 KF_INTERVAL = 5000
 """
@@ -155,8 +157,9 @@ BATCHROW_UNDEF = BatchRow(-1, -1)
 @dataclass
 class ChainHandle:
     """ Object shared by arcs on the same chain. """
-    topRow: BatchRow = BATCHROW_UNDEF
-    bottomRow: BatchRow = BATCHROW_UNDEF
+    _t: BatchRow = BATCHROW_UNDEF
+    _b: BatchRow = BATCHROW_UNDEF
+    alias: ChainHandle | None = None
 
     def isValid(self):
         # It's OK for bottomRow to be dangling, but not topRow.
@@ -166,6 +169,56 @@ class ChainHandle:
         tr = int(self.topRow)
         br = int(self.bottomRow)
         return f"Chain({tr}\u2192{br})"
+
+    def resolve(self):
+        """ Return non-aliased ChainHandle """
+
+        if self.alias is None:
+            return self
+
+        if self.alias.alias is not None:
+            # Flatten aliases
+            frontier = [self, self.alias]
+            root = frontier[-1]
+            while True:
+                root = root.alias
+                if root.alias is None:
+                    break
+                frontier.append(root)
+            for ch in frontier:
+                ch.alias = root
+            if DEVDEBUG:
+                assert root.alias is None
+                assert root not in frontier
+                assert root is self.alias
+
+        return self.alias
+
+    @property
+    def topRow(self) -> BatchRow:
+        return self.resolve()._t
+
+    @property
+    def bottomRow(self) -> BatchRow:
+        return self.resolve()._b
+
+    @bottomRow.setter
+    def bottomRow(self, value):
+        self._b = value
+        if self.alias is not None:
+            raise ValueError("Cannot modify row in aliased ChainHandle")
+
+    def setAliasOf(self, master: ChainHandle):
+        if self.alias is not None:
+            self.alias.setAliasOf(master)
+
+        self.alias = master
+        self._t = BATCHROW_UNDEF
+        self._b = BATCHROW_UNDEF
+
+    def invalidate(self):
+        self.t = BATCHROW_UNDEF
+        self.b = BATCHROW_UNDEF
 
 
 @dataclass
@@ -237,7 +290,7 @@ class Arc:
     def __next__(self):
         return self.nextArc
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Arc]:
         arc = self
         while arc:
             yield arc
@@ -339,6 +392,8 @@ class Frame:
         # In debug mode, make sure none of the arcs are dangling
         assert all(arc is None or arc.openedBy != DEAD_VALUE for arc in openArcsCopy)
         assert all(arc is None or arc.openedBy != DEAD_VALUE for arc in solvedArcsCopy)
+        assert all(arc is None or arc.chain.isValid() for arc in openArcsCopy)
+        assert all(arc is None or arc.chain.isValid() for arc in solvedArcsCopy)
 
         return Frame(self.row, self.commit, solvedArcsCopy, openArcsCopy, self.lastArc)
 
@@ -563,6 +618,7 @@ class GeneratorState(Frame):
             myMainOpenArc = min(myOpenArcs, key=lambda a: a.lane)
             myHomeLane = myMainOpenArc.lane
             myHomeChain = myMainOpenArc.chain
+            assert myHomeChain.isValid()
             for arc in myOpenArcs:
                 # Close off open arcs
                 assert arc.closedBy == me
@@ -651,9 +707,8 @@ class GeneratorState(Frame):
 
                 # Close off home chain
                 myHomeChain.bottomRow = row
-            else:
-                assert myHomeChain.bottomRow != BATCHROW_UNDEF, \
-                    "parentless commit's home chain is supposed to be closed off here!"
+
+            assert myHomeChain.bottomRow.isValid(), "parentless commit's home chain shouldn't be dangling at bottom"
 
             newArc = Arc(lane=myHomeLane, chain=myHomeChain,
                          openedAt=row, closedAt=row,
@@ -663,7 +718,7 @@ class GeneratorState(Frame):
             assert newArc.isParentlessCommitBogusArc()
 
         assert not handOffHomeLane
-        assert myHomeChain.topRow != BATCHROW_UNDEF
+        assert myHomeChain.topRow.isValid()
         assert len(self.openArcs) == len(self.solvedArcs)
 
         # Keep track of peak arc count for statistics
@@ -754,7 +809,12 @@ class PlaybackState(Frame):
 class Graph:
     keyframes: list[Frame]
     keyframeRows: list[BatchRow]
-    startArc: Arc  # linked list start sentinel; guaranteed to never be None
+
+    startArc: Arc
+    """
+    Start sentinel of the linked list of Arcs. Guaranteed to never be None.
+    Use startArc.nextArc to get to the first actual arc.
+    """
 
     commitRows: dict[Oid, BatchRow]
     ownBatches: list[int]
@@ -840,7 +900,7 @@ class Graph:
 
         kfID = bisect.bisect_left(self.keyframeRows, frame.row)
         if kfID < len(self.keyframes) and self.keyframes[kfID].row == frame.row:
-            log.info("Graph", "Not overwriting existing keyframe", kfID)
+            log.info(TAG, f"Not overwriting existing keyframe {kfID}")
             assert self.keyframes[kfID] == frame.sealCopy()
         else:
             kf = frame.sealCopy()
@@ -985,12 +1045,12 @@ class Graph:
             return
 
         # In debug mode, bulldoze opening commits in dead arcs so they stand out in the debugger (make them dangling)
-        if __debug__:
-            for deadArc in self.startArc:
+        if DEVDEBUG and self.startArc.nextArc:
+            for deadArc in self.startArc.nextArc:
                 if deadArc.openedAt >= row:
                     break
-                if deadArc != self.startArc:
-                    deadArc.openedBy = DEAD_VALUE
+                deadArc.openedAt = BATCHROW_UNDEF
+                deadArc.openedBy = DEAD_VALUE
 
         # Rewire top of list
         self.startArc.nextArc =\
@@ -1053,7 +1113,7 @@ class Graph:
         # Verify chains
         if self.startArc.nextArc:
             for a in self.startArc.nextArc:
-                log.info("Graph", f"{a}")
+                log.info(TAG, f"{a}")
                 assert a.chain.isValid()
 
         # Verify keyframes
@@ -1157,7 +1217,7 @@ class GraphSplicer:
         equilibriumOldRow = int(self.oldPlayer.row)
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
-        log.info("GraphSplicer", F"FOUND EQUILIBRIUM @new={equilibriumNewRow};old={equilibriumOldRow}!")
+        log.verbose(TAG, f"Equilibrium: commit={self.oldPlayer.commit} new={equilibriumNewRow} old={equilibriumOldRow}")
 
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.
@@ -1176,9 +1236,10 @@ class GraphSplicer:
             # Remap chain - the ChainHandle object is shared with all arcs on this chain
             newCH = newOpenArc.chain
             oldCH = oldOpenArc.chain
-            assert newCH.topRow != BATCHROW_UNDEF
-            assert oldCH.topRow != BATCHROW_UNDEF
-            oldCH.topRow = newCH.topRow
+            assert newCH.topRow.isValid()
+            assert oldCH.topRow.isValid()
+            newCH.bottomRow = oldCH.bottomRow   # rewire bottom row BEFORE setting alias
+            oldCH.setAliasOf(newCH)
 
             # Splice old junctions into new junctions
             if oldOpenArc.junctions:
