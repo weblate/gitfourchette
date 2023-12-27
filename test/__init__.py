@@ -16,3 +16,6 @@ os.environ["FORCE_QT_API"] = "1"
 
 from gitfourchette.qt import *
 from qtpy.QtTest import QTest
+
+from gitfourchette import log
+log.setVerbosity(log.logger.Verbosity.VERBOSE)

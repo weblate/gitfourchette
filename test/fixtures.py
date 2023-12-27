@@ -14,9 +14,7 @@ def tempDir() -> tempfile.TemporaryDirectory:
 
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
-    from gitfourchette import log, settings, qt
-
-    log.VERBOSITY = 0
+    from gitfourchette import settings, qt
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
     settings.TEST_MODE = True
