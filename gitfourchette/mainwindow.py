@@ -920,8 +920,12 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def getDropOutcomeFromMimeData(mime: QMimeData) -> tuple[Literal["", "patch", "open", "clone"], str]:
-        if mime.hasUrls() and len(mime.urls()) > 0:
-            url: QUrl = mime.urls()[0]
+        if mime.hasUrls():
+            try:
+                url: QUrl = mime.urls()[0]
+            except IndexError:
+                return "", ""
+
             if url.isLocalFile():
                 path = url.toLocalFile()
                 return MainWindow.getDropOutcomeFromLocalFilePath(path)
