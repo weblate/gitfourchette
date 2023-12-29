@@ -252,7 +252,8 @@ class CommitLogDelegate(QStyledItemDelegate):
             x2 = metrics.horizontalAdvance(summaryText, needleIndex + needleLength)
             highlight(x1, x2)
 
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(summaryText))
+        elidedSummaryText = elide(summaryText)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elidedSummaryText)
 
         # ------ Author
         rect.setLeft(leftBoundName)
@@ -276,6 +277,12 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ----------------
         painter.restore()
+
+        # Tooltip metrics
+        summaryIsElided = len(elidedSummaryText) == 0 or elidedSummaryText.endswith(("…", ELISION))
+        model = index.model()
+        model.setData(index, summaryIsElided, CommitLogModel.MessageElidedRole)
+        model.setData(index, leftBoundName, CommitLogModel.AuthorColumnXRole)
 
     def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):
         """Last-resort row drawing routine used if _paint raises an exception."""

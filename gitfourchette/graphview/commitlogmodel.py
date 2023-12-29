@@ -1,17 +1,29 @@
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
+
+
+EPHEMERAL_ROW_CACHE = 150
+""" Number of rows to keep track of for MessageElidedRole """
 
 
 class CommitLogModel(QAbstractListModel):
     CommitRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 0
     OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
+    MessageElidedRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 2
+    AuthorColumnXRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 3
 
     # Reference to RepoState.commitSequence
     _commitSequence: list[Commit] | None
 
+    _authorColumnX: int
+    _elidedRows: dict[int, bool]
+
     def __init__(self, parent):
         super().__init__(parent)
         self._commitSequence = None
+        self._authorColumnX = -1
+        self._elidedRows = {}
 
     @property
     def isValid(self):
@@ -19,6 +31,7 @@ class CommitLogModel(QAbstractListModel):
 
     def clear(self):
         self.setCommitSequence(None)
+        self._elidedRows.clear()
 
     def setCommitSequence(self, newCommitSequence: list[Commit] | None):
         self.beginResetModel()
@@ -52,13 +65,89 @@ class CommitLogModel(QAbstractListModel):
 
         if role == Qt.ItemDataRole.DisplayRole:
             return None
+
         elif role == CommitLogModel.CommitRole:
             return self._commitSequence[index.row()]
+
         elif role == CommitLogModel.OidRole:
             commit = self._commitSequence[index.row()]
             if commit:
                 return commit.oid
             else:
                 return None
-        else:
-            return None
+
+        elif role == Qt.ItemDataRole.ToolTipRole:
+            commit = self._commitSequence[index.row()]
+            if not commit:
+                return None
+            x = self.parent().mapFromGlobal(QCursor.pos()).x()
+            if x >= self._authorColumnX:
+                return commitAuthorTooltip(commit)
+            elif index.row() in self._elidedRows:
+                return commitMessageTooltip(commit)
+
+    def setData(self, index, value, role=None):
+        if role == CommitLogModel.AuthorColumnXRole:
+            self._authorColumnX = value
+            return True
+
+        elif role == CommitLogModel.MessageElidedRole:
+            row = index.row()
+            self._elidedRows.pop(row, False)
+
+            if value:
+                # Since we just popped this row, re-setting it will bump it to the end of the keys
+                # (dicts keep key insertion order in Python 3.7+)
+                self._elidedRows[row] = True
+
+                # Nuke old entries if the dict grew beyond the threshold
+                if len(self._elidedRows) > EPHEMERAL_ROW_CACHE * 2:
+                    keep = list(self._elidedRows.keys())[-EPHEMERAL_ROW_CACHE:]
+                    self._elidedRows = {k: True for k in keep}
+
+            return True
+
+        return False
+
+
+def commitAuthorTooltip(commit: Commit) -> str:
+    def formatTime(sig: Signature):
+        qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
+        s = QLocale().toString(qdt, QLocale.FormatType.LongFormat)
+        return escape(s)
+
+    def formatPerson(sig: Signature):
+        return f"<b>{escape(sig.name)}</b> &lt;{escape(sig.email)}&gt;"
+
+    author = commit.author
+    committer = commit.committer
+
+    markup = "<p style='white-space: pre'>"
+    markup += formatPerson(author)
+
+    if author == committer:
+        markup += f"<small><br>{formatTime(author)}"
+    elif author.name == committer.name and author.email == committer.email:
+        suffixA = translate("CommitTooltip", "(authored)")
+        suffixC = translate("CommitTooltip", "(committed)")
+        markup += (f"<small><br>{formatTime(author)} {suffixA}"
+                   f"<br>{formatTime(committer)} {suffixC}")
+    else:
+        committedBy = translate("CommitTooltip", "Committed by {0}")
+        markup += (f"<small><br>{formatTime(author)}<br><br>"
+                   + committedBy.format(formatPerson(committer)) +
+                   f"<br><small>{formatTime(committer)}")
+
+    return markup
+
+
+def commitMessageTooltip(commit: Commit) -> str:
+    message = commit.message.rstrip()
+    maxLength = max(len(line) for line in message.splitlines())
+    message = escape(message)
+
+    if maxLength <= 80:
+        # Keep Qt from wrapping tooltip text when the message is made up of short lines
+        return "<p style='white-space: pre'>" + message
+    else:
+        return "<p>" + message.replace('\n', '<br>')
