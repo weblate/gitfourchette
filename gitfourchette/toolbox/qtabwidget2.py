@@ -260,9 +260,11 @@ class QTabWidget2(QWidget):
         self.tabScrollArea.ensureVisible(p.x(), p.y())
 
     def scrollTabs(self, delta: QPoint):
+        x = delta.x()
+        y = delta.y()
+        deltaValue = x if abs(x) > abs(y) else y
         scrollBar = self.tabScrollArea.horizontalScrollBar()
-        # TODO: Horizontal mouse scrolling?
-        scrollBar.setValue(scrollBar.value() - delta.y())
+        scrollBar.setValue(scrollBar.value() - deltaValue)
 
     @CallbackAccumulator.deferredMethod  # don't update overflow button too often
     def updateOverflowDropdown(self):
