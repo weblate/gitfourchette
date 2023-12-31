@@ -259,12 +259,12 @@ def _version_at_least(
     current_version = version_to_tuple(current_version_string)
 
     if tuple(current_version) < tuple(required_version):
-        if not raise_error:
-            return False
-
         message = (f"{feature_name} requires {package_name} v{required_version_string} or later "
                    f"(you have v{current_version_string}).")
-        raise NotImplementedError(message)
+        if raise_error:
+            raise NotImplementedError(message)
+        else:
+            _log.warning(_TAG, message)
 
     return True
 
@@ -854,6 +854,7 @@ class Repo(_VanillaRepository):
         If `author` or `committer` are not overridden, use the repository's default_signature.
         """
 
+        # Prep ref to update
         if self.head_is_detached:
             ref_to_update = "HEAD"
         else:
@@ -862,16 +863,24 @@ class Repo(_VanillaRepository):
             # so we should always have a ref name, even though it might not point to anything.
             ref_to_update = self.lookup_reference("HEAD").target
 
+        # Prep parent list
         if self.head_is_unborn:
             parents = []
         else:
+            # Always take HEAD commit as 1st parent
             parents = [self.head_commit_oid]
 
+        # If a merge was in progress, add merge heads to parent list
+        parents += self.listall_mergeheads()
+        assert len(set(parents)) == len(parents), "duplicate heads!"
+
+        # Get oid of index tree
         index_tree_oid = self.index.write_tree()
 
         # Take default signature now to prevent any timestamp diff between author and committer
         fallback_signature = self.default_signature
 
+        # Create the commit
         new_commit_oid = self.create_commit(
             ref_to_update,
             author or fallback_signature,
@@ -880,6 +889,9 @@ class Repo(_VanillaRepository):
             index_tree_oid,
             parents
         )
+
+        # Clear repository state to conclude a merge/cherrypick operation
+        self.state_cleanup()
 
         # Repository.create_commit flushes the staged changes from the in-memory index.
         # Write the index to disk so that other applications can pick up the updated staging area.
@@ -1410,6 +1422,12 @@ class Repo(_VanillaRepository):
         else:
             with _contextlib.suppress(KeyError):
                 del self.config[key]
+
+    # TODO: Nuke this shim once we drop backwards compat with old pygit2 versions (1.13 and older)
+    def listall_mergeheads(self) -> list[Oid]:
+        if not pygit2_version_at_least("1.14", raise_error=False, feature_name="listall_mergeheads"):
+            return []
+        return super().listall_mergeheads()
 
 
 class RepoContext:
