@@ -69,6 +69,9 @@ class RepoState(QObject):
     workdirStale: bool
     numChanges: int
 
+    headIsDetached: bool
+    homeBranch: str
+
     uiPrefs: RepoPrefs
 
     def __init__(self, parent: QObject, repo: Repo):
@@ -102,6 +105,7 @@ class RepoState(QObject):
         self.localCommits = None
 
         self.headIsDetached = False
+        self.homeBranch = ""
         self.refCache = {}
         self.reverseRefCache = {}
         self.refreshRefCache()
@@ -147,7 +151,11 @@ class RepoState(QObject):
         Return True if there were any changes in the refs since the last
         refresh, or False if nothing changed.
         """
-        self.headIsDetached = self.repo.head_is_detached
+
+        if self.repo.head_is_detached or self.repo.head_is_unborn:
+            self.homeBranch = ""
+        else:
+            self.homeBranch = self.repo.head_branch_shorthand
 
         refCache = self.repo.map_refs_to_oids()
 

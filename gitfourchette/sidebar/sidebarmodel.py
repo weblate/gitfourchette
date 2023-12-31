@@ -1,5 +1,6 @@
 from gitfourchette import log
 from gitfourchette import settings
+from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -15,8 +16,6 @@ ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
 ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
 ROLE_REF = Qt.ItemDataRole.UserRole + 3
-
-ACTIVE_BULLET = "★ "
 
 
 class EItem(enum.IntEnum):

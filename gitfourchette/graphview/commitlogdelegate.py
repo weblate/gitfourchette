@@ -1,5 +1,6 @@
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.graphview.graphpaint import paintGraphFrame
@@ -56,6 +57,8 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.uncommittedFont = QFont()
         self.calloutFont = QFont()
         self.calloutFontMetrics = QFontMetricsF(self.calloutFont)
+        self.activeCalloutFont = QFont()
+        self.activeCalloutFontMetrics = QFontMetricsF(self.activeCalloutFont)
 
     def invalidateMetrics(self):
         self.mustRefreshMetrics = True
@@ -77,6 +80,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.calloutFont = QFont(option.font)
         self.calloutFont.setWeight(QFont.Weight.Light)
         self.calloutFontMetrics = QFontMetricsF(self.calloutFont)
+
+        self.activeCalloutFont = QFont(self.calloutFont)
+        self.activeCalloutFont.setWeight(QFont.Weight.Bold)
+        self.activeCalloutFontMetrics = QFontMetricsF(self.activeCalloutFont)
 
         wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
         dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
@@ -207,8 +214,9 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Callouts
         if oid in self.state.reverseRefCache:
+            homeBranch = RefPrefix.HEADS + self.state.homeBranch
+
             painter.save()
-            painter.setFont(self.calloutFont)
             for refName in self.state.reverseRefCache[oid]:
                 if refName != 'HEAD':
                     calloutText = refName
@@ -226,10 +234,19 @@ class CommitLogDelegate(QStyledItemDelegate):
                         calloutColor = calloutDef.color
                         break
 
+                if refName == homeBranch:
+                    calloutFont = self.activeCalloutFont
+                    calloutFontMetrics = self.activeCalloutFontMetrics
+                    calloutText = ACTIVE_BULLET + calloutText
+                else:
+                    calloutFont = self.calloutFont
+                    calloutFontMetrics = self.calloutFontMetrics
+
+                painter.setFont(calloutFont)
                 painter.setPen(calloutColor)
                 rect.setLeft(rect.right())
                 label = F"[{calloutText}] "
-                rect.setWidth(int(self.calloutFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
+                rect.setWidth(int(calloutFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
                 painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, label)
             painter.restore()
 
@@ -268,7 +285,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                 highlight(x1, x2)
 
         # Draw author name
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText))
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, elide(authorText) + "  ")
 
         # ------ Date
         rect.setLeft(leftBoundDate)
