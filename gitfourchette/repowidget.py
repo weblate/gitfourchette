@@ -57,6 +57,9 @@ class RepoWidget(QWidget):
     splittersToSave: list[QSplitter]
     splitterStates: dict[str, QByteArray]
 
+    def __del__(self):
+        log.verbose(TAG, f"__del__ RepoWidget {self.pathPending}")
+
     @property
     def repo(self) -> Repo:
         return self.state.repo if self.state is not None else None

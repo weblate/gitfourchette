@@ -432,6 +432,10 @@ class Repo(_VanillaRepository):
     Drop-in replacement for pygit2.Repository with convenient front-ends to common git operations.
     """
 
+    def __del__(self):
+        _log.verbose(_TAG, "__del__ Repo")
+        self.free()
+
     @property
     def head_tree(self) -> Tree:
         return self.head.peel(Tree)
