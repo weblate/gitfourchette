@@ -213,9 +213,13 @@ class RepoState(QObject):
 
     def _uncommittedChangesFakeCommitParents(self):
         try:
-            return [self.refCache["HEAD"]]
+            head = self.refCache["HEAD"]
         except KeyError:  # Unborn HEAD
             return []
+
+        mergeHeads = self.repo.listall_mergeheads()
+        mergeHeads.insert(0, head)
+        return mergeHeads
 
     @benchmark
     def loadChangedRefs(self, oldRefCache: dict[str, Oid]):
