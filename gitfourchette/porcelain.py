@@ -104,9 +104,12 @@ from pygit2 import (
     GIT_STATUS_WT_UNREADABLE,
 )
 
-from pygit2.remote import (
-    TransferProgress
-)
+try:
+    # pygit2 1.14+
+    from pygit2.remotes import TransferProgress
+except ImportError:
+    # TODO: Nuke this once we drop compatibility with old pygit2 versions (1.13 and older)
+    from pygit2.remote import TransferProgress
 
 import contextlib as _contextlib
 import os as _os
