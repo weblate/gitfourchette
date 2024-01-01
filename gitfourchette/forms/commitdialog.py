@@ -3,6 +3,8 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
 
+INFO_ICON_SIZE = 16
+
 
 class CommitDialog(QDialog):
     @property
@@ -16,7 +18,8 @@ class CommitDialog(QDialog):
             committerSignature: Signature,
             amendingCommitHash: str,
             detachedHead: bool,
-            parent):
+            mergeParents: list,
+            parent: QWidget):
         super().__init__(parent)
 
         self.ui = Ui_CommitDialog()
@@ -38,7 +41,19 @@ class CommitDialog(QDialog):
         formatWidgetTooltip(self.ui.overrideCommitterSignature,
                             escape(f"{committerSignature.name} <{committerSignature.email}>, {committerQDT.toString()}"))
 
-        self.ui.detachedHeadWarning.setVisible(detachedHead)
+        warning = ""
+        if mergeParents:
+            warning = self.tr("This commit will conclude the merge.")
+        elif amendingCommitHash:
+            warning = self.tr("You are amending commit “{0}”.").format(amendingCommitHash)
+        elif detachedHead:
+            warning = self.tr("You are not in any branch (detached HEAD). "
+                              "You should create a branch to keep track of your commit.")
+
+        self.ui.infoBox.setVisible(bool(warning))
+        self.ui.infoText.setText(warning)
+        self.ui.infoIcon.setPixmap(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(INFO_ICON_SIZE))
+        self.ui.infoIcon.setMaximumWidth(INFO_ICON_SIZE)
 
         self.ui.authorSignature.setSignature(authorSignature)
 

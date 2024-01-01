@@ -94,18 +94,44 @@
     </widget>
    </item>
    <item>
-    <widget class="QLabel" name="detachedHeadWarning">
-     <property name="font">
-      <font>
-       <bold>true</bold>
-      </font>
+    <widget class="QGroupBox" name="infoBox">
+     <property name="title">
+      <string/>
      </property>
-     <property name="text">
-      <string>Warning: You are not in any branch (detached HEAD). You should create a branch to ensure your commit won’t be lost inadvertently.</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QLabel" name="infoIcon">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>24</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">ICON</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="infoText">
+        <property name="text">
+         <string notr="true">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>

@@ -42,6 +42,7 @@ class NewCommit(RepoTask):
             committerSignature=sig,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
+            mergeParents=self.repo.listall_mergeheads(),
             parent=self.parentWidget())
 
         cd.ui.revealAuthor.setChecked(initialAuthor is not None and initialAuthor != sig)
@@ -102,6 +103,7 @@ class AmendCommit(RepoTask):
             committerSignature=self.repo.default_signature,
             amendingCommitHash=shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
+            mergeParents=[],
             parent=self.parentWidget())
 
         setWindowModal(cd)
