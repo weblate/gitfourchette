@@ -290,6 +290,52 @@ class FastForwardBranch(RepoTask):
         return TaskEffects.Refs | TaskEffects.Head | TaskEffects.Workdir
 
 
+class MergeBranch(RepoTask):
+    def effects(self) -> TaskEffects:
+        # TODO: Force refresh top of graph including the parents of the Uncommited Changes Fake Commit
+        return TaskEffects.Refs | TaskEffects.Workdir | TaskEffects.ShowWorkdir
+
+    def flow(self, them: str):
+        # Run merge analysis on background thread
+        yield from self.flowEnterWorkerThread()
+        myBranch = self.repo.head_branch_shorthand
+        theirBranch = self.repo.branches.local[them]
+        target: Oid = theirBranch.target
+        analysis, pref = self.repo.merge_analysis(target)
+
+        yield from self.flowEnterUiThread()
+        print(repr(analysis), repr(pref))
+
+        if analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
+            message = self.tr("Nothing to be done. "
+                              "Your branch “{0}” is already up-to-date with “{1}”.").format(myBranch, them)
+            yield from self.flowAbort(text=message)
+
+        elif analysis == GIT_MERGE_ANALYSIS_UNBORN:
+            message = self.tr("Cannot merge into an unborn head.")
+            yield from self.flowAbort(text=message)
+
+        elif analysis == GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL:
+            message = self.tr("There are no merge conflicts. Your branch <b>“{0}”</b> can be "
+                              "fast-forwarded to <b>“{1}”</b>.").format(myBranch, them)
+            details = self.tr("Fast-forwarding means that the tip of your branch will be moved "
+                              "to a more recent commit in a linear path without requiring a merge. "
+                              "In this case, “{0}” will be fast-forwarded to “{1}”."
+                              ).format(myBranch, shortHash(target))
+            yield from self.flowConfirm(text=message, verb=self.tr("Fast-Forward"), detailText=details)
+            self.repo.fast_forward_branch(myBranch, theirBranch.name)
+
+        elif analysis == GIT_MERGE_ANALYSIS_NORMAL:
+            message = paragraphs(
+                self.tr("Merging <b>“{0}”</b> into <b>“{1}”</b> will cause conflicts.").format(them, myBranch),
+                self.tr("You will need to fix the conflicts and then commit the result."))
+            yield from self.flowConfirm(text=message, verb=self.tr("Merge"))
+            self.repo.merge(target)
+
+        else:
+            yield from self.flowAbort(escape(f"Unsupported MergeAnalysis! ma={repr(analysis)} mp={repr(pref)}"))
+
+
 class RecallCommit(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Refs

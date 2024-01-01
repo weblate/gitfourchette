@@ -7,6 +7,7 @@ from gitfourchette.tasks.branchtasks import NewBranchFromHead, SwitchBranch, Ren
 from gitfourchette.tasks.branchtasks import NewBranchFromLocalBranch, NewBranchFromCommit
 from gitfourchette.tasks.branchtasks import FastForwardBranch
 from gitfourchette.tasks.branchtasks import RecallCommit
+from gitfourchette.tasks.branchtasks import MergeBranch
 from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutCommit, RevertCommit, ResetHead
 from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIdentity
 from gitfourchette.tasks.committasks import NewTag, DeleteTag

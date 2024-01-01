@@ -18,7 +18,6 @@ class Sidebar(QTreeView):
     toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
 
-    mergeBranchIntoActive = Signal(str)
     rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
 
@@ -125,7 +124,8 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Merge “{0}” into “{1}”...").format(thisBranchDisplay, activeBranchDisplay),
-                          lambda: self.mergeBranchIntoActive.emit(data),
+                          lambda: MergeBranch.invoke(data),
+                          icon="vcs-merge",
                           enabled=not isCurrentBranch and activeBranchName),
 
                 ActionDef(self.tr("&Rebase “{0}” onto “{1}”...").format(activeBranchDisplay, thisBranchDisplay),

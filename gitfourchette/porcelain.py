@@ -77,6 +77,7 @@ from pygit2 import (
     GIT_MERGE_ANALYSIS_FASTFORWARD,
     GIT_MERGE_ANALYSIS_NORMAL,
     GIT_MERGE_ANALYSIS_UP_TO_DATE,
+    GIT_MERGE_ANALYSIS_UNBORN,
     GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY,
     GIT_MERGE_PREFERENCE_NONE,
     GIT_MERGE_PREFERENCE_NO_FASTFORWARD,
@@ -1238,29 +1239,34 @@ class Repo(_VanillaRepository):
 
         return submo_paths
 
-    def fast_forward_branch(self, local_branch_name: str, remote_branch_name: str = ""):
+    def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
         """
-        Fast-forwards a local branch to a remote branch.
-        Returns True if the local branch was up-to-date.
-        Raises DivergentBranchesError if fast-forwarding is impossible.
+        Fast-forward a local branch to another branch (local or remote).
+        Return True if the local branch was up-to-date.
+        Raise DivergentBranchesError if fast-forwarding is impossible.
+
+        If target_branch_name is omitted, attempt to fast-forward to the
+        branch's upstream (will not fetch it beforehand).
         """
+        assert not local_branch_name.startswith("refs/")
         lb = self.branches.local[local_branch_name]
 
-        if not remote_branch_name:
+        if not target_branch_name:
             rb = lb.upstream
             if not rb:
                 raise ValueError("Local branch does not track a remote branch")
         else:
-            rb = self.branches.remote[remote_branch_name]
+            assert isinstance(target_branch_name, str)
+            target_prefix, target_shorthand = RefPrefix.split(target_branch_name)
+            if target_prefix == RefPrefix.REMOTES:
+                rb = self.branches.remote[target_shorthand]
+            elif target_prefix == RefPrefix.HEADS:
+                rb = self.branches.local[target_shorthand]
+            else:
+                rb = self.branches[target_shorthand]
 
         merge_analysis, merge_pref = self.merge_analysis(rb.target, RefPrefix.HEADS + local_branch_name)
-
-        merge_pref_names = {
-            GIT_MERGE_PREFERENCE_NONE: "none",
-            GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY: "ff only",
-            GIT_MERGE_PREFERENCE_NO_FASTFORWARD: "no ff"
-        }
-        _log.info(_TAG, f"Merge analysis: {merge_analysis}. Merge preference: {merge_pref_names.get(merge_pref, '???')}.")
+        _log.verbose(_TAG, f"Merge analysis: {repr(merge_analysis)}. Merge preference: {repr(merge_pref)}.")
 
         if merge_analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE:
             # Local branch is up-to-date with remote branch, nothing to do.
@@ -1285,7 +1291,7 @@ class Repo(_VanillaRepository):
 
         else:
             # Unborn or something...
-            raise NotImplementedError(F"Unsupported merge analysis {merge_analysis}.")
+            raise NotImplementedError(f"Cannot fast-forward with {repr(merge_analysis)}.")
 
     def cherrypick(self, oid: Oid):
         super().cherrypick(oid)

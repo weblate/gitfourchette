@@ -352,6 +352,7 @@ class RepoTask(QObject):
             buttonIcon: (QStyle.StandardPixmap | str | None) = None,
             verb: str = "",
             cancelText: str = "",
+            detailText: str = "",
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -380,6 +381,9 @@ class RepoTask(QObject):
 
         if cancelText:
             qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
+
+        if detailText:
+            qmb.setDetailedText(detailText)
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self.flowDialog(qmb)

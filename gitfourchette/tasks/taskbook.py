@@ -53,6 +53,7 @@ class TaskBook:
             tasks.LoadPatch: translate("task", "Load diff"),
             tasks.LoadWorkdir: translate("task", "Refresh working directory"),
             tasks.MarkConflictSolved: translate("task", "Mark conflict solved"),
+            tasks.MergeBranch: translate("task", "Merge branch"),
             tasks.NewBranchFromHead: translate("task", "New local branch"),
             tasks.NewCommit: translate("task", "Commit"),
             tasks.NewRemote: translate("task", "Add remote"),
