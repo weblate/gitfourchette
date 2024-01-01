@@ -395,8 +395,6 @@ class RefreshRepo(tasks.RepoTask):
         with QSignalBlockerContext(rw.sidebar):
             rw.sidebar.refresh(rw.state)
 
-        rw.refreshWindowTitle()
-
         # Now jump to where we should be after the refresh
         assert rw.navLocator == initialLocator, "locator has changed"
 
@@ -423,3 +421,7 @@ class RefreshRepo(tasks.RepoTask):
                 jumpTo = NavLocator.inCommit(rw.state.activeCommitOid)
 
         yield from self.flowSubtask(Jump, jumpTo)
+
+        # Refresh window title and status bar warning bubbles.
+        # Do this last because it requires the index to be fresh (updated by the Jump subtask)
+        rw.refreshWindowTitle()

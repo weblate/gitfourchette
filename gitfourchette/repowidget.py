@@ -764,26 +764,43 @@ class RepoWidget(QWidget):
         else:
             inBrackets = repo.head_branch_shorthand
 
-        if repo and repo.any_conflicts:
+        # Merging? Any conflicts?
+        if repo and repo.state() & GIT_REPOSITORY_STATE_MERGE:
             inBrackets += ", \u26a0 "
-            inBrackets += self.tr("merge conflict")
-            self.statusWarning.emit(self.tr("merge conflict in workdir"))
+            inBrackets += self.tr("MERGING")
+            try:
+                mh = repo.listall_mergeheads()[0]
+                name = self.state.reverseRefCache[mh][0]
+                name = RefPrefix.split(name)[1]
+                message = self.tr("Merging “{0}”".format(escape(name)))
+            except (IndexError, KeyError):
+                message = self.tr("Merging")
+            message = f"<b>{message}</b>: "
+            if not repo.any_conflicts:
+                message += self.tr("All conflicts fixed. Commit to conclude merge.")
+            else:
+                message += self.tr("Conflicts need fixing")
+            self.statusWarning.emit(message)
+        elif repo and repo.any_conflicts:
+            inBrackets += ", \u26a0 "
+            inBrackets += self.tr("conflict")
+            self.statusWarning.emit(self.tr("Conflicts need fixing"))
         else:
             self.statusWarning.emit("")
 
         if settings.prefs.debug_showPID:
-            suffix += qAppName()
-            if __debug__:
-                suffix += "-debug"
-            suffix += F" (PID {os.getpid()}, {qtBindingName}"
+            chain = []
+            if DEVDEBUG:
+                chain.append("DEVDEBUG")
+            elif __debug__:
+                chain.append("debug")
             if settings.TEST_MODE:
-                suffix += ", TEST_MODE"
+                chain.append("TEST_MODE")
             if settings.SYNC_TASKS:
-                suffix += ", SYNC_TASKS"
-            suffix += ")"
-
-        if suffix:
-            suffix = " \u2013 " + suffix
+                chain.append("SYNC_TASKS")
+            chain.append(f"PID {os.getpid()}")
+            chain.append(qtBindingName)
+            suffix += " - " + ", ".join(chain)
 
         if inBrackets:
             suffix = F" [{inBrackets}]{suffix}"
