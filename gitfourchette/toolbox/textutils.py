@@ -1,4 +1,5 @@
 import io
+from typing import Iterable
 
 from gitfourchette.qt import *
 from html import escape as escape
@@ -53,4 +54,24 @@ def elide(text: str, ems: int = 20):
     maxWidth = _generalFontMetrics.horizontalAdvance(ems * 'M')
     return _generalFontMetrics.elidedText(text, Qt.TextElideMode.ElideMiddle, maxWidth)
 
+
+def ulList(items: Iterable[str], limit: int = 10):
+    n = 0
+    text = "<ul>"
+
+    for item in items:
+        if n < limit:
+            text += f"\n<li>{item}</li>"
+        n += 1
+
+    if n == 0:
+        return ""
+
+    if n > limit:
+        unlisted = n - limit
+        more = translate("Global", "(+ %n more)", "", unlisted)
+        text += f"\n<li><i>{more}</i></li>"
+
+    text += "\n</ul>"
+    return text
 

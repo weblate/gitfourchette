@@ -25,7 +25,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
-from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook
+from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
@@ -45,6 +45,7 @@ class RepoWidget(QWidget):
     statusMessage = Signal(str)
     clearStatus = Signal()
     statusWarning = Signal(str)
+    statusButton = Signal(str, object)
 
     state: RepoState | None
 
@@ -224,6 +225,7 @@ class RepoWidget(QWidget):
 
     def _makeDirtyContainer(self):
         header = QElidedLabel(" ")
+        header.setToolTip(self.tr("Unstaged files: will not be included in the commit unless you stage them."))
 
         dirtyFiles = DirtyFiles(self)
 
@@ -261,6 +263,7 @@ class RepoWidget(QWidget):
 
     def _makeStageContainer(self):
         header = QElidedLabel(" ")
+        header.setToolTip(self.tr("Staged files: will be included in the commit."))
 
         stagedFiles = StagedFiles(self)
 
@@ -620,7 +623,7 @@ class RepoWidget(QWidget):
         self.state = None
 
         # Clean up status bar if there were repo-specific warnings in it
-        self.refreshWindowTitle()
+        self.refreshWindowChrome()
 
     def clearDiffView(self, sourceFileList: FileList | None = None):
         # Ignore clear request if it comes from a widget that doesn't have focus
@@ -746,7 +749,7 @@ class RepoWidget(QWidget):
         else:
             self.state.workdirStale = True
 
-    def refreshWindowTitle(self):
+    def refreshWindowChrome(self):
         shortname = self.getTitle()
         inBrackets = ""
         suffix = ""
@@ -765,7 +768,12 @@ class RepoWidget(QWidget):
             inBrackets = repo.head_branch_shorthand
 
         # Merging? Any conflicts?
-        if repo and repo.state() & GIT_REPOSITORY_STATE_MERGE:
+        statusWarning = ""
+        statusButtonCaption = ""
+        statusButtonCallback = None
+        if not repo:
+            pass
+        elif repo.state() & GIT_REPOSITORY_STATE_MERGE:
             inBrackets += ", \u26a0 "
             inBrackets += self.tr("MERGING")
             try:
@@ -780,13 +788,16 @@ class RepoWidget(QWidget):
                 message += self.tr("All conflicts fixed. Commit to conclude merge.")
             else:
                 message += self.tr("Conflicts need fixing")
-            self.statusWarning.emit(message)
-        elif repo and repo.any_conflicts:
+            statusWarning = message
+            statusButtonCaption = self.tr("Abort Merge")
+            statusButtonCallback = lambda: self.runTask(AbortMerge)
+        elif repo.any_conflicts:
             inBrackets += ", \u26a0 "
             inBrackets += self.tr("conflict")
-            self.statusWarning.emit(self.tr("Conflicts need fixing"))
-        else:
-            self.statusWarning.emit("")
+            statusWarning = self.tr("Conflicts need fixing")
+
+        self.statusWarning.emit(statusWarning)
+        self.statusButton.emit(statusButtonCaption, statusButtonCallback)
 
         if settings.prefs.debug_showPID:
             chain = []
@@ -889,7 +900,7 @@ class RepoWidget(QWidget):
 
         # Reflect any change in titlebar prefs
         if self.isVisible():
-            self.refreshWindowTitle()
+            self.refreshWindowChrome()
 
     # -------------------------------------------------------------------------
 

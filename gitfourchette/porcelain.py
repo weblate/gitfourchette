@@ -1438,6 +1438,33 @@ class Repo(_VanillaRepository):
             return []
         return super().listall_mergeheads()
 
+    def get_reset_merge_file_list(self):
+        self.index.read()
+
+        staged_diff = self.diff('HEAD', None, cached=True)  # staged - index to head
+        unstaged_diff = self.diff(None, None)  # unstaged - index to workdir
+
+        staged_paths = [p.delta.new_file.path for p in staged_diff]
+        unstaged_paths = [p.delta.new_file.path for p in unstaged_diff if p.delta.status != GIT_DELTA_CONFLICTED]
+
+        if set(staged_paths).intersection(unstaged_paths):
+            raise ValueError("entries not up-to-date")
+
+        return staged_paths
+
+    def reset_merge(self):
+        """
+        "git reset --merge" resets the index and updates the files in the working tree that are different between
+        <commit> and HEAD, but keeps those which are different between the index and working tree (i.e. which have
+        changes which have not been added). If a file that is different between <commit> and the index has unstaged
+        changes, reset is aborted.
+
+        In other words, --merge does something like a git read-tree -u -m <commit>, but carries forward unmerged
+        index entries.
+        """
+        staged_paths = self.get_reset_merge_file_list()
+        self.restore_files(staged_paths)
+
 
 class RepoContext:
     def __init__(self, path: str | _Path, flags: int = 0):

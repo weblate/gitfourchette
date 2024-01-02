@@ -424,4 +424,4 @@ class RefreshRepo(tasks.RepoTask):
 
         # Refresh window title and status bar warning bubbles.
         # Do this last because it requires the index to be fresh (updated by the Jump subtask)
-        rw.refreshWindowTitle()
+        rw.refreshWindowChrome()

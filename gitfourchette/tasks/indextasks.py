@@ -333,14 +333,7 @@ class ApplyPatchFile(RepoTask):
         text = text.format(os.path.basename(path))
         text += " "
         text += self.tr("It will modify <b>%n</b> files:", "", numDeltas)
-        text += "<ul>"
-        for delta in deltas[:numListed]:
-            text += F"<li>({delta.status_char()}) {escape(delta.new_file.path)}</li>"
-        if len(deltas) > numListed:
-            text += "<li><i>" + self.tr("(and %n more)", "", numUnlisted) + "</i></li>"
-
-        text += "</ul>"
-
+        text += ulList(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
         yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"))
 
         self.repo.apply(loadedDiff, GIT_APPLY_LOCATION_WORKDIR)
@@ -349,3 +342,30 @@ class ApplyPatchFile(RepoTask):
 class ApplyPatchFileReverse(ApplyPatchFile):
     def flow(self, path: str = ""):
         yield from ApplyPatchFile.flow(self, reverse=True, path=path)
+
+
+class AbortMerge(RepoTask):
+    def effects(self) -> TaskEffects:
+        return TaskEffects.DefaultRefresh
+
+    def flow(self):
+        if self.repo.state() != GIT_REPOSITORY_STATE_MERGE:
+            yield from self.flowAbort(self.tr("No merge is in progress."), icon='information')
+
+        try:
+            abortList = self.repo.get_reset_merge_file_list()
+        except ValueError:
+            message = self.tr("The merge cannot be aborted right now "
+                              "because you have files that are both staged and unstaged.")
+            yield from self.flowAbort(message)
+
+        message = paragraphs(
+            self.tr("Do you want to abort the merge? All conflicts will be cleared "
+                    "and all <b>staged</b> changes will be lost."),
+            self.tr("%n files will be reset:", "", len(abortList)))
+        message += ulList(abortList)
+        yield from self.flowConfirm(text=message)
+
+        yield from self.flowEnterUiThread()
+        self.repo.reset_merge()
+        self.repo.state_cleanup()

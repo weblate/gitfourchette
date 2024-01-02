@@ -133,7 +133,7 @@ class Prefs(PrefsFile):
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS
     authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.ABBREVIATED_EMAIL
     maxRecentRepos              : int           = 20
-    showStatusBar               : bool          = False
+    showStatusBar               : bool          = True
     autoHideMenuBar             : bool          = False
     diff_font                   : str           = ""
     diff_tabSpaces              : int           = 4

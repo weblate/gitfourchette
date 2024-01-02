@@ -419,7 +419,7 @@ class MainWindow(QMainWindow):
         # Get out of welcome widget
         self.welcomeStack.setCurrentWidget(self.tabs)
 
-        w.refreshWindowTitle()  # Refresh window title before loading
+        w.refreshWindowChrome()  # Refresh window title before loading
         w.restoreSplitterStates()
 
         # If we don't have a RepoState, then the tab is lazy-loaded.
@@ -429,7 +429,7 @@ class MainWindow(QMainWindow):
         else:
             # Trigger repo refresh.
             w.onRegainForeground()
-            w.refreshWindowTitle()
+            w.refreshWindowChrome()
 
     def generateTabContextMenu(self, i: int):
         if i < 0:  # Right mouse button released outside tabs
@@ -526,7 +526,7 @@ class MainWindow(QMainWindow):
         rw.setSharedSplitterState(self.sharedSplitterStates)
 
         rw.nameChange.connect(lambda: self.refreshTabText(rw))
-        rw.nameChange.connect(lambda: rw.refreshWindowTitle())
+        rw.nameChange.connect(lambda: rw.refreshWindowChrome())
         rw.openRepo.connect(lambda path: self.openRepoNextTo(rw, path))
         rw.openPrefs.connect(self.openPrefsDialog)
 
@@ -534,6 +534,7 @@ class MainWindow(QMainWindow):
         rw.busyMessage.connect(self.statusBar2.showBusyMessage)
         rw.clearStatus.connect(self.statusBar2.clearMessage)
         rw.statusWarning.connect(self.statusBar2.showPermanentWarning)
+        rw.statusButton.connect(self.statusBar2.setButton)
 
         # Create a tab for the RepoWidget
         with QSignalBlockerContext(self.tabs):

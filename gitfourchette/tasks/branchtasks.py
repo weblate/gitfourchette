@@ -298,6 +298,9 @@ class MergeBranch(RepoTask):
     def flow(self, them: str):
         # Run merge analysis on background thread
         yield from self.flowEnterWorkerThread()
+        self.repo.refresh_index()
+        anyStagedFiles = self.repo.any_staged_changes
+        anyConflicts = self.repo.any_conflicts
         myBranch = self.repo.head_branch_shorthand
         theirBranch = self.repo.branches.local[them]
         target: Oid = theirBranch.target
@@ -306,9 +309,22 @@ class MergeBranch(RepoTask):
         yield from self.flowEnterUiThread()
         print(repr(analysis), repr(pref))
 
-        if analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
-            message = self.tr("Nothing to be done. "
-                              "Your branch “{0}” is already up-to-date with “{1}”.").format(myBranch, them)
+        if anyConflicts:
+            message = paragraphs(
+                self.tr("Merging is not possible right now because you have unresolved conflicts."),
+                self.tr("Before you try again, please fix the conflicts."))
+            yield from self.flowAbort(text=message)
+
+        elif anyStagedFiles:
+            message = paragraphs(
+                self.tr("Merging is not possible right now because you have staged changes."),
+                self.tr("Before you try again, please commit your staged changes, or commit them."))
+            yield from self.flowAbort(text=message)
+
+        elif analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
+            message = paragraphs(
+                self.tr("No merge is necessary."),
+                self.tr("Your branch “{0}” is already up-to-date with “{1}”.").format(myBranch, them))
             yield from self.flowAbort(text=message)
 
         elif analysis == GIT_MERGE_ANALYSIS_UNBORN:

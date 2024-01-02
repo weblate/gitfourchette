@@ -36,5 +36,5 @@ from .qtutils import (
     MultiShortcut, makeMultiShortcut,
     CallbackAccumulator,
 )
-from .textutils import escape, escamp, paragraphs, messageSummary, elide
+from .textutils import escape, escamp, paragraphs, messageSummary, elide, ulList
 from .validatormultiplexer import ValidatorMultiplexer

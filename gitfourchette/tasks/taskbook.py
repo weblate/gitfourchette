@@ -21,6 +21,7 @@ class TaskBook:
     @classmethod
     def initialize(cls):
         cls.names = {
+            tasks.AbortMerge: translate("task", "Abort merge"),
             tasks.AbsorbSubmodule: translate("task", "Absorb existing repository as submodule"),
             tasks.AcceptMergeConflictResolution: translate("task", "Accept merge conflict resolution"),
             tasks.AmendCommit: translate("task", "Amend last commit"),

@@ -79,6 +79,9 @@ class ApplyStash(RepoTask):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
     def flow(self, stashCommitId: Oid, tickDelete=True):
+        if self.repo.any_conflicts:
+            yield from self.flowAbort(self.tr("Before applying a stash, please resolve the merge conflicts in your working directory."))
+
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
 
