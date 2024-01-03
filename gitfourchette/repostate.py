@@ -160,6 +160,10 @@ class RepoState(QObject):
         refCache = self.repo.map_refs_to_oids()
 
         if refCache == self.refCache:
+            # Make sure it's sorted in the exact same order...
+            if DEVDEBUG:
+                assert list(refCache.keys()) == list(self.refCache.keys()), "refCache key order changed! how did that happen?"
+
             # Nothing to do!
             return False
 
@@ -194,7 +198,8 @@ class RepoState(QObject):
         if self.walker is None:
             self.walker = self.repo.walk(None, sorting)
         else:
-            self.walker.sort(sorting)  # this resets the walker
+            self.walker.reset()
+            self.walker.sort(sorting)  # this resets the walker IF ALREADY WALKING (i.e. next was called once)
 
         # In topological mode, the order in which the tips are pushed is
         # significant (last in, first out). The tips should be pre-sorted in
@@ -232,8 +237,6 @@ class RepoState(QObject):
         oldHeads = oldRefCache.values()
         newHeads = self.refCache.values()
 
-        walker = self.initializeWalker(newHeads)
-
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
         newHiddenCommitSolver: HiddenCommitSolver = self.newHiddenCommitSolver()
         newForeignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
@@ -244,6 +247,7 @@ class RepoState(QObject):
 
         if graphSplicer.keepGoing:
             with Benchmark("Walk graph until equilibrium"):
+                walker = self.initializeWalker(newHeads)
                 for commit in walker:
                     oid = commit.oid
                     parents = commit.parent_ids
