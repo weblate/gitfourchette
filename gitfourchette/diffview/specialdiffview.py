@@ -45,24 +45,28 @@ class SpecialDiffView(QTextBrowser):
         document = QTextDocument(self)
         document.setObjectName("ImageDiffDocument")
 
-        imageB.setDevicePixelRatio(self.devicePixelRatio())
-
-        document.addResource(IMAGE_RESOURCE_TYPE, QUrl("image"), imageB)
-
         humanSizeA = self.locale().formattedDataSize(delta.old_file.size)
         humanSizeB = self.locale().formattedDataSize(delta.new_file.size)
 
-        textA = self.tr("Old: {0}&times;{1} pixels, {2}").format(imageA.width(), imageA.height(), humanSizeA)
-        textB = self.tr("New: {0}&times;{1} pixels, {2}").format(imageB.width(), imageB.height(), humanSizeB)
-        newFileDisplayedBelow = self.tr("(new file displayed below)")
+        textA = self.tr("Old:") + " " + self.tr("{0}&times;{1} pixels, {2}").format(imageA.width(), imageA.height(), humanSizeA)
+        textB = self.tr("New:") + " " + self.tr("{0}&times;{1} pixels, {2}").format(imageB.width(), imageB.height(), humanSizeB)
+
+        if delta.old_file.id == NULL_OID:
+            header = f"<span class='add'>{textB}</span>"
+            image = imageB
+        elif delta.new_file.id == NULL_OID:
+            header = f"<span class='del'>{textA} " + self.tr("(<b>deleted file</b> displayed below)") + "</span>"
+            image = imageA
+        else:
+            header = f"<span class='del'>{textA}</span><br><span class='add'>{textB} " + self.tr("(<b>new file</b> displayed below)") + "</span>"
+            image = imageB
+
+        image.setDevicePixelRatio(self.devicePixelRatio())
+        document.addResource(IMAGE_RESOURCE_TYPE, QUrl("image"), image)
 
         document.setHtml(
-            "<style> p { text-align: center; } </style>"
-            "<p>"
-            F"{textA}<br/>"
-            F"{textB}<br/>"
-            F"{newFileDisplayedBelow}"
-            "</p>"
-            "<p><img src='image' /></p>")
+            "<style>.add{color: green;} .del{color: red;}</style>"
+            f"<p>{header}</p>"
+            "<p style='text-align: center'><img src='image' /></p>")
 
         self.replaceDocument(document)
