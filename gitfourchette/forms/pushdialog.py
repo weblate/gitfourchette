@@ -64,9 +64,11 @@ class PushDialog(QDialog):
         localBranch = self.currentLocalBranch
 
         remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
+        remoteTooltip = self.ui.remoteBranchEdit.itemData(index, Qt.ItemDataRole.ToolTipRole)
 
         if remoteItem != ERemoteItem.ExistingRef:
             self.ui.remoteNameLabel.setText("\u21AA " + remoteData + "/")
+            self.ui.remoteNameLabel.setToolTip(remoteTooltip)
             newRBN = self.repo.generate_unique_branch_name_on_remote(remoteData, localBranch.branch_name)
             self.ui.newRemoteBranchStackedWidget.setCurrentIndex(0)
             self.ui.newRemoteBranchNameEdit.setText(newRBN)
@@ -74,8 +76,8 @@ class PushDialog(QDialog):
         else:
             self.ui.newRemoteBranchStackedWidget.setCurrentIndex(1)
             self.ui.remoteBranchEdit.setFocus(Qt.FocusReason.TabFocusReason)
-            pass
 
+        self.ui.remoteBranchEdit.setToolTip(remoteTooltip)
         self.updateTrackCheckBox()
 
         self.remoteBranchNameValidator.run()
@@ -196,6 +198,8 @@ class PushDialog(QDialog):
             firstRemote = True
 
             for remoteName, remoteBranches in self.repo.listall_remote_branches().items():
+                remoteUrl = self.repo.remotes[remoteName].url
+
                 if not firstRemote:
                     comboBox.insertSeparator(comboBox.count())
 
@@ -220,7 +224,7 @@ class PushDialog(QDialog):
 
                     if font:
                         comboBox.setItemData(comboBox.count()-1, font, Qt.ItemDataRole.FontRole)
-                    comboBox.setItemData(comboBox.count()-1, self.repo.remotes[remoteName].url, Qt.ItemDataRole.ToolTipRole)
+                    comboBox.setItemData(comboBox.count()-1, remoteUrl, Qt.ItemDataRole.ToolTipRole)
 
                 if firstRemote:
                     self.fallbackAutoNewIndex = comboBox.count()
@@ -228,6 +232,7 @@ class PushDialog(QDialog):
                     stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder),
                     self.tr("New remote branch on {0}").format(escamp(remoteName)),
                     (ERemoteItem.NewRef, remoteName))
+                comboBox.setItemData(comboBox.count()-1, remoteUrl, Qt.ItemDataRole.ToolTipRole)
 
                 firstRemote = False
 
