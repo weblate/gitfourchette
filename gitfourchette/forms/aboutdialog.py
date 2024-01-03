@@ -1,12 +1,13 @@
 from gitfourchette.qt import *
-from gitfourchette import exttools
 from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
-from gitfourchette.toolbox.qtutils import *
+from gitfourchette.toolbox import *
+from textwrap import dedent
 import contextlib
 import pygit2
 import sys
 
 
+WEBSITE_URL = "https://github.com/jorio/gitfourchette"
 DONATE_URL = "https://ko-fi.com/jorio"
 
 
@@ -23,6 +24,9 @@ def getPygit2FeatureStrings():
     return featureList
 
 
+def simpleLink(url):
+    return f"<a href='{url}'>{url}</a>"
+
 class AboutDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
@@ -35,19 +39,28 @@ class AboutDialog(QDialog):
 
         self.setWindowTitle(self.windowTitle().format(appName))
 
-        self.ui.softwareName.setText(self.ui.softwareName.text().format(appName, appVersion))
+        header = dedent(f"""\
+            <span style='font-size: 14pt'>{appName}</span> {appVersion}
+            <br>{simpleLink(WEBSITE_URL)}
+            <br>{self.tr("The comfortable Git UI for Linux.")}
+            <br>Copyright © 2024 Iliyas Jorio
+            """)
+
+        blurb = paragraphs(
+            self.tr("{app} is free software that I develop in my spare time."),
+            self.tr("If you enjoy using it, feel free to make a donation at {donate}. "
+                    "Every little bit encourages the continuation of the project!"),
+            self.tr("Thank you for your support!"),
+        ).format(app=appName, donate=simpleLink(DONATE_URL))
+
+        self.ui.header.setText(header)
+        self.ui.header.setOpenExternalLinks(True)
+        self.ui.aboutBlurb.setText(blurb)
+        self.ui.aboutBlurb.setOpenExternalLinks(True)
 
         pixmap = QPixmap("assets:gitfourchette.png")
-        pixmap.setDevicePixelRatio(4)
+        pixmap.setDevicePixelRatio(5)
         self.ui.iconLabel.setPixmap(pixmap)
-
-        pixmap = QPixmap("assets:kofi.png")
-        self.ui.donateButton.setIcon(QIcon(pixmap))
-        self.ui.donateButton.setIconSize(QSize(pixmap.width()//3, pixmap.height()//3))
-        self.ui.donateButton.setText("")
-
-        self.ui.donateButton.clicked.connect(lambda: QDesktopServices.openUrl(DONATE_URL))
-        self.ui.donateButton.setToolTip(DONATE_URL)
 
         buildDate = ""
         if PYINSTALLER_BUNDLE:
@@ -56,21 +69,21 @@ class AboutDialog(QDialog):
                 buildDate = (" " + self.tr("built on:", "when the software was built") +
                              " " + gitfourchette._buildconstants.buildDate)
 
-        tweakWidgetFont(self.ui.plainTextEdit, 90)
-
         qtBindingSuffix = ""
         if QTPY:
             from qtpy import __version__ as qtpyVersion
             qtBindingSuffix = f" (via qtpy {qtpyVersion})"
 
-        self.ui.plainTextEdit.setPlainText(F"""\
-{appName} {appVersion}{'-debug' if __debug__ else ''}
-{buildDate}
-libgit2 {pygit2.LIBGIT2_VERSION} ({', '.join(getPygit2FeatureStrings())})
-pygit2 {pygit2.__version__}
-Qt {qVersion()}
-{qtBindingName} {qtBindingVersion}{qtBindingSuffix}
-Python {'.'.join(str(i) for i in sys.version_info)}""")
+        components = dedent(f"""\
+            {appName} {appVersion}{'-debug' if __debug__ else ''}
+            {buildDate}
+            pygit2 {pygit2.__version__}
+            libgit2 {pygit2.LIBGIT2_VERSION} ({', '.join(getPygit2FeatureStrings())})
+            {qtBindingName} {qtBindingVersion}{qtBindingSuffix}
+            Qt {qVersion()}
+            Python {'.'.join(str(i) for i in sys.version_info)}
+            """)
+        self.ui.componentsBlurb.setText(components)
 
 
 def showAboutDialog(parent: QWidget):
