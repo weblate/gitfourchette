@@ -1,3 +1,4 @@
+import contextlib
 import gc
 import re
 import os
@@ -413,7 +414,6 @@ class MainWindow(QMainWindow):
 
     def onTabCurrentWidgetChanged(self):
         w = self.currentRepoWidget()
-
         if not w:
             return
 
@@ -423,14 +423,13 @@ class MainWindow(QMainWindow):
         w.refreshWindowChrome()  # Refresh window title before loading
         w.restoreSplitterStates()
 
-        # If we don't have a RepoState, then the tab is lazy-loaded.
-        # We need to load it now.
-        if not w.isLoaded:
-            w.primeRepo()
-        else:
+        if w.isLoaded:
             # Trigger repo refresh.
             w.onRegainForeground()
             w.refreshWindowChrome()
+        elif w.allowAutoLoad:
+            # Tab was lazy-loaded.
+            w.primeRepo()
 
     def generateTabContextMenu(self, i: int):
         if i < 0:  # Right mouse button released outside tabs
@@ -517,9 +516,10 @@ class MainWindow(QMainWindow):
         # First check that we don't have a tab for this repo already
         for i in range(self.tabs.count()):
             existingRW: RepoWidget = self.tabs.widget(i)
-            if os.path.samefile(workdir, existingRW.workdir):
-                self.tabs.setCurrentIndex(i)
-                return existingRW
+            with contextlib.suppress(FileNotFoundError):  # if existingRW has illegal workdir, this exception may be raised
+                if os.path.samefile(workdir, existingRW.workdir):
+                    self.tabs.setCurrentIndex(i)
+                    return existingRW
 
         # Create a RepoWidget
         rw = RepoWidget(self)

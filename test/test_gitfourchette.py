@@ -2,6 +2,7 @@ from . import reposcenario
 from .fixtures import *
 from .util import *
 from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 
 
 def testEmptyRepo(qtbot, tempDir, mainWindow):
@@ -157,7 +158,12 @@ def testUnloadRepoWhenFolderGoesMissing(qtbot, tempDir, mainWindow):
 
     mainWindow.refreshRepo()
     assert not rw.isLoaded
-    rejectQMessageBox(rw, "folder.+missing")
+
+    urp: UnloadedRepoPlaceholder = rw.placeholderWidget
+    assert urp is not None
+    assert isinstance(urp, UnloadedRepoPlaceholder)
+    assert urp.isVisibleTo(rw)
+    assert re.search(r"folder.+missing", urp.ui.label.text(), re.I)
 
     # Make sure we're not writing the prefs to a ghost directory structure upon exiting
     assert not os.path.isfile(f"{wd}/.git/gitfourchette.json")

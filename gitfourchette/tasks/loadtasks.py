@@ -217,8 +217,7 @@ class PrimeRepo(RepoTask):
         yield from self.flowSubtask(Jump, NavLocator(NavContext.WORKDIR))
 
     def onError(self, exc: Exception):
-        self.rw.state = None
-        # TODO: rw failure card?
+        self.rw.cleanup(str(exc), allowAutoReload=False)
         super().onError(exc)
 
 

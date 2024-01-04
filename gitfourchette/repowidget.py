@@ -53,6 +53,8 @@ class RepoWidget(QWidget):
     pathPending: str
     "Path of the repository if it isn't loaded yet (state=None)"
 
+    allowAutoLoad: bool
+
     navLocator: NavLocator
     navHistory: NavHistory
 
@@ -96,6 +98,7 @@ class RepoWidget(QWidget):
 
         self.state = None
         self.pathPending = ""
+        self.allowAutoLoad = True
 
         self.busyCursorDelayer = QTimer(self)
         self.busyCursorDelayer.setSingleShot(True)
@@ -477,6 +480,12 @@ class RepoWidget(QWidget):
         assert self.mainStack.currentIndex() != 0
         assert self.mainStack.count() <= 2
 
+    @property
+    def placeholderWidget(self):
+        if self.mainStack.count() > 1:
+            return self.mainStack.widget(1)
+        return None
+
     # -------------------------------------------------------------------------
     # Navigation
 
@@ -573,7 +582,7 @@ class RepoWidget(QWidget):
         """ Called when closing a repo tab """
         self.cleanup()
 
-    def cleanup(self):
+    def cleanup(self, message: str = "", allowAutoReload: bool = True):
         assert onAppThread()
 
         hasRepo = self.state and self.state.repo
@@ -604,17 +613,11 @@ class RepoWidget(QWidget):
         if hasRepo:
             # Save path if we want to reload the repo later
             self.pathPending = os.path.normpath(self.state.repo.workdir)
+            self.allowAutoLoad = allowAutoReload
 
             # Kill any ongoing task then block UI thread until the task dies cleanly
             self.repoTaskRunner.killCurrentTask()
             self.repoTaskRunner.joinZombieTask()
-
-            # Install placeholder widget
-            placeholder = UnloadedRepoPlaceholder(self)
-            placeholder.ui.nameLabel.setText(self.getTitle())
-            placeholder.ui.loadButton.clicked.connect(lambda: self.primeRepo())
-            placeholder.ui.loadButton.clicked.connect(lambda: placeholder.deleteLater())
-            self.setPlaceholderWidget(placeholder)
 
             # Free the repository
             self.state.repo.free()
@@ -622,6 +625,22 @@ class RepoWidget(QWidget):
             log.info(TAG, "Repository freed:", self.pathPending)
 
         self.state = None
+
+        # Install placeholder widget
+        placeholder = UnloadedRepoPlaceholder(self)
+        placeholder.ui.nameLabel.setText(self.getTitle())
+        placeholder.ui.loadButton.clicked.connect(lambda: self.primeRepo())
+        placeholder.ui.icon.setVisible(False)
+        self.setPlaceholderWidget(placeholder)
+
+        if message:
+            placeholder.ui.label.setText(message)
+
+        if not allowAutoReload:
+            placeholder.ui.icon.setText("")
+            placeholder.ui.icon.setPixmap(stockIcon("image-missing").pixmap(96))
+            placeholder.ui.icon.setVisible(True)
+            placeholder.ui.loadButton.setText(self.tr("Try to reload"))
 
         # Clean up status bar if there were repo-specific warnings in it
         self.refreshWindowChrome()
@@ -766,7 +785,8 @@ class RepoWidget(QWidget):
             oid = repo.head_commit_oid
             inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
         else:
-            inBrackets = repo.head_branch_shorthand
+            with contextlib.suppress(GitError):
+                inBrackets = repo.head_branch_shorthand
 
         # Merging? Any conflicts?
         statusWarning = ""
@@ -883,16 +903,13 @@ class RepoWidget(QWidget):
             self.busyCursorDelayer.start()
 
     def onRepoGone(self):
+        message = self.tr("Repository folder went missing:") + "\n" + escamp(self.pathPending)
+
         # Unload the repo
-        self.cleanup()
+        self.cleanup(message=message, allowAutoReload=False)
 
         # Surround repo name with parentheses in tab widget and title bar
         self.nameChange.emit()
-
-        showWarning(
-            self,
-            self.tr("Repository folder missing"),
-            paragraphs(self.tr("The repository folder has gone missing at this location:"), escape(self.pathPending)))
 
     def refreshPrefs(self):
         self.diffView.refreshPrefs()
