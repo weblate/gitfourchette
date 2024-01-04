@@ -510,6 +510,8 @@ class MainWindow(QMainWindow):
             workdir = path
         else:
             with RepoContext(path) as repo:
+                if repo.is_bare:
+                    raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
                 workdir = repo.workdir
 
         # First check that we don't have a tab for this repo already
