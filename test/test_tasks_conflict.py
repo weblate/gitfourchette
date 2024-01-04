@@ -26,6 +26,7 @@ def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
 
     # Keep our deletion of a1.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 0)
     assert rw.conflictView.ui.radioDbuOurs.isVisibleTo(rw)
     rw.conflictView.ui.radioDbuOurs.click()
@@ -33,6 +34,7 @@ def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
 
     # Take their a2.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 0)
     assert rw.conflictView.ui.radioDbuTheirs.isVisibleTo(rw)
     rw.conflictView.ui.radioDbuTheirs.click()
@@ -68,6 +70,7 @@ def testConflictDeletedByThem(qtbot, tempDir, mainWindow):
 
     # Keep our a1.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 0)
     assert rw.conflictView.ui.radioDbtOurs.isVisibleTo(rw)
     rw.conflictView.ui.radioDbtOurs.click()
@@ -75,6 +78,7 @@ def testConflictDeletedByThem(qtbot, tempDir, mainWindow):
 
     # Take their deletion of a2.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt"]
+    assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 0)
     assert rw.conflictView.ui.radioDbtTheirs.isVisibleTo(rw)
     rw.conflictView.ui.radioDbtTheirs.click()
