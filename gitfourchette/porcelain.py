@@ -144,6 +144,11 @@ GIT_STATUS_WT_MASK = (
         | GIT_STATUS_WT_RENAMED
         | GIT_STATUS_WT_UNREADABLE)
 
+_RESTORE_STRATEGY = (
+        GIT_CHECKOUT_FORCE
+        | GIT_CHECKOUT_REMOVE_UNTRACKED
+        | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
+
 
 class RefPrefix:
     HEADS = "refs/heads/"
@@ -1021,59 +1026,34 @@ class Repo(_VanillaRepository):
                 index.add(patch.delta.new_file.path)
         index.write()
 
-    def restore_files(self, paths: list[str]):
+    def restore_files_from_head(self, paths: list[str]):
         """
-        Resets the given files to their state at the HEAD commit.
+        Reset the given files to their state at the HEAD commit.
         Any staged, unstaged, or untracked changes in those files will be lost.
-        NOTE: This will not
         """
+        assert not self.head_is_unborn
+        self.checkout_tree(self.head_tree, paths=paths, strategy=_RESTORE_STRATEGY)
 
-        assert not self.head_is_unborn, "restoreFiles doesn't support unborn HEAD"
-
-        strategy = (GIT_CHECKOUT_FORCE
-                    | GIT_CHECKOUT_REMOVE_UNTRACKED
-                    | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
-
-        self.checkout_tree(self.head_tree, paths=paths, strategy=strategy)
-
-    def get_staged_tree(self) -> Tree:
-        # refresh index before getting indexTree in case an external program modified the staging area
-        self.refresh_index(force=False)
-
-        # get tree with staged changes
-        index_tree_id = self.index.write_tree()
-        index_tree = self[index_tree_id]
-
-        return index_tree
-
-    def discard_files(self, paths: list[str]):
+    def restore_files_from_index(self, paths: list[str]):
         """
-        Discards unstaged changes in the given files.
-        Does not discard any changes that are staged.
+        Discard unstaged changes in the given files.
+        Staged changes will remain.
         """
-
-        strategy = (GIT_CHECKOUT_FORCE
-                    | GIT_CHECKOUT_REMOVE_UNTRACKED
-                    | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
-
-        # get tree with staged changes
-        index_tree = self.get_staged_tree()
-
-        # reset files to their state in the staged tree
-        self.checkout_tree(index_tree, paths=paths, strategy=strategy)
+        self.refresh_index()  # in case an external program modified the staging area
+        self.checkout_index(paths=paths, strategy=_RESTORE_STRATEGY)
 
     def discard_mode_changes(self, paths: list[str]):
         """
         Discards mode changes in the given files.
         """
 
-        # get tree with staged changes
-        index_tree = self.get_staged_tree()
+        self.refresh_index()  # in case an external program modified the staging area
+        index = self.index
 
-        # reset files to their mode in the staged tree
+        # Reset files to their mode in the staged (index) tree
         for p in paths:
             try:
-                mode = index_tree[p].filemode
+                mode = index[p].mode
             except KeyError:
                 continue
             if mode in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]:
@@ -1463,7 +1443,7 @@ class Repo(_VanillaRepository):
         index entries.
         """
         staged_paths = self.get_reset_merge_file_list()
-        self.restore_files(staged_paths)
+        self.restore_files_from_head(staged_paths)
 
 
 class RepoContext:

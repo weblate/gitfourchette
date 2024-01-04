@@ -70,7 +70,7 @@ class NewStash(RepoTask):
         yield from self.flowEnterWorkerThread()
         self.repo.create_stash(stashMessage, paths=tickedFiles)
         if not keepIntact:
-            self.repo.restore_files(tickedFiles)
+            self.repo.restore_files_from_index(tickedFiles)
 
 
 class ApplyStash(RepoTask):

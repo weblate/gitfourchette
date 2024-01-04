@@ -64,7 +64,7 @@ class DiscardFiles(_BaseStagingTask):
         yield from self.flowEnterWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
         Trash(self.repo).backupPatches(patches)
-        self.repo.discard_files(paths)
+        self.repo.restore_files_from_index(paths)
 
 
 class UnstageFiles(_BaseStagingTask):
@@ -176,7 +176,7 @@ class ApplyPatch(RepoTask):
             self.repo.stage_files([fullPatch])
         elif purpose & PatchPurpose.DISCARD:
             Trash(self.repo).backupPatches([fullPatch])
-            self.repo.discard_files([fullPatch.delta.new_file.path])
+            self.repo.restore_files_from_index([fullPatch.delta.new_file.path])
         else:
             raise KeyError(f"applyFullPatch: unsupported purpose {purpose}")
 

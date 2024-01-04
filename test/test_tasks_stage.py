@@ -69,6 +69,25 @@ def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, main
     assert rw.repo.status() == {"a/a1.txt": GIT_STATUS_INDEX_MODIFIED}
 
 
+def testDiscardModeChange(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    path = f"{wd}/a/a1.txt"
+    assert os.lstat(path).st_mode & 0o777 == 0o644
+
+    writeFile(path, "keep this!")
+    os.chmod(path, 0o777)
+
+    rw = mainWindow.openRepo(wd)
+    assert qlvGetRowData(rw.dirtyFiles) == ["[+x] a/a1.txt"]
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    contextMenu = rw.dirtyFiles.makeContextMenu()
+    findMenuAction(contextMenu, "(restore|revert|discard) mode").trigger()
+    acceptQMessageBox(rw, "(restore|revert|discard) mode")
+
+    assert readFile(path).decode() == "keep this!"
+    assert os.lstat(path).st_mode & 0o777 == 0o644
+
+
 def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir, "TestEmptyRepository")
     reposcenario.stagedNewEmptyFile(wd)

@@ -55,21 +55,28 @@ class FileList(QListView):
         self.flModel.clear()
         self.commitOid = NULL_OID
 
-    def contextMenuEvent(self, event: QContextMenuEvent):
+    def makeContextMenu(self):
         numIndexes = len(self.selectedIndexes())
         if numIndexes == 0:
-            return
+            return None
 
+        actions = self.createContextMenuActions(numIndexes)
+        menu = ActionDef.makeQMenu(self, actions)
+        menu.setObjectName("FileListContextMenu")
+        return menu
+
+    def contextMenuEvent(self, event: QContextMenuEvent):
         try:
-            actions = self.createContextMenuActions(numIndexes)
+            menu = self.makeContextMenu()
         except Exception as exc:
             # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
             # (endless loop of "This exception was delayed").
             excMessageBox(exc, message="Failed to create FileList context menu")
             return
 
-        menu = ActionDef.makeQMenu(self, actions)
-        menu.setObjectName("FileListContextMenu")
+        if not menu:
+            return
+
         menu.exec(event.globalPos())
 
         # Can't set WA_DeleteOnClose because this crashes on macOS e.g. when exporting a patch.
