@@ -1,7 +1,7 @@
 APP_VERSION = "1.0.0"
-APP_NAME = "GitFourchette"
+APP_SYSTEM_NAME = "gitfourchette"
 APP_DISPLAY_NAME = "GitFourchette"
-APP_URL_SCHEME = "gitfourchette"
+APP_URL_SCHEME = APP_SYSTEM_NAME
 
 ACTIVE_BULLET = "★ "
 

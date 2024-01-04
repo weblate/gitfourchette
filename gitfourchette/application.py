@@ -16,7 +16,7 @@ class GFApplication(QApplication):
         self.initialSession = None
 
         # Don't use app.setOrganizationName because it changes QStandardPaths.
-        self.setApplicationName(APP_NAME)  # used by QStandardPaths
+        self.setApplicationName(APP_SYSTEM_NAME)  # used by QStandardPaths
         self.setApplicationDisplayName(APP_DISPLAY_NAME)  # user-friendly name
         self.setApplicationVersion(APP_VERSION)
 
@@ -43,12 +43,12 @@ class GFApplication(QApplication):
             settings.SYNC_TASKS = True
         else:
             # Load settings
-            with NonCriticalOperation(F"Loading {settings.prefs.filename}"):
+            with NonCriticalOperation(F"Loading prefs"):
                 settings.prefs.load()
                 settings.applyQtStylePref(forceApplyDefault=False)
 
             # Load history
-            with NonCriticalOperation(F"Loading {settings.history.filename}"):
+            with NonCriticalOperation(F"Loading history"):
                 settings.history.load()
 
         log.setVerbosity(settings.prefs.debug_verbosity.value)
@@ -60,7 +60,7 @@ class GFApplication(QApplication):
         # Initialize session
         session = settings.Session()
         if not settings.TEST_MODE:
-            with NonCriticalOperation(F"Loading {session.filename}"):
+            with NonCriticalOperation(F"Loading session"):
                 session.load()
 
         # Open paths passed in via the command line

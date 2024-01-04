@@ -1,3 +1,4 @@
+from gitfourchette.appconsts import APP_SYSTEM_NAME
 from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.porcelain import *
@@ -7,12 +8,12 @@ import shutil
 
 
 class Trash:
-    DIR_NAME = "trash"
+    DIR_NAME = f"{APP_SYSTEM_NAME}-trash"
     TIME_FORMAT = '%Y%m%dT%H%M%S'
 
     def __init__(self, repo: Repo):
         self.repo = repo
-        self.trashDir = os.path.join(repo.path, settings.REPO_SETTINGS_DIR, Trash.DIR_NAME)
+        self.trashDir = os.path.join(repo.path, Trash.DIR_NAME)
         self.trashFiles = []
         self.refreshFiles()
 

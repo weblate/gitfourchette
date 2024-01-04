@@ -19,7 +19,8 @@ PROGRESS_INTERVAL = 5000
 
 @dataclass
 class RepoPrefs(PrefsFile):
-    filename = "prefs.json"
+    _filename = f"{APP_SYSTEM_NAME}.json"
+    _allowMakeDirs = False
     _parentDir = ""
 
     draftCommitMessage: str = ""
@@ -80,9 +81,8 @@ class RepoState(QObject):
         assert isinstance(repo, Repo)
         self.repo = repo
 
-        uiConfigPath = os.path.join(self.repo.path, settings.REPO_SETTINGS_DIR)
         self.uiPrefs = RepoPrefs()
-        self.uiPrefs._parentDir = uiConfigPath
+        self.uiPrefs._parentDir = self.repo.path
 
         # On Windows, core.autocrlf is usually set to true in the system config.
         # However, libgit2 cannot find the system config if git wasn't installed

@@ -149,8 +149,15 @@ def testUnloadRepoWhenFolderGoesMissing(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     assert rw.isLoaded
 
+    rw.state.uiPrefs.draftCommitMessage = "some bogus change to prevent prefs to be written"
+    rw.state.uiPrefs.write(force=True)
+    assert os.path.isfile(f"{wd}/.git/gitfourchette.json")
+
     os.rename(wd, os.path.normpath(wd) + "-2")
 
     mainWindow.refreshRepo()
     assert not rw.isLoaded
     rejectQMessageBox(rw, "folder.+missing")
+
+    # Make sure we're not writing the prefs to a ghost directory structure upon exiting
+    assert not os.path.isfile(f"{wd}/.git/gitfourchette.json")

@@ -18,8 +18,6 @@ TEST_MODE = False
 SYNC_TASKS = False
 """ Force tasks to run synchronously on the UI thread. """
 
-REPO_SETTINGS_DIR = "gitfourchette"
-
 LANGUAGES = [
     "en_US",
     "fr_FR",
@@ -124,7 +122,7 @@ class QtApiNames(enum.StrEnum):
 
 @dataclasses.dataclass
 class Prefs(PrefsFile):
-    filename = "prefs.json"
+    _filename = "prefs.json"
 
     language                    : str           = ""
     qtStyle                     : str           = ""
@@ -165,7 +163,7 @@ class Prefs(PrefsFile):
 
 @dataclasses.dataclass
 class History(PrefsFile):
-    filename = "history.json"
+    _filename = "history.json"
 
     repos: dict = dataclasses.field(default_factory=dict)
     cloneHistory: list = dataclasses.field(default_factory=list)
@@ -286,7 +284,7 @@ class History(PrefsFile):
 
 @dataclasses.dataclass
 class Session(PrefsFile):
-    filename = "session.json"
+    _filename = "session.json"
 
     tabs                        : list          = dataclasses.field(default_factory=list)
     activeTabIndex              : int           = -1

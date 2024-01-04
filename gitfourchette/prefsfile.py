@@ -36,18 +36,26 @@ class PrefsJSONDecoder(json.JSONDecoder):
 
 
 class PrefsFile:
+    _filename = ""
+    _allowMakeDirs = True
+
     def getParentDir(self):
         return QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
 
     def _getFullPath(self, forWriting: bool):
+        assert self._filename != "", "you must override _filename"
+
         prefsDir = self.getParentDir()
         if not prefsDir:
             return None
 
         if forWriting:
-            os.makedirs(prefsDir, exist_ok=True)
+            if self._allowMakeDirs or False:
+                os.makedirs(prefsDir, exist_ok=True)
+            elif not os.path.isdir(prefsDir):
+                return None
 
-        fullPath = os.path.join(prefsDir, getattr(self, 'filename'))
+        fullPath = os.path.join(prefsDir, self._filename)
 
         if not forWriting and not os.path.isfile(fullPath):
             return None
@@ -55,6 +63,12 @@ class PrefsFile:
         return fullPath
 
     def write(self, force=False):
+        # Prepare the path
+        prefsPath = self._getFullPath(forWriting=True)
+        if not prefsPath:
+            log.warning(TAG, "Couldn't get path for writing")
+            return None
+
         from gitfourchette.settings import TEST_MODE
         if not force and TEST_MODE:
             log.info(TAG, "Not writing prefs in test mode")
@@ -79,16 +93,15 @@ class PrefsFile:
             if (k not in defaults) or (defaults[k] != v):
                 filtered[k] = v
 
-        # If the filtered object comes out empty (all defaults) and the file doesn't exist yet,
+        # If the filtered object comes out empty (all defaults)
         # avoid cluttering the directory - don't write out an empty object
-        if not filtered and not self._getFullPath(forWriting=False):
-            log.info(TAG, "Not writing empty object")
-            return None
-
-        # Prepare the path
-        prefsPath = self._getFullPath(forWriting=True)
-        if not prefsPath:
-            log.warning(TAG, "Couldn't get path for writing")
+        if not filtered:
+            if not self._getFullPath(forWriting=False):
+                # File doesn't exist - don't write out an empty object
+                log.verbose(TAG, "Not writing empty object")
+            else:
+                log.verbose(TAG, "Deleting prefs file because we want defaults")
+                os.unlink(prefsPath)
             return None
 
         # Dump the object to disk
