@@ -39,11 +39,16 @@ class AboutDialog(QDialog):
 
         self.setWindowTitle(self.windowTitle().format(appName))
 
+        if APP_BUILD_DATE:
+            buildDate = " " + self.tr("(built on {date})").format(date=APP_BUILD_DATE)
+        else:
+            buildDate = ""
+
         header = dedent(f"""\
-            <span style='font-size: 14pt'>{appName}</span> {appVersion}
-            <br>{simpleLink(WEBSITE_URL)}
+            <span style='font-size: 12pt'>{appName} {appVersion}</span>{buildDate}
             <br>{self.tr("The comfortable Git UI for Linux.")}
             <br>Copyright © 2024 Iliyas Jorio
+            <br>{simpleLink(WEBSITE_URL)}
             """)
 
         blurb = paragraphs(
@@ -61,13 +66,6 @@ class AboutDialog(QDialog):
         pixmap = QPixmap("assets:gitfourchette.png")
         pixmap.setDevicePixelRatio(5)
         self.ui.iconLabel.setPixmap(pixmap)
-
-        buildDate = ""
-        if PYINSTALLER_BUNDLE:
-            with contextlib.suppress(ImportError):
-                import gitfourchette._buildconstants
-                buildDate = (" " + self.tr("built on:", "when the software was built") +
-                             " " + gitfourchette._buildconstants.buildDate)
 
         qtBindingSuffix = ""
         if QTPY:

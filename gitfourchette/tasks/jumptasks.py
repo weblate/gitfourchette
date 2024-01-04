@@ -3,6 +3,9 @@ Tasks that navigate to a specific area of the repository.
 
 Unlike most other tasks, jump tasks directly manipulate the UI extensively, via RepoWidget.
 """
+
+import os
+
 from gitfourchette import log, tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *

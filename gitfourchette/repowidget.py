@@ -1,5 +1,6 @@
 import contextlib
 import typing
+import os
 from typing import Literal, Type
 
 from gitfourchette import log

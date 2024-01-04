@@ -1,7 +1,7 @@
+import contextlib
+import os
 from dataclasses import dataclass
 from typing import Any
-
-import contextlib
 
 from gitfourchette import log
 from gitfourchette import settings

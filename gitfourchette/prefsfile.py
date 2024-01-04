@@ -1,6 +1,7 @@
 import dataclasses
 import enum
 import json
+import os
 
 from gitfourchette import log
 from gitfourchette import pycompat  # StrEnum for Python 3.10

@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-import argparse, contextlib, difflib, os, re, subprocess, sys
+import argparse, contextlib, datetime, difflib, os, re, subprocess, sys, textwrap
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -18,10 +18,10 @@ def makeParser():
     parser.add_argument("--force", action="store_true",
                         help="skip mtime and equality checks before regenerating an asset")
 
-    parser.add_argument("--lang", action="store_true", default=False,
+    parser.add_argument("--lang", action="store_true",
                         help="update .ts/.qm files")
 
-    parser.add_argument("--clean-lang", action="store_true", default=False,
+    parser.add_argument("--clean-lang", action="store_true",
                         help="update .ts/.qm files without source code info")
 
     parser.add_argument("--lupdate", default="pyside6-lupdate",
@@ -36,8 +36,11 @@ def makeParser():
     parser.add_argument("--no-uic-cleanup", action="store_true",
                         help="don't postprocess uic output")
 
-    parser.add_argument("--version", action="store_true", default=False,
+    parser.add_argument("--version", action="store_true",
                         help="show tool versions and exit")
+
+    parser.add_argument("--freeze", default="", metavar="QT_API",
+                        help="write frozen constants to appconsts.py and exit")
 
     return parser
 
@@ -94,6 +97,29 @@ def writeIfDifferent(path, text, ignoreChangedLines=None):
             print("Wrote", path)
     else:
         Path(path).touch()
+
+
+def patchSection(path: str, contents: str):
+    def ensureNewline(s: str):
+        return s + ("" if s.endswith("\n") else "\n")
+
+    with open(path, "rt") as f:
+        text = f.read()
+
+    contents = ensureNewline(contents)
+    lines = contents.splitlines(keepends=True)
+    assert len(lines) >= 2
+    beginMarker = lines[0]
+    endMarker = lines[-1]
+    assert beginMarker
+    assert endMarker
+
+    beginPos = text.index(beginMarker)
+    endPos = text.index(endMarker.rstrip())
+
+    newText = (text[: beginPos] + contents + text[endPos + len(endMarker) :])
+    writeIfDifferent(path, newText)
+    return newText
 
 
 def writeStatusIcon(fill='#ff00ff', char='X', round=2):
@@ -215,6 +241,21 @@ def updateQmFiles(lrelease):
     """)
 
 
+def writeFreezeFile(qtApi: str):
+    buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
+    freezeText = textwrap.dedent(f"""\
+        # BEGIN_FREEZE_CONSTS
+        ####################################
+        # Do not commit these changes!
+        ####################################
+        
+        APP_FROZEN = True
+        APP_BUILD_DATE = "{buildDate}"
+        APP_FIXED_QT_BINDING = "{qtApi.lower()}"
+        # END_FREEZE_CONSTS""")
+    patchSection(Path(SRC_DIR) / 'appconsts.py', freezeText)
+
+
 if __name__ == '__main__':
     args = makeParser().parse_args()
 
@@ -226,6 +267,10 @@ if __name__ == '__main__':
         toolVersions += call(args.lupdate, "-version").stdout
         toolVersions += call(args.lrelease, "-version").stdout
         print(toolVersions)
+        sys.exit(0)
+
+    if args.freeze:
+        writeFreezeFile(args.freeze)
         sys.exit(0)
 
     # Generate status icons.

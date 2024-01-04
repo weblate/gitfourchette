@@ -1,5 +1,8 @@
+import os
 from typing import Callable
+
 from gitfourchette.qt import *
+
 _supportedImageFormats = None
 _stockIconCache = {}
 

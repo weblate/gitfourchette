@@ -1,5 +1,6 @@
 """Non-textual diffs"""
 import contextlib
+import os
 import re
 from dataclasses import dataclass
 

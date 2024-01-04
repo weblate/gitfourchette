@@ -1,4 +1,5 @@
 import errno
+import os
 
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor

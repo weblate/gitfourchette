@@ -1,3 +1,5 @@
+import os
+
 from gitfourchette.qt import *
 
 

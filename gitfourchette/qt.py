@@ -11,12 +11,13 @@
 #
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 
-import os
-import sys
+import json as _json
+import os as _os
+import sys as _sys
 
 from gitfourchette.appconsts import *
 
-QT_BINDING_ORDER = ["pyqt6", "pyqt5", "pyside6", "pyside2", "qtpy"]
+_qtBindingOrder = ["pyqt6", "pyqt5", "pyside6", "pyside2"]
 
 QTPY = False
 QT5 = False
@@ -27,32 +28,29 @@ PYQT5 = False
 PYQT6 = False
 MACOS = False
 WINDOWS = False
-PYINSTALLER_BUNDLE = (getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'))
-DEVDEBUG = __debug__ and not PYINSTALLER_BUNDLE
+
+DEVDEBUG = __debug__ and not APP_FROZEN
 """ Enable expensive debug assertions """
 
-if PYINSTALLER_BUNDLE:  # in PyInstaller bundles, target a fixed API
-    from ._buildconstants import qtBinding as QT_BINDING_FIXED
-    QT_BINDING_ORDER = [QT_BINDING_FIXED]
-    qtBindingBootPref = QT_BINDING_ORDER[0]
+if APP_FIXED_QT_BINDING:  # in frozen apps (PyInstaller, AppImage, Flatpak), target a fixed API
+    _qtBindingOrder = [APP_FIXED_QT_BINDING]
+    qtBindingBootPref = _qtBindingOrder[0]
 else:
-    qtBindingBootPref = os.environ.get("QT_API", "").lower()
+    qtBindingBootPref = _os.environ.get("QT_API", "").lower()
 
     # If QT_API isn't set, see if the app's prefs file specifies a preferred Qt binding
     if not qtBindingBootPref:
-        import json
-        prefsPath = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
-        prefsPath = os.path.join(prefsPath, "GitFourchette", "prefs.json")
-        jsonPrefs = None
+        _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
+        _prefsPath = _os.path.join(_prefsPath, "GitFourchette", "prefs.json")
+        _jsonPrefs = None
         try:
-            with open(prefsPath, 'rt', encoding='utf-8') as f:
-                jsonPrefs = json.load(f)
-            qtBindingBootPref = jsonPrefs.get("debug_forceQtApi", "").lower()
+            with open(_prefsPath, 'rt', encoding='utf-8') as f:
+                _jsonPrefs = _json.load(f)
+            qtBindingBootPref = _jsonPrefs.get("debug_forceQtApi", "").lower()
         except (IOError, ValueError):
             pass
-        del json, prefsPath, jsonPrefs
 
-    QTPY = os.environ.get("QTPY", "").lower() in ["1", "true", "yes"]
+    QTPY = _os.environ.get("QTPY", "").lower() in ["1", "true", "yes"]
 
 if QTPY:
     from qtpy.QtCore import *
@@ -63,19 +61,20 @@ if QTPY:
 else:
     if not qtBindingBootPref:
         pass
-    elif qtBindingBootPref not in QT_BINDING_ORDER:
+    elif qtBindingBootPref not in _qtBindingOrder:
         # Sanitize value if user passed in junk
-        sys.stderr.write(f"Unrecognized Qt binding name: '{qtBindingBootPref}'\n")
-        qtBindingBootPref = ""
+        _sys.stderr.write(f"Unrecognized Qt binding name: '{qtBindingBootPref}'\n")
+        _qtBindingBootPref = ""
     else:
         # Move preferred binding to front of list
-        QT_BINDING_ORDER.remove(qtBindingBootPref)
-        QT_BINDING_ORDER.insert(0, qtBindingBootPref)
+        _qtBindingOrder.remove(qtBindingBootPref)
+        _qtBindingOrder.insert(0, qtBindingBootPref)
 
-    print("Qt binding order is:", QT_BINDING_ORDER)
+    if DEVDEBUG:
+        print("Qt binding order is:", _qtBindingOrder)
 
     qtBindingName = ""
-    for _tentative in QT_BINDING_ORDER:
+    for _tentative in _qtBindingOrder:
         assert _tentative.islower()
 
         try:
@@ -124,11 +123,9 @@ else:
         except ImportError:
             continue
 
-    del _tentative
-
 if not qtBindingName:
-    sys.stderr.write("No Qt binding found. Please install either PyQt5, PyQt6, or PySide6.\n")
-    sys.exit(1)
+    _sys.stderr.write("No Qt binding found. Please install either PyQt5, PyQt6, or PySide6.\n")
+    _sys.exit(1)
 
 # -----------------------------------------------------------------------------
 # Set up platform constants
@@ -142,16 +139,16 @@ FREEDESKTOP = (KERNEL == "linux") or ("bsd" in KERNEL)
 # Exclude some known bad PySide6 versions
 
 if PYSIDE6:
-    badPyside6Versions = [
+    _badPyside6Versions = [
         "6.4.0",  # PYSIDE-2104
         "6.4.0.1",  # PYSIDE-2104
         "6.5.1",  # PYSIDE-2346
     ]
-    if any(v == qtBindingVersion for v in badPyside6Versions):
+    if any(v == qtBindingVersion for v in _badPyside6Versions):
         QApplication()
         QMessageBox.critical(None, "", f"PySide6 version {qtBindingVersion} isn't supported.\n"
                                        f"Please upgrade to the latest version of PySide6.")
-        exit(1)
+        _sys.exit(1)
 
 # -----------------------------------------------------------------------------
 # Patch some holes in Qt bindings with stuff that qtpy doesn't provide

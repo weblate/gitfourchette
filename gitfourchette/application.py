@@ -1,3 +1,5 @@
+import os
+
 from gitfourchette.qt import *
 from gitfourchette.toolbox import NonCriticalOperation
 from gitfourchette import settings

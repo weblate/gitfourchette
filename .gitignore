@@ -2,5 +2,4 @@ __pycache__
 .DS_Store
 build/
 dist/
-_buildconstants.py
 gitfourchette.egg-info/

@@ -12,6 +12,7 @@ from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.forms.ui_identitydialog2 import Ui_IdentityDialog2
 import contextlib
 import html
+import os
 
 
 class NewCommit(RepoTask):

@@ -1,3 +1,5 @@
+import os
+
 from gitfourchette import settings
 from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.exttools import PREFKEY_MERGETOOL

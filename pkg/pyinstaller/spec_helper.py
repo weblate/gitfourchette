@@ -1,4 +1,4 @@
-import datetime
+import subprocess
 from pathlib import Path
 
 ROOT = Path().resolve()
@@ -39,8 +39,4 @@ def getExcludeList(api):
 
 
 def writeBuildConstants(api):
-    # Write _buildconstants.py
-    buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
-    with open(ROOT/'gitfourchette/_buildconstants.py', 'wt') as f:
-        f.write(f"buildDate = \"{buildDate}\"\n")
-        f.write(f"qtBinding = \"{api.lower()}\"")
+    subprocess.run(['python3', ROOT/'update_resources.py', '--freeze', api])
