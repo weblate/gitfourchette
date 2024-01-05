@@ -46,7 +46,7 @@
    <item row="1" column="1">
     <widget class="QLineEdit" name="emailEdit"/>
    </item>
-   <item row="2" column="0">
+   <item row="3" column="0">
     <widget class="QLabel" name="timeLabel">
      <property name="text">
       <string>&amp;Time:</string>
@@ -56,21 +56,32 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QDateTimeEdit" name="timeEdit">
-     <property name="currentSection">
-      <enum>QDateTimeEdit::YearSection</enum>
-     </property>
-     <property name="displayFormat">
-      <string notr="true">yyyy-MM-dd HH:mm:ss (t)</string>
-     </property>
-     <property name="calendarPopup">
-      <bool>true</bool>
-     </property>
-     <property name="timeSpec">
-      <enum>Qt::LocalTime</enum>
-     </property>
-    </widget>
+   <item row="3" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QDateTimeEdit" name="timeEdit">
+       <property name="currentSection">
+        <enum>QDateTimeEdit::YearSection</enum>
+       </property>
+       <property name="displayFormat">
+        <string notr="true">yyyy-MM-dd HH:mm:ss (t)</string>
+       </property>
+       <property name="calendarPopup">
+        <bool>true</bool>
+       </property>
+       <property name="timeSpec">
+        <enum>Qt::LocalTime</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="nowButton">
+       <property name="text">
+        <string>Now</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
@@ -78,6 +89,7 @@
   <tabstop>nameEdit</tabstop>
   <tabstop>emailEdit</tabstop>
   <tabstop>timeEdit</tabstop>
+  <tabstop>nowButton</tabstop>
  </tabstops>
  <resources/>
  <connections/>

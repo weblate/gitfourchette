@@ -24,12 +24,17 @@ class SignatureForm(QWidget):
         self.ui.nameEdit.textChanged.connect(self.signatureChanged)
         self.ui.emailEdit.textChanged.connect(self.signatureChanged)
         self.ui.timeEdit.timeChanged.connect(self.signatureChanged)
+        self.ui.nowButton.clicked.connect(self.setDateTimeNow)
 
     def setSignature(self, signature: Signature):
         qdt: QDateTime = QDateTime.fromSecsSinceEpoch(signature.time, Qt.TimeSpec.OffsetFromUTC, signature.offset * 60)
         self.ui.nameEdit.setText(signature.name)
         self.ui.emailEdit.setText(signature.email)
         self.ui.timeEdit.setDateTime(qdt)
+
+    def setDateTimeNow(self):
+        now = QDateTime.currentDateTime()
+        self.ui.timeEdit.setDateTime(now)
 
     def installValidator(self, validator: ValidatorMultiplexer):
         validator.connectInput(self.ui.nameEdit, SignatureForm.validateInput)
