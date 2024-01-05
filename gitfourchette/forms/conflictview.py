@@ -88,6 +88,10 @@ class ConflictView(QWidget):
     def displayConflict(self, conflict: DiffConflict):
         assert conflict is not None, "don't call displayConflict with None"
 
+        # Don't lose captions & focused widget if we're showing the exact same conflict
+        if conflict == self.currentConflict:
+            return
+
         self.currentConflict = conflict
 
         for radio in self.ui.groupBox.findChildren(QRadioButton):
