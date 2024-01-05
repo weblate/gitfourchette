@@ -1,9 +1,12 @@
+import re
+
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
 
 
 SEARCH_PULSE_DELAY = 250
+LIKELY_HASH_PATTERN = re.compile(r"[0-9A-Fa-f]{1,40}")
 
 
 class SearchBar(QWidget):
@@ -105,12 +108,8 @@ class SearchBar(QWidget):
     def onSearchTextChanged(self, text: str):
         self.searchTerm = text.strip().lower()
 
-        if 0 < len(self.searchTerm) < 40:
-            try:
-                int(self.searchTerm, 16)
-                self.searchTermLooksLikeHash = True
-            except ValueError:
-                self.searchTermLooksLikeHash = False
+        if 0 < len(self.searchTerm) <= 40:
+            self.searchTermLooksLikeHash = bool(re.match(LIKELY_HASH_PATTERN, text))
 
         if self.searchTerm:
             self.searchPulseTimer.start()
