@@ -1,14 +1,16 @@
-from gitfourchette import trash
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.trash import Trash
 from gitfourchette.toolbox import *
 from gitfourchette.forms.stashdialog import StashDialog
 
 
 def backupStash(repo: Repo, stashCommitId: Oid):
-    repoTrash = trash.Trash(repo)
-    trashFile = repoTrash.newFile(ext=".txt", originalPath="DELETED_STASH")
+    trashFile = Trash.instance().newFile(repo.workdir, ext=".txt", originalPath="DELETED_STASH")
+
+    if not trashFile:
+        return
 
     text = F"""\
 To recover this stash, paste the hash below into "Repo > Recall Lost Commit" in {qAppName()}:

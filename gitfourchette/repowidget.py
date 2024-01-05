@@ -28,7 +28,6 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
 from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
-from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
 
 TAG = "RepoWidget"
@@ -844,44 +843,6 @@ class RepoWidget(QWidget):
     def selectRef(self, refName: str):
         oid = self.repo.get_commit_oid_from_refname(refName)
         self.jump(NavLocator(NavContext.COMMITTED, commit=oid))
-
-    # -------------------------------------------------------------------------
-
-    def openRescueFolder(self):
-        trash = Trash(self.repo)
-        if trash.exists():
-            openFolder(trash.trashDir)
-        else:
-            showInformation(
-                self,
-                self.tr("Open Rescue Folder"),
-                self.tr("There’s no rescue folder for this repository. Perhaps you haven’t discarded a change with {0} yet.").format(qAppName()))
-
-    def clearRescueFolder(self):
-        trash = Trash(self.repo)
-        sizeOnDisk, patchCount = trash.getSize()
-
-        if patchCount <= 0:
-            showInformation(
-                self,
-                self.tr("Clear Rescue Folder"),
-                self.tr("There are no discarded changes to delete."))
-            return
-
-        humanSize = self.locale().formattedDataSize(sizeOnDisk)
-
-        askPrompt = (
-            self.tr("Do you want to permanently delete <b>%n</b> discarded patch(es)?", "", patchCount) + "<br>" +
-            self.tr("This will free up {0} on disk.").format(humanSize) + "<br>" +
-            translate("Global", "This cannot be undone!"))
-
-        askConfirmation(
-            parent=self,
-            title=self.tr("Clear rescue folder"),
-            text=askPrompt,
-            callback=lambda: trash.clear(),
-            okButtonText=self.tr("Delete permanently"),
-            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
 
     # -------------------------------------------------------------------------
 

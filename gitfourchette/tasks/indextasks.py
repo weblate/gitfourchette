@@ -63,7 +63,7 @@ class DiscardFiles(_BaseStagingTask):
 
         yield from self.flowEnterWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
-        Trash(self.repo).backupPatches(patches)
+        Trash.instance().backupPatches(self.repo.workdir, patches)
         self.repo.restore_files_from_index(paths)
 
 
@@ -136,7 +136,7 @@ class ApplyPatch(RepoTask):
                 verb=title,
                 buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
-            Trash(self.repo).backupPatch(subPatch, fullPatch.delta.new_file.path)
+            Trash.instance().backupPatch(self.repo.workdir, subPatch, fullPatch.delta.new_file.path)
             applyLocation = GIT_APPLY_LOCATION_WORKDIR
         else:
             applyLocation = GIT_APPLY_LOCATION_INDEX
@@ -175,7 +175,7 @@ class ApplyPatch(RepoTask):
         elif purpose & PatchPurpose.STAGE:
             self.repo.stage_files([fullPatch])
         elif purpose & PatchPurpose.DISCARD:
-            Trash(self.repo).backupPatches([fullPatch])
+            Trash.instance().backupPatches(self.repo.workdir, [fullPatch])
             self.repo.restore_files_from_index([fullPatch.delta.new_file.path])
         else:
             raise KeyError(f"applyFullPatch: unsupported purpose {purpose}")
@@ -218,8 +218,7 @@ class HardSolveConflict(RepoTask):
         repo.refresh_index()
         assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
 
-        trash = Trash(repo)
-        trash.backupFile(path)
+        Trash.instance().backupFile(repo.workdir, path)
 
         # TODO: we should probably set the modes correctly and stuff as well
         if keepOid == NULL_OID:

@@ -23,6 +23,7 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.repowidget import RepoWidget
 from gitfourchette.tasks import TaskInvoker, TaskBook, RepoTask
 from gitfourchette.toolbox import *
+from gitfourchette.trash import Trash
 
 
 class MainWindow(QMainWindow):
@@ -295,13 +296,6 @@ class MainWindow(QMainWindow):
 
         repoMenu.addSeparator()
 
-        a = repoMenu.addAction(self.tr("Open Trash..."), self.openRescueFolder)
-        a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
-        a.setStatusTip(self.tr("Explore changes that you may have discarded by mistake"))
-
-        a = repoMenu.addAction(self.tr("Empty Trash..."), self.clearRescueFolder)
-        a.setStatusTip(self.tr("Delete all discarded changes from the trash folder"))
-
         a = repoMenu.addAction(self.tr("Recall Lost Commit..."))
         TaskBook.fillAction(a, tasks.RecallCommit)
 
@@ -378,6 +372,15 @@ class MainWindow(QMainWindow):
         a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
         a.setMenuRole(QAction.MenuRole.AboutRole)
         a.setIcon(QIcon("assets:gitfourchette-simple.png"))
+
+        helpMenu.addSeparator()
+
+        a = helpMenu.addAction(self.tr("Open Trash..."), self.openRescueFolder)
+        a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        a.setStatusTip(self.tr("Explore changes that you may have discarded by mistake"))
+
+        a = helpMenu.addAction(self.tr("Empty Trash..."), self.clearRescueFolder)
+        a.setStatusTip(self.tr("Delete all discarded changes from the trash folder"))
 
         # -------------------------------------------------------------
 
@@ -606,14 +609,6 @@ class MainWindow(QMainWindow):
     def pushBranch(self, rw: RepoWidget):
         rw.startPushFlow()
 
-    @needRepoWidget
-    def openRescueFolder(self, rw: RepoWidget):
-        rw.openRescueFolder()
-
-    @needRepoWidget
-    def clearRescueFolder(self, rw: RepoWidget):
-        rw.clearRescueFolder()
-
     def _openLocalConfigFile(self, fullPath: str):
         def createAndOpen():
             open(fullPath, "ab").close()
@@ -658,6 +653,45 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def previousFile(self, rw: RepoWidget):
         rw.selectNextFile(False)
+
+    # -------------------------------------------------------------------------
+    # Help menu
+
+    def openRescueFolder(self):
+        trash = Trash.instance()
+        if trash.exists():
+            openFolder(trash.trashDir)
+        else:
+            showInformation(
+                self,
+                self.tr("Open trash folder"),
+                self.tr("There’s no trash folder. Perhaps you haven’t discarded a change with {0} yet.").format(qAppName()))
+
+    def clearRescueFolder(self):
+        trash = Trash.instance()
+        sizeOnDisk, patchCount = trash.size()
+
+        if patchCount <= 0:
+            showInformation(
+                self,
+                self.tr("Clear trash folder"),
+                self.tr("There are no discarded changes to delete."))
+            return
+
+        humanSize = self.locale().formattedDataSize(sizeOnDisk)
+
+        askPrompt = (
+                self.tr("Do you want to permanently delete <b>%n</b> discarded patch(es)?", "", patchCount) + "<br>" +
+                self.tr("This will free up {0} on disk.").format(humanSize) + "<br>" +
+                translate("Global", "This cannot be undone!"))
+
+        askConfirmation(
+            parent=self,
+            title=self.tr("Clear trash folder"),
+            text=askPrompt,
+            callback=lambda: trash.clear(),
+            okButtonText=self.tr("Delete permanently"),
+            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
 
     # -------------------------------------------------------------------------
     # File menu callbacks

@@ -1,21 +1,36 @@
-from gitfourchette.appconsts import APP_SYSTEM_NAME
 from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.porcelain import *
+from gitfourchette.qt import *
 import datetime
 import os
 import shutil
 
 
 class Trash:
-    DIR_NAME = f"{APP_SYSTEM_NAME}-trash"
-    TIME_FORMAT = '%Y%m%dT%H%M%S'
+    DIR_NAME = "trash"
+    TIME_FORMAT = '%Y%m%d-%H%M%S'
+    _instance = None
 
-    def __init__(self, repo: Repo):
-        self.repo = repo
-        self.trashDir = os.path.join(repo.path, Trash.DIR_NAME)
+    def __init__(self):
+        cacheDir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
+        self.trashDir = os.path.join(cacheDir, Trash.DIR_NAME)
         self.trashFiles = []
         self.refreshFiles()
+
+    @staticmethod
+    def instance():
+        if not Trash._instance:
+            Trash._instance = Trash()
+        return Trash._instance
+
+    @property
+    def maxFileCount(self) -> int:
+        return settings.prefs.trash_maxFiles
+
+    @property
+    def maxFileSize(self) -> int:
+        return settings.prefs.trash_maxFileSizeKB * 1024
 
     def exists(self):
         return os.path.isdir(self.trashDir)
@@ -26,54 +41,63 @@ class Trash:
             files = os.listdir(self.trashDir)
             self.trashFiles = sorted(files, reverse=True)
 
-    def makeRoom(self, maxFiles=-1):
-        if maxFiles < 0:
-            maxFiles = max(0, settings.prefs.trash_maxFiles-1)
-
+    def makeRoom(self, maxFiles: int):
         while len(self.trashFiles) > maxFiles:
             f = self.trashFiles.pop()
             fullPath = os.path.join(self.trashDir, f)
             if os.path.isfile(fullPath):
-                log.info("trash", "Deleting trash file", fullPath)
+                log.verbose("trash", "Deleting trash file", fullPath)
                 os.unlink(fullPath)
 
-    def newFile(self, ext: str = "", originalPath: str = "") -> str:
+    def newFile(self, workdir: str, ext: str = "", originalPath: str = "") -> str:
+        maxFiles = self.maxFileCount
+        if maxFiles == 0:
+            return ""
+
+        maxFiles = max(0, maxFiles - 1)
+        self.makeRoom(maxFiles)
+
         os.makedirs(self.trashDir, exist_ok=True)
 
         now = datetime.datetime.now().strftime(Trash.TIME_FORMAT)
-        baseName = os.path.basename(originalPath)
-
-        path = os.path.join(self.trashDir, F'{now}-{baseName}{ext}')
+        wdID = os.path.basename(os.path.normpath(workdir))
+        base = os.path.basename(os.path.normpath(originalPath))
+        stem = f"{now}-{wdID}---{base}"
+        path = os.path.join(self.trashDir, stem + ext)
 
         # If a file exists at this path, tack a number to the end of the name.
         for differentiator in range(2, 100):  # If we reach 99, just overwrite the last one.
             if os.path.exists(path):
-                path = os.path.join(self.trashDir, F'{now}-{baseName}({differentiator}){ext}')
+                path = os.path.join(self.trashDir, f"{stem}({differentiator}){ext}")
             else:
                 break
 
-        self.makeRoom()
         self.trashFiles.insert(0, path)
-
         return path
 
-    def backupFile(self, path: str):
-        fullPath = os.path.join(self.repo.workdir, path)
+    def backupFile(self, workdir: str, originalPath: str) -> str:
+        fullPath = os.path.join(workdir, originalPath)
 
-        if os.lstat(fullPath).st_size > 1024*settings.prefs.trash_maxFileSizeKB:
-            return None
+        if os.lstat(fullPath).st_size > self.maxFileSize:
+            return ""
 
         # Copy new file
-        trashedPath = self.newFile(originalPath=path)
-        shutil.copyfile(fullPath, trashedPath)
-        return trashedPath
+        trashPath = self.newFile(workdir, originalPath=originalPath)
+        if not trashPath:
+            return ""
 
-    def backupPatch(self, data: bytes, originalPath: str = ""):
-        trashFile = self.newFile(ext=".patch", originalPath=originalPath)
+        shutil.copyfile(fullPath, trashPath)
+        return trashPath
+
+    def backupPatch(self, workdir: str, data: bytes, originalPath: str = ""):
+        trashFile = self.newFile(workdir, ext=".patch", originalPath=originalPath)
+        if not trashFile:
+            return ""
         with open(trashFile, 'wb') as f:
             f.write(data)
+        return trashFile
 
-    def backupPatches(self, patches: list[Patch]):
+    def backupPatches(self, workdir: str, patches: list[Patch]):
         for patch in patches:
             path = patch.delta.new_file.path
 
@@ -82,13 +106,13 @@ class Trash:
                 continue
 
             elif patch.delta.status == GIT_DELTA_UNTRACKED or patch.delta.is_binary:
-                self.backupFile(path)
+                self.backupFile(workdir, path)
 
             else:
                 # Write text patch
-                self.backupPatch(patch.data, path)
+                self.backupPatch(workdir, patch.data, path)
 
-    def getSize(self):
+    def size(self) -> tuple[int, int]:
         size = 0
         count = 0
 
