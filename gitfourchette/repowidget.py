@@ -791,11 +791,12 @@ class RepoWidget(QWidget):
         statusWarning = ""
         statusButtonCaption = ""
         statusButtonCallback = None
+
         if not repo:
             pass
+
         elif repo.state() & GIT_REPOSITORY_STATE_MERGE:
-            inBrackets += ", \u26a0 "
-            inBrackets += self.tr("MERGING")
+            inBrackets += ", \u26a0 " + self.tr("MERGING")
             try:
                 mh = repo.listall_mergeheads()[0]
                 name = self.state.reverseRefCache[mh][0]
@@ -805,15 +806,27 @@ class RepoWidget(QWidget):
                 message = self.tr("Merging")
             message = f"<b>{message}</b>: "
             if not repo.any_conflicts:
-                message += self.tr("All conflicts fixed. Commit to conclude merge.")
+                message += self.tr("All conflicts fixed. Commit to conclude.")
             else:
                 message += self.tr("Conflicts need fixing")
             statusWarning = message
             statusButtonCaption = self.tr("Abort Merge")
             statusButtonCallback = lambda: self.runTask(AbortMerge)
+
+        elif repo.state() & GIT_REPOSITORY_STATE_CHERRYPICK:
+            inBrackets += ", \u26a0 " + self.tr("CHERRY-PICKING")
+            message = self.tr("Cherry-picking")
+            message = f"<b>{message}</b>: "
+            if not repo.any_conflicts:
+                message += self.tr("All conflicts fixed. Commit to conclude.")
+            else:
+                message += self.tr("Conflicts need fixing")
+            statusWarning = message
+            statusButtonCaption = self.tr("Abort Cherry-Pick")
+            statusButtonCallback = lambda: self.runTask(AbortMerge)
+
         elif repo.any_conflicts:
-            inBrackets += ", \u26a0 "
-            inBrackets += self.tr("conflict")
+            inBrackets += ", \u26a0 " + self.tr("CONFLICT")
             statusWarning = self.tr("Conflicts need fixing")
 
         self.statusWarning.emit(statusWarning)

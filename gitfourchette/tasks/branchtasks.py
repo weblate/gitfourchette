@@ -312,13 +312,13 @@ class MergeBranch(RepoTask):
         if anyConflicts:
             message = paragraphs(
                 self.tr("Merging is not possible right now because you have unresolved conflicts."),
-                self.tr("Before you try again, please fix the conflicts."))
+                self.tr("Fix the conflicts to proceed."))
             yield from self.flowAbort(text=message)
 
         elif anyStagedFiles:
             message = paragraphs(
                 self.tr("Merging is not possible right now because you have staged changes."),
-                self.tr("Before you try again, please commit your staged changes, or commit them."))
+                self.tr("Commit your changes or stash them to proceed."))
             yield from self.flowAbort(text=message)
 
         elif analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:

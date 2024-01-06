@@ -348,22 +348,34 @@ class AbortMerge(RepoTask):
         return TaskEffects.DefaultRefresh
 
     def flow(self):
-        if self.repo.state() != GIT_REPOSITORY_STATE_MERGE:
-            yield from self.flowAbort(self.tr("No merge is in progress."), icon='information')
+        isMerging = self.repo.state() == GIT_REPOSITORY_STATE_MERGE
+        isCherryPicking = self.repo.state() == GIT_REPOSITORY_STATE_CHERRYPICK
+
+        if not isMerging and not isCherryPicking:
+            yield from self.flowAbort(self.tr("No merge or cherry-pick is in progress."), icon='information')
 
         try:
             abortList = self.repo.get_reset_merge_file_list()
         except ValueError:
-            message = self.tr("The merge cannot be aborted right now "
-                              "because you have files that are both staged and unstaged.")
+            message = self.tr("Cannot abort right now because you have files that are both staged and unstaged.")
             yield from self.flowAbort(message)
 
         message = paragraphs(
-            self.tr("Do you want to abort the merge? All conflicts will be cleared "
-                    "and all <b>staged</b> changes will be lost."),
-            self.tr("%n files will be reset:", "", len(abortList)))
-        message += ulList(abortList)
-        yield from self.flowConfirm(text=message)
+            self.tr("Do you want to abort the merge?") if not isCherryPicking
+            else self.tr("Do you want to abort the cherry-pick?"),
+        )
+
+        if not abortList:
+            message += self.tr("No files are affected.")
+        else:
+            message += paragraphs(
+                self.tr("All conflicts will be cleared and all <b>staged</b> changes will be lost."),
+                self.tr("%n files will be reset:", "", len(abortList)))
+            message += ulList(abortList)
+
+        verb = self.tr("Abort merge") if isMerging else self.tr("Abort cherry-pick")
+
+        yield from self.flowConfirm(text=message, verb=verb)
 
         yield from self.flowEnterUiThread()
         self.repo.reset_merge()

@@ -43,7 +43,7 @@ class NewCommit(RepoTask):
             committerSignature=sig,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
-            mergeParents=self.repo.listall_mergeheads(),
+            repoState=self.repo.state(),
             parent=self.parentWidget())
 
         cd.ui.revealAuthor.setChecked(initialAuthor is not None and initialAuthor != sig)
@@ -94,6 +94,10 @@ class AmendCommit(RepoTask):
             yield from self.flowAbort(
                 self.tr("Please fix merge conflicts in the working directory before amending the commit."))
 
+        state = self.repo.state()
+        if state == GIT_REPOSITORY_STATE_CHERRYPICK:
+            yield from self.flowAbort(self.tr("You are in the middle of a cherry-pick – cannot amend."))
+
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = self.repo.head_commit
 
@@ -104,7 +108,7 @@ class AmendCommit(RepoTask):
             committerSignature=self.repo.default_signature,
             amendingCommitHash=shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
-            mergeParents=[],
+            repoState=state,
             parent=self.parentWidget())
 
         setWindowModal(cd)
@@ -410,20 +414,32 @@ class CherrypickCommit(RepoTask):
         return effects
 
     def flow(self, oid: Oid):
+        # Prevent cherry-picking with staged changes, like vanilla git (despite libgit2 allowing it)
+        if self.repo.any_staged_changes:
+            yield from self.flowAbort(paragraphs(
+                self.tr("Cherry-picking is not possible right now because you have staged changes."),
+                self.tr("Commit your changes or stash them to proceed.")))
+
         self.didCommit = False
 
         yield from self.flowEnterWorkerThread()
         self.repo.cherrypick(oid)
+
         anyConflicts = self.repo.any_conflicts
         commit = self.repo.peel_commit(oid)
+        dud = not anyConflicts and not self.repo.any_staged_changes
 
-        self.repo.state_cleanup()  # also cleans up .git/MERGE_MSG
+        # If cherrypicking didn't do anything, don't let the CHERRYPICK state linger.
+        # (Otherwise, the state will be cleared when we commit)
+        if dud:
+            self.repo.state_cleanup()
 
+        # Back to UI thread
         yield from self.flowEnterUiThread()
 
-        if not anyConflicts and not self.repo.any_staged_changes:
-            info = self.tr("There’s nothing to cherry-pick from “{0}” "
-                           "that the current branch doesn’t already have.").format(shortHash(oid))
+        if dud:
+            info = self.tr("There’s nothing to cherry-pick from “{0}” that the current branch doesn’t already have."
+                           ).format(shortHash(oid))
             yield from self.flowAbort(info, "information")
 
         self.rw.state.setDraftCommitMessage(commit.message, author=commit.author)
