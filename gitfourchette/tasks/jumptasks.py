@@ -371,11 +371,15 @@ class RefreshRepo(tasks.RepoTask):
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
             oldRefCache = rw.state.refCache
-            anyRefsChanged = rw.state.refreshRefCache()
+            needGraphRefresh = rw.state.refreshRefCache()
+            needGraphRefresh |= rw.state.refreshMergeheadsCache()
 
             # Load commits from changed refs only
-            if anyRefsChanged:
-                assert onAppThread()  # loadTaintedCommitsOnly is not thread safe for now
+            if needGraphRefresh:
+                # Make sure we're on the UI thread.
+                # We don't want GraphView to try to read an incomplete state while repainting.
+                assert onAppThread()
+
                 nRemovedRows, nAddedRows = rw.state.loadChangedRefs(oldRefCache)
 
                 # Refresh top of graphview
@@ -388,7 +392,7 @@ class RefreshRepo(tasks.RepoTask):
                     else:
                         rw.graphView.setCommitSequence(rw.state.commitSequence)
             else:
-                log.info(TAG, "Refresh: No refs changed.")
+                log.verbose(TAG, "Refresh: No need to refresh the graph.")
 
         # Schedule a repaint of the entire GraphView if the refs changed
         if effectFlags & (TaskEffects.Head | TaskEffects.Refs):

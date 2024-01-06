@@ -55,6 +55,8 @@ class RepoState(QObject):
     reverseRefCache: dict[Oid, list[str]]
     "Maps commit oids to reference names pointing to this commit"
 
+    mergeheadsCache: list[Oid]
+
     # path of superproject if this is a submodule
     superproject: str
 
@@ -108,7 +110,10 @@ class RepoState(QObject):
         self.homeBranch = ""
         self.refCache = {}
         self.reverseRefCache = {}
+        self.mergeheadsCache = []
+
         self.refreshRefCache()
+        self.refreshMergeheadsCache()
 
         self.superproject = repo.get_superproject()
 
@@ -175,6 +180,14 @@ class RepoState(QObject):
         self.reverseRefCache = reverseRefCache
         return True
 
+    @benchmark
+    def refreshMergeheadsCache(self):
+        mh = self.repo.listall_mergeheads()
+        if mh != self.mergeheadsCache:
+            self.mergeheadsCache = mh
+            return True
+        return False
+
     @property
     def shortName(self) -> str:
         prefix = ""
@@ -219,12 +232,9 @@ class RepoState(QObject):
     def _uncommittedChangesFakeCommitParents(self):
         try:
             head = self.refCache["HEAD"]
+            return [head] + self.mergeheadsCache
         except KeyError:  # Unborn HEAD
             return []
-
-        mergeHeads = self.repo.listall_mergeheads()
-        mergeHeads.insert(0, head)
-        return mergeHeads
 
     @benchmark
     def loadChangedRefs(self, oldRefCache: dict[str, Oid]):
