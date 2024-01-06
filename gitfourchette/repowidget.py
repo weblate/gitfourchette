@@ -801,7 +801,7 @@ class RepoWidget(QWidget):
                 mh = repo.listall_mergeheads()[0]
                 name = self.state.reverseRefCache[mh][0]
                 name = RefPrefix.split(name)[1]
-                message = self.tr("Merging “{0}”".format(escape(name)))
+                message = self.tr("Merging “{0}”").format(escape(name))
             except (IndexError, KeyError):
                 message = self.tr("Merging")
             message = f"<b>{message}</b>: "

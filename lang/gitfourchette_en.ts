@@ -19,31 +19,27 @@
     </message>
 </context>
 <context>
-    <name>ApplyPatchFile</name>
+    <name>AbortMerge</name>
     <message numerus="yes">
-        <source>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; files:</source>
+        <source>%n files will be reset:</source>
         <translation>
-            <numerusform>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; file:</numerusform>
-            <numerusform>Patch file &lt;b&gt;“{0}”&lt;/b&gt; can be applied cleanly to your working directory. It will modify &lt;b&gt;%n&lt;/b&gt; files:</numerusform>
+            <numerusform>%n file will be reset:</numerusform>
+            <numerusform>%n files will be reset:</numerusform>
         </translation>
     </message>
+</context>
+<context>
+    <name>ApplyPatchFile</name>
     <message numerus="yes">
-        <source>(and %n more)</source>
+        <source>It will modify &lt;b&gt;%n&lt;/b&gt; files:</source>
         <translation>
-            <numerusform>(and %n more)</numerusform>
-            <numerusform>(and %n more)</numerusform>
+            <numerusform>It will modify &lt;b&gt;%n&lt;/b&gt; file:</numerusform>
+            <numerusform>It will modify &lt;b&gt;%n&lt;/b&gt; files:</numerusform>
         </translation>
     </message>
 </context>
 <context>
     <name>CommittedFiles</name>
-    <message numerus="yes">
-        <source>Open &amp;Diff(s) in {0}</source>
-        <translation>
-            <numerusform>Open &amp;Diff in {0}</numerusform>
-            <numerusform>Open &amp;Diffs in {0}</numerusform>
-        </translation>
-    </message>
     <message numerus="yes">
         <source>E&amp;xport Diff(s) As Patch...</source>
         <translation>
@@ -52,10 +48,17 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open &amp;Path(s)</source>
+        <source>&amp;Edit in {0}</source>
         <translation>
-            <numerusform>Open &amp;Path</numerusform>
-            <numerusform>Open &amp;Paths</numerusform>
+            <numerusform>&amp;Edit in {0}</numerusform>
+            <numerusform>&amp;Edit in {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Open &amp;Folder(s)</source>
+        <translation>
+            <numerusform>Open &amp;Folder</numerusform>
+            <numerusform>Open &amp;Folders</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -95,10 +98,24 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open &amp;Diff(s) in {0}</source>
+        <source>&amp;Edit in {0}</source>
         <translation>
-            <numerusform>Open &amp;Diff in {0}</numerusform>
-            <numerusform>Open &amp;Diffs in {0}</numerusform>
+            <numerusform>&amp;Edit in {0}</numerusform>
+            <numerusform>&amp;Edit in {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Edit HEAD Version(s) in {0}</source>
+        <translation>
+            <numerusform>Edit HEAD Version in {0}</numerusform>
+            <numerusform>Edit HEAD Versions in {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Open &amp;Folder(s)</source>
+        <translation>
+            <numerusform>Open &amp;Folder</numerusform>
+            <numerusform>Open &amp;Folders</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -109,24 +126,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open &amp;Path(s)</source>
-        <translation>
-            <numerusform>Open &amp;Path</numerusform>
-            <numerusform>Open &amp;Paths</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <source>&amp;Copy Path(s)</source>
         <translation>
             <numerusform>&amp;Copy Path</numerusform>
             <numerusform>&amp;Copy Paths</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Open HEAD Version(s) in {0}</source>
-        <translation>
-            <numerusform>Open HEAD Version in {0}</numerusform>
-            <numerusform>Open HEAD Versions in {0}</numerusform>
         </translation>
     </message>
 </context>
@@ -153,10 +156,10 @@
 <context>
     <name>FileList</name>
     <message numerus="yes">
-        <source>Revert Old Mode(s)</source>
+        <source>Revert Mode Change(s)</source>
         <translation>
-            <numerusform>Revert Old Mode</numerusform>
-            <numerusform>Revert Old Modes</numerusform>
+            <numerusform>Revert Mode Change</numerusform>
+            <numerusform>Revert Mode Changes</numerusform>
         </translation>
     </message>
 </context>
@@ -173,17 +176,17 @@
 <context>
     <name>Jump</name>
     <message numerus="yes">
-        <source>%n dirty file(s):</source>
+        <source>%n dirty:</source>
         <translation>
-            <numerusform>%n dirty file:</numerusform>
-            <numerusform>%n dirty files:</numerusform>
+            <numerusform>%n dirty:</numerusform>
+            <numerusform>%n dirty:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n file(s) staged for commit:</source>
+        <source>%n staged:</source>
         <translation>
-            <numerusform>%n file staged for commit:</numerusform>
-            <numerusform>%n files staged for commit:</numerusform>
+            <numerusform>%n staged:</numerusform>
+            <numerusform>%n staged:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -197,20 +200,17 @@
 <context>
     <name>MainWindow</name>
     <message numerus="yes">
-        <source>The session couldn’t be restored fully because %n repositories failed to load:</source>
-        <translation>
-            <numerusform>The session couldn’t be restored fully because %n repository failed to load:</numerusform>
-            <numerusform>The session couldn’t be restored fully because %n repositories failed to load:</numerusform>
-        </translation>
-    </message>
-</context>
-<context>
-    <name>RepoWidget</name>
-    <message numerus="yes">
         <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch(es)?</source>
         <translation>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch?</numerusform>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patches?</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>The session couldn’t be restored fully because %n repositories failed to load:</source>
+        <translation>
+            <numerusform>The session couldn’t be restored fully because %n repository failed to load:</numerusform>
+            <numerusform>The session couldn’t be restored fully because %n repositories failed to load:</numerusform>
         </translation>
     </message>
 </context>
@@ -224,10 +224,17 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open &amp;Diff(s) in {0}</source>
+        <source>Edit &amp;HEAD Version(s) in {0}</source>
         <translation>
-            <numerusform>Open &amp;Diff in {0}</numerusform>
-            <numerusform>Open &amp;Diffs in {0}</numerusform>
+            <numerusform>Edit &amp;HEAD Version in {0}</numerusform>
+            <numerusform>Edit &amp;HEAD Versions in {0}</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Open &amp;Folder(s)</source>
+        <translation>
+            <numerusform>Open &amp;Folder</numerusform>
+            <numerusform>Open &amp;Folders</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -238,24 +245,10 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Open &amp;Path(s)</source>
-        <translation>
-            <numerusform>Open &amp;Path</numerusform>
-            <numerusform>Open &amp;Paths</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <source>&amp;Copy Path(s)</source>
         <translation>
             <numerusform>&amp;Copy Path</numerusform>
             <numerusform>&amp;Copy Paths</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Open &amp;HEAD Version(s) in {0}</source>
-        <translation>
-            <numerusform>Open &amp;HEAD Version in {0}</numerusform>
-            <numerusform>Open &amp;HEAD Versions in {0}</numerusform>
         </translation>
     </message>
 </context>

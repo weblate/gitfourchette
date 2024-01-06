@@ -80,7 +80,7 @@ class TaskBook:
             tasks.ApplyPatchFile: translate("task", "Apply a patch file to the working directory"),
             tasks.ApplyPatchFileReverse: translate("task", "Apply a patch file to the working directory (reverse patch before applying)"),
             tasks.ApplyStash: translate("task", "Restore backed up changes to the working directory"),
-            tasks.CherrypickCommit: translate("task", "Apply the changes introduced by this commit"),
+            tasks.CherrypickCommit: translate("task", "Bring the changes introduced by this commit to the current branch"),
             tasks.DeleteBranch: translate("task", "Delete this branch locally"),
             tasks.EditTrackedBranch: translate("task", "Choose the remote branch to be tracked by this local branch"),
             tasks.ExportStashAsPatch: translate("task", "Create a patch file from this stash"),

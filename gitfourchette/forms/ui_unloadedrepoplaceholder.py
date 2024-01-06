@@ -54,6 +54,6 @@ class Ui_UnloadedRepoPlaceholder(object):
 
     def retranslateUi(self, UnloadedRepoPlaceholder):
         _translate = QCoreApplication.translate
-        UnloadedRepoPlaceholder.setWindowTitle(_translate("UnloadedRepoPlaceholder", "Form"))
-        self.label.setText(_translate("UnloadedRepoPlaceholder", "This repository is ready to be loaded."))
+        UnloadedRepoPlaceholder.setWindowTitle(_translate("UnloadedRepoPlaceholder", "Unloaded repository"))
+        self.label.setText(_translate("UnloadedRepoPlaceholder", "Ready to load this repository."))
         self.loadButton.setText(_translate("UnloadedRepoPlaceholder", "Load"))

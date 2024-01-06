@@ -236,12 +236,12 @@ class RepoTask(QObject):
             showConflictErrorMessage(self.parentWidget(), exc, self.name())
         elif isinstance(exc, MultiFileError):
             # Patch doesn't apply
-            message = self.tr("Operation failed: {0}.").format(escape(self.name()))
+            message = tr("Operation failed: {0}.").format(escape(self.name()))
             for filePath, fileException in exc.file_exceptions.items():
                 message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
             showWarning(self.parentWidget(), self.name(), message)
         else:
-            message = self.tr("Operation failed: {0}.").format(escape(self.name()))
+            message = tr("Operation failed: {0}.").format(escape(self.name()))
             excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
 
     def effects(self) -> TaskEffects:
@@ -482,9 +482,11 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            showInformation(task.parentWidget(), self.tr("Operation in progress"),
-                            self.tr("Please wait for the current operation to complete. "
-                                    "({0} cannot be interrupted by {1})").format(self._currentTask, task))
+            message = paragraphs(
+                self.tr("Please wait for the current operation to complete."),
+                self.tr("(“{0}” cannot be interrupted by “{1}”)")
+            ).format(self._currentTask.name(), task.name())
+            showInformation(task.parentWidget(), self.tr("Operation in progress"), message)
 
     def _startTask(self, task):
         assert self._currentTask == task

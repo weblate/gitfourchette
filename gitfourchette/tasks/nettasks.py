@@ -45,10 +45,10 @@ class DeleteRemoteBranch(_BaseNetTask):
         remoteName, _ = split_remote_branch_shorthand(remoteBranchShorthand)
 
         text = paragraphs(
-            self.tr("Really delete branch <b>“{0}”</b> "
-                    "from the remote repository?").format(escape(remoteBranchShorthand)),
-            self.tr("The remote branch will disappear for all users of remote “{0}”.").format(escape(remoteName))
-            + " " + translate("Global", "This cannot be undone!"))
+            self.tr("Really delete branch <b>“{0}”</b> from the remote repository?"),
+            self.tr("The remote branch will disappear for all users of remote “{1}”.")
+            + " " + tr("This cannot be undone!")
+        ).format(escape(remoteBranchShorthand), escape(remoteName))
         verb = self.tr("Delete on remote")
         yield from self.flowConfirm(text=text, verb=verb, buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
@@ -109,10 +109,13 @@ class FetchRemoteBranch(_BaseNetTask):
             try:
                 branch = self.repo.branches.local[branchName]
             except KeyError:
-                yield from self.flowAbort(self.tr("Please switch to a local branch before performing this action."))
+                message = tr("Please switch to a local branch before performing this action.")
+                yield from self.flowAbort(message)
 
             if not branch.upstream:
-                yield from self.flowAbort(self.tr("Can’t fetch remote changes on “{0}” because it isn’t tracking a remote branch.").format(branch.shorthand))
+                message = self.tr("Can’t fetch remote changes on “{0}” because this branch "
+                                  "isn’t tracking a remote branch.").format(branch.shorthand)
+                yield from self.flowAbort(message)
 
             remoteBranchName = branch.upstream.shorthand
 

@@ -42,7 +42,7 @@ class NewStash(RepoTask):
         if self.repo.head_is_unborn:
             yield from self.flowAbort(
                 self.tr("Cannot create a stash when HEAD is unborn.")
-                + " " + translate("Global", "Please create the initial commit in this repository first."))
+                + " " + tr("Please create the initial commit in this repository first."))
 
         status = self.repo.status(untracked_files="all", ignored=False)
 

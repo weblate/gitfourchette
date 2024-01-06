@@ -54,7 +54,7 @@ class DiscardFiles(_BaseStagingTask):
                 textPara.append(self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path)))
         else:
             textPara.append(self.tr("Really discard changes to <b>%n files</b>?", "", len(patches)))
-        textPara.append(translate("Global", "This cannot be undone!"))
+        textPara.append(tr("This cannot be undone!"))
 
         yield from self.flowConfirm(
             text=paragraphs(textPara),
@@ -89,7 +89,7 @@ class DiscardModeChanges(_BaseStagingTask):
             textPara.append(self.tr("Really discard mode change in <b>“{0}”</b>?").format(escape(path)))
         else:
             textPara.append(self.tr("Really discard mode changes in <b>%n files</b>?", "", len(patches)))
-        textPara.append(translate("Global", "This cannot be undone!"))
+        textPara.append(tr("This cannot be undone!"))
 
         yield from self.flowConfirm(
             text=paragraphs(textPara),
@@ -129,7 +129,7 @@ class ApplyPatch(RepoTask):
                 textPara.append(self.tr("Really discard this hunk?"))
             else:
                 textPara.append(self.tr("Really discard the selected lines?"))
-            textPara.append(translate("Global", "This cannot be undone!"))
+            textPara.append(tr("This cannot be undone!"))
             yield from self.flowConfirm(
                 title,
                 text=paragraphs(textPara),

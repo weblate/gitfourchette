@@ -68,7 +68,7 @@ class DeleteBranch(RepoTask):
             yield from self.flowAbort(text)
 
         text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
-                          translate("Global", "This cannot be undone!"))
+                          tr("This cannot be undone!"))
 
         yield from self.flowConfirm(
             text=text,
@@ -178,7 +178,7 @@ class NewBranchFromHead(_NewBranchBaseTask):
         if self.repo.head_is_unborn:
             yield from self.flowAbort(
                 self.tr("Cannot create a local branch when HEAD is unborn.")
-                + " " + translate("Global", "Please create the initial commit in this repository first."))
+                + " " + tr("Please create the initial commit in this repository first."))
 
         tip = self.repo.head_commit.oid
 
@@ -344,7 +344,7 @@ class MergeBranch(RepoTask):
         elif analysis == GIT_MERGE_ANALYSIS_NORMAL:
             message = paragraphs(
                 self.tr("Merging <b>“{0}”</b> into <b>“{1}”</b> will cause conflicts.").format(them, myBranch),
-                self.tr("You will need to fix the conflicts and then commit the result."))
+                self.tr("You will need to fix the conflicts. Then, commit the result to conclude the merge."))
             yield from self.flowConfirm(text=message, verb=self.tr("Merge"))
             self.repo.merge(target)
 

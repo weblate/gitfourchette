@@ -369,12 +369,12 @@ def _getCmdName(command, fallback, presets):
 
 
 def getExternalEditorName():
-    return _getCmdName(prefs.external_editor, translate("Global", "Text Editor"), EDITOR_TOOL_PRESETS)
+    return _getCmdName(prefs.external_editor, tr("Text Editor"), EDITOR_TOOL_PRESETS)
 
 
 def getDiffToolName():
-    return _getCmdName(prefs.external_diff, translate("Global", "Diff Tool"), DIFF_TOOL_PRESETS)
+    return _getCmdName(prefs.external_diff, tr("Diff Tool"), DIFF_TOOL_PRESETS)
 
 
 def getMergeToolName():
-    return _getCmdName(prefs.external_merge, translate("Global", "Merge Tool"), MERGE_TOOL_PRESETS)
+    return _getCmdName(prefs.external_merge, tr("Merge Tool"), MERGE_TOOL_PRESETS)
