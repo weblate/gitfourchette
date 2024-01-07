@@ -1,4 +1,8 @@
+from __future__ import annotations as _annotations
+
 import contextlib as _contextlib
+import dataclasses as _dataclasses
+import enum
 import logging as _logging
 import os as _os
 import re as _re
@@ -1446,6 +1450,10 @@ class Repo(_VanillaRepository):
         if staged_paths:
             self.restore_files_from_head(staged_paths)
 
+    def wrap_conflict(self, path: str) -> DiffConflict:
+        ancestor, ours, theirs = self.index.conflicts[path]
+        return DiffConflict(ancestor, ours, theirs)
+
 
 class RepoContext:
     def __init__(self, path: str | _Path, flags: int = 0):
@@ -1461,5 +1469,41 @@ class RepoContext:
         self.repo = None
 
 
-# Remove symbols starting with underscore from public export (for "from porcelain import *")
-__all__ = [x for x in dir() if not x.startswith("_")]
+class ConflictSides(enum.IntEnum):
+    UNKNOWN = 0
+    MODIFIED_BY_BOTH = 1
+    DELETED_BY_THEM = 2
+    DELETED_BY_US = 3
+
+
+@_dataclasses.dataclass(frozen=True)
+class DiffConflict:
+    ancestor: IndexEntry | None
+    ours: IndexEntry | None
+    theirs: IndexEntry | None
+
+    @property
+    def sides(self) -> ConflictSides:
+        ours = bool(self.ours)
+        theirs = bool(self.theirs)
+
+        if ours and theirs:
+            return ConflictSides.MODIFIED_BY_BOTH
+        elif ours and not theirs:
+            return ConflictSides.DELETED_BY_THEM
+        elif not ours and theirs:
+            return ConflictSides.DELETED_BY_US
+        else:
+            return ConflictSides.UNKNOWN
+
+    @property
+    def deleted_by_us(self):
+        return self.sides == ConflictSides.DELETED_BY_US
+
+    @property
+    def deleted_by_them(self):
+        return self.sides == ConflictSides.DELETED_BY_THEM
+
+    @property
+    def modified_by_both(self):
+        return self.sides == ConflictSides.MODIFIED_BY_BOTH

@@ -8,7 +8,6 @@ from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.diffview import DiffView
-from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
 from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles

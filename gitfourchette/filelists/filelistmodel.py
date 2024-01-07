@@ -61,6 +61,15 @@ def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
     statusCaption = TrTables.diffStatusChar(sc)
     if sc not in '?U':  # show status char except for untracked and conflict
         statusCaption += f" ({sc})"
+    if sc == 'U':  # conflict sides
+        dc = repo.wrap_conflict(delta.new_file.path)
+        if dc.deleted_by_us:
+            postfix = translate("git", "deleted by us")
+        elif dc.deleted_by_them:
+            postfix = translate("git", "deleted by them")
+        else:
+            postfix = translate("git", "modified by both")
+        statusCaption += f" ({postfix})"
     text += newLine(translate("FileList", "status:"), statusCaption)
 
     # Similarity + Old name

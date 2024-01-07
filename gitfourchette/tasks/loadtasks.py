@@ -275,8 +275,8 @@ class LoadPatch(RepoTask):
             return SpecialDiffError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
         if patch.delta.status == GIT_DELTA_CONFLICTED:
-            ancestor, ours, theirs = self.repo.index.conflicts[patch.delta.new_file.path]
-            return DiffConflict(ancestor, ours, theirs)
+            path = patch.delta.new_file.path
+            return self.repo.wrap_conflict(path)
 
         submodule = None
         with (contextlib.suppress(KeyError),

@@ -9,7 +9,6 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.exttools import openInMergeTool, PREFKEY_MERGETOOL
-from gitfourchette.diffview.specialdiff import DiffConflict
 
 
 logger = logging.getLogger(__name__)

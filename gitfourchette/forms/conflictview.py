@@ -1,10 +1,9 @@
 import os
 
 from gitfourchette import settings
-from gitfourchette.diffview.specialdiff import DiffConflict
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
-from gitfourchette.porcelain import NULL_OID
+from gitfourchette.porcelain import NULL_OID, DiffConflict
 from gitfourchette.qt import *
 from gitfourchette.tasks import HardSolveConflict
 from gitfourchette.toolbox import *
@@ -51,7 +50,7 @@ class ConflictView(QWidget):
         if not conflict:
             return
 
-        elif conflict.deletedByUs:
+        elif conflict.deleted_by_us:
             b = self.ui.radioGroupDbu.checkedButton()
             if not b:
                 pass
@@ -60,7 +59,7 @@ class ConflictView(QWidget):
             elif b is self.ui.radioDbuOurs:  # ignore incoming change, keep deletion
                 self.hardSolve(conflict.theirs.path, NULL_OID)
 
-        elif conflict.deletedByThem:
+        elif conflict.deleted_by_them:
             b = self.ui.radioGroupDbt.checkedButton()
             if not b:
                 pass
@@ -104,14 +103,14 @@ class ConflictView(QWidget):
         if not conflict:
             pass
 
-        elif conflict.deletedByUs:
+        elif conflict.deleted_by_us:
             self.ui.subtitleLabel.setText(self.tr(
                 "<b>Deleted by us:</b> this file was deleted from <i>our</i> branch, "
                 "but <i>their</i> branch kept it and made changes to it."))
             for radio in self.ui.radioGroupDbu.buttons():
                 radio.setVisible(True)
 
-        elif conflict.deletedByThem:
+        elif conflict.deleted_by_them:
             self.ui.subtitleLabel.setText(self.tr(
                 "<b>Deleted by them:</b> we’ve made changes to this file, "
                 "but <i>their</i> branch has deleted it."))

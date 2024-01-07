@@ -12,21 +12,6 @@ from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 
 
-@dataclass
-class DiffConflict:
-    ancestor: IndexEntry | None
-    ours: IndexEntry | None
-    theirs: IndexEntry | None
-
-    @property
-    def deletedByUs(self):
-        return not self.ours and self.theirs
-
-    @property
-    def deletedByThem(self):
-        return self.ours and not self.theirs
-
-
 class DiffImagePair:
     oldImage: QImage
     newImage: QImage
