@@ -61,7 +61,10 @@ class QStatusBar2(QStatusBar):
             self.busyWidget.setVisible(False)
         super().clearMessage()
 
-    def showPermanentWarning(self, text: str):
+    def showPermanentWarning(self, text: str, heeded: bool = False):
+        self.warningLabel.setProperty("heeded", str(heeded).lower())
+        self.warningLabel.setStyleSheet("* {}")  # reset stylesheet to percolate property change
+
         self.warningLabel.setVisible(bool(text))
         self.warningLabel.setText(text)
 

@@ -44,7 +44,7 @@ class RepoWidget(QWidget):
     busyMessage = Signal(str)
     statusMessage = Signal(str)
     clearStatus = Signal()
-    statusWarning = Signal(str)
+    statusWarning = Signal(str, bool)
     statusButton = Signal(str, object)
 
     state: RepoState | None
@@ -789,6 +789,7 @@ class RepoWidget(QWidget):
 
         # Merging? Any conflicts?
         statusWarning = ""
+        statusWarningHeeded = False
         statusButtonCaption = ""
         statusButtonCallback = None
 
@@ -807,6 +808,7 @@ class RepoWidget(QWidget):
             message = f"<b>{message}</b>: "
             if not repo.any_conflicts:
                 message += self.tr("All conflicts fixed. Commit to conclude.")
+                statusWarningHeeded = True
             else:
                 message += self.tr("Conflicts need fixing")
             statusWarning = message
@@ -819,6 +821,7 @@ class RepoWidget(QWidget):
             message = f"<b>{message}</b>: "
             if not repo.any_conflicts:
                 message += self.tr("All conflicts fixed. Commit to conclude.")
+                statusWarningHeeded = True
             else:
                 message += self.tr("Conflicts need fixing")
             statusWarning = message
@@ -829,7 +832,7 @@ class RepoWidget(QWidget):
             inBrackets += ", \u26a0 " + self.tr("CONFLICT")
             statusWarning = self.tr("Conflicts need fixing")
 
-        self.statusWarning.emit(statusWarning)
+        self.statusWarning.emit(statusWarning, statusWarningHeeded)
         self.statusButton.emit(statusButtonCaption, statusButtonCallback)
 
         if settings.prefs.debug_showPID:

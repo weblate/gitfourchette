@@ -15,8 +15,13 @@ QTreeView#sidebar::branch {
 
 QLabel#statusWarning {
     border-radius: 4px;
-    color: black;
-    background-color: #ffbb00;
     padding-left: 1ex;
     padding-right: 1ex;
+    color: black;
+    background-color: #ffbb00;
+}
+
+QLabel#statusWarning[heeded="true"] {
+    color: white;
+    background-color: #3d9970;
 }
