@@ -1,17 +1,18 @@
-from gitfourchette import log
+import filecmp
+import logging
+import os
+import shutil
+import tempfile
+
 from gitfourchette import tempdir
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.exttools import openInMergeTool, PREFKEY_MERGETOOL
 from gitfourchette.diffview.specialdiff import DiffConflict
-import filecmp
-import os
-import shutil
-import tempfile
 
 
-TAG = "UnmergedConflict"
+logger = logging.getLogger(__name__)
 
 
 class UnmergedConflict(QObject):
@@ -49,7 +50,7 @@ class UnmergedConflict(QObject):
             self.process.finished.connect(self.onMergeProcessFinished)
 
     def onMergeProcessFinished(self, exitCode: int, exitStatus: QProcess.ExitStatus):
-        log.info(TAG, "Merge tool exited with code", exitCode, exitStatus)
+        logger.info(f"Merge tool exited with code {exitCode}, {exitStatus}")
 
         if exitCode != 0 or exitStatus == QProcess.ExitStatus.CrashExit:
             self.mergeFailed.emit()
@@ -61,14 +62,13 @@ class UnmergedConflict(QObject):
             self.mergeFailed.emit()
             return
 
-        qmb = asyncMessageBox(
-            self.parent(),
-            'information',
-            self.tr("Merge conflict resolved"),
-            paragraphs(
-                self.tr("It looks like you’ve resolved the merge conflict in <b>“{0}”</b>.").format(self.conflict.ours.path),
-                self.tr("Do you want to keep this resolution?")),
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        message = paragraphs(
+            self.tr("It looks like you’ve resolved the merge conflict in <b>“{0}”</b>."),
+            self.tr("Do you want to keep this resolution?")
+        ).format(self.conflict.ours.path)
+
+        qmb = asyncMessageBox(self.parent(), 'information', self.tr("Merge conflict resolved"), message,
+                              QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
         qmb.button(QMessageBox.StandardButton.Ok).setText(self.tr("Confirm resolution"))
         qmb.button(QMessageBox.StandardButton.Cancel).setText(self.tr("Discard resolution"))
         qmb.accepted.connect(self.mergeComplete)

@@ -1,13 +1,12 @@
 import contextlib
 import gc
+import logging
 import re
 import os
 from typing import Literal, Type
 
 import pygit2
 
-from gitfourchette import log
-from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.diffview.diffview import DiffView
@@ -19,11 +18,13 @@ from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState
 from gitfourchette.repowidget import RepoWidget
 from gitfourchette.tasks import TaskInvoker, TaskBook, RepoTask
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
+
+
+logger = logging.getLogger(__name__)
 
 
 class MainWindow(QMainWindow):
@@ -103,7 +104,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def reloadStyleSheet():
-        log.verbose("MainWindow", "Reloading QSS")
+        logger.debug("Reloading QSS")
         with NonCriticalOperation("Reload application-wide stylesheet"):
             MainWindow.styleSheetReloadScheduled = False
             styleSheetFile = QFile("assets:style.qss")
@@ -361,7 +362,7 @@ class MainWindow(QMainWindow):
         )
 
         if DEVDEBUG:
-            a = goMenu.addAction(self.tr("Navigation Log"), lambda: print(self.currentRepoWidget().navHistory.getTextLog()))
+            a = goMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
 
         # -------------------------------------------------------------
@@ -997,7 +998,7 @@ class MainWindow(QMainWindow):
                 showInformation(self, self.tr("No repository"),
                                 self.tr("Please open a repository before importing a patch."))
         else:
-            log.warning("MainWindow", f"Unsupported drag-and-drop outcome {action}")
+            logger.warning(f"Unsupported drag-and-drop outcome {action}")
 
     # -------------------------------------------------------------------------
     # Prefs
@@ -1008,7 +1009,7 @@ class MainWindow(QMainWindow):
             settings.applyQtStylePref(forceApplyDefault=True)
 
         if "debug_verbosity" in prefDiff:
-            log.setVerbosity(settings.prefs.debug_verbosity)
+            logging.root.setLevel(settings.prefs.debug_verbosity.value)
 
         if "language" in prefDiff:
             settings.applyLanguagePref()

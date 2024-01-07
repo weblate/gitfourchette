@@ -1,4 +1,7 @@
+import logging
 import os
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Keep qtpy binding (used by main app) in sync with pytest
 if os.environ.get("PYTEST_QT_API") and os.environ.get("QT_API"):
@@ -16,6 +19,3 @@ os.environ["FORCE_QT_API"] = "1"
 
 from gitfourchette.qt import *
 from qtpy.QtTest import QTest
-
-from gitfourchette import log
-log.setVerbosity(log.logger.Verbosity.VERBOSE)

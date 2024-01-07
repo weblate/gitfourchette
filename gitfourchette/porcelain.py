@@ -1,4 +1,8 @@
-from gitfourchette import log as _log
+import contextlib as _contextlib
+import logging as _logging
+import os as _os
+import re as _re
+import typing as _typing
 from pathlib import Path as _Path
 
 from pygit2 import (
@@ -115,13 +119,8 @@ except ImportError:
     # TODO: Nuke this once we drop compatibility with old pygit2 versions (1.13 and older)
     from pygit2.remote import TransferProgress
 
-import contextlib as _contextlib
-import os as _os
-import re as _re
-import typing as _typing
 
-
-_TAG = "porcelain"
+_logger = _logging.getLogger(__name__)
 
 NULL_OID = Oid(raw=b'')
 
@@ -242,7 +241,7 @@ class CheckoutBreakdown(CheckoutCallbacks):
 
 class StashApplyBreakdown(StashApplyCallbacks, CheckoutBreakdown):
     def stash_apply_progress(self, pr):
-        _log.info(_TAG, f"stash apply progress: {pr}")
+        _logger.info(f"stash apply progress: {pr}")
 
 
 def _version_at_least(
@@ -273,7 +272,7 @@ def _version_at_least(
         if raise_error:
             raise NotImplementedError(message)
         else:
-            _log.warning(_TAG, message)
+            _logger.warning(message)
 
     return True
 
@@ -445,7 +444,7 @@ class Repo(_VanillaRepository):
     """
 
     def __del__(self):
-        _log.verbose(_TAG, "__del__ Repo")
+        _logger.debug("__del__ Repo")
         self.free()
 
     @property
@@ -534,7 +533,7 @@ class Repo(_VanillaRepository):
         # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
         # index was stale, but this requires the repo to be writable.
         if update_index:
-            _log.verbose(_TAG, "GIT_DIFF_UPDATE_INDEX")
+            _logger.debug("GIT_DIFF_UPDATE_INDEX")
             flags |= GIT_DIFF_UPDATE_INDEX
 
         if show_binary:
@@ -771,7 +770,7 @@ class Repo(_VanillaRepository):
         remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
 
         refspec = f":{RefPrefix.HEADS}{branchName}"
-        _log.info(_TAG, f"Delete remote branch: refspec: \"{refspec}\"")
+        _logger.info(f"Delete remote branch: refspec: \"{refspec}\"")
 
         remote = self.remotes[remoteName]
         remote.push([refspec], callbacks=remoteCallbacks)
@@ -788,7 +787,7 @@ class Repo(_VanillaRepository):
         # Next, delete the old branch
         refspec2 = f":{RefPrefix.HEADS}{oldBranchName}"
 
-        _log.info(_TAG, f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
+        _logger.info(f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
 
         remote = self.remotes[remoteName]
         remote.push([refspec1, refspec2], callbacks=remote_callbacks)
@@ -812,7 +811,7 @@ class Repo(_VanillaRepository):
             except KeyError:  # pygit2 wraps GIT_ENOTFOUND with KeyError
                 # Stale -- nuke it
                 self.references.delete(head_refname)
-                _log.info(_TAG, "Deleted stale remote HEAD symbolic ref: " + head_refname)
+                _logger.info("Deleted stale remote HEAD symbolic ref: " + head_refname)
 
     def fetch_remote(self, remote_name: str, remote_callbacks: RemoteCallbacks) -> TransferProgress:
         # Delete `refs/remotes/{remoteName}/HEAD` before fetching.
@@ -956,7 +955,7 @@ class Repo(_VanillaRepository):
             try:
                 tips.append(("HEAD", self.head_commit))
             except InvalidSpecError as e:
-                _log.info(_TAG, F"{e} - Skipping detached HEAD")
+                _logger.info(f"{e} - Skipping detached HEAD")
                 pass
 
         for ref in self.listall_reference_objects():
@@ -969,7 +968,7 @@ class Repo(_VanillaRepository):
                 tips.append((ref.name, commit))
             except InvalidSpecError as e:
                 # Some refs might not be committish, e.g. in linux's source repo
-                _log.info(_TAG, F"{e} - Skipping ref '{ref.name}'")
+                _logger.info(f"{e} - Skipping ref '{ref.name}'")
                 pass
 
         for i, stash in enumerate(self.listall_stashes()):
@@ -977,7 +976,7 @@ class Repo(_VanillaRepository):
                 commit = self.peel_commit(stash.commit_id)
                 tips.append((f"stash@{{{i}}}", commit))
             except InvalidSpecError as e:
-                _log.info(_TAG, F"{e} - Skipping stash '{stash.message}'")
+                _logger.info(f"{e} - Skipping stash '{stash.message}'")
                 pass
 
         # Reinsert all tips in chronological order
@@ -997,7 +996,7 @@ class Repo(_VanillaRepository):
 
             if type(ref.target) != Oid:
                 # Symbolic reference
-                _log.verbose(_TAG, F"Skipping symbolic reference {ref_key} --> {ref.target}")
+                _logger.debug(f"Skipping symbolic reference {ref_key} --> {ref.target}")
                 continue
 
             if ref.target != oid:
@@ -1253,7 +1252,7 @@ class Repo(_VanillaRepository):
                 rb = self.branches[target_shorthand]
 
         merge_analysis, merge_pref = self.merge_analysis(rb.target, RefPrefix.HEADS + local_branch_name)
-        _log.verbose(_TAG, f"Merge analysis: {repr(merge_analysis)}. Merge preference: {repr(merge_pref)}.")
+        _logger.debug(f"Merge analysis: {repr(merge_analysis)}. Merge preference: {repr(merge_pref)}.")
 
         if merge_analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE:
             # Local branch is up-to-date with remote branch, nothing to do.

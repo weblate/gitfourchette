@@ -1,12 +1,14 @@
+import logging
+from itertools import zip_longest
+
 from gitfourchette import colors
-from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.graph import Frame, Graph
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState, UC_FAKEID
-from itertools import zip_longest
 
+logger = logging.getLogger(__name__)
 
 LANE_WIDTH = 10
 LANE_THICKNESS = 2
@@ -79,10 +81,10 @@ def paintGraphFrame(
         # Get this commit's sequential index in the graph
         myRow = state.graph.getCommitRow(oid)
     except KeyError:
-        log.warning("graphpaint", "skipping unregistered commit:", oid)
+        logger.warning(f"Skipping unregistered commit: {oid}")
         return
     except IndexError:
-        log.warning("graphpaint", "skipping commit that is probably not registered yet:", oid)
+        logger.warning(f"Skipping commit that is probably not registered yet: {oid}")
         return
 
     painter.save()

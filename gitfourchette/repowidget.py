@@ -1,9 +1,9 @@
 import contextlib
+import logging
 import typing
 import os
 from typing import Literal, Type
 
-from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.diffview.diffdocument import DiffDocument
@@ -30,7 +30,7 @@ from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
 from gitfourchette.unmergedconflict import UnmergedConflict
 
-TAG = "RepoWidget"
+logger = logging.getLogger(__name__)
 
 FileStackPage = Literal["workdir", "commit"]
 DiffStackPage = Literal["text", "special", "conflict"]
@@ -61,7 +61,7 @@ class RepoWidget(QWidget):
     splitterStates: dict[str, QByteArray]
 
     def __del__(self):
-        log.verbose(TAG, f"__del__ RepoWidget {self.pathPending}")
+        logger.debug(f"__del__ RepoWidget {self.pathPending}")
 
     @property
     def repo(self) -> Repo:
@@ -421,12 +421,12 @@ class RepoWidget(QWidget):
 
     def primeRepo(self, path: str = "", force: bool = False):
         if not force and self.isLoaded:
-            log.warning(TAG, f"Repo already primed! {path}")
+            logger.warning(f"Repo already primed! {path}")
             return None
 
         primingTask = self.repoTaskRunner.currentTask
         if isinstance(primingTask, tasks.PrimeRepo):
-            log.verbose(TAG, f"Repo is being primed: {path}")
+            logger.debug(f"Repo is being primed: {path}")
             return primingTask
 
         path = path or self.pathPending
@@ -467,7 +467,7 @@ class RepoWidget(QWidget):
         while self.mainStack.count() > 1:
             i = self.mainStack.count() - 1
             w = self.mainStack.widget(i)
-            log.verbose(TAG, f"Removing modal placeholder widget: {w.objectName()}")
+            logger.debug(f"Removing modal placeholder widget: {w.objectName()}")
             self.mainStack.removeWidget(w)
             w.deleteLater()
         assert self.mainStack.count() <= 1
@@ -492,7 +492,7 @@ class RepoWidget(QWidget):
         if self.diffStack.currentWidget() is self.diffView:
             newLocator = self.diffView.getPreciseLocator()
             if not newLocator.isSimilarEnoughTo(self.navLocator):
-                log.warning(TAG, f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")
+                logger.warning(f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")
         else:
             newLocator = self.navLocator.coarse()
         self.navHistory.push(newLocator)
@@ -517,7 +517,7 @@ class RepoWidget(QWidget):
         elif page == "workdir":
             widgets = [self.dirtyFiles, self.stagedFiles]
         else:
-            log.warning(TAG, f"Unknown FileStackPage {page})")
+            logger.warning(f"Unknown FileStackPage {page})")
             return
 
         numWidgets = len(widgets)
@@ -596,7 +596,7 @@ class RepoWidget(QWidget):
             try:
                 uiPrefs.write()
             except IOError as e:
-                log.warning(TAG, f"IOError when writing prefs: {e}")
+                logger.warning(f"IOError when writing prefs: {e}")
 
         # Clear UI
         with QSignalBlockerContext(
@@ -621,7 +621,7 @@ class RepoWidget(QWidget):
             # Free the repository
             self.state.repo.free()
             self.state.repo = None
-            log.info(TAG, "Repository freed:", self.pathPending)
+            logger.info(f"Repository freed: {self.pathPending}")
 
         self.state = None
 
@@ -905,10 +905,10 @@ class RepoWidget(QWidget):
             return
 
         if url.scheme() != APP_URL_SCHEME:
-            log.warning(TAG, "Unsupported scheme in internal link:", url.toDisplayString())
+            logger.warning(f"Unsupported scheme in internal link: {url.toDisplayString()}")
             return
 
-        log.info(TAG, F"Internal link:", url.toDisplayString())
+        logger.info(f"Internal link: {url.toDisplayString()}")
 
         if url.authority() == NavLocator.URL_AUTHORITY:
             locator = NavLocator.parseUrl(url)
@@ -928,11 +928,10 @@ class RepoWidget(QWidget):
             allqi = query.queryItems(QUrl.ComponentFormattingOption.FullyDecoded)
             cmdName = url.path().removeprefix("/")
             taskClass = tasks.__dict__[cmdName]
-            print("taskClass:", taskClass)
             kwargs = {k: v for k, v in allqi}
             self.runTask(taskClass, **kwargs)
         else:
-            log.warning(TAG, "Unsupported authority in internal link: ", url.toDisplayString())
+            logger.warning(f"Unsupported authority in internal link: {url.toDisplayString()}")
 
     # -------------------------------------------------------------------------
 

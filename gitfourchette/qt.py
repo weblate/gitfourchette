@@ -11,11 +11,14 @@
 #
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 
+import logging as _logging
 import json as _json
 import os as _os
 import sys as _sys
 
 from gitfourchette.appconsts import *
+
+_logger = _logging.getLogger(__name__)
 
 _qtBindingOrder = ["pyqt6", "pyqt5", "pyside6", "pyside2"]
 
@@ -63,7 +66,7 @@ else:
         pass
     elif qtBindingBootPref not in _qtBindingOrder:
         # Sanitize value if user passed in junk
-        _sys.stderr.write(f"Unrecognized Qt binding name: '{qtBindingBootPref}'\n")
+        _logger.warning(f"Unrecognized Qt binding name: '{qtBindingBootPref}'")
         _qtBindingBootPref = ""
     else:
         # Move preferred binding to front of list
@@ -71,7 +74,7 @@ else:
         _qtBindingOrder.insert(0, qtBindingBootPref)
 
     if DEVDEBUG:
-        print("Qt binding order is:", _qtBindingOrder)
+        _logger.debug(f"Qt binding order is: {_qtBindingOrder}")
 
     qtBindingName = ""
     for _tentative in _qtBindingOrder:
@@ -115,7 +118,7 @@ else:
                 QT5 = PYSIDE2 = True
 
             else:
-                print("Unsupported binding", _tentative)
+                _logger.warning(f"Unsupported Qt binding {_tentative}")
                 continue
 
             break

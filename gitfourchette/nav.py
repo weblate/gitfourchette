@@ -1,15 +1,14 @@
 from __future__ import annotations
-from gitfourchette import log
-from gitfourchette.porcelain import NULL_OID, Oid
-from gitfourchette.qt import *
-from gitfourchette.toolbox import *
-from typing import ClassVar
+
 import dataclasses
 import enum
 import time
+from typing import ClassVar
 
+from gitfourchette.porcelain import NULL_OID, Oid
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 
-TAG = "nav"
 PUSH_INTERVAL = 0.5
 
 

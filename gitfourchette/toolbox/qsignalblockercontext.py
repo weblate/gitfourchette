@@ -1,5 +1,8 @@
+import logging
+
 from gitfourchette.qt import *
-from gitfourchette import log
+
+logger = logging.getLogger(__name__)
 
 
 class QSignalBlockerContext:
@@ -13,7 +16,7 @@ class QSignalBlockerContext:
     def __enter__(self):
         for o in self.objectsToBlock:
             if o.signalsBlocked():
-                log.warning("QSignalBlockerContext", "Nesting QSignalBlockerContexts isn't a great idea!", o)
+                logger.warning(f"Nesting QSignalBlockerContexts isn't a great idea! {o}")
             o.blockSignals(True)
 
     def __exit__(self, excType, excValue, excTraceback):

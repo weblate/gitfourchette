@@ -1,17 +1,18 @@
 from __future__ import annotations
-from collections import defaultdict
-from dataclasses import dataclass
-from gitfourchette import log
-from gitfourchette.porcelain import Oid as _RealOidType
-from gitfourchette.qt import DEVDEBUG
-from gitfourchette.toolbox import *
-from typing import ClassVar, Iterable, Iterator
+
 import bisect
 import contextlib
 import itertools
+import logging
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import ClassVar, Iterable, Iterator
 
+from gitfourchette.porcelain import Oid as _RealOidType
+from gitfourchette.qt import DEVDEBUG
+from gitfourchette.toolbox import *
 
-TAG = "graph"
+logger = logging.getLogger(__name__)
 
 KF_INTERVAL = 5000
 """
@@ -900,7 +901,7 @@ class Graph:
 
         kfID = bisect.bisect_left(self.keyframeRows, frame.row)
         if kfID < len(self.keyframes) and self.keyframes[kfID].row == frame.row:
-            log.info(TAG, f"Not overwriting existing keyframe {kfID}")
+            logger.info(f"Not overwriting existing keyframe {kfID}")
             assert self.keyframes[kfID] == frame.sealCopy()
         else:
             kf = frame.sealCopy()
@@ -1113,7 +1114,7 @@ class Graph:
         # Verify chains
         if self.startArc.nextArc:
             for a in self.startArc.nextArc:
-                log.info(TAG, f"{a}")
+                logger.info(f"{a}")
                 assert a.chain.isValid()
 
         # Verify keyframes
@@ -1217,7 +1218,7 @@ class GraphSplicer:
         equilibriumOldRow = int(self.oldPlayer.row)
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
-        log.verbose(TAG, f"Equilibrium: commit={self.oldPlayer.commit} new={equilibriumNewRow} old={equilibriumOldRow}")
+        logger.debug(f"Equilibrium: commit={self.oldPlayer.commit} new={equilibriumNewRow} old={equilibriumOldRow}")
 
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.

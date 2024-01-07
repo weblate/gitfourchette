@@ -1,10 +1,13 @@
-from gitfourchette import log
+import datetime
+import logging
+import os
+import shutil
+
 from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-import datetime
-import os
-import shutil
+
+logger = logging.getLogger(__name__)
 
 
 class Trash:
@@ -46,7 +49,7 @@ class Trash:
             f = self.trashFiles.pop()
             fullPath = os.path.join(self.trashDir, f)
             if os.path.isfile(fullPath):
-                log.verbose("trash", "Deleting trash file", fullPath)
+                logger.debug(f"Deleting trash file {fullPath}")
                 os.unlink(fullPath)
 
     def newFile(self, workdir: str, ext: str = "", originalPath: str = "") -> str:

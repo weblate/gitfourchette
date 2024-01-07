@@ -1,13 +1,14 @@
-from gitfourchette.qt import *
-from gitfourchette.toolbox import *
-from gitfourchette.trtables import TrTables
-from gitfourchette import log
-from gitfourchette import tempdir
+import logging
 import os
 import shlex
 
+from gitfourchette import tempdir
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
-TAG = "exttools"
+logger = logging.getLogger(__name__)
+
 PREFKEY_EDITOR = "external_editor"
 PREFKEY_DIFFTOOL = "external_diff"
 PREFKEY_MERGETOOL = "external_merge"
@@ -101,7 +102,7 @@ def openInExternalTool(
                 del tokens[placeholderIndex]
         except ValueError:
             # Missing placeholder token - just append path to end of command line...
-            log.warning(TAG, f"Missing placeholder token {placeholderToken} in command template {command}")
+            logger.warning(f"Missing placeholder token {placeholderToken} in command template {command}")
             if path:
                 tokens.append(path)
 
@@ -115,7 +116,7 @@ def openInExternalTool(
         os.chmod(scriptPath, 0o700)  # should be 500
         tokens = ["/bin/sh", scriptPath] + tokens[1:]
 
-    log.info(TAG, "Starting process: " + " ".join(tokens))
+    logger.info("Starting process: " + " ".join(tokens))
 
     p = QProcess(parent)
     p.setProgram(tokens[0])
@@ -123,8 +124,8 @@ def openInExternalTool(
     p.setWorkingDirectory(os.path.dirname(paths[0]))
     p.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedChannels)
 
-    p.finished.connect(lambda code, status: log.info(TAG, "Process done:", code, status))
-    p.errorOccurred.connect(lambda processError: log.info(TAG, "Process error", processError))
+    p.finished.connect(lambda code, status: logger.info(f"Process done: {code} {status}"))
+    p.errorOccurred.connect(lambda processError: logger.info(f"Process error: {processError}"))
     p.errorOccurred.connect(lambda processError: onExternalToolProcessError(p, prefKey))
 
     p.start(mode=QProcess.OpenModeFlag.Unbuffered)

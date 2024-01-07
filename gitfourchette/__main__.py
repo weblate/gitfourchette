@@ -1,6 +1,8 @@
-from gitfourchette.qt import *
+import logging
 import signal
 import sys
+
+from gitfourchette.qt import *
 
 
 def excepthook(exctype, value, tb):
@@ -11,6 +13,11 @@ def excepthook(exctype, value, tb):
 
 
 def main():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(levelname).1s %(asctime)s %(filename)-16s | %(message)s',
+        datefmt="%H:%M:%S")
+
     # inject our own exception hook to show an error dialog in case of unhandled exceptions
     # (note that this may get overridden when running under a debugger)
     sys.excepthook = excepthook

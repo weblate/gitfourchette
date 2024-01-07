@@ -1,3 +1,5 @@
+import logging
+
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
@@ -5,6 +7,8 @@ from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
 from gitfourchette.forms.trackedbranchdialog import TrackedBranchDialog
+
+logger = logging.getLogger(__name__)
 
 
 class SwitchBranch(RepoTask):
@@ -307,7 +311,7 @@ class MergeBranch(RepoTask):
         analysis, pref = self.repo.merge_analysis(target)
 
         yield from self.flowEnterUiThread()
-        print(repr(analysis), repr(pref))
+        logger.info(f"Merge analysis: {repr(analysis)} {repr(pref)}")
 
         if anyConflicts:
             message = paragraphs(

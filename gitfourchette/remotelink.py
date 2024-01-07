@@ -1,15 +1,16 @@
-from gitfourchette import log
+import base64
+import logging
+import os.path
+import re
+
 from gitfourchette import repoconfig
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-import base64
-import os.path
-import re
 
+logger = logging.getLogger(__name__)
 
 DLRATE_REFRESH_INTERVAL = 1000
-
 
 AUTH_NAMES = {
     GIT_CREDENTIAL_USERPASS_PLAINTEXT: "userpass_plaintext",
@@ -100,7 +101,7 @@ class RemoteLink(QObject, RemoteCallbacks):
                 if not os.path.isfile(privkey):
                     raise FileNotFoundError(self.tr("Remote-specific private key file not found:") + " " + compactPath(privkey))
 
-                log.info("RemoteLink", "Using remote-specific key pair", privkey)
+                logger.info(f"Using remote-specific key pair {privkey}")
 
                 self.keypairFiles.append((pubkey, privkey))
 
@@ -113,7 +114,7 @@ class RemoteLink(QObject, RemoteCallbacks):
                     if pubkey.endswith(".pub"):
                         privkey = pubkey.removesuffix(".pub")
                         if os.path.isfile(privkey) and os.path.isfile(pubkey):
-                            log.info("RemoteLink", "Discovered key pair", privkey)
+                            logger.info(f"Discovered key pair {privkey}")
                             self.keypairFiles.append((pubkey, privkey))
 
         # See if any of the keys are passphrase-protected or unreadable
@@ -134,7 +135,7 @@ class RemoteLink(QObject, RemoteCallbacks):
 
     def _onAbort(self):
         self._aborting = True
-        log.info("RemoteLink", "Abort flag set.")
+        logger.info("Abort flag set.")
 
     @mayAbortNetworkOperation
     def sideband_progress(self, string):
@@ -165,11 +166,11 @@ class RemoteLink(QObject, RemoteCallbacks):
             raise ConnectionRefusedError(self.tr("Too many credential retries."))
 
         if self.attempts == 1:
-            log.info("RemoteLink", "Auths accepted by server:", getAuthNamesFromFlags(allowed_types))
+            logger.info(f"Auths accepted by server: {getAuthNamesFromFlags(allowed_types)}")
 
         if self.keypairFiles and (allowed_types & GIT_CREDENTIAL_SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
-            log.info("RemoteLink", "Attempting login with:", compactPath(pubkey))
+            logger.info(f"Attempting login with: {compactPath(pubkey)}")
 
             if self.usingCustomKeyFile:
                 self.message.emit(self.tr("Logging in with remote-specific key...") + "\n" + compactPath(pubkey))
@@ -238,7 +239,7 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.message.emit(message)
 
     def update_tips(self, refname, old, new):
-        log.info("RemoteLink", F"Update tip {refname}: {old} ---> {new}")
+        logger.info(f"Update tip {refname}: {old} ---> {new}")
 
     def push_update_reference(self, refname: str, message: str | None):
         if not message:

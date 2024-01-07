@@ -1,12 +1,14 @@
-from gitfourchette.qt import *
-from gitfourchette import log
-from gitfourchette.toolbox.qtutils import onAppThread, setWindowModal, MakeNonNativeDialog
-from gitfourchette.toolbox.excutils import shortenTracebackPath
-from typing import Callable, Literal
-import traceback
 import html
+import logging
 import re
+import traceback
+from typing import Callable, Literal
 
+from gitfourchette.qt import *
+from gitfourchette.toolbox.excutils import shortenTracebackPath
+from gitfourchette.toolbox.qtutils import onAppThread, setWindowModal, MakeNonNativeDialog
+
+logger = logging.getLogger(__name__)
 
 MessageBoxIconName = Literal['warning', 'information', 'question', 'critical']
 
@@ -103,9 +105,9 @@ def asyncMessageBox(
 
     loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
     if icon in ['information', 'question']:
-        log.verbose("MessageBox", loggedMessage)
+        logger.debug(loggedMessage)
     else:
-        log.warning("MessageBox", loggedMessage)
+        logger.warning(loggedMessage)
 
     icons = {
         'warning': QMessageBox.Icon.Warning,

@@ -1,14 +1,17 @@
-from gitfourchette import log
+import logging
+import enum
+import traceback
+
 from gitfourchette import tasks
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-from gitfourchette.forms.brandeddialog import convertToBrandedDialog
-from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
-import enum
-import traceback
+
+logger = logging.getLogger(__name__)
 
 
 class ERemoteItem(enum.Enum):
@@ -322,7 +325,7 @@ class PushDialog(QDialog):
 
     def onPushClicked(self):
         remote = self.repo.remotes[self.currentRemoteName]
-        log.info("PushDialog", self.refspec, remote.name)
+        logger.info(f"Will push to: {self.refspec} ({remote.name})")
         link = RemoteLink(self)
         self.remoteLink = link
 

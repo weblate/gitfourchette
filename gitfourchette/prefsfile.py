@@ -1,14 +1,14 @@
 import dataclasses
 import enum
 import json
+import logging
 import os
 
-from gitfourchette import log
 from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 
-TAG = "prefs"
+logger = logging.getLogger(__name__)
 
 
 class PrefsJSONEncoder(json.JSONEncoder):
@@ -66,12 +66,12 @@ class PrefsFile:
         # Prepare the path
         prefsPath = self._getFullPath(forWriting=True)
         if not prefsPath:
-            log.warning(TAG, "Couldn't get path for writing")
+            logger.warning("Couldn't get path for writing")
             return None
 
         from gitfourchette.settings import TEST_MODE
         if not force and TEST_MODE:
-            log.info(TAG, "Not writing prefs in test mode")
+            logger.info("Not writing prefs in test mode")
             return None
 
         # Get default values if we're saving a dataclass
@@ -98,9 +98,9 @@ class PrefsFile:
         if not filtered:
             if not self._getFullPath(forWriting=False):
                 # File doesn't exist - don't write out an empty object
-                log.verbose(TAG, "Not writing empty object")
+                logger.debug("Not writing empty object")
             else:
-                log.verbose(TAG, "Deleting prefs file because we want defaults")
+                logger.debug("Deleting prefs file because we want defaults")
                 os.unlink(prefsPath)
             return None
 
@@ -108,7 +108,7 @@ class PrefsFile:
         with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
             json.dump(obj=filtered, fp=jsonFile, indent='\t', cls=PrefsJSONEncoder)
 
-        log.info(TAG, f"Wrote {prefsPath}")
+        logger.info(f"Wrote {prefsPath}")
         return prefsPath
 
     def load(self):
@@ -120,15 +120,15 @@ class PrefsFile:
             try:
                 obj = json.load(f, cls=PrefsJSONDecoder)
             except ValueError as loadError:
-                log.warning(TAG, F"{prefsPath}: {loadError}")
+                logger.warning(f"{prefsPath}: {loadError}", exc_info=True)
                 return False
 
             for k in obj:
                 if k.startswith('_'):
-                    log.warning(TAG, F"{prefsPath}: skipping illegal key: {k}")
+                    logger.warning(f"{prefsPath}: skipping illegal key: {k}")
                     continue
                 if k not in self.__dict__:
-                    log.warning(TAG, F"{prefsPath}: skipping unknown key: {k}")
+                    logger.warning(f"{prefsPath}: skipping unknown key: {k}")
                     continue
 
                 if obj[k] is None:

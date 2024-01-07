@@ -1,15 +1,17 @@
 import contextlib
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any
 
-from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
+
+logger = logging.getLogger(__name__)
 
 PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
 FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
@@ -146,12 +148,12 @@ class FileListModel(QAbstractListModel):
             patch: Patch = entry.diff[entry.patchNo]
             return patch
         except GitError as e:
-            log.warning("FileList", "GitError when attempting to get patch:", type(e).__name__, e)
+            logger.warning(f"GitError when attempting to get patch: {type(e).__name__}", exc_info=True)
             return None
         except OSError as e:
             # We might get here if the UI attempts to update itself while a long async
             # operation is ongoing. (e.g. a file is being recreated)
-            log.warning("FileList", "UI attempting to update during async operation?", type(e).__name__, e)
+            logger.warning(f"UI attempting to update during async operation? {type(e).__name__}", exc_info=True)
             return None
 
     def getDeltaAt(self, index: QModelIndex) -> DiffDelta:

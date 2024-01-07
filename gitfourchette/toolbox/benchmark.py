@@ -1,13 +1,13 @@
-from gitfourchette import log
+import logging
 import os
 import time
 
-TAG = "benchmark"
+logger = logging.getLogger(__name__)
 
 try:
     import psutil
 except ModuleNotFoundError:
-    log.info(TAG, "psutil isn't available. Memory pressure estimates won't work.")
+    logger.info("psutil isn't available. Memory pressure estimates won't work.")
     psutil = None
 
 
@@ -35,7 +35,7 @@ class Benchmark:
     def __exit__(self, exc_type, exc_value, traceback):
         tt = time.perf_counter() - self.start
         rss = getRSS()
-        log.verbose(TAG, F"{int(tt * 1000):6d}ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
+        logger.debug(f"{int(tt * 1000):6d}ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
         Benchmark.nesting.pop()
 
 

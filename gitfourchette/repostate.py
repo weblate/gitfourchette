@@ -1,17 +1,19 @@
+import logging
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
-from gitfourchette import log
-from gitfourchette import tempdir
+from typing import Iterable
+
 from gitfourchette import settings
+from gitfourchette import tempdir
+from gitfourchette.graph import Graph, GraphSplicer
 from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
-from gitfourchette.graph import Graph, GraphSplicer, KF_INTERVAL, BatchRow
 from gitfourchette.porcelain import *
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from typing import Iterable
-import os
 
+logger = logging.getLogger(__name__)
 
 UC_FAKEID = "UC_FAKEID"
 PROGRESS_INTERVAL = 5000
@@ -93,7 +95,7 @@ class RepoState(QObject):
         # setting autocrlf=true in the config.
         if WINDOWS and "core.autocrlf" not in self.repo.config:
             tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
-            log.info("RepoState", "Forcing core.autocrlf=true in: " + tempConfigPath)
+            logger.info(f"Forcing core.autocrlf=true in: {tempConfigPath}")
             tempConfig = GitConfig(tempConfigPath)
             tempConfig["core.autocrlf"] = "true"
             self.repo.config.add_file(tempConfigPath, level=1)
@@ -335,7 +337,7 @@ class RepoState(QObject):
                     seeds.add(oid)
             except (KeyError, InvalidSpecError):
                 # Remove it from prefs
-                log.info("RepoState", "Skipping missing hidden branch: " + hiddenBranch)
+                logger.info(f"Skipping missing hidden branch: {hiddenBranch}")
                 self.uiPrefs.hiddenBranches.remove(hiddenBranch)
 
         hiddenStashCommits = self.uiPrefs.hiddenStashCommits[:]
@@ -345,7 +347,7 @@ class RepoState(QObject):
                 seeds.add(oid)
             else:
                 # Remove it from prefs
-                log.info("RepoState", "Skipping missing hidden stash: " + hiddenStash)
+                logger.info(f"Skipping missing hidden stash: {hiddenStash}")
                 self.uiPrefs.hiddenStashCommits.remove(hiddenStash)
 
         return seeds

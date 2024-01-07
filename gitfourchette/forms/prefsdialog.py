@@ -1,4 +1,6 @@
-from gitfourchette import log
+import enum
+import logging
+
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.settings import (
@@ -12,8 +14,8 @@ from gitfourchette.settings import (
 )
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-import enum
 
+logger = logging.getLogger(__name__)
 
 SAMPLE_SIGNATURE = Signature("Jean-Michel Tartempion", "jm.tarte@example.com", 0, 0)
 SAMPLE_FILE_PATH = "spam/.ham/eggs/hello.c"
@@ -214,7 +216,7 @@ class PrefsDialog(QDialog):
                 del self.prefDiff[k]
         else:
             self.prefDiff[k] = v
-        log.verbose("prefsdialog", f"Assign {k} {v} ({type(v)})")
+        logger.debug(f"Assign {k} {v} ({type(v)})")
 
     def getMostRecentValue(self, k):
         if k in self.prefDiff:

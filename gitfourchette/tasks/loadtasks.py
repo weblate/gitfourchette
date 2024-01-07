@@ -1,6 +1,6 @@
 import contextlib
+import logging
 
-from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.graph import Graph, BatchRow
@@ -14,7 +14,7 @@ from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 
-TAG = "LoadTasks"
+logger = logging.getLogger(__name__)
 
 
 class PrimeRepo(RepoTask):
@@ -27,8 +27,9 @@ class PrimeRepo(RepoTask):
         self._wantAbort = True
 
     def flow(self, path: str):
+        from gitfourchette.graph import KF_INTERVAL
         from gitfourchette.repowidget import RepoWidget
-        from gitfourchette.repostate import RepoState, UC_FAKEID, KF_INTERVAL, PROGRESS_INTERVAL
+        from gitfourchette.repostate import RepoState, UC_FAKEID, PROGRESS_INTERVAL
         from gitfourchette.tasks.jumptasks import Jump
 
         assert path
@@ -109,7 +110,7 @@ class PrimeRepo(RepoTask):
         self.progressAbortable.emit(False)
 
         numCommits = len(commitSequence)
-        log.info("loadCommitSequence", F"{state.shortName}: loaded {numCommits} commits")
+        logger.info(f"{state.shortName}: loaded {numCommits} commits")
         graphMessage = self.tr("{0} commits total.").format(QLocale().toString(numCommits))
         if truncatedHistory:
             graphMessage += " " + self.tr("(truncated)", "commit history truncated")
@@ -163,7 +164,7 @@ class PrimeRepo(RepoTask):
 
         self.progressValue.emit(numCommits)
 
-        log.verbose("loadCommitSequence", "Peak arc count:", graphGenerator.peakArcCount)
+        logger.debug(f"Peak arc count: {graphGenerator.peakArcCount}")
 
         state.commitSequence = commitSequence
         state.graph = graph
@@ -224,7 +225,7 @@ class PrimeRepo(RepoTask):
 class LoadWorkdir(RepoTask):
     def canKill(self, task: RepoTask):
         if type(task) is LoadWorkdir:
-            log.warning(TAG, "LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
+            logger.warning("LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
             return True
         return type(task) in [LoadCommit, LoadPatch]
 

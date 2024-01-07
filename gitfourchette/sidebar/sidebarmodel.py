@@ -1,4 +1,8 @@
-from gitfourchette import log
+import contextlib
+import logging
+import enum
+from typing import Any, Iterable
+
 from gitfourchette import settings
 from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.porcelain import *
@@ -6,11 +10,8 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 from gitfourchette.repostate import RepoState
-from typing import Any, Iterable
-import contextlib
-import enum
 
-TAG = "sidebar"
+logger = logging.getLogger(__name__)
 
 ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
 ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
@@ -185,13 +186,13 @@ class SidebarModel(QAbstractItemModel):
                     try:
                         self._remoteBranchesDict[remote].append(branchName)
                     except KeyError:
-                        log.warning(TAG, f"Refresh cache: missing remote: {remote}")
+                        logger.warning(f"Refresh cache: missing remote: {remote}")
                 elif prefix == RefPrefix.TAGS:
                     self._tags.append(shorthand)
                 elif name == "HEAD" or name.startswith("stash@{"):
                     pass  # handled separately
                 else:
-                    log.warning(TAG, f"Refresh cache: unsupported ref prefix: {name}")
+                    logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
 
             # Sort remote branches
             for remote in self._remoteBranchesDict:

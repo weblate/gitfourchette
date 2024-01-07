@@ -1,9 +1,9 @@
+import logging
 import os
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox import NonCriticalOperation
 from gitfourchette import settings
-from gitfourchette import log
 
 
 class GFApplication(QApplication):
@@ -51,7 +51,8 @@ class GFApplication(QApplication):
             with NonCriticalOperation(F"Loading history"):
                 settings.history.load()
 
-        log.setVerbosity(settings.prefs.debug_verbosity.value)
+        # Set logging level
+        logging.root.setLevel(settings.prefs.debug_verbosity.value)
 
         # Set language
         with NonCriticalOperation("Loading language"):

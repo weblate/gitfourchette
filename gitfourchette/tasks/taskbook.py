@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import logging
 from typing import Type, Union
 
-from gitfourchette import log
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskInvoker
 from gitfourchette.toolbox import stockIcon, MultiShortcut, makeMultiShortcut
+
+logger = logging.getLogger(__name__)
 
 
 class TaskBook:
@@ -152,7 +154,7 @@ class TaskBook:
         except KeyError:
             name = t.__name__
             cls.names[t] = name
-            log.warning("TaskBook", f"Missing name for task '{name}'")
+            logger.warning(f"Missing name for task '{name}'")
 
         if QLocale().language() in [QLocale.Language.C, QLocale.Language.English]:
             name = name.title()

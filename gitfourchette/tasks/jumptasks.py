@@ -3,10 +3,10 @@ Tasks that navigate to a specific area of the repository.
 
 Unlike most other tasks, jump tasks directly manipulate the UI extensively, via RepoWidget.
 """
-
+import logging
 import os
 
-from gitfourchette import log, tasks
+from gitfourchette import tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskEffects, RepoGoneError
@@ -14,7 +14,7 @@ from gitfourchette.toolbox import *
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 
-TAG = "Jump"
+logger = logging.getLogger(__name__)
 
 
 class Jump(RepoTask):
@@ -35,14 +35,14 @@ class Jump(RepoTask):
         rw: RepoWidget = self.rw
         assert isinstance(rw, RepoWidget)
 
-        log.info(TAG, locator)
+        logger.debug(f"Locator: {locator}")
 
         # Back up current locator
         rw.saveFilePositions()
 
         # Refine locator: Try to recall where we were last time we looked at this context.
         locator = rw.navHistory.refine(locator)
-        log.info(TAG, "locator refined to:", locator)
+        logger.debug(f"Locator refined to: {locator}")
 
         # Show workdir or commit views (and update them if needed)
         if locator.context.isWorkdir():
@@ -284,7 +284,7 @@ class Jump(RepoTask):
 
         rw.navLocator = locator
         rw.navHistory.push(locator)
-        log.info(TAG, "locator set to:", locator)
+        logger.debug(f"Locator set to: {locator}")
 
 
 class JumpBackOrForward(tasks.RepoTask):
@@ -392,7 +392,7 @@ class RefreshRepo(tasks.RepoTask):
                     else:
                         rw.graphView.setCommitSequence(rw.state.commitSequence)
             else:
-                log.verbose(TAG, "Refresh: No need to refresh the graph.")
+                logger.debug("Refresh: No need to refresh the graph.")
 
         # Schedule a repaint of the entire GraphView if the refs changed
         if effectFlags & (TaskEffects.Head | TaskEffects.Refs):

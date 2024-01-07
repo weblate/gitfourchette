@@ -1,19 +1,28 @@
-from gitfourchette.qt import *
 import gc
+import logging
 import os
+import textwrap
 import time
+
+from gitfourchette.qt import *
 
 try:
     import psutil
 except ImportError:
-    print("psutil isn't available. The memory indicator will not work.")
     psutil = None
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryIndicator(QPushButton):
     def __init__(self, parent):
         super().__init__(parent)
+
+        self.setObjectName("MemoryIndicator")
         self.setText("Memory")
+
+        if not psutil:
+            logger.info("psutil isn't available. Some information will be missing from the memory indicator.")
 
         # No border: don't let it thicken the status bar
         self.setStyleSheet("border: none; text-align: right; padding-right: 8px;")
@@ -36,13 +45,10 @@ class MemoryIndicator(QPushButton):
     def onMemoryIndicatorClicked(self):
         gc.collect()
 
-        print("Top-Level Windows:")
-        for tlw in QApplication.topLevelWindows():
-            print("*", tlw)
-        print("Top-Level Widgets:")
-        for tlw in QApplication.topLevelWidgets():
-            print("*", tlw, tlw.objectName())
-        print()
+        windows = '\n'.join(f'\t* {w.__class__.__name__} {w.objectName()}' for w in QApplication.topLevelWindows())
+        widgets = '\n'.join(f'\t* {w.__class__.__name__} {w.objectName()}' for w in QApplication.topLevelWidgets())
+        report = f"\nTop-Level Windows:\n{windows}\nTop-Level Widgets:\n{widgets}\n"
+        logging.info(report)
 
         self.updateMemoryIndicator()
 

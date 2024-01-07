@@ -1,14 +1,15 @@
 from __future__ import annotations
-from gitfourchette.porcelain import Repo, ConflictError, MultiFileError
+
+import enum
+import logging
+from typing import Any, Generator, Type
+
 from gitfourchette.nav import NavLocator
+from gitfourchette.porcelain import Repo, ConflictError, MultiFileError
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette import log
-from typing import Any, Generator, Type
-import enum
 
-
-TAG = "RepoTaskRunner"
+logger = logging.getLogger(__name__)
 
 
 def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operation"):
@@ -294,7 +295,7 @@ class RepoTask(QObject):
         subtask = subtaskClass(self)
         subtask.setRepo(self.repo)
         subtask.setObjectName(f"{self.objectName()}:sub{subtask.objectName()}")
-        log.info(TAG, f"{self}: Entering subtask {subtask}")
+        logger.debug(f"{self}: Entering subtask {subtask}")
 
         # Push subtask onto stack
         subtask._taskStack = self._taskStack  # share reference to task stack
@@ -477,7 +478,7 @@ class RepoTaskRunner(QObject):
             self._startTask(task)
 
         elif task.canKill(self._currentTask):
-            log.info(TAG, f"Task {task} killed task {self._currentTask}")
+            logger.info(f"Task {task} killed task {self._currentTask}")
             self.killCurrentTask()
             self._currentTask = task
 
@@ -492,7 +493,7 @@ class RepoTaskRunner(QObject):
         assert self._currentTask == task
         assert task._currentFlow
 
-        log.info(TAG, f"Start task {task}")
+        logger.debug(f"Start task {task}")
 
         self._currentTaskBenchmark = Benchmark(str(task))
         self._currentTaskBenchmark.__enter__()
@@ -558,7 +559,7 @@ class RepoTaskRunner(QObject):
 
                 if isinstance(exception, StopIteration):
                     # No more steps in the flow
-                    log.info(TAG, f"Task successful: {task}")
+                    logger.debug(f"Task successful: {task}")
                     self.refreshPostTask.emit(task)
                 elif isinstance(exception, FlowControlAbort):
                     # Controlled exit, show message (if any)
@@ -593,7 +594,7 @@ class RepoTaskRunner(QObject):
         return nextToken
 
     def _releaseTask(self, task: RepoTask):
-        log.info(TAG, f"End task {task}")
+        logger.debug(f"End task {task}")
         self.progress.emit("", False)
         self._currentTaskBenchmark.__exit__(None, None, None)
 

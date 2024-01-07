@@ -1,11 +1,11 @@
 import enum
+import logging
 import os
 import re
 from bisect import bisect_left, bisect_right
 from typing import Literal
 
 from gitfourchette import colors
-from gitfourchette import log
 from gitfourchette import settings
 from gitfourchette.diffview.diffdocument import DiffDocument, LineData
 from gitfourchette.forms.searchbar import SearchBar
@@ -16,7 +16,7 @@ from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
 from gitfourchette.toolbox import *
 
-TAG = "DiffView"
+logger = logging.getLogger(__name__)
 
 
 @enum.unique
@@ -253,7 +253,7 @@ class DiffView(QPlainTextEdit):
             newDoc.document = None  # prevent any callers from using a stale object
 
             # Bail now - don't change the document
-            log.verbose(TAG, "Reusing document")
+            logger.debug("Reusing document")
             return
 
         if oldDocument:
@@ -348,7 +348,7 @@ class DiffView(QPlainTextEdit):
                 scrolls += 1
                 scrollTo = vsb.value() + 1
                 vsb.setValue(scrollTo)
-            # log.info(TAG, f"Stabilized in {scrolls} iterations - final scroll {scrollTo} vs {locator.diffScroll})"
+            # logger.info(f"Stabilized in {scrolls} iterations - final scroll {scrollTo} vs {locator.diffScroll})"
             #               f" - char pos {self.cursorForPosition(corner).position()} vs {locator.diffScrollTop}")
 
         # Move text cursor
@@ -898,7 +898,7 @@ class DiffView(QPlainTextEdit):
         clipboard = QApplication.clipboard()
 
         if __debug__ and "\u2029" not in clipboard.text(mode):
-            log.info(TAG, F"Scrubbing U+2029 would be useless in this buffer!")
+            logger.info("Scrubbing U+2029 would be useless in this buffer!")
             return
 
         # Even if we have focus, another process might have modified the clipboard in the background.
@@ -909,7 +909,7 @@ class DiffView(QPlainTextEdit):
         if not ownsData:
             return
 
-        log.info(TAG, F"Scrubbing U+2029 characters from clipboard ({mode})")
+        logger.info(f"Scrubbing U+2029 characters from clipboard ({mode})")
         text = clipboard.text(mode).replace("\u2029", "\n")
         with QSignalBlockerContext(clipboard):
             clipboard.setText(text, mode)

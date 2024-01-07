@@ -1,16 +1,18 @@
-from gitfourchette import log
+import contextlib
+import dataclasses
+import enum
+import logging
+import os
+import shlex
+
 from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
 from gitfourchette.toolbox.pathutils import PathDisplayStyle
 from gitfourchette.trtables import TrTables
-import contextlib
-import dataclasses
-import enum
-import os
-import shlex
 
+logger = logging.getLogger(__name__)
 
 TEST_MODE = False
 """ Unit testing mode. """
@@ -120,6 +122,12 @@ class QtApiNames(enum.StrEnum):
     QTAPI_PYSIDE2 = "pyside2"
 
 
+class LoggingLevel(enum.IntEnum):
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+
+
 @dataclasses.dataclass
 class Prefs(PrefsFile):
     _filename = "prefs.json"
@@ -157,7 +165,7 @@ class Prefs(PrefsFile):
     debug_fixU2029InClipboard   : bool          = False
     debug_hideStashJunkParents  : bool          = True
     debug_autoRefresh           : bool          = True
-    debug_verbosity             : log.Logger.Verbosity = log.Logger.Verbosity.QUIET
+    debug_verbosity             : LoggingLevel  = LoggingLevel.WARNING
     debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
 
 
@@ -335,7 +343,7 @@ def applyLanguagePref():
         app.installTranslator(newTranslator)
         installedTranslators.append(newTranslator)
     else:
-        log.warning("settings", "Failed to load translator.")
+        logger.warning("Failed to load translator.")
         newTranslator.deleteLater()
 
     # Load Qt base translation
@@ -347,8 +355,8 @@ def applyLanguagePref():
                 installedTranslators.append(baseTranslator)
             else:
                 baseTranslator.deleteLater()
-        except BaseException as exc:
-            log.warning("settings", f"Failed to load Qt base translation for language: {prefs.language} - Cause: {exc}")
+        except Exception as exc:
+            logger.warning(f"Failed to load Qt base translation for language: {prefs.language}", exc_info=True)
 
     TrTables.retranslateAll()
 
