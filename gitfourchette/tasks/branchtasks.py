@@ -149,8 +149,8 @@ class _NewBranchBaseTask(RepoTask):
                 dlg.ui.upstreamComboBox.setCurrentIndex(i)
 
         setWindowModal(dlg)
+        dlg.setFixedHeight(dlg.sizeHint().height())
         dlg.show()
-        dlg.setMaximumHeight(dlg.height())
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
 

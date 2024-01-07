@@ -64,9 +64,8 @@ class EditRemote(RepoTask):
             parent=self.parentWidget())
 
         setWindowModal(dlg)
-        dlg.resize(512, 128)
+        dlg.setFixedHeight(dlg.sizeHint().height())
         dlg.show()
-        dlg.setMaximumHeight(dlg.height())
         yield from self.flowDialog(dlg)
 
         newRemoteName = dlg.ui.nameEdit.text()
