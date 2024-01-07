@@ -16,7 +16,9 @@ class CommittedFiles(FileList):
     def __init__(self, parent: QWidget):
         super().__init__(parent, NavContext.COMMITTED)
 
-    def createContextMenuActions(self, n):
+    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+        n = len(patches)
+
         return [
             ActionDef(
                 self.tr("Open Diff in New &Window"),

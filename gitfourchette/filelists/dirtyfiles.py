@@ -2,6 +2,7 @@ from gitfourchette import settings
 from gitfourchette.filelists.filelist import FileList
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.tasks import *
@@ -17,7 +18,9 @@ class DirtyFiles(FileList):
 
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-    def createContextMenuActions(self, n):
+    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+        n = len(patches)
+
         return [
             ActionDef(
                 self.tr("&Stage %n File(s)", "", n),
@@ -95,10 +98,13 @@ class DirtyFiles(FileList):
             super().keyPressEvent(event)
 
     def stage(self):
-        self.stageFiles.emit(list(self.selectedEntries()))
+        patches = list(self.selectedPatches())
+        self.stageFiles.emit(patches)
 
     def discard(self):
-        self.discardFiles.emit(list(self.selectedEntries()))
+        patches = list(self.selectedPatches())
+        self.discardFiles.emit(patches)
 
     def wantDiscardModeChanges(self):
-        self.discardModeChanges.emit(list(self.selectedEntries()))
+        patches = list(self.selectedPatches())
+        self.discardModeChanges.emit(patches)

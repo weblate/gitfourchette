@@ -57,11 +57,11 @@ class FileList(QListView):
         self.commitOid = NULL_OID
 
     def makeContextMenu(self):
-        numIndexes = len(self.selectedIndexes())
-        if numIndexes == 0:
+        patches = list(self.selectedPatches())
+        if len(patches) == 0:
             return None
 
-        actions = self.createContextMenuActions(numIndexes)
+        actions = self.createContextMenuActions(patches)
         menu = ActionDef.makeQMenu(self, actions)
         menu.setObjectName("FileListContextMenu")
         return menu
@@ -86,7 +86,7 @@ class FileList(QListView):
         # was called" -- I suppose this means the context menu won't be deleted until the FileList has control again.
         menu.deleteLater()
 
-    def createContextMenuActions(self, count: int) -> list[ActionDef]:
+    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
         """ To be overridden """
         return []
 
@@ -106,24 +106,24 @@ class FileList(QListView):
             ])
 
     def confirmBatch(self, callback: Callable[[Patch], None], title: str, prompt: str, threshold: int = 3):
-        entries = list(self.selectedEntries())
+        patches = list(self.selectedPatches())
 
         def runBatch():
             errors = []
 
-            for e in entries:
+            for patch in patches:
                 try:
-                    callback(e)
+                    callback(patch)
                 except SelectedFileBatchError as exc:
                     errors.append(str(exc))
 
             if errors:
                 showWarning(self, title, "<br>".join(errors))
 
-        if len(entries) <= threshold:
+        if len(patches) <= threshold:
             runBatch()
         else:
-            numFiles = len(entries)
+            numFiles = len(patches)
 
             qmb = askConfirmation(
                 self,
@@ -197,9 +197,8 @@ class FileList(QListView):
             super().keyPressEvent(event)
 
     def copyPaths(self):
-        wd = self.repo.workdir
-        text = '\n'.join(os.path.join(wd, entry.delta.new_file.path)
-                         for entry in self.selectedEntries())
+        text = '\n'.join(self.repo.in_workdir(patch.delta.new_file.path)
+                         for patch in self.selectedPatches())
         if text:
             QApplication.clipboard().setText(text)
 
@@ -258,7 +257,7 @@ class FileList(QListView):
         else:
             super().mouseMoveEvent(event)
 
-    def selectedEntries(self) -> Generator[Patch, None, None]:
+    def selectedPatches(self) -> Generator[Patch, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():
             patch: Patch = index.data(Qt.ItemDataRole.UserRole)
@@ -285,23 +284,18 @@ class FileList(QListView):
 
     def savePatchAs(self, saveInto=None):
         def warnBinary(affectedPaths):
-            showWarning(
-                self,
-                self.tr("Save patch file"),
-                paragraphs(
-                    self.tr("For the time being, {0} is unable to export binary patches "
-                            "from a selection of files.").format(qAppName()),
-                    self.tr("The following binary files were skipped in the patch:"),
-                    "<br>".join(escape(f) for f in affectedPaths)))
+            message = paragraphs(
+                self.tr("For the time being, {0} is unable to export binary patches from a selection of files."),
+                self.tr("The following binary files were skipped in the patch:")).format(qAppName())
+            message += ulList(escape(f) for f in affectedPaths)
+            showWarning(self, self.tr("Save patch file"), message)
 
-        entries = list(self.selectedEntries())
-
+        patches = list(self.selectedPatches())
         names = set()
-
         skippedBinaryFiles = []
 
         bigpatch = b""
-        for patch in entries:
+        for patch in patches:
             if patch.delta.status == GIT_DELTA_DELETED:
                 diffFile = patch.delta.old_file
             else:
@@ -376,22 +370,22 @@ class FileList(QListView):
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
     def wantPartialStash(self):
-        paths = [patch.delta.old_file.path for patch in self.selectedEntries()]
+        paths = [patch.delta.old_file.path for patch in self.selectedPatches()]
         NewStash.invoke(paths)
 
     def revertModeActionDef(self, n: int, callback: Callable):
-        action = ActionDef(self.tr("Revert Mode Change(s)", "", n), callback, enabled=False)
+        action = ActionDef(self.tr("Revert Mode Change", "", n), callback, enabled=False)
 
         try:
-            entries = self.selectedEntries()
+            patches = self.selectedPatches()
         except ValueError:
-            # If selectedEntries fails (e.g. due to stale diff), just return the default action
+            # If selectedPatches fails (e.g. due to stale diff), just return the default action
             return action
 
-        for entry in entries:
-            om = entry.delta.old_file.mode
-            nm = entry.delta.new_file.mode
-            if (entry.delta.status in [GIT_DELTA_MODIFIED, GIT_DELTA_RENAMED]
+        for patch in patches:
+            om = patch.delta.old_file.mode
+            nm = patch.delta.new_file.mode
+            if (patch.delta.status in [GIT_DELTA_MODIFIED, GIT_DELTA_RENAMED]
                     and om != nm
                     and nm in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]):
                 action.enabled = True

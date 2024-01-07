@@ -2,6 +2,7 @@ from gitfourchette import settings
 from gitfourchette.filelists.filelist import FileList
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
+from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.tasks import *
@@ -16,7 +17,9 @@ class StagedFiles(FileList):
 
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-    def createContextMenuActions(self, n):
+    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+        n = len(patches)
+
         return [
             ActionDef(
                 self.tr("&Unstage %n File(s)", "", n),
@@ -85,9 +88,9 @@ class StagedFiles(FileList):
             super().keyPressEvent(event)
 
     def unstage(self):
-        self.unstageFiles.emit(list(self.selectedEntries()))
+        self.unstageFiles.emit(list(self.selectedPatches()))
 
     def wantUnstageModeChange(self):
-        self.unstageModeChanges.emit(list(self.selectedEntries()))
+        self.unstageModeChanges.emit(list(self.selectedPatches()))
 
 
