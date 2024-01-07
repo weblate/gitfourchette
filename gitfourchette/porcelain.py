@@ -270,15 +270,16 @@ def _version_at_least(
     required_version = version_to_tuple(required_version_string)
     current_version = version_to_tuple(current_version_string)
 
-    if tuple(current_version) < tuple(required_version):
-        message = (f"{feature_name} requires {package_name} v{required_version_string} or later "
-                   f"(you have v{current_version_string}).")
-        if raise_error:
-            raise NotImplementedError(message)
-        else:
-            _logger.warning(message)
+    if tuple(current_version) >= tuple(required_version):
+        return True
 
-    return True
+    message = (f"{feature_name} requires {package_name} v{required_version_string} or later "
+               f"(you have v{current_version_string}).")
+    if raise_error:
+        raise NotImplementedError(message)
+    else:
+        _logger.warning(message)
+        return False
 
 
 def pygit2_version_at_least(required_version: str, raise_error=True, feature_name="This feature"):
