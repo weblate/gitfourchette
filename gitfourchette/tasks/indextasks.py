@@ -3,7 +3,7 @@ from gitfourchette.diffview.diffview import PatchPurpose
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
@@ -11,7 +11,7 @@ import os
 
 
 class _BaseStagingTask(RepoTask):
-    def canKill(self, task: 'RepoTask'):
+    def canKill(self, task: RepoTask):
         # Jump/Refresh tasks shouldn't prevent a staging task from starting
         # when the user holds down RETURN/DELETE in a FileListView
         # to stage/unstage a series of files.
@@ -26,7 +26,7 @@ class StageFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to stage (may happen if user keeps pressing Enter in file list view)
             QApplication.beep()
-            yield from self.flowAbort()
+            raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
         self.repo.stage_files(patches)
@@ -43,7 +43,7 @@ class DiscardFiles(_BaseStagingTask):
 
         if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self.flowAbort()
+            raise AbortTask()
         elif len(patches) == 1:
             patch = patches[0]
             path = patch.delta.new_file.path
@@ -71,7 +71,7 @@ class UnstageFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self.flowAbort()
+            raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
         self.repo.unstage_files(patches)
@@ -83,7 +83,7 @@ class DiscardModeChanges(_BaseStagingTask):
 
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self.flowAbort()
+            raise AbortTask()
         elif len(patches) == 1:
             path = patches[0].delta.new_file.path
             textPara.append(self.tr("Really discard mode change in <b>“{0}”</b>?").format(escape(path)))
@@ -105,7 +105,7 @@ class UnstageModeChanges(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to unstage (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
-            yield from self.flowAbort()
+            raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
         self.repo.unstage_mode_changes(patches)
@@ -189,11 +189,11 @@ class RevertPatch(RepoTask):
 
     def flow(self, fullPatch: Patch, patchData: bytes):
         if not patchData:
-            yield from self.flowAbort(self.tr("There’s nothing to revert in the selection."))
+            raise AbortTask(self.tr("There’s nothing to revert in the selection."))
 
         diff = self.repo.applies_breakdown(patchData, location=GIT_APPLY_LOCATION_WORKDIR)
         if not diff:
-            yield from self.flowAbort(
+            raise AbortTask(
                 self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
 
         yield from self.flowEnterWorkerThread()
@@ -352,13 +352,13 @@ class AbortMerge(RepoTask):
         isCherryPicking = self.repo.state() == GIT_REPOSITORY_STATE_CHERRYPICK
 
         if not isMerging and not isCherryPicking:
-            yield from self.flowAbort(self.tr("No merge or cherry-pick is in progress."), icon='information')
+            raise AbortTask(self.tr("No merge or cherry-pick is in progress."), icon='information')
 
         try:
             abortList = self.repo.get_reset_merge_file_list()
         except ValueError:
             message = self.tr("Cannot abort right now because you have files that are both staged and unstaged.")
-            yield from self.flowAbort(message)
+            raise AbortTask(message)
 
         message = paragraphs(
             self.tr("Do you want to abort the merge?") if not isCherryPicking

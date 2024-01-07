@@ -105,10 +105,10 @@ class FlowControlToken(QObject):
         return F"FlowControlToken({self.flowControl.name})"
 
 
-class FlowControlAbort(Exception):
+class AbortTask(Exception):
     """ To bail from a coroutine early, we must raise an exception to ensure that
     any active context managers exit deterministically."""
-    def __init__(self, text: str, icon: MessageBoxIconName, asStatusMessage: bool):
+    def __init__(self, text: str = "", icon: MessageBoxIconName = "warning", asStatusMessage: bool = False):
         super().__init__(text)
         self.icon = icon
         self.asStatusMessage = asStatusMessage
@@ -131,7 +131,7 @@ class RepoTask(QObject):
     taskID: int
     jumpTo: NavLocator | None
 
-    _currentFlow: FlowGeneratorType
+    _currentFlow: FlowGeneratorType | None
     _currentIteration: int
 
     _taskStack: list[RepoTask]
@@ -213,7 +213,7 @@ class RepoTask(QObject):
             expensiveComputationCorrect = meaning == 42
             yield from self.flowEnterUiThread()
             if not expensiveComputationCorrect:
-                yield from self.flowAbort("Sorry, computer says no.")
+                raise AbortTask("Sorry, computer says no.")
 
         The coroutine always starts on the UI thread.
         """
@@ -250,16 +250,6 @@ class RepoTask(QObject):
         Returns which parts of the UI should be refreshed when this task is done.
         """
         return TaskEffects.Nothing
-
-    def flowAbort(self, text: str = "", icon: MessageBoxIconName = "warning", asStatusMessage: bool = False):
-        """
-        Aborts the task with an optional error message.
-        The success signal will NOT be emitted.
-
-        This function is intended to be called by flow() with "yield from".
-        """
-        raise FlowControlAbort(text, icon, asStatusMessage)
-        yield  # Dummy yield to make it a generator
 
     def flowEnterWorkerThread(self):
         """
@@ -344,7 +334,7 @@ class RepoTask(QObject):
 
         if abortTaskIfRejected and didReject:
             dialog.deleteLater()
-            yield from self.flowAbort()
+            raise AbortTask("")
 
     def flowConfirm(
             self,
@@ -561,7 +551,7 @@ class RepoTaskRunner(QObject):
                     # No more steps in the flow
                     logger.debug(f"Task successful: {task}")
                     self.refreshPostTask.emit(task)
-                elif isinstance(exception, FlowControlAbort):
+                elif isinstance(exception, AbortTask):
                     # Controlled exit, show message (if any)
                     message = str(exception)
                     if message and exception.asStatusMessage:

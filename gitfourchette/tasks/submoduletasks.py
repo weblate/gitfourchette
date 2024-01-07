@@ -5,7 +5,7 @@ Submodule management tasks.
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_absorbsubmodule import Ui_AbsorbSubmodule
 from pathlib import Path
@@ -32,13 +32,13 @@ class AbsorbSubmodule(RepoTask):
             message = paragraphs(
                 self.tr("“{0}” is a bare repository.").format(subName),
                 self.tr("This operation does not support bare repositories."))
-            yield from self.flowAbort(message)
+            raise AbortTask(message)
 
         if not subRemotes:
             message = paragraphs(
                 self.tr("“{0}” has no remotes.").format(subName),
                 self.tr("Please open “{0}” and add a remote to it before absorbing it as a submodule of “{1}”.").format(subName, thisName))
-            yield from self.flowAbort(message)
+            raise AbortTask(message)
 
         dlg = QDialog(self.parentWidget())
 

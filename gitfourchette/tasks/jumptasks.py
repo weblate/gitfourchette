@@ -9,7 +9,7 @@ import os
 from gitfourchette import tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
-from gitfourchette.tasks import RepoTask, TaskEffects, RepoGoneError
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
@@ -221,7 +221,7 @@ class Jump(RepoTask):
                 rw.graphView.selectCommit(locator.commit, silent=False)
             except GraphView.SelectCommitError as e:
                 # Commit is hidden or not loaded
-                yield from self.flowAbort(str(e), asStatusMessage=True)
+                raise AbortTask(str(e), asStatusMessage=True)
 
         # Attempt to select matching ref in sidebar
         with (

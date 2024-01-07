@@ -1,6 +1,6 @@
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.trash import Trash
 from gitfourchette.toolbox import *
 from gitfourchette.forms.stashdialog import StashDialog
@@ -35,19 +35,19 @@ class NewStash(RepoTask):
     def flow(self, paths: list[str] | None = None):
         # libgit2 will refuse to create a stash if there are conflicts
         if self.repo.index.conflicts:
-            yield from self.flowAbort(
+            raise AbortTask(
                 self.tr("Before creating a stash, please fix merge conflicts in the working directory."))
 
         # libgit2 will refuse to create a stash if there are no commits at all
         if self.repo.head_is_unborn:
-            yield from self.flowAbort(
+            raise AbortTask(
                 self.tr("Cannot create a stash when HEAD is unborn.")
                 + " " + tr("Please create the initial commit in this repository first."))
 
         status = self.repo.status(untracked_files="all", ignored=False)
 
         if not status:
-            yield from self.flowAbort(self.tr("There are no changes to stash."), "information")
+            raise AbortTask(self.tr("There are no changes to stash."), "information")
 
         # Prevent stashing any submodules
         with Benchmark("NewStash/Query submodules"):
@@ -55,7 +55,7 @@ class NewStash(RepoTask):
                 status.pop(submo, None)
 
         if not status:
-            yield from self.flowAbort(self.tr("There are no changes to stash (submodules cannot be stashed)."), "information")
+            raise AbortTask(self.tr("There are no changes to stash (submodules cannot be stashed)."), "information")
 
         dlg = StashDialog(status, paths, self.parentWidget())
         setWindowModal(dlg)
@@ -82,7 +82,7 @@ class ApplyStash(RepoTask):
 
     def flow(self, stashCommitId: Oid, tickDelete=True):
         if self.repo.any_conflicts:
-            yield from self.flowAbort(self.tr("Before applying a stash, please resolve the merge conflicts in your working directory."))
+            raise AbortTask(self.tr("Before applying a stash, please resolve the merge conflicts in your working directory."))
 
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)

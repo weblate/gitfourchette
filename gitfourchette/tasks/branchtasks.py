@@ -2,7 +2,7 @@ import logging
 
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
@@ -19,7 +19,7 @@ class SwitchBranch(RepoTask):
         assert not newBranch.startswith(RefPrefix.HEADS)
 
         if self.repo.branches.local[newBranch].is_checked_out():
-            yield from self.flowAbort(
+            raise AbortTask(
                 self.tr("Branch <b>“{0}”</b> is already checked out.").format(escape((newBranch))),
                 'information')
 
@@ -69,7 +69,7 @@ class DeleteBranch(RepoTask):
             text = paragraphs(
                 self.tr("Cannot delete “{0}” because it is the current branch.").format(escape(localBranchName)),
                 self.tr("Before you try again, switch to another branch."))
-            yield from self.flowAbort(text)
+            raise AbortTask(text)
 
         text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
                           tr("This cannot be undone!"))
@@ -180,7 +180,7 @@ class _NewBranchBaseTask(RepoTask):
 class NewBranchFromHead(_NewBranchBaseTask):
     def flow(self):
         if self.repo.head_is_unborn:
-            yield from self.flowAbort(
+            raise AbortTask(
                 self.tr("Cannot create a local branch when HEAD is unborn.")
                 + " " + tr("Please create the initial commit in this repository first."))
 
@@ -236,7 +236,7 @@ class EditTrackedBranch(RepoTask):
 
         # Bail if no-op
         if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
-            yield from self.flowAbort()
+            raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
 
@@ -251,13 +251,13 @@ class FastForwardBranch(RepoTask):
         try:
             branch = self.repo.branches.local[localBranchName]
         except KeyError:
-            yield from self.flowAbort(self.tr("To fast-forward a branch, a local branch must be checked out. "
-                                               "Try switching to a local branch before fast-forwarding it."))
+            raise AbortTask(self.tr("To fast-forward a branch, a local branch must be checked out. "
+                                    "Try switching to a local branch before fast-forwarding it."))
 
         upstream: Branch = branch.upstream
         if not upstream:
-            yield from self.flowAbort(self.tr("Can’t fast-forward “{0}” because it isn’t tracking a remote branch."
-                                              ).format(escape(branch.shorthand)))
+            raise AbortTask(self.tr("Can’t fast-forward “{0}” because it isn’t tracking a remote branch."
+                                    ).format(escape(branch.shorthand)))
 
         remoteBranchName = upstream.shorthand
 
@@ -317,23 +317,23 @@ class MergeBranch(RepoTask):
             message = paragraphs(
                 self.tr("Merging is not possible right now because you have unresolved conflicts."),
                 self.tr("Fix the conflicts to proceed."))
-            yield from self.flowAbort(text=message)
+            raise AbortTask(message)
 
         elif anyStagedFiles:
             message = paragraphs(
                 self.tr("Merging is not possible right now because you have staged changes."),
                 self.tr("Commit your changes or stash them to proceed."))
-            yield from self.flowAbort(text=message)
+            raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
             message = paragraphs(
                 self.tr("No merge is necessary."),
                 self.tr("Your branch “{0}” is already up-to-date with “{1}”.").format(myBranch, them))
-            yield from self.flowAbort(text=message)
+            raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_UNBORN:
             message = self.tr("Cannot merge into an unborn head.")
-            yield from self.flowAbort(text=message)
+            raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL:
             message = self.tr("There are no merge conflicts. Your branch <b>“{0}”</b> can be "
@@ -353,7 +353,7 @@ class MergeBranch(RepoTask):
             self.repo.merge(target)
 
         else:
-            yield from self.flowAbort(escape(f"Unsupported MergeAnalysis! ma={repr(analysis)} mp={repr(pref)}"))
+            raise AbortTask(escape(f"Unsupported MergeAnalysis! ma={repr(analysis)} mp={repr(pref)}"))
 
 
 class RecallCommit(RepoTask):

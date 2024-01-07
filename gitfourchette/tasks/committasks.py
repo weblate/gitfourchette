@@ -2,7 +2,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.jumptasks import RefreshRepo
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.forms.commitdialog import CommitDialog
@@ -21,8 +21,7 @@ class NewCommit(RepoTask):
 
     def flow(self):
         if self.repo.index.conflicts:
-            yield from self.flowAbort(
-                self.tr("Please fix merge conflicts in the working directory before committing."))
+            raise AbortTask(self.tr("Please fix merge conflicts in the working directory before committing."))
 
         if not self.repo.any_staged_changes:
             yield from self.flowConfirm(
@@ -64,7 +63,7 @@ class NewCommit(RepoTask):
 
         if cd.result() == QDialog.DialogCode.Rejected:
             cd.deleteLater()
-            yield from self.flowAbort()
+            raise AbortTask()
 
         cd.deleteLater()
 
@@ -91,12 +90,11 @@ class AmendCommit(RepoTask):
 
     def flow(self):
         if self.repo.index.conflicts:
-            yield from self.flowAbort(
-                self.tr("Please fix merge conflicts in the working directory before amending the commit."))
+            raise AbortTask(self.tr("Please fix merge conflicts in the working directory before amending the commit."))
 
         state = self.repo.state()
         if state == GIT_REPOSITORY_STATE_CHERRYPICK:
-            yield from self.flowAbort(self.tr("You are in the middle of a cherry-pick – cannot amend."))
+            raise AbortTask(self.tr("You are in the middle of a cherry-pick – cannot amend."))
 
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = self.repo.head_commit
@@ -124,7 +122,7 @@ class AmendCommit(RepoTask):
 
         if cd.result() == QDialog.DialogCode.Rejected:
             cd.deleteLater()
-            yield from self.flowAbort()
+            raise AbortTask()
 
         author = cd.getOverriddenAuthorSignature()
         committer = cd.getOverriddenCommitterSignature()
@@ -416,7 +414,7 @@ class CherrypickCommit(RepoTask):
     def flow(self, oid: Oid):
         # Prevent cherry-picking with staged changes, like vanilla git (despite libgit2 allowing it)
         if self.repo.any_staged_changes:
-            yield from self.flowAbort(paragraphs(
+            raise AbortTask(paragraphs(
                 self.tr("Cherry-picking is not possible right now because you have staged changes."),
                 self.tr("Commit your changes or stash them to proceed.")))
 
@@ -440,7 +438,7 @@ class CherrypickCommit(RepoTask):
         if dud:
             info = self.tr("There’s nothing to cherry-pick from “{0}” that the current branch doesn’t already have."
                            ).format(shortHash(oid))
-            yield from self.flowAbort(info, "information")
+            raise AbortTask(info, "information")
 
         self.rw.state.setDraftCommitMessage(commit.message, author=commit.author)
 

@@ -4,7 +4,7 @@ Remote access tasks.
 
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.remotelinkprogressdialog import RemoteLinkProgressDialog
@@ -110,12 +110,12 @@ class FetchRemoteBranch(_BaseNetTask):
                 branch = self.repo.branches.local[branchName]
             except KeyError:
                 message = tr("Please switch to a local branch before performing this action.")
-                yield from self.flowAbort(message)
+                raise AbortTask(message)
 
             if not branch.upstream:
                 message = self.tr("Can’t fetch remote changes on “{0}” because this branch "
                                   "isn’t tracking a remote branch.").format(branch.shorthand)
-                yield from self.flowAbort(message)
+                raise AbortTask(message)
 
             remoteBranchName = branch.upstream.shorthand
 

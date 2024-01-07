@@ -1,6 +1,6 @@
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 
 
@@ -25,7 +25,7 @@ class ComposePatch(RepoTask):
         yield from self.flowEnterUiThread()
 
         if not composed:
-            yield from self.flowAbort(self.tr("Nothing to export. The patch is empty."), icon="information")
+            raise AbortTask(self.tr("Nothing to export. The patch is empty."), icon="information")
 
         qfd = PersistentFileDialog.saveFile(self.parentWidget(), "SaveFile", self.name(), fileName)
         yield from self.flowDialog(qfd)
