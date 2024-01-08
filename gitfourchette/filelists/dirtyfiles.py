@@ -19,47 +19,90 @@ class DirtyFiles(FileList):
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+        actions = []
+
         n = len(patches)
 
-        return [
-            ActionDef(
-                self.tr("&Stage %n File(s)", "", n),
-                self.stage,
-                icon="list-add",  # QStyle.StandardPixmap.SP_ArrowDown,
-                shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
-            ),
+        statusSet = set(patch.delta.status for patch in patches)
 
-            ActionDef(
-                self.tr("&Discard Changes"),
-                self.discard,
-                icon=QStyle.StandardPixmap.SP_TrashIcon,
-                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
-            ),
+        if GIT_DELTA_CONFLICTED not in statusSet:
+            actions += [
+                ActionDef(
+                    self.tr("&Stage %n File(s)", "", n),
+                    self.stage,
+                    icon="list-add",  # QStyle.StandardPixmap.SP_ArrowDown,
+                    shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
+                ),
 
-            ActionDef(
-                self.tr("Stas&h Changes..."),
-                self.wantPartialStash,
-                icon="vcs-stash",
-                shortcuts=TaskBook.shortcuts.get(NewStash, [])
-            ),
+                ActionDef(
+                    self.tr("&Discard Changes"),
+                    self.discard,
+                    icon=QStyle.StandardPixmap.SP_TrashIcon,
+                    shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
+                ),
 
-            self.revertModeActionDef(n, self.wantDiscardModeChanges),
+                ActionDef(
+                    self.tr("Stas&h Changes..."),
+                    self.wantPartialStash,
+                    icon="vcs-stash",
+                    shortcuts=TaskBook.shortcuts.get(NewStash, [])
+                ),
 
-            ActionDef.SEPARATOR,
+                self.revertModeActionDef(n, self.wantDiscardModeChanges),
 
-            ActionDef(
-                self.tr("Compare in {0}").format(settings.getDiffToolName()),
-                self.wantOpenInDiffTool,
-                icon="vcs-diff",
-            ),
+                ActionDef.SEPARATOR,
 
-            ActionDef(
-                self.tr("E&xport Diff(s) As Patch...", "", n),
-                self.savePatchAs
-            ),
+                ActionDef(
+                    self.tr("Compare in {0}").format(settings.getDiffToolName()),
+                    self.wantOpenInDiffTool,
+                    icon="vcs-diff",
+                ),
 
-            ActionDef.SEPARATOR,
+                ActionDef(
+                    self.tr("E&xport Diff(s) As Patch...", "", n),
+                    self.savePatchAs
+                ),
+            ]
+        elif len(statusSet) == 1:  # Only conflicted files
+            actions += [
+                ActionDef(
+                    self.tr("%n Merge Conflicts", "singular form should simply say 'Merge Conflict'", n),
+                    isSection=True,
+                ),
 
+                ActionDef(
+                    self.tr("Resolve by Accepting “Theirs”"),
+                    self.mergeTakeTheirs,
+                ),
+
+                ActionDef(
+                    self.tr("Resolve by Keeping “Ours”"),
+                    self.mergeKeepOurs,
+                ),
+
+                # ActionDef(
+                #     self.tr("Merge in {0}").format(settings.getMergeToolName()),
+                #     self.mergeInTool,
+                # )
+            ]
+        else:
+            # Conflicted + non-conflicted files selected
+            actions += [
+                ActionDef(
+                    self.tr("Mixed conflicts"),
+                    isSection=True,
+                ),
+                ActionDef(
+                    self.tr("Selected files must be reviewed individually."),
+                    enabled=False,
+                ),
+            ]
+            pass
+
+        if actions:
+            actions.append(ActionDef.SEPARATOR)
+
+        actions += [
             ActionDef(
                 self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
                 self.openWorkdirFile,
@@ -88,6 +131,8 @@ class DirtyFiles(FileList):
             self.pathDisplayStyleSubmenu()
         ]
 
+        return actions
+
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
         if k in GlobalShortcuts.stageHotkeys:
@@ -108,3 +153,26 @@ class DirtyFiles(FileList):
     def wantDiscardModeChanges(self):
         patches = list(self.selectedPatches())
         self.discardModeChanges.emit(patches)
+
+    def _mergeKeep(self, keepOurs: bool):
+        patches = list(self.selectedPatches())
+
+        conflicts = self.repo.index.conflicts
+
+        table = {}
+
+        for patch in patches:
+            path = patch.delta.new_file.path
+            ancestor, ours, theirs = conflicts[path]
+            if keepOurs:
+                table[path] = ours.id
+            else:
+                table[path] = theirs.id
+
+        HardSolveConflicts.invoke(table)
+
+    def mergeKeepOurs(self):
+        self._mergeKeep(keepOurs=True)
+
+    def mergeTakeTheirs(self):
+        self._mergeKeep(keepOurs=False)

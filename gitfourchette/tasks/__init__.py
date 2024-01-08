@@ -22,7 +22,7 @@ from gitfourchette.tasks.remotetasks import NewRemote, EditRemote, DeleteRemote
 from gitfourchette.tasks.indextasks import StageFiles, UnstageFiles, DiscardFiles
 from gitfourchette.tasks.indextasks import UnstageModeChanges, DiscardModeChanges
 from gitfourchette.tasks.indextasks import ApplyPatch, RevertPatch
-from gitfourchette.tasks.indextasks import HardSolveConflict, MarkConflictSolved, AcceptMergeConflictResolution
+from gitfourchette.tasks.indextasks import HardSolveConflicts, MarkConflictSolved, AcceptMergeConflictResolution
 from gitfourchette.tasks.indextasks import ApplyPatchFile, ApplyPatchFileReverse
 from gitfourchette.tasks.indextasks import AbortMerge
 from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, DropStash

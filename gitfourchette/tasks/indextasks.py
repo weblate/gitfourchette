@@ -1,3 +1,6 @@
+import contextlib
+import os
+
 from gitfourchette import reverseunidiff
 from gitfourchette.diffview.diffview import PatchPurpose
 from gitfourchette.nav import NavLocator
@@ -7,7 +10,6 @@ from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.unmergedconflict import UnmergedConflict
-import os
 
 
 class _BaseStagingTask(RepoTask):
@@ -234,40 +236,50 @@ class RevertPatch(RepoTask):
                 break
 
 
-class HardSolveConflict(RepoTask):
+class HardSolveConflicts(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
-    def flow(self, path: str, keepOid: Oid):
+    def flow(self, conflictedFiles: dict[str, Oid]):
         yield from self.flowEnterWorkerThread()
+
         repo = self.repo
-        fullPath = os.path.join(repo.workdir, path)
-
         repo.refresh_index()
-        assert (repo.index.conflicts is not None) and (path in repo.index.conflicts)
+        index = repo.index
+        conflicts = index.conflicts
+        assert conflicts is not None
 
-        Trash.instance().backupFile(repo.workdir, path)
+        assert isinstance(conflictedFiles, dict)
+        for path, keepOid in conflictedFiles.items():
+            assert type(path) is str
+            assert type(keepOid) is Oid
+            assert path in conflicts
 
-        # TODO: we should probably set the modes correctly and stuff as well
-        if keepOid == NULL_OID:
-            os.unlink(fullPath)
-        else:
-            blob = repo.peel_blob(keepOid)
-            with open(fullPath, "wb") as f:
-                f.write(blob.data)
+            with contextlib.suppress(FileNotFoundError):  # ignore FileNotFoundError for DELETED_BY_US conflicts
+                Trash.instance().backupFile(repo.workdir, path)
 
-        del repo.index.conflicts[path]
-        assert (repo.index.conflicts is None) or (path not in repo.index.conflicts)
+            fullPath = repo.in_workdir(path)
 
-        if keepOid != NULL_OID:
-            # Stage the file so it doesn't show up in both file lists
-            repo.index.add(path)
+            # TODO: we should probably set the modes correctly and stuff as well
+            if keepOid == NULL_OID:
+                os.unlink(fullPath)
+            else:
+                blob = repo.peel_blob(keepOid)
+                with open(fullPath, "wb") as f:
+                    f.write(blob.data)
 
-            # Jump to staged file after the task
-            self.jumpTo = NavLocator.inStaged(path)
+            del conflicts[path]
+            assert path not in conflicts
+
+            if keepOid != NULL_OID:
+                # Stage the file so it doesn't show up in both file lists
+                index.add(path)
+
+                # Jump to staged file after the task
+                self.jumpTo = NavLocator.inStaged(path)
 
         # Write index modifications to disk
-        repo.index.write()
+        index.write()
 
 
 class MarkConflictSolved(RepoTask):

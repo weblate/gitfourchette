@@ -5,7 +5,7 @@ from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.porcelain import NULL_OID, DiffConflict
 from gitfourchette.qt import *
-from gitfourchette.tasks import HardSolveConflict
+from gitfourchette.tasks import HardSolveConflicts
 from gitfourchette.toolbox import *
 
 
@@ -79,7 +79,7 @@ class ConflictView(QWidget):
 
     @staticmethod
     def hardSolve(path: str, oid=NULL_OID):
-        HardSolveConflict.invoke(path, oid)
+        HardSolveConflicts.invoke({path: oid})
 
     def clear(self):
         self.currentConflict = None

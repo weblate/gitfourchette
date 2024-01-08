@@ -23,6 +23,7 @@ class ActionDef:
     statusTip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
+    isSection: bool = False
 
     def toQAction(self, parent: QMenu) -> QAction:
         if self.submenu:
@@ -84,6 +85,8 @@ class ActionDef:
             elif type(actionDef) is QAction:
                 actionDef.setParent(menu)  # reparent it
                 menu.addAction(actionDef)
+            elif actionDef.isSection:
+                menu.addSection(actionDef.caption)
             elif actionDef.submenu:
                 submenu = actionDef.makeSubmenu(parent=menu)
                 menu.addMenu(submenu)
