@@ -21,12 +21,37 @@ class _BaseStagingTask(RepoTask):
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
+    def denyConflicts(self, patches: list[Patch], purpose: PatchPurpose):
+        conflicts = [p for p in patches if p.delta.status == GIT_DELTA_CONFLICTED]
+
+        if not conflicts:
+            return
+
+        numPatches = len(patches)
+        numConflicts = len(conflicts)
+
+        if numPatches == numConflicts:
+            intro = self.tr("You have selected %n merge conflicts that are still unsolved.", "", numConflicts)
+        else:
+            intro = self.tr("There are %n unsolved merge conflicts among your selection.", "", numConflicts)
+
+        if purpose == PatchPurpose.STAGE:
+            please = self.tr("Please fix it/them before staging:", "'it/them' refers to the selected merge conflicts", numConflicts)
+        else:
+            please = self.tr("Please fix it/them before discarding:", "'it/them' refers to the selected merge conflicts", numConflicts)
+
+        message = paragraphs(intro, please)
+        message += ulList(p.delta.new_file.path for p in conflicts)
+        raise AbortTask(message)
+
 
 class StageFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
         if not patches:  # Nothing to stage (may happen if user keeps pressing Enter in file list view)
             QApplication.beep()
             raise AbortTask()
+
+        self.denyConflicts(patches, PatchPurpose.STAGE)
 
         yield from self.flowEnterWorkerThread()
         self.repo.stage_files(patches)
@@ -44,7 +69,10 @@ class DiscardFiles(_BaseStagingTask):
         if not patches:  # Nothing to discard (may happen if user keeps pressing Delete in file list view)
             QApplication.beep()
             raise AbortTask()
-        elif len(patches) == 1:
+
+        self.denyConflicts(patches, PatchPurpose.DISCARD)
+
+        if len(patches) == 1:
             patch = patches[0]
             path = patch.delta.new_file.path
             if patch.delta.status == GIT_DELTA_UNTRACKED:
