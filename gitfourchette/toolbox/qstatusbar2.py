@@ -34,13 +34,17 @@ class QStatusBar2(QStatusBar):
 
     def showBusyMessage(self, text: str):
         self.busyLabel.setText(text)
-        self.busySpinner.start()
-        if not self.busyWidget.isVisible():
-            self.addWidget(self.busyWidget, 1)
+        if not self.busySpinner.isSpinning():
+            self.busySpinner.start()
             self.busyWidget.setVisible(True)
+            self.addWidget(self.busyWidget, 1)
 
     def clearMessage(self):
-        if self.busyWidget.isVisible():
+        # Temporary messages take precedence over busySpinner/busyWidget, so
+        # those widgets might be invisible even though a message is set.
+        # So, busySpinner.isSpinning is a better way to check that a message
+        # is currently set than .isVisible.
+        if self.busySpinner.isSpinning():
             self.busySpinner.stop()
             self.removeWidget(self.busyWidget)
             self.busyWidget.setVisible(False)
