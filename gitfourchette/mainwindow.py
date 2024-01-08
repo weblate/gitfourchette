@@ -540,8 +540,6 @@ class MainWindow(QMainWindow):
         rw.statusMessage.connect(self.statusBar2.showMessage)
         rw.busyMessage.connect(self.statusBar2.showBusyMessage)
         rw.clearStatus.connect(self.statusBar2.clearMessage)
-        rw.statusWarning.connect(self.statusBar2.showPermanentWarning)
-        rw.statusButton.connect(self.statusBar2.setButton)
 
         # Create a tab for the RepoWidget
         with QSignalBlockerContext(self.tabs):

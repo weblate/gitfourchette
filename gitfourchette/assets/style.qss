@@ -13,15 +13,11 @@ QTreeView#sidebar::branch {
     border-image: none;
 }
 
-QLabel#statusWarning {
-    border-radius: 4px;
-    padding-left: 1ex;
-    padding-right: 1ex;
-    color: black;
-    background-color: #ffbb00;
-}
+StateBox { padding: 8px; }
 
-QLabel#statusWarning[heeded="true"] {
-    color: white;
-    background-color: #3d9970;
-}
+StateBox { background-color: #ffbb00; }
+StateBox QLabel { color: black; }
+
+StateBox[heeded="true"] { background-color: #3d9970; }
+StateBox[heeded="true"] QLabel { color: white; }
+

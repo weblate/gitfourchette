@@ -17,6 +17,7 @@ from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.forms.statebox import StateBox
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
@@ -43,8 +44,6 @@ class RepoWidget(QWidget):
     busyMessage = Signal(str)
     statusMessage = Signal(str)
     clearStatus = Signal()
-    statusWarning = Signal(str, bool)
-    statusButton = Signal(str, object)
 
     state: RepoState | None
 
@@ -109,7 +108,7 @@ class RepoWidget(QWidget):
         # ----------------------------------
         # Build widgets
 
-        self.sidebar = Sidebar(self)
+        sidebarContainer = self._makeSidebarContainer()
         self.graphView = GraphView(self)
         self.filesStack = self._makeFilesStack()
         diffViewContainer = self._makeDiffContainer()
@@ -131,7 +130,7 @@ class RepoWidget(QWidget):
 
         sideSplitter = QSplitter(Qt.Orientation.Horizontal)
         sideSplitter.setObjectName("SideSplitter")
-        sideSplitter.addWidget(self.sidebar)
+        sideSplitter.addWidget(sidebarContainer)
         sideSplitter.addWidget(mainSplitter)
         sideSplitter.setSizes([100, 500])
         sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
@@ -391,6 +390,24 @@ class RepoWidget(QWidget):
         self.conflictView = conflict
         self.specialDiffView = specialDiff
         self.diffView = diff
+
+        return container
+
+    def _makeSidebarContainer(self):
+        sidebar = Sidebar(self)
+        stateBox = StateBox(self)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0,0,0,0)
+        layout.setSpacing(0)
+        layout.addWidget(sidebar)
+        layout.addWidget(stateBox)
+
+        container = QWidget()
+        container.setLayout(layout)
+
+        self.sidebar = sidebar
+        self.stateBox = stateBox
 
         return container
 
@@ -787,52 +804,65 @@ class RepoWidget(QWidget):
                 inBrackets = repo.head_branch_shorthand
 
         # Merging? Any conflicts?
-        statusWarning = ""
-        statusWarningHeeded = False
-        statusButtonCaption = ""
-        statusButtonCallback = None
+        stateBoxTitle = ""
+        stateBoxText = ""
+        stateBoxWarningHeeded = False
+        stateBoxButtonCaption = ""
+        stateBoxButtonCallback = None
 
         if not repo:
             pass
 
         elif repo.state() & GIT_REPOSITORY_STATE_MERGE:
-            inBrackets += ", \u26a0 " + self.tr("MERGING")
+            stateBoxTitle = self.tr("Merging")
             try:
-                mh = repo.listall_mergeheads()[0]
+                mh = self.state.mergeheadsCache[0]
                 name = self.state.reverseRefCache[mh][0]
                 name = RefPrefix.split(name)[1]
-                message = self.tr("Merging “{0}”").format(escape(name))
+                stateBoxTitle = self.tr("Merging “{0}”").format(escape(name))
             except (IndexError, KeyError):
-                message = self.tr("Merging")
-            message = f"<b>{message}</b>: "
+                pass
+
             if not repo.any_conflicts:
-                message += self.tr("All conflicts fixed. Commit to conclude.")
-                statusWarningHeeded = True
+                stateBoxText += self.tr("All conflicts fixed. Commit to conclude.")
+                stateBoxWarningHeeded = True
             else:
-                message += self.tr("Conflicts need fixing")
-            statusWarning = message
-            statusButtonCaption = self.tr("Abort Merge")
-            statusButtonCallback = lambda: self.runTask(AbortMerge)
+                stateBoxText += self.tr("Conflicts need fixing.")
+
+            stateBoxButtonCaption = self.tr("Abort Merge")
+            stateBoxButtonCallback = lambda: self.runTask(AbortMerge)
 
         elif repo.state() & GIT_REPOSITORY_STATE_CHERRYPICK:
-            inBrackets += ", \u26a0 " + self.tr("CHERRY-PICKING")
-            message = self.tr("Cherry-picking")
-            message = f"<b>{message}</b>: "
+            stateBoxTitle = self.tr("Cherry-picking")
+
+            message = ""
             if not repo.any_conflicts:
-                message += self.tr("All conflicts fixed. Commit to conclude.")
-                statusWarningHeeded = True
+                message = self.tr("All conflicts fixed. Commit to conclude.")
+                stateBoxWarningHeeded = True
             else:
-                message += self.tr("Conflicts need fixing")
-            statusWarning = message
-            statusButtonCaption = self.tr("Abort Cherry-Pick")
-            statusButtonCallback = lambda: self.runTask(AbortMerge)
+                message += self.tr("Conflicts need fixing.")
+
+            stateBoxText = message
+            stateBoxButtonCaption = self.tr("Abort Cherry-Pick")
+            stateBoxButtonCallback = lambda: self.runTask(AbortMerge)
+
+        elif repo.state() & (GIT_REPOSITORY_STATE_REBASE | GIT_REPOSITORY_STATE_REBASE_MERGE):
+            stateBoxTitle = self.tr("Rebasing")
+
+        elif repo.state() & GIT_REPOSITORY_STATE_REBASE_INTERACTIVE:
+            stateBoxTitle = self.tr("Rebasing interactively")
 
         elif repo.any_conflicts:
-            inBrackets += ", \u26a0 " + self.tr("CONFLICT")
-            statusWarning = self.tr("Conflicts need fixing")
+            stateBoxTitle = self.tr("Conflicts")
+            stateBoxText = self.tr("Conflicts need fixing")
 
-        self.statusWarning.emit(statusWarning, statusWarningHeeded)
-        self.statusButton.emit(statusButtonCaption, statusButtonCallback)
+        # Set up StateBox
+        if stateBoxText:
+            self.stateBox.showPermanentWarning(stateBoxTitle, stateBoxText, stateBoxWarningHeeded)
+            self.stateBox.setButton(stateBoxButtonCaption, stateBoxButtonCallback)
+            self.stateBox.setVisible(True)
+        else:
+            self.stateBox.setVisible(False)
 
         if settings.prefs.debug_showPID:
             chain = []
