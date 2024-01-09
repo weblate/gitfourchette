@@ -121,6 +121,8 @@ class RepoWidget(QWidget):
         bottomSplitter.addWidget(self.filesStack)
         bottomSplitter.addWidget(diffViewContainer)
         bottomSplitter.setSizes([100, 300])
+        bottomSplitter.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
+        bottomSplitter.setStretchFactor(1, 1)
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical)
         mainSplitter.setObjectName("CentralSplitter")
