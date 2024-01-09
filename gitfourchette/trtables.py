@@ -9,6 +9,7 @@ class TrTables:
     _prefKeys = {}
     _diffStatusChars = {}
     _fileModes = {}
+    _conflictHelp = {}
 
     @classmethod
     def retranslateAll(cls):
@@ -18,6 +19,7 @@ class TrTables:
         cls._prefKeys = cls._init_prefKeys()
         cls._diffStatusChars = cls._init_diffStatusChars()
         cls._fileModes = cls._init_fileModes()
+        cls._conflictHelp = cls._init_conflictHelp()
 
     @classmethod
     def exceptionName(cls, exc: BaseException):
@@ -56,6 +58,10 @@ class TrTables:
             return cls._fileModes[m]
         except KeyError:
             return f"{m:o}"
+
+    @classmethod
+    def conflictHelp(cls, key: str):
+        return cls._conflictHelp.get(key, "?"+key)
 
     @staticmethod
     def _init_exceptionNames():
@@ -221,4 +227,52 @@ class TrTables:
             "QTAPI_PYSIDE2": "PySide2 " + translate("Prefs", "(not recommended)"),
             "QTAPI_PYQT6": "PyQt6",
             "QTAPI_PYQT5": "PyQt5",
+        }
+
+    @staticmethod
+    def _init_conflictHelp():
+        return {
+            "DELETED_BY_US": translate(
+                "ConflictView",
+                "<b>Deleted by us:</b> this file was deleted from <i>our</i> branch, "
+                "but <i>their</i> branch kept it and made changes to it."),
+
+            "DELETED_BY_THEM": translate(
+                "ConflictView",
+                "<b>Deleted by them:</b> we’ve made changes to this file, "
+                "but <i>their</i> branch has deleted it."),
+
+            "MODIFIED_BY_BOTH": translate(
+                "ConflictView",
+                "<b>Modified by both:</b> This file has received changes "
+                "from both <i>our</i> branch and <i>their</i> branch."),
+
+            "tool": translate(
+                "ConflictView",
+                "You will be able to merge the changes in {tool}. When you are done merging, "
+                "save the file in {tool} and come back to {app} to finish solving the conflict."),
+
+            "ours": translate(
+                "ConflictView",
+                "Reject incoming changes. The file won’t be modified from its current state in HEAD."),
+
+            "theirs": translate(
+                "ConflictView",
+                "Accept incoming changes. The file will be <b>replaced</b> with the incoming version."),
+
+            "dbutheirs": translate(
+                "ConflictView",
+                "Accept incoming changes. The file will be added back to your branch with the incoming changes."),
+
+            "dbuours": translate(
+                "ConflictView",
+                "Reject incoming changes. The file won’t be added back to your branch."),
+
+            "dbtours": translate(
+                "ConflictView",
+                "Reject incoming deletion. Our version of the file will be kept intact."),
+
+            "dbttheirs": translate(
+                "ConflictView",
+                "Accept incoming deletion. The file will be deleted."),
         }

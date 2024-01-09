@@ -65,27 +65,7 @@
       <string>How do you want to solve this conflict?</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
-      <item row="2" column="0">
-       <widget class="QRadioButton" name="radioTheirs">
-        <property name="text">
-         <string>Use “their” version as is</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupBoth</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QRadioButton" name="radioDbuOurs">
-        <property name="text">
-         <string>Don’t add the file</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbu</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="3" column="0">
+      <item row="4" column="0">
        <widget class="QRadioButton" name="radioTool">
         <property name="text">
          <string>Merge in {tool}</string>
@@ -95,27 +75,7 @@
         </attribute>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QRadioButton" name="radioDbuTheirs">
-        <property name="text">
-         <string>Add “their” version back to our branch</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbu</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QRadioButton" name="radioDbtOurs">
-        <property name="text">
-         <string>Keep “our” version intact</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbt</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="0" column="0">
+      <item row="1" column="0">
        <widget class="QRadioButton" name="radioOurs">
         <property name="text">
          <string>Keep “our” version intact</string>
@@ -126,12 +86,52 @@
        </widget>
       </item>
       <item row="7" column="0">
+       <widget class="QRadioButton" name="radioDbtOurs">
+        <property name="text">
+         <string>Keep “our” version intact</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">radioGroupDbt</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="6" column="0">
+       <widget class="QRadioButton" name="radioDbuOurs">
+        <property name="text">
+         <string>Don’t add the file</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">radioGroupDbu</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QRadioButton" name="radioDbuTheirs">
+        <property name="text">
+         <string>Add “their” version back to our branch</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">radioGroupDbu</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="8" column="0">
        <widget class="QRadioButton" name="radioDbtTheirs">
         <property name="text">
          <string>Delete the file</string>
         </property>
         <attribute name="buttonGroup">
          <string notr="true">radioGroupDbt</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="radioTheirs">
+        <property name="text">
+         <string>Use “their” version as is</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">radioGroupBoth</string>
         </attribute>
        </widget>
       </item>
@@ -180,7 +180,7 @@
  <connections/>
  <buttongroups>
   <buttongroup name="radioGroupBoth"/>
-  <buttongroup name="radioGroupDbt"/>
   <buttongroup name="radioGroupDbu"/>
+  <buttongroup name="radioGroupDbt"/>
  </buttongroups>
 </ui>

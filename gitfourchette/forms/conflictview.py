@@ -3,10 +3,11 @@ import os
 from gitfourchette import settings
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
-from gitfourchette.porcelain import NULL_OID, DiffConflict
+from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides
 from gitfourchette.qt import *
 from gitfourchette.tasks import HardSolveConflicts
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 
 class ConflictView(QWidget):
@@ -27,14 +28,14 @@ class ConflictView(QWidget):
         self.setBackgroundRole(QPalette.ColorRole.Base)
         self.setAutoFillBackground(True)
 
-        def bindRadio(radio: QRadioButton):
-            # Keep lambdas separate from for loop due to PYSIDE-2524 (buggy lambda capture if signal has default args)
-            name = radio.objectName().removeprefix("radio").lower()
-            assert name in self.helpTexts()
-            radio.clicked.connect(lambda: self.setConfirmCaption(radio.text()))
-            radio.clicked.connect(lambda: self.ui.explainer.setText(self.helpTexts()[name]))
+        self.buttonGroups = {
+            ConflictSides.DELETED_BY_US: self.ui.radioGroupDbu,
+            ConflictSides.DELETED_BY_THEM: self.ui.radioGroupDbt,
+            ConflictSides.MODIFIED_BY_BOTH: self.ui.radioGroupBoth,
+        }
+
         for radio in self.ui.groupBox.findChildren(QRadioButton):
-            bindRadio(radio)
+            radio.clicked.connect(self.onRadioClicked)
 
         tweakWidgetFont(self.ui.titleLabel, 130)
         tweakWidgetFont(self.ui.explainer, 90)
@@ -93,35 +94,26 @@ class ConflictView(QWidget):
 
         self.currentConflict = conflict
 
-        for radio in self.ui.groupBox.findChildren(QRadioButton):
-            radio.setChecked(False)
-            radio.setVisible(False)
+        # Reset buttons
+        for group in self.buttonGroups.values():
+            group.setExclusive(False)  # must do this to actually be able to uncheck individual radios
+            for b in group.buttons():
+                b.setChecked(False)
+                b.setVisible(False)
+            group.setExclusive(True)
+        self.ui.confirmButton.setEnabled(False)
 
         self.ui.retranslateUi(self)
         self.reformatWidgetText()
 
         if not conflict:
-            pass
+            return
 
-        elif conflict.deleted_by_us:
-            self.ui.subtitleLabel.setText(self.tr(
-                "<b>Deleted by us:</b> this file was deleted from <i>our</i> branch, "
-                "but <i>their</i> branch kept it and made changes to it."))
-            for radio in self.ui.radioGroupDbu.buttons():
-                radio.setVisible(True)
-
-        elif conflict.deleted_by_them:
-            self.ui.subtitleLabel.setText(self.tr(
-                "<b>Deleted by them:</b> we’ve made changes to this file, "
-                "but <i>their</i> branch has deleted it."))
-            for radio in self.ui.radioGroupDbt.buttons():
-                radio.setVisible(True)
-
-        else:
-            self.ui.subtitleLabel.setText(self.tr(
-                "<b>Modified by both:</b> This file has received changes from both <i>our</i> branch and <i>their</i> branch."))
-            for radio in self.ui.radioGroupBoth.buttons():
-                radio.setVisible(True)
+        sides = conflict.sides
+        group = self.buttonGroups[sides]
+        for radio in group.buttons():
+            radio.setVisible(True)
+        self.ui.subtitleLabel.setText(TrTables.conflictHelp(sides.name))
 
     def reformatWidgetText(self):
         formatWidgetText(self.ui.radioTool, tool=settings.getMergeToolName())
@@ -137,43 +129,25 @@ class ConflictView(QWidget):
 
         formatWidgetText(self.ui.titleLabel, escape(os.path.basename(displayPath)))
 
-    def setConfirmCaption(self, s: str):
-        self.ui.confirmButton.setText(s)
+    def onRadioClicked(self):
+        assert self.currentConflict
+        sides = self.currentConflict.sides
+        group = self.buttonGroups[sides]
+
+        radio: QRadioButton = group.checkedButton()
+        assert isinstance(radio, QRadioButton)
+
+        name = radio.objectName().removeprefix("radio").lower()
+        help = TrTables.conflictHelp(name)
+        help = help.format(app=qAppName(), tool=settings.getMergeToolName())
+        if radio is self.ui.radioTool:
+            href = makeInternalLink("prefs", PREFKEY_MERGETOOL)
+            help += f" <a href='{href}'>" + self.tr("Select another merge tool...") + "</a>"
+        self.ui.explainer.setText(help)
+
+        self.ui.confirmButton.setText(self.tr("Resolve Conflict"))
         self.ui.confirmButton.setEnabled(True)
 
     def refreshPrefs(self):
         if self.currentConflict:
             self.displayConflict(self.currentConflict)
-
-    def helpTexts(self):
-        return {
-            "tool":
-                str.format(
-                    self.tr("You will be able to merge the changes in {tool}. When you are done merging, "
-                            "save the file in {tool} and come back to {app} to finish solving the conflict."
-                            ) + " <a href='{settingsLink}'>{selectOther}</a>",
-                    app=qAppName(),
-                    tool=settings.getMergeToolName(),
-                    settingsLink=makeInternalLink("prefs", PREFKEY_MERGETOOL),
-                    selectOther=self.tr("Select another merge tool...")),
-
-            "ours":
-                self.tr("Reject incoming changes. "
-                        "The file won’t be modified from its current state in HEAD."),
-
-            "theirs":
-                self.tr("Accept incoming changes. "
-                        "The file will be <b>replaced</b> with the incoming version."),
-
-            "dbutheirs":
-                self.tr("Accept incoming changes. The file will be added back to your branch with the incoming changes."),
-
-            "dbuours":
-                self.tr("Reject incoming changes. The file won’t be added back to your branch."),
-
-            "dbtours":
-                self.tr("Reject incoming deletion. Our version of the file will be kept intact."),
-
-            "dbttheirs":
-                self.tr("Accept incoming deletion. The file will be deleted."),
-        }
