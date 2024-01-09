@@ -72,7 +72,7 @@ class RepoState(QObject):
     hiddenCommits: set[Oid]
 
     workdirStale: bool
-    numChanges: int
+    numUncommittedChanges: int
 
     headIsDetached: bool
     homeBranch: str
@@ -122,7 +122,7 @@ class RepoState(QObject):
         self.activeCommitOid = None
 
         self.workdirStale = True
-        self.numChanges = 0
+        self.numUncommittedChanges = 0
 
         self.uiPrefs.load()
 

@@ -165,15 +165,22 @@ class CommitLogDelegate(QStyledItemDelegate):
         else:
             oid = UC_FAKEID
             commit = None
-            summaryText = self.tr("[Uncommitted Changes]")
+
+            prefix = ""
+            numUncommittedChanges = self.state.numUncommittedChanges
+            if numUncommittedChanges > 0:
+                prefix = f"({numUncommittedChanges}) "
+
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
             dateText = ""
             painter.setFont(self.uncommittedFont)
 
+            summaryText = prefix + self.tr("Uncommitted Changes")
             draftCommitMessage = self.state.getDraftCommitMessage()
             if draftCommitMessage:
-                summaryText += F" {messageSummary(draftCommitMessage)[0]}"
+                draftLine = messageSummary(draftCommitMessage)[0]
+                summaryText += f": “{messageSummary(draftCommitMessage)[0].strip()}”"
 
             searchTerm = ""
             searchTermLooksLikeHash = False

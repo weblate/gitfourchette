@@ -511,8 +511,9 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.UncommittedChanges:
             if displayRole:
                 changesText = self.tr("Changes")
-                if self.repoState.numChanges != 0:
-                    changesText = f"({self.repoState.numChanges}) " + changesText
+                numUncommittedChanges = self.repoState.numUncommittedChanges
+                if numUncommittedChanges != 0:
+                    changesText = f"({numUncommittedChanges}) " + changesText
                 return changesText
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere

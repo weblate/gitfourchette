@@ -9,6 +9,7 @@ import os
 from gitfourchette import tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.qt import *
+from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
 from gitfourchette.diffview.diffdocument import DiffDocument
@@ -166,14 +167,15 @@ class Jump(RepoTask):
             rw.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
 
             newNumChanges = nDirty + nStaged
-            numChangesDifferent = rw.state.numChanges != newNumChanges
-            rw.state.numChanges = newNumChanges
+            numChangesDifferent = rw.state.numUncommittedChanges != newNumChanges
+            rw.state.numUncommittedChanges = newNumChanges
 
             rw.state.workdirStale = False
 
-            # Show number of staged changes in sidebar
+            # Show number of staged changes in sidebar and graph
             if numChangesDifferent:
                 rw.sidebar.repaint()
+                rw.graphView.repaintCommit(UC_FAKEID)
 
         # If jumping to generic workdir context, find a concrete context
         if locator.context == NavContext.WORKDIR:
