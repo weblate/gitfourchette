@@ -25,7 +25,21 @@ class FileList(QListView):
     stashFiles = Signal(list)  # list[str]
 
     navContext: NavContext
+    """ 
+    COMMITTED, STAGED or DIRTY.
+    Does not change throughout the lifespan of this FileList.
+    """
+
     commitOid: Oid
+    """
+    The commit that is currently being shown.
+    Only valid if navContext == COMMITTED.
+    """
+
+    skippedRenameDetection: bool
+    """
+    In large diffs, we skip rename detection.
+    """
 
     def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
@@ -35,6 +49,8 @@ class FileList(QListView):
 
         self.navContext = navContext
         self.commitOid = NULL_OID
+        self.skippedRenameDetection = False
+
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
@@ -49,12 +65,14 @@ class FileList(QListView):
     def isEmpty(self):
         return self.model().rowCount() == 0
 
-    def setContents(self, diffs: list[Diff]):
+    def setContents(self, diffs: list[Diff], skippedRenameDetection: bool):
         self.flModel.setDiffs(diffs)
+        self.skippedRenameDetection = skippedRenameDetection
 
     def clear(self):
         self.flModel.clear()
         self.commitOid = NULL_OID
+        self.skippedRenameDetection = False
 
     def makeContextMenu(self):
         patches = list(self.selectedPatches())

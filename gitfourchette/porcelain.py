@@ -586,7 +586,7 @@ class Repo(_VanillaRepository):
         # status = repo.status(untracked_files="no")
         # return any(0 != (flag & GIT_STATUS_INDEX_MASK) for flag in status.values())
 
-    def commit_diffs(self, oid: Oid, show_binary: bool = False) -> list[Diff]:
+    def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1) -> list[Diff]:
         """
         Get a list of Diffs of a commit compared to its parents.
         """
@@ -604,7 +604,8 @@ class Repo(_VanillaRepository):
             for i, parent in enumerate(commit.parents):
                 if i == 0:
                     diff = self.diff(parent, commit, flags=flags)
-                    diff.find_similar()
+                    if find_similar_threshold < 0 or len(diff) < find_similar_threshold:
+                        diff.find_similar()
                     all_diffs.append(diff)
                 elif not parent.parents:
                     # This parent is parentless: assume merging in new files from this parent

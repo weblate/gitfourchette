@@ -16,6 +16,9 @@ from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
 
+RENAME_COUNT_THRESHOLD = 100
+""" Don't find_similar beyond this number of files in the main diff """
+
 
 class PrimeRepo(RepoTask):
     progressRange = Signal(int, int)
@@ -250,8 +253,13 @@ class LoadCommit(RepoTask):
 
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
-        self.diffs = self.repo.commit_diffs(oid)
+        self.diffs = self.repo.commit_diffs(oid, find_similar_threshold=RENAME_COUNT_THRESHOLD)
         self.message = self.repo.get_commit_message(oid)
+
+        self.skippedRenameDetection = False
+        if len(self.diffs) > 0:
+            mainDiff = self.diffs[0]
+            self.skippedRenameDetection = len(mainDiff) >= RENAME_COUNT_THRESHOLD
 
 
 class LoadPatch(RepoTask):

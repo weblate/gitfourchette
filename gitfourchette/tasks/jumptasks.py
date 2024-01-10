@@ -144,6 +144,9 @@ class Jump(RepoTask):
             rw.graphView.selectUncommittedChanges()
             rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
 
+        # Reset diff banner
+        rw.diffBanner.setVisible(False)
+
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY
                 or locator.hasFlags(NavFlags.ForceRefreshWorkdir)
@@ -158,8 +161,8 @@ class Jump(RepoTask):
 
             # Fill FileListViews
             with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles):  # Don't emit jump signals
-                rw.dirtyFiles.setContents([workdirTask.dirtyDiff])
-                rw.stagedFiles.setContents([workdirTask.stageDiff])
+                rw.dirtyFiles.setContents([workdirTask.dirtyDiff], False)
+                rw.stagedFiles.setContents([workdirTask.stageDiff], False)
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
@@ -234,12 +237,17 @@ class Jump(RepoTask):
             rw.sidebar.selectAnyRef(*refCandidates)
 
         flv = rw.committedFiles
+        rw.diffBanner.setVisible(False)
 
         if flv.commitOid == locator.commit:
             # No need to reload the same commit
+            # (if this flv was dormant and is sent back to the foreground).
             pass
 
         else:
+            # Loading a different commit
+            rw.diffBanner.lastWarningWasDismissed = False
+
             # Load commit (async)
             subtask = yield from self.flowSubtask(tasks.LoadCommit, locator.commit)
             assert isinstance(subtask, tasks.LoadCommit)
@@ -252,7 +260,7 @@ class Jump(RepoTask):
             with QSignalBlockerContext(flv):  # Don't emit jump signals
                 flv.clear()
                 flv.setCommit(locator.commit)
-                flv.setContents(diffs)
+                flv.setContents(diffs, subtask.skippedRenameDetection)
                 numChanges = flv.model().rowCount()
 
             # Show message if commit is empty
@@ -276,6 +284,11 @@ class Jump(RepoTask):
                 QStyle.StandardPixmap.SP_MessageBoxInformation))
             self.setFinalLocator(locator.replace(path=""))
             return None  # Force early out
+
+        # Warning banner
+        if flv.skippedRenameDetection and not rw.diffBanner.lastWarningWasDismissed:
+            message = self.tr("To speed up the loading of this large commit, rename detection was skipped.")
+            rw.diffBanner.popUp("", message, canDismiss=True)
 
         return locator
 

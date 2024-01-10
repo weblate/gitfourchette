@@ -4,20 +4,27 @@ QListView::item:selected:!active {
     background-color: palette(mid);
 }
 
-QTreeView#sidebar {
+Sidebar {
     background: palette(window);
 }
 
-QTreeView#sidebar::branch {
+Sidebar::branch {
     image: none;
     border-image: none;
 }
 
-StateBox { padding: 8px; }
+Banner.diff {
+    padding: 2px;
+    margin-bottom: 4px;
+}
 
-StateBox { background-color: #ffbb00; }
-StateBox QLabel { color: black; }
+Banner.merge {
+    padding: 8px;
+}
 
-StateBox[heeded="true"] { background-color: #3d9970; }
-StateBox[heeded="true"] QLabel { color: white; }
+Banner { background-color: #ffbb00; }
+Banner QLabel { color: black; }
+
+Banner[heeded="true"] { background-color: #3d9970; }
+Banner[heeded="true"] QLabel { color: white; }
 

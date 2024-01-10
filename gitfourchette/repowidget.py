@@ -13,11 +13,11 @@ from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles
 from gitfourchette.filelists.filelist import FileList
 from gitfourchette.filelists.stagedfiles import StagedFiles
+from gitfourchette.forms.banner import Banner
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.pushdialog import PushDialog
-from gitfourchette.forms.statebox import StateBox
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
@@ -113,6 +113,11 @@ class RepoWidget(QWidget):
         self.filesStack = self._makeFilesStack()
         diffViewContainer = self._makeDiffContainer()
 
+        diffBanner = Banner(self, orientation=Qt.Orientation.Horizontal)
+        diffBanner.setProperty("class", "diff")
+        diffBanner.setVisible(False)
+        self.diffBanner = diffBanner
+
         # ----------------------------------
         # Splitters
 
@@ -124,11 +129,20 @@ class RepoWidget(QWidget):
         bottomSplitter.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
         bottomSplitter.setStretchFactor(1, 1)
 
+        bottomContainerLayout = QVBoxLayout()
+        bottomContainerLayout.setContentsMargins(0,0,0,0)
+        bottomContainerLayout.setSpacing(0)
+        bottomContainerLayout.addWidget(diffBanner)
+        bottomContainerLayout.addWidget(bottomSplitter, 1)
+        bottomContainer = QWidget()
+        bottomContainer.setLayout(bottomContainerLayout)
+
         mainSplitter = QSplitter(Qt.Orientation.Vertical)
         mainSplitter.setObjectName("CentralSplitter")
         mainSplitter.addWidget(self.graphView)
-        mainSplitter.addWidget(bottomSplitter)
+        mainSplitter.addWidget(bottomContainer)
         mainSplitter.setSizes([100, 150])
+        # mainSplitter.setStretchFactor(1, 1)
 
         sideSplitter = QSplitter(Qt.Orientation.Horizontal)
         sideSplitter.setObjectName("SideSplitter")
@@ -397,19 +411,21 @@ class RepoWidget(QWidget):
 
     def _makeSidebarContainer(self):
         sidebar = Sidebar(self)
-        stateBox = StateBox(self)
+
+        banner = Banner(self, orientation=Qt.Orientation.Vertical)
+        banner.setProperty("class", "merge")
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
         layout.setSpacing(0)
         layout.addWidget(sidebar)
-        layout.addWidget(stateBox)
+        layout.addWidget(banner)
 
         container = QWidget()
         container.setLayout(layout)
 
         self.sidebar = sidebar
-        self.stateBox = stateBox
+        self.mergeBanner = banner
 
         return container
 
@@ -806,65 +822,64 @@ class RepoWidget(QWidget):
                 inBrackets = repo.head_branch_shorthand
 
         # Merging? Any conflicts?
-        stateBoxTitle = ""
-        stateBoxText = ""
-        stateBoxWarningHeeded = False
-        stateBoxButtonCaption = ""
-        stateBoxButtonCallback = None
+        bannerTitle = ""
+        bannerText = ""
+        bannerHeeded = False
+        bannerAction = ""
+        bannerCallback = None
 
         if not repo:
             pass
 
         elif repo.state() & GIT_REPOSITORY_STATE_MERGE:
-            stateBoxTitle = self.tr("Merging")
+            bannerTitle = self.tr("Merging")
             try:
                 mh = self.state.mergeheadsCache[0]
                 name = self.state.reverseRefCache[mh][0]
                 name = RefPrefix.split(name)[1]
-                stateBoxTitle = self.tr("Merging “{0}”").format(escape(name))
+                bannerTitle = self.tr("Merging “{0}”").format(escape(name))
             except (IndexError, KeyError):
                 pass
 
             if not repo.any_conflicts:
-                stateBoxText += self.tr("All conflicts fixed. Commit to conclude.")
-                stateBoxWarningHeeded = True
+                bannerText += self.tr("All conflicts fixed. Commit to conclude.")
+                bannerHeeded = True
             else:
-                stateBoxText += self.tr("Conflicts need fixing.")
+                bannerText += self.tr("Conflicts need fixing.")
 
-            stateBoxButtonCaption = self.tr("Abort Merge")
-            stateBoxButtonCallback = lambda: self.runTask(AbortMerge)
+            bannerAction = self.tr("Abort Merge")
+            bannerCallback = lambda: self.runTask(AbortMerge)
 
         elif repo.state() & GIT_REPOSITORY_STATE_CHERRYPICK:
-            stateBoxTitle = self.tr("Cherry-picking")
+            bannerTitle = self.tr("Cherry-picking")
 
             message = ""
             if not repo.any_conflicts:
                 message = self.tr("All conflicts fixed. Commit to conclude.")
-                stateBoxWarningHeeded = True
+                bannerHeeded = True
             else:
                 message += self.tr("Conflicts need fixing.")
 
-            stateBoxText = message
-            stateBoxButtonCaption = self.tr("Abort Cherry-Pick")
-            stateBoxButtonCallback = lambda: self.runTask(AbortMerge)
+            bannerText = message
+            bannerAction = self.tr("Abort Cherry-Pick")
+            bannerCallback = lambda: self.runTask(AbortMerge)
 
         elif repo.state() & (GIT_REPOSITORY_STATE_REBASE | GIT_REPOSITORY_STATE_REBASE_MERGE):
-            stateBoxTitle = self.tr("Rebasing")
+            bannerTitle = self.tr("Rebasing")
 
         elif repo.state() & GIT_REPOSITORY_STATE_REBASE_INTERACTIVE:
-            stateBoxTitle = self.tr("Rebasing interactively")
+            bannerTitle = self.tr("Rebasing interactively")
 
         elif repo.any_conflicts:
-            stateBoxTitle = self.tr("Conflicts")
-            stateBoxText = self.tr("Conflicts need fixing")
+            bannerTitle = self.tr("Conflicts")
+            bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
 
-        # Set up StateBox
-        if stateBoxText:
-            self.stateBox.showPermanentWarning(stateBoxTitle, stateBoxText, stateBoxWarningHeeded)
-            self.stateBox.setButton(stateBoxButtonCaption, stateBoxButtonCallback)
-            self.stateBox.setVisible(True)
+        # Set up Banner
+        if bannerText:
+            self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False,
+                                   buttonLabel=bannerAction, buttonCallback=bannerCallback)
         else:
-            self.stateBox.setVisible(False)
+            self.mergeBanner.setVisible(False)
 
         if settings.prefs.debug_showPID:
             chain = []
