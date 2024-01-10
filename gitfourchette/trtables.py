@@ -197,6 +197,7 @@ class TrTables:
 
             "graph_rowHeight": translate("Prefs", "Row spacing"),
             "graph_flattenLanes": translate("Prefs", "Squeeze branch lanes in graph"),
+            "graph_authorDiffAsterisk": translate("Prefs", "Mark name/date differences between author && committer (*)"),
 
             "trash_maxFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
             "trash_maxFileSizeKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),

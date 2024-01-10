@@ -87,6 +87,8 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
         dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
+        if settings.prefs.graph_authorDiffAsterisk:
+            dateText += "*"
         self.dateMaxWidth = QFontMetrics(self.activeCommitFont).horizontalAdvance(dateText + " ")
         self.dateMaxWidth = int(self.dateMaxWidth)  # make sure it's an int for pyqt5 compat
 
@@ -149,13 +151,23 @@ class CommitLogDelegate(QStyledItemDelegate):
         commit: Commit | None = index.data(CommitLogModel.CommitRole)
         if commit:
             oid = commit.oid
+            author = commit.author
+            committer = commit.committer
+
             # TODO: If is stash, getCoreStashMessage
             summaryText, contd = messageSummary(commit.message, ELISION)
             hashText = commit.oid.hex[:settings.prefs.shortHashChars]
-            authorText = abbreviatePerson(commit.author, settings.prefs.authorDisplayStyle)
+            authorText = abbreviatePerson(author, settings.prefs.authorDisplayStyle)
 
-            qdt = QDateTime.fromSecsSinceEpoch(commit.author.time)
+            qdt = QDateTime.fromSecsSinceEpoch(author.time)
             dateText = option.locale.toString(qdt, settings.prefs.shortTimeFormat)
+
+            if settings.prefs.graph_authorDiffAsterisk:
+                if author.email != committer.email:
+                    authorText += "*"
+                if author.time != committer.time:
+                    dateText += "*"
+
             if self.state.activeCommitOid == commit.oid:
                 painter.setFont(self.activeCommitFont)
 

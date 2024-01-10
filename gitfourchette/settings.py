@@ -155,6 +155,7 @@ class Prefs(PrefsFile):
     graph_chronologicalOrder    : bool          = True
     graph_rowHeight             : GraphRowHeight= GraphRowHeight.RELAXED
     graph_flattenLanes          : bool          = True
+    graph_authorDiffAsterisk    : bool          = True
     external_editor             : str           = ""
     external_diff               : str           = list(DIFF_TOOL_PRESETS.values())[0]
     external_merge              : str           = list(MERGE_TOOL_PRESETS.values())[0]
