@@ -6,7 +6,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
-from gitfourchette.sidebar.sidebarmodel import (SidebarModel, EItem, UNINDENT_ITEMS, LEAF_ITEMS,
+from gitfourchette.sidebar.sidebarmodel import (SidebarModel, EItem, UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND,
                                                 ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA)
 from gitfourchette.toolbox import *
 
@@ -51,6 +51,11 @@ class Sidebar(QTreeView):
 
         self.expandTriangleClickIndex = None
         self.eatDoubleClickTimer = QElapsedTimer()
+
+    def switchMode(self, modeId: int):
+        model: SidebarModel = self.model()
+        model.switchMode(modeId)
+        self.restoreExpandedItems()
 
     def visualRect(self, index: QModelIndex) -> QRect:
         """Required so the theme can properly draw unindented rows.
@@ -363,6 +368,9 @@ class Sidebar(QTreeView):
             # Clicking collapse/expand triangle - will react in mouseReleaseEvent
             self.expandTriangleClickIndex = index
             event.accept()
+        elif index.isValid():
+            self.setCurrentIndex(index)
+            event.accept()
         else:
             super().mousePressEvent(event)
 
@@ -373,10 +381,14 @@ class Sidebar(QTreeView):
             # Let user collapse/expand in quick succession without triggering a double click
             self.eatDoubleClickTimer.restart()
             # Toggle expanded state
-            if self.isExpanded(index):
+            item = SidebarModel.unpackItem(index)
+            if item in ALWAYS_EXPAND or item in LEAF_ITEMS:
+                pass
+            elif self.isExpanded(index):
                 self.collapse(index)
             else:
                 self.expand(index)
+            event.accept()
         else:
             self.expandTriangleClickIndex = None
             super().mouseReleaseEvent(event)
@@ -462,9 +474,12 @@ class Sidebar(QTreeView):
             item = SidebarModel.unpackItem(index)
             if item in LEAF_ITEMS:
                 continue
-            h = SidebarModel.getCollapseHash(index)
-            if h not in self.collapseCache:
+            if item in ALWAYS_EXPAND:
                 self.expand(index)
+            else:
+                h = SidebarModel.getCollapseHash(index)
+                if h not in self.collapseCache:
+                    self.expand(index)
             if item == EItem.RemotesHeader:  # Only RemotesHeader has children that can themselves be expanded
                 for subrow in range(model.rowCount(index)):
                     frontier.append((depth+1, model.index(subrow, 0, index)))

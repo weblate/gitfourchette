@@ -6,6 +6,7 @@ class TrTables:
     _exceptionNames = {}
     _nameValidationCodes = {}
     _sidebarItems = {}
+    _sidebarModes = {}
     _prefKeys = {}
     _diffStatusChars = {}
     _fileModes = {}
@@ -16,6 +17,7 @@ class TrTables:
         cls._exceptionNames = cls._init_exceptionNames()
         cls._nameValidationCodes = cls._init_nameValidationCodes()
         cls._sidebarItems = cls._init_sidebarItems()
+        cls._sidebarModes = cls._init_sidebarModes()
         cls._prefKeys = cls._init_prefKeys()
         cls._diffStatusChars = cls._init_diffStatusChars()
         cls._fileModes = cls._init_fileModes()
@@ -39,6 +41,10 @@ class TrTables:
             return cls._sidebarItems[item]
         except KeyError:
             return "?"+str(item)
+
+    @classmethod
+    def sidebarMode(cls, item: int):
+        return cls._sidebarModes.get(item, "?")
 
     @classmethod
     def prefKey(cls, key: str):
@@ -90,7 +96,7 @@ class TrTables:
         from gitfourchette.sidebar.sidebarmodel import EItem as E
         return {
             E.UncommittedChanges: translate("SidebarModel", "Changes"),
-            E.LocalBranchesHeader: translate("SidebarModel", "Branches"),
+            E.LocalBranchesHeader: translate("SidebarModel", "Local Branches"),
             E.StashesHeader: translate("SidebarModel", "Stashes"),
             E.RemotesHeader: translate("SidebarModel", "Remotes"),
             E.TagsHeader: translate("SidebarModel", "Tags"),
@@ -104,6 +110,16 @@ class TrTables:
             E.Tag: translate("SidebarModel", "Tag"),
             E.Submodule: translate("SidebarModel", "Submodules"),
             E.Spacer: "---",
+        }
+
+    @staticmethod
+    def _init_sidebarModes():
+        from gitfourchette.sidebar.sidebarmodel import SidebarTabMode as E
+        return {
+            E.Branches: translate("SidebarModel", "Branches & Remotes"),
+            E.Stashes: translate("SidebarModel", "Stashes"),
+            E.Tags: translate("SidebarModel", "Tags"),
+            E.Submodules: translate("SidebarModel", "Submodules"),
         }
 
     @staticmethod
@@ -196,6 +212,7 @@ class TrTables:
             "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
             "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
             "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
+            "debug_modalSidebar": translate("Prefs", "Modal sidebar"),
             "debug_forceQtApi": translate("Prefs", "Preferred Qt binding"),
             "debug_forceQtApi_help": translate(
                 "Prefs", "<p>After restarting, {app} will use this Qt binding if available.</p><p>You can also pass "

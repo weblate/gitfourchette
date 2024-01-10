@@ -18,6 +18,16 @@ ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
 ROLE_REF = Qt.ItemDataRole.UserRole + 3
 
+MODAL_SIDEBAR = settings.prefs.debug_modalSidebar  # do not change while app is running
+
+
+class SidebarTabMode(enum.IntEnum):
+    NonModal = -1
+    Branches = 0
+    Stashes = 1
+    Tags = 2
+    Submodules = 3
+
 
 class EItem(enum.IntEnum):
     UncommittedChanges = enum.auto()
@@ -37,7 +47,7 @@ class EItem(enum.IntEnum):
     Spacer = enum.auto()
 
 
-HEADER_ITEMS = [
+HEADER_ITEMS_NONMODAL = [
     EItem.UncommittedChanges,
     EItem.Spacer,
     EItem.StashesHeader,
@@ -48,6 +58,25 @@ HEADER_ITEMS = [
     EItem.Spacer,
     EItem.TagsHeader,
     EItem.Spacer,
+    EItem.SubmodulesHeader,
+]
+
+HEADER_ITEMS_MODAL = [
+    [
+        EItem.LocalBranchesHeader,
+        EItem.Spacer,
+        EItem.RemotesHeader,
+    ],
+    [EItem.StashesHeader],
+    [EItem.TagsHeader],
+    [EItem.SubmodulesHeader]
+]
+
+ALWAYS_EXPAND = [] if not MODAL_SIDEBAR else [
+    EItem.LocalBranchesHeader,
+    EItem.RemotesHeader,
+    EItem.TagsHeader,
+    EItem.StashesHeader,
     EItem.SubmodulesHeader,
 ]
 
@@ -74,6 +103,14 @@ UNINDENT_ITEMS = {
     EItem.RemoteBranch: -1,
 }
 
+if MODAL_SIDEBAR: UNINDENT_ITEMS.update({
+    EItem.LocalBranchesHeader: -1,
+    EItem.RemotesHeader: -1,
+    EItem.StashesHeader: -1,
+    EItem.TagsHeader: -1,
+    EItem.SubmodulesHeader: -1,
+})
+
 class SidebarModel(QAbstractItemModel):
     repoState: RepoState | None
     repo: Repo | None
@@ -89,6 +126,8 @@ class SidebarModel(QAbstractItemModel):
     _submodules: list[str]
     _hiddenBranches: list[str]
     _hiddenStashCommits: list[str]
+
+    modeId: int
 
     @staticmethod
     def packId(eid: EItem, offset: int = 0) -> int:
@@ -126,7 +165,15 @@ class SidebarModel(QAbstractItemModel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.modeId = -1
         self.clear()
+
+    @property
+    def rootLayoutDef(self):
+        if self.modeId == SidebarTabMode.NonModal:
+            return HEADER_ITEMS_NONMODAL
+        else:
+            return HEADER_ITEMS_MODAL[self.modeId]
 
     def clear(self, emitSignals=True):
         if emitSignals:
@@ -151,6 +198,11 @@ class SidebarModel(QAbstractItemModel):
 
         if emitSignals:
             self.endResetModel()
+
+    def switchMode(self, i: int):
+        self.beginResetModel()
+        self.modeId = i
+        self.endResetModel()
 
     @benchmark
     def refreshCache(self, repoState: RepoState):
@@ -234,7 +286,7 @@ class SidebarModel(QAbstractItemModel):
             return QModelIndex()
 
         if not parent or not parent.isValid():  # root
-            return self.createIndex(row, 0, HEADER_ITEMS[row].value)
+            return self.createIndex(row, 0, self.rootLayoutDef[row].value)
 
         item = self.unpackItem(parent)
 
@@ -277,9 +329,9 @@ class SidebarModel(QAbstractItemModel):
         item = self.unpackItem(index)
 
         def makeParentIndex(parentHeader: EItem):
-            return self.createIndex(HEADER_ITEMS.index(parentHeader), 0, self.packId(parentHeader))
+            return self.createIndex(self.rootLayoutDef.index(parentHeader), 0, self.packId(parentHeader))
 
-        if item in HEADER_ITEMS:
+        if item in self.rootLayoutDef:
             # it's a root node -- return invalid index because no parent
             return QModelIndex()
 
@@ -309,8 +361,8 @@ class SidebarModel(QAbstractItemModel):
         if not self.repo:
             return 0
 
-        if not parent.isValid():
-            return len(HEADER_ITEMS)
+        if not parent.isValid():  # root
+            return len(self.rootLayoutDef)
 
         item = self.unpackItem(parent)
 
@@ -549,6 +601,9 @@ class SidebarModel(QAbstractItemModel):
         item = self.unpackItem(index)
 
         if item == EItem.Spacer:
+            return Qt.ItemFlag.NoItemFlags
+
+        if item in ALWAYS_EXPAND:
             return Qt.ItemFlag.NoItemFlags
 
         return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable

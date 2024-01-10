@@ -1051,7 +1051,9 @@ class MainWindow(QMainWindow):
         ]
 
         warnIfNeedRestart = [
+            "language",
             "debug_forceQtApi",
+            "debug_modalSidebar",
         ]
 
         if any(k in warnIfNeedRestart for k in prefDiff):

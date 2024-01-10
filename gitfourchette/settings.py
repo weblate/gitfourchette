@@ -165,6 +165,7 @@ class Prefs(PrefsFile):
     debug_fixU2029InClipboard   : bool          = False
     debug_hideStashJunkParents  : bool          = True
     debug_autoRefresh           : bool          = True
+    debug_modalSidebar          : bool          = False
     debug_verbosity             : LoggingLevel  = LoggingLevel.WARNING
     debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
 

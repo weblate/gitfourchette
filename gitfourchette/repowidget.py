@@ -26,8 +26,10 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
+from gitfourchette.sidebar.sidebarmodel import SidebarTabMode, MODAL_SIDEBAR
 from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 from gitfourchette.unmergedconflict import UnmergedConflict
 
 logger = logging.getLogger(__name__)
@@ -412,12 +414,41 @@ class RepoWidget(QWidget):
     def _makeSidebarContainer(self):
         sidebar = Sidebar(self)
 
+        if MODAL_SIDEBAR:
+            repoName = QElidedLabel("RepoName")
+            self.nameChange.connect(lambda: repoName.setText(self.getTitle()))
+            tweakWidgetFont(repoName, 110)
+            repoName.setContentsMargins(4, 8, 0, 0)
+
+            modeTabs = QTabBar(self)
+            modeTabs.setExpanding(True)
+            modeTabs.setUsesScrollButtons(False)
+            modeTabs.currentChanged.connect(lambda i: sidebar.switchMode(modeTabs.tabData(i)))
+            modeTabs.setSizePolicy(QSizePolicy.Policy.Minimum, modeTabs.sizePolicy().verticalPolicy())
+
+            tweakWidgetFont(modeTabs, 80)
+            with QSignalBlockerContext(modeTabs):
+                for mode in SidebarTabMode:
+                    if mode == SidebarTabMode.NonModal:
+                        continue
+                    i = modeTabs.count()
+                    name = TrTables.sidebarMode(mode)
+                    modeTabs.addTab(name[:2])
+                    modeTabs.setTabData(i, mode)
+                    modeTabs.setTabToolTip(i, name)
+
+            modeTabs.currentChanged.emit(modeTabs.currentIndex())
+
         banner = Banner(self, orientation=Qt.Orientation.Vertical)
         banner.setProperty("class", "merge")
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
-        layout.setSpacing(0)
+        if MODAL_SIDEBAR:
+            layout.setSpacing(0)
+            layout.addWidget(repoName)
+            layout.addSpacing(8)
+            layout.addWidget(modeTabs)
         layout.addWidget(sidebar)
         layout.addWidget(banner)
 
