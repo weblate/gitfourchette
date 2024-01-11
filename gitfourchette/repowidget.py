@@ -194,10 +194,7 @@ class RepoWidget(QWidget):
         self.conflictView.openPrefs.connect(self.openPrefs)
         self.conflictView.linkActivated.connect(self.processInternalLink)
 
-        self.sidebar.commitClicked.connect(self.graphView.selectCommit)
         self.sidebar.pushBranch.connect(self.startPushFlow)
-        self.sidebar.refClicked.connect(self.selectRef)
-        self.sidebar.uncommittedChangesClicked.connect(self.graphView.selectUncommittedChanges)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
         self.sidebar.toggleHideStash.connect(self.toggleHideStash)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
@@ -217,6 +214,7 @@ class RepoWidget(QWidget):
         self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
         self.connectTask(self.dirtyFiles.stashFiles,            tasks.NewStash)
         self.connectTask(self.graphView.jump,                   tasks.Jump)
+        self.connectTask(self.sidebar.jump,                     tasks.Jump)
         self.connectTask(self.stagedFiles.jump,                 tasks.Jump)
         self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)

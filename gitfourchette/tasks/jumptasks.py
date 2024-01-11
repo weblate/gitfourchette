@@ -8,6 +8,7 @@ import os
 
 from gitfourchette import tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
+from gitfourchette.porcelain import NULL_OID
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
@@ -214,10 +215,29 @@ class Jump(RepoTask):
 
         return locator
 
-    def showCommit(self, locator: NavLocator):
+    def showCommit(self, locator: NavLocator) -> NavLocator:
+        """
+        Jump to a commit.
+        Return a refined NavLocator.
+        """
+
         from gitfourchette.repowidget import RepoWidget
         rw: RepoWidget = self.rw
         assert isinstance(rw, RepoWidget)
+
+        assert locator.context == NavContext.COMMITTED
+
+        # If it's a ref, look it up
+        if locator.ref:
+            assert locator.commit == NULL_OID
+            try:
+                oid = rw.state.refCache[locator.ref]
+                locator = locator.replace(commit=oid, ref="")
+            except KeyError:
+                raise AbortTask(self.tr("Unknown reference “{0}”.").format(locator.ref))
+
+        assert locator.commit
+        assert not locator.ref
 
         # Select row in commit log
         from gitfourchette.graphview.graphview import GraphView

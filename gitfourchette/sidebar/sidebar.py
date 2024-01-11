@@ -1,5 +1,6 @@
 import contextlib
 
+from gitfourchette.nav import NavLocator
 from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.porcelain import *
@@ -12,9 +13,8 @@ from gitfourchette.toolbox import *
 
 
 class Sidebar(QTreeView):
-    uncommittedChangesClicked = Signal()
-    refClicked = Signal(str)
-    commitClicked = Signal(Oid)
+    jump = Signal(NavLocator)
+
     toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
 
@@ -303,21 +303,23 @@ class Sidebar(QTreeView):
 
     def onEntryClicked(self, item: EItem, data: str):
         if item == EItem.UncommittedChanges:
-            self.uncommittedChangesClicked.emit()
+            locator = NavLocator.inWorkdir()
         elif item == EItem.UnbornHead:
-            pass
+            locator = NavLocator.inWorkdir()
         elif item == EItem.DetachedHead:
-            self.refClicked.emit("HEAD")
+            locator = NavLocator.inRef("HEAD")
         elif item == EItem.LocalBranch:
-            self.refClicked.emit(RefPrefix.HEADS + data)
+            locator = NavLocator.inRef(RefPrefix.HEADS + data)
         elif item == EItem.RemoteBranch:
-            self.refClicked.emit(RefPrefix.REMOTES + data)
+            locator = NavLocator.inRef(RefPrefix.REMOTES + data)
         elif item == EItem.Tag:
-            self.refClicked.emit(RefPrefix.TAGS + data)
+            locator = NavLocator.inRef(RefPrefix.TAGS + data)
         elif item == EItem.Stash:
-            self.commitClicked.emit(Oid(hex=data))
+            locator = NavLocator.inCommit(Oid(hex=data))
         else:
-            pass
+            return None
+
+        self.jump.emit(locator)
 
     def onEntryDoubleClicked(self, item: EItem, data: str):
         if item == EItem.LocalBranch:

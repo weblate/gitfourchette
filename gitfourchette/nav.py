@@ -75,6 +75,7 @@ class NavLocator:
     context: NavContext = NavContext.EMPTY
     commit: Oid = NULL_OID
     path: str = ""
+    ref: str = ""
     diffLineNo: int = 0
     diffCursor: int = 0
     diffScroll: int = 0
@@ -84,9 +85,20 @@ class NavLocator:
     URL_AUTHORITY: ClassVar[str] = "jump"
 
     def __post_init__(self):
-        assert isinstance(self.context, NavContext)
-        assert isinstance(self.commit, Oid)
-        assert isinstance(self.path, str)
+        if DEVDEBUG:
+            assert isinstance(self.context, NavContext)
+            assert isinstance(self.commit, Oid)
+            assert isinstance(self.path, str)
+            assert isinstance(self.ref, str)
+            hasCommit = self.commit != NULL_OID
+            hasRef = bool(self.ref)
+            if self.context == NavContext.COMMITTED:
+                assert hasCommit or hasRef
+                assert hasCommit ^ hasRef
+                assert not hasRef or self.ref == "HEAD" or self.ref.startswith("refs/")
+            else:
+                assert not hasCommit
+                assert not hasRef
 
     def __bool__(self):
         """
@@ -105,12 +117,20 @@ class NavLocator:
         return NavLocator(context=NavContext.COMMITTED, commit=oid, path=path)
 
     @staticmethod
+    def inRef(ref: str, path: str = ""):
+        return NavLocator(context=NavContext.COMMITTED, ref=ref, path=path)
+
+    @staticmethod
     def inUnstaged(path: str = ""):
         return NavLocator(context=NavContext.UNSTAGED, path=path)
 
     @staticmethod
     def inStaged(path: str = ""):
         return NavLocator(context=NavContext.STAGED, path=path)
+
+    @staticmethod
+    def inWorkdir():
+        return NavLocator(context=NavContext.WORKDIR)
 
     def isSimilarEnoughTo(self, other: NavLocator):
         """Coarse equality - Compare context, commit & path (ignores flags & position in diff)"""
@@ -189,10 +209,12 @@ class NavLocator:
 
     @property
     def contextKey(self):
-        if self.context == NavContext.COMMITTED:
-            return self.commit.hex
-        else:
+        if self.context != NavContext.COMMITTED:
             return self.context.name
+        elif self.ref:
+            return self.ref
+        else:
+            return self.commit.hex
 
     @property
     def fileKey(self):
