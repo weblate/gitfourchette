@@ -382,6 +382,9 @@ class GraphView(QListView):
         if op == "start":
             return
 
+        if not self.searchBar.searchTerm:  # user probably hit F3 without having searched before
+            return
+
         forward = op != "previous"
 
         if not didWrap and len(self.selectedIndexes()) != 0:
