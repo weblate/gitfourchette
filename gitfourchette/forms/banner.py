@@ -2,12 +2,16 @@ import contextlib
 from typing import Callable
 
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 
 
 class Banner(QFrame):
     def __init__(self, parent, orientation: Qt.Orientation):
         super().__init__(parent)
         self.setObjectName("StateBox")
+
+        icon = QLabel(self)
+        icon.setPixmap(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(16))
 
         label = QLabel(__name__, self)
         label.setWordWrap(True)
@@ -28,6 +32,7 @@ class Banner(QFrame):
 
         layout.setContentsMargins(0,0,0,0)
         # layout.setSpacing(0)
+        layout.addWidget(icon)
         layout.addWidget(label)
         layout.addWidget(button)
         layout.addWidget(dismissButton)
@@ -35,6 +40,7 @@ class Banner(QFrame):
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
+        self.icon = icon
         self.label = label
         self.button = button
         self.dismissButton = dismissButton
@@ -46,6 +52,7 @@ class Banner(QFrame):
             text: str,
             heeded=False,
             canDismiss=False,
+            withIcon=False,
             buttonLabel: str = "",
             buttonCallback: Callable = None
     ):
@@ -61,6 +68,7 @@ class Banner(QFrame):
             markup = f"<small>{text}</small>"
 
         self.label.setText(markup)
+        self.icon.setVisible(withIcon)
 
         self.dismissButton.setVisible(canDismiss)
         self.lastWarningWasDismissed = False

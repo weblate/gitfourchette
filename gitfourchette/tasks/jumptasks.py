@@ -239,6 +239,8 @@ class Jump(RepoTask):
         assert locator.commit
         assert not locator.ref
 
+        warnings = []
+
         # Select row in commit log
         from gitfourchette.graphview.graphview import GraphView
         with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
@@ -246,7 +248,8 @@ class Jump(RepoTask):
                 rw.graphView.selectCommit(locator.commit, silent=False)
             except GraphView.SelectCommitError as e:
                 # Commit is hidden or not loaded
-                raise AbortTask(str(e), asStatusMessage=True)
+                rw.graphView.clearSelection()
+                warnings.append(str(e))
 
         # Attempt to select matching ref in sidebar
         with (
@@ -305,10 +308,12 @@ class Jump(RepoTask):
             self.setFinalLocator(locator.replace(path=""))
             return None  # Force early out
 
+        if flv.skippedRenameDetection:
+            warnings.append(self.tr("Rename detection was skipped to load this large commit faster."))
+
         # Warning banner
-        if flv.skippedRenameDetection and not rw.diffBanner.lastWarningWasDismissed:
-            message = self.tr("To speed up the loading of this large commit, rename detection was skipped.")
-            rw.diffBanner.popUp("", message, canDismiss=True)
+        if warnings and not rw.diffBanner.lastWarningWasDismissed:
+            rw.diffBanner.popUp("", "<br>".join(warnings), canDismiss=True, withIcon=True)
 
         return locator
 

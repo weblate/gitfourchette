@@ -31,11 +31,11 @@ class GraphView(QListView):
             self.foundButHidden = foundButHidden
 
         def __str__(self):
-            h = shortHash(self.oid)
             if self.foundButHidden:
-                return translate("GraphView", "Cannot jump to commit “{0}” because it is on a hidden branch.").format(h)
+                m = translate("GraphView", "Commit “{0}” isn’t shown in the graph because it is part of a hidden branch.")
             else:
-                return translate("GraphView", "Commit “{0}” not loaded.").format(h)
+                m = translate("GraphView", "Commit “{0}” isn’t shown in the graph.")
+            return m.format(shortHash(self.oid))
 
     def __init__(self, parent):
         super().__init__(parent)
