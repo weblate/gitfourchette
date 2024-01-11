@@ -209,6 +209,9 @@ class PrimeRepo(RepoTask):
         # Refresh tab text
         rw.nameChange.emit()
 
+        # Splitters may have moved around while loading, restore them
+        rw.restoreSplitterStates()
+
         # Scrolling HEAD into view isn't super intuitive if we boot to Uncommitted Changes
         # if newState.activeCommitOid:
         #     rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
