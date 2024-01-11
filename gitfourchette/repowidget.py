@@ -412,6 +412,7 @@ class RepoWidget(QWidget):
     def _makeSidebarContainer(self):
         sidebar = Sidebar(self)
 
+        modeTabs = None
         if MODAL_SIDEBAR:
             repoName = QElidedLabel("RepoName")
             self.nameChange.connect(lambda: repoName.setText(self.getTitle()))
@@ -454,6 +455,7 @@ class RepoWidget(QWidget):
         container.setLayout(layout)
 
         self.sidebar = sidebar
+        self.sidebarTabs = modeTabs
         self.mergeBanner = banner
 
         return container

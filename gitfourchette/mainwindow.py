@@ -16,13 +16,15 @@ from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
+from gitfourchette.sidebar.sidebarmodel import SidebarTabMode
 from gitfourchette.tasks import TaskInvoker, TaskBook, RepoTask
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-
+from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
@@ -347,10 +349,26 @@ class MainWindow(QMainWindow):
         goMenu: QMenu = menubar.addMenu(self.tr("&Go"))
         goMenu.setObjectName("MWGoMenu")
 
+        sideTabsGoMenu = []
+        if settings.prefs.debug_modalSidebar:
+            for i, mode in enumerate(SidebarTabMode):
+                if mode == SidebarTabMode.NonModal:
+                    assert i == 0
+                    continue
+                assert i >= 1
+                sideTabsGoMenu.append(ActionDef(
+                    escamp(TrTables.sidebarMode(mode)),
+                    lambda m=mode: self.selectSidebarTab(None, m),
+                    shortcuts=f"Ctrl+{i}"
+                ))
+            sideTabsGoMenu.append(ActionDef.SEPARATOR)
+
         ActionDef.addToQMenu(
             goMenu,
-            ActionDef(self.tr("&Uncommitted Changes"), self.selectUncommittedChanges, shortcuts="Ctrl+U"),
+            ActionDef(self.tr("Go to &Uncommitted Changes"), self.selectUncommittedChanges, shortcuts="Ctrl+U"),
+            ActionDef(self.tr("Go to &HEAD Commit"), self.selectHead, shortcuts="Ctrl+D" if MACOS else "Ctrl+H"),
             ActionDef.SEPARATOR,
+            *sideTabsGoMenu,
             ActionDef(self.tr("&Next Tab"), self.nextTab, shortcuts="Ctrl+Tab"),
             ActionDef(self.tr("&Previous Tab"), self.previousTab, shortcuts="Ctrl+Shift+Tab"),
             ActionDef.SEPARATOR,
@@ -574,11 +592,11 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def needRepoWidget(callback):
-        def wrapper(self, rw=None):
+        def wrapper(self, rw=None, *args, **kwargs):
             if rw is None:
                 rw = self.currentRepoWidget()
             if rw:
-                callback(self, rw)
+                callback(self, rw, *args, **kwargs)
             else:
                 showInformation(self, self.tr("No repository"),
                                 self.tr("Please open a repository before performing this action."))
@@ -643,7 +661,19 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def selectUncommittedChanges(self, rw: RepoWidget):
-        rw.graphView.selectUncommittedChanges()
+        rw.jump(NavLocator.inWorkdir())
+
+    @needRepoWidget
+    def selectHead(self, rw: RepoWidget):
+        rw.jump(NavLocator.inRef("HEAD"))
+
+    @needRepoWidget
+    def selectSidebarTab(self, rw: RepoWidget, mode: SidebarTabMode):
+        tabs = rw.sidebarTabs
+        for i in range(tabs.count()):
+            if tabs.tabData(i) == mode:
+                tabs.setCurrentIndex(i)
+                return
 
     @needRepoWidget
     def nextFile(self, rw: RepoWidget):

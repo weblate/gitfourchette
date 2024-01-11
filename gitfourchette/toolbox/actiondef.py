@@ -19,7 +19,7 @@ class ActionDef:
     checkState: int = 0
     enabled: bool = True
     submenu: list['ActionDef'] = field(default_factory=list)
-    shortcuts: MultiShortcut = field(default_factory=list)
+    shortcuts: MultiShortcut | str = field(default_factory=list)
     statusTip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
