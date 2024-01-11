@@ -524,7 +524,7 @@ class RepoTaskRunner(QObject):
                 control = result.flowControl
 
                 if control == FlowControlToken.Kind.WAIT_READY:
-                    self.progress.emit(self.tr("Awaiting your input to resume {0}").format(task.name()), False)
+                    self.progress.emit("", False)
 
                     # Re-enter when user is ready
                     result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
