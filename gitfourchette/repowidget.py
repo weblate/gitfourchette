@@ -133,9 +133,9 @@ class RepoWidget(QWidget):
 
         bottomContainerLayout = QVBoxLayout()
         bottomContainerLayout.setContentsMargins(0,0,0,0)
-        bottomContainerLayout.setSpacing(0)
-        bottomContainerLayout.addWidget(diffBanner)
+        bottomContainerLayout.setSpacing(2)
         bottomContainerLayout.addWidget(bottomSplitter, 1)
+        bottomContainerLayout.addWidget(diffBanner)
         bottomContainer = QWidget()
         bottomContainer.setLayout(bottomContainerLayout)
 

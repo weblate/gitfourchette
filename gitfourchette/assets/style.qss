@@ -15,16 +15,13 @@ Sidebar::branch {
 
 Banner.diff {
     padding: 2px;
-    margin-bottom: 4px;
 }
 
 Banner.merge {
     padding: 8px;
+    background-color: #ffbb00;
 }
-
-Banner { background-color: #ffbb00; }
-Banner QLabel { color: black; }
+Banner.merge QLabel { color: black; }
 
 Banner[heeded="true"] { background-color: #3d9970; }
 Banner[heeded="true"] QLabel { color: white; }
-
