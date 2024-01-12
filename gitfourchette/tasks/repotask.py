@@ -530,7 +530,8 @@ class RepoTaskRunner(QObject):
                     result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
 
                 elif not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD:
-                    self.progress.emit(self.tr("In progress: {0}...").format(task.name()), True)
+                    busyMessage = self.tr("Busy: {0}...").format(task.name())
+                    self.progress.emit(busyMessage, True)
 
                     # Wrapper around `next(flow)`.
                     # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
