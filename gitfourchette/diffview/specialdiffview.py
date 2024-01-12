@@ -21,15 +21,17 @@ class SpecialDiffView(QTextBrowser):
         document.setObjectName("DiffErrorDocument")
 
         icon = stockIcon(err.icon)
-        pixmap = icon.pixmap(48, 48)
+        pixmap: QPixmap = icon.pixmap(48, 48)
         document.addResource(IMAGE_RESOURCE_TYPE, QUrl("icon"), pixmap)
 
         markup = (
             "<table width='100%'>"
             "<tr>"
-            "<td><img src='icon'/></td>"
-            "<td width=8></td>"
-            F"<td width='100%'><big>{err.message}</big><br/>{err.details}</td>"
+            f"<td width='{pixmap.width()}px'><img src='icon'/></td>"
+            "<td width='100%' style='padding-left: 8px; padding-top: 8px;'>"
+            f"<big>{err.message}</big>"
+            f"<br/>{err.details}"
+            "</td>"
             "</tr>"
             "</table>")
 
