@@ -24,7 +24,7 @@ class TaskBook:
     def initialize(cls):
         cls.names = {
             tasks.AbortMerge: translate("task", "Abort merge"),
-            tasks.AbsorbSubmodule: translate("task", "Absorb existing repository as submodule"),
+            tasks.AbsorbSubmodule: translate("task", "Absorb existing repo as submodule"),
             tasks.AcceptMergeConflictResolution: translate("task", "Accept merge conflict resolution"),
             tasks.AmendCommit: translate("task", "Amend last commit"),
             tasks.ApplyPatch: translate("task", "Apply selected text", "partial patch from selected text in diff"),
@@ -51,17 +51,22 @@ class TaskBook:
             tasks.HardSolveConflicts: translate("task", "Accept/reject incoming changes"),
             tasks.Jump: translate("task", "Navigate in repo"),
             tasks.JumpBack: translate("task", "Navigate back"),
+            tasks.JumpBackOrForward: translate("task", "Navigate forward"),
             tasks.JumpForward: translate("task", "Navigate forward"),
             tasks.LoadCommit: translate("task", "Load commit"),
             tasks.LoadPatch: translate("task", "Load diff"),
             tasks.LoadWorkdir: translate("task", "Refresh working directory"),
             tasks.MarkConflictSolved: translate("task", "Mark conflict solved"),
             tasks.MergeBranch: translate("task", "Merge branch"),
+            tasks.NewBranchFromCommit: translate("task", "New local branch"),
             tasks.NewBranchFromHead: translate("task", "New local branch"),
+            tasks.NewBranchFromLocalBranch: translate("task", "New local branch"),
             tasks.NewCommit: translate("task", "Commit"),
             tasks.NewRemote: translate("task", "Add remote"),
             tasks.NewStash: translate("task", "Stash changes"),
             tasks.NewTag: translate("task", "New tag"),
+            tasks.NewTrackingBranch: translate("task", "New local branch"),
+            tasks.PrimeRepo: translate("task", "Open repo"),
             tasks.RecallCommit: translate("task", "Recall lost commit"),
             tasks.RefreshRepo: translate("task", "Refresh repo"),
             tasks.RenameBranch: translate("task", "Rename local branch"),
@@ -145,6 +150,15 @@ class TaskBook:
             tasks.JumpBack,
             tasks.JumpForward,
         }
+
+        # Check that all tasks have names
+        if DEVDEBUG:
+            for n, t in vars(tasks).items():
+                try:
+                    if issubclass(t, RepoTask) and t is not RepoTask and t not in cls.names:
+                        logger.warning(f"Missing task name: {t.__name__}")
+                except TypeError:
+                    pass
 
     @classmethod
     def autoActionName(cls, t: Type[RepoTask]):
