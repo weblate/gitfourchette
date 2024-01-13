@@ -18,7 +18,7 @@ ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
 ROLE_REF = Qt.ItemDataRole.UserRole + 3
 
-MODAL_SIDEBAR = settings.prefs.debug_modalSidebar  # do not change while app is running
+MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.debug_modalSidebar  # do not change while app is running
 
 
 class SidebarTabMode(enum.IntEnum):

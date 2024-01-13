@@ -1,8 +1,13 @@
-from gitfourchette.mainwindow import MainWindow
+from __future__ import annotations
 from pytestqt.qtbot import QtBot
+from typing import TYPE_CHECKING
 import pytest
 import tempfile
 import os
+
+if TYPE_CHECKING:
+    # For '-> MainWindow' type annotation, without pulling in MainWindow in the actual fixture
+    from gitfourchette.mainwindow import MainWindow
 
 
 @pytest.fixture
@@ -15,6 +20,7 @@ def tempDir() -> tempfile.TemporaryDirectory:
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
     from gitfourchette import settings, qt
+    from gitfourchette.mainwindow import MainWindow
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
     settings.TEST_MODE = True
