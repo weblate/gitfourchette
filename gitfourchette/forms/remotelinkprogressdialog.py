@@ -25,8 +25,7 @@ class RemoteLinkProgressDialog(QProgressDialog):
         self.canceled.disconnect(self.cancel)
         self.canceled.connect(self.userAbort)
 
-        if not settings.TEST_MODE:
-            self.show()
+        self.show()
 
         self.remoteLink = RemoteLink(self)
         self.remoteLink.message.connect(self.setLabelText)
