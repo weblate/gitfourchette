@@ -24,6 +24,7 @@ def testCommit(qtbot, tempDir, mainWindow):
     QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
 
     dialog.ui.revealAuthor.click()
+    dialog.ui.overrideCommitterSignature.setChecked(False)
     dialog.ui.authorSignature.ui.nameEdit.setText("Custom Author")
     dialog.ui.authorSignature.ui.emailEdit.setText("custom.author@example.com")
     enteredDate = QDateTime.fromString("1999-12-31 23:59:00", "yyyy-MM-dd HH:mm:ss")
@@ -36,6 +37,7 @@ def testCommit(qtbot, tempDir, mainWindow):
     assert headCommit.author.name == "Custom Author"
     assert headCommit.author.email == "custom.author@example.com"
     assert headCommit.author.time == enteredDate.toSecsSinceEpoch()
+    assert headCommit.committer.name == TEST_SIGNATURE.name
 
     assert len(headCommit.parents) == 1
     diff = rw.repo.diff(headCommit.parents[0], headCommit)
@@ -170,6 +172,25 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
     assert headCommit.message == "ca geht's mol?"
     assert headCommit.author.name == "Archibald Haddock"
     assert headCommit.author.email == "1e15sabords@example.com"
+
+
+def testCommitStableDate(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
+    rw = mainWindow.openRepo(wd)
+
+    rw.commitButton.click()
+    acceptQMessageBox(rw, "empty commit")
+
+    dialog: CommitDialog = findQDialog(rw, "commit")
+    QTest.keyClicks(dialog.ui.summaryEditor, "hold on a sec...")
+
+    qtbot.wait(1500)  # wait for next second
+    dialog.accept()
+
+    headCommit = rw.repo.head_commit
+    assert headCommit.message == "hold on a sec..."
+    assert headCommit.author == headCommit.committer
 
 
 def testResetHeadToCommit(qtbot, tempDir, mainWindow):

@@ -32,20 +32,20 @@ class NewCommit(RepoTask):
 
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
 
-        sig = self.repo.default_signature
+        fallbackSignature = self.repo.default_signature
         initialMessage = self.rw.state.getDraftCommitMessage()
-        initialAuthor = self.rw.state.getDraftCommitAuthor()
+        initialAuthor = self.rw.state.getDraftCommitAuthor() or fallbackSignature
 
         cd = CommitDialog(
             initialText=initialMessage,
-            authorSignature=initialAuthor or sig,
-            committerSignature=sig,
+            authorSignature=initialAuthor,
+            committerSignature=fallbackSignature,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
             repoState=self.repo.state(),
             parent=self.parentWidget())
 
-        cd.ui.revealAuthor.setChecked(initialAuthor is not None and initialAuthor != sig)
+        cd.ui.revealAuthor.setChecked(initialAuthor != fallbackSignature)
 
         setWindowModal(cd)
 
@@ -53,12 +53,12 @@ class NewCommit(RepoTask):
         yield from self.flowDialog(cd, abortTaskIfRejected=False)
 
         message = cd.getFullMessage()
-        author = cd.getOverriddenAuthorSignature()
-        committer = cd.getOverriddenCommitterSignature()
+        author = cd.getOverriddenAuthorSignature() or fallbackSignature
+        committer = cd.getOverriddenCommitterSignature() or fallbackSignature
 
         # Save commit message as draft now, so we don't lose it if the commit operation fails or is rejected.
         if message != initialMessage or author != initialAuthor:
-            savedAuthor = author if author != sig else None
+            savedAuthor = author if author != fallbackSignature else None
             self.rw.state.setDraftCommitMessage(message, savedAuthor)
 
         if cd.result() == QDialog.DialogCode.Rejected:
@@ -68,9 +68,6 @@ class NewCommit(RepoTask):
         cd.deleteLater()
 
         yield from self.flowEnterWorkerThread()
-
-        if not author:
-            author = sig
 
         self.repo.create_commit_on_head(message, author, committer)
 
@@ -99,11 +96,13 @@ class AmendCommit(RepoTask):
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = self.repo.head_commit
 
+        fallbackSignature = self.repo.default_signature
+
         # TODO: Retrieve draft message
         cd = CommitDialog(
             initialText=headCommit.message,
             authorSignature=headCommit.author,
-            committerSignature=self.repo.default_signature,
+            committerSignature=fallbackSignature,
             amendingCommitHash=shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
             repoState=state,
@@ -124,8 +123,8 @@ class AmendCommit(RepoTask):
             cd.deleteLater()
             raise AbortTask()
 
-        author = cd.getOverriddenAuthorSignature()
-        committer = cd.getOverriddenCommitterSignature()
+        author = cd.getOverriddenAuthorSignature() or fallbackSignature
+        committer = cd.getOverriddenCommitterSignature() or fallbackSignature
         cd.deleteLater()
 
         yield from self.flowEnterWorkerThread()

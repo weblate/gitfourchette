@@ -12,8 +12,8 @@ TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
 def unpackRepo(
         tempDir,
         testRepoName="TestGitRepository",
-        userName="Rascar Capac",
-        userEmail="rascarcapac@example.com",
+        userName=TEST_SIGNATURE.name,
+        userEmail=TEST_SIGNATURE.email,
 ) -> str:
     testPath = os.path.realpath(__file__)
     testPath = os.path.dirname(testPath)
