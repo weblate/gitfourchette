@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Type, Union
+from typing import Any, Type, Union
 
 from gitfourchette import tasks
 from gitfourchette.qt import *
@@ -60,12 +60,11 @@ class TaskBook:
             tasks.MergeBranch: translate("task", "Merge branch"),
             tasks.NewBranchFromCommit: translate("task", "New local branch"),
             tasks.NewBranchFromHead: translate("task", "New local branch"),
-            tasks.NewBranchFromLocalBranch: translate("task", "New local branch"),
+            tasks.NewBranchFromRef: translate("task", "New local branch"),
             tasks.NewCommit: translate("task", "Commit"),
             tasks.NewRemote: translate("task", "Add remote"),
             tasks.NewStash: translate("task", "Stash changes"),
             tasks.NewTag: translate("task", "New tag"),
-            tasks.NewTrackingBranch: translate("task", "New local branch"),
             tasks.PrimeRepo: translate("task", "Open repo"),
             tasks.RecallCommit: translate("task", "Recall lost commit"),
             tasks.RefreshRepo: translate("task", "Refresh repo"),
@@ -96,12 +95,11 @@ class TaskBook:
             tasks.FetchRemoteBranch: translate("task", "Get the latest commits from the remote server"),
             tasks.NewBranchFromCommit: translate("task", "Start a new branch from this commit"),
             tasks.NewBranchFromHead: translate("task", "Start a new branch from the current HEAD"),
-            tasks.NewBranchFromLocalBranch: translate("task", "Start a new branch from the tip of this branch"),
+            tasks.NewBranchFromRef: translate("task", "Start a new branch from the tip of this branch"),
             tasks.NewCommit: translate("task", "Create a commit of the staged changes in the working directory"),
             tasks.NewRemote: translate("task", "Add a remote server to this repo"),
             tasks.NewStash: translate("task", "Back up uncommitted changes and clean up the working directory"),
             tasks.NewTag: translate("task", "Tag this commit with a name"),
-            tasks.NewTrackingBranch: translate("task", "Start a new local branch that will track this remote branch"),
             tasks.RenameBranch: translate("task", "Rename this branch locally"),
             tasks.ResetHead: translate("task", "Make HEAD point to another commit"),
             tasks.RevertCommit: translate("task", "Revert the changes introduced by this commit"),
@@ -131,14 +129,14 @@ class TaskBook:
             tasks.FastForwardBranch: "media-skip-forward",
             tasks.FetchRemote: QStyle.StandardPixmap.SP_BrowserReload,
             tasks.FetchRemoteBranch: QStyle.StandardPixmap.SP_BrowserReload,
+            tasks.MergeBranch: "vcs-merge",
             tasks.NewBranchFromCommit: "vcs-branch",
             tasks.NewBranchFromHead: "vcs-branch",
-            tasks.NewBranchFromLocalBranch: "vcs-branch",
+            tasks.NewBranchFromRef: "vcs-branch",
             tasks.NewCommit: "document-save",
             tasks.NewRemote: "folder-remote",
             tasks.NewStash: "vcs-stash",
             tasks.NewTag: "tag-new",
-            tasks.NewTrackingBranch: "vcs-branch",
             tasks.SetUpIdentityFirstRun: "user-identity",
             tasks.SetUpRepoIdentity: "user-identity",
             tasks.SwitchBranch: "document-swap",
@@ -183,7 +181,7 @@ class TaskBook:
             name="",
             enabled=True,
             menuRole=QAction.MenuRole.NoRole,
-            taskArgs=None
+            taskArgs: Any = None
     ) -> QAction:
         if not name:
             name = cls.autoActionName(t)
@@ -196,7 +194,7 @@ class TaskBook:
 
         action = QAction()
         action.setText(name)
-        action.setEnabled(enabled)
+        action.setEnabled(bool(enabled))
         action.setMenuRole(menuRole)
 
         TaskBook.fillAction(action, t, taskArgs)

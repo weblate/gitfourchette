@@ -18,7 +18,6 @@ class Sidebar(QTreeView):
     toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
 
-    rebaseActiveOntoBranch = Signal(str)
     pushBranch = Signal(str)
 
     openSubmoduleRepo = Signal(str)
@@ -84,6 +83,9 @@ class Sidebar(QTreeView):
 
         actions = []
 
+        model: SidebarModel = self.model()
+        repo = model.repo
+
         if item == EItem.UncommittedChanges:
             actions += [
                 TaskBook.action(NewCommit, "&C"),
@@ -99,9 +101,8 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.LocalBranch:
-            model: SidebarModel = self.model()
-            repo = model.repo
             branch = repo.branches.local[data]
+            refName = RefPrefix.HEADS + data
 
             activeBranchName = repo.head_branch_shorthand
             isCurrentBranch = branch and branch.is_checked_out()
@@ -128,14 +129,12 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Merge “{0}” into “{1}”...").format(thisBranchDisplay, activeBranchDisplay),
-                          lambda: MergeBranch.invoke(data),
-                          icon="vcs-merge",
-                          enabled=not isCurrentBranch and activeBranchName),
-
-                ActionDef(self.tr("&Rebase “{0}” onto “{1}”...").format(activeBranchDisplay, thisBranchDisplay),
-                          lambda: self.rebaseActiveOntoBranch.emit(data),
-                          enabled=not isCurrentBranch and activeBranchName),
+                TaskBook.action(
+                    MergeBranch,
+                    self.tr("&Merge into “{0}”...").format(activeBranchDisplay),
+                    taskArgs=data,
+                    enabled=not isCurrentBranch and activeBranchName,
+                ),
 
                 ActionDef.SEPARATOR,
 
@@ -169,13 +168,13 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(NewBranchFromLocalBranch, self.tr("New &Branch from Here..."), taskArgs=data),
+                TaskBook.action(NewBranchFromRef, self.tr("New &Branch from Here..."), taskArgs=refName),
 
                 ActionDef.SEPARATOR,
 
                 ActionDef(
                     self.tr("&Hide in Graph"),
-                    lambda: self.toggleHideBranch.emit("refs/heads/" + data),
+                    lambda: self.toggleHideBranch.emit(refName),
                     checkState=1 if isBranchHidden else -1,
                     statusTip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
                 ),
@@ -189,14 +188,28 @@ class Sidebar(QTreeView):
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
+            activeBranchName = repo.head_branch_shorthand
+
+            refName = RefPrefix.REMOTES + data
+            thisBranchDisplay = elide(data)
+            activeBranchDisplay = elide(activeBranchName)
+
             actions += [
                 TaskBook.action(
-                    NewTrackingBranch,
-                    self.tr("New local branch tracking “{0}”...").format(escamp(elide(data))),
-                    taskArgs=data
+                    NewBranchFromRef,
+                    self.tr("Start Local Branch from Here..."),
+                    taskArgs=refName,
                 ),
 
-                TaskBook.action(FetchRemoteBranch, self.tr("Fetch this remote branch..."), taskArgs=data),
+                TaskBook.action(FetchRemoteBranch, self.tr("Fetch Remote Changes..."), taskArgs=data),
+
+                ActionDef.SEPARATOR,
+
+                TaskBook.action(
+                    MergeBranch,
+                    self.tr("&Merge into “{0}”...").format(activeBranchDisplay),
+                    taskArgs=refName,
+                ),
 
                 ActionDef.SEPARATOR,
 
@@ -207,7 +220,7 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.toggleHideBranch.emit("refs/remotes/" + data),
+                          lambda: self.toggleHideBranch.emit(refName),
                           checkState=1 if isBranchHidden else -1),
             ]
 
@@ -278,7 +291,7 @@ class Sidebar(QTreeView):
                           lambda: self.openSubmoduleFolder.emit(data)),
 
                 ActionDef(self.tr("Copy &Path"),
-                          lambda: QApplication.clipboard().setText(os.path.join(repo.workdir, data))),
+                          lambda: QApplication.clipboard().setText(repo.in_workdir(data))),
             ]
 
         # --------------------
@@ -348,7 +361,7 @@ class Sidebar(QTreeView):
             ApplyStash.invoke(oid)
 
         elif item == EItem.RemoteBranch:
-            NewTrackingBranch.invoke(data)
+            NewBranchFromRef.invoke(RefPrefix.REMOTES + data)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)

@@ -121,7 +121,7 @@ def testDeleteCurrentBranch(qtbot, tempDir, mainWindow):
     assert "master" in repo.branches.local  # still there
 
 
-def testNewRemoteTrackingBranch(qtbot, tempDir, mainWindow):
+def testNewBranchTrackingRemoteBranch1(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -130,7 +130,7 @@ def testNewRemoteTrackingBranch(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/master")
 
-    findMenuAction(menu, "new local branch tracking").trigger()
+    findMenuAction(menu, "(start|new).+local branch").trigger()
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
     dlg.ui.nameEdit.setText("newmaster")
@@ -140,15 +140,15 @@ def testNewRemoteTrackingBranch(qtbot, tempDir, mainWindow):
     assert repo.branches.local["newmaster"].upstream == repo.branches.remote["origin/master"]
 
 
-def testNewRemoteTrackingBranch2(qtbot, tempDir, mainWindow):
+def testNewBranchTrackingRemoteBranch2(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
     menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/first-merge")
-    findMenuAction(menu, "new .*branch .*tracking").trigger()
+    findMenuAction(menu, "(start|new).*local branch").trigger()
 
-    dlg: NewBranchDialog = findQDialog(rw, "new .*branch")
+    dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
     assert dlg.ui.nameEdit.text() == "first-merge"
     assert dlg.ui.upstreamCheckBox.isChecked()
     assert dlg.ui.upstreamComboBox.currentText() == "origin/first-merge"

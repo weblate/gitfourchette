@@ -162,7 +162,7 @@ class RefPrefix:
     TAGS = "refs/tags/"
 
     @classmethod
-    def split(cls, refname: str):
+    def split(cls, refname: str) -> tuple[str, str]:
         for prefix in cls.HEADS, cls.REMOTES, cls.TAGS:
             if refname.startswith(prefix):
                 return prefix, refname[len(prefix):]

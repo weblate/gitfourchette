@@ -4,7 +4,7 @@ from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
-def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):
+def testCurrentBranchCannotSwitchOrMerge(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -12,7 +12,7 @@ def testCurrentBranchCannotSwitchMergeOrRebase(qtbot, tempDir, mainWindow):
 
     assert not findMenuAction(menu, "switch to").isEnabled()
     assert not findMenuAction(menu, "merge").isEnabled()
-    assert not findMenuAction(menu, "rebase").isEnabled()
+    # assert not findMenuAction(menu, "rebase").isEnabled()
 
 
 def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):

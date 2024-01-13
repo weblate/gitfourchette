@@ -202,24 +202,23 @@ class NewBranchFromCommit(_NewBranchBaseTask):
         yield from self._internalFlow(tip)
 
 
-class NewBranchFromLocalBranch(_NewBranchBaseTask):
-    def flow(self, localBranchName: str):
-        assert not localBranchName.startswith(RefPrefix.HEADS)
-        branch = self.repo.branches.local[localBranchName]
-        tip = branch.target
-        localName = localBranchName
-        upstream = branch.upstream.shorthand if branch.upstream else ""
-        yield from self._internalFlow(tip, localName, trackUpstream=upstream)
+class NewBranchFromRef(_NewBranchBaseTask):
+    def flow(self, refname: str):
+        prefix, name = RefPrefix.split(refname)
 
+        if prefix == RefPrefix.HEADS:
+            branch = self.repo.branches.local[name]
+            upstream = branch.upstream.shorthand if branch.upstream else ""
 
-class NewTrackingBranch(_NewBranchBaseTask):
-    def flow(self, remoteBranchName: str):
-        assert not remoteBranchName.startswith(RefPrefix.REMOTES)
-        branch = self.repo.branches.remote[remoteBranchName]
-        tip = branch.target
-        localName = remoteBranchName.removeprefix(branch.remote_name + "/")
-        upstream = branch.shorthand
-        yield from self._internalFlow(tip, localName, trackUpstream=upstream)
+        elif prefix == RefPrefix.REMOTES:
+            branch = self.repo.branches.remote[name]
+            upstream = branch.shorthand
+            name = name.removeprefix(branch.remote_name + "/")
+
+        else:
+            raise ValueError(f"Unsupported prefix for refname '{refname}'")
+
+        yield from self._internalFlow(branch.target, name, trackUpstream=upstream)
 
 
 class EditTrackedBranch(RepoTask):
