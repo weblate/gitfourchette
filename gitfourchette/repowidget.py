@@ -432,9 +432,10 @@ class RepoWidget(QWidget):
                         continue
                     i = modeTabs.count()
                     name = TrTables.sidebarMode(mode)
+                    tip = appendShortcutToToolTipText(name, QKeySequence(f"Ctrl+{i+1}"))
                     modeTabs.addTab(name[:2])
                     modeTabs.setTabData(i, mode)
-                    modeTabs.setTabToolTip(i, name)
+                    modeTabs.setTabToolTip(i, tip)
                     modeTabs.setTabIcon(i, stockIcon("sidebar_" + mode.name.lower()))
 
             modeTabs.currentChanged.emit(modeTabs.currentIndex())

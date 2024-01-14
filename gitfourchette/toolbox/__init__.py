@@ -29,6 +29,7 @@ from .qtutils import (
     formatWidgetTooltip,
     isDarkTheme,
     stockIcon, clearStockIconCache,
+    appendShortcutToToolTipText,
     appendShortcutToToolTip,
     openFolder, showInFolder, DisableWidgetContext,
     QScrollBackupContext, QTabBarStyleNoRotatedText,

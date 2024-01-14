@@ -179,16 +179,22 @@ def clearStockIconCache():
     _stockIconCache.clear()
 
 
-def appendShortcutToToolTip(widget: QWidget, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
+def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
     if type(shortcut) in [QKeySequence.StandardKey, Qt.Key]:
         shortcut = QKeySequence(shortcut)
     hint = shortcut.toString(QKeySequence.SequenceFormat.NativeText)
     hint = f"<span style='color: palette(mid)'> {hint}</span>"
-    toolTip = widget.toolTip()
     prefix = ""
     if singleLine:
         prefix = "<p style='white-space: pre'>"
-    widget.setToolTip(f"{prefix}{toolTip} {hint}")
+    return f"{prefix}{tip} {hint}"
+
+
+def appendShortcutToToolTip(widget: QWidget, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
+    tip = widget.toolTip()
+    tip = appendShortcutToToolTipText(tip, shortcut, singleLine)
+    widget.setToolTip(tip)
+    return tip
 
 
 class DisableWidgetContext:
