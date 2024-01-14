@@ -91,7 +91,7 @@ class PrefsDialog(QDialog):
             # of the style to the proxy!!!
             proxyStyle = QTabBarStyleNoRotatedText(prefs.qtStyle)
             tabWidget.setStyle(proxyStyle)
-            tabWidget.setTabPosition(QTabWidget.TabPosition.West)
+            tabWidget.setTabPosition(QTabWidget.TabPosition.West if self.isLeftToRight() else QTabWidget.TabPosition.East)
 
         pCategory = "~~~dummy~~~"
         form: QFormLayout = None

@@ -57,19 +57,17 @@ class Sidebar(QTreeView):
         self.restoreExpandedItems()
 
     def visualRect(self, index: QModelIndex) -> QRect:
-        """Required so the theme can properly draw unindented rows.
-        The offset should match that in SidebarDelegate."""
+        """
+        Required so the theme can properly draw unindented rows.
+        TODO: Can we make it possible to click in blank space to select an item?
+        """
 
         vr = super().visualRect(index)
 
         if index.isValid():
             with contextlib.suppress(ValueError):
                 item = SidebarModel.unpackItem(index)
-
-                if item in UNINDENT_ITEMS:
-                    unindentLevels = UNINDENT_ITEMS[item]
-                    unindentPixels = unindentLevels * self.indentation()
-                    vr.adjust(unindentPixels, 0, 0, 0)
+                SidebarDelegate.unindentRect(item, vr, self.indentation())
 
         return vr
 
@@ -376,10 +374,22 @@ class Sidebar(QTreeView):
         unpacked = SidebarModel.unpackItemAndData(current)
         self.onEntryClicked(*unpacked)
 
+    def clickFallsInExpandTriangle(self, index, x):
+        if not index.isValid():
+            return False
+
+        rect = self.visualRect(index)
+        if not rect.isValid():
+            return False
+
+        if self.isLeftToRight():
+            return x < rect.left()
+        else:
+            return x > rect.right()
+
     def mousePressEvent(self, event: QMouseEvent):
         index = self.indexAt(event.pos())
-        rect = self.visualRect(index)
-        if index.isValid() and rect.isValid() and event.pos().x() < rect.left():
+        if self.clickFallsInExpandTriangle(index, event.pos().x()):
             # Clicking collapse/expand triangle - will react in mouseReleaseEvent
             self.expandTriangleClickIndex = index
             event.accept()
@@ -391,8 +401,7 @@ class Sidebar(QTreeView):
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         index = self.indexAt(event.pos())
-        rect = self.visualRect(index)
-        if index.isValid() and rect.isValid() and event.pos().x() < rect.left() and index == self.expandTriangleClickIndex:
+        if self.clickFallsInExpandTriangle(index, event.pos().x()):
             # Let user collapse/expand in quick succession without triggering a double click
             self.eatDoubleClickTimer.restart()
             # Toggle expanded state
