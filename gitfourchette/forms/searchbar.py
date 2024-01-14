@@ -29,6 +29,8 @@ class SearchBar(QWidget):
     def __init__(self, parent: QWidget, help: str):
         super().__init__(parent)
 
+        self.setObjectName("SearchBar")
+
         self.ui = Ui_SearchBar()
         self.ui.setupUi(self)
 
@@ -106,6 +108,7 @@ class SearchBar(QWidget):
         self.hide()
 
     def onSearchTextChanged(self, text: str):
+        self.turnRed(False)
         self.searchTerm = text.strip().lower()
 
         if 0 < len(self.searchTerm) <= 40:
@@ -115,3 +118,9 @@ class SearchBar(QWidget):
             self.searchPulseTimer.start()
         else:
             self.searchPulseTimer.stop()
+
+    def turnRed(self, red=True):
+        wasRed = self.property("red") == "true"
+        self.setProperty("red", "true" if red else "false")
+        if wasRed ^ red:  # trigger stylesheet refresh
+            self.setStyleSheet("* {}")

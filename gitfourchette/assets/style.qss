@@ -25,3 +25,5 @@ Banner.merge QLabel { color: black; }
 
 Banner[heeded="true"] { background-color: #3d9970; }
 Banner[heeded="true"] QLabel { color: white; }
+
+SearchBar[red="true"] QLineEdit { color: red; }

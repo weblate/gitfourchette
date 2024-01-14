@@ -452,6 +452,8 @@ class GraphView(QListView):
             self.setCurrentIndex(index)
             return
 
+        self.searchBar.turnRed()
+
     def searchCommitInRange(self, searchRange: range) -> QModelIndex | None:
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly
 
