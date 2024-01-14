@@ -27,6 +27,7 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
 from gitfourchette.sidebar.sidebarmodel import SidebarTabMode, MODAL_SIDEBAR
+from gitfourchette.sidebar.sidebarmodetabs import SidebarModeTabs
 from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
@@ -419,8 +420,7 @@ class RepoWidget(QWidget):
             tweakWidgetFont(repoName, 110)
             repoName.setContentsMargins(4, 8, 0, 0)
 
-            modeTabs = QTabBar(self)
-            modeTabs.setExpanding(True)
+            modeTabs = SidebarModeTabs(self)
             modeTabs.setUsesScrollButtons(False)
             modeTabs.currentChanged.connect(lambda i: sidebar.switchMode(modeTabs.tabData(i)))
             modeTabs.setSizePolicy(QSizePolicy.Policy.Minimum, modeTabs.sizePolicy().verticalPolicy())
@@ -435,6 +435,7 @@ class RepoWidget(QWidget):
                     modeTabs.addTab(name[:2])
                     modeTabs.setTabData(i, mode)
                     modeTabs.setTabToolTip(i, name)
+                    modeTabs.setTabIcon(i, stockIcon("sidebar_" + mode.name.lower()))
 
             modeTabs.currentChanged.emit(modeTabs.currentIndex())
 
