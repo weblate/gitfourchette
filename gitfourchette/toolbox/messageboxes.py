@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 MessageBoxIconName = Literal['warning', 'information', 'question', 'critical']
 
+_excMessageBoxQueue = []
+
 
 def excMessageBox(
         exc,
@@ -30,6 +32,8 @@ def excMessageBox(
             raise exc
 
     try:
+        isCritical = icon == 'critical'
+
         if printExc:
             traceback.print_exception(exc.__class__, exc, exc.__traceback__)
 
@@ -56,7 +60,12 @@ def excMessageBox(
             if summary.startswith("_pygit2.GitError:"):
                 summary = summary.removeprefix("_pygit2.GitError:")
                 summary = tr("Git error:") + summary
+            if len(summary) > 500:
+                summary = summary[:500] + "... " + tr("(MESSAGE TRUNCATED)")
             message += "<br><br>" + html.escape(summary)
+            if isCritical:
+                message += "<p><small>" + tr("If you want to report a bug, please click “Show Details” "
+                                             "and copy the <b>entire</b> message.")
 
         details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
         details = [shortenTracebackPath(line) for line in details]
@@ -72,23 +81,69 @@ def excMessageBox(
             detailsEdit.setFont(font)
             detailsEdit.setMinimumWidth(600)
 
-        qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-
         # Keep user from triggering more exceptions by clicking on stuff in the background
         qmb.setWindowModality(Qt.WindowModality.ApplicationModal)
 
-        if parent:
-            qmb.show()
-        else:
-            # Without a parent, show() won't work. So, use exec() as the very last resort.
-            # (Calling exec() may crash on macOS if another modal dialog is active.)
-            qmb.exec()
+        dismissButton = qmb.addButton(QMessageBox.StandardButton.Ok)
+        qmb.setDefaultButton(dismissButton)
+        qmb.setEscapeButton(dismissButton)
+
+        if isCritical:
+            quitButton = qmb.addButton(QMessageBox.StandardButton.Abort)
+            quitButton.setText(tr("Quit application"))
+
+        # Show next error message in queue when finished
+        qmb.finished.connect(_popExcMessageBoxQueue)
+
+        # Add the qmb to the queue of error messages
+        _excMessageBoxQueue.append(qmb)
+
+        # Only show now if no other excMessageBox is currently being shown
+        if len(_excMessageBoxQueue) <= 1:
+            _showExcMessageBox(qmb)
 
     except BaseException as excMessageBoxError:
         sys.stderr.write(f"*********************************************\n")
         sys.stderr.write(f"excMessageBox failed!!!\n")
         sys.stderr.write(f"*********************************************\n")
         traceback.print_exception(excMessageBoxError)
+
+
+def _popExcMessageBoxQueue(result = QMessageBox.StandardButton.Ok):
+    if result == QMessageBox.StandardButton.Abort:
+        logger.warning("Application aborted from message box.")
+        QApplication.exit(1)
+        return
+
+    if result != QMessageBox.StandardButton.Ok:
+        for qmb in _excMessageBoxQueue:
+            qmb.deleteLater()
+        _excMessageBoxQueue.clear()
+        return
+
+    _excMessageBoxQueue.pop(0)
+    if not _excMessageBoxQueue:
+        # No more messages to show
+        return
+
+    qmb = _excMessageBoxQueue[0]
+
+    if len(_excMessageBoxQueue) >= 1:
+        dismissAllButton = qmb.addButton(QMessageBox.StandardButton.NoToAll)
+        dismissAllButton.setText(tr("Skip %n more errors", "", len(_excMessageBoxQueue)-1))
+
+    _showExcMessageBox(qmb)
+
+
+def _showExcMessageBox(qmb):
+    qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+
+    if qmb.parent():
+        qmb.show()
+    else:
+        # Without a parent, show() won't work. So, use exec() as the very last resort.
+        # (Calling exec() may crash on macOS if another modal dialog is active.)
+        qmb.exec()
 
 
 def asyncMessageBox(
