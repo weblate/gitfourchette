@@ -56,7 +56,7 @@ def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"NewFile.txt": GIT_STATUS_WT_NEW}
 
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"NewFile.txt": GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED}
 
@@ -74,7 +74,7 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"file with spaces.txt": GIT_STATUS_WT_NEW}
 
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"file with spaces.txt": GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED}
 
@@ -99,8 +99,8 @@ def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
     # Partial patch of first modified line
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Down)    # Skip hunk line (@@...@@)
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Down)    # Skip hunk line (@@...@@)
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
     assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED}
 
     staged = rw.repo.get_staged_changes()
@@ -150,21 +150,21 @@ def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
     assert rw.repo.status() == {"master.txt": GIT_STATUS_INDEX_MODIFIED}
 
     # It must also work in reverse - let's unstage this change via a subpatch
     qlvClickNthRow(rw.stagedFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Delete)
     assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED}
 
     # Finally, let's discard this change via a subpatch
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.diffView, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "discard")
     assert rw.repo.status() == {}
 

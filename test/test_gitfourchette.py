@@ -101,23 +101,23 @@ def testCommitSearch(qtbot, tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
 
-    # QTest.keySequence(mainWindow, "Ctrl+F") doesn't work unless we show the window first...
+    # qtbot.keySequence(mainWindow, "Ctrl+F") doesn't work unless we show the window first...
     mainWindow.dispatchSearchCommand()
 
     assert searchBar.isVisibleTo(rw)
 
-    QTest.keyClicks(searchEdit, "first")
+    qtbot.keyClicks(searchEdit, "first")
 
     previousRow = -1
     for oid in matchingCommits:
-        QTest.keySequence(searchEdit, "Return")
+        qtbot.keySequence(searchEdit, "Return")
         assert oid == rw.graphView.currentCommitOid
 
         assert getGraphRow() > previousRow  # go down
         previousRow = getGraphRow()
 
     # end of log
-    QTest.keySequence(searchEdit, "Return")
+    qtbot.keySequence(searchEdit, "Return")
     assert getGraphRow() < previousRow  # wrap around to top of graph
     previousRow = getGraphRow()
 
@@ -128,19 +128,19 @@ def testCommitSearch(qtbot, tempDir, mainWindow):
 
     # now search backwards
     for oid in reversed(matchingCommits):
-        QTest.keySequence(searchEdit, "Shift+Return")
+        qtbot.keySequence(searchEdit, "Shift+Return")
         assert oid == rw.graphView.currentCommitOid
 
         assert getGraphRow() < previousRow  # go up
         previousRow = getGraphRow()
 
     # top of log
-    QTest.keySequence(searchEdit, "Shift+Return")
+    qtbot.keySequence(searchEdit, "Shift+Return")
     assert getGraphRow() > previousRow
     previousRow = getGraphRow()
 
     # escape closes search bar
-    QTest.keySequence(searchEdit, "Escape")
+    qtbot.keySequence(searchEdit, "Escape")
     assert not searchBar.isVisibleTo(rw)
 
 

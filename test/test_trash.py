@@ -23,7 +23,7 @@ def testBackupDiscardedPatches(qtbot, tempDir, mainWindow):
     trash.refreshFiles()
     assert len(trash.trashFiles) == 0
 
-    QTest.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
+    qtbot.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
     acceptQMessageBox(rw, "really discard changes")
 
     assert len(trash.trashFiles) == 2
@@ -52,7 +52,7 @@ def testTrashFull(qtbot, tempDir, mainWindow):
     trash.refreshFiles()
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "really discard changes")
 
     # Trash should have been purged to make room for new patch

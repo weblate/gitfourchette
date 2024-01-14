@@ -11,7 +11,7 @@ def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == []
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
@@ -25,7 +25,7 @@ def testDiscardUntrackedFile(qtbot, tempDir, mainWindow):
 
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
     acceptQMessageBox(rw, "really delete")
 
@@ -42,7 +42,7 @@ def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
     acceptQMessageBox(rw, "really discard changes")
 
@@ -59,7 +59,7 @@ def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, main
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
     acceptQMessageBox(rw, "really discard changes")
 
@@ -95,7 +95,7 @@ def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
     qlvClickNthRow(rw.stagedFiles, 0)
-    QTest.keyPress(rw.stagedFiles, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.stagedFiles, Qt.Key.Key_Delete)
 
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []

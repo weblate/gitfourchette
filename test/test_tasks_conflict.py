@@ -111,14 +111,14 @@ def testConflictDoesntPreventManipulatingIndexOnOtherFile(qtbot, tempDir, mainWi
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "b/b1.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 1)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert qlvGetRowData(rw.stagedFiles) == ["b/b1.txt"]
 
     writeFile(f"{wd}/b/b1.txt", "b1\nb1\nunstaged change\nstaged change\n")
     rw.refreshRepo()
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "b/b1.txt"]
     qlvClickNthRow(rw.dirtyFiles, 1)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, r"really discard changes.+b1\.txt")
 
     assert readFile(f"{wd}/b/b1.txt").decode() == "b1\nb1\nstaged change\n"

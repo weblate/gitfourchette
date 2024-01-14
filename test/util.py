@@ -1,4 +1,5 @@
 from . import *
+from pytestqt.qtbot import QtBot as _QtBot
 import os
 import re
 import tarfile
@@ -88,7 +89,7 @@ def qlvClickNthRow(view: QListView, n: int):
     assert index.isValid()
     view.scrollTo(index)
     rect = view.visualRect(index)
-    QTest.mouseClick(view.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
+    _QtBot.mouseClick(view.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
     return index.data(Qt.ItemDataRole.DisplayRole)
 
 

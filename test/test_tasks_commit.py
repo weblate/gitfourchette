@@ -14,13 +14,13 @@ def testCommit(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     rw.commitButton.click()
 
     dialog: CommitDialog = findQDialog(rw, "commit")
-    QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
+    qtbot.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
 
     dialog.ui.revealAuthor.click()
     dialog.ui.overrideCommitterSignature.setChecked(False)
@@ -51,14 +51,14 @@ def testCommitUntrackedFileInEmptyRepo(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
 
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
-    QTest.keyClicks(dialog.ui.summaryEditor, "Initial commit")
+    qtbot.keyClicks(dialog.ui.summaryEditor, "Initial commit")
     dialog.accept()
 
     rows = qlvGetRowData(rw.graphView, CommitLogModel.CommitRole)
@@ -74,7 +74,7 @@ def testCommitMessageDraftSavedOnCancel(qtbot, tempDir, mainWindow):
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
-    QTest.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
+    qtbot.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
     dialog.reject()
 
     rw.commitButton.click()
@@ -182,7 +182,7 @@ def testCommitStableDate(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, "empty commit")
 
     dialog: CommitDialog = findQDialog(rw, "commit")
-    QTest.keyClicks(dialog.ui.summaryEditor, "hold on a sec...")
+    qtbot.keyClicks(dialog.ui.summaryEditor, "hold on a sec...")
 
     qtbot.wait(1500)  # wait for next second
     dialog.accept()
@@ -321,7 +321,7 @@ def testNewTag(qtbot, tempDir, mainWindow):
 
     dlg: QDialog = findQDialog(rw, "new tag")
     lineEdit = dlg.findChild(QLineEdit)
-    QTest.keyClicks(lineEdit, newTag)
+    qtbot.keyClicks(lineEdit, newTag)
     dlg.accept()
 
     assert newTag in rw.repo.listall_tags()
