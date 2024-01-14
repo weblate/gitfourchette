@@ -10,6 +10,19 @@ if TYPE_CHECKING:
     from gitfourchette.mainwindow import MainWindow
 
 
+@pytest.fixture(scope="session")
+def qapp_args():
+    mainPyPath = os.path.join(os.path.dirname(__file__), "..", "gitfourchette", "__main__.py")
+    mainPyPath = os.path.normpath(mainPyPath)
+    return [mainPyPath, "--test-mode", "--no-threads"]
+
+
+@pytest.fixture(scope="session")
+def qapp_cls():
+    from gitfourchette.application import GFApplication
+    yield GFApplication
+
+
 @pytest.fixture
 def tempDir() -> tempfile.TemporaryDirectory:
     td = tempfile.TemporaryDirectory(prefix="gitfourchettetest-")
@@ -19,25 +32,17 @@ def tempDir() -> tempfile.TemporaryDirectory:
 
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
-    from gitfourchette import settings, qt
+    from gitfourchette import settings, qt, trash
     from gitfourchette.mainwindow import MainWindow
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
-    settings.TEST_MODE = True
-    settings.SYNC_TASKS = True
-
-    # Set up resource search path. Not critical, but prevents spam about missing assets.
-    assetsSearchPath = os.path.join(os.path.dirname(__file__), "..", "gitfourchette", "assets")
-    qt.QDir.addSearchPath("assets", assetsSearchPath)
+    assert settings.TEST_MODE
+    assert settings.SYNC_TASKS
 
     mw = MainWindow()
 
     # Don't let window linger in memory after this test
     mw.setAttribute(qt.Qt.WidgetAttribute.WA_DeleteOnClose)
-
-    # Initialize translation tables (translated texts are needed for some tests)
-    from gitfourchette.trtables import TrTables
-    TrTables.retranslateAll()
 
     # Let qtbot track the window and close it at the end of the test
     qtbot.addWidget(mw)
@@ -45,4 +50,7 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     qt.QApplication.setActiveWindow(mw)
 
     # mw.show()
-    return mw
+    yield mw
+
+    # Clear temp trash after this test
+    trash.Trash.instance().clear()

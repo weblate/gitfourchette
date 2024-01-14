@@ -1,6 +1,5 @@
 from gitfourchette.nav import NavContext, NavLocator
 from . import reposcenario
-from .fixtures import *
 from .util import *
 
 

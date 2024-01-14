@@ -9,6 +9,7 @@ import pygit2
 
 from gitfourchette import settings
 from gitfourchette import tasks
+from gitfourchette.application import GFApplication
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.forms.aboutdialog import showAboutDialog
@@ -1032,15 +1033,17 @@ class MainWindow(QMainWindow):
     # Prefs
 
     def refreshPrefs(self, prefDiff: dict = dict()):
+        app = GFApplication.instance()
+
         # Apply new style
         if "qtStyle" in prefDiff:
-            settings.applyQtStylePref(forceApplyDefault=True)
+            app.applyQtStylePref(forceApplyDefault=True)
 
         if "debug_verbosity" in prefDiff:
-            logging.root.setLevel(settings.prefs.debug_verbosity.value)
+            app.applyLoggingLevelPref()
 
         if "language" in prefDiff:
-            settings.applyLanguagePref()
+            app.applyLanguagePref()
             TaskBook.initialize()
             self.fillGlobalMenuBar()
 

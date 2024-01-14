@@ -3,7 +3,6 @@ Remote management tests.
 """
 
 from . import reposcenario
-from .fixtures import *
 from .util import *
 from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.sidebar.sidebarmodel import EItem

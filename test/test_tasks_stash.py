@@ -1,10 +1,10 @@
 from . import reposcenario
-from .fixtures import *
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.forms.stashdialog import StashDialog
 from gitfourchette.tasks import DropStash
 import os
+import pytest
 
 
 def testNewStash(qtbot, tempDir, mainWindow):

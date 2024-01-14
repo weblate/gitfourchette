@@ -4,17 +4,17 @@ import enum
 import logging
 import os
 import shlex
+import sys
 
 from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
 from gitfourchette.toolbox.pathutils import PathDisplayStyle
-from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
-TEST_MODE = False
+TEST_MODE = "pytest" in sys.modules
 """ Unit testing mode. """
 
 SYNC_TASKS = False
@@ -306,61 +306,12 @@ class Session(PrefsFile):
 # The app should load the user's prefs with prefs.load() and history.load().
 prefs = Prefs()
 history = History()
-installedTranslators = []
 
 
 def qtIsNativeMacosStyle():
     if not MACOS:
         return False
     return (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
-
-
-def applyQtStylePref(forceApplyDefault: bool):
-    app = QApplication.instance() 
-
-    if prefs.qtStyle:
-        app.setStyle(prefs.qtStyle)
-    elif forceApplyDefault:
-        app.setStyle(app.PLATFORM_DEFAULT_STYLE_NAME)
-
-    if MACOS:
-        app.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, qtIsNativeMacosStyle())
-
-
-def applyLanguagePref():
-    app = QCoreApplication.instance()
-
-    # Flush old translators
-    while installedTranslators:
-        app.removeTranslator(installedTranslators.pop())
-
-    if prefs.language:
-        locale = QLocale(prefs.language)
-    else:
-        locale = QLocale()  # "Automatic" setting: Get system locale
-    QLocale.setDefault(locale)
-
-    newTranslator = QTranslator(app)
-    if newTranslator.load(locale, "gitfourchette", "_", "assets:", ".qm"):
-        app.installTranslator(newTranslator)
-        installedTranslators.append(newTranslator)
-    else:
-        logger.warning("Failed to load translator.")
-        newTranslator.deleteLater()
-
-    # Load Qt base translation
-    if not QT5:  # Do this on Qt 6 and up only
-        try:
-            baseTranslator = QTranslator(app)
-            if baseTranslator.load(locale, "qtbase", "_", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
-                app.installTranslator(baseTranslator)
-                installedTranslators.append(baseTranslator)
-            else:
-                baseTranslator.deleteLater()
-        except Exception as exc:
-            logger.warning(f"Failed to load Qt base translation for language: {prefs.language}", exc_info=True)
-
-    TrTables.retranslateAll()
 
 
 def _getCmdName(command, fallback, presets):

@@ -1,5 +1,4 @@
 from . import reposcenario
-from .fixtures import *
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.forms.newbranchdialog import NewBranchDialog

@@ -1,5 +1,4 @@
 from . import reposcenario
-from .fixtures import *
 from .util import *
 import subprocess
 

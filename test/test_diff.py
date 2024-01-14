@@ -1,5 +1,4 @@
 from . import reposcenario
-from .fixtures import *
 from .util import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.diffview.diffview import DiffView
