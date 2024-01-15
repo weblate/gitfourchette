@@ -192,6 +192,24 @@ def testCommitStableDate(qtbot, tempDir, mainWindow):
     assert headCommit.author == headCommit.committer
 
 
+def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
+    rw = mainWindow.openRepo(wd)
+
+    rw.amendButton.click()
+
+    dialog: CommitDialog = findQDialog(rw, "amend")
+    qtbot.keyClicks(dialog.ui.summaryEditor, "hold on a sec...")
+
+    qtbot.wait(1500)  # wait for next second
+    dialog.accept()
+
+    headCommit = rw.repo.head_commit
+    assert headCommit.message == "hold on a sec..."
+    assert headCommit.author != headCommit.committer
+
+
 def testResetHeadToCommit(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
