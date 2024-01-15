@@ -1,29 +1,37 @@
 from gitfourchette.qt import *
+from gitfourchette.settings import qtIsNativeMacosStyle
 
 
 class _SidebarModeTabStyle(QProxyStyle):
-    def drawControl(self, element: QStyle.ControlElement, option: QStyleOptionTab, painter: QPainter, widget: QWidget = None):
-        icon = QIcon()
-
-        if element == QStyle.ControlElement.CE_TabBarTabLabel:
-            icon = QIcon(option.icon)
-            option.icon = QIcon()  # draw without icon first
-            option.text = ""  # and without text
-
-        super().drawControl(element, option, painter, widget)
-
-        if icon.isNull():
+    def drawControl(self, element: QStyle.ControlElement, option: QStyleOptionTab, painter: QPainter, widget: QWidget):
+        if element != QStyle.ControlElement.CE_TabBarTabLabel:
+            super().drawControl(element, option, painter, widget)
             return
 
-        iconSize = QSize(option.iconSize)  # TODO: or just set a custom size like QSize(20,20)
+        painter.save()
+
+        # On some themes like Breeze, active tab text may be raised by a couple pixels.
+        # So use that as the center instead of option.rect.center().
+        textRect: QRect = self.proxy().subElementRect(QStyle.SubElement.SE_TabBarTabText, option, widget)
+        iconCenter = QPoint(option.rect.center().x(), textRect.center().y())
+
+        icon: QIcon = option.icon
+        iconSize = option.iconSize  # TODO: or just set a custom size like QSize(20,20)
+        iconColor = painter.pen().color()
         iconRect = QRect(0, 0, iconSize.width(), iconSize.height())
-        iconRect.moveCenter(option.rect.center())
+        iconRect.moveCenter(iconCenter)
 
-        iconMode = QIcon.Mode.Normal if (option.state & QStyle.StateFlag.State_Enabled) else QIcon.Mode.Disabled
-        iconState = QIcon.State.On if (option.state & QStyle.StateFlag.State_Selected) else QIcon.State.Off
-        pixmap = icon.pixmap(iconSize, iconMode, iconState)
+        maskPixmap = icon.pixmap(iconSize)
+        colorPixmap = QPixmap(iconSize)
+        colorPixmap.fill(Qt.GlobalColor.transparent)  # prime alpha channel
+        colorPixmap.fill(iconColor)
+        stencil = QPainter(colorPixmap)
+        stencil.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
+        stencil.drawPixmap(0, 0, maskPixmap)
+        stencil.end()
+        painter.drawPixmap(iconRect.x(), iconRect.y(), colorPixmap)
 
-        painter.drawPixmap(iconRect.x(), iconRect.y(), pixmap)
+        painter.restore()
 
 
 class SidebarModeTabs(QTabBar):
@@ -41,10 +49,18 @@ class SidebarModeTabs(QTabBar):
 
         self.setMinimumWidth(4*16)
 
+        if qtIsNativeMacosStyle():
+            self.setDrawBase(False)
+
     def tabSizeHint(self, index):
         # Works best if "expanding" tabs are OFF.
-        minW = int(self.width() / self.count())
+        vanillaSize = QTabBar.tabSizeHint(self, index)
+        count = self.count()
+        if count == 0:  # avoid div by zero
+            return vanillaSize
+
+        minW = int(self.width() / count)
         w = max(minW, 16)
-        w = min(w, 40)
-        # vanillaSize = QTabBar.tabSizeHint(self, index)
-        return QSize(w, 40)
+        w = min(w, 60)
+        h = vanillaSize.height()
+        return QSize(w, h)
