@@ -1,12 +1,31 @@
+import logging
+
 from gitfourchette.qt import *
 from gitfourchette.settings import qtIsNativeMacosStyle
 
+_logger = logging.getLogger(__name__)
+
 
 class _SidebarModeTabStyle(QProxyStyle):
-    def drawControl(self, element: QStyle.ControlElement, option: QStyleOptionTab, painter: QPainter, widget: QWidget):
+    def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, widget: QWidget):
         if element != QStyle.ControlElement.CE_TabBarTabLabel:
             super().drawControl(element, option, painter, widget)
             return
+
+        assert element == QStyle.ControlElement.CE_TabBarTabLabel
+
+        if not isinstance(option, QStyleOptionTab):
+            # When the app is in the background, PyQt5 sometimes passes some
+            # junk type here (QStyleOptionViewItem) even though the docs say
+            # that CE_TabBarTabLabel corresponds to QStyleOptionTab.
+            # Is this a bug in the binding?
+            # (I've also seen it happen *once* with PyQt6...)
+            if DEVDEBUG:
+                _logger.warning(f"Unexpected QProxyStyle option: {type(option)}")
+            super().drawControl(element, option, painter, widget)  # default to normal
+            return
+
+        assert isinstance(option, QStyleOptionTab)
 
         painter.save()
 
@@ -43,9 +62,10 @@ class SidebarModeTabs(QTabBar):
 
         # Pass a string to the proxy's ctor, NOT QApplication.style() as this would transfer the ownership
         # of the style to the proxy!!!
-        from gitfourchette import settings
-        self.proxyStyle = _SidebarModeTabStyle(settings.prefs.qtStyle)
-        self.setStyle(self.proxyStyle)
+        if not PYSIDE2:  # could never get this to work with PySide2
+            from gitfourchette import settings
+            proxyStyle = _SidebarModeTabStyle(settings.prefs.qtStyle)
+            self.setStyle(proxyStyle)
 
         self.setMinimumWidth(4*16)
 
