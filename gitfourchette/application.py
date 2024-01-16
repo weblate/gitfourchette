@@ -58,6 +58,11 @@ class GFApplication(QApplication):
         if commandLine.isSet("test-mode"):
             settings.TEST_MODE = True
             settings.SYNC_TASKS = True
+
+            # Force English in unit tests regardless of the host machine's locale
+            # because many unit tests look for pieces of text in dialogs.
+            settings.prefs.language = settings.LANGUAGES[0]
+            assert settings.prefs.language.startswith("en")
         else:
             # Load settings
             with NonCriticalOperation(F"Loading prefs"):
