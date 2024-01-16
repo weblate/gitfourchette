@@ -101,7 +101,10 @@
             <height>274</height>
            </rect>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout">
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <property name="spacing">
+            <number>16</number>
+           </property>
            <item>
             <widget class="QLabel" name="aboutBlurb">
              <property name="text">
@@ -112,6 +115,19 @@
              </property>
              <property name="wordWrap">
               <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="mugshot">
+             <property name="toolTip">
+              <string>The author!</string>
+             </property>
+             <property name="text">
+              <string notr="true">MUG</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
              </property>
             </widget>
            </item>
@@ -151,8 +167,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>100</width>
-            <height>30</height>
+            <width>411</width>
+            <height>267</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_4">

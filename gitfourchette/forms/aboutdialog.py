@@ -61,6 +61,10 @@ class AboutDialog(QDialog):
 
         self.ui.header.setText(header)
         self.ui.header.setOpenExternalLinks(True)
+
+        self.ui.mugshot.setText("")
+        self.ui.mugshot.setPixmap(QPixmap("assets:mug.png"))
+
         self.ui.aboutBlurb.setText(blurb)
         self.ui.aboutBlurb.setOpenExternalLinks(True)
 
