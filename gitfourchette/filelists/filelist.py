@@ -23,6 +23,7 @@ class FileList(QListView):
     selectedCountChanged = Signal(int)
     openDiffInNewWindow = Signal(Patch, NavLocator)
     stashFiles = Signal(list)  # list[str]
+    statusMessage = Signal(str)
 
     navContext: NavContext
     """ 
@@ -218,8 +219,11 @@ class FileList(QListView):
     def copyPaths(self):
         text = '\n'.join(self.repo.in_workdir(patch.delta.new_file.path)
                          for patch in self.selectedPatches())
-        if text:
-            QApplication.clipboard().setText(text)
+        if not text:
+            return
+
+        QApplication.clipboard().setText(text)
+        self.statusMessage.emit(clipboardStatusMessage(text))
 
     def selectRow(self, rowNumber=0):
         if self.model().rowCount() == 0:

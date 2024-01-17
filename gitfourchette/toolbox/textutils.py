@@ -50,9 +50,17 @@ def paragraphs(*args) -> str:
     return builder.getvalue()
 
 
-def elide(text: str, ems: int = 20):
+def elide(text: str, mode: Qt.TextElideMode = Qt.TextElideMode.ElideMiddle, ems: int = 20):
     maxWidth = _generalFontMetrics.horizontalAdvance(ems * 'M')
-    return _generalFontMetrics.elidedText(text, Qt.TextElideMode.ElideMiddle, maxWidth)
+    return _generalFontMetrics.elidedText(text, mode, maxWidth)
+
+
+def clipboardStatusMessage(text: str):
+    n = 1 + text.count('\n')
+    if n == 1:
+        return tr("“{0}” copied to clipboard.").format(elide(text))
+    else:
+        return tr("%n lines copied to clipboard.", "", n)
 
 
 def ulList(items: Iterable[str], limit: int = 10):

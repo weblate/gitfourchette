@@ -183,11 +183,13 @@ class RepoWidget(QWidget):
                 if fileList != otherFileList:
                     fileList.jump.connect(otherFileList.clearSelection)
             fileList.nothingClicked.connect(lambda fl=fileList: self.clearDiffView(fl))
+            fileList.statusMessage.connect(self.statusMessage)
 
         self.diffView.contextualHelp.connect(self.statusMessage)
 
         self.specialDiffView.anchorClicked.connect(self.processInternalLink)
         self.graphView.linkActivated.connect(self.processInternalLink)
+        self.graphView.statusMessage.connect(self.statusMessage)
 
         self.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
 
@@ -195,6 +197,7 @@ class RepoWidget(QWidget):
         self.conflictView.openPrefs.connect(self.openPrefs)
         self.conflictView.linkActivated.connect(self.processInternalLink)
 
+        self.sidebar.statusMessage.connect(self.statusMessage)
         self.sidebar.pushBranch.connect(self.startPushFlow)
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
         self.sidebar.toggleHideStash.connect(self.toggleHideStash)

@@ -23,6 +23,8 @@ class Sidebar(QTreeView):
     openSubmoduleRepo = Signal(str)
     openSubmoduleFolder = Signal(str)
 
+    statusMessage = Signal(str)
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -289,7 +291,7 @@ class Sidebar(QTreeView):
                           lambda: self.openSubmoduleFolder.emit(data)),
 
                 ActionDef(self.tr("Copy &Path"),
-                          lambda: QApplication.clipboard().setText(repo.in_workdir(data))),
+                          lambda: self.copyToClipboard(repo.in_workdir(data)))
             ]
 
         # --------------------
@@ -526,3 +528,6 @@ class Sidebar(QTreeView):
 
         return True
 
+    def copyToClipboard(self, text: str):
+        QApplication.clipboard().setText(text),
+        self.statusMessage.emit(clipboardStatusMessage(text))

@@ -617,7 +617,9 @@ class MainWindow(QMainWindow):
 
     @needRepoWidget
     def copyRepoPath(self, rw: RepoWidget):
-        QApplication.clipboard().setText(rw.workdir)
+        text = rw.workdir
+        QApplication.clipboard().setText(text)
+        rw.statusMessage.emit(clipboardStatusMessage(text))
 
     @needRepoWidget
     def renameRepo(self, rw: RepoWidget):

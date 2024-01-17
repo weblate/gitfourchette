@@ -20,6 +20,7 @@ class GraphView(QListView):
     jump = Signal(NavLocator)
     widgetMoved = Signal()
     linkActivated = Signal(str)
+    statusMessage = Signal(str)
 
     clModel: CommitLogModel
     clFilter: CommitLogFilter
@@ -302,7 +303,9 @@ class GraphView(QListView):
         if not oid:  # uncommitted changes
             return
 
-        QApplication.clipboard().setText(oid.hex)
+        text = oid.hex
+        QApplication.clipboard().setText(text)
+        self.statusMessage.emit(clipboardStatusMessage(text))
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         # do standard callback, such as scrolling the viewport if reaching the edges, etc.
