@@ -27,8 +27,6 @@ class _SidebarModeTabStyle(QProxyStyle):
 
         assert isinstance(option, QStyleOptionTab)
 
-        painter.save()
-
         # On some themes like Breeze, active tab text may be raised by a couple pixels.
         # So use that as the center instead of option.rect.center().
         textRect: QRect = self.proxy().subElementRect(QStyle.SubElement.SE_TabBarTabText, option, widget)
@@ -40,17 +38,25 @@ class _SidebarModeTabStyle(QProxyStyle):
         iconRect = QRect(0, 0, iconSize.width(), iconSize.height())
         iconRect.moveCenter(iconCenter)
 
-        maskPixmap = icon.pixmap(iconSize)
-        colorPixmap = QPixmap(iconSize)
+        dpr = widget.devicePixelRatioF()
+
+        if QT5:
+            maskPixmap = icon.pixmap(iconSize * dpr)
+            maskPixmap.setDevicePixelRatio(dpr)
+        else:
+            maskPixmap = icon.pixmap(iconSize, dpr)
+
+        colorPixmap = QPixmap(maskPixmap.size())
+        colorPixmap.setDevicePixelRatio(dpr)
         colorPixmap.fill(Qt.GlobalColor.transparent)  # prime alpha channel
         colorPixmap.fill(iconColor)
+
         stencil = QPainter(colorPixmap)
         stencil.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
         stencil.drawPixmap(0, 0, maskPixmap)
         stencil.end()
-        painter.drawPixmap(iconRect.x(), iconRect.y(), colorPixmap)
 
-        painter.restore()
+        painter.drawPixmap(iconRect, colorPixmap, colorPixmap.rect())
 
 
 class SidebarModeTabs(QTabBar):
