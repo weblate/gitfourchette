@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import logging
 
 from gitfourchette import settings
@@ -290,8 +290,8 @@ class LoadPatch(RepoTask):
             return self.repo.wrap_conflict(path)
 
         submodule = None
-        with (contextlib.suppress(KeyError),
-              contextlib.suppress(ValueError),  # "submodule <whatever> has not been added yet" (GIT_EEXISTS)
+        with (suppress(KeyError),
+              suppress(ValueError),  # "submodule <whatever> has not been added yet" (GIT_EEXISTS)
               Benchmark("Submodule detection")
               ):
             submodule = self.repo.lookup_submodule(patch.delta.new_file.path)

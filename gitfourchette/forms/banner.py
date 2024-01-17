@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 from typing import Callable
 
 from gitfourchette.qt import *
@@ -74,7 +74,7 @@ class Banner(QFrame):
         self.lastWarningWasDismissed = False
 
         # Always disconnect any previous callback
-        with contextlib.suppress(BaseException):
+        with suppress(BaseException):
             self.button.clicked.disconnect()
 
         if not buttonLabel:

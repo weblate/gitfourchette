@@ -10,7 +10,7 @@ from gitfourchette.forms.signatureform import SignatureForm
 from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.forms.ui_identitydialog2 import Ui_IdentityDialog2
-import contextlib
+from contextlib import suppress
 import html
 import os
 
@@ -140,7 +140,7 @@ class SetUpIdentityFirstRun(RepoTask):
 
     def flow(self, okButtonText=""):
         # Getting the default signature will fail if the user's identity is missing or incorrectly set
-        with contextlib.suppress(KeyError, ValueError):
+        with suppress(KeyError, ValueError):
             sig = self.repo.default_signature
             return
 
@@ -266,9 +266,9 @@ class SetUpRepoIdentity(RepoTask):
                 configObject = GitConfig(os.path.expanduser("~/.gitconfig"))
 
             # Nuke repo-specific identity
-            with contextlib.suppress(KeyError):
+            with suppress(KeyError):
                 del self.repo.config["user.name"]
-            with contextlib.suppress(KeyError):
+            with suppress(KeyError):
                 del self.repo.config["user.email"]
         else:
             configObject = self.repo.config

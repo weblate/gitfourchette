@@ -1,6 +1,6 @@
 from typing import Literal
 
-import contextlib
+from contextlib import suppress
 
 from gitfourchette import settings
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
@@ -355,19 +355,19 @@ class GraphView(QListView):
             return ""
 
     def selectCommit(self, oid: Oid, silent=True):
-        with contextlib.suppress(GraphView.SelectCommitError if silent else ()):
+        with suppress(GraphView.SelectCommitError if silent else ()):
             filterIndex = self.getFilterIndexForCommit(oid)
             if filterIndex.row() != self.currentIndex().row():
                 self.scrollTo(filterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
                 self.setCurrentIndex(filterIndex)
 
     def scrollToCommit(self, oid: Oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
-        with contextlib.suppress(GraphView.SelectCommitError):
+        with suppress(GraphView.SelectCommitError):
             filterIndex = self.getFilterIndexForCommit(oid)
             self.scrollTo(filterIndex, scrollHint)
 
     def repaintCommit(self, oid: Oid):
-        with contextlib.suppress(GraphView.SelectCommitError):
+        with suppress(GraphView.SelectCommitError):
             filterIndex = self.getFilterIndexForCommit(oid)
             self.update(filterIndex)
 

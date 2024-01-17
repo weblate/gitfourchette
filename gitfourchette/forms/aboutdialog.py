@@ -1,8 +1,8 @@
 from gitfourchette.qt import *
 from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
 from gitfourchette.toolbox import *
+from contextlib import suppress
 from textwrap import dedent
-import contextlib
 import pygit2
 import sys
 

@@ -2,13 +2,13 @@
 Remote access tasks.
 """
 
+from contextlib import suppress
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.remotelinkprogressdialog import RemoteLinkProgressDialog
-import contextlib
 
 
 class _BaseNetTask(RepoTask):
@@ -66,7 +66,7 @@ class RenameRemoteBranch(_BaseNetTask):
         newBranchName = branchName  # naked name, NOT prefixed with the name of the remote
 
         reservedNames = self.repo.listall_remote_branches().get(remoteName, [])
-        with contextlib.suppress(ValueError):
+        with suppress(ValueError):
             reservedNames.remove(branchName)
         nameTaken = self.tr("This name is already taken by another branch on this remote.")
 

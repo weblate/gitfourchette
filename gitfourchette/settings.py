@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import dataclasses
 import enum
 import logging
@@ -94,11 +94,11 @@ def _filterToolPresets():
         excludeTools = macTools + winTools
 
     for key in excludeTools:
-        with contextlib.suppress(KeyError):
+        with suppress(KeyError):
             del DIFF_TOOL_PRESETS[key]
-        with contextlib.suppress(KeyError):
+        with suppress(KeyError):
             del DIFF_TOOL_PRESETS[key]
-        with contextlib.suppress(KeyError):
+        with suppress(KeyError):
             del MERGE_TOOL_PRESETS[key]
 
 

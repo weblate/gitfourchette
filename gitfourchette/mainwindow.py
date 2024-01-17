@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import gc
 import logging
 import re
@@ -539,7 +539,7 @@ class MainWindow(QMainWindow):
         # First check that we don't have a tab for this repo already
         for i in range(self.tabs.count()):
             existingRW: RepoWidget = self.tabs.widget(i)
-            with contextlib.suppress(FileNotFoundError):  # if existingRW has illegal workdir, this exception may be raised
+            with suppress(FileNotFoundError):  # if existingRW has illegal workdir, this exception may be raised
                 if os.path.samefile(workdir, existingRW.workdir):
                     self.tabs.setCurrentIndex(i)
                     return existingRW

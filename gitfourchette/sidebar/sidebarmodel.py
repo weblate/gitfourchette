@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import logging
 import enum
 from typing import Any, Iterable

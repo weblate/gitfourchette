@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import bisect
-import contextlib
+from contextlib import suppress
 import itertools
 import logging
 from collections import defaultdict
@@ -82,7 +82,7 @@ class BatchRow:
 
             # Compact end of list
             while cls.globalOffsets and cls.globalOffsets[-1] == -1:
-                with contextlib.suppress(ValueError):
+                with suppress(ValueError):
                     cls.freeBatchNos.remove(len(cls.globalOffsets) - 1)
                 cls.globalOffsets.pop()
 

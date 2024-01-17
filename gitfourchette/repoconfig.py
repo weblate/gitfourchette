@@ -2,7 +2,7 @@
 Manage proprietary settings in a repository's .git/config.
 """
 
-import contextlib
+from contextlib import suppress
 from gitfourchette.porcelain import *
 
 

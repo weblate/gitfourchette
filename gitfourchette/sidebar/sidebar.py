@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 
 from gitfourchette.nav import NavLocator
 from gitfourchette.tasks import *
@@ -67,7 +67,7 @@ class Sidebar(QTreeView):
         vr = super().visualRect(index)
 
         if index.isValid():
-            with contextlib.suppress(ValueError):
+            with suppress(ValueError):
                 item = SidebarModel.unpackItem(index)
                 SidebarDelegate.unindentRect(item, vr, self.indentation())
 
@@ -458,7 +458,7 @@ class Sidebar(QTreeView):
 
     def selectAnyRef(self, *refCandidates: str) -> QModelIndex | None:
         # Early out if any candidate ref is already selected
-        with contextlib.suppress(IndexError):
+        with suppress(IndexError):
             index = self.selectedIndexes()[0]
             if index and index.data(ROLE_REF) in refCandidates:
                 return index

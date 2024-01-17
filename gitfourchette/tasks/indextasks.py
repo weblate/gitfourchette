@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import os
 
 from gitfourchette import reverseunidiff
@@ -255,7 +255,7 @@ class HardSolveConflicts(RepoTask):
             assert type(keepOid) is Oid
             assert path in conflicts
 
-            with contextlib.suppress(FileNotFoundError):  # ignore FileNotFoundError for DELETED_BY_US conflicts
+            with suppress(FileNotFoundError):  # ignore FileNotFoundError for DELETED_BY_US conflicts
                 Trash.instance().backupFile(repo.workdir, path)
 
             fullPath = repo.in_workdir(path)

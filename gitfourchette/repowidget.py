@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import logging
 import typing
 import os
@@ -517,7 +517,7 @@ class RepoWidget(QWidget):
 
     def restoreSplitterStates(self):
         for splitter in self.splittersToSave:
-            with contextlib.suppress(KeyError):
+            with suppress(KeyError):
                 name = splitter.objectName()
                 state = self.splitterStates[name]
                 splitter.restoreState(state)
@@ -854,7 +854,7 @@ class RepoWidget(QWidget):
             oid = repo.head_commit_oid
             inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
         else:
-            with contextlib.suppress(GitError):
+            with suppress(GitError):
                 inBrackets = repo.head_branch_shorthand
 
         # Merging? Any conflicts?

@@ -9,7 +9,7 @@ from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState, UC_FAKEID
 from gitfourchette.toolbox import *
 from dataclasses import dataclass
-import contextlib
+from contextlib import suppress
 import traceback
 
 
@@ -324,10 +324,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         """Last-resort row drawing routine used if _paint raises an exception."""
 
         text = "?" * 7
-        with contextlib.suppress(BaseException):
+        with suppress(BaseException):
             commit: Commit = index.data(CommitLogModel.CommitRole)
             text = commit.oid.hex[:7]
-        with contextlib.suppress(BaseException):
+        with suppress(BaseException):
             details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
             text += " " + shortenTracebackPath(details[-2].splitlines(False)[0]) + ":: " + repr(exc)
 

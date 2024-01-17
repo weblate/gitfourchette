@@ -1,5 +1,5 @@
 """Non-textual diffs"""
-import contextlib
+from contextlib import suppress
 import os
 import re
 from dataclasses import dataclass
@@ -142,7 +142,7 @@ class SpecialDiffError(Exception):
                     hashText = hashText.removesuffix("-dirty")
                     suffix = translate("Diff", "(with uncommitted changes)")
                     dirty = True
-                with contextlib.suppress(ValueError):
+                with suppress(ValueError):
                     oid = Oid(hex=hashText)
                     hashText = shortHash(oid)
 

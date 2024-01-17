@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
-import argparse, contextlib, datetime, difflib, os, re, subprocess, sys, textwrap
+import argparse, datetime, difflib, os, re, subprocess, sys, textwrap
 import xml.etree.ElementTree as ET
+from contextlib import suppress
 from pathlib import Path
 
 REPO_ROOTDIR = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -134,7 +135,7 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
 
 def compileUi(uic, uiPath, pyPath, force=False, cleanupOutput=True):
     if not force:
-        with contextlib.suppress(FileNotFoundError):
+        with suppress(FileNotFoundError):
             uiStat = os.stat(uiPath)
             pyStat = os.stat(pyPath)
             if pyStat.st_mtime > uiStat.st_mtime:

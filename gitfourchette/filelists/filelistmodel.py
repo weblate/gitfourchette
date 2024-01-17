@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import logging
 import os
 from dataclasses import dataclass
@@ -92,7 +92,7 @@ def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
 
     # Modified time
     if isWorkdir and sc not in 'DU':
-        with contextlib.suppress(IOError):
+        with suppress(IOError):
             fullPath = os.path.join(repo.workdir, nf.path)
             fileStat = os.stat(fullPath)
             timeQdt = QDateTime.fromSecsSinceEpoch(int(fileStat.st_mtime))

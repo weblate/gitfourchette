@@ -1,8 +1,8 @@
+from contextlib import suppress
 from dataclasses import dataclass
 from gitfourchette.qt import *
 from gitfourchette.toolbox.qtutils import stockIcon
 from typing import Callable, Iterable, Optional
-import contextlib
 
 
 class ValidatorMultiplexer(QObject):
@@ -81,7 +81,7 @@ class ValidatorMultiplexer(QObject):
 
         # Disable error tooltip on success
         if success:
-            with contextlib.suppress(BaseException):
+            with suppress(BaseException):
                 self.timer.timeout.disconnect()
             self.timer.stop()
             QToolTip.hideText()
@@ -100,7 +100,7 @@ class ValidatorMultiplexer(QObject):
                 input.inEditIcon.setToolTip(err)
 
                 if input.edit.hasFocus():
-                    with contextlib.suppress(BaseException):
+                    with suppress(BaseException):
                         self.timer.timeout.disconnect()
                     self.timer.stop()
                     self.timer.timeout.connect(

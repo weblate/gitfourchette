@@ -1,4 +1,4 @@
-import contextlib
+from contextlib import suppress
 import enum
 import os
 import re
@@ -22,7 +22,7 @@ class AuthorDisplayStyle(enum.IntEnum):
 
 
 def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME):
-    with contextlib.suppress(IndexError):
+    with suppress(IndexError):
         if style == AuthorDisplayStyle.FULL_NAME:
             return sig.name
 

@@ -1,12 +1,12 @@
 from __future__ import annotations as _annotations
 
-import contextlib as _contextlib
 import dataclasses as _dataclasses
 import enum
 import logging as _logging
 import os as _os
 import re as _re
 import typing as _typing
+from contextlib import suppress as _suppress
 from pathlib import Path as _Path
 
 from pygit2 import (
@@ -417,10 +417,10 @@ def get_git_global_identity() -> tuple[str, str]:
         # "The global file '.gitconfig' doesn't exist: No such file or directory
         return name, email
 
-    with _contextlib.suppress(KeyError):
+    with _suppress(KeyError):
         name = global_config["user.name"]
 
-    with _contextlib.suppress(KeyError):
+    with _suppress(KeyError):
         email = global_config["user.email"]
 
     return name, email
@@ -1342,10 +1342,10 @@ class Repo(_VanillaRepository):
         if _os.path.isfile(local_config_path):
             local_config = GitConfig(local_config_path)
 
-            with _contextlib.suppress(KeyError):
+            with _suppress(KeyError):
                 name = local_config["user.name"]
 
-            with _contextlib.suppress(KeyError):
+            with _suppress(KeyError):
                 email = local_config["user.email"]
 
         return name, email
@@ -1418,7 +1418,7 @@ class Repo(_VanillaRepository):
         if value:
             self.config[key] = value
         else:
-            with _contextlib.suppress(KeyError):
+            with _suppress(KeyError):
                 del self.config[key]
 
     # TODO: Nuke this shim once we drop backwards compat with old pygit2 versions (1.13 and older)
