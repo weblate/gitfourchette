@@ -363,17 +363,14 @@ class ApplyPatchFile(RepoTask):
         yield from self.flowEnterUiThread()
 
         numDeltas = len(deltas)
-        numListed = min(numDeltas, 10)
-        numUnlisted = numDeltas - numListed
         if reverse:
             text = self.tr("Patch file <b>“{0}”</b>, <b>reversed</b>, can be applied cleanly to your working directory.")
         else:
             text = self.tr("Patch file <b>“{0}”</b> can be applied cleanly to your working directory.")
         text = text.format(os.path.basename(path))
-        text += " "
-        text += self.tr("It will modify <b>%n</b> files:", "", numDeltas)
-        text += ulList(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
-        yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"))
+        details = self.tr("It will modify <b>%n</b> files:", "", numDeltas)
+        details += ulList(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
+        yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), detailText=details)
 
         self.repo.apply(loadedDiff, GIT_APPLY_LOCATION_WORKDIR)
 
@@ -406,16 +403,20 @@ class AbortMerge(RepoTask):
         )
 
         if not abortList:
-            message += self.tr("No files are affected.")
+            details = self.tr("No files are affected.")
         else:
-            message += paragraphs(
-                self.tr("All conflicts will be cleared and all <b>staged</b> changes will be lost."),
-                self.tr("%n files will be reset:", "", len(abortList)))
-            message += ulList(abortList)
+            if self.repo.any_conflicts:
+                message += paragraphs(self.tr("All conflicts will be cleared "
+                                              "and all <b>staged</b> changes will be lost."))
+            else:
+                message += paragraphs(self.tr("All <b>staged</b> changes will be lost."))
+
+            details = paragraphs(self.tr("%n files will be reset:", "", len(abortList)))
+            details += "<span style='white-space: pre'>" + ulList(abortList)
 
         verb = self.tr("Abort merge") if isMerging else self.tr("Abort cherry-pick")
 
-        yield from self.flowConfirm(text=message, verb=verb)
+        yield from self.flowConfirm(text=message, verb=verb, detailText=details)
 
         yield from self.flowEnterUiThread()
         self.repo.reset_merge()

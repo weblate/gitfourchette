@@ -299,13 +299,17 @@ class MergeBranch(RepoTask):
         return TaskEffects.Refs | TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def flow(self, them: str):
+        assert them.startswith('refs/')
+
+        theirBranch, theirBranchIsLocal = self.repo.get_branch_from_refname(them)
+        assert isinstance(theirBranch, Branch)
+
         # Run merge analysis on background thread
         yield from self.flowEnterWorkerThread()
         self.repo.refresh_index()
         anyStagedFiles = self.repo.any_staged_changes
         anyConflicts = self.repo.any_conflicts
-        myBranch = self.repo.head_branch_shorthand
-        theirBranch = self.repo.branches.local[them]
+        myShorthand = self.repo.head_branch_shorthand
         target: Oid = theirBranch.target
         analysis, pref = self.repo.merge_analysis(target)
 
@@ -327,7 +331,7 @@ class MergeBranch(RepoTask):
         elif analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
             message = paragraphs(
                 self.tr("No merge is necessary."),
-                self.tr("Your branch “{0}” is already up-to-date with “{1}”.").format(myBranch, them))
+                self.tr("Your branch “{0}” is already up-to-date with “{1}”.").format(myShorthand, them))
             raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_UNBORN:
@@ -335,20 +339,24 @@ class MergeBranch(RepoTask):
             raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL:
-            message = self.tr("There are no merge conflicts. Your branch <b>“{0}”</b> can be "
-                              "fast-forwarded to <b>“{1}”</b>.").format(myBranch, them)
-            details = self.tr("Fast-forwarding means that the tip of your branch will be moved "
-                              "to a more recent commit in a linear path without requiring a merge. "
-                              "In this case, “{0}” will be fast-forwarded to “{1}”."
-                              ).format(myBranch, shortHash(target))
-            yield from self.flowConfirm(text=message, verb=self.tr("Fast-Forward"), detailText=details)
-            self.repo.fast_forward_branch(myBranch, theirBranch.name)
+            message = self.tr("Your branch <b>“{0}”</b> can simply be fast-forwarded to <b>“{1}”</b>."
+                              ).format(myShorthand, them)
+            details = paragraphs(
+                self.tr("<b>Fast-forwarding</b> means that the tip of your branch will be moved to a more "
+                        "recent commit in a linear path, without the need to create a merge commit."),
+                self.tr("In this case, “{0}” will be fast-forwarded to “{1}”."),
+            ).format(myShorthand, shortHash(target))
+            yield from self.flowConfirm(text=message, verb=self.tr("Fast-Forward"),
+                                        detailText=details, detailLink=self.tr("What does this mean?"))
+            yield from self.flowEnterWorkerThread()
+            self.repo.fast_forward_branch(myShorthand, theirBranch.name)
 
         elif analysis == GIT_MERGE_ANALYSIS_NORMAL:
             message = paragraphs(
-                self.tr("Merging <b>“{0}”</b> into <b>“{1}”</b> will cause conflicts.").format(them, myBranch),
-                self.tr("You will need to fix the conflicts. Then, commit the result to conclude the merge."))
+                self.tr("Merging <b>“{0}”</b> into <b>“{1}”</b> may cause conflicts.").format(them, myShorthand),
+                self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
             yield from self.flowConfirm(text=message, verb=self.tr("Merge"))
+            yield from self.flowEnterWorkerThread()
             self.repo.merge(target)
 
         else:

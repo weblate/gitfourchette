@@ -71,6 +71,18 @@ class GraphView(QListView):
 
     def makeContextMenu(self):
         oid = self.currentCommitOid
+        state = self.repoWidget.state
+
+        mergeActions = []
+        if state.homeBranch:
+            with suppress(KeyError, StopIteration):
+                rrc = state.reverseRefCache[oid]
+                target = next(r for r in rrc if r.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
+                mergeCaption = self.tr("&Merge into “{0}”...").format(escamp(state.homeBranch))
+                mergeActions = [
+                    TaskBook.action(MergeBranch, name=mergeCaption, taskArgs=(target,)),
+                    ActionDef.SEPARATOR,
+                ]
 
         if not oid:
             actions = [
@@ -85,6 +97,7 @@ class GraphView(QListView):
                 TaskBook.action(NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
                 TaskBook.action(NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
+                *mergeActions,
                 TaskBook.action(CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid),
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,

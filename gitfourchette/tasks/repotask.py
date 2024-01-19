@@ -344,6 +344,7 @@ class RepoTask(QObject):
             verb: str = "",
             cancelText: str = "",
             detailText: str = "",
+            detailLink: str = "",
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -374,7 +375,16 @@ class RepoTask(QObject):
             qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
 
         if detailText:
-            qmb.setDetailedText(detailText)
+            if not detailLink:
+                qmb.setInformativeText(detailText)
+            else:
+                qmb.setInformativeText("<a href='_'>{0}</a>".format(detailLink))
+
+                infoLabel: QLabel = qmb.findChild(QLabel, "qt_msgbox_informativelabel")
+                if infoLabel:
+                    infoLabel.setOpenExternalLinks(False)
+                    infoLabel.setToolTip(detailText)
+                    infoLabel.linkActivated.connect(lambda: QToolTip.showText(QCursor.pos(), detailText, infoLabel))
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self.flowDialog(qmb)

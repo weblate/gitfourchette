@@ -132,7 +132,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     MergeBranch,
                     self.tr("&Merge into “{0}”...").format(activeBranchDisplay),
-                    taskArgs=data,
+                    taskArgs=refName,
                     enabled=not isCurrentBranch and activeBranchName,
                 ),
 
