@@ -20,8 +20,13 @@ class NewCommit(RepoTask):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def flow(self):
+        from gitfourchette.tasks import Jump
+
         if self.repo.index.conflicts:
             raise AbortTask(self.tr("Please fix merge conflicts in the working directory before committing."))
+
+        # Jump to workdir
+        yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
         if not self.repo.any_staged_changes:
             yield from self.flowConfirm(
@@ -86,12 +91,17 @@ class AmendCommit(RepoTask):
         self.rw.state.setDraftCommitMessage(newMessage, forAmending=True)
 
     def flow(self):
+        from gitfourchette.tasks import Jump
+
         if self.repo.index.conflicts:
             raise AbortTask(self.tr("Please fix merge conflicts in the working directory before amending the commit."))
 
         state = self.repo.state()
         if state == GIT_REPOSITORY_STATE_CHERRYPICK:
             raise AbortTask(self.tr("You are in the middle of a cherry-pick – cannot amend."))
+
+        # Jump to workdir
+        yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
         headCommit = self.repo.head_commit
