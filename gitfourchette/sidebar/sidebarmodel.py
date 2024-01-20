@@ -126,6 +126,7 @@ class SidebarModel(QAbstractItemModel):
     _submodules: list[str]
     _hiddenBranches: list[str]
     _hiddenStashCommits: list[str]
+    _hideAllStashes: bool
 
     modeId: int
 
@@ -192,6 +193,7 @@ class SidebarModel(QAbstractItemModel):
         self._submodules = []
         self._hiddenBranches = []
         self._hiddenStashCommits = []
+        self._hideAllStashes = False
 
         self._cachedTooltipIndex = None
         self._cachedTooltipText = ""
@@ -274,6 +276,7 @@ class SidebarModel(QAbstractItemModel):
 
         self._hiddenBranches = repoState.uiPrefs.hiddenBranches
         self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
+        self._hideAllStashes = repoState.uiPrefs.hideAllStashes
 
         with Benchmark("Sidebar/endResetModel"):
             self.endResetModel()
@@ -604,6 +607,8 @@ class SidebarModel(QAbstractItemModel):
             elif fontRole:
                 font = self._parentWidget.font()
                 font.setBold(True)
+                if item == EItem.StashesHeader and self._hideAllStashes:
+                    font.setStrikeOut(True)
                 return font
             elif hiddenRole:
                 return False

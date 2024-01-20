@@ -17,6 +17,7 @@ class Sidebar(QTreeView):
 
     toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
+    toggleHideAllStashes = Signal()
 
     pushBranch = Signal(str)
 
@@ -243,6 +244,11 @@ class Sidebar(QTreeView):
         elif item == EItem.StashesHeader:
             actions += [
                 TaskBook.action(NewStash, "&S"),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("&Hide All Stashes in Graph"),
+                          lambda: self.toggleHideAllStashes.emit(),
+                          checkState=1 if model._hideAllStashes else -1,
+                          ),
             ]
 
         elif item == EItem.Stash:
@@ -250,7 +256,7 @@ class Sidebar(QTreeView):
 
             isStashHidden = False
             if index:  # in test mode, we may not have an index
-                isStashHidden = self.model().data(index, ROLE_ISHIDDEN)
+                isStashHidden = model.data(index, ROLE_ISHIDDEN)
 
             actions += [
                 TaskBook.action(ApplyStash, self.tr("&Apply"), taskArgs=oid),

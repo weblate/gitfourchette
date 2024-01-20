@@ -31,6 +31,7 @@ class RepoPrefs(PrefsFile):
     hiddenBranches: list = field(default_factory=list)
     hiddenStashCommits: list = field(default_factory=list)
     collapseCache: list = field(default_factory=list)
+    hideAllStashes: bool = False
 
     def getParentDir(self):
         return self._parentDir
@@ -320,6 +321,12 @@ class RepoState(QObject):
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
+    @benchmark
+    def toggleHideAllStashes(self):
+        self.uiPrefs.hideAllStashes = not self.uiPrefs.hideAllStashes
+        self.uiPrefs.write()
+        self.resolveHiddenCommits()
+
     def getHiddenBranchOids(self):
         seeds = set()
         hiddenBranches = self.uiPrefs.hiddenBranches[:]
@@ -340,15 +347,20 @@ class RepoState(QObject):
                 logger.info(f"Skipping missing hidden branch: {hiddenBranch}")
                 self.uiPrefs.hiddenBranches.remove(hiddenBranch)
 
-        hiddenStashCommits = self.uiPrefs.hiddenStashCommits[:]
-        for hiddenStash in hiddenStashCommits:
-            oid = Oid(hex=hiddenStash)
-            if oid in self.reverseRefCache:
-                seeds.add(oid)
-            else:
-                # Remove it from prefs
-                logger.info(f"Skipping missing hidden stash: {hiddenStash}")
-                self.uiPrefs.hiddenStashCommits.remove(hiddenStash)
+        if self.uiPrefs.hideAllStashes:
+            for refName, oid in self.refCache.items():
+                if refName.startswith("stash@{"):
+                    seeds.add(oid)
+        else:
+            hiddenStashCommits = self.uiPrefs.hiddenStashCommits[:]
+            for hiddenStash in hiddenStashCommits:
+                oid = Oid(hex=hiddenStash)
+                if oid in self.reverseRefCache:
+                    seeds.add(oid)
+                else:
+                    # Remove it from prefs
+                    logger.info(f"Skipping missing hidden stash: {hiddenStash}")
+                    self.uiPrefs.hiddenStashCommits.remove(hiddenStash)
 
         return seeds
 
