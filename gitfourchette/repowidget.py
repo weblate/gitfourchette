@@ -59,7 +59,7 @@ class RepoWidget(QWidget):
     navHistory: NavHistory
 
     splittersToSave: list[QSplitter]
-    splitterStates: dict[str, QByteArray]
+    sharedSplitterSizes: dict[str, list[int]]
 
     def __del__(self):
         logger.debug(f"__del__ RepoWidget {self.pathPending}")
@@ -131,6 +131,7 @@ class RepoWidget(QWidget):
         bottomSplitter.setSizes([100, 300])
         bottomSplitter.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
         bottomSplitter.setStretchFactor(1, 1)
+        bottomSplitter.setChildrenCollapsible(False)
 
         bottomContainerLayout = QVBoxLayout()
         bottomContainerLayout.setContentsMargins(0,0,0,0)
@@ -145,23 +146,25 @@ class RepoWidget(QWidget):
         mainSplitter.addWidget(self.graphView)
         mainSplitter.addWidget(bottomContainer)
         mainSplitter.setSizes([100, 150])
-        # mainSplitter.setStretchFactor(1, 1)
+        mainSplitter.setChildrenCollapsible(False)
 
         sideSplitter = QSplitter(Qt.Orientation.Horizontal)
+        sideSplitter.setChildrenCollapsible(False)
         sideSplitter.setObjectName("SideSplitter")
         sideSplitter.addWidget(sidebarContainer)
         sideSplitter.addWidget(mainSplitter)
         sideSplitter.setSizes([100, 500])
         sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
         sideSplitter.setStretchFactor(1, 1)
+        sideSplitter.setChildrenCollapsible(False)
 
         mainLayout = QStackedLayout()
         mainLayout.addWidget(sideSplitter)
         self.setLayout(mainLayout)
 
-        self.splitterStates = {}
+        self.sharedSplitterSizes = {}
 
-        splitters = self.findChildren(QSplitter)
+        splitters: list[QSplitter] = self.findChildren(QSplitter)
         assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
         self.splittersToSave = splitters
 
@@ -237,6 +240,7 @@ class RepoWidget(QWidget):
         workdirSplitter.addWidget(dirtyContainer)
         workdirSplitter.addWidget(stageContainer)
         workdirSplitter.setObjectName("WorkdirSplitter")
+        workdirSplitter.setChildrenCollapsible(False)
 
         filesStack = QStackedWidget()
         filesStack.addWidget(workdirSplitter)
@@ -512,22 +516,25 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
     # Splitter state
 
-    def setSharedSplitterState(self, splitterStates: dict[str, QByteArray]):
-        self.splitterStates = splitterStates
+    def setSharedSplitterSizes(self, splitterSizes: dict[str, list[int]]):
+        self.sharedSplitterSizes = splitterSizes
         self.restoreSplitterStates()
 
     def saveSplitterState(self, splitter: QSplitter):
+        # QSplitter.saveState() saves a bunch of properties that we may want to
+        # override in later versions, such as whether child widgets are
+        # collapsible, the width of the splitter handle, etc. So, don't use
+        # saveState(); instead, save the raw sizes for predictable results.
         name = splitter.objectName()
-        state = splitter.saveState()
-        self.splitterStates[name] = state
+        sizes = splitter.sizes()[:]
+        self.sharedSplitterSizes[name] = sizes
 
     def restoreSplitterStates(self):
         for splitter in self.splittersToSave:
             with suppress(KeyError):
                 name = splitter.objectName()
-                state = self.splitterStates[name]
-                splitter.restoreState(state)
-            splitter.setHandleWidth(-1)  # reset default splitter width
+                sizes = self.sharedSplitterSizes[name]
+                splitter.setSizes(sizes)
 
     # -------------------------------------------------------------------------
     # Placeholder widgets

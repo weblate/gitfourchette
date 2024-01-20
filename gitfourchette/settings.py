@@ -299,7 +299,7 @@ class Session(PrefsFile):
     tabs                        : list          = dataclasses.field(default_factory=list)
     activeTabIndex              : int           = -1
     windowGeometry              : bytes         = b""
-    splitterStates              : dict          = dataclasses.field(default_factory=dict)
+    splitterSizes               : dict          = dataclasses.field(default_factory=dict)
 
 
 # Initialize default prefs and history.

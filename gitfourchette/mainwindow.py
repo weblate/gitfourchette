@@ -1,4 +1,5 @@
 from contextlib import suppress
+import copy
 import gc
 import logging
 import re
@@ -39,6 +40,8 @@ class MainWindow(QMainWindow):
     recentMenu: QMenu
     repoMenu: QMenu
 
+    sharedSplitterSizes: dict[str, list[int]]
+
     def __init__(self):
         super().__init__()
 
@@ -51,7 +54,7 @@ class MainWindow(QMainWindow):
 
         self.setObjectName("GFMainWindow")
 
-        self.sharedSplitterStates = {}
+        self.sharedSplitterSizes = {}
 
         self.setWindowTitle(qAppName())
         self.resize(QSize(800, 600))
@@ -549,7 +552,7 @@ class MainWindow(QMainWindow):
         rw.setPendingWorkdir(workdir)
 
         # Hook RepoWidget signals
-        rw.setSharedSplitterState(self.sharedSplitterStates)
+        rw.setSharedSplitterSizes(self.sharedSplitterSizes)
 
         rw.nameChange.connect(lambda: self.refreshTabText(rw))
         rw.nameChange.connect(lambda: rw.refreshWindowChrome())
@@ -889,7 +892,7 @@ class MainWindow(QMainWindow):
     # Session management
 
     def restoreSession(self, session: settings.Session):
-        self.sharedSplitterStates = {k: session.splitterStates[k] for k in session.splitterStates}
+        self.sharedSplitterSizes = copy.deepcopy(session.splitterSizes)
         self.restoreGeometry(session.windowGeometry)
 
         # Stop here if there are no tabs to load
@@ -958,10 +961,7 @@ class MainWindow(QMainWindow):
     def saveSession(self):
         session = settings.Session()
         session.windowGeometry = bytes(self.saveGeometry())
-        if self.currentRepoWidget():
-            session.splitterStates = {s.objectName(): bytes(s.saveState()) for s in self.currentRepoWidget().splittersToSave}
-        else:
-            session.splitterStates = {}
+        session.splitterSizes = self.sharedSplitterSizes.copy()
         session.tabs = [self.tabs.widget(i).workdir for i in range(self.tabs.count())]
         session.activeTabIndex = self.tabs.currentIndex()
         session.write()
