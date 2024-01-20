@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import shlex
@@ -71,7 +72,8 @@ def setUpMergeToolPrompt(parent: QWidget, prefKey: str):
 def openInExternalTool(
         parent: QWidget,
         prefKey: str,
-        paths: list[str],
+        replacements: dict[str, str],
+        positional: list[str],
         allowQDesktopFallback: bool = False
 ) -> QProcess | None:
 
@@ -82,7 +84,7 @@ def openInExternalTool(
     command = getattr(settings.prefs, prefKey, "").strip()
 
     if not command and allowQDesktopFallback:
-        for p in paths:
+        for p in positional:
             QDesktopServices.openUrl(QUrl.fromLocalFile(p))
         return
 
@@ -92,19 +94,20 @@ def openInExternalTool(
 
     tokens = shlex.split(command, posix=not WINDOWS)
 
-    for i, path in enumerate(paths, start=1):
-        placeholderToken = f"${i}"
-        try:
-            placeholderIndex = tokens.index(placeholderToken)
-            if path:
-                tokens[placeholderIndex] = path
-            else:
-                del tokens[placeholderIndex]
-        except ValueError:
-            # Missing placeholder token - just append path to end of command line...
-            logger.warning(f"Missing placeholder token {placeholderToken} in command template {command}")
-            if path:
-                tokens.append(path)
+    for placeholder, replacement in replacements.items():
+        for i, tok in enumerate(tokens):
+            if tok.endswith(placeholder):
+                prefix = tok.removesuffix(placeholder)
+                break
+        else:
+            raise ValueError(f"Placeholder token {placeholder} not found")
+        if replacement:
+            tokens[i] = prefix + replacement
+        else:
+            del tokens[i]
+
+    # Just append other paths to end of command line...
+    tokens.extend(positional)
 
     # Little trick to prevent opendiff (launcher shim for Xcode's FileMerge) from exiting immediately.
     # (Just launching /bin/bash -c ... doesn't make it wait)
@@ -116,12 +119,19 @@ def openInExternalTool(
         os.chmod(scriptPath, 0o700)  # should be 500
         tokens = ["/bin/sh", scriptPath] + tokens[1:]
 
+    wd = ""
+    for p in itertools.chain(replacements.values(), positional):
+        if not p:
+            continue
+        wd = os.path.dirname(p)
+        break
+
     logger.info("Starting process: " + " ".join(tokens))
 
     p = QProcess(parent)
     p.setProgram(tokens[0])
     p.setArguments(tokens[1:])
-    p.setWorkingDirectory(os.path.dirname(paths[0]))
+    p.setWorkingDirectory(wd)
     p.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedChannels)
 
     p.finished.connect(lambda code, status: logger.info(f"Process done: {code} {status}"))
@@ -134,12 +144,15 @@ def openInExternalTool(
 
 
 def openInTextEditor(parent: QWidget, path: str):
-    return openInExternalTool(parent, PREFKEY_EDITOR, [path], allowQDesktopFallback=True)
+    return openInExternalTool(parent, PREFKEY_EDITOR, positional=[path], replacements={},
+                              allowQDesktopFallback=True)
 
 
 def openInDiffTool(parent: QWidget, a: str, b: str):
-    return openInExternalTool(parent, PREFKEY_DIFFTOOL, [a, b])
+    return openInExternalTool(parent, PREFKEY_DIFFTOOL, positional=[],
+                              replacements={"$L": a, "$R": b})
 
 
 def openInMergeTool(parent: QWidget, ancestor: str, ours: str, theirs: str, output: str):
-    return openInExternalTool(parent, PREFKEY_MERGETOOL, [ancestor, ours, theirs, output])
+    return openInExternalTool(parent, PREFKEY_MERGETOOL, positional=[],
+                              replacements={"$B": ancestor, "$L": ours, "$R": theirs, "$M": output})

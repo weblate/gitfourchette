@@ -51,6 +51,7 @@ class UnmergedConflict(QObject):
         logger.info(f"Merge tool exited with code {exitCode}, {exitStatus}")
 
         if exitCode != 0 or exitStatus == QProcess.ExitStatus.CrashExit:
+            logger.warning(f"Process returned {exitCode}")
             self.mergeFailed.emit()
             return
 

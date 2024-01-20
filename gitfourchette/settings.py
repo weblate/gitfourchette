@@ -45,40 +45,44 @@ EDITOR_TOOL_PRESETS = {
 }
 
 DIFF_TOOL_PRESETS = {
-    "Beyond Compare": "bcompare $1 $2",
-    "FileMerge": "opendiff $1 $2",
-    "GVim": "gvim -f -d $1 $2",
-    "JetBrains CLion": "clion diff $1 $2",
-    "JetBrains IDEA": "idea diff $1 $2",
-    "JetBrains PyCharm": "pycharm diff $1 $2",
-    "KDiff3": "kdiff3 $1 $2",
-    "MacVim": "mvim -f -d $1 $2",
-    "Meld": "meld $1 $2",
-    "P4Merge": "p4merge $1 $2",
-    "SourceGear DiffMerge": "diffmerge $1 $2",
-    "Visual Studio Code": "code --diff $1 $2 --wait",
-    "WinMerge": "winmergeu /u /wl /wr $1 $2",
+    "Beyond Compare": "bcompare $L $R",
+    "FileMerge": "opendiff $L $R",
+    "GVim": "gvim -f -d $L $R",
+    "JetBrains CLion": "clion diff $L $R",
+    "JetBrains IDEA": "idea diff $L $R",
+    "JetBrains PyCharm": "pycharm diff $L $R",
+    "KDiff3": "kdiff3 $L $R",
+    "MacVim": "mvim -f -d $L $R",
+    "Meld": "meld $L $R",
+    "P4Merge": "p4merge $L $R",
+    "SourceGear DiffMerge": "diffmerge $L $R",
+    "Visual Studio Code": "code --new-window --wait --diff $L $R",
+    "WinMerge": "winmergeu /u /wl /wr $L $R",
 }
 
-# $1: ANCESTOR/BASE
-# $2: OURS/LOCAL
-# $3: THEIRS/REMOTE
-# $4: MERGED
+# $B: ANCESTOR/BASE/CENTER
+# $L: OURS/LOCAL/LEFT
+# $R: THEIRS/REMOTE/RIGHT
+# $M: MERGED/OUTPUT
 MERGE_TOOL_PRESETS = {
-    "Beyond Compare": "bcompare $1 $2 $3 $4",
-    "FileMerge": "opendiff -ancestor $1 $2 $3 -merge $4",
-    "GVim": "gvim -f -d -c 'wincmd J' $4 $2 $1 $3",
-    "Helix P4Merge": "p4merge $1 $2 $3 $4",
-    "JetBrains CLion": "clion merge $2 $3 $1 $4",
-    "JetBrains IDEA": "idea merge $2 $3 $1 $4",
-    "JetBrains PyCharm": "pycharm merge $2 $3 $1 $4",
-    "KDiff3": "kdiff3 --merge $1 $2 $3 --output $4",
-    "MacVim": "mvim -f -d -c 'wincmd J' $4 $2 $1 $3",
-    "Meld": "meld --auto-merge $1 $2 $3 -o $4",
-    "SourceGear DiffMerge": "diffmerge --merge --result $4 $1 $2 $3",
-    "Visual Studio Code": "code --merge $2 $3 $1 $4 --wait",
-    "WinMerge": "winmergeu /u /wl /wm /wr /am $1 $2 $3 /o $4",
+    "Beyond Compare": "bcompare $L $R $B $M",
+    "FileMerge": "opendiff -ancestor $B $L $R -merge $M",
+    "GVim": "gvim -f -d -c 'wincmd J' $M $L $B $R",
+    "Helix P4Merge": "p4merge $B $L $R $M",
+    "JetBrains CLion": "clion merge $L $R $B $M",
+    "JetBrains IDEA": "idea merge $L $R $B $M",
+    "JetBrains PyCharm": "pycharm merge $L $R $B $M",
+    "KDiff3": "kdiff3 --merge $B $L $R --output $M",
+    "MacVim": "mvim -f -d -c 'wincmd J' $M $L $B $R",
+    "Meld": "meld --auto-merge $B $L $R --output=$M",
+    "SourceGear DiffMerge": "diffmerge --merge --result=$M $L $B $R",
+    "Visual Studio Code": "code --new-window --wait --merge $L $R $B $M",
+    "WinMerge": "winmergeu /u /wl /wm /wr /am $B $L $R /o $M",
 }
+
+
+DEFAULT_DIFF_TOOL_PRESET = ""
+DEFAULT_MERGE_TOOL_PRESET = ""
 
 
 def _filterToolPresets():
@@ -86,16 +90,25 @@ def _filterToolPresets():
     macTools = ["FileMerge", "MacVim", "BBEdit"]
     winTools = ["WinMerge"]
 
+    global DEFAULT_MERGE_TOOL_PRESET
+    global DEFAULT_DIFF_TOOL_PRESET
+
     if MACOS:
         excludeTools = winTools + freedesktopTools
+        DEFAULT_DIFF_TOOL_PRESET = "FileMerge"
+        DEFAULT_MERGE_TOOL_PRESET = "FileMerge"
     elif WINDOWS:
         excludeTools = macTools + freedesktopTools
+        DEFAULT_DIFF_TOOL_PRESET = "WinMerge"
+        DEFAULT_MERGE_TOOL_PRESET = "WinMerge"
     else:
         excludeTools = macTools + winTools
+        DEFAULT_DIFF_TOOL_PRESET = "KDiff3"
+        DEFAULT_MERGE_TOOL_PRESET = "KDiff3"
 
     for key in excludeTools:
         with suppress(KeyError):
-            del DIFF_TOOL_PRESETS[key]
+            del EDITOR_TOOL_PRESETS[key]
         with suppress(KeyError):
             del DIFF_TOOL_PRESETS[key]
         with suppress(KeyError):
@@ -157,8 +170,8 @@ class Prefs(PrefsFile):
     graph_flattenLanes          : bool          = True
     graph_authorDiffAsterisk    : bool          = True
     external_editor             : str           = ""
-    external_diff               : str           = list(DIFF_TOOL_PRESETS.values())[0]
-    external_merge              : str           = list(MERGE_TOOL_PRESETS.values())[0]
+    external_diff               : str           = DIFF_TOOL_PRESETS[DEFAULT_DIFF_TOOL_PRESET]
+    external_merge              : str           = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
     debug_showMemoryIndicator   : bool          = True

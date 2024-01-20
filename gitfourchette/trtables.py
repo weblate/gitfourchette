@@ -221,7 +221,19 @@ class TrTables:
 
             "external_editor": translate("Prefs", "Text editor"),
             "external_diff": translate("Prefs", "Diff tool"),
+            "external_diff_help": "<p style='white-space: pre'>" + translate(
+                "Prefs", "Argument placeholders:"
+                         "\n<code>$L</code> - Old/Left"
+                         "\n<code>$R</code> - New/Right"
+            ),
             "external_merge": translate("Prefs", "Merge tool"),
+            "external_merge_help": "<p style='white-space: pre'>" + translate(
+                "Prefs", "Argument placeholders:"
+                         "\n<code>$B</code> - Ancestor / Base / Center"
+                         "\n<code>$L</code> - Ours / Local / Left"
+                         "\n<code>$R</code> - Theirs / Remote / Right"
+                         "\n<code>$M</code> - Merged / Output / Result"
+            ),
 
             "FULL_PATHS": translate("PathDisplayStyle", "Full paths"),
             "ABBREVIATE_DIRECTORIES": translate("PathDisplayStyle", "Abbreviate directories"),
