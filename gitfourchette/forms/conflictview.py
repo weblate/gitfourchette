@@ -31,6 +31,7 @@ class ConflictView(QWidget):
         self.buttonGroups = {
             ConflictSides.DELETED_BY_US: self.ui.radioGroupDbu,
             ConflictSides.DELETED_BY_THEM: self.ui.radioGroupDbt,
+            ConflictSides.DELETED_BY_BOTH: self.ui.radioGroupDbb,
             ConflictSides.MODIFIED_BY_BOTH: self.ui.radioGroupBoth,
         }
 
@@ -69,7 +70,10 @@ class ConflictView(QWidget):
             elif b is self.ui.radioDbtOurs:  # ignore incoming deletion
                 self.hardSolve(conflict.ours.path, conflict.ours.id)
 
-        else:
+        elif conflict.deleted_by_both:
+            self.hardSolve(conflict.ancestor.path, NULL_OID)
+
+        elif conflict.modified_by_both:
             b = self.ui.radioGroupBoth.checkedButton()
             if b is self.ui.radioOurs:
                 self.hardSolve(conflict.ours.path, conflict.ours.id)
@@ -124,8 +128,10 @@ class ConflictView(QWidget):
 
         if conflict.ours:
             displayPath = conflict.ours.path
-        else:
+        elif conflict.theirs:
             displayPath = conflict.theirs.path
+        else:
+            displayPath = conflict.ancestor.path
 
         formatWidgetText(self.ui.titleLabel, escape(os.path.basename(displayPath)))
 

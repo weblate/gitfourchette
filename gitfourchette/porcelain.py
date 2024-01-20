@@ -1475,10 +1475,10 @@ class RepoContext:
 
 
 class ConflictSides(enum.IntEnum):
-    UNKNOWN = 0
-    MODIFIED_BY_BOTH = 1
-    DELETED_BY_THEM = 2
-    DELETED_BY_US = 3
+    MODIFIED_BY_BOTH = 0b11
+    DELETED_BY_THEM = 0b01
+    DELETED_BY_US = 0b10
+    DELETED_BY_BOTH = 0b00
 
 
 @_dataclasses.dataclass(frozen=True)
@@ -1489,17 +1489,9 @@ class DiffConflict:
 
     @property
     def sides(self) -> ConflictSides:
-        ours = bool(self.ours)
-        theirs = bool(self.theirs)
-
-        if ours and theirs:
-            return ConflictSides.MODIFIED_BY_BOTH
-        elif ours and not theirs:
-            return ConflictSides.DELETED_BY_THEM
-        elif not ours and theirs:
-            return ConflictSides.DELETED_BY_US
-        else:
-            return ConflictSides.UNKNOWN
+        lo = 0b01 * bool(self.ours)
+        hi = 0b10 * bool(self.theirs)
+        return ConflictSides(hi | lo)
 
     @property
     def deleted_by_us(self):
@@ -1508,6 +1500,10 @@ class DiffConflict:
     @property
     def deleted_by_them(self):
         return self.sides == ConflictSides.DELETED_BY_THEM
+
+    @property
+    def deleted_by_both(self):
+        return self.sides == ConflictSides.DELETED_BY_BOTH
 
     @property
     def modified_by_both(self):

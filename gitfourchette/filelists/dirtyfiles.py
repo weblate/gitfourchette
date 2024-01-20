@@ -164,7 +164,9 @@ class DirtyFiles(FileList):
         for patch in patches:
             path = patch.delta.new_file.path
             ancestor, ours, theirs = conflicts[path]
-            if keepOurs:
+            if not ours and not theirs:  # special treatment for DELETED_BY_BOTH
+                table[path] = NULL_OID
+            elif keepOurs:
                 table[path] = ours.id
             else:
                 table[path] = theirs.id

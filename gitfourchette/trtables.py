@@ -260,9 +260,14 @@ class TrTables:
                 "<b>Deleted by them:</b> we’ve made changes to this file, "
                 "but <i>their</i> branch has deleted it."),
 
+            "DELETED_BY_BOTH": translate(
+                "ConflictView",
+                "<b>Deleted by both sides:</b> the file was deleted from <i>our</i> branch, "
+                "and <i>their</i> branch has deleted it too."),
+
             "MODIFIED_BY_BOTH": translate(
                 "ConflictView",
-                "<b>Modified by both:</b> This file has received changes "
+                "<b>Modified by both sides:</b> This file has received changes "
                 "from both <i>our</i> branch and <i>their</i> branch."),
 
             "tool": translate(
@@ -293,4 +298,8 @@ class TrTables:
             "dbttheirs": translate(
                 "ConflictView",
                 "Accept incoming deletion. The file will be deleted."),
+
+            "dbbnuke": translate(
+                "ConflictView",
+                "The file will be deleted."),
         }

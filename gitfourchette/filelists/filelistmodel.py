@@ -67,8 +67,10 @@ def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
             postfix = translate("git", "deleted by us")
         elif dc.deleted_by_them:
             postfix = translate("git", "deleted by them")
+        elif dc.deleted_by_both:
+            postfix = translate("git", "deleted by both sides")
         else:
-            postfix = translate("git", "modified by both")
+            postfix = translate("git", "modified by both sides")
         statusCaption += f" ({postfix})"
     text += newLine(translate("FileList", "status:"), statusCaption)
 

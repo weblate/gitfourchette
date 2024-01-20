@@ -65,16 +65,6 @@
       <string>How do you want to solve this conflict?</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
-      <item row="4" column="0">
-       <widget class="QRadioButton" name="radioTool">
-        <property name="text">
-         <string>Merge in {tool}</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupBoth</string>
-        </attribute>
-       </widget>
-      </item>
       <item row="1" column="0">
        <widget class="QRadioButton" name="radioOurs">
         <property name="text">
@@ -85,13 +75,13 @@
         </attribute>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QRadioButton" name="radioDbtOurs">
+      <item row="4" column="0">
+       <widget class="QRadioButton" name="radioTool">
         <property name="text">
-         <string>Keep “our” version intact</string>
+         <string>Merge in {tool}</string>
         </property>
         <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbt</string>
+         <string notr="true">radioGroupBoth</string>
         </attribute>
        </widget>
       </item>
@@ -115,6 +105,16 @@
         </attribute>
        </widget>
       </item>
+      <item row="0" column="0">
+       <widget class="QRadioButton" name="radioTheirs">
+        <property name="text">
+         <string>Use “their” version as is</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">radioGroupBoth</string>
+        </attribute>
+       </widget>
+      </item>
       <item row="8" column="0">
        <widget class="QRadioButton" name="radioDbtTheirs">
         <property name="text">
@@ -125,13 +125,23 @@
         </attribute>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QRadioButton" name="radioTheirs">
+      <item row="7" column="0">
+       <widget class="QRadioButton" name="radioDbtOurs">
         <property name="text">
-         <string>Use “their” version as is</string>
+         <string>Keep “our” version intact</string>
         </property>
         <attribute name="buttonGroup">
-         <string notr="true">radioGroupBoth</string>
+         <string notr="true">radioGroupDbt</string>
+        </attribute>
+       </widget>
+      </item>
+      <item row="9" column="0">
+       <widget class="QRadioButton" name="radioDbbNuke">
+        <property name="text">
+         <string>Keep deletion</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">radioGroupDbb</string>
         </attribute>
        </widget>
       </item>
@@ -179,8 +189,9 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="radioGroupBoth"/>
   <buttongroup name="radioGroupDbu"/>
   <buttongroup name="radioGroupDbt"/>
+  <buttongroup name="radioGroupDbb"/>
+  <buttongroup name="radioGroupBoth"/>
  </buttongroups>
 </ui>

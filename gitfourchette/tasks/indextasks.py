@@ -262,7 +262,8 @@ class HardSolveConflicts(RepoTask):
 
             # TODO: we should probably set the modes correctly and stuff as well
             if keepOid == NULL_OID:
-                os.unlink(fullPath)
+                if os.path.isfile(fullPath):  # the file may not exist in DELETED_BY_BOTH conflicts
+                    os.unlink(fullPath)
             else:
                 blob = repo.peel_blob(keepOid)
                 with open(fullPath, "wb") as f:
