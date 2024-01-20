@@ -205,6 +205,7 @@ class RepoWidget(QWidget):
         self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
         self.sidebar.toggleHideStash.connect(self.toggleHideStash)
         self.sidebar.toggleHideAllStashes.connect(self.toggleHideAllStashes)
+        self.sidebar.toggleHideRemote.connect(self.toggleHideRemote)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
@@ -817,6 +818,11 @@ class RepoWidget(QWidget):
 
     def toggleHideAllStashes(self):
         self.state.toggleHideAllStashes()
+        self.graphView.setHiddenCommits(self.state.hiddenCommits)
+        self.sidebar.refresh(self.state)
+
+    def toggleHideRemote(self, remoteName: str):
+        self.state.toggleHideRemote(remoteName)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
         self.sidebar.refresh(self.state)
 

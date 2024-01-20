@@ -19,6 +19,16 @@ UC_FAKEID = "UC_FAKEID"
 PROGRESS_INTERVAL = 5000
 
 
+def toggleListElement(l: list, e):
+    assert isinstance(l, list)
+    try:
+        l.remove(e)
+        return False
+    except ValueError:
+        l.append(e)
+        return True
+
+
 @dataclass
 class RepoPrefs(PrefsFile):
     _filename = f"{APP_SYSTEM_NAME}.json"
@@ -30,6 +40,7 @@ class RepoPrefs(PrefsFile):
     draftAmendMessage: str = ""
     hiddenBranches: list = field(default_factory=list)
     hiddenStashCommits: list = field(default_factory=list)
+    hiddenRemotes: list = field(default_factory=list)
     collapseCache: list = field(default_factory=list)
     hideAllStashes: bool = False
 
@@ -300,24 +311,13 @@ class RepoState(QObject):
 
     @benchmark
     def toggleHideBranch(self, branchName: str):
-        if branchName not in self.uiPrefs.hiddenBranches:
-            # Hide
-            self.uiPrefs.hiddenBranches.append(branchName)
-        else:
-            # Unhide
-            self.uiPrefs.hiddenBranches.remove(branchName)
+        toggleListElement(self.uiPrefs.hiddenBranches, branchName)
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
     @benchmark
     def toggleHideStash(self, stashOid: Oid):
-        oidHex = stashOid.hex
-        if oidHex not in self.uiPrefs.hiddenStashCommits:
-            # Hide
-            self.uiPrefs.hiddenStashCommits.append(oidHex)
-        else:
-            # Unhide
-            self.uiPrefs.hiddenStashCommits.remove(oidHex)
+        toggleListElement(self.uiPrefs.hiddenStashCommits, stashOid.hex)
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
@@ -327,9 +327,23 @@ class RepoState(QObject):
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
+    @benchmark
+    def toggleHideRemote(self, remoteName: str):
+        toggleListElement(self.uiPrefs.hiddenRemotes, remoteName)
+        self.uiPrefs.write()
+        self.resolveHiddenCommits()
+
     def getHiddenBranchOids(self):
         seeds = set()
         hiddenBranches = self.uiPrefs.hiddenBranches[:]
+
+        if self.uiPrefs.hiddenRemotes:
+            for refName, oid in self.refCache.items():
+                prefix, name = RefPrefix.split(refName)
+                if prefix == RefPrefix.REMOTES:
+                    remoteName = name.split('/', 1)[0]
+                    if remoteName in self.uiPrefs.hiddenRemotes:
+                        hiddenBranches.append(refName)
 
         def isSharedByVisibleBranch(oid):
             return any(

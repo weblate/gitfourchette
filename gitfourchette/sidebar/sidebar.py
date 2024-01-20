@@ -18,6 +18,7 @@ class Sidebar(QTreeView):
     toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
     toggleHideAllStashes = Signal()
+    toggleHideRemote = Signal(str)
 
     pushBranch = Signal(str)
 
@@ -234,6 +235,13 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 TaskBook.action(DeleteRemote, self.tr("&Remove Remote..."), taskArgs=data),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("&Hide Remote in Graph"),
+                          lambda: self.toggleHideRemote.emit(data),
+                          checkState=1 if data in model._hiddenRemotes else -1,
+                          ),
             ]
 
         elif item == EItem.RemotesHeader:
