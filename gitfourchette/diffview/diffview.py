@@ -548,6 +548,9 @@ class DiffView(QPlainTextEdit):
         posStart = cursor.selectionStart()
         posEnd = cursor.selectionEnd()
 
+        if posStart < 0 or posEnd < 0:
+            return -1, -1
+
         # If line 1 is completely selected and the cursor has landed at the very beginning of line 2,
         # don't select line 2.
         if posEnd - posStart > 0:
