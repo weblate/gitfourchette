@@ -731,7 +731,7 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # File menu callbacks
 
-    def newRepo(self, path="", detectParentRepo=True):
+    def newRepo(self, path="", detectParentRepo=True, allowNonEmptyDirectory=False):
         if not path:
             qfd = PersistentFileDialog.saveDirectory(self, "NewRepo", self.tr("New repository"))
             qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("&Create repo in this folder"))
@@ -744,10 +744,17 @@ class MainWindow(QMainWindow):
             parentRepo = pygit2.discover_repository(path)
 
         if not detectParentRepo or not parentRepo:
+            if not allowNonEmptyDirectory and os.listdir(path):
+                message = self.tr("Are you sure you want to initialize a Git repository in <b>“{0}”</b>? "
+                                  "This directory isn’t empty.").format(escape(path))
+                askConfirmation(self, self.tr("Directory isn’t empty"), message, messageBoxIcon='warning',
+                                callback=lambda: self.newRepo(path, detectParentRepo, allowNonEmptyDirectory=True))
+                return
+
             try:
                 pygit2.init_repository(path)
                 self.openRepo(path, exactMatch=True)
-            except BaseException as exc:
+            except Exception as exc:
                 message = self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path))
                 excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
 
