@@ -49,7 +49,10 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
     qt.QApplication.setActiveWindow(mw)
 
-    # mw.show()
+    # Show window, which is required for some keyClicks calls to work.
+    # If this inconveniences you, set the QT_QPA_PLATFORM=offscreen environment variable.
+    mw.show()
+
     yield mw
 
     # Clear temp trash after this test

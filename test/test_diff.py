@@ -191,3 +191,55 @@ def testDiffInNewWindow(qtbot, tempDir, mainWindow):
     mainWindow.closeAllTabs()
     qtbot.wait(1)  # doesn't get a chance to clean up windows without this...
     assert 1 == len(QGuiApplication.topLevelWindows())
+
+
+def testSearchInDiff(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex='0966a434eb1a025db6b71485ab63a3bfbea520b6')
+    rw.jump(NavLocator.inCommit(oid, path="master.txt"))
+
+    diffView = rw.diffView
+    searchBar = rw.diffView.searchBar
+    searchLine = rw.diffView.searchBar.ui.lineEdit
+    searchNext = searchBar.ui.forwardButton
+    searchPrev = searchBar.ui.backwardButton
+
+    assert not searchBar.isVisibleTo(rw)
+    mainWindow.show()
+    diffView.setFocus()
+    qtbot.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
+    assert searchBar.isVisibleTo(rw)
+
+    qtbot.keyClicks(searchLine, "master")
+    searchNext.click()
+    forward1 = diffView.textCursor()
+    assert forward1.selectedText() == "master"
+
+    searchNext.click()
+    forward2 = diffView.textCursor()
+    assert forward1 != forward2
+    assert forward2.selectedText() == "master"
+    assert forward2.position() > forward1.position()
+
+    searchNext.click()
+    acceptQMessageBox(rw, "no more occurrences")
+    forward1Copy = diffView.textCursor()
+    assert forward1Copy == forward1  # should have wrapped around
+
+    # Now search in reverse
+    searchPrev.click()
+    acceptQMessageBox(rw, "no more occurrences")
+    reverse1 = diffView.textCursor()
+    assert reverse1.selectedText() == "master"
+    assert reverse1 == forward2
+
+    searchPrev.click()
+    reverse2: QTextCursor = diffView.textCursor()
+    assert reverse2 == forward1
+
+    searchPrev.click()
+    acceptQMessageBox(rw, "no more occurrences")
+    reverse3: QTextCursor = diffView.textCursor()
+    assert reverse3 == reverse1

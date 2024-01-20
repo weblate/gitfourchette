@@ -940,7 +940,7 @@ class DiffView(QPlainTextEdit):
         else:
             newCursor = doc.find(message, self.textCursor(), QTextDocument.FindFlag.FindBackward)
 
-        if newCursor:
+        if newCursor and not newCursor.isNull():  # extra isNull check needed for PyQt5 & PyQt6
             self.setTextCursor(newCursor)
             return
 

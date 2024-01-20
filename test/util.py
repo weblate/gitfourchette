@@ -128,6 +128,8 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
 
 def findQMessageBox(parent: QWidget, textPattern: str):
     for qmb in parent.findChildren(QMessageBox):
+        if not qmb.isVisibleTo(parent):  # skip zombie QMBs
+            continue
         if re.search(textPattern, qmb.text(), re.IGNORECASE):
             return qmb
 
