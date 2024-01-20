@@ -5,13 +5,16 @@ Submodule management tasks.
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_absorbsubmodule import Ui_AbsorbSubmodule
 from pathlib import Path
 
 
 class AbsorbSubmodule(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts
+
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
 

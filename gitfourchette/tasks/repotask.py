@@ -5,7 +5,7 @@ import logging
 from typing import Any, Generator, Type
 
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import Repo, ConflictError, MultiFileError
+from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, GIT_REPOSITORY_STATE_CHERRYPICK
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -50,6 +50,14 @@ def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operat
 
     if numConflicts > maxConflicts:
         qmb.setDetailedText("\n".join(exc.conflicts))
+
+
+class TaskPrereqs(enum.IntFlag):
+    Nothing = 0
+    NoUnborn = enum.auto()
+    NoConflicts = enum.auto()
+    NoCherrypick = enum.auto()
+    NoStagedChanges = enum.auto()
 
 
 class TaskEffects(enum.IntFlag):
@@ -245,6 +253,9 @@ class RepoTask(QObject):
             message = tr("Operation failed: {0}.").format(escape(self.name()))
             excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
 
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.Nothing
+
     def effects(self) -> TaskEffects:
         """
         Returns which parts of the UI should be refreshed when this task is done.
@@ -389,6 +400,28 @@ class RepoTask(QObject):
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self.flowDialog(qmb)
 
+    def checkPrereqs(self):
+        prereqs = self.prereqs()
+        repo = self.repo
+
+        if TaskPrereqs.NoConflicts in prereqs and repo.any_conflicts:
+            raise AbortTask(self.tr("Fix merge conflicts before performing this action."))
+
+        if TaskPrereqs.NoUnborn in prereqs and repo.head_is_unborn:
+            raise AbortTask(paragraphs(
+                self.tr("There are no commits in this repository yet."),
+                self.tr("Create the initial commit in this repository before performing this action.")))
+
+        if TaskPrereqs.NoCherrypick in prereqs and repo.state() == GIT_REPOSITORY_STATE_CHERRYPICK:
+            raise AbortTask(paragraphs(
+                self.tr("You are in the middle of a cherry-pick."),
+                self.tr("Before performing this action, conclude the cherry-pick.")))
+
+        if TaskPrereqs.NoStagedChanges in prereqs and repo.any_staged_changes:
+            raise AbortTask(paragraphs(
+                self.tr("You have staged changes."),
+                self.tr("Before performing this action, commit your changes or stash them.")))
+
 
 class RepoTaskRunner(QObject):
     refreshPostTask = Signal(RepoTask)
@@ -489,7 +522,7 @@ class RepoTaskRunner(QObject):
             ).format(self._currentTask.name(), task.name())
             showInformation(task.parentWidget(), self.tr("Operation in progress"), message)
 
-    def _startTask(self, task):
+    def _startTask(self, task: RepoTask):
         assert self._currentTask == task
         assert task._currentFlow
 
@@ -500,6 +533,14 @@ class RepoTaskRunner(QObject):
 
         # Prepare internal signal for coroutine continuation
         self._continueFlow.connect(lambda result: self._iterateFlow(task, result))
+
+        # Check task prerequisites
+        try:
+            task.checkPrereqs()
+        except AbortTask as abort:
+            self.reportAbortTask(task, abort)
+            self._releaseTask(task)
+            return
 
         # Prime the flow (i.e. start coroutine)
         self._iterateFlow(task, FlowControlToken())
@@ -564,12 +605,7 @@ class RepoTaskRunner(QObject):
                     self.refreshPostTask.emit(task)
                 elif isinstance(exception, AbortTask):
                     # Controlled exit, show message (if any)
-                    message = str(exception)
-                    if message and exception.asStatusMessage:
-                        self.progress.emit("\u26a0 " + message, False)
-                    elif message:
-                        qmb = asyncMessageBox(self.parent(), exception.icon, task.name(), message)
-                        qmb.show()
+                    self.reportAbortTask(task, exception)
                 elif isinstance(exception, RepoGoneError):
                     self.repoGone.emit()
                 else:
@@ -619,6 +655,14 @@ class RepoTaskRunner(QObject):
             self._zombieTask = None
         else:
             assert False
+
+    def reportAbortTask(self, task: RepoTask, exception: AbortTask):
+        message = str(exception)
+        if message and exception.asStatusMessage:
+            self.progress.emit("\u26a0 " + message, False)
+        elif message:
+            qmb = asyncMessageBox(self.parent(), exception.icon, task.name(), message)
+            qmb.show()
 
 
 class TaskInvoker(QObject):

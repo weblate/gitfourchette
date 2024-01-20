@@ -1,6 +1,6 @@
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, TaskPrereqs
 from gitfourchette.trash import Trash
 from gitfourchette.toolbox import *
 from gitfourchette.forms.stashdialog import StashDialog
@@ -29,21 +29,15 @@ Original stash message below:
 
 
 class NewStash(RepoTask):
+    def prereqs(self):
+        # libgit2 will refuse to create a stash if there are conflicts (NoConflicts)
+        # libgit2 will refuse to create a stash if there are no commits at all (NoUnborn)
+        return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn
+
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
     def flow(self, paths: list[str] | None = None):
-        # libgit2 will refuse to create a stash if there are conflicts
-        if self.repo.index.conflicts:
-            raise AbortTask(
-                self.tr("Before creating a stash, please fix merge conflicts in the working directory."))
-
-        # libgit2 will refuse to create a stash if there are no commits at all
-        if self.repo.head_is_unborn:
-            raise AbortTask(
-                self.tr("Cannot create a stash when HEAD is unborn.")
-                + " " + tr("Please create the initial commit in this repository first."))
-
         status = self.repo.status(untracked_files="all", ignored=False)
 
         if not status:
@@ -76,14 +70,15 @@ class NewStash(RepoTask):
 
 
 class ApplyStash(RepoTask):
+    def prereqs(self):
+        # libgit2 will refuse to apply a stash if there are conflicts (NoConflicts)
+        return TaskPrereqs.NoConflicts
+
     def effects(self):
         # Refs only change if the stash is deleted after a successful application.
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
 
     def flow(self, stashCommitId: Oid, tickDelete=True):
-        if self.repo.any_conflicts:
-            raise AbortTask(self.tr("Before applying a stash, please resolve the merge conflicts in your working directory."))
-
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
 

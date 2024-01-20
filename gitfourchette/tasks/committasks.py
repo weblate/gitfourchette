@@ -2,7 +2,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.jumptasks import RefreshRepo
-from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.forms.commitdialog import CommitDialog
@@ -16,14 +16,14 @@ import os
 
 
 class NewCommit(RepoTask):
+    def prereqs(self):
+        return TaskPrereqs.NoConflicts
+
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def flow(self):
         from gitfourchette.tasks import Jump
-
-        if self.repo.index.conflicts:
-            raise AbortTask(self.tr("Please fix merge conflicts in the working directory before committing."))
 
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
@@ -81,6 +81,9 @@ class NewCommit(RepoTask):
 
 
 class AmendCommit(RepoTask):
+    def prereqs(self):
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts | TaskPrereqs.NoCherrypick
+
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
@@ -93,19 +96,12 @@ class AmendCommit(RepoTask):
     def flow(self):
         from gitfourchette.tasks import Jump
 
-        if self.repo.index.conflicts:
-            raise AbortTask(self.tr("Please fix merge conflicts in the working directory before amending the commit."))
-
-        state = self.repo.state()
-        if state == GIT_REPOSITORY_STATE_CHERRYPICK:
-            raise AbortTask(self.tr("You are in the middle of a cherry-pick – cannot amend."))
-
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
-        headCommit = self.repo.head_commit
 
+        headCommit = self.repo.head_commit
         fallbackSignature = self.repo.default_signature
 
         # TODO: Retrieve draft message
@@ -115,7 +111,7 @@ class AmendCommit(RepoTask):
             committerSignature=fallbackSignature,
             amendingCommitHash=shortHash(headCommit.oid),
             detachedHead=self.repo.head_is_detached,
-            repoState=state,
+            repoState=self.repo.state(),
             parent=self.parentWidget())
 
         setWindowModal(cd)
@@ -358,6 +354,9 @@ class ResetHead(RepoTask):
 
 
 class NewTag(RepoTask):
+    def prereqs(self):
+        return TaskPrereqs.NoUnborn
+
     def effects(self):
         return TaskEffects.Refs
 
@@ -414,6 +413,10 @@ class DeleteTag(RepoTask):
 
 
 class CherrypickCommit(RepoTask):
+    def prereqs(self):
+        # Prevent cherry-picking with staged changes, like vanilla git (despite libgit2 allowing it)
+        return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
+
     def effects(self):
         effects = TaskEffects.Workdir | TaskEffects.ShowWorkdir
         if self.didCommit:
@@ -421,12 +424,6 @@ class CherrypickCommit(RepoTask):
         return effects
 
     def flow(self, oid: Oid):
-        # Prevent cherry-picking with staged changes, like vanilla git (despite libgit2 allowing it)
-        if self.repo.any_staged_changes:
-            raise AbortTask(paragraphs(
-                self.tr("Cherry-picking is not possible right now because you have staged changes."),
-                self.tr("Commit your changes or stash them to proceed.")))
-
         self.didCommit = False
 
         yield from self.flowEnterWorkerThread()

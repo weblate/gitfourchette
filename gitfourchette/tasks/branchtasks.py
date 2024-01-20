@@ -2,7 +2,7 @@ import logging
 
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
@@ -178,12 +178,10 @@ class _NewBranchBaseTask(RepoTask):
 
 
 class NewBranchFromHead(_NewBranchBaseTask):
-    def flow(self):
-        if self.repo.head_is_unborn:
-            raise AbortTask(
-                self.tr("Cannot create a local branch when HEAD is unborn.")
-                + " " + tr("Please create the initial commit in this repository first."))
+    def prereqs(self):
+        return TaskPrereqs.NoUnborn
 
+    def flow(self):
         tip = self.repo.head_commit.oid
 
         # Initialize upstream to the current branch's upstream, if any
