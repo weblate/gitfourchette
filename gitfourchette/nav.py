@@ -188,10 +188,14 @@ class NavLocator:
     def parseUrl(url: QUrl):
         assert url.authority() == NavLocator.URL_AUTHORITY
         assert url.hasFragment()
+
         frag = url.fragment()
         path = url.path()
-        assert path.startswith("/")
-        path = path.removeprefix("/")
+
+        if path:  # fix up non-empty path
+            assert path.startswith("/")
+            path = path.removeprefix("/")
+
         try:
             context = NavContext[frag]
             commit = NULL_OID
