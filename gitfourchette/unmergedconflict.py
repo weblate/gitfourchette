@@ -30,7 +30,6 @@ class UnmergedConflict(QObject):
         self.mergeDir = tempfile.TemporaryDirectory(dir=tempdir.getSessionTemporaryDirectory(), prefix="merge-", ignore_cleanup_errors=True)
         mergeDirPath = self.mergeDir.name
 
-        # TODO: do we always have an ancestor?
         self.ancestorPath = dumpTempBlob(repo, mergeDirPath, conflict.ancestor, "ANCESTOR")
         self.oursPath = dumpTempBlob(repo, mergeDirPath, conflict.ours, "OURS")
         self.theirsPath = dumpTempBlob(repo, mergeDirPath, conflict.theirs, "THEIRS")

@@ -33,6 +33,7 @@ class ConflictView(QWidget):
             ConflictSides.DELETED_BY_THEM: self.ui.radioGroupDbt,
             ConflictSides.DELETED_BY_BOTH: self.ui.radioGroupDbb,
             ConflictSides.MODIFIED_BY_BOTH: self.ui.radioGroupBoth,
+            ConflictSides.ADDED_BY_BOTH: self.ui.radioGroupBoth,  # reuse same group as MODIFIED_BY_BOTH
         }
 
         for radio in self.ui.groupBox.findChildren(QRadioButton):
@@ -73,7 +74,7 @@ class ConflictView(QWidget):
         elif conflict.deleted_by_both:
             self.hardSolve(conflict.ancestor.path, NULL_OID)
 
-        elif conflict.modified_by_both:
+        elif conflict.modified_by_both or conflict.added_by_both:
             b = self.ui.radioGroupBoth.checkedButton()
             if b is self.ui.radioOurs:
                 self.hardSolve(conflict.ours.path, conflict.ours.id)

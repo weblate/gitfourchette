@@ -1475,10 +1475,12 @@ class RepoContext:
 
 
 class ConflictSides(enum.IntEnum):
-    MODIFIED_BY_BOTH = 0b11
-    DELETED_BY_THEM = 0b01
-    DELETED_BY_US = 0b10
-    DELETED_BY_BOTH = 0b00
+    # -------------------TOA (Theirs, Ours, Ancestor)
+    MODIFIED_BY_BOTH = 0b111
+    DELETED_BY_THEM  = 0b011
+    DELETED_BY_US    = 0b101
+    DELETED_BY_BOTH  = 0b001
+    ADDED_BY_BOTH    = 0b110
 
 
 @_dataclasses.dataclass(frozen=True)
@@ -1489,9 +1491,11 @@ class DiffConflict:
 
     @property
     def sides(self) -> ConflictSides:
-        lo = 0b01 * bool(self.ours)
-        hi = 0b10 * bool(self.theirs)
-        return ConflictSides(hi | lo)
+        a = 0b001 * bool(self.ancestor)
+        o = 0b010 * bool(self.ours)
+        t = 0b100 * bool(self.theirs)
+        return ConflictSides(t | o | a)
+        # This ctor will raise ValueError if it's an invalid IntEnum
 
     @property
     def deleted_by_us(self):
@@ -1508,3 +1512,7 @@ class DiffConflict:
     @property
     def modified_by_both(self):
         return self.sides == ConflictSides.MODIFIED_BY_BOTH
+
+    @property
+    def added_by_both(self):
+        return self.sides == ConflictSides.ADDED_BY_BOTH

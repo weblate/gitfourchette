@@ -270,6 +270,12 @@ class TrTables:
                 "<b>Modified by both sides:</b> This file has received changes "
                 "from both <i>our</i> branch and <i>their</i> branch."),
 
+            "ADDED_BY_BOTH": translate(
+                "ConflictView",
+                "<b>Added by both sides:</b> This file has been created in "
+                "both <i>our</i> branch and <i>their</i> branch, independently "
+                "from each other. So, there is no common ancestor."),
+
             "tool": translate(
                 "ConflictView",
                 "You will be able to merge the changes in {tool}. When you are done merging, "
