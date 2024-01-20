@@ -64,7 +64,7 @@ def excMessageBox(
                 summary = summary[:500] + "... " + tr("(MESSAGE TRUNCATED)")
             message += "<br><br>" + html.escape(summary)
             if isCritical:
-                message += "<p><small>" + tr("If you want to report a bug, please click “Show Details” "
+                message += "<p><small>" + tr("If you want to file a bug report, please click “Show Details” "
                                              "and copy the <b>entire</b> message.")
 
         details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
@@ -80,17 +80,18 @@ def excMessageBox(
             font.setPointSize(min(font.pointSize(), 8))
             detailsEdit.setFont(font)
             detailsEdit.setMinimumWidth(600)
+            detailsEdit.setFixedHeight(300)
 
         # Keep user from triggering more exceptions by clicking on stuff in the background
         qmb.setWindowModality(Qt.WindowModality.ApplicationModal)
 
+        if isCritical:
+            quitButton = qmb.addButton(QMessageBox.StandardButton.Reset)  # Reset button is leftmost in KDE
+            quitButton.setText(tr("Quit application"))
+
         dismissButton = qmb.addButton(QMessageBox.StandardButton.Ok)
         qmb.setDefaultButton(dismissButton)
         qmb.setEscapeButton(dismissButton)
-
-        if isCritical:
-            quitButton = qmb.addButton(QMessageBox.StandardButton.Abort)
-            quitButton.setText(tr("Quit application"))
 
         # Show next error message in queue when finished
         qmb.finished.connect(_popExcMessageBoxQueue)
@@ -110,7 +111,7 @@ def excMessageBox(
 
 
 def _popExcMessageBoxQueue(result = QMessageBox.StandardButton.Ok):
-    if result == QMessageBox.StandardButton.Abort:
+    if result == QMessageBox.StandardButton.Reset:
         logger.warning("Application aborted from message box.")
         QApplication.exit(1)
         return
