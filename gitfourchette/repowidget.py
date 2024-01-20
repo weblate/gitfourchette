@@ -430,6 +430,12 @@ class RepoWidget(QWidget):
 
             tweakWidgetFont(modeTabs, 80)
             with QSignalBlockerContext(modeTabs):
+                iconTable = {
+                    SidebarTabMode.Tags: "git-tag",
+                    SidebarTabMode.Submodules: "git-submodule",
+                    SidebarTabMode.Stashes: "git-stash",
+                    SidebarTabMode.Branches: "git-branch",
+                }
                 for mode in SidebarTabMode:
                     if mode == SidebarTabMode.NonModal:
                         continue
@@ -439,7 +445,7 @@ class RepoWidget(QWidget):
                     modeTabs.addTab(name[:2])
                     modeTabs.setTabData(i, mode)
                     modeTabs.setTabToolTip(i, tip)
-                    modeTabs.setTabIcon(i, stockIcon("sidebar_" + mode.name.lower()))
+                    modeTabs.setTabIcon(i, stockIcon(iconTable[mode]))
 
             modeTabs.currentChanged.emit(modeTabs.currentIndex())
 

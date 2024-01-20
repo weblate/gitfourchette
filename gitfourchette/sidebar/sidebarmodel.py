@@ -50,13 +50,13 @@ class EItem(enum.IntEnum):
 HEADER_ITEMS_NONMODAL = [
     EItem.UncommittedChanges,
     EItem.Spacer,
-    EItem.StashesHeader,
-    EItem.Spacer,
     EItem.LocalBranchesHeader,
     EItem.Spacer,
     EItem.RemotesHeader,
     EItem.Spacer,
     EItem.TagsHeader,
+    EItem.Spacer,
+    EItem.StashesHeader,
     EItem.Spacer,
     EItem.SubmodulesHeader,
 ]
@@ -437,10 +437,7 @@ class SidebarModel(QAbstractItemModel):
             branchNo = self.unpackOffset(index)
             branchName = self._localBranches[branchNo]
             if displayRole:
-                if branchName == self._checkedOut:
-                    return F"{ACTIVE_BULLET}{branchName}"
-                else:
-                    return branchName
+                return branchName
             elif userRole:
                 return branchName
             elif refRole:
@@ -463,20 +460,28 @@ class SidebarModel(QAbstractItemModel):
                     return self.hiddenBranchFont()
                 else:
                     return None
+            elif decorationRole:
+                return stockIcon("git-branch" if branchName != self._checkedOut else "git-home")
 
         elif item == EItem.UnbornHead:
             if displayRole:
-                return F"{ACTIVE_BULLET}{self._unbornHead} " + self.tr("[unborn]")
+                return self.tr("[unborn]") + F" {self._unbornHead}"
             elif userRole:
                 return self._unbornHead
             elif toolTipRole:
-                return self.tr("Unborn HEAD: does not point to a commit yet.")
+                text = "<p style='white-space: pre'>"
+                text += self.tr("Local branch <b>“{0}”</b>")
+                text += "<br>" + self.tr("Unborn HEAD: does not point to a commit yet.")
+                text += "<br>" + self.tr("The branch will be created when you create the initial commit.")
+                text = text.format(escape(self._unbornHead))
+                self.cacheTooltip(index, text)
+                return text
             elif hiddenRole:
                 return False
 
         elif item == EItem.DetachedHead:
             if displayRole:
-                return ACTIVE_BULLET + self.tr("[detached HEAD]")
+                return self.tr("Detached HEAD")
             elif userRole:
                 return self._detachedHead
             elif toolTipRole:
@@ -496,6 +501,8 @@ class SidebarModel(QAbstractItemModel):
                 return self._remoteURLs[row]
             elif hiddenRole:
                 return False
+            elif decorationRole:
+                return stockIcon("git-remote")
 
         elif item == EItem.RemoteBranch:
             remoteNo = self.unpackOffset(index)
@@ -516,6 +523,8 @@ class SidebarModel(QAbstractItemModel):
                     return None
             elif hiddenRole:
                 return F"refs/remotes/{remoteName}/{branchName}" in self._hiddenBranches
+            elif decorationRole:
+                return stockIcon("git-branch")
 
         elif item == EItem.Tag:
             if displayRole or userRole:
@@ -524,6 +533,8 @@ class SidebarModel(QAbstractItemModel):
                 return F"refs/tags/{self._tags[row]}"
             elif hiddenRole:
                 return False
+            elif decorationRole:
+                return stockIcon("git-tag")
 
         elif item == EItem.Stash:
             stash = self._stashes[row]
@@ -549,6 +560,8 @@ class SidebarModel(QAbstractItemModel):
                     return None
             elif hiddenRole:
                 return stash.commit_id.hex in self._hiddenStashCommits
+            elif decorationRole:
+                return stockIcon("git-stash")
 
         elif item == EItem.Submodule:
             if displayRole:
@@ -559,10 +572,12 @@ class SidebarModel(QAbstractItemModel):
                 return self._submodules[row]
             elif hiddenRole:
                 return False
+            elif decorationRole:
+                return stockIcon("git-submodule")
 
         elif item == EItem.UncommittedChanges:
             if displayRole:
-                changesText = self.tr("Changes")
+                changesText = self.tr("Uncommitted")
                 numUncommittedChanges = self.repoState.numUncommittedChanges
                 if numUncommittedChanges != 0:
                     changesText = f"({numUncommittedChanges}) " + changesText
@@ -576,6 +591,10 @@ class SidebarModel(QAbstractItemModel):
                 return font
             elif hiddenRole:
                 return False
+            elif decorationRole:
+                return stockIcon("git-workdir")
+            elif toolTipRole:
+                return appendShortcutToToolTipText(self.tr("Go to Uncommitted Changes"), QKeySequence("Ctrl+U"))
 
         else:
             if displayRole:
@@ -591,7 +610,7 @@ class SidebarModel(QAbstractItemModel):
 
         # fallback
         if sizeHintRole:
-            return QSize(-1, self._parentWidget.fontMetrics().height())
+            return QSize(-1, int(1.15 * self._parentWidget.fontMetrics().height()))
         elif hiddenRole:
             return False
 
