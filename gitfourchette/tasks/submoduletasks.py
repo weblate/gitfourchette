@@ -33,14 +33,15 @@ class AbsorbSubmodule(RepoTask):
 
         if subIsBare:
             message = paragraphs(
-                self.tr("“{0}” is a bare repository.").format(subName),
+                self.tr("{0} is a bare repository.").format(bquo(subName)),
                 self.tr("This operation does not support bare repositories."))
             raise AbortTask(message)
 
         if not subRemotes:
             message = paragraphs(
-                self.tr("“{0}” has no remotes.").format(subName),
-                self.tr("Please open “{0}” and add a remote to it before absorbing it as a submodule of “{1}”.").format(subName, thisName))
+                self.tr("{0} has no remotes.").format(bquo(subName)),
+                self.tr("Please open {0} and add a remote to it before absorbing it as a submodule of {1}."
+                        ).format(bquo(subName), bquo(thisName)))
             raise AbortTask(message)
 
         dlg = QDialog(self.parentWidget())
@@ -53,8 +54,8 @@ class AbsorbSubmodule(RepoTask):
         ui.setupUi(dlg)
         dlg.ui = ui  # for easier access in unit testing
         dlg.setWindowTitle(self.name())
-        formatWidgetText(ui.label1, sub=escape(subName), super=escape(thisName))
-        formatWidgetText(ui.label2, sub=escape(subName), super=escape(thisName))
+        formatWidgetText(ui.label1, sub=bquoe(subName), super=bquoe(thisName))
+        formatWidgetText(ui.label2, sub=bquoe(subName), super=bquoe(thisName))
         ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(self.tr("Absorb submodule"))
 
         ui.comboBox.parent().layout().addWidget(qcb)

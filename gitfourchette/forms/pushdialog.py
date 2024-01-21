@@ -49,7 +49,7 @@ class PushDialog(QDialog):
         localBranch = self.currentLocalBranch
 
         if localBranch.upstream:
-            self.ui.trackingLabel.setText(self.tr("tracking “{0}”").format(escamp(localBranch.upstream.shorthand)))
+            self.ui.trackingLabel.setText(self.tr("tracking {0}").format(lquo(localBranch.upstream.shorthand)))
         else:
             self.ui.trackingLabel.setText(self.tr("non-tracking"))
 
@@ -93,9 +93,9 @@ class PushDialog(QDialog):
 
         metrics = self.ui.trackingLabel.fontMetrics()
 
-        lbName = escape(metrics.elidedText(lbName, Qt.TextElideMode.ElideMiddle, 150))
-        rbName = escape(metrics.elidedText(rbName, Qt.TextElideMode.ElideMiddle, 150))
-        lbUpstream = escape(metrics.elidedText(lbUpstream, Qt.TextElideMode.ElideMiddle, 150))
+        lbName = hquo(metrics.elidedText(lbName, Qt.TextElideMode.ElideMiddle, 150))
+        rbName = hquo(metrics.elidedText(rbName, Qt.TextElideMode.ElideMiddle, 150))
+        lbUpstream = hquo(metrics.elidedText(lbUpstream, Qt.TextElideMode.ElideMiddle, 150))
 
         hasUpstream = bool(localBranch.upstream)
         isTrackingHomeBranch = hasUpstream and localBranch.upstream.shorthand == self.currentRemoteBranchFullName
@@ -106,15 +106,15 @@ class PushDialog(QDialog):
             willTrack = self.willPushToNewBranch or isTrackingHomeBranch
 
         if not hasUpstream and willTrack:
-            text = self.tr("“{0}” will track “{1}”.").format(lbName, rbName)
+            text = self.tr("{0} will track {1}.").format(lbName, rbName)
         elif not hasUpstream and not willTrack:
-            text = self.tr("“{0}” currently does not track any remote branch.").format(lbName)
+            text = self.tr("{0} currently does not track any remote branch.").format(lbName)
         elif isTrackingHomeBranch:
-            text = self.tr("“{0}” already tracks remote branch “{1}”.").format(lbName, lbUpstream)
+            text = self.tr("{0} already tracks remote branch {1}.").format(lbName, lbUpstream)
         elif willTrack:
-            text = self.tr("“{0}” will track “{1}” instead of “{2}”.").format(lbName, rbName, lbUpstream)
+            text = self.tr("{0} will track {1} instead of {2}.").format(lbName, rbName, lbUpstream)
         else:
-            text = self.tr("“{0}” currently tracks “{1}”.").format(lbName, lbUpstream)
+            text = self.tr("{0} currently tracks {1}.").format(lbName, lbUpstream)
 
         self.ui.trackingLabel.setWordWrap(True)
         self.ui.trackingLabel.setText("<small>" + text + "</small>")
@@ -233,7 +233,7 @@ class PushDialog(QDialog):
                     self.fallbackAutoNewIndex = comboBox.count()
                 comboBox.addItem(
                     stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder),
-                    self.tr("New remote branch on {0}").format(escamp(remoteName)),
+                    self.tr("New remote branch on {0}").format(lquo(remoteName)),
                     (ERemoteItem.NewRef, remoteName))
                 comboBox.setItemData(comboBox.count()-1, remoteUrl, Qt.ItemDataRole.ToolTipRole)
 

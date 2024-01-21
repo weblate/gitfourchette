@@ -85,9 +85,10 @@ class DeleteRemote(RepoTask):
     def flow(self, remoteName: str):
         yield from self.flowConfirm(
             text=paragraphs(
-                self.tr("Really remove remote <b>“{0}”</b>?").format(escape(remoteName)),
+                self.tr("Really remove remote {0}?"),
                 self.tr("This will merely detach the remote from your local repository. "
-                        "The remote server itself will not be affected.")),
+                        "The remote server itself will not be affected.")
+            ).format(bquo(remoteName)),
             verb=self.tr("Remove remote", "Button label"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 

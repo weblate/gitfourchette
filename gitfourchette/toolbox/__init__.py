@@ -40,5 +40,6 @@ from .qtutils import (
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide, ulList,
     clipboardStatusMessage,
+    hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe
 )
 from .validatormultiplexer import ValidatorMultiplexer

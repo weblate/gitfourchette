@@ -82,8 +82,8 @@ class ApplyStash(RepoTask):
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
 
-        question = self.tr("Do you want to apply the changes stashed in <b>“{0}”</b> to your working directory?"
-                           ).format(escape(stashMessage))
+        question = self.tr("Do you want to apply the changes stashed in {0} to your working directory?"
+                           ).format(bquoe(stashMessage))
 
         qmb = asyncMessageBox(self.parentWidget(), 'question', self.name(), question,
                               QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
@@ -108,9 +108,9 @@ class ApplyStash(RepoTask):
 
         if self.repo.index.conflicts:
             yield from self.flowEnterUiThread()
-            message = [self.tr("Applying the stash “{0}” has caused merge conflicts "
+            message = [self.tr("Applying the stash {0} has caused merge conflicts "
                                "because your files have diverged since they were stashed."
-                               ).format(escape(stashMessage))]
+                               ).format(bquoe(stashMessage))]
             if deleteAfterApply:
                 message.append(self.tr("The stash wasn’t deleted in case you need to re-apply it later."))
             showWarning(self.parentWidget(), self.tr("Conflicts caused by stash application"), paragraphs(message))
@@ -129,7 +129,7 @@ class DropStash(RepoTask):
         stashCommit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
         yield from self.flowConfirm(
-            text=self.tr("Really delete stash <b>“{0}”</b>?").format(stashMessage),
+            text=self.tr("Really delete stash {0}?").format(bquoe(stashMessage)),
             verb=self.tr("Delete stash"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 

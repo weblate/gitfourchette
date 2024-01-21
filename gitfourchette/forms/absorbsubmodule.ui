@@ -29,7 +29,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>Do you want the Git repository “{sub}” to be absorbed as a submodule of “{super}”?</string>
+      <string>Do you want the Git repository {sub} to be absorbed as a submodule of {super}?</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -79,7 +79,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>If you choose to proceed, “{super}” will assume control of the “.git” directory in “{sub}”. You will not be able to use “{sub}” as an independent repository. This cannot be undone!</string>
+      <string>If you choose to proceed, {super} will assume control of the “.git” directory in {sub}. You will not be able to use {sub} as an independent repository. This cannot be undone!</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

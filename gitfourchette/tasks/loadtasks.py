@@ -61,7 +61,7 @@ class PrimeRepo(RepoTask):
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
 
-        self.progressMessage.emit(self.tr("Opening “{0}”...").format(settings.history.getRepoNickname(path)))
+        self.progressMessage.emit(self.tr("Opening {0}...").format(tquo(settings.history.getRepoNickname(path))))
 
         # Create repo state
         state = RepoState(rw, repo)

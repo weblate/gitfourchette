@@ -42,7 +42,7 @@ class NewBranchDialog(QDialog):
         validator.run()
 
         convertToBrandedDialog(self, self.tr("New branch"),
-                               self.tr("Commit at tip:") + f" {target}\n“{targetSubtitle}”")
+                               self.tr("Commit at tip:") + " " + target + "\n" + tquo(targetSubtitle))
 
         self.ui.nameEdit.setFocus()
         self.ui.nameEdit.selectAll()

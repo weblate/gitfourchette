@@ -192,7 +192,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             draftCommitMessage = self.state.getDraftCommitMessage()
             if draftCommitMessage:
                 draftLine = messageSummary(draftCommitMessage)[0]
-                summaryText += f": “{messageSummary(draftCommitMessage)[0].strip()}”"
+                summaryText += ": " + tquo(draftLine.strip())
 
             searchTerm = ""
             searchTermLooksLikeHash = False

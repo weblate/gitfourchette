@@ -95,7 +95,7 @@ class Ui_ConflictView(object):
     def retranslateUi(self, ConflictView):
         _translate = QCoreApplication.translate
         ConflictView.setWindowTitle(_translate("ConflictView", "Merge conflict"))
-        self.titleLabel.setText(_translate("ConflictView", "Merge conflict on “{0}”"))
+        self.titleLabel.setText(_translate("ConflictView", "Merge conflict on {0}"))
         self.groupBox.setTitle(_translate("ConflictView", "How do you want to solve this conflict?"))
         self.radioOurs.setText(_translate("ConflictView", "Keep “our” version intact"))
         self.radioTool.setText(_translate("ConflictView", "Merge in {tool}"))

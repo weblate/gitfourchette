@@ -17,19 +17,20 @@ def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operat
     numConflicts = len(exc.conflicts)
 
     # lupdate doesn't pick up the plural form with translate("Context", "%n", "", numConflicts)
-    title = tr("%n conflicting file(s)", "", numConflicts)
-    nFilesSubmessage = tr("<b>%n file(s)</b>", "", numConflicts)
+    title = tr("%n conflicting files", "", numConflicts)
+    nFilesSubmessage = tr("<b>%n files</b>", "", numConflicts)
 
     if exc.description == "workdir":
-        message = translate("Conflict", "Operation <b>{0}</b> conflicts with {1} in the working directory:"
-                            ).format(opName, nFilesSubmessage)
+        message = translate("Conflict", "Operation {0} conflicts with {1} in the working directory:"
+                            ).format(bquo(opName), nFilesSubmessage)
     elif exc.description == "HEAD":
-        message = translate("Conflict", "Operation <b>{0}</b> conflicts with {1} in the commit at HEAD:"
-                            ).format(opName, nFilesSubmessage)
+        message = translate("Conflict", "Operation {0} conflicts with {1} in the commit at HEAD:"
+                            ).format(bquo(opName), nFilesSubmessage)
     else:
-        message = translate("Conflict", "Operation <b>{0}</b> has caused a conflict with {1} ({2}):"
-                            ).format(opName, nFilesSubmessage, exc.description)
+        message = translate("Conflict", "Operation {0} has caused a conflict with {1} ({2}):"
+                            ).format(bquo(opName), nFilesSubmessage, exc.description)
 
+    # TODO: Use ulList?
     message += f"<ul><li>"
     message += "</li><li>".join(exc.conflicts[:maxConflicts])
     if numConflicts > maxConflicts:
@@ -516,11 +517,9 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
-            message = paragraphs(
-                self.tr("Please wait for the current operation to complete."),
-                self.tr("(“{0}” cannot be interrupted by “{1}”)")
-            ).format(self._currentTask.name(), task.name())
-            showInformation(task.parentWidget(), self.tr("Operation in progress"), message)
+            message = self.tr("Please wait for the current operation to complete ({0})."
+                              ).format(hquo(self._currentTask.name()))
+            showInformation(task.parentWidget(), self.tr("Operation in progress"), "<html>" + message)
 
     def _startTask(self, task: RepoTask):
         assert self._currentTask == task

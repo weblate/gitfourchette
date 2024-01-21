@@ -955,7 +955,7 @@ class DiffView(QPlainTextEdit):
 
         prompt = [
             self.tr("End of diff reached.") if forward else self.tr("Top of diff reached."),
-            self.tr("No more occurrences of “{0}” found.").format(escape(message))
+            self.tr("No more occurrences of {0} found.").format(bquo(message))
         ]
         askConfirmation(self, self.tr("Find in Diff"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
                         messageBoxIcon="information", callback=wrapAround)

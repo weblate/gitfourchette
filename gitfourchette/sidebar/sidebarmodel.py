@@ -453,13 +453,13 @@ class SidebarModel(QAbstractItemModel):
                 return F"refs/heads/{branchName}"
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("Local branch <b>“{0}”</b>").format(escape(branchName))
+                text += self.tr("Local branch {0}").format(bquo(branchName))
                 if branchName == self._checkedOut:
                     text += "\n" + ACTIVE_BULLET + self.tr("Active branch")
                 # TODO no-GIL: try to lock the repo here - if we can't, skip upstream info and don't cache the tooltip
                 upstream = self.repo.branches.local[branchName].upstream  # a bit costly
                 if upstream:
-                    text += "\n" + self.tr("Tracking remote branch “{0}”").format(escape(upstream.shorthand))
+                    text += "\n" + self.tr("Tracking remote branch {0}").format(hquo(upstream.shorthand))
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
@@ -479,10 +479,10 @@ class SidebarModel(QAbstractItemModel):
                 return self._unbornHead
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("Local branch <b>“{0}”</b>")
+                text += self.tr("Local branch {0}")
                 text += "<br>" + self.tr("Unborn HEAD: does not point to a commit yet.")
                 text += "<br>" + self.tr("The branch will be created when you create the initial commit.")
-                text = text.format(escape(self._unbornHead))
+                text = text.format(bquo(self._unbornHead))
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
@@ -494,7 +494,7 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return self._detachedHead
             elif toolTipRole:
-                return self.tr("Detached HEAD") + " @ " + self._detachedHead
+                return self.tr("Detached HEAD") + " @ " + bquo(self._detachedHead)
             elif hiddenRole:
                 return False
             elif role == decorationRole:
@@ -507,7 +507,7 @@ class SidebarModel(QAbstractItemModel):
             if displayRole or userRole:
                 return self._remotes[row]
             elif toolTipRole:
-                return self._remoteURLs[row]
+                return "<p style='white-space: pre'>" + escape(self._remoteURLs[row])
             elif fontRole:
                 if self._remotes[row] in self._hiddenRemotes:
                     return self.hiddenBranchFont()
@@ -527,7 +527,8 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return F"{remoteName}/{branchName}"
             elif toolTipRole:
-                return F"{remoteName}/{branchName}"
+                return ("<p style='white-space: pre'>" + self.tr("Remote-tracking branch {0}")
+                        ).format(bquo(f"{remoteName}/{branchName}"))
             elif fontRole:
                 if F"refs/remotes/{remoteName}/{branchName}" in self._hiddenBranches:
                     return self.hiddenBranchFont()

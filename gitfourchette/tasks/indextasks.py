@@ -78,10 +78,10 @@ class DiscardFiles(_BaseStagingTask):
             patch = patches[0]
             path = patch.delta.new_file.path
             if patch.delta.status == GIT_DELTA_UNTRACKED:
-                textPara.append(self.tr("Really delete <b>“{0}”</b>?").format(escape(path)))
+                textPara.append(self.tr("Really delete {0}?").format(bquo(path)))
                 verb = self.tr("Delete file", "Button label")
             else:
-                textPara.append(self.tr("Really discard changes to <b>“{0}”</b>?").format(escape(path)))
+                textPara.append(self.tr("Really discard changes to {0}?").format(bquo(path)))
         else:
             textPara.append(self.tr("Really discard changes to <b>%n files</b>?", "", len(patches)))
         textPara.append(tr("This cannot be undone!"))
@@ -116,7 +116,7 @@ class DiscardModeChanges(_BaseStagingTask):
             raise AbortTask()
         elif len(patches) == 1:
             path = patches[0].delta.new_file.path
-            textPara.append(self.tr("Really discard mode change in <b>“{0}”</b>?").format(escape(path)))
+            textPara.append(self.tr("Really discard mode change in {0}?").format(bquo(path)))
         else:
             textPara.append(self.tr("Really discard mode changes in <b>%n files</b>?", "", len(patches)))
         textPara.append(tr("This cannot be undone!"))
@@ -180,8 +180,10 @@ class ApplyPatch(RepoTask):
         shortPath = os.path.basename(fullPatch.delta.new_file.path)
 
         questionText = paragraphs(
-            self.tr("You are trying to {0} changes from the line-by-line editor, but you haven’t selected any red/green lines.").format(verb),
-            self.tr("Do you want to {0} this entire file <b>“{1}”</b>?").format(verb, escape(shortPath)))
+            self.tr("You are trying to {0} changes from the line-by-line editor, "
+                    "but you haven’t selected any red/green lines."),
+            self.tr("Do you want to {0} this entire file {1}?")
+        ).format(verb, bquo(shortPath))
 
         qmb = asyncMessageBox(
             self.parentWidget(),
@@ -365,10 +367,10 @@ class ApplyPatchFile(RepoTask):
 
         numDeltas = len(deltas)
         if reverse:
-            text = self.tr("Patch file <b>“{0}”</b>, <b>reversed</b>, can be applied cleanly to your working directory.")
+            text = self.tr("Patch file {0}, <b>reversed</b>, can be applied cleanly to your working directory.")
         else:
-            text = self.tr("Patch file <b>“{0}”</b> can be applied cleanly to your working directory.")
-        text = text.format(os.path.basename(path))
+            text = self.tr("Patch file {0} can be applied cleanly to your working directory.")
+        text = text.format(bquoe(os.path.basename(path)))
         details = self.tr("It will modify <b>%n</b> files:", "", numDeltas)
         details += ulList(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
         yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), detailText=details)

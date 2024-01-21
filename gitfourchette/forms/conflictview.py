@@ -134,7 +134,7 @@ class ConflictView(QWidget):
         else:
             displayPath = conflict.ancestor.path
 
-        formatWidgetText(self.ui.titleLabel, escape(os.path.basename(displayPath)))
+        formatWidgetText(self.ui.titleLabel, lquo(os.path.basename(displayPath)))
 
     def onRadioClicked(self):
         assert self.currentConflict

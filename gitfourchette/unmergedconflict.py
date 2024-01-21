@@ -62,9 +62,9 @@ class UnmergedConflict(QObject):
             return
 
         message = paragraphs(
-            self.tr("It looks like you’ve resolved the merge conflict in <b>“{0}”</b>."),
+            self.tr("It looks like you’ve resolved the merge conflict in {0}."),
             self.tr("Do you want to keep this resolution?")
-        ).format(self.conflict.ours.path)
+        ).format(bquo(self.conflict.ours.path))
 
         qmb = asyncMessageBox(self.parent(), 'information', self.tr("Merge conflict resolved"), message,
                               QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)

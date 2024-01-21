@@ -23,7 +23,7 @@
    <item>
     <widget class="QLabel" name="titleLabel">
      <property name="text">
-      <string>Merge conflict on “{0}”</string>
+      <string>Merge conflict on {0}</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -189,9 +189,9 @@
  <resources/>
  <connections/>
  <buttongroups>
-  <buttongroup name="radioGroupDbu"/>
-  <buttongroup name="radioGroupDbt"/>
-  <buttongroup name="radioGroupDbb"/>
   <buttongroup name="radioGroupBoth"/>
+  <buttongroup name="radioGroupDbb"/>
+  <buttongroup name="radioGroupDbt"/>
+  <buttongroup name="radioGroupDbu"/>
  </buttongroups>
 </ui>

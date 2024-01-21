@@ -51,7 +51,7 @@ class RemoteDialog(QDialog):
         validator.connectInput(self.ui.keyFilePathEdit, self.validateKeyFileInput, mustBeValid=False)
 
         if edit:
-            title = self.tr("Edit remote “{0}”").format(escape(elide(remoteName)))
+            title = self.tr("Edit remote {0}").format(hquoe(remoteName))
             self.setWindowTitle(self.tr("Edit remote"))
             okButton.setText(self.tr("Save changes"))
             self.ui.fetchAfterAddCheckBox.setVisible(False)
@@ -99,7 +99,7 @@ class RemoteDialog(QDialog):
             sshDir = ""
 
         qfd = PersistentFileDialog.openFile(
-            self, "KeyFile", self.tr("Select public key file for remote “{0}”").format(self.ui.nameEdit.text()),
+            self, "KeyFile", self.tr("Select public key file for remote {0}").format(lquo(self.ui.nameEdit.text())),
             filter=self.tr("Public key file") + " (*.pub)",
             fallbackPath=sshDir)
 

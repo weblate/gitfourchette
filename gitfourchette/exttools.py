@@ -33,9 +33,9 @@ def onExternalToolProcessError(process: QProcess, prefKey: str):
     title = translate("exttools", "Failed to start {0}").format(translatedPrefKey)
 
     message = translate("exttools",
-                        "Couldn’t start {0} <b>“{1}”</b> ({2}). "
+                        "Couldn’t start {0} {1} ({2}). "
                         "It might not be installed on your machine."
-                        ).format(translatedPrefKey, escape(programName), str(processError).removeprefix("ProcessError."))
+                        ).format(translatedPrefKey, bquo(programName), str(processError).removeprefix("ProcessError."))
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
                           QMessageBox.StandardButton.Retry | QMessageBox.StandardButton.Ok)
@@ -56,14 +56,13 @@ def setUpMergeToolPrompt(parent: QWidget, prefKey: str):
 
     title = translatedPrefKey
 
-    message = translate("exttools",
-                        "“{0}” isn’t set up in your preferences yet.").format(translatedPrefKey)
+    message = translate("exttools", "{0} isn’t set up in your preferences yet.").format(bquo(translatedPrefKey))
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
                           QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
     configureButton = qmb.button(QMessageBox.StandardButton.Ok)
-    configureButton.setText(translate("exttools", "Set up {0}").format(translatedPrefKey))
+    configureButton.setText(translate("exttools", "Set up {0}").format(lquo(translatedPrefKey)))
 
     qmb.accepted.connect(lambda: openPrefsDialog(parent, prefKey))
     qmb.show()

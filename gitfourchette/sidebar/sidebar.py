@@ -117,14 +117,14 @@ class Sidebar(QTreeView):
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
-            thisBranchDisplay = elide(data)
-            activeBranchDisplay = elide(activeBranchName)
-            upstreamBranchDisplay = elide(upstreamBranchName)
+            thisBranchDisplay = lquoe(data)
+            activeBranchDisplay = lquoe(activeBranchName)
+            upstreamBranchDisplay = lquoe(upstreamBranchName)
 
             actions += [
                 TaskBook.action(
                     SwitchBranch,
-                    self.tr("&Switch to “{0}”").format(thisBranchDisplay),
+                    self.tr("&Switch to {0}").format(thisBranchDisplay),
                     taskArgs=(data, False),  # False: don't ask for confirmation
                     enabled=not isCurrentBranch,
                 ),
@@ -133,7 +133,7 @@ class Sidebar(QTreeView):
 
                 TaskBook.action(
                     MergeBranch,
-                    self.tr("&Merge into “{0}”...").format(activeBranchDisplay),
+                    self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
                     enabled=not isCurrentBranch and activeBranchName,
                 ),
@@ -155,7 +155,7 @@ class Sidebar(QTreeView):
 
                 TaskBook.action(
                     FastForwardBranch,
-                    self.tr("Fast-Forward to “{0}”...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
+                    self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
                     taskArgs=data,
                     enabled=hasUpstream,
                 ),
@@ -193,8 +193,8 @@ class Sidebar(QTreeView):
             activeBranchName = repo.head_branch_shorthand
 
             refName = RefPrefix.REMOTES + data
-            thisBranchDisplay = elide(data)
-            activeBranchDisplay = elide(activeBranchName)
+            thisBranchDisplay = lquoe(data)
+            activeBranchDisplay = lquoe(activeBranchName)
 
             actions += [
                 TaskBook.action(
@@ -209,7 +209,7 @@ class Sidebar(QTreeView):
 
                 TaskBook.action(
                     MergeBranch,
-                    self.tr("&Merge into “{0}”...").format(activeBranchDisplay),
+                    self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
                 ),
 

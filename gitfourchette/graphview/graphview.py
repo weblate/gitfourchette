@@ -33,10 +33,10 @@ class GraphView(QListView):
 
         def __str__(self):
             if self.foundButHidden:
-                m = translate("GraphView", "Commit “{0}” isn’t shown in the graph because it is part of a hidden branch.")
+                m = translate("GraphView", "Commit {0} isn’t shown in the graph because it is part of a hidden branch.")
             else:
-                m = translate("GraphView", "Commit “{0}” isn’t shown in the graph.")
-            return m.format(shortHash(self.oid))
+                m = translate("GraphView", "Commit {0} isn’t shown in the graph.")
+            return m.format(tquo(shortHash(self.oid)))
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -78,7 +78,7 @@ class GraphView(QListView):
             with suppress(KeyError, StopIteration):
                 rrc = state.reverseRefCache[oid]
                 target = next(r for r in rrc if r.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
-                mergeCaption = self.tr("&Merge into “{0}”...").format(escamp(state.homeBranch))
+                mergeCaption = self.tr("&Merge into {0}...").format(lquo(state.homeBranch))
                 mergeActions = [
                     TaskBook.action(MergeBranch, name=mergeCaption, taskArgs=(target,)),
                     ActionDef.SEPARATOR,
@@ -207,7 +207,7 @@ class GraphView(QListView):
         for p in commit.parent_ids:
             parentHashes.append(NavLocator.inCommit(p).toHtml("[" + shortHash(p) + "]"))
 
-        parentTitle = self.tr("%n parent(s)", "", len(parentHashes))
+        parentTitle = self.tr("%n parents", "singular form can just say 'Parent'", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
         likelyShallowRoot = len(parentHashes) == 0 and self.repo.is_shallow
@@ -359,14 +359,6 @@ class GraphView(QListView):
 
         return newFilterIndex
 
-    def getFilterIndexError(self, filterIndex: QModelIndex, oid: Oid) -> str:
-        if filterIndex is None:
-            return self.tr("Commit “{0}” not found or not loaded.").format(shortHash(oid))
-        elif not filterIndex.isValid():
-            return self.tr("Cannot jump to commit “{0}” because it is on a hidden branch.").format(shortHash(oid))
-        else:
-            return ""
-
     def selectCommit(self, oid: Oid, silent=True):
         with suppress(GraphView.SelectCommitError if silent else ()):
             filterIndex = self.getFilterIndexForCommit(oid)
@@ -429,8 +421,8 @@ class GraphView(QListView):
             # Wrap around once
             self.search(op, didWrap=True)
         else:
-            displayTerm = escape(self.searchBar.rawSearchTerm)
-            showInformation(self, self.tr("Find Commit"), self.tr("“{0}” not found.").format(displayTerm))
+            displayTerm = self.searchBar.rawSearchTerm
+            showInformation(self, self.tr("Find Commit"), self.tr("{0} not found.").format(bquo(displayTerm)))
 
     def getVisibleRowRange(self) -> range:
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly

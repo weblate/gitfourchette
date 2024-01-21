@@ -47,7 +47,7 @@ class CommitDialog(QDialog):
         elif repoState == GIT_REPOSITORY_STATE_CHERRYPICK:
             warning = self.tr("This commit will conclude the cherry-pick.")
         elif amendingCommitHash:
-            warning = self.tr("You are amending commit “{0}”.").format(amendingCommitHash)
+            warning = self.tr("You are amending commit {0}.").format(lquo(amendingCommitHash))
         elif detachedHead:
             warning = self.tr("You are not in any branch (detached HEAD). "
                               "You should create a branch to keep track of your commit.")

@@ -46,7 +46,10 @@ def makeBrandedDialogLayout(
     return gridLayout
 
 
-def makeBrandedDialog(dialog, innerLayout, promptText, subtitleText: str = ""):
+def makeBrandedDialog(dialog, innerLayout, promptText: str = "", subtitleText: str = ""):
+    if not promptText:
+        promptText = escape(dialog.windowTitle())
+
     gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText)
     gridLayout.addLayout(innerLayout, 2, 3, 1, 1)
 
@@ -58,7 +61,7 @@ def convertToBrandedDialog(
         multilineSubtitle: bool = False,
 ):
     if not promptText:
-        promptText = dialog.windowTitle()
+        promptText = escape(dialog.windowTitle())
 
     innerContent = QWidget(dialog)
     innerContent.setLayout(dialog.layout())
@@ -119,7 +122,7 @@ def showTextInputDialog(
         validator.connectInput(lineEdit, validate)
         validator.run()
 
-    makeBrandedDialog(dlg, layout, title)
+    makeBrandedDialog(dlg, layout)
 
     # This size isn't guaranteed. But it'll expand the dialog horizontally if the label is shorter.
     dlg.setMinimumWidth(512)

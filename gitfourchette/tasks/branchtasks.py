@@ -20,11 +20,11 @@ class SwitchBranch(RepoTask):
 
         if self.repo.branches.local[newBranch].is_checked_out():
             raise AbortTask(
-                self.tr("Branch <b>“{0}”</b> is already checked out.").format(escape((newBranch))),
+                self.tr("Branch {0} is already checked out.").format(bquo(newBranch)),
                 'information')
 
         if askForConfirmation:
-            text = self.tr("Do you want to switch to branch <b>“{0}”</b>?").format(escape(newBranch))
+            text = self.tr("Do you want to switch to branch {0}?").format(bquo(newBranch))
             verb = self.tr("Switch")
             yield from self.flowConfirm(text=text, verb=verb)
 
@@ -43,7 +43,7 @@ class RenameBranch(RepoTask):
 
         dlg = showTextInputDialog(
             self.parentWidget(),
-            self.tr("Rename local branch “{0}”").format(escape(elide(oldBranchName))),
+            self.tr("Rename local branch {0}").format(tquoe(oldBranchName)),
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),
@@ -67,11 +67,11 @@ class DeleteBranch(RepoTask):
 
         if localBranchName == self.repo.head_branch_shorthand:
             text = paragraphs(
-                self.tr("Cannot delete “{0}” because it is the current branch.").format(escape(localBranchName)),
+                self.tr("Cannot delete {0} because it is the current branch.").format(bquo(localBranchName)),
                 self.tr("Before you try again, switch to another branch."))
             raise AbortTask(text)
 
-        text = paragraphs(self.tr("Really delete local branch <b>“{0}”</b>?").format(escape(localBranchName)),
+        text = paragraphs(self.tr("Really delete local branch {0}?").format(bquo(localBranchName)),
                           tr("This cannot be undone!"))
 
         yield from self.flowConfirm(
@@ -253,8 +253,8 @@ class FastForwardBranch(RepoTask):
 
         upstream: Branch = branch.upstream
         if not upstream:
-            raise AbortTask(self.tr("Can’t fast-forward “{0}” because it isn’t tracking a remote branch."
-                                    ).format(escape(branch.shorthand)))
+            raise AbortTask(self.tr("Can’t fast-forward {0} because it isn’t tracking a remote branch."
+                                    ).format(bquo(branch.shorthand)))
 
         remoteBranchName = upstream.shorthand
 
@@ -271,18 +271,20 @@ class FastForwardBranch(RepoTask):
         if upToDate:
             message = [self.tr("No fast-forwarding necessary.")]
             if ahead:
-                message.append(self.tr("Your local branch “{0}” is ahead of “{1}”.").format(
-                    escape(localBranchName), escape(remoteBranchName)))
+                message.append(self.tr("Your local branch {0} is ahead of {1}."))
             else:
-                message.append(self.tr("Your local branch “{0}” is already up-to-date with “{1}”.").format(
-                    escape(localBranchName), escape(remoteBranchName)))
-            showInformation(self.parentWidget(), self.name(), paragraphs(message))
+                message.append(self.tr("Your local branch {0} is already up-to-date with {1}."))
+            message = paragraphs(message).format(bquo(localBranchName), bquo(remoteBranchName))
+            showInformation(self.parentWidget(), self.name(), message)
 
     def onError(self, exc):
         if isinstance(exc, DivergentBranchesError):
+            lb = exc.local_branch.shorthand
+            rb = exc.remote_branch.shorthand
             text = paragraphs(
-                self.tr("Can’t fast-forward “{0}” to “{1}”.").format(exc.local_branch.shorthand, exc.remote_branch.shorthand),
-                self.tr("The branches are divergent."))
+                self.tr("Can’t fast-forward {0} to {1}."),
+                self.tr("The branches are divergent."),
+            ).format(bquo(lb), bquo(rb))
             showWarning(self.parentWidget(), self.name(), text)
         else:
             super().onError(exc)
@@ -329,7 +331,7 @@ class MergeBranch(RepoTask):
         elif analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
             message = paragraphs(
                 self.tr("No merge is necessary."),
-                self.tr("Your branch “{0}” is already up-to-date with “{1}”.").format(myShorthand, them))
+                self.tr("Your branch {0} is already up-to-date with {1}.").format(bquo(myShorthand), bquo(them)))
             raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_UNBORN:
@@ -337,13 +339,13 @@ class MergeBranch(RepoTask):
             raise AbortTask(message)
 
         elif analysis == GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL:
-            message = self.tr("Your branch <b>“{0}”</b> can simply be fast-forwarded to <b>“{1}”</b>."
-                              ).format(myShorthand, them)
+            message = self.tr("Your branch {0} can simply be fast-forwarded to {1}."
+                              ).format(bquo(myShorthand), bquo(them))
             details = paragraphs(
                 self.tr("<b>Fast-forwarding</b> means that the tip of your branch will be moved to a more "
                         "recent commit in a linear path, without the need to create a merge commit."),
-                self.tr("In this case, “{0}” will be fast-forwarded to “{1}”."),
-            ).format(myShorthand, shortHash(target))
+                self.tr("In this case, {0} will be fast-forwarded to {1}."),
+            ).format(bquo(myShorthand), bquo(shortHash(target)))
             yield from self.flowConfirm(text=message, verb=self.tr("Fast-Forward"),
                                         detailText=details, detailLink=self.tr("What does this mean?"))
             yield from self.flowEnterWorkerThread()
@@ -351,7 +353,7 @@ class MergeBranch(RepoTask):
 
         elif analysis == GIT_MERGE_ANALYSIS_NORMAL:
             message = paragraphs(
-                self.tr("Merging <b>“{0}”</b> into <b>“{1}”</b> may cause conflicts.").format(them, myShorthand),
+                self.tr("Merging {0} into {1} may cause conflicts.").format(bquo(them), bquo(myShorthand)),
                 self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
             yield from self.flowConfirm(text=message, verb=self.tr("Merge"))
             yield from self.flowEnterWorkerThread()

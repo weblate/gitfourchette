@@ -292,7 +292,7 @@ class Jump(RepoTask):
                 rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(self.tr("Empty commit.")))
 
             # Set header text
-            rw.committedHeader.setText(self.tr("%n change(s) in {0}:", "", numChanges
+            rw.committedHeader.setText(self.tr("%n changes in {0}:", "", numChanges
                                                ).format(shortHash(locator.commit)))
             rw.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
@@ -303,7 +303,7 @@ class Jump(RepoTask):
             rw.diffHeader.setText(self.tr("Empty commit"))
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("This commit is empty."),
-                self.tr("Commit “{0}” doesn’t affect any files.").format(shortHash(locator.commit)),
+                self.tr("Commit {0} doesn’t affect any files.").format(hquo(shortHash(locator.commit))),
                 QStyle.StandardPixmap.SP_MessageBoxInformation))
             self.setFinalLocator(locator.replace(path=""))
             return None  # Force early out

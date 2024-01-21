@@ -467,8 +467,8 @@ class MainWindow(QMainWindow):
 
         superproject = rw.state.superproject if rw.state else settings.history.getRepoSuperproject(rw.workdir)
         if superproject:
-            superprojectName = escamp(settings.history.getRepoTabName(superproject))
-            superprojectLabel = self.tr("Open Superproject “{0}”").format(superprojectName)
+            superprojectName = settings.history.getRepoTabName(superproject)
+            superprojectLabel = self.tr("Open Superproject {0}").format(lquo(superprojectName))
         else:
             superprojectLabel = self.tr("Open Superproject")
 
@@ -517,7 +517,7 @@ class MainWindow(QMainWindow):
             excMessageBox(
                 exc,
                 self.tr("Open repository"),
-                self.tr("Couldn’t open the repository at “{0}”.").format(escape(path)),
+                self.tr("Couldn’t open the repository at {0}.").format(bquo(path)),
                 parent=self,
                 icon='warning')
             return None
@@ -641,11 +641,11 @@ class MainWindow(QMainWindow):
             basename = os.path.basename(fullPath)
             askConfirmation(
                 self,
-                self.tr("Open “{0}”").format(basename),
+                self.tr("Open {0}").format(tquo(basename)),
                 paragraphs(
-                    self.tr("There’s no file at this location:") + "<br>" + escape(fullPath),
+                    self.tr("File {0} does not exist.").format(bquo(fullPath)),
                     self.tr("Do you want to create it?")),
-                okButtonText=self.tr("Create “{0}”").format(basename),
+                okButtonText=self.tr("Create {0}").format(lquo(basename)),
                 callback=createAndOpen)
         else:
             openInTextEditor(self, fullPath)
@@ -716,8 +716,8 @@ class MainWindow(QMainWindow):
         humanSize = self.locale().formattedDataSize(sizeOnDisk)
 
         askPrompt = (
-                self.tr("Do you want to permanently delete <b>%n</b> discarded patch(es)?", "", patchCount) + "<br>" +
-                self.tr("This will free up {0} on disk.").format(humanSize) + "<br>" +
+                self.tr("Do you want to permanently delete <b>%n</b> discarded patches?", "", patchCount) + "<br>" +
+                self.tr("This will free up {0} on disk.").format(escape(humanSize)) + "<br>" +
                 translate("Global", "This cannot be undone!"))
 
         askConfirmation(
@@ -745,8 +745,8 @@ class MainWindow(QMainWindow):
 
         if not detectParentRepo or not parentRepo:
             if not allowNonEmptyDirectory and os.listdir(path):
-                message = self.tr("Are you sure you want to initialize a Git repository in <b>“{0}”</b>? "
-                                  "This directory isn’t empty.").format(escape(path))
+                message = self.tr("Are you sure you want to initialize a Git repository in {0}? "
+                                  "This directory isn’t empty.").format(bquo(path))
                 askConfirmation(self, self.tr("Directory isn’t empty"), message, messageBoxIcon='warning',
                                 callback=lambda: self.newRepo(path, detectParentRepo, allowNonEmptyDirectory=True))
                 return
@@ -755,12 +755,13 @@ class MainWindow(QMainWindow):
                 pygit2.init_repository(path)
                 self.openRepo(path, exactMatch=True)
             except Exception as exc:
-                message = self.tr("Couldn’t create an empty repository in “{0}”.").format(escape(path))
+                message = self.tr("Couldn’t create an empty repository in {0}.").format(bquo(path))
                 excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
 
         if parentRepo:
             parentRepo = os.path.normpath(parentRepo)
             parentWorkdir = os.path.dirname(parentRepo) if os.path.basename(parentRepo) == ".git" else parentRepo
+            parentBasename = os.path.basename(parentRepo)
 
             if parentRepo == path or parentWorkdir == path:
                 message = paragraphs(
@@ -780,16 +781,21 @@ class MainWindow(QMainWindow):
                     "\t" + escape(parentWorkdir),
                     self.tr("Do you want to create a new repository in the subfolder anyway?")
                 )
+
                 qmb = asyncMessageBox(
                     self, 'information', self.tr("Repository found in parent folder"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+
                 openButton = qmb.button(QMessageBox.StandardButton.Open)
-                openButton.setText(self.tr("&Open parent repo “{0}”").format(os.path.basename(parentWorkdir)))
+                openButton.setText(self.tr("&Open parent repo {0}").format(lquo(parentBasename)))
                 openButton.clicked.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
+
                 createButton = qmb.button(QMessageBox.StandardButton.Ok)
                 createButton.setText(self.tr("&Create repo in subfolder"))
                 createButton.clicked.connect(lambda: self.newRepo(path, detectParentRepo=False))
+
                 qmb.show()
+
             return
 
     def cloneDialog(self, initialUrl: str = ""):

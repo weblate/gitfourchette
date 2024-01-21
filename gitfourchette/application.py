@@ -104,6 +104,7 @@ class GFApplication(QApplication):
 
     def bootUi(self):
         from gitfourchette.mainwindow import MainWindow
+        from gitfourchette.toolbox import bquo
 
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
@@ -117,8 +118,8 @@ class GFApplication(QApplication):
             QMessageBox.information(
                 self.mainWindow,
                 translate("Prefs", "Qt binding unavailable"),
-                translate("Prefs", "Your preferred Qt binding “{0}” is not available.\nUsing “{1}” instead."
-                          ).format(qtBindingBootPref, qtBindingName.lower()))
+                translate("Prefs", "Your preferred Qt binding {0} is not available.<br>Using {1} instead."
+                          ).format(bquo(qtBindingBootPref), bquo(qtBindingName.lower())))
 
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:

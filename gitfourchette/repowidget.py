@@ -898,7 +898,7 @@ class RepoWidget(QWidget):
                 mh = self.state.mergeheadsCache[0]
                 name = self.state.reverseRefCache[mh][0]
                 name = RefPrefix.split(name)[1]
-                bannerTitle = self.tr("Merging “{0}”").format(escape(name))
+                bannerTitle = self.tr("Merging {0}").format(bquo(name))
             except (IndexError, KeyError):
                 pass
 

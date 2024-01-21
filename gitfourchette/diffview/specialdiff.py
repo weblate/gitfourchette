@@ -79,11 +79,11 @@ class SpecialDiffError(Exception):
                 message = translate("Diff", "This untracked folder is the root of another Git repository.")
 
                 # TODO: if we had the full path to the root repo, we could just make a standard file link, and we wouldn't need the "opensubfolder" authority
-                prompt1 = translate("Diff", "Open “{0}” in new tab").format(treeName)
+                prompt1 = translate("Diff", "Open {0} in new tab").format(bquo(treeName))
                 openLink = makeInternalLink("opensubfolder", treePath)
                 longform.append(f"<center><p><a href='{openLink}'>{prompt1}</a></p></center>")
 
-                prompt = translate("Diff", "Absorb “{0}” as submodule").format(treeName)
+                prompt = translate("Diff", "Absorb {0} as submodule").format(bquo(treeName))
                 taskLink = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
                 longform.append(f"<center><p><a href='{taskLink}'>{prompt}</a></p></center>")
             elif delta.status in [GIT_DELTA_ADDED, GIT_DELTA_UNTRACKED]:
@@ -93,7 +93,7 @@ class SpecialDiffError(Exception):
 
         if oldFile.path != newFile.path:
             intro = translate("Diff", "Renamed:")
-            details.append(f"{intro} “{escape(oldFile.path)}” &rarr; “{escape(newFile.path)}”.")
+            details.append(f"{intro} {hquo(oldFile.path)} &rarr; {hquo(newFile.path)}.")
 
         if oldFileExists and oldFile.mode != newFile.mode:
             intro = translate("Diff", "Mode change:")
@@ -156,12 +156,12 @@ class SpecialDiffError(Exception):
         shortName = os.path.basename(submodule.name)
         localPath = os.path.join(repo.workdir, submodule.path)
         linkHref = QUrl.fromLocalFile(localPath).toString()
-        linkText = translate("Diff", "Open submodule “{0}”").format(shortName)
+        linkText = translate("Diff", "Open submodule {0}").format(bquo(shortName))
 
         oldText = translate("Diff", "Old commit:")
         newText = translate("Diff", "New commit:")
 
-        text1 = translate("Diff", "Submodule “<b>{0}</b>” was updated.").format(shortName)
+        text1 = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
         text2 = f"<a href='{linkHref}'>{linkText}</a>"
         text3 = (f"<table><tr><td>{oldText} </td><td><code>{oldHash}</code> {oldSuffix}</td></tr>"
                  f"<tr><td>{newText} </td><td><code>{newHash}</code> {newSuffix}</td></tr></table>")

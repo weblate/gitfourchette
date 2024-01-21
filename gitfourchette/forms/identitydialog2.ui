@@ -17,7 +17,7 @@
    <item row="3" column="0">
     <widget class="QGroupBox" name="identityGroupBox">
      <property name="title">
-      <string>Custom identity for “{0}”</string>
+      <string>Custom identity for {0}</string>
      </property>
      <layout class="QFormLayout" name="formLayout">
       <property name="fieldGrowthPolicy">
@@ -71,7 +71,7 @@
    <item row="1" column="0">
     <widget class="QCheckBox" name="localIdentityCheckBox">
      <property name="text">
-      <string>&amp;Use a custom identity in repository “{0}”</string>
+      <string>&amp;Use a custom identity in repository {0}</string>
      </property>
     </widget>
    </item>

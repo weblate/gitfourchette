@@ -45,11 +45,11 @@ class TrackedBranchDialog(QDialog):
 
         explainer = "<p>"
         if trackedBranch:
-            explainer += self.tr("Local branch <b>“{0}”</b> currently tracks remote branch <b>“{1}”</b>.")\
-                .format(escape(localBranch.shorthand), escape(trackedBranch.shorthand))
+            explainer += self.tr("Local branch {0} currently tracks remote branch {1}."
+                                 ).format(bquo(localBranch.shorthand), bquo(trackedBranch.shorthand))
         else:
-            explainer += self.tr("Local branch <b>“{0}”</b> currently does <b>not</b> track a remote branch.")\
-                .format(escape(localBranch.shorthand))
+            explainer += self.tr("Local branch {0} currently does <b>not</b> track a remote branch."
+                                 ).format(bquo(localBranch.shorthand))
         explainer += "</p><p>" + self.tr("Pick a new remote branch to track:") + "</p>"
         explainerLabel = QLabel(explainer)
         explainerLabel.setWordWrap(True)
@@ -64,7 +64,7 @@ class TrackedBranchDialog(QDialog):
         layout.addWidget(hintLabel)
         layout.addWidget(buttonBox)
 
-        makeBrandedDialog(self, layout, self.tr("Set branch tracked by “{0}”").format(escape(elide(localBranch.shorthand))))
+        makeBrandedDialog(self, layout, self.tr("Set branch tracked by {0}").format(hquoe(localBranch.shorthand)))
 
         self.setModal(True)
         self.resize(512, 128)

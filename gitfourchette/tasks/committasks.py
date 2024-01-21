@@ -213,7 +213,7 @@ class SetUpRepoIdentity(RepoTask):
         ui.setupUi(dlg)
         dlg.ui = ui  # for easier access in unit testing
 
-        ui.localIdentityCheckBox.setText(ui.localIdentityCheckBox.text().format(html.escape(repoName)))
+        ui.localIdentityCheckBox.setText(ui.localIdentityCheckBox.text().format(lquo(repoName)))
         ui.localIdentityCheckBox.setChecked(useLocalIdentity)
 
         def onLocalIdentityCheckBoxChanged(newState):
@@ -229,12 +229,12 @@ class SetUpRepoIdentity(RepoTask):
                 ui.nameEdit.setPlaceholderText("")
                 ui.emailEdit.setPlaceholderText("")
 
-                groupBoxTitle = translate("IdentityDialog2", "Custom identity for “{0}”").format(html.escape(repoName))
+                groupBoxTitle = translate("IdentityDialog2", "Custom identity for {0}").format(lquo(repoName))
                 okButtonText = translate("IdentityDialog2", "Set custom identity")
             else:
                 initialName, initialEmail = get_git_global_identity()
 
-                groupBoxTitle = translate("IdentityDialog2", "Global identity (for “{0}” and other repos)").format(html.escape(repoName))
+                groupBoxTitle = translate("IdentityDialog2", "Global identity (for {0} and other repos)").format(lquo(repoName))
                 okButtonText = translate("IdentityDialog2", "Set global identity")
 
             ui.nameEdit.setText(initialName)
@@ -311,7 +311,7 @@ class CheckoutCommit(RepoTask):
             ui.switchToLocalBranchRadioButton.setVisible(False)
 
         dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
-        convertToBrandedDialog(dlg, subtitleText=f"“{commitMessage}”")
+        convertToBrandedDialog(dlg, subtitleText=tquo(commitMessage))
         setWindowModal(dlg)
         yield from self.flowDialog(dlg)
 
@@ -372,7 +372,7 @@ class NewTag(RepoTask):
 
         dlg = showTextInputDialog(
             self.parentWidget(),
-            self.tr("New tag on commit “{0}”").format(shortHash(oid)),
+            self.tr("New tag on commit {0}").format(tquo(shortHash(oid))),
             self.tr("Enter tag name:"),
             okButtonText=self.tr("Create Tag"),
             deleteOnClose=False,
@@ -398,7 +398,7 @@ class DeleteTag(RepoTask):
         # TODO: This won't delete the tag on remotes
 
         yield from self.flowConfirm(
-            text=self.tr("Really delete tag <b>“{0}”</b>?").format(tagName),
+            text=self.tr("Really delete tag {0}?").format(bquo(tagName)),
             verb=self.tr("Delete tag"),
             buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
@@ -442,8 +442,8 @@ class CherrypickCommit(RepoTask):
         yield from self.flowEnterUiThread()
 
         if dud:
-            info = self.tr("There’s nothing to cherry-pick from “{0}” that the current branch doesn’t already have."
-                           ).format(shortHash(oid))
+            info = self.tr("There’s nothing to cherry-pick from {0} that the current branch doesn’t already have."
+                           ).format(bquo(shortHash(oid)))
             raise AbortTask(info, "information")
 
         self.rw.state.setDraftCommitMessage(commit.message, author=commit.author)
@@ -451,8 +451,8 @@ class CherrypickCommit(RepoTask):
         if not anyConflicts:
             yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
             yield from self.flowConfirm(
-                text=self.tr("Cherry-picking “{0}” was successful. "
-                             "Do you want to commit the result now?").format(shortHash(oid)),
+                text=self.tr("Cherry-picking {0} was successful. "
+                             "Do you want to commit the result now?").format(bquo(shortHash(oid))),
                 verb=self.tr("Commit"),
                 cancelText=self.tr("Review changes"))
             yield from self.flowSubtask(NewCommit)

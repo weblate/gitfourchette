@@ -45,10 +45,10 @@ class DeleteRemoteBranch(_BaseNetTask):
         remoteName, _ = split_remote_branch_shorthand(remoteBranchShorthand)
 
         text = paragraphs(
-            self.tr("Really delete branch <b>“{0}”</b> from the remote repository?"),
-            self.tr("The remote branch will disappear for all users of remote “{1}”.")
+            self.tr("Really delete branch {0} from the remote repository?"),
+            self.tr("The remote branch will disappear for all users of remote {1}.")
             + " " + tr("This cannot be undone!")
-        ).format(escape(remoteBranchShorthand), escape(remoteName))
+        ).format(bquo(remoteBranchShorthand), bquo(remoteName))
         verb = self.tr("Delete on remote")
         yield from self.flowConfirm(text=text, verb=verb, buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
@@ -72,7 +72,7 @@ class RenameRemoteBranch(_BaseNetTask):
 
         dlg = showTextInputDialog(
             self.parentWidget(),
-            self.tr("Rename remote branch “{0}”").format(escape(remoteBranchName)),
+            self.tr("Rename remote branch {0}").format(tquoe(remoteBranchName)),
             self.tr("Enter new name:"),
             newBranchName,
             okButtonText=self.tr("Rename on remote"),
@@ -113,8 +113,8 @@ class FetchRemoteBranch(_BaseNetTask):
                 raise AbortTask(message)
 
             if not branch.upstream:
-                message = self.tr("Can’t fetch remote changes on “{0}” because this branch "
-                                  "isn’t tracking a remote branch.").format(branch.shorthand)
+                message = self.tr("Can’t fetch remote changes on {0} because this branch "
+                                  "isn’t tracking a remote branch.").format(bquoe(branch.shorthand))
                 raise AbortTask(message)
 
             remoteBranchName = branch.upstream.shorthand
