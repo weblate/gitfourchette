@@ -16,14 +16,14 @@ class LineData:
     text: str
     "Line text for visual representation."
 
-    diffLine: DiffLine | None
-    "pygit2 diff line data."
-
-    cursorStart: int
-    "Cursor position at start of line in QDocument."
-
     hunkPos: DiffLinePos
     "Which hunk this line pertains to, and its position in the hunk."
+
+    diffLine: DiffLine | None = None
+    "pygit2 diff line data."
+
+    cursorStart: int = -1
+    "Cursor position at start of line in QDocument."
 
     cursorEnd: int = -1
     "Cursor position at end of line in QDocument."
@@ -89,59 +89,7 @@ class DiffDocument:
         if len(patch.hunks) == 0:
             raise SpecialDiffError.noChange(patch.delta)
 
-        style = DiffStyle()
-
-        document = QTextDocument()  # recreating a document is faster than clearing the existing one
-        document.setObjectName("DiffPatchDocument")
-        document.setDocumentLayout(QPlainTextDocumentLayout(document))
-
-        cursor: QTextCursor = QTextCursor(document)
-
-        # Begin batching text insertions for performance.
-        # This prevents Qt from recomputing the document's layout after every line insertion.
-        cursor.beginEditBlock()
-
-        defaultBF = cursor.blockFormat()
-        defaultCF = cursor.charFormat()
-
-        assert document.isEmpty()
-
         lineData = []
-
-        def insertLineData(ld: LineData, bf, cf):
-            lineData.append(ld)
-
-            trailer = None
-
-            if ld.text.endswith('\r\n'):
-                trimBack = -2
-                if settings.prefs.diff_showStrayCRs:
-                    trailer = "<CRLF>"
-            elif ld.text.endswith('\r'):
-                trimBack = -1
-                if settings.prefs.diff_showStrayCRs:
-                    trailer = "<CR>"
-            elif ld.text.endswith('\n'):
-                trimBack = -1
-            else:
-                trailer = translate("Diff", "<no newline at end of file>")
-                trimBack = None
-
-            if not document.isEmpty():
-                cursor.insertBlock()
-                ld.cursorStart = cursor.position()
-            else:
-                ld.cursorStart = 0
-
-            cursor.setBlockFormat(bf)
-            cursor.setBlockCharFormat(cf)
-            cursor.insertText(ld.text[:trimBack])
-
-            if trailer:
-                cursor.setCharFormat(style.warningCF1)
-                cursor.insertText(trailer)
-
-            ld.cursorEnd = cursor.position()
 
         clumpID = 0
         numLinesInClump = 0
@@ -151,12 +99,8 @@ class DiffDocument:
             oldLine = hunk.old_start
             newLine = hunk.new_start
 
-            hunkHeaderLD = LineData(
-                text=hunk.header,
-                cursorStart=cursor.position(),
-                diffLine=None,
-                hunkPos=DiffLinePos(hunkID, -1))
-            insertLineData(hunkHeaderLD, style.arobaseBF, style.arobaseCF)
+            hunkHeaderLD = LineData(text=hunk.header, hunkPos=DiffLinePos(hunkID, -1))
+            lineData.append(hunkHeaderLD)
 
             for hunkLineNum, diffLine in enumerate(hunk.lines):
                 origin = diffLine.origin
@@ -178,24 +122,16 @@ class DiffDocument:
                         target.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
                         QStyle.StandardPixmap.SP_MessageBoxWarning)
 
-                ld = LineData(
-                    text=content,
-                    cursorStart=cursor.position(),
-                    diffLine=diffLine,
-                    hunkPos=DiffLinePos(hunkID, hunkLineNum))
-
-                bf = defaultBF
+                ld = LineData(text=content, hunkPos=DiffLinePos(hunkID, hunkLineNum), diffLine=diffLine)
 
                 assert origin in " -+", F"diffline origin: '{origin}'"
                 if origin == '+':
-                    bf = style.plusBF
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == -1
                     newLine += 1
                     ld.clumpID = clumpID
                     numLinesInClump += 1
                 elif origin == '-':
-                    bf = style.minusBF
                     assert diffLine.new_lineno == -1
                     assert diffLine.old_lineno == oldLine
                     oldLine += 1
@@ -207,7 +143,73 @@ class DiffDocument:
                     newLine += 1
                     oldLine += 1
 
-                insertLineData(ld, bf, defaultCF)
+                lineData.append(ld)
+
+        style = DiffStyle()
+
+        document = QTextDocument()  # recreating a document is faster than clearing the existing one
+        document.setObjectName("DiffPatchDocument")
+        document.setDocumentLayout(QPlainTextDocumentLayout(document))
+
+        cursor: QTextCursor = QTextCursor(document)
+
+        # Begin batching text insertions for performance.
+        # This prevents Qt from recomputing the document's layout after every line insertion.
+        cursor.beginEditBlock()
+
+        defaultBF = cursor.blockFormat()
+        defaultCF = cursor.charFormat()
+        showStrayCRs = settings.prefs.diff_showStrayCRs
+
+        assert document.isEmpty()
+
+        # Build up document from the lineData array.
+        for ld in lineData:
+            # Decide block format & character format
+            if ld.diffLine is None:
+                bf = style.arobaseBF
+                cf = style.arobaseCF
+            elif ld.diffLine.origin == '+':
+                bf = style.plusBF
+                cf = defaultCF
+            elif ld.diffLine.origin == '-':
+                bf = style.minusBF
+                cf = defaultCF
+            else:
+                bf = defaultBF
+                cf = defaultCF
+
+            # Process line ending
+            trailer = ""
+            if ld.text.endswith('\n'):
+                trimBack = -1
+            elif ld.text.endswith('\r\n'):
+                trimBack = -2
+                if showStrayCRs:
+                    trailer = "<CRLF>"
+            elif ld.text.endswith('\r'):
+                trimBack = -1
+                if showStrayCRs:
+                    trailer = "<CR>"
+            else:
+                trailer = translate("Diff", "<no newline at end of file>")
+                trimBack = None  # yes, None. This will cancel slicing.
+
+            if not document.isEmpty():
+                cursor.insertBlock()
+                ld.cursorStart = cursor.position()
+            else:
+                ld.cursorStart = 0
+
+            cursor.setBlockFormat(bf)
+            cursor.setBlockCharFormat(cf)
+            cursor.insertText(ld.text[:trimBack])
+
+            if trailer:
+                cursor.setCharFormat(style.warningCF1)
+                cursor.insertText(trailer)
+
+            ld.cursorEnd = cursor.position()
 
         # Done batching text insertions.
         cursor.endEditBlock()

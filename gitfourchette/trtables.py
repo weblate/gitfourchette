@@ -175,7 +175,7 @@ class TrTables:
             "diff_largeFileThresholdKB": translate("Prefs", "Load diffs up to # KB"),
             "diff_imageFileThresholdKB": translate("Prefs", "Load images up to # KB"),
             "diff_wordWrap": translate("Prefs", "Word wrap"),
-            "diff_showStrayCRs": translate("Prefs", "Highlight stray “CR” characters"),
+            "diff_showStrayCRs": translate("Prefs", "Highlight alien line endings (CRLF)"),
             "diff_colorblindFriendlyColors": translate("Prefs", "Colorblind-friendly color scheme"),
 
             "tabs_closeButton": translate("Prefs", "Show tab close button"),
