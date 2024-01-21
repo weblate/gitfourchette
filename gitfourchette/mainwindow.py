@@ -57,8 +57,9 @@ class MainWindow(QMainWindow):
         self.sharedSplitterSizes = {}
 
         self.setWindowTitle(qAppName())
-        self.resize(QSize(800, 600))
-        self.move(QPoint(50, 50))
+
+        initialSize = .75 * QApplication.primaryScreen().availableSize()
+        self.resize(initialSize)
 
         self.tabs = QTabWidget2(self)
         self.tabs.currentWidgetChanged.connect(self.onTabCurrentWidgetChanged)
