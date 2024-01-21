@@ -109,22 +109,27 @@ class Jump(RepoTask):
         patch = flv.getPatchForFile(locator.path)
         patchTask: tasks.LoadPatch = yield from self.flowSubtask(tasks.LoadPatch, patch, locator)
         result = patchTask.result
+        resultType = type(result)
 
-        if type(result) == DiffConflict:
+        if resultType is DiffConflict:
             rw.setDiffStackPage("conflict")
             rw.conflictView.displayConflict(result)
-        elif type(result) == SpecialDiffError:
+
+        elif resultType is SpecialDiffError:
             rw.setDiffStackPage("special")
             rw.specialDiffView.displaySpecialDiffError(result)
-        elif type(result) == DiffDocument:
+
+        elif resultType is DiffDocument:
             rw.setDiffStackPage("text")
             if DEVDEBUG:
                 prefix = shortHash(patch.delta.old_file.id) + ".." + shortHash(patch.delta.new_file.id)
                 rw.diffHeader.setText(f"({prefix}) {rw.diffHeader.text()}")
             rw.diffView.replaceDocument(rw.repo, patch, locator, result)
-        elif type(result) == DiffImagePair:
+
+        elif resultType is DiffImagePair:
             rw.setDiffStackPage("special")
             rw.specialDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
+
         else:
             rw.setDiffStackPage("special")
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
