@@ -1,6 +1,6 @@
 import os
 
-from gitfourchette import settings
+from gitfourchette import settings, colors
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides
@@ -83,6 +83,18 @@ class ConflictView(QWidget):
             elif b is self.ui.radioTool:
                 self.openMergeTool.emit(conflict)
 
+    def onMergeFailed(self, conflict: DiffConflict, code: int):
+        if conflict != self.currentConflict:
+            return
+
+        if code < 0:
+            message = self.tr("The merge tool failed to start.") + " " + self._selectMergeToolLink()
+        else:
+            message = self.tr("The merge tool exited without completing the merge (exit code {0})."
+                              ).format(code)
+
+        self.ui.explainer.setText(f"<b style='color: {colors.red.name()}'>" + message)
+
     @staticmethod
     def hardSolve(path: str, oid=NULL_OID):
         HardSolveConflicts.invoke({path: oid})
@@ -148,8 +160,7 @@ class ConflictView(QWidget):
         help = TrTables.conflictHelp(name)
         help = help.format(app=qAppName(), tool=settings.getMergeToolName())
         if radio is self.ui.radioTool:
-            href = makeInternalLink("prefs", PREFKEY_MERGETOOL)
-            help += f" <a href='{href}'>" + self.tr("Select another merge tool...") + "</a>"
+            help += " " + self._selectMergeToolLink()
         self.ui.explainer.setText(help)
 
         self.ui.confirmButton.setText(self.tr("Resolve Conflict"))
@@ -158,3 +169,8 @@ class ConflictView(QWidget):
     def refreshPrefs(self):
         if self.currentConflict:
             self.displayConflict(self.currentConflict)
+
+    def _selectMergeToolLink(self):
+        text = self.tr("Select another merge tool...")
+        href = makeInternalLink("prefs", PREFKEY_MERGETOOL)
+        return f"<a href='{href}'>{text}</a>"

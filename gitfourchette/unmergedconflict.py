@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class UnmergedConflict(QObject):
-    mergeFailed = Signal()
+    mergeFailed = Signal(int)
     mergeComplete = Signal()
 
     process: QProcess | None
@@ -45,6 +45,7 @@ class UnmergedConflict(QObject):
     def startProcess(self):
         self.process = openInMergeTool(self.parent(), self.ancestorPath, self.oursPath, self.theirsPath, self.scratchPath)
         if self.process:
+            self.process.errorOccurred.connect(lambda: self.mergeFailed.emit(-1))
             self.process.finished.connect(self.onMergeProcessFinished)
 
     def onMergeProcessFinished(self, exitCode: int, exitStatus: QProcess.ExitStatus):
@@ -52,13 +53,13 @@ class UnmergedConflict(QObject):
 
         if exitCode != 0 or exitStatus == QProcess.ExitStatus.CrashExit:
             logger.warning(f"Process returned {exitCode}")
-            self.mergeFailed.emit()
+            self.mergeFailed.emit(exitCode)
             return
 
         # If output file still contains original contents,
         # the merge tool probably hasn't done anything
         if filecmp.cmp(self.scratchPath, self.repo.in_workdir(self.conflict.ours.path)):
-            self.mergeFailed.emit()
+            self.mergeFailed.emit(exitCode)
             return
 
         message = paragraphs(

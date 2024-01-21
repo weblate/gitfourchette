@@ -789,8 +789,10 @@ class RepoWidget(QWidget):
     # Conflicts
 
     def openConflictInMergeTool(self, conflict: DiffConflict):
+        self.conflictView.ui.explainer.setText(self.tr("Waiting for merge tool..."))
         umc = UnmergedConflict(self, self.repo, conflict)
         umc.mergeComplete.connect(lambda: self.runTask(tasks.AcceptMergeConflictResolution, umc))
+        umc.mergeFailed.connect(lambda code: self.conflictView.onMergeFailed(conflict, code))
         umc.startProcess()
 
     # -------------------------------------------------------------------------
