@@ -1,4 +1,6 @@
+import difflib
 from dataclasses import dataclass
+from typing import Generator
 
 from gitfourchette import colors
 from gitfourchette import settings
@@ -7,6 +9,7 @@ from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import DiffLinePos
+from gitfourchette.toolbox import *
 
 MAX_LINE_LENGTH = 10_000
 
@@ -31,33 +34,57 @@ class LineData:
     clumpID: int = -1
     "Which clump this line pertains to. 'Clumps' are groups of adjacent +/- lines."
 
+    doppelganger: int = -1
+    "Index of the doppelganger LineData in a perfectly even clump."
+
 
 class DiffStyle:
     def __init__(self):
-        if settings.prefs.diff_colorblindFriendlyColors:
-            self.minusColor = QColor(colors.orange)
-            self.plusColor = QColor(colors.teal)
+        colorblind = settings.prefs.diff_colorblindFriendlyColors
+
+        if colorblind:
+            delColor1 = QColor(colors.orange)
+            addColor1 = QColor(colors.teal)
         else:
-            self.minusColor = QColor(0xff5555)   # Lower-saturation alternative for e.g. foreground text: 0x993333
-            self.plusColor = QColor(0x55ff55)   # Lower-saturation alternative for e.g. foreground text: 0x339933
+            delColor1 = QColor(0xff5555)   # Lower-saturation alternative for e.g. foreground text: 0x993333
+            addColor1 = QColor(0x55ff55)   # Lower-saturation alternative for e.g. foreground text: 0x339933
+        delColor1.setAlphaF(.35)
+        addColor1.setAlphaF(.35)
 
-        self.minusColor.setAlpha(0x58)
-        self.plusColor.setAlpha(0x58)
+        if colorblind:
+            delColor2 = QColor(colors.orange)
+            addColor2 = QColor(colors.teal)
+            delColor2.setAlphaF(.6)
+            addColor2.setAlphaF(.6)
+        elif isDarkTheme():
+            delColor2 = QColor(0x993333)
+            addColor2 = QColor(0x339933)
+            delColor2.setAlphaF(.6)
+            addColor2.setAlphaF(.6)
+        else:
+            delColor2 = QColor(0x993333)
+            addColor2 = QColor(0x339933)
+            delColor2.setAlphaF(.25)
+            addColor2.setAlphaF(.25)
 
-        self.plusBF = QTextBlockFormat()
-        self.plusBF.setBackground(self.plusColor)
+        self.addBF1 = QTextBlockFormat()
+        self.delBF1 = QTextBlockFormat()
+        self.addBF1.setBackground(addColor1)
+        self.delBF1.setBackground(delColor1)
 
-        self.minusBF = QTextBlockFormat()
-        self.minusBF.setBackground(self.minusColor)
+        self.addCF2 = QTextCharFormat()
+        self.delCF2 = QTextCharFormat()
+        self.addCF2.setBackground(addColor2)
+        self.delCF2.setBackground(delColor2)
 
-        self.arobaseBF = QTextBlockFormat()
-        self.arobaseCF = QTextCharFormat()
-        self.arobaseCF.setFontItalic(True)
-        self.arobaseCF.setForeground(QColor(0, 80, 240))
+        self.hunkBF = QTextBlockFormat()
+        self.hunkCF = QTextCharFormat()
+        self.hunkCF.setFontItalic(True)
+        self.hunkCF.setForeground(QColor(0x0050f0))
 
-        self.warningCF1 = QTextCharFormat()
-        self.warningCF1.setFontWeight(QFont.Weight.Bold)
-        self.warningCF1.setForeground(QColor(200, 30, 0))
+        self.warningCF = QTextCharFormat()
+        self.warningCF.setFontWeight(QFont.Weight.Bold)
+        self.warningCF.setForeground(QColor(0xc81e00))
 
 
 @dataclass
@@ -93,6 +120,7 @@ class DiffDocument:
 
         clumpID = 0
         numLinesInClump = 0
+        perfectClumpTally = 0
 
         # For each line of the diff, create a LineData object.
         for hunkID, hunk in enumerate(patch.hunks):
@@ -108,8 +136,20 @@ class DiffDocument:
 
                 # Any lines that aren't +/- break up the current clump
                 if origin not in "+-" and numLinesInClump != 0:
+                    # Process perfect clump (sum of + and - origins is 0)
+                    if numLinesInClump > 0 and perfectClumpTally == 0:
+                        assert (numLinesInClump % 2) == 0, "line count should be even in perfect clumps"
+                        clumpStart = len(lineData) - numLinesInClump
+                        halfClump = numLinesInClump // 2
+                        for doppel1 in range(clumpStart, clumpStart + halfClump):
+                            doppel2 = doppel1 + halfClump
+                            lineData[doppel1].doppelganger = doppel2
+                            lineData[doppel2].doppelganger = doppel1
+
+                    # Start new clump
                     clumpID += 1
                     numLinesInClump = 0
+                    perfectClumpTally = 0
 
                 # Skip GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
                 if origin in "=><":
@@ -131,12 +171,14 @@ class DiffDocument:
                     newLine += 1
                     ld.clumpID = clumpID
                     numLinesInClump += 1
+                    perfectClumpTally += 1
                 elif origin == '-':
                     assert diffLine.new_lineno == -1
                     assert diffLine.old_lineno == oldLine
                     oldLine += 1
                     ld.clumpID = clumpID
                     numLinesInClump += 1
+                    perfectClumpTally -= 1
                 else:
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == oldLine
@@ -164,16 +206,16 @@ class DiffDocument:
         assert document.isEmpty()
 
         # Build up document from the lineData array.
-        for ld in lineData:
+        for i, ld in enumerate(lineData):
             # Decide block format & character format
             if ld.diffLine is None:
-                bf = style.arobaseBF
-                cf = style.arobaseCF
+                bf = style.hunkBF
+                cf = style.hunkCF
             elif ld.diffLine.origin == '+':
-                bf = style.plusBF
+                bf = style.addBF1
                 cf = defaultCF
             elif ld.diffLine.origin == '-':
-                bf = style.minusBF
+                bf = style.delBF1
                 cf = defaultCF
             else:
                 bf = defaultBF
@@ -206,12 +248,51 @@ class DiffDocument:
             cursor.insertText(ld.text[:trimBack])
 
             if trailer:
-                cursor.setCharFormat(style.warningCF1)
+                cursor.setCharFormat(style.warningCF)
                 cursor.insertText(trailer)
 
             ld.cursorEnd = cursor.position()
+
+        # Emphasize doppelganger differences
+        doppelgangerBlocksQueue = []
+        for i, ld in enumerate(lineData):
+            if ld.doppelganger < 0:  # Skip lines without doppelgangers
+                continue
+
+            assert i != ld.doppelganger, "line cannot be its own doppelganger"
+            aheadOfDoppelganger = i < ld.doppelganger
+
+            if aheadOfDoppelganger:
+                sm = difflib.SequenceMatcher(a=ld.text, b=lineData[ld.doppelganger].text)
+                blocks = sm.get_matching_blocks()
+                doppelgangerBlocksQueue.append(blocks)  # Set blocks aside for my doppelganger
+            else:
+                blocks = doppelgangerBlocksQueue.pop(0)  # Consume blocks set aside by my doppelganger
+
+            cf = style.delCF2 if ld.diffLine.origin == '-' else style.addCF2
+            offset = ld.cursorStart
+
+            for x1, x2 in _invertMatchingBlocks(blocks, useA=aheadOfDoppelganger):
+                cursor.setPosition(offset + x1, QTextCursor.MoveMode.MoveAnchor)
+                cursor.setPosition(offset + x2, QTextCursor.MoveMode.KeepAnchor)
+                cursor.setCharFormat(cf)
+
+        assert not doppelgangerBlocksQueue, "should've consumed all doppelganger matching blocks!"
 
         # Done batching text insertions.
         cursor.endEditBlock()
 
         return DiffDocument(document=document, lineData=lineData, style=style)
+
+
+def _invertMatchingBlocks(blockList: list[difflib.Match], useA: bool) -> Generator[tuple[int, int], None, None]:
+    px = 0
+
+    for block in blockList:
+        x1 = block.a if useA else block.b
+        x2 = x1 + block.size
+
+        if px != x1:
+            yield px, x1
+
+        px = x2
