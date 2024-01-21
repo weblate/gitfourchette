@@ -115,6 +115,7 @@ class FileListModel(QAbstractListModel):
 
     entries: list[Entry]
     fileRows: dict[str, int]
+    highlightedCounterpartRow: int
     navContext: NavContext
 
     def __init__(self, parent: QWidget, navContext: NavContext):
@@ -134,6 +135,7 @@ class FileListModel(QAbstractListModel):
     def clear(self):
         self.entries = []
         self.fileRows = {}
+        self.highlightedCounterpartRow = -1
         self.modelReset.emit()
 
     def setDiffs(self, diffs: list[Diff]):
@@ -213,16 +215,33 @@ class FileListModel(QAbstractListModel):
             parentWidget: QWidget = self.parent()
             return QSize(-1, parentWidget.fontMetrics().height())
 
+        elif role == Qt.ItemDataRole.FontRole:
+            if index.row() == self.highlightedCounterpartRow:
+                f: QFont = self.parent().font()
+                f.setUnderline(True)
+                return f
+
         return None
 
-    def getRowForFile(self, path):
+    def getRowForFile(self, path: str) -> int:
+        """
+        Get the row number for the given path.
+        Raise KeyError if the path is absent from this model.
+        """
         return self.fileRows[path]
 
-    def getFileAtRow(self, row: int):
+    def getFileAtRow(self, row: int) -> str:
+        """
+        Get the path corresponding to the given row number.
+        Return an empty string if the row number is invalid.
+        """
         if row < 0 or row >= self.rowCount():
             return ""
         return self.data(self.index(row), FILEPATH_ROLE)
 
-    def hasFile(self, path):
+    def hasFile(self, path: str) -> bool:
+        """
+        Return True if the given path is present in this model.
+        """
         return path in self.fileRows
 

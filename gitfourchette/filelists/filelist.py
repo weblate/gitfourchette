@@ -254,12 +254,40 @@ class FileList(QListView):
 
         self.selectedCountChanged.emit(numSelectedTotal)
 
+        # We're the active FileList, clear counterpart.
+        self._setCounterpart(-1)
+
         if current and current.isValid():
             locator = self.getNavLocatorForIndex(current)
             locator = locator.withExtraFlags(NavFlags.AllowMultiSelect)
             self.jump.emit(locator)
         else:
             self.nothingClicked.emit()
+
+    def highlightCounterpart(self, loc: NavLocator):
+        try:
+            row = self.flModel.getRowForFile(loc.path)
+        except KeyError:
+            row = -1
+        self._setCounterpart(row)
+
+    def _setCounterpart(self, newRow: int):
+        model = self.flModel
+        oldRow = model.highlightedCounterpartRow
+
+        if oldRow == newRow:
+            return
+
+        model.highlightedCounterpartRow = newRow
+
+        if oldRow >= 0:
+            oldIndex = model.index(oldRow, 0)
+            self.update(oldIndex)
+
+        if newRow >= 0:
+            newIndex = model.index(newRow, 0)
+            self.selectionModel().setCurrentIndex(newIndex, QItemSelectionModel.SelectionFlag.NoUpdate)
+            self.update(newIndex)
 
     def getNavLocatorForIndex(self, index: QModelIndex):
         filePath = index.data(FILEPATH_ROLE)

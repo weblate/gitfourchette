@@ -88,8 +88,10 @@ class Jump(RepoTask):
             if anyFile:
                 if flv is rw.stagedFiles:
                     rw.unstageButton.setEnabled(True)
+                    rw.dirtyFiles.highlightCounterpart(locator)
                 elif flv is rw.dirtyFiles:
                     rw.stageButton.setEnabled(True)
+                    rw.stagedFiles.highlightCounterpart(locator)
 
             # Set correct card in filesStack (after selecting the file to avoid flashing)
             if locator.context == NavContext.COMMITTED:
