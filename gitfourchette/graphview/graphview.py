@@ -81,8 +81,16 @@ class GraphView(QListView):
                 mergeCaption = self.tr("&Merge into {0}...").format(lquo(state.homeBranch))
                 mergeActions = [
                     TaskBook.action(MergeBranch, name=mergeCaption, taskArgs=(target,)),
-                    ActionDef.SEPARATOR,
                 ]
+
+        stashActions = []
+        with suppress(KeyError, StopIteration):
+            rrc = state.reverseRefCache[oid]
+            target = next(r for r in rrc if r.startswith("stash@{"))
+            stashActions = [
+                TaskBook.action(ApplyStash, taskArgs=oid),
+                TaskBook.action(DropStash, taskArgs=oid),
+            ]
 
         if not oid:
             actions = [
@@ -97,10 +105,12 @@ class GraphView(QListView):
             checkoutAction.setShortcut(QKeySequence("Return"))
 
             actions = [
+                *mergeActions,
+                *stashActions,
+                ActionDef.SEPARATOR,
                 TaskBook.action(NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
                 TaskBook.action(NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
-                *mergeActions,
                 checkoutAction,
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,
