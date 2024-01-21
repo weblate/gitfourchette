@@ -5,7 +5,7 @@ from typing import Callable, Generator
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
-from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks import *
@@ -256,6 +256,7 @@ class FileList(QListView):
 
         if current and current.isValid():
             locator = self.getNavLocatorForIndex(current)
+            locator = locator.withExtraFlags(NavFlags.AllowMultiSelect)
             self.jump.emit(locator)
         else:
             self.nothingClicked.emit()
@@ -361,7 +362,7 @@ class FileList(QListView):
         else:
             return ""
 
-    def selectFile(self, file: str):
+    def selectFile(self, file: str) -> bool:
         if not file:
             return False
 

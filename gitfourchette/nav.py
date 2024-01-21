@@ -18,6 +18,7 @@ class NavFlags(enum.IntFlag):
     AllowWriteIndex = enum.auto()
     AllowLongLines = enum.auto()
     AllowLargeDiffs = enum.auto()
+    AllowMultiSelect = enum.auto()
 
     DefaultFlags = 0
 

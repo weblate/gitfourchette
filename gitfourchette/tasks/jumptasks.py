@@ -77,6 +77,10 @@ class Jump(RepoTask):
             # Select correct row in file list
             anyFile = False
             if locator.path:
+                # Fix multiple "ghost" selections in DirtyFiles/StagedFiles with JumpBackOrForward.
+                if not locator.hasFlags(NavFlags.AllowMultiSelect):
+                    flv.clearSelection()
+
                 anyFile = flv.selectFile(locator.path)
 
             rw.stageButton.setEnabled(False)
