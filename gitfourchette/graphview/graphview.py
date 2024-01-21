@@ -93,20 +93,23 @@ class GraphView(QListView):
                 TaskBook.action(ExportWorkdirAsPatch, "&X"),
             ]
         else:
+            checkoutAction = TaskBook.action(CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
+            checkoutAction.setShortcut(QKeySequence("Return"))
+
             actions = [
                 TaskBook.action(NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
                 TaskBook.action(NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 *mergeActions,
-                TaskBook.action(CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid),
+                checkoutAction,
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,
                 TaskBook.action(CherrypickCommit, self.tr("Cherry &Pick..."), taskArgs=oid),
                 TaskBook.action(RevertCommit, self.tr("Re&vert..."), taskArgs=oid),
                 TaskBook.action(ExportCommitAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard),
-                ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation),
+                ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard, shortcuts=GlobalShortcuts.copy),
+                ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation, shortcuts=QKeySequence("Space")),
             ]
 
         menu = ActionDef.makeQMenu(self, actions)
@@ -153,6 +156,10 @@ class GraphView(QListView):
             super().mouseDoubleClickEvent(event)
 
     def keyPressEvent(self, event: QKeyEvent):
+        if event.matches(QKeySequence.StandardKey.Copy):
+            self.copyCommitHashToClipboard()
+            return
+
         k = event.key()
         oid = self.currentCommitOid
 
