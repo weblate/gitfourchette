@@ -147,21 +147,19 @@ def stockIcon(iconId: str | QStyle.StandardPixmap) -> QIcon:
         return _stockIconCache[iconId]
 
     def lookUpNamedIcon(name: str) -> QIcon:
-        # First attempt to get a matching icon from the assets
-        dark = isDarkTheme()
-        prefixes = QDir.searchPaths("assets")
-
+        # First, attempt to get a matching icon from the assets
         def assetCandidates():
+            prefix = "assets:"
+            dark = isDarkTheme()
             for ext in ".svg", ".png":
                 if dark:  # attempt to get dark mode variant first
-                    yield f"{name}@dark{ext}"
-                yield f"{name}{ext}"
+                    yield f"{prefix}{name}@dark{ext}"
+                yield f"{prefix}{name}{ext}"
 
         for candidate in assetCandidates():
-            for prefix in prefixes:
-                fullPath = os.path.join(prefix, candidate)
-                if os.path.isfile(fullPath):
-                    return QIcon(fullPath)
+            f = QFile(candidate)
+            if f.exists():
+                return QIcon(f.fileName())
 
         # Fall back to theme icons
         return QIcon.fromTheme(name)
