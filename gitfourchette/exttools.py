@@ -1,10 +1,12 @@
 import itertools
 import logging
 import os
+import re
 import shlex
 
 from gitfourchette import tempdir
 from gitfourchette.qt import *
+from gitfourchette.settings import prefs
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 
@@ -19,33 +21,58 @@ def openPrefsDialog(parent: QWidget, prefKey: str):
     parent.window().openPrefsDialog(prefKey)
 
 
-def onExternalToolProcessError(process: QProcess, prefKey: str):
-    parent: QWidget = process.parent()
+def onLocateTool(prefKey: str, newPath: str):
+    command = getattr(prefs, prefKey)
+
+    tokens = shlex.split(command, posix=not WINDOWS)
+    tokens[0] = newPath
+
+    newCommand = shlex.join(tokens)
+
+    # Remove single quotes added around our placeholders by shlex.join() (e.g. $L --> '$L')
+    newCommand = re.sub(r" '(\$[0-9A-Z])'", r" \1", newCommand, re.I | re.A)
+
+    setattr(prefs, prefKey, newCommand)
+    prefs.write()
+
+
+def onExternalToolProcessError(parent: QWidget, prefKey: str):
     assert isinstance(parent, QWidget)
 
-    processError: QProcess.ProcessError = process.error()
-
-    programName = process.program()
-    programName = os.path.basename(programName)
+    commandTokens = shlex.split(getattr(prefs, prefKey), posix=not WINDOWS)
+    programName = os.path.basename(commandTokens[0])
 
     translatedPrefKey = TrTables.prefKey(prefKey)
 
     title = translate("exttools", "Failed to start {0}").format(translatedPrefKey)
 
     message = translate("exttools",
-                        "Couldn’t start {0} {1} ({2}). "
-                        "It might not be installed on your machine."
-                        ).format(translatedPrefKey, bquo(programName), str(processError).removeprefix("ProcessError."))
+                        "Couldn’t start {0} {1}. It might not be installed on your machine."
+                        ).format(translatedPrefKey, bquo(programName))
+
+    configureButtonID = QMessageBox.StandardButton.Retry
+    browseButtonID = QMessageBox.StandardButton.Open
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
-                          QMessageBox.StandardButton.Retry | QMessageBox.StandardButton.Ok)
+                          configureButtonID | browseButtonID | QMessageBox.StandardButton.Ok)
 
-    configureButton = qmb.button(QMessageBox.StandardButton.Retry)
+    configureButton = qmb.button(configureButtonID)
     configureButton.setText(translate("exttools", "Pick another program"))
 
+    browseButton = qmb.button(browseButtonID)
+    browseButton.setText(translate("exttools", "Locate {0}...").format(lquo(programName)))
+
     def onQMBFinished(result):
-        if result == QMessageBox.StandardButton.Retry:
+        if result == configureButtonID:
             openPrefsDialog(parent, prefKey)
+        elif result == browseButtonID:
+            qfd = QFileDialog(parent, translate("exttools", "Locate {0}...").format(lquo(programName)))
+            qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+            qfd.setFileMode(QFileDialog.FileMode.AnyFile)
+            qfd.setWindowModality(Qt.WindowModality.WindowModal)
+            qfd.show()
+            qfd.fileSelected.connect(lambda newPath: onLocateTool(prefKey, newPath))#lambda x: print("fs", x))
+            return qfd
 
     qmb.finished.connect(onQMBFinished)
     qmb.show()
@@ -108,16 +135,13 @@ def openInExternalTool(
     # Just append other paths to end of command line...
     tokens.extend(positional)
 
-    # Little trick to prevent opendiff (launcher shim for Xcode's FileMerge) from exiting immediately.
-    # (Just launching /bin/bash -c ... doesn't make it wait)
-    if os.path.basename(tokens[0]) == "opendiff":
-        #tokens = ["/bin/bash", "-c", f"""'{tokens[0]}' "$@" | cat""", "--"] + tokens[1:]
-        scriptPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "opendiff.sh")
-        with open(scriptPath, "w") as scriptFile:
-            scriptFile.write(f"""#!/bin/sh\nset -e\n'{tokens[0]}' "$@" | cat""")
-        os.chmod(scriptPath, 0o700)  # should be 500
-        tokens = ["/bin/sh", scriptPath] + tokens[1:]
+    # macOS-specific wrapper
+    if MACOS:
+        launcherScript = QFile("assets:mactool.sh")
+        assert launcherScript.exists()
+        tokens.insert(0, launcherScript.fileName())
 
+    # Find appropriate workdir
     wd = ""
     for p in itertools.chain(replacements.values(), positional):
         if not p:
@@ -125,7 +149,10 @@ def openInExternalTool(
         wd = os.path.dirname(p)
         break
 
-    logger.info("Starting process: " + " ".join(tokens))
+    def wrap127(code, status):
+        logger.info(f"Process done: {code} {status}")
+        if not WINDOWS and code == 127:
+            onExternalToolProcessError(parent, prefKey)
 
     p = QProcess(parent)
     p.setProgram(tokens[0])
@@ -133,10 +160,11 @@ def openInExternalTool(
     p.setWorkingDirectory(wd)
     p.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedChannels)
 
-    p.finished.connect(lambda code, status: logger.info(f"Process done: {code} {status}"))
+    p.finished.connect(wrap127)
     p.errorOccurred.connect(lambda processError: logger.info(f"Process error: {processError}"))
-    p.errorOccurred.connect(lambda processError: onExternalToolProcessError(p, prefKey))
+    p.errorOccurred.connect(lambda processError: onExternalToolProcessError(parent, prefKey))
 
+    logger.info("Starting process: " + shlex.join(tokens))
     p.start(mode=QProcess.OpenModeFlag.Unbuffered)
 
     return p

@@ -330,16 +330,22 @@ def qtIsNativeMacosStyle():
 def _getCmdName(command, fallback, presets):
     if not command.strip():
         return fallback
-    else:
-        presetName = next((k for k, v in presets.items() if v == command), "")
-        if presetName:
-            return presetName
 
-        p = shlex.split(command, posix=not WINDOWS)[0]
+    presetName = next((k for k, v in presets.items() if v == command), "")
+    if presetName:
+        return presetName
+
+    tokens = shlex.split(command, posix=not WINDOWS)
+
+    try:
+        p = tokens[0]
         p = p.removeprefix('"').removeprefix("'")
         p = p.removesuffix('"').removesuffix("'")
         p = os.path.basename(p)
+
         return p
+    except IndexError:
+        return fallback
 
 
 def getExternalEditorName():

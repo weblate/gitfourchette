@@ -72,5 +72,5 @@ class UnmergedConflict(QObject):
         qmb.button(QMessageBox.StandardButton.Ok).setText(self.tr("Confirm resolution"))
         qmb.button(QMessageBox.StandardButton.Cancel).setText(self.tr("Discard resolution"))
         qmb.accepted.connect(self.mergeComplete)
-        qmb.rejected.connect(self.mergeFailed)
+        qmb.rejected.connect(lambda: self.mergeFailed.emit(-1))
         qmb.show()
