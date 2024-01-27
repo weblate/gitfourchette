@@ -105,29 +105,17 @@ class CommitLogDelegate(QStyledItemDelegate):
     def _paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
-
-        # Draw selection background _underneath_ the style's default graphics.
-        # This is a workaround for the "windowsvista" style, which does not draw a solid color background for
-        # selected items -- instead, it draws a very slight alpha overlay on _top_ of the item.
-        # The problem is that its palette still returns white for foreground text, so the result would be unreadable
-        # if we didn't draw a strong solid-color background. Most other styles draw their own background as a solid
-        # color, so this rect is probably not visible outside of "windowsvista".
-        if hasFocus and isSelected:
-            painter.fillRect(option.rect, option.palette.color(QPalette.ColorRole.Highlight))
-
-        outlineColor = option.palette.color(QPalette.ColorRole.Base)
-
-        # Draw default background
-        super().paint(painter, option, index)
+        style = option.widget.style()
+        palette: QPalette = option.palette
+        outlineColor = palette.color(QPalette.ColorRole.Base)
+        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
 
         painter.save()
 
-        palette: QPalette = option.palette
-        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
+        # Draw default background
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
         if isSelected:
-            #if option.state & QStyle.StateFlag.State_HasFocus:
-            #    painter.fillRect(option.rect, palette.color(pcg, QPalette.ColorRole.Highlight))
             painter.setPen(palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
 
         # Get metrics of '0' before setting a custom font,
