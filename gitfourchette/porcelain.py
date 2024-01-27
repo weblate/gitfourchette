@@ -119,12 +119,7 @@ from pygit2 import (
     GIT_STATUS_WT_UNREADABLE,
 )
 
-try:
-    # pygit2 1.14+
-    from pygit2.remotes import TransferProgress
-except ImportError:
-    # TODO: Nuke this once we drop compatibility with old pygit2 versions (1.13 and older)
-    from pygit2.remote import TransferProgress
+from pygit2.remotes import TransferProgress
 
 
 _logger = _logging.getLogger(__name__)
@@ -1420,12 +1415,6 @@ class Repo(_VanillaRepository):
         else:
             with _suppress(KeyError):
                 del self.config[key]
-
-    # TODO: Nuke this shim once we drop backwards compat with old pygit2 versions (1.13 and older)
-    def listall_mergeheads(self) -> list[Oid]:
-        if not pygit2_version_at_least("1.14", raise_error=False, feature_name="listall_mergeheads"):
-            return []
-        return super().listall_mergeheads()
 
     def get_reset_merge_file_list(self):
         self.index.read()

@@ -55,9 +55,6 @@ class PrimeRepo(RepoTask):
         repo = Repo(path, GIT_REPOSITORY_OPEN_NO_SEARCH)
         self.setRepo(repo)  # required to execute subtasks later
 
-        if repo.is_shallow:
-            libgit2_version_at_least("1.7.0", feature_name="Shallow clone support")
-
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
 
