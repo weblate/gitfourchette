@@ -35,7 +35,6 @@ class Ui_SearchBar(object):
         self.backwardButton.setObjectName("backwardButton")
         self.horizontalLayout.addWidget(self.backwardButton)
         self.closeButton = QToolButton(parent=SearchBar)
-        self.closeButton.setText("╳")
         self.closeButton.setObjectName("closeButton")
         self.horizontalLayout.addWidget(self.closeButton)
 
@@ -49,3 +48,4 @@ class Ui_SearchBar(object):
         self.forwardButton.setToolTip(_translate("SearchBar", "Next Occurrence"))
         self.backwardButton.setToolTip(_translate("SearchBar", "Previous Occurrence"))
         self.closeButton.setToolTip(_translate("SearchBar", "Close Search Bar"))
+        self.closeButton.setText(_translate("SearchBar", "Done"))

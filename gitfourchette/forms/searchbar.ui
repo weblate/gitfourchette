@@ -71,7 +71,7 @@
       <string>Close Search Bar</string>
      </property>
      <property name="text">
-      <string notr="true">╳</string>
+      <string>Done</string>
      </property>
     </widget>
    </item>

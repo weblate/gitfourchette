@@ -24,29 +24,44 @@ class SearchBar(QWidget):
 
     @property
     def rawSearchTerm(self):
-        return self.ui.lineEdit.text()
+        return self.lineEdit.text()
 
-    def __init__(self, parent: QWidget, help: str):
-        super().__init__(parent)
+    @property
+    def lineEdit(self) -> QLineEdit:
+        return self.ui.lineEdit
 
-        self.setObjectName("SearchBar")
+    @property
+    def textChanged(self):
+        return self.lineEdit.textChanged
+
+    @property
+    def buttons(self):
+        return self.ui.forwardButton, self.ui.backwardButton, self.ui.closeButton
+
+    def __init__(self, buddy: QWidget, help: str):
+        super().__init__(buddy)
+
+        self.setObjectName(f"SearchBar({buddy.objectName()})")
+        self.buddy = buddy
 
         self.ui = Ui_SearchBar()
         self.ui.setupUi(self)
 
-        self.ui.lineEdit.setStyleSheet("border: 1px solid gray; border-radius: 5px;")
-        self.ui.lineEdit.setPlaceholderText(help)
-        self.ui.lineEdit.addAction(stockIcon("magnifying-glass"), QLineEdit.ActionPosition.LeadingPosition)
-        self.ui.closeButton.clicked.connect(self.bail)
+        self.lineEdit.setStyleSheet("border: 1px solid gray; border-radius: 5px;")
+        self.lineEdit.setPlaceholderText(help)
+        self.lineEdit.addAction(stockIcon("magnifying-glass"), QLineEdit.ActionPosition.LeadingPosition)
+        self.lineEdit.textChanged.connect(self.onSearchTextChanged)
 
+        self.ui.closeButton.clicked.connect(self.bail)
         self.ui.forwardButton.clicked.connect(self.searchNext)
         self.ui.backwardButton.clicked.connect(self.searchPrevious)
-
-        self.ui.lineEdit.textChanged.connect(self.onSearchTextChanged)
 
         self.ui.forwardButton.setIcon(stockIcon("go-down-search"))
         self.ui.backwardButton.setIcon(stockIcon("go-up-search"))
         self.ui.closeButton.setIcon(stockIcon("dialog-close"))
+
+        for button in self.buttons:
+            button.setMaximumHeight(1)
 
         appendShortcutToToolTip(self.ui.backwardButton, QKeySequence.StandardKey.FindPrevious)
         appendShortcutToToolTip(self.ui.forwardButton, QKeySequence.StandardKey.FindNext)
@@ -60,29 +75,15 @@ class SearchBar(QWidget):
         self.searchPulseTimer.setInterval(SEARCH_PULSE_DELAY)
         self.searchPulseTimer.timeout.connect(self.searchPulse)
 
-    @property
-    def textChanged(self):
-        return self.ui.lineEdit.textChanged
-
-    def snapToParent(self):
-        pw: QWidget = self.parentWidget()
-        assert isinstance(pw, QAbstractScrollArea), "search bar parent must be QAbstractScrollArea"
-
-        x = pw.width() - self.width() - pw.frameWidth()
-        y = pw.frameWidth()
-
-        if pw.verticalScrollBar().isVisible():
-            x -= pw.verticalScrollBar().width()
-
-        self.move(x, y)
+        tweakWidgetFont(self.lineEdit, 85)
 
     def keyPressEvent(self, event: QKeyEvent):
-        if not self.ui.lineEdit.hasFocus():
+        if not self.lineEdit.hasFocus():
             super().keyPressEvent(event)
 
         elif event.key() in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
             event.accept()
-            self.ui.lineEdit.selectAll()
+            self.lineEdit.selectAll()
             if not self.searchTerm:
                 QApplication.beep()
             elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
@@ -96,16 +97,19 @@ class SearchBar(QWidget):
 
     def popUp(self, forceSelectAll=False):
         wasHidden = self.isHidden()
-        # TODO: if wasn't hidden, save whoever had focus, and restore focus on it (not necessarily parent()) in bail()
         self.show()
-        self.snapToParent()
-        self.ui.lineEdit.setFocus(Qt.FocusReason.PopupFocusReason)
+
+        for button in self.buttons:
+            button.setMaximumHeight(self.lineEdit.height())
+
+        self.lineEdit.setFocus(Qt.FocusReason.PopupFocusReason)
+
         if forceSelectAll or wasHidden:
-            self.ui.lineEdit.selectAll()
+            self.lineEdit.selectAll()
 
     def bail(self):
         self.searchPulseTimer.stop()
-        self.parentWidget().setFocus(Qt.FocusReason.PopupFocusReason)
+        self.buddy.setFocus(Qt.FocusReason.PopupFocusReason)
         self.hide()
 
     def onSearchTextChanged(self, text: str):

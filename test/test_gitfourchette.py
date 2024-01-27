@@ -92,7 +92,7 @@ def testCommitSearch(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     searchBar = rw.graphView.searchBar
-    searchEdit = searchBar.ui.lineEdit
+    searchEdit = searchBar.lineEdit
 
     def getGraphRow():
         indexes = rw.graphView.selectedIndexes()

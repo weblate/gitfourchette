@@ -18,7 +18,6 @@ from gitfourchette.toolbox import *
 
 class GraphView(QListView):
     jump = Signal(NavLocator)
-    widgetMoved = Signal()
     linkActivated = Signal(str)
     statusMessage = Signal(str)
 
@@ -63,13 +62,9 @@ class GraphView(QListView):
         self.searchBar.searchNext.connect(lambda: self.search("next"))
         self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
         self.searchBar.searchPulse.connect(self.searchPulse)
-        self.widgetMoved.connect(self.searchBar.snapToParent)
         self.searchBar.hide()
 
         self.refreshPrefs(invalidateMetrics=False)
-
-    def moveEvent(self, event: QMoveEvent):
-        self.widgetMoved.emit()
 
     def makeContextMenu(self):
         oid = self.currentCommitOid

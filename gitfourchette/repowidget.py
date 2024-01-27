@@ -112,9 +112,9 @@ class RepoWidget(QWidget):
         # Build widgets
 
         sidebarContainer = self._makeSidebarContainer()
-        self.graphView = GraphView(self)
+        graphContainer = self._makeGraphContainer()
         self.filesStack = self._makeFilesStack()
-        diffViewContainer = self._makeDiffContainer()
+        diffContainer = self._makeDiffContainer()
 
         diffBanner = Banner(self, orientation=Qt.Orientation.Horizontal)
         diffBanner.setProperty("class", "diff")
@@ -127,7 +127,7 @@ class RepoWidget(QWidget):
         bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
         bottomSplitter.setObjectName("BottomSplitter")
         bottomSplitter.addWidget(self.filesStack)
-        bottomSplitter.addWidget(diffViewContainer)
+        bottomSplitter.addWidget(diffContainer)
         bottomSplitter.setSizes([100, 300])
         bottomSplitter.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
         bottomSplitter.setStretchFactor(1, 1)
@@ -143,7 +143,7 @@ class RepoWidget(QWidget):
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical)
         mainSplitter.setObjectName("CentralSplitter")
-        mainSplitter.addWidget(self.graphView)
+        mainSplitter.addWidget(graphContainer)
         mainSplitter.addWidget(bottomContainer)
         mainSplitter.setSizes([100, 150])
         mainSplitter.setChildrenCollapsible(False)
@@ -380,6 +380,21 @@ class RepoWidget(QWidget):
         self.committedHeader = header
         return container
 
+    def _makeGraphContainer(self):
+        graphView = GraphView(self)
+
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(graphView.searchBar)
+        layout.addWidget(graphView)
+
+        container = QWidget()
+        container.setLayout(layout)
+
+        self.graphView = graphView
+        return container
+
     def _makeDiffContainer(self):
         header = QElidedLabel(" ")
         header.setElideMode(Qt.TextElideMode.ElideMiddle)
@@ -387,6 +402,14 @@ class RepoWidget(QWidget):
         header.setMinimumHeight(24)
 
         diff = DiffView()
+
+        diffViewContainerLayout = QVBoxLayout()
+        diffViewContainerLayout.setSpacing(0)
+        diffViewContainerLayout.setContentsMargins(0, 0, 0, 0)
+        diffViewContainerLayout.addWidget(diff)
+        diffViewContainerLayout.addWidget(diff.searchBar)
+        diffViewContainer = QWidget()
+        diffViewContainer.setLayout(diffViewContainerLayout)
 
         specialDiff = SpecialDiffView()
 
@@ -397,7 +420,7 @@ class RepoWidget(QWidget):
 
         stack = QStackedWidget()
         # Add widgets in same order as DiffStackPage
-        stack.addWidget(diff)
+        stack.addWidget(diffViewContainer)
         stack.addWidget(specialDiff)
         stack.addWidget(conflictScroll)
         stack.setCurrentWidget(diff)
@@ -408,8 +431,8 @@ class RepoWidget(QWidget):
         layout.addWidget(header)
         layout.addWidget(stack)
 
-        container = QWidget()
-        container.setLayout(layout)
+        stackContainer = QWidget()
+        stackContainer.setLayout(layout)
 
         self.diffHeader = header
         self.diffStack = stack
@@ -417,7 +440,7 @@ class RepoWidget(QWidget):
         self.specialDiffView = specialDiff
         self.diffView = diff
 
-        return container
+        return stackContainer
 
     def _makeSidebarContainer(self):
         sidebar = Sidebar(self)
@@ -807,7 +830,7 @@ class RepoWidget(QWidget):
 
     def dispatchSearchCommand(self, op: Literal["start", "next", "previous"]):
         diffSearchWidgets = (self.dirtyFiles, self.stagedFiles, self.committedFiles,
-                             self.diffView, self.diffView.searchBar.ui.lineEdit)
+                             self.diffView, self.diffView.searchBar.lineEdit)
 
         if self.diffView.isVisibleTo(self) and any(w.hasFocus() for w in diffSearchWidgets):
             self.diffView.search(op)

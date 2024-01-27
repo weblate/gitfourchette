@@ -202,7 +202,7 @@ def testSearchInDiff(qtbot, tempDir, mainWindow):
 
     diffView = rw.diffView
     searchBar = rw.diffView.searchBar
-    searchLine = rw.diffView.searchBar.ui.lineEdit
+    searchLine = rw.diffView.searchBar.lineEdit
     searchNext = searchBar.ui.forwardButton
     searchPrev = searchBar.ui.backwardButton
 

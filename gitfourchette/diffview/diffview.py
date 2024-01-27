@@ -132,7 +132,6 @@ class DiffView(QPlainTextEdit):
     else:
         applyPatch = Signal(Patch, bytes, PatchPurpose)
     revertPatch = Signal(Patch, bytes)
-    widgetMoved = Signal()
     contextualHelp = Signal(str)
 
     lineData: list[LineData]
@@ -182,7 +181,6 @@ class DiffView(QPlainTextEdit):
         self.searchBar.searchNext.connect(lambda: self.search("next"))
         self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
         self.searchBar.hide()
-        self.widgetMoved.connect(self.searchBar.snapToParent)
 
         # Initialize font
         self.refreshPrefs()
@@ -197,11 +195,6 @@ class DiffView(QPlainTextEdit):
             # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
             excMessageBox(exc, message="Failed to create DiffView context menu")
             return
-
-    def moveEvent(self, event: QMoveEvent):
-        """Emit signal to reposition the search bar"""
-        self.widgetMoved.emit()
-        super().moveEvent(event)
 
     def resizeEvent(self, event: QResizeEvent):
         """Update gutter geometry"""
