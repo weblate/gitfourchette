@@ -66,6 +66,8 @@ class GraphView(QListView):
         self.widgetMoved.connect(self.searchBar.snapToParent)
         self.searchBar.hide()
 
+        self.refreshPrefs(invalidateMetrics=False)
+
     def moveEvent(self, event: QMoveEvent):
         self.widgetMoved.emit()
 
@@ -393,10 +395,14 @@ class GraphView(QListView):
             filterIndex = self.getFilterIndexForCommit(oid)
             self.update(filterIndex)
 
-    def refreshPrefs(self):
+    def refreshPrefs(self, invalidateMetrics=True):
+        self.setVerticalScrollMode(
+            self.ScrollMode.ScrollPerPixel if settings.prefs.debug_smoothScroll else self.ScrollMode.ScrollPerItem)
+
         # Force redraw to reflect changes in row height, flattening, date format, etc.
-        self.itemDelegate().invalidateMetrics()
-        self.model().layoutChanged.emit()
+        if invalidateMetrics:
+            self.itemDelegate().invalidateMetrics()
+            self.model().layoutChanged.emit()
 
     # -------------------------------------------------------------------------
     # Find text in commit message or hash

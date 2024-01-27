@@ -60,6 +60,11 @@ class FileList(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
         self.setUniformItemSizes(True)  # potential perf boost with many files
 
+        self.refreshPrefs()
+
+    def refreshPrefs(self):
+        self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
+
     @property
     def flModel(self) -> FileListModel:
         return self.model()

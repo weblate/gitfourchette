@@ -1,5 +1,6 @@
 from contextlib import suppress
 
+from gitfourchette import settings
 from gitfourchette.nav import NavLocator
 from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
@@ -54,6 +55,8 @@ class Sidebar(QTreeView):
 
         self.expandTriangleClickIndex = None
         self.eatDoubleClickTimer = QElapsedTimer()
+
+        self.refreshPrefs()
 
     def switchMode(self, modeId: int):
         model: SidebarModel = self.model()
@@ -327,6 +330,9 @@ class Sidebar(QTreeView):
         model: SidebarModel = self.model()
         model.refreshCache(repoState)
         self.restoreExpandedItems()
+
+    def refreshPrefs(self):
+        self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
 
     def onEntryClicked(self, item: EItem, data: str):
         if item == EItem.UncommittedChanges:

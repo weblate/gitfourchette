@@ -1001,6 +1001,10 @@ class RepoWidget(QWidget):
         self.diffView.refreshPrefs()
         self.graphView.refreshPrefs()
         self.conflictView.refreshPrefs()
+        self.sidebar.refreshPrefs()
+        self.dirtyFiles.refreshPrefs()
+        self.stagedFiles.refreshPrefs()
+        self.committedFiles.refreshPrefs()
 
         # Reflect any change in titlebar prefs
         if self.isVisible():

@@ -158,7 +158,7 @@ class TrTables:
             "graph": translate("Prefs", "Commit History"),
             "trash": translate("Prefs", "Trash"),
             "external": translate("Prefs", "External Tools"),
-            "debug": translate("Prefs", "Experimental"),
+            "debug": translate("Prefs", "Advanced"),
 
             "language": translate("Prefs", "Language"),
             "qtStyle": translate("Prefs", "Theme"),
@@ -214,6 +214,7 @@ class TrTables:
             "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
             "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
             "debug_modalSidebar": translate("Prefs", "Modal sidebar"),
+            "debug_smoothScroll": translate("Prefs", "Smooth scrolling (where applicable)"),
             "debug_forceQtApi": translate("Prefs", "Preferred Qt binding"),
             "debug_forceQtApi_help": translate(
                 "Prefs", "<p>After restarting, {app} will use this Qt binding if available.</p><p>You can also pass "

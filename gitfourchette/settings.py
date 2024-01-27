@@ -177,11 +177,19 @@ class Prefs(PrefsFile):
     debug_showMemoryIndicator   : bool          = True
     debug_showPID               : bool          = True
     debug_fixU2029InClipboard   : bool          = False
+    debug_smoothScroll          : bool          = True
     debug_hideStashJunkParents  : bool          = True
     debug_autoRefresh           : bool          = True
     debug_modalSidebar          : bool          = False
     debug_verbosity             : LoggingLevel  = LoggingLevel.WARNING
     debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
+
+    @property
+    def listViewScrollMode(self) -> QAbstractItemView.ScrollMode:
+        if self.debug_smoothScroll:
+            return QAbstractItemView.ScrollMode.ScrollPerPixel
+        else:
+            return QAbstractItemView.ScrollMode.ScrollPerItem
 
 
 @dataclasses.dataclass
