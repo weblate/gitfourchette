@@ -82,7 +82,6 @@ class SearchBar(QWidget):
             super().keyPressEvent(event)
 
         elif event.key() in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
-            event.accept()
             self.lineEdit.selectAll()
             if not self.searchTerm:
                 QApplication.beep()
@@ -92,8 +91,10 @@ class SearchBar(QWidget):
                 self.searchNext.emit()
 
         elif event.key() == Qt.Key.Key_Escape:
-            event.accept()
             self.bail()
+
+        else:
+            super().keyPressEvent(event)
 
     def popUp(self, forceSelectAll=False):
         wasHidden = self.isHidden()

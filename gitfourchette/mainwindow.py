@@ -980,7 +980,7 @@ class MainWindow(QMainWindow):
         session.activeTabIndex = self.tabs.currentIndex()
         session.write()
 
-    def closeEvent(self, e):
+    def closeEvent(self, event: QCloseEvent):
         QApplication.instance().removeEventFilter(self)
 
         # Save session before closing all tabs.
@@ -990,7 +990,7 @@ class MainWindow(QMainWindow):
         # Important so unit tests wind down properly!
         self.closeAllTabs()
 
-        e.accept()
+        event.accept()
 
     # -------------------------------------------------------------------------
     # Drag and drop
