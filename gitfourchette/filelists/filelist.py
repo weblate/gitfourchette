@@ -353,7 +353,7 @@ class FileList(QListView):
 
         bigpatch = b""
         for patch in patches:
-            if patch.delta.status == GIT_DELTA_DELETED:
+            if patch.delta.status == DeltaStatus.DELETED:
                 diffFile = patch.delta.old_file
             else:
                 diffFile = patch.delta.new_file
@@ -442,14 +442,14 @@ class FileList(QListView):
         for patch in patches:
             om = patch.delta.old_file.mode
             nm = patch.delta.new_file.mode
-            if (patch.delta.status in [GIT_DELTA_MODIFIED, GIT_DELTA_RENAMED]
+            if (patch.delta.status in [DeltaStatus.MODIFIED, DeltaStatus.RENAMED]
                     and om != nm
-                    and nm in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]):
+                    and nm in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]):
                 action.enabled = True
                 if n == 1:
-                    if nm == GIT_FILEMODE_BLOB_EXECUTABLE:
+                    if nm == FileMode.BLOB_EXECUTABLE:
                         action.caption = self.tr("Revert Mode to Non-Executable")
-                    elif nm == GIT_FILEMODE_BLOB:
+                    elif nm == FileMode.BLOB:
                         action.caption = self.tr("Revert Mode to Executable")
 
         return action

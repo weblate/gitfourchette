@@ -35,88 +35,30 @@ from pygit2 import (
     Submodule,
     Tree,
     Walker,
-)
 
-from pygit2 import (
     __version__ as PYGIT2_VERSION,
     LIBGIT2_VERSION,
 )
 
-from pygit2 import (
-    GIT_APPLY_LOCATION_BOTH,
-    GIT_APPLY_LOCATION_INDEX,
-    GIT_APPLY_LOCATION_WORKDIR,
-    GIT_BRANCH_ALL,
-    GIT_BRANCH_LOCAL,
-    GIT_BRANCH_REMOTE,
-    GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH,
-    GIT_CHECKOUT_FORCE,
-    GIT_CHECKOUT_NOTIFY_CONFLICT,
-    GIT_CHECKOUT_REMOVE_UNTRACKED,
-    GIT_CREDENTIAL_DEFAULT,
-    GIT_CREDENTIAL_SSH_CUSTOM,
-    GIT_CREDENTIAL_SSH_INTERACTIVE,
-    GIT_CREDENTIAL_SSH_KEY,
-    GIT_CREDENTIAL_SSH_MEMORY,
-    GIT_CREDENTIAL_USERNAME,
-    GIT_CREDENTIAL_USERPASS_PLAINTEXT,
-    GIT_DELTA_ADDED,
-    GIT_DELTA_CONFLICTED,
-    GIT_DELTA_DELETED,
-    GIT_DELTA_IGNORED,
-    GIT_DELTA_MODIFIED,
-    GIT_DELTA_RENAMED,
-    GIT_DELTA_TYPECHANGE,
-    GIT_DELTA_UNMODIFIED,
-    GIT_DELTA_UNTRACKED,
-    GIT_DIFF_INCLUDE_UNTRACKED,
-    GIT_DIFF_NORMAL,
-    GIT_DIFF_RECURSE_UNTRACKED_DIRS,
-    GIT_DIFF_SHOW_BINARY,
-    GIT_DIFF_SHOW_UNTRACKED_CONTENT,
-    GIT_DIFF_UPDATE_INDEX,
-    GIT_FETCH_NO_PRUNE,
-    GIT_FETCH_PRUNE,
-    GIT_FILEMODE_BLOB,
-    GIT_FILEMODE_BLOB_EXECUTABLE,
-    GIT_FILEMODE_COMMIT,
-    GIT_FILEMODE_LINK,
-    GIT_FILEMODE_TREE,
-    GIT_MERGE_ANALYSIS_FASTFORWARD,
-    GIT_MERGE_ANALYSIS_NORMAL,
-    GIT_MERGE_ANALYSIS_UP_TO_DATE,
-    GIT_MERGE_ANALYSIS_UNBORN,
-    GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY,
-    GIT_MERGE_PREFERENCE_NONE,
-    GIT_MERGE_PREFERENCE_NO_FASTFORWARD,
-    GIT_OBJ_COMMIT,
-    GIT_REF_OID,
-    GIT_REF_SYMBOLIC,
-    GIT_RESET_HARD,
-    GIT_RESET_MIXED,
-    GIT_RESET_SOFT,
-    GIT_REPOSITORY_OPEN_NO_SEARCH,
-    GIT_REPOSITORY_STATE_MERGE,
-    GIT_REPOSITORY_STATE_NONE,
-    GIT_REPOSITORY_STATE_REBASE,
-    GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,
-    GIT_REPOSITORY_STATE_REBASE_MERGE,
-    GIT_REPOSITORY_STATE_CHERRYPICK,
-    GIT_SORT_NONE,
-    GIT_SORT_REVERSE,
-    GIT_SORT_TIME,
-    GIT_SORT_TOPOLOGICAL,
-    GIT_STATUS_INDEX_DELETED,
-    GIT_STATUS_INDEX_MODIFIED,
-    GIT_STATUS_INDEX_NEW,
-    GIT_STATUS_INDEX_RENAMED,
-    GIT_STATUS_INDEX_TYPECHANGE,
-    GIT_STATUS_WT_DELETED,
-    GIT_STATUS_WT_MODIFIED,
-    GIT_STATUS_WT_NEW,
-    GIT_STATUS_WT_RENAMED,
-    GIT_STATUS_WT_TYPECHANGE,
-    GIT_STATUS_WT_UNREADABLE,
+from pygit2.enums import (
+    ApplyLocation,
+    BranchType,
+    CheckoutNotify,
+    CheckoutStrategy,
+    CredentialType,
+    DeltaStatus,
+    DiffOption,
+    FileStatus,
+    FileMode,
+    FetchPrune,
+    MergeAnalysis,
+    MergePreference,
+    ObjectType,
+    RepositoryOpenFlag,
+    RepositoryState,
+    ReferenceType,
+    ResetMode,
+    SortMode,
 )
 
 from pygit2.remotes import TransferProgress
@@ -130,25 +72,25 @@ CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = _re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", _re.IGNORECASE)
 DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
 
-GIT_STATUS_INDEX_MASK = (
-        GIT_STATUS_INDEX_NEW
-        | GIT_STATUS_INDEX_MODIFIED
-        | GIT_STATUS_INDEX_DELETED
-        | GIT_STATUS_INDEX_RENAMED
-        | GIT_STATUS_INDEX_TYPECHANGE)
+FileStatus_INDEX_MASK = (
+        FileStatus.INDEX_NEW
+        | FileStatus.INDEX_MODIFIED
+        | FileStatus.INDEX_DELETED
+        | FileStatus.INDEX_RENAMED
+        | FileStatus.INDEX_TYPECHANGE)
 
-GIT_STATUS_WT_MASK = (
-        GIT_STATUS_WT_NEW
-        | GIT_STATUS_WT_MODIFIED
-        | GIT_STATUS_WT_DELETED
-        | GIT_STATUS_WT_TYPECHANGE
-        | GIT_STATUS_WT_RENAMED
-        | GIT_STATUS_WT_UNREADABLE)
+FileStatus_WT_MASK = (
+        FileStatus.WT_NEW
+        | FileStatus.WT_MODIFIED
+        | FileStatus.WT_DELETED
+        | FileStatus.WT_TYPECHANGE
+        | FileStatus.WT_RENAMED
+        | FileStatus.WT_UNREADABLE)
 
 _RESTORE_STRATEGY = (
-        GIT_CHECKOUT_FORCE
-        | GIT_CHECKOUT_REMOVE_UNTRACKED
-        | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
+        CheckoutStrategy.FORCE
+        | CheckoutStrategy.REMOVE_UNTRACKED
+        | CheckoutStrategy.DISABLE_PATHSPEC_MATCH)
 
 
 class RefPrefix:
@@ -213,18 +155,18 @@ class MultiFileError(Exception):
 
 
 class CheckoutBreakdown(CheckoutCallbacks):
-    status: dict[str, int]
+    status: dict[str, CheckoutNotify]
 
     def __init__(self):
         super().__init__()
         self.status = dict()
 
-    def checkout_notify(self, why: int, path: str, baseline=None, target=None, workdir=None):
+    def checkout_notify(self, why: CheckoutNotify, path: str, baseline=None, target=None, workdir=None):
         self.status[path] = why
 
     def get_conflicts(self):
         return [path for path in self.status
-                if self.status[path] == GIT_CHECKOUT_NOTIFY_CONFLICT]
+                if self.status[path] == CheckoutNotify.CONFLICT]
 
     def __enter__(self):
         return self
@@ -506,13 +448,13 @@ class Repo(_VanillaRepository):
         In other words, this function compares the workdir to HEAD.
         """
 
-        flags = (GIT_DIFF_INCLUDE_UNTRACKED
-                 | GIT_DIFF_RECURSE_UNTRACKED_DIRS
-                 | GIT_DIFF_SHOW_UNTRACKED_CONTENT
+        flags = (DiffOption.INCLUDE_UNTRACKED
+                 | DiffOption.RECURSE_UNTRACKED_DIRS
+                 | DiffOption.SHOW_UNTRACKED_CONTENT
                  )
 
         if show_binary:
-            flags |= GIT_DIFF_SHOW_BINARY
+            flags |= DiffOption.SHOW_BINARY
 
         dirty_diff = self.diff('HEAD', None, cached=False, flags=flags)
         dirty_diff.find_similar()
@@ -525,22 +467,22 @@ class Repo(_VanillaRepository):
         In other words, this function compares the workdir to the index.
         """
 
-        flags = (GIT_DIFF_INCLUDE_UNTRACKED
-                 | GIT_DIFF_RECURSE_UNTRACKED_DIRS
-                 | GIT_DIFF_SHOW_UNTRACKED_CONTENT
+        flags = (DiffOption.INCLUDE_UNTRACKED
+                 | DiffOption.RECURSE_UNTRACKED_DIRS
+                 | DiffOption.SHOW_UNTRACKED_CONTENT
                  )
 
         # Don't attempt to update the index if the repo is locked for writing
         update_index &= _os.access(self.path, _os.W_OK)
 
-        # GIT_DIFF_UPDATE_INDEX may improve performance for subsequent diffs if the
+        # UPDATE_INDEX may improve performance for subsequent diffs if the
         # index was stale, but this requires the repo to be writable.
         if update_index:
-            _logger.debug("GIT_DIFF_UPDATE_INDEX")
-            flags |= GIT_DIFF_UPDATE_INDEX
+            _logger.debug("UPDATE_INDEX")
+            flags |= DiffOption.UPDATE_INDEX
 
         if show_binary:
-            flags |= GIT_DIFF_SHOW_BINARY
+            flags |= DiffOption.SHOW_BINARY
 
         dirty_diff = self.diff(None, None, flags=flags)
         # dirty_diff.find_similar()  #-- it seems that find_similar cannot find renames in unstaged changes, so don't bother
@@ -553,10 +495,10 @@ class Repo(_VanillaRepository):
         In other words, this function compares the index to HEAD.
         """
 
-        flags = GIT_DIFF_NORMAL
+        flags = DiffOption.NORMAL
 
         if show_binary:
-            flags |= GIT_DIFF_SHOW_BINARY
+            flags |= DiffOption.SHOW_BINARY
 
         if self.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
             index_tree_oid = self.index.write_tree()
@@ -579,16 +521,16 @@ class Repo(_VanillaRepository):
         return 0 != len(self.get_staged_changes(fast=True))
         # ---This also works, but it's slower.
         # status = repo.status(untracked_files="no")
-        # return any(0 != (flag & GIT_STATUS_INDEX_MASK) for flag in status.values())
+        # return any(0 != (flag & FileStatus.INDEX_MASK) for flag in status.values())
 
     def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1) -> list[Diff]:
         """
         Get a list of Diffs of a commit compared to its parents.
         """
-        flags = GIT_DIFF_NORMAL
+        flags = DiffOption.NORMAL
 
         if show_binary:
-            flags |= GIT_DIFF_SHOW_BINARY
+            flags |= DiffOption.SHOW_BINARY
 
         commit: Commit = self.get(oid)
 
@@ -809,7 +751,7 @@ class Repo(_VanillaRepository):
         head_ref = self.references.get(head_refname)
 
         # Only risk deleting remote HEAD if it's symbolic
-        if head_ref and head_ref.type == GIT_REF_SYMBOLIC:
+        if head_ref and head_ref.type == ReferenceType.SYMBOLIC:
             try:
                 head_ref.resolve()
             except KeyError:  # pygit2 wraps GIT_ENOTFOUND with KeyError
@@ -823,7 +765,7 @@ class Repo(_VanillaRepository):
         self.delete_stale_remote_head_symbolic_ref(remote_name)
 
         remote = self.remotes[remote_name]
-        transfer = remote.fetch(callbacks=remote_callbacks, prune=GIT_FETCH_PRUNE)
+        transfer = remote.fetch(callbacks=remote_callbacks, prune=FetchPrune.PRUNE)
         return transfer
 
     def fetch_remote_branch(
@@ -837,18 +779,8 @@ class Repo(_VanillaRepository):
         self.delete_stale_remote_head_symbolic_ref(remoteName)
 
         remote = self.remotes[remoteName]
-        transfer = remote.fetch(refspecs=[branchName], callbacks=remote_callbacks, prune=GIT_FETCH_NO_PRUNE)
+        transfer = remote.fetch(refspecs=[branchName], callbacks=remote_callbacks, prune=FetchPrune.NO_PRUNE)
         return transfer
-
-    def reset_head2(self, onto: Oid, mode: _typing.Literal["soft", "mixed", "hard"], recurse_submodules: bool = False):
-        modes = {
-            "soft": GIT_RESET_SOFT,
-            "mixed": GIT_RESET_MIXED,
-            "hard": GIT_RESET_HARD,
-        }
-        self.reset(onto, modes[mode])
-        if recurse_submodules:
-            raise NotImplementedError("reset HEAD + recurse submodules not implemented yet!")
 
     def get_commit_message(self, oid: Oid) -> str:
         commit = self.peel_commit(oid)
@@ -963,7 +895,7 @@ class Repo(_VanillaRepository):
                 pass
 
         for ref in self.listall_reference_objects():
-            if (ref.type != GIT_REF_OID  # Skip symbolic references
+            if (ref.type != ReferenceType.OID  # Skip symbolic references
                     or ref.name == "refs/stash"):  # Stashes are dealt with separately
                 continue
 
@@ -1023,7 +955,7 @@ class Repo(_VanillaRepository):
     def stage_files(self, patches: list[Patch]):
         index = self.index
         for patch in patches:
-            if patch.delta.status == GIT_DELTA_DELETED:
+            if patch.delta.status == DeltaStatus.DELETED:
                 index.remove(patch.delta.new_file.path)
             else:
                 index.add(patch.delta.new_file.path)
@@ -1063,7 +995,7 @@ class Repo(_VanillaRepository):
                 mode = index[p].mode
             except KeyError:
                 continue
-            if mode in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]:
+            if mode in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]:
                 _os.chmod(self.in_workdir(p), mode)
 
     def unstage_files(self, patches: list[Patch]):
@@ -1079,10 +1011,10 @@ class Repo(_VanillaRepository):
             delta = patch.delta
             old_path = delta.old_file.path
             new_path = delta.new_file.path
-            if delta.status == GIT_DELTA_ADDED:
+            if delta.status == DeltaStatus.ADDED:
                 assert (not head_tree) or (old_path not in head_tree)
                 index.remove(old_path)
-            elif delta.status == GIT_DELTA_RENAMED:
+            elif delta.status == DeltaStatus.RENAMED:
                 # TODO: Two-step removal to completely unstage a rename -- is this what we want?
                 assert new_path in index
                 index.remove(new_path)
@@ -1100,8 +1032,8 @@ class Repo(_VanillaRepository):
             of = patch.delta.old_file
             nf = patch.delta.new_file
             if (of.mode != nf.mode
-                    and patch.delta.status not in [GIT_DELTA_ADDED, GIT_DELTA_DELETED, GIT_DELTA_UNTRACKED]
-                    and of.mode in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]):
+                    and patch.delta.status not in [DeltaStatus.ADDED, DeltaStatus.DELETED, DeltaStatus.UNTRACKED]
+                    and of.mode in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]):
                 index.add(IndexEntry(nf.path, nf.id, of.mode))
 
         index.write()
@@ -1160,7 +1092,7 @@ class Repo(_VanillaRepository):
         i = self.find_stash_index(oid)
         self.stash_drop(self.find_stash_index(oid))
 
-    def applies_breakdown(self, patch_data: bytes | str, location: int = GIT_APPLY_LOCATION_WORKDIR) -> Diff:
+    def applies_breakdown(self, patch_data: bytes | str, location: int = ApplyLocation.WORKDIR) -> Diff:
         diff = Diff.parse_diff(patch_data)
         error = MultiFileError()
 
@@ -1192,7 +1124,7 @@ class Repo(_VanillaRepository):
 
     def apply(self,
               patch_data_or_diff: bytes | str | Diff,
-              location: int = GIT_APPLY_LOCATION_WORKDIR
+              location: ApplyLocation = ApplyLocation.WORKDIR
               ) -> Diff:
         if type(patch_data_or_diff) in [bytes, str]:
             diff = Diff.parse_diff(patch_data_or_diff)
@@ -1258,11 +1190,11 @@ class Repo(_VanillaRepository):
         merge_analysis, merge_pref = self.merge_analysis(rb.target, RefPrefix.HEADS + local_branch_name)
         _logger.debug(f"Merge analysis: {repr(merge_analysis)}. Merge preference: {repr(merge_pref)}.")
 
-        if merge_analysis & GIT_MERGE_ANALYSIS_UP_TO_DATE:
+        if merge_analysis & MergeAnalysis.UP_TO_DATE:
             # Local branch is up-to-date with remote branch, nothing to do.
             return True
 
-        elif merge_analysis == (GIT_MERGE_ANALYSIS_NORMAL | GIT_MERGE_ANALYSIS_FASTFORWARD):
+        elif merge_analysis == (MergeAnalysis.NORMAL | MergeAnalysis.FASTFORWARD):
             # Go ahead and fast-forward.
 
             # First, we need to check out the tree pointed to by the remote branch. This step is necessary,
@@ -1275,7 +1207,7 @@ class Repo(_VanillaRepository):
             # Then make the local branch point to the same commit as the remote branch.
             lb.set_target(rb.target)
 
-        elif merge_analysis == GIT_MERGE_ANALYSIS_NORMAL:
+        elif merge_analysis == MergeAnalysis.NORMAL:
             # Can't FF. Divergent branches?
             raise DivergentBranchesError(lb, rb)
 
@@ -1388,7 +1320,7 @@ class Repo(_VanillaRepository):
                 submodule_dotgit_file.write(f"gitdir: {_os.path.relpath(inner_g2, inner_w)}\n")
 
         # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
-        entry = IndexEntry(inner_w.relative_to(outer_w), inner_head_oid, GIT_FILEMODE_COMMIT)
+        entry = IndexEntry(inner_w.relative_to(outer_w), inner_head_oid, FileMode.COMMIT)
         self.index.add(entry)
 
         # While we're here also add .gitmodules
@@ -1423,7 +1355,7 @@ class Repo(_VanillaRepository):
         unstaged_diff = self.diff(None, None)  # unstaged - index to workdir
 
         staged_paths = [p.delta.new_file.path for p in staged_diff]
-        unstaged_paths = [p.delta.new_file.path for p in unstaged_diff if p.delta.status != GIT_DELTA_CONFLICTED]
+        unstaged_paths = [p.delta.new_file.path for p in unstaged_diff if p.delta.status != DeltaStatus.CONFLICTED]
 
         if set(staged_paths).intersection(unstaged_paths):
             raise ValueError("entries not up-to-date")
@@ -1450,7 +1382,7 @@ class Repo(_VanillaRepository):
 
 
 class RepoContext:
-    def __init__(self, path: str | _Path, flags: int = 0):
+    def __init__(self, path: str | _Path, flags: RepositoryOpenFlag = 0):
         self.repo = Repo(path, flags)
 
     def __enter__(self) -> Repo:

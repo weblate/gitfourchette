@@ -36,7 +36,7 @@ class RenameBranch(RepoTask):
     def flow(self, oldBranchName: str):
         assert not oldBranchName.startswith(RefPrefix.HEADS)
 
-        forbiddenBranchNames = self.repo.listall_branches(GIT_BRANCH_LOCAL)
+        forbiddenBranchNames = self.repo.listall_branches(BranchType.LOCAL)
         forbiddenBranchNames.remove(oldBranchName)
 
         nameTaken = self.tr("This name is already taken by another local branch.")
@@ -125,7 +125,7 @@ class _NewBranchBaseTask(RepoTask):
         # Ensure no duplicate upstreams (stable order since Python 3.7+)
         upstreams = list(dict.fromkeys(upstreams))
 
-        forbiddenBranchNames = repo.listall_branches(GIT_BRANCH_LOCAL)
+        forbiddenBranchNames = repo.listall_branches(BranchType.LOCAL)
 
         commitMessage = repo.get_commit_message(tip)
         commitMessage, junk = messageSummary(commitMessage)
@@ -328,17 +328,17 @@ class MergeBranch(RepoTask):
                 self.tr("Commit your changes or stash them to proceed."))
             raise AbortTask(message)
 
-        elif analysis == GIT_MERGE_ANALYSIS_UP_TO_DATE:
+        elif analysis == MergeAnalysis.UP_TO_DATE:
             message = paragraphs(
                 self.tr("No merge is necessary."),
                 self.tr("Your branch {0} is already up-to-date with {1}.").format(bquo(myShorthand), bquo(them)))
             raise AbortTask(message)
 
-        elif analysis == GIT_MERGE_ANALYSIS_UNBORN:
+        elif analysis == MergeAnalysis.UNBORN:
             message = self.tr("Cannot merge into an unborn head.")
             raise AbortTask(message)
 
-        elif analysis == GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL:
+        elif analysis == MergeAnalysis.FASTFORWARD | MergeAnalysis.NORMAL:
             message = self.tr("Your branch {0} can simply be fast-forwarded to {1}."
                               ).format(bquo(myShorthand), bquo(them))
             details = paragraphs(
@@ -351,7 +351,7 @@ class MergeBranch(RepoTask):
             yield from self.flowEnterWorkerThread()
             self.repo.fast_forward_branch(myShorthand, theirBranch.name)
 
-        elif analysis == GIT_MERGE_ANALYSIS_NORMAL:
+        elif analysis == MergeAnalysis.NORMAL:
             message = paragraphs(
                 self.tr("Merging {0} into {1} may cause conflicts.").format(bquo(them), bquo(myShorthand)),
                 self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))

@@ -25,7 +25,7 @@ class DirtyFiles(FileList):
 
         statusSet = set(patch.delta.status for patch in patches)
 
-        if GIT_DELTA_CONFLICTED not in statusSet:
+        if DeltaStatus.CONFLICTED not in statusSet:
             actions += [
                 ActionDef(
                     self.tr("&Stage %n File(s)", "", n),

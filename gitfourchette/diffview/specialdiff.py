@@ -73,7 +73,7 @@ class SpecialDiffError(Exception):
             message = translate("Diff", "Empty file was deleted.")
 
         if not oldFileExists:
-            if delta.new_file.mode == GIT_FILEMODE_TREE:
+            if delta.new_file.mode == FileMode.TREE:
                 treePath = os.path.normpath(delta.new_file.path)
                 treeName = os.path.basename(treePath)
                 message = translate("Diff", "This untracked folder is the root of another Git repository.")
@@ -86,7 +86,7 @@ class SpecialDiffError(Exception):
                 prompt = translate("Diff", "Absorb {0} as submodule").format(bquo(treeName))
                 taskLink = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
                 longform.append(f"<center><p><a href='{taskLink}'>{prompt}</a></p></center>")
-            elif delta.status in [GIT_DELTA_ADDED, GIT_DELTA_UNTRACKED]:
+            elif delta.status in [DeltaStatus.ADDED, DeltaStatus.UNTRACKED]:
                 message = translate("Diff", "New empty file.")
             else:
                 message = translate("Diff", "File is empty.")

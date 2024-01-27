@@ -223,7 +223,7 @@ def testResetHeadToCommit(qtbot, tempDir, mainWindow):
     rw.graphView.resetHeadFlow()
 
     qd: ResetHeadDialog = findQDialog(rw, "reset head to 0966a4")
-    qd.modeButtons['hard'].click()
+    qd.modeButtons[ResetMode.HARD].click()
     qd.accept()
 
     assert rw.repo.head.target == oid1
@@ -293,7 +293,7 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
 
     rw.graphView.selectUncommittedChanges()
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
-    assert rw.repo.status() == {"c/c2-2.txt": GIT_STATUS_INDEX_NEW}
+    assert rw.repo.status() == {"c/c2-2.txt": FileStatus.INDEX_NEW}
 
 
 def testCherrypick(qtbot, tempDir, mainWindow):
@@ -310,7 +310,7 @@ def testCherrypick(qtbot, tempDir, mainWindow):
     triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
 
     assert rw.fileStackPage() == "workdir"
-    assert rw.repo.status() == {"a/a1.txt": GIT_STATUS_INDEX_NEW}
+    assert rw.repo.status() == {"a/a1.txt": FileStatus.INDEX_NEW}
 
     acceptQMessageBox(rw, "cherry.+success.+commit")
 

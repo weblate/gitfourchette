@@ -23,17 +23,17 @@ def deltaModeText(delta: DiffDelta):
 
     if om != 0 and nm != 0 and om != nm:
         # Mode change
-        if nm == GIT_FILEMODE_BLOB_EXECUTABLE:
+        if nm == FileMode.BLOB_EXECUTABLE:
             return "+x"
-        elif om == GIT_FILEMODE_BLOB_EXECUTABLE:
+        elif om == FileMode.BLOB_EXECUTABLE:
             return "-x"
         else:
             return ""
     elif om == 0:
         # New file
-        if nm in [0, GIT_FILEMODE_BLOB]:
+        if nm in [0, FileMode.BLOB]:
             pass
-        elif nm == GIT_FILEMODE_BLOB_EXECUTABLE:
+        elif nm == FileMode.BLOB_EXECUTABLE:
             return "+x"
         else:
             return TrTables.fileMode(nm)
@@ -48,7 +48,7 @@ def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
     nf: DiffFile = delta.new_file
 
     sc = delta.status_char()
-    if delta.status == GIT_DELTA_CONFLICTED:  # libgit2 should arguably return "U" (unmerged) for conflicts, but it doesn't
+    if delta.status == DeltaStatus.CONFLICTED:  # libgit2 should arguably return "U" (unmerged) for conflicts, but it doesn't
         sc = "U"
 
     text = "<p style='white-space: pre'>" + escape(nf.path)
@@ -91,7 +91,7 @@ def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
             text += newLine(legend, f"{TrTables.fileMode(of.mode)} &rarr; {TrTables.fileMode(nf.mode)}")
 
     # Size (if available)
-    if sc not in 'DU' and nf.size != 0 and (nf.mode & GIT_FILEMODE_BLOB == GIT_FILEMODE_BLOB):
+    if sc not in 'DU' and nf.size != 0 and (nf.mode & FileMode.BLOB == FileMode.BLOB):
         text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size))
 
     # Modified time
@@ -146,7 +146,7 @@ class FileListModel(QAbstractListModel):
 
         for diff in diffs:
             for patchNo, delta in enumerate(diff.deltas):
-                if self.skipConflicts and delta.status == GIT_DELTA_CONFLICTED:
+                if self.skipConflicts and delta.status == DeltaStatus.CONFLICTED:
                     continue
                 self.fileRows[delta.new_file.path] = len(self.entries)
                 self.entries.append(FileListModel.Entry(delta, diff, patchNo))
@@ -199,9 +199,9 @@ class FileListModel(QAbstractListModel):
             delta = self.getDeltaAt(index)
             if not delta:
                 iconName = "status_x"
-            elif delta.status == GIT_DELTA_UNTRACKED:
+            elif delta.status == DeltaStatus.UNTRACKED:
                 iconName = "status_a"
-            elif delta.status == GIT_DELTA_CONFLICTED:
+            elif delta.status == DeltaStatus.CONFLICTED:
                 iconName = "status_u"
             else:
                 iconName = "status_" + delta.status_char().lower()

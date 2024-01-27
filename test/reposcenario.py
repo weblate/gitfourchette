@@ -9,7 +9,7 @@ def fileWithStagedAndUnstagedChanges(path):
         repo.index.add("a/a1.txt")
         repo.index.write()
         writeFile(F"{path}/a/a1.txt", "a1\nUNSTAGED CHANGE TO REVERT\nstaged change\n")
-        assert repo.status() == {"a/a1.txt": GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_MODIFIED}
+        assert repo.status() == {"a/a1.txt": FileStatus.INDEX_MODIFIED | FileStatus.WT_MODIFIED}
 
 
 def stagedNewEmptyFile(path):
@@ -18,7 +18,7 @@ def stagedNewEmptyFile(path):
         repo.index.read()
         repo.index.add("SomeNewFile.txt")
         repo.index.write()
-        assert repo.status() == {"SomeNewFile.txt": GIT_STATUS_INDEX_NEW}
+        assert repo.status() == {"SomeNewFile.txt": FileStatus.INDEX_NEW}
 
 
 def stashedChange(path):

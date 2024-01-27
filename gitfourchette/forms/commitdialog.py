@@ -42,9 +42,9 @@ class CommitDialog(QDialog):
                             escape(f"{committerSignature.name} <{committerSignature.email}>, {committerQDT.toString()}"))
 
         warning = ""
-        if repoState == GIT_REPOSITORY_STATE_MERGE:
+        if repoState == RepositoryState.MERGE:
             warning = self.tr("This commit will conclude the merge.")
-        elif repoState == GIT_REPOSITORY_STATE_CHERRYPICK:
+        elif repoState == RepositoryState.CHERRYPICK:
             warning = self.tr("This commit will conclude the cherry-pick.")
         elif amendingCommitHash:
             warning = self.tr("You are amending commit {0}.").format(lquo(amendingCommitHash))

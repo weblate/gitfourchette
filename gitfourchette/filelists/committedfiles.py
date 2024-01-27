@@ -146,11 +146,11 @@ class CommittedFiles(FileList):
     def getFileRevisionInfo(self, patch: Patch, beforeCommit: bool = False) -> tuple[str, Blob, DiffFile]:
         if beforeCommit:
             diffFile = patch.delta.old_file
-            if patch.delta.status == GIT_DELTA_ADDED:
+            if patch.delta.status == DeltaStatus.ADDED:
                 raise FileNotFoundError(errno.ENOENT, self.tr("This file didn’t exist before the commit."), diffFile.path)
         else:
             diffFile = patch.delta.new_file
-            if patch.delta.status == GIT_DELTA_DELETED:
+            if patch.delta.status == DeltaStatus.DELETED:
                 raise FileNotFoundError(errno.ENOENT, self.tr("This file was deleted by the commit."), diffFile.path)
 
         blob = self.repo.peel_blob(diffFile.id)

@@ -32,7 +32,7 @@ class StashDialog(QDialog):
         self.ui.fileList.setUniformItemSizes(True)
         scrollTo = None
         for filePath, fileStatus in repoStatus.items():
-            if (fileStatus & GIT_STATUS_INDEX_MASK) and (fileStatus & GIT_STATUS_WT_MASK):
+            if (fileStatus & FileStatus_INDEX_MASK) and (fileStatus & FileStatus_WT_MASK):
                 self.ui.indexAndWtWarning.setVisible(True)
 
             listItem = QListWidgetItem(filePath, self.ui.fileList)

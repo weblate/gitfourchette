@@ -151,7 +151,7 @@ class DiffDocument:
                     numLinesInClump = 0
                     perfectClumpTally = 0
 
-                # Skip GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+                # Skip GIT_DIFF_LINE_CONTEXT_EOFNL, ...ADD_EOFNL, ...DEL_EOFNL
                 if origin in "=><":
                     continue
 

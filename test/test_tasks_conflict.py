@@ -41,7 +41,7 @@ def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
 
     assert not rw.repo.index.conflicts
     assert not rw.conflictView.isVisibleTo(rw)
-    assert rw.repo.status() == {"a/a2.txt": GIT_STATUS_INDEX_NEW}
+    assert rw.repo.status() == {"a/a2.txt": FileStatus.INDEX_NEW}
 
 
 def testConflictDeletedByThem(qtbot, tempDir, mainWindow):
@@ -85,7 +85,7 @@ def testConflictDeletedByThem(qtbot, tempDir, mainWindow):
 
     assert not rw.repo.index.conflicts
     assert not rw.conflictView.isVisibleTo(rw)
-    assert rw.repo.status() == {"a/a2.txt": GIT_STATUS_INDEX_DELETED}
+    assert rw.repo.status() == {"a/a2.txt": FileStatus.INDEX_DELETED}
 
 
 def testConflictDoesntPreventManipulatingIndexOnOtherFile(qtbot, tempDir, mainWindow):

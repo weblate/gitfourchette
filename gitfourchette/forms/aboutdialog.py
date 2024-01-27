@@ -12,16 +12,7 @@ DONATE_URL = "https://ko-fi.com/jorio"
 
 
 def getPygit2FeatureStrings():
-    featureNames = {
-        pygit2.GIT_FEATURE_SSH: "ssh",
-        pygit2.GIT_FEATURE_HTTPS: "https",
-        pygit2.GIT_FEATURE_THREADS: "threads"
-    }
-    featureList = []
-    for mask, name in featureNames.items():
-        if pygit2.features & mask:
-            featureList.append(name)
-    return featureList
+    return [f.name.lower() for f in pygit2.enums.Feature if f & pygit2.features]
 
 
 def simpleLink(url):

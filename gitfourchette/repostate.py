@@ -213,14 +213,14 @@ class RepoState(QObject):
 
     @benchmark
     def initializeWalker(self, tipOids: Iterable[Oid]) -> Walker:
-        sorting = GIT_SORT_TOPOLOGICAL
+        sorting = SortMode.TOPOLOGICAL
 
         if settings.prefs.graph_chronologicalOrder:
             # In strictly chronological ordering, a commit may appear before its
             # children if it was "created" later than its children. The graph
             # generator produces garbage in this case. So, for chronological
-            # ordering, keep GIT_SORT_TOPOLOGICAL in addition to GIT_SORT_TIME.
-            sorting |= GIT_SORT_TIME
+            # ordering, keep TOPOLOGICAL in addition to TIME.
+            sorting |= SortMode.TIME
 
         if self.walker is None:
             self.walker = self.repo.walk(None, sorting)

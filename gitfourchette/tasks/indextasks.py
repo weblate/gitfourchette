@@ -24,7 +24,7 @@ class _BaseStagingTask(RepoTask):
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def denyConflicts(self, patches: list[Patch], purpose: PatchPurpose):
-        conflicts = [p for p in patches if p.delta.status == GIT_DELTA_CONFLICTED]
+        conflicts = [p for p in patches if p.delta.status == DeltaStatus.CONFLICTED]
 
         if not conflicts:
             return
@@ -77,7 +77,7 @@ class DiscardFiles(_BaseStagingTask):
         if len(patches) == 1:
             patch = patches[0]
             path = patch.delta.new_file.path
-            if patch.delta.status == GIT_DELTA_UNTRACKED:
+            if patch.delta.status == DeltaStatus.UNTRACKED:
                 textPara.append(self.tr("Really delete {0}?").format(bquo(path)))
                 verb = self.tr("Delete file", "Button label")
             else:
@@ -167,9 +167,9 @@ class ApplyPatch(RepoTask):
                 buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
             Trash.instance().backupPatch(self.repo.workdir, subPatch, fullPatch.delta.new_file.path)
-            applyLocation = GIT_APPLY_LOCATION_WORKDIR
+            applyLocation = ApplyLocation.WORKDIR
         else:
-            applyLocation = GIT_APPLY_LOCATION_INDEX
+            applyLocation = ApplyLocation.INDEX
 
         yield from self.flowEnterWorkerThread()
         self.repo.apply(subPatch, applyLocation)
@@ -223,17 +223,17 @@ class RevertPatch(RepoTask):
         if not patchData:
             raise AbortTask(self.tr("There’s nothing to revert in the selection."))
 
-        diff = self.repo.applies_breakdown(patchData, location=GIT_APPLY_LOCATION_WORKDIR)
+        diff = self.repo.applies_breakdown(patchData, location=ApplyLocation.WORKDIR)
         if not diff:
             raise AbortTask(
                 self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
 
         yield from self.flowEnterWorkerThread()
-        diff = self.repo.apply(diff, location=GIT_APPLY_LOCATION_WORKDIR)
+        diff = self.repo.apply(diff, location=ApplyLocation.WORKDIR)
 
         # After the task, jump to a NavLocator that points to any file that was modified by the patch
         for p in diff:
-            if p.delta.status != GIT_DELTA_DELETED:
+            if p.delta.status != DeltaStatus.DELETED:
                 self.jumpTo = NavLocator.inUnstaged(p.delta.new_file.path)
                 break
 
@@ -375,7 +375,7 @@ class ApplyPatchFile(RepoTask):
         details += ulList(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
         yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), detailText=details)
 
-        self.repo.apply(loadedDiff, GIT_APPLY_LOCATION_WORKDIR)
+        self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
 
 
 class ApplyPatchFileReverse(ApplyPatchFile):
@@ -388,8 +388,8 @@ class AbortMerge(RepoTask):
         return TaskEffects.DefaultRefresh
 
     def flow(self):
-        isMerging = self.repo.state() == GIT_REPOSITORY_STATE_MERGE
-        isCherryPicking = self.repo.state() == GIT_REPOSITORY_STATE_CHERRYPICK
+        isMerging = self.repo.state() == RepositoryState.MERGE
+        isCherryPicking = self.repo.state() == RepositoryState.CHERRYPICK
 
         if not isMerging and not isCherryPicking:
             raise AbortTask(self.tr("No merge or cherry-pick is in progress."), icon='information')

@@ -348,9 +348,11 @@ class ResetHead(RepoTask):
     def effects(self):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
-    def flow(self, onto: Oid, resetMode: str, recurseSubmodules: bool):
+    def flow(self, onto: Oid, resetMode: ResetMode, recurseSubmodules: bool):
         yield from self.flowEnterWorkerThread()
-        self.repo.reset_head2(onto, resetMode, recurseSubmodules)
+        if recurseSubmodules:
+            raise NotImplementedError("RecurseSubmodules not implemented in ResetHead")
+        self.repo.reset(onto, resetMode)
 
 
 class NewTag(RepoTask):
@@ -385,7 +387,7 @@ class NewTag(RepoTask):
         yield from self.flowEnterWorkerThread()
 
         if signIt:
-            self.repo.create_tag(tagName, oid, GIT_OBJ_COMMIT, self.repo.default_signature, "")
+            self.repo.create_tag(tagName, oid, ObjectType.COMMIT, self.repo.default_signature, "")
         else:
             self.repo.create_reference(RefPrefix.TAGS + tagName, oid)
 

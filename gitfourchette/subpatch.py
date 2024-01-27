@@ -70,7 +70,7 @@ def getPatchPreamble(delta: DiffDelta, reverse=False):
 
     if not ofExists:
         preamble += F"new file mode {nf.mode:06o}\n"
-    elif of.mode != nf.mode or nf.mode != GIT_FILEMODE_BLOB:
+    elif of.mode != nf.mode or nf.mode != FileMode.BLOB:
         preamble += F"old mode {of.mode:06o}\n"
         preamble += F"new mode {nf.mode:06o}\n"
 
@@ -114,7 +114,7 @@ def writeContext(subpatch: io.BytesIO, reverse: bool, lines: Iterable[DiffLine])
             # Skip that line entirely
             continue
         elif line.origin in "=><":
-            # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+            # GIT_DIFF_LINE_CONTEXT_EOFNL, ...ADD_EOFNL, ...DEL_EOFNL
             # Just copy "\ No newline at end of file" verbatim without an origin character
             pass
         elif line.origin in " -+":
@@ -235,7 +235,7 @@ def extractSubpatch(
                 plusLines = io.BytesIO()
 
             if origin in "=><":
-                # GIT_DIFF_LINE_CONTEXT_EOFNL, GIT_DIFF_LINE_ADD_EOFNL, GIT_DIFF_LINE_DEL_EOFNL
+                # GIT_DIFF_LINE_CONTEXT_EOFNL, ...ADD_EOFNL, ...DEL_EOFNL
                 # Just write raw content (b"\n\\ No newline at end of file") without an origin char
                 assert line.raw_content[0] == ord('\n')
                 buffer.write(line.raw_content)

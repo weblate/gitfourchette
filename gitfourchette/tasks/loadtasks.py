@@ -52,7 +52,7 @@ class PrimeRepo(RepoTask):
         progressWidget.ui.abortButton.setEnabled(False)
 
         # Create the repo
-        repo = Repo(path, GIT_REPOSITORY_OPEN_NO_SEARCH)
+        repo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
         self.setRepo(repo)  # required to execute subtasks later
 
         if repo.is_bare:
@@ -282,7 +282,7 @@ class LoadPatch(RepoTask):
             # Rare libgit2 bug, should be fixed in 1.6.0
             return SpecialDiffError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
 
-        if patch.delta.status == GIT_DELTA_CONFLICTED:
+        if patch.delta.status == DeltaStatus.CONFLICTED:
             path = patch.delta.new_file.path
             return self.repo.wrap_conflict(path)
 

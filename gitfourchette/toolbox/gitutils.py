@@ -93,6 +93,6 @@ def nameValidationMessage(name: str, reservedNames: list[str], nameTakenMessage:
 
 
 def simplifyOctalFileMode(m: int):
-    if m in [GIT_FILEMODE_BLOB, GIT_FILEMODE_BLOB_EXECUTABLE]:
+    if m in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]:
         m &= ~0o100000
     return m

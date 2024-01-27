@@ -3,18 +3,18 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
 
-DEFAULT_MODE = "mixed"
+DEFAULT_MODE = ResetMode.MIXED
 
 
 MODE_LABELS = {
-    "soft": "&Soft",
-    "mixed": "&Mixed",
-    "hard": "&Hard",
+    ResetMode.SOFT: "&Soft",
+    ResetMode.MIXED: "&Mixed",
+    ResetMode.HARD: "&Hard",
 }
 
 
 MODE_TEXT = {
-    "soft":
+    ResetMode.SOFT:
         """
         <ul>
         <li><p><b>Unstaged files</b>:<br>don’t touch</p>
@@ -27,7 +27,7 @@ MODE_TEXT = {
         # This leaves all your changed files
         # “Changes to be committed”, as <code>git status</code> would put it.</p>
 
-    "mixed":
+    ResetMode.MIXED:
         """
         <ul>
         <li><p><b>Unstaged files</b>:<br>don’t touch</p>
@@ -38,7 +38,7 @@ MODE_TEXT = {
         # <p>Resets the index but not the working tree (i.e., the changed files are preserved but
         # not marked for commit) and reports what has not been updated.</p>
 
-    "hard":
+    ResetMode.HARD:
         """
         <ul>
         <li><p><b>Unstaged files</b>:<br>⚠ <em>nuke changes</em> to files that have been touched by any commits since {commit}</p>
@@ -60,13 +60,13 @@ MODE_TEXT = {
 
 class ResetHeadDialog(QDialog):
     oid: Oid
-    activeMode: str
+    activeMode: ResetMode
     recurseSubmodules: bool
     helpLabel: QLabel
     recurseCheckbox: QCheckBox
 
     def setHelp(self):
-        title = self.activeMode.title()
+        title = self.activeMode.name.title()
         text = MODE_TEXT[self.activeMode].format(commit=self.shortsha)
 
         if self.recurseCheckbox.isEnabled() and self.recurseCheckbox.isChecked():
@@ -79,7 +79,7 @@ class ResetHeadDialog(QDialog):
         self.recurseSubmodules = checked
         self.setHelp()
 
-    def setActiveMode(self, mode: str, checked: bool = True):
+    def setActiveMode(self, mode: ResetMode, checked: bool = True):
         if not checked:
             return
         self.activeMode = mode
@@ -89,7 +89,7 @@ class ResetHeadDialog(QDialog):
     def __init__(self, oid: Oid, parent: QWidget):
         super().__init__(parent)
 
-        self.activeMode = "???"
+        self.activeMode = DEFAULT_MODE
         self.recurseSubmodules = False
         self.shortsha = shortHash(oid)
 
@@ -116,9 +116,9 @@ class ResetHeadDialog(QDialog):
         buttonVBL = QVBoxLayout()
 
         self.modeButtons = {}
-        for mode in ['soft', 'mixed', 'hard']:
+        for mode in [ResetMode.SOFT, ResetMode.MIXED, ResetMode.HARD]:
             button = QRadioButton(MODE_LABELS[mode])
-            button.toggled.connect(lambda checked, mode=mode: self.setActiveMode(mode, checked))
+            button.toggled.connect(lambda checked, m=mode: self.setActiveMode(m, checked))
             buttonVBL.addWidget(button)
             self.modeButtons[mode] = button
 

@@ -80,7 +80,7 @@ def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
     with RepoContext(barePath) as bareRepo:
         assert bareRepo.is_bare
         assert bareRepo.head.target == oldHead
-        bareRepo.reset_head2(newHead, mode="soft")  # can't reset hard in bare repos, whatever...
+        bareRepo.reset(newHead, ResetMode.SOFT)  # can't reset hard in bare repos, whatever...
         assert bareRepo.head.target == newHead
 
     rw = mainWindow.openRepo(wd)

@@ -53,12 +53,12 @@ def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    assert rw.repo.status() == {"NewFile.txt": GIT_STATUS_WT_NEW}
+    assert rw.repo.status() == {"NewFile.txt": FileStatus.WT_NEW}
 
     rw.diffView.setFocus()
     qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
 
-    assert rw.repo.status() == {"NewFile.txt": GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED}
+    assert rw.repo.status() == {"NewFile.txt": FileStatus.INDEX_NEW | FileStatus.WT_MODIFIED}
 
     stagedId = rw.repo.index["NewFile.txt"].id
     stagedBlob = rw.repo.peel_blob(stagedId)
@@ -71,12 +71,12 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    assert rw.repo.status() == {"file with spaces.txt": GIT_STATUS_WT_NEW}
+    assert rw.repo.status() == {"file with spaces.txt": FileStatus.WT_NEW}
 
     rw.diffView.setFocus()
     qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
 
-    assert rw.repo.status() == {"file with spaces.txt": GIT_STATUS_INDEX_NEW | GIT_STATUS_WT_MODIFIED}
+    assert rw.repo.status() == {"file with spaces.txt": FileStatus.INDEX_NEW | FileStatus.WT_MODIFIED}
 
     stagedId = rw.repo.index["file with spaces.txt"].id
     stagedBlob = rw.repo.peel_blob(stagedId)
@@ -94,14 +94,14 @@ def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
     writeFile(F"{wd}/master.txt", "This file is +x now\nOn master\nOn master\nDon't stage this line\n")
 
     rw = mainWindow.openRepo(wd)
-    assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED}
+    assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED}
 
     # Partial patch of first modified line
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     qtbot.keyPress(rw.diffView, Qt.Key.Key_Down)    # Skip hunk line (@@...@@)
     qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
-    assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED}
+    assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED | FileStatus.INDEX_MODIFIED}
 
     staged = rw.repo.get_staged_changes()
     delta = next(staged.deltas)
@@ -121,7 +121,7 @@ def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
     writeFile(F"{wd}/master.txt", NEW_CONTENTS)
     rw = mainWindow.openRepo(wd)
 
-    assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED}
+    assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED}
 
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
@@ -144,21 +144,21 @@ def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
         writeFile(F"{wd}/master.txt", "hello\n")
 
     rw = mainWindow.openRepo(wd)
-    assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED}
+    assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED}
 
     # Initiate subpatch by selecting lines and hitting return
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
     qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
-    assert rw.repo.status() == {"master.txt": GIT_STATUS_INDEX_MODIFIED}
+    assert rw.repo.status() == {"master.txt": FileStatus.INDEX_MODIFIED}
 
     # It must also work in reverse - let's unstage this change via a subpatch
     qlvClickNthRow(rw.stagedFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
     qtbot.keyPress(rw.diffView, Qt.Key.Key_Delete)
-    assert rw.repo.status() == {"master.txt": GIT_STATUS_WT_MODIFIED}
+    assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED}
 
     # Finally, let's discard this change via a subpatch
     qlvClickNthRow(rw.dirtyFiles, 0)

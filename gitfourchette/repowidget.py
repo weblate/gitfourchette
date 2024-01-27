@@ -898,10 +898,12 @@ class RepoWidget(QWidget):
         bannerAction = ""
         bannerCallback = None
 
+        rstate = repo.state() if repo else RepositoryState.NONE
+
         if not repo:
             pass
 
-        elif repo.state() & GIT_REPOSITORY_STATE_MERGE:
+        elif rstate == RepositoryState.MERGE:
             bannerTitle = self.tr("Merging")
             try:
                 mh = self.state.mergeheadsCache[0]
@@ -920,7 +922,7 @@ class RepoWidget(QWidget):
             bannerAction = self.tr("Abort Merge")
             bannerCallback = lambda: self.runTask(AbortMerge)
 
-        elif repo.state() & GIT_REPOSITORY_STATE_CHERRYPICK:
+        elif rstate == RepositoryState.CHERRYPICK:
             bannerTitle = self.tr("Cherry-picking")
 
             message = ""
@@ -934,10 +936,10 @@ class RepoWidget(QWidget):
             bannerAction = self.tr("Abort Cherry-Pick")
             bannerCallback = lambda: self.runTask(AbortMerge)
 
-        elif repo.state() & (GIT_REPOSITORY_STATE_REBASE | GIT_REPOSITORY_STATE_REBASE_MERGE):
+        elif rstate in [RepositoryState.REBASE, RepositoryState.REBASE_MERGE]:
             bannerTitle = self.tr("Rebasing")
 
-        elif repo.state() & GIT_REPOSITORY_STATE_REBASE_INTERACTIVE:
+        elif rstate == RepositoryState.REBASE_INTERACTIVE:
             bannerTitle = self.tr("Rebasing interactively")
 
         elif repo.any_conflicts:

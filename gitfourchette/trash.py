@@ -109,11 +109,11 @@ class Trash:
         for patch in patches:
             path = patch.delta.new_file.path
 
-            if patch.delta.status == GIT_DELTA_DELETED:
+            if patch.delta.status == DeltaStatus.DELETED:
                 # It doesn't make sense to back up a file deletion
                 continue
 
-            elif patch.delta.status == GIT_DELTA_UNTRACKED or patch.delta.is_binary:
+            elif patch.delta.status == DeltaStatus.UNTRACKED or patch.delta.is_binary:
                 self.backupFile(workdir, path)
 
             else:

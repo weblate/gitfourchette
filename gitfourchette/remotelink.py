@@ -12,22 +12,12 @@ logger = logging.getLogger(__name__)
 
 DLRATE_REFRESH_INTERVAL = 1000
 
-AUTH_NAMES = {
-    GIT_CREDENTIAL_USERPASS_PLAINTEXT: "userpass_plaintext",
-    GIT_CREDENTIAL_SSH_KEY: "ssh_key",
-    GIT_CREDENTIAL_SSH_CUSTOM: "ssh_custom",
-    GIT_CREDENTIAL_DEFAULT: "default",
-    GIT_CREDENTIAL_SSH_INTERACTIVE: "ssh_interactive",
-    GIT_CREDENTIAL_USERNAME: "username",
-    GIT_CREDENTIAL_SSH_MEMORY: "ssh_memory"
-}
-
 
 def getAuthNamesFromFlags(allowedTypes):
     allowedTypeNames = []
-    for k, v in AUTH_NAMES.items():
-        if allowedTypes & k:
-            allowedTypeNames.append(v)
+    for credential in CredentialType:
+        if allowedTypes & credential:
+            allowedTypeNames.append(credential.name.lower())
     return ", ".join(allowedTypeNames)
 
 
@@ -168,7 +158,7 @@ class RemoteLink(QObject, RemoteCallbacks):
         if self.attempts == 1:
             logger.info(f"Auths accepted by server: {getAuthNamesFromFlags(allowed_types)}")
 
-        if self.keypairFiles and (allowed_types & GIT_CREDENTIAL_SSH_KEY):
+        if self.keypairFiles and (allowed_types & CredentialType.SSH_KEY):
             pubkey, privkey = self.keypairFiles.pop()
             logger.info(f"Attempting login with: {compactPath(pubkey)}")
 

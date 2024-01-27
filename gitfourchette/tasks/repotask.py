@@ -5,7 +5,7 @@ import logging
 from typing import Any, Generator, Type
 
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, GIT_REPOSITORY_STATE_CHERRYPICK
+from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, RepositoryState
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
@@ -413,7 +413,7 @@ class RepoTask(QObject):
                 self.tr("There are no commits in this repository yet."),
                 self.tr("Create the initial commit in this repository before performing this action.")))
 
-        if TaskPrereqs.NoCherrypick in prereqs and repo.state() == GIT_REPOSITORY_STATE_CHERRYPICK:
+        if TaskPrereqs.NoCherrypick in prereqs and repo.state() == RepositoryState.CHERRYPICK:
             raise AbortTask(paragraphs(
                 self.tr("You are in the middle of a cherry-pick."),
                 self.tr("Before performing this action, conclude the cherry-pick.")))
