@@ -2,10 +2,12 @@
 
 set -e
 
+PYTHON=${PYTHON:-python3}
+
 here="$(dirname "$(realpath "$0")")"
 cd "$here/../.."
 
-python3.12 -m PyInstaller pkg/pyinstaller/gitfourchette-macos.spec --noconfirm
+$PYTHON -m PyInstaller pkg/pyinstaller/gitfourchette-macos.spec --noconfirm
 
 APP=dist/GitFourchette.app
 

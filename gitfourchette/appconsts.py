@@ -7,6 +7,7 @@ ACTIVE_BULLET = "★ "
 
 # BEGIN_FREEZE_CONSTS
 # These constants can be overwritten by `update_resources.py --freeze`
+# Do not commit changes in this file unless you know what you are doing!
 APP_FROZEN = False
 APP_BUILD_DATE = ""
 APP_FIXED_QT_BINDING = ""
