@@ -647,7 +647,14 @@ class RepoWidget(QWidget):
                 widgets[leader].clearSelection()
             widgets[leader].selectRow(row)
         else:
+            # No valid selection
             QApplication.beep()
+
+            # Focus on the widget that has some selected files in it
+            for w in widgets:
+                if len(w.selectedIndexes()) > 0:
+                    w.setFocus()
+                    break
 
     # -------------------------------------------------------------------------
 
