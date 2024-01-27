@@ -150,7 +150,7 @@ class Prefs(PrefsFile):
     shortHashChars              : int           = 7
     shortTimeFormat             : str           = list(SHORT_DATE_PRESETS.values())[0]
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS
-    authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.ABBREVIATED_EMAIL
+    authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME
     maxRecentRepos              : int           = 20
     showStatusBar               : bool          = True
     autoHideMenuBar             : bool          = False

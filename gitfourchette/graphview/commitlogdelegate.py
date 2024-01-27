@@ -304,7 +304,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                 highlight(x1, x2)
 
         # Draw author name
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, elide(authorText) + "  ")
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText) + "  ")
 
         # ------ Date
         rect.setLeft(leftBoundDate)
