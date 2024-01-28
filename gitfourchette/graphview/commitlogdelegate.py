@@ -162,6 +162,9 @@ class CommitLogDelegate(QStyledItemDelegate):
             searchBar: SearchBar = self.parent().searchBar
             searchTerm: str = searchBar.searchTerm
             searchTermLooksLikeHash: bool = searchBar.searchTermLooksLikeHash
+
+            if not searchBar.isVisible():
+                searchTerm = ""
         else:
             oid = UC_FAKEID
             commit = None

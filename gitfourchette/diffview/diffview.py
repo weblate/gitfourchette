@@ -109,7 +109,11 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
         self.highlightFormat.setFontWeight(QFont.Weight.Bold)
 
     def highlightBlock(self, text: str):
-        term = self.parent().searchBar.searchTerm
+        searchBar = self.parent().searchBar
+        if not searchBar.isVisible():
+            return
+
+        term = searchBar.searchTerm
         if not term:
             return
         termLength = len(term)
@@ -180,6 +184,7 @@ class DiffView(QPlainTextEdit):
         self.searchBar.textChanged.connect(self.highlighter.rehighlight)
         self.searchBar.searchNext.connect(lambda: self.search(SearchBar.Op.NEXT))
         self.searchBar.searchPrevious.connect(lambda: self.search(SearchBar.Op.PREVIOUS))
+        self.searchBar.visibilityChanged.connect(lambda: self.highlighter.rehighlight())
         self.searchBar.hide()
 
         # Initialize font

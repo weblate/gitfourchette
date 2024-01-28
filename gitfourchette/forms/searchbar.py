@@ -20,6 +20,7 @@ class SearchBar(QWidget):
     searchNext = Signal()
     searchPrevious = Signal()
     searchPulse = Signal()
+    visibilityChanged = Signal(bool)
 
     searchTerm: str
     "Sanitized search term (lowercase, stripped whitespace)"
@@ -30,7 +31,7 @@ class SearchBar(QWidget):
     searchPulseTimer: QTimer
 
     @property
-    def rawSearchTerm(self):
+    def rawSearchTerm(self) -> str:
         return self.lineEdit.text()
 
     @property
@@ -38,7 +39,7 @@ class SearchBar(QWidget):
         return self.ui.lineEdit
 
     @property
-    def textChanged(self):
+    def textChanged(self) -> Signal:
         return self.lineEdit.textChanged
 
     @property
@@ -105,6 +106,12 @@ class SearchBar(QWidget):
 
         else:
             super().keyPressEvent(event)
+
+    def showEvent(self, event: QShowEvent):
+        self.visibilityChanged.emit(True)
+
+    def hideEvent(self, event: QHideEvent):
+        self.visibilityChanged.emit(False)
 
     def popUp(self, forceSelectAll=False):
         wasHidden = self.isHidden()

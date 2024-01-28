@@ -48,6 +48,8 @@ class _FileListDelegate(QStyledItemDelegate):
 
         searchBar: SearchBar = option.widget.searchBar
         searchTerm = searchBar.searchTerm
+        if not searchBar.isVisible():
+            searchTerm = ""
 
         if searchTerm and searchTerm in fullText.lower():
             needleIndex = elidedText.lower().find(searchTerm)
