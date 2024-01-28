@@ -207,8 +207,6 @@ class TrTables:
                 "“trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. "
                 "You can look around this trash folder via <i>“Help &rarr; Open Trash”</i>."),
 
-            "debug_showMemoryIndicator": translate("Prefs", "Show memory indicator in status bar"),
-            "debug_showPID": translate("Prefs", "Show technical info in title bar"),
             "debug_verbosity": translate("Prefs", "Logging verbosity"),
             "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
             "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),

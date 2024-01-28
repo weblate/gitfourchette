@@ -5,6 +5,7 @@ from typing import Any, Type, Union
 
 from gitfourchette import tasks
 from gitfourchette.qt import *
+from gitfourchette.settings import DEVDEBUG
 from gitfourchette.tasks import RepoTask, TaskInvoker
 from gitfourchette.toolbox import stockIcon, MultiShortcut, makeMultiShortcut
 

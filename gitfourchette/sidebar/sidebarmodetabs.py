@@ -1,7 +1,7 @@
 import logging
 
 from gitfourchette.qt import *
-from gitfourchette.settings import qtIsNativeMacosStyle
+from gitfourchette.settings import DEVDEBUG, qtIsNativeMacosStyle
 
 _logger = logging.getLogger(__name__)
 

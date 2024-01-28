@@ -386,7 +386,7 @@ class MainWindow(QMainWindow):
             TaskBook.action(tasks.JumpForward),
         )
 
-        if DEVDEBUG:
+        if settings.DEVDEBUG:
             a = goMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
 
@@ -1075,7 +1075,7 @@ class MainWindow(QMainWindow):
             self.fillRecentMenu()
 
         self.statusBar2.setVisible(settings.prefs.showStatusBar)
-        self.statusBar2.enableMemoryIndicator(settings.prefs.debug_showMemoryIndicator)
+        self.statusBar2.enableMemoryIndicator(settings.DEVDEBUG)
 
         self.tabs.refreshPrefs()
         self.autoHideMenuBar.refreshPrefs()

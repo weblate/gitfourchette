@@ -7,6 +7,7 @@ from typing import Any, Generator, Type
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, RepositoryState
 from gitfourchette.qt import *
+from gitfourchette.settings import DEVDEBUG
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)

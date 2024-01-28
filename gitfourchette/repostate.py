@@ -180,7 +180,7 @@ class RepoState(QObject):
 
         if refCache == self.refCache:
             # Make sure it's sorted in the exact same order...
-            if DEVDEBUG:
+            if settings.DEVDEBUG:
                 assert list(refCache.keys()) == list(self.refCache.keys()), "refCache key order changed! how did that happen?"
 
             # Nothing to do!

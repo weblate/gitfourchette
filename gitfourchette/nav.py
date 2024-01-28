@@ -7,6 +7,7 @@ from typing import ClassVar
 
 from gitfourchette.porcelain import NULL_OID, Oid
 from gitfourchette.qt import *
+from gitfourchette.settings import DEVDEBUG
 from gitfourchette.toolbox import *
 
 PUSH_INTERVAL = 0.5

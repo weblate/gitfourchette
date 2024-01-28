@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Iterable, Iterator
 
 from gitfourchette.porcelain import Oid as _RealOidType
-from gitfourchette.qt import DEVDEBUG
+from gitfourchette.settings import DEVDEBUG
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)

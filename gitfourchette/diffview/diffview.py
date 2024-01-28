@@ -247,7 +247,7 @@ class DiffView(QPlainTextEdit):
         # Detect if we're trying to load exactly the same patch - common occurrence when moving the app back to the
         # foreground. In that case, don't change the document to prevent losing any selected text.
         if self.canReuseCurrentDocument(locator, patch, newDoc):
-            if DEVDEBUG:  # this check can be pretty expensive!
+            if settings.DEVDEBUG:  # this check can be pretty expensive!
                 assert patch.data == self.currentPatch.data
 
             # Delete new document

@@ -1018,12 +1018,8 @@ class RepoWidget(QWidget):
         else:
             self.mergeBanner.setVisible(False)
 
-        if settings.prefs.debug_showPID:
+        if settings.DEVDEBUG:
             chain = []
-            if DEVDEBUG:
-                chain.append("DEVDEBUG")
-            elif __debug__:
-                chain.append("debug")
             if settings.TEST_MODE:
                 chain.append("TEST_MODE")
             if settings.SYNC_TASKS:

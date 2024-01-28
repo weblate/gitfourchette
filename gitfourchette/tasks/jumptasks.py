@@ -11,6 +11,7 @@ from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
 from gitfourchette.porcelain import NULL_OID
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
+from gitfourchette.settings import DEVDEBUG
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
 from gitfourchette.diffview.diffdocument import DiffDocument

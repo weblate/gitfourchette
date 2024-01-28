@@ -2,9 +2,9 @@ from __future__ import annotations
 import logging
 import os
 
+# Import as few internal modules as possible here to avoid premature initialization
+# from cascading imports before the QApplication has booted.
 from gitfourchette.qt import *
-from gitfourchette.toolbox import NonCriticalOperation
-from gitfourchette import settings
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,9 @@ class GFApplication(QApplication):
         commandLine = GFApplication.makeCommandLineParser()
         commandLine.process(argv)
 
+        from gitfourchette.toolbox import NonCriticalOperation
+        from gitfourchette import settings
+
         with NonCriticalOperation("Asset search"):
             # Add asset search path relative to boot script
             assetSearchPath = os.path.join(os.path.dirname(bootScriptPath), "assets")
@@ -52,6 +55,9 @@ class GFApplication(QApplication):
             self.PLATFORM_DEFAULT_STYLE_NAME = self.style().objectName()
 
         # Initialize settings
+        if commandLine.isSet("debug"):
+            settings.DEVDEBUG = True
+
         if commandLine.isSet("no-threads"):
             settings.SYNC_TASKS = True
 
@@ -126,9 +132,10 @@ class GFApplication(QApplication):
         parser = QCommandLineParser()
         parser.addHelpOption()
         parser.addVersionOption()
-        parser.addOption(QCommandLineOption(["test-mode"], "Prevents loading/saving of user preferences."))
         parser.addOption(QCommandLineOption(["no-threads", "n"], "Turn off multithreading (run all tasks on UI thread)."))
-        parser.addPositionalArgument("repos", "Paths to repositories to open on launch.", "[repos...]")
+        parser.addOption(QCommandLineOption(["debug", "d"], "Enable expensive assertions and development features."))
+        parser.addOption(QCommandLineOption(["test-mode"], "Prevent loading/saving user preferences."))
+        parser.addPositionalArgument("repos", "Repository paths to open on launch.", "[repos...]")
         return parser
 
     def flushTranslators(self):
@@ -148,6 +155,8 @@ class GFApplication(QApplication):
             return False
 
     def applyLanguagePref(self):
+        from gitfourchette import settings
+
         self.flushTranslators()
 
         preferredLanguage = settings.prefs.language
@@ -184,6 +193,8 @@ class GFApplication(QApplication):
         TrTables.retranslateAll()
 
     def applyQtStylePref(self, forceApplyDefault: bool):
+        from gitfourchette import settings
+
         if settings.prefs.qtStyle:
             self.setStyle(settings.prefs.qtStyle)
         elif forceApplyDefault:
@@ -194,4 +205,6 @@ class GFApplication(QApplication):
             self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, isNativeStyle)
 
     def applyLoggingLevelPref(self):
+        from gitfourchette import settings
+
         logging.root.setLevel(settings.prefs.debug_verbosity.value)

@@ -16,10 +16,23 @@ from gitfourchette.toolbox.pathutils import PathDisplayStyle
 logger = logging.getLogger(__name__)
 
 TEST_MODE = "pytest" in sys.modules
-""" Unit testing mode. """
+"""
+Unit testing mode (don't touch real user prefs, etc.).
+Can be forced with command-line switch "--test-mode".
+"""
+
+DEVDEBUG = TEST_MODE
+"""
+Enable expensive assertions and debugging features.
+Can be forced with command-line switch "--debug".
+"""
 
 SYNC_TASKS = False
-""" Force tasks to run synchronously on the UI thread. """
+"""
+Force tasks to run synchronously on the UI thread.
+Useful for debugging.
+Can be forced with command-line switch "--no-threads".
+"""
 
 LANGUAGES = [
     "en_US",
@@ -176,8 +189,6 @@ class Prefs(PrefsFile):
     external_merge              : str           = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
-    debug_showMemoryIndicator   : bool          = True
-    debug_showPID               : bool          = True
     debug_fixU2029InClipboard   : bool          = False
     debug_smoothScroll          : bool          = True
     debug_hideStashJunkParents  : bool          = True

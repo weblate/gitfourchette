@@ -66,7 +66,7 @@ class AboutDialog(QDialog):
         qtBindingSuffix = ""
 
         components = dedent(f"""<html>\
-            {appName} {appVersion}{'-debug' if __debug__ else ''}
+            {appName} {appVersion}
             {buildDate}
             
             <p>Powered by:</p>

@@ -29,9 +29,6 @@ PYQT6 = False
 MACOS = False
 WINDOWS = False
 
-DEVDEBUG = __debug__ and not APP_FROZEN
-""" Enable expensive debug assertions """
-
 if APP_FIXED_QT_BINDING:  # in frozen apps (PyInstaller, AppImage, Flatpak), target a fixed API
     _qtBindingOrder = [APP_FIXED_QT_BINDING]
     _qtBindingBootPref = _qtBindingOrder[0]
