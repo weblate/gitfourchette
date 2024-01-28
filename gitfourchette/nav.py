@@ -111,7 +111,7 @@ class NavLocator:
         return self.context.value != NavContext.EMPTY
     
     def __repr__(self) -> str:
-        return F"{self.__class__.__name__}({self.contextKey[:10]} {self.path})"
+        return F"{self.__class__.__name__}({self.contextKey:.8} {self.path})"
 
     @staticmethod
     def inCommit(oid: Oid, path: str = ""):

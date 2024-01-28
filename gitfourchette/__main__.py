@@ -14,6 +14,7 @@ def excepthook(exctype, value, tb):
 
 def main():
     logging.basicConfig(
+        stream=sys.stdout,
         level=logging.DEBUG,
         format='%(levelname).1s %(asctime)s %(filename)-16s | %(message)s',
         datefmt="%H:%M:%S")

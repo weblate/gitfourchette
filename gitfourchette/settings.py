@@ -9,6 +9,7 @@ import sys
 from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
+from gitfourchette.toolbox.benchmark import BENCHMARK_LOGGING_LEVEL
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
 from gitfourchette.toolbox.pathutils import PathDisplayStyle
 
@@ -136,6 +137,7 @@ class QtApiNames(enum.StrEnum):
 
 
 class LoggingLevel(enum.IntEnum):
+    BENCHMARK = BENCHMARK_LOGGING_LEVEL
     DEBUG = logging.DEBUG
     INFO = logging.INFO
     WARNING = logging.WARNING

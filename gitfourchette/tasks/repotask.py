@@ -163,7 +163,7 @@ class RepoTask(QObject):
         self._currentIteration = 0
         self.taskID = RepoTask._globalTaskCounter
         RepoTask._globalTaskCounter += 1
-        self.setObjectName(f"task{self.__class__.__name__}")
+        self.setObjectName(self.__class__.__name__)
         self.jumpTo = None
         self._taskStack = [self]
 
@@ -296,8 +296,8 @@ class RepoTask(QObject):
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
         subtask = subtaskClass(self)
         subtask.setRepo(self.repo)
-        subtask.setObjectName(f"{self.objectName()}:sub{subtask.objectName()}")
-        logger.debug(f"{self}: Entering subtask {subtask}")
+        subtask.setObjectName(f"{self.objectName()}:{subtask.objectName()}")
+        # logger.debug(f"Subtask {subtask}")
 
         # Push subtask onto stack
         subtask._taskStack = self._taskStack  # share reference to task stack
@@ -525,7 +525,7 @@ class RepoTaskRunner(QObject):
         assert self._currentTask == task
         assert task._currentFlow
 
-        logger.debug(f"Start task {task}")
+        logger.debug(f">>> {task}")
 
         self._currentTaskBenchmark = Benchmark(str(task))
         self._currentTaskBenchmark.__enter__()
@@ -600,7 +600,6 @@ class RepoTaskRunner(QObject):
 
                 if isinstance(exception, StopIteration):
                     # No more steps in the flow
-                    logger.debug(f"Task successful: {task}")
                     self.refreshPostTask.emit(task)
                 elif isinstance(exception, AbortTask):
                     # Controlled exit, show message (if any)
@@ -630,7 +629,7 @@ class RepoTaskRunner(QObject):
         return nextToken
 
     def _releaseTask(self, task: RepoTask):
-        logger.debug(f"End task {task}")
+        logger.debug(f"<<< {task}")
         self.progress.emit("", False)
         self._currentTaskBenchmark.__exit__(None, None, None)
 

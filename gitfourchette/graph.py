@@ -1218,7 +1218,7 @@ class GraphSplicer:
         equilibriumOldRow = int(self.oldPlayer.row)
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
-        logger.debug(f"Equilibrium: commit={self.oldPlayer.commit} new={equilibriumNewRow} old={equilibriumOldRow}")
+        logger.debug(f"Equilibrium: commit={str(self.oldPlayer.commit):.7} new={equilibriumNewRow} old={equilibriumOldRow}")
 
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.

@@ -251,7 +251,7 @@ class DiffView(QPlainTextEdit):
             newDoc.document = None  # prevent any callers from using a stale object
 
             # Bail now - don't change the document
-            logger.debug("Reusing document")
+            logger.debug("Don't need to regenerate diff document.")
             return
 
         if oldDocument:

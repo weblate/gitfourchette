@@ -3,6 +3,7 @@ import os
 import time
 
 logger = logging.getLogger(__name__)
+BENCHMARK_LOGGING_LEVEL = 5
 
 try:
     import psutil
@@ -35,7 +36,7 @@ class Benchmark:
     def __exit__(self, exc_type, exc_value, traceback):
         tt = time.perf_counter() - self.start
         rss = getRSS()
-        logger.debug(f"{tt*1000:8.2f} ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
+        logger.log(BENCHMARK_LOGGING_LEVEL, f"{tt*1000:8.2f} ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
         Benchmark.nesting.pop()
 
 
