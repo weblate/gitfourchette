@@ -121,6 +121,7 @@ class QTabWidget2(QWidget):
         self.overflowButton.setCheckable(True)
         self.overflowButton.setFixedWidth(16)
         self.overflowButton.setAutoRaise(True)
+        self.overflowButton.hide()  # hiding now prevents jitter on boot because maximum height is adjuster later
 
         self.tabScrollArea.setWidget(self.tabs)
         self.tabs.visibilityChanged.connect(self.tabScrollArea.setVisible)
@@ -270,6 +271,8 @@ class QTabWidget2(QWidget):
     def updateOverflowDropdown(self):
         isOverflowing = self.topWidget.width() < self.tabs.width()
         self.overflowButton.setVisible(isOverflowing)
+        if isOverflowing:
+            self.overflowButton.setMaximumHeight(self.tabs.height())
 
     def onOverflowButtonClicked(self):
         self.overflowMenu.clear()
