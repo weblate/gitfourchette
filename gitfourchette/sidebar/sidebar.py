@@ -355,7 +355,10 @@ class Sidebar(QTreeView):
         self.jump.emit(locator)
 
     def onEntryDoubleClicked(self, item: EItem, data: str):
-        if item == EItem.LocalBranch:
+        if item == EItem.Spacer:
+            pass
+
+        elif item == EItem.LocalBranch:
             SwitchBranch.invoke(data, True)  # True: ask for confirmation
 
         elif item == EItem.Remote:
@@ -382,6 +385,86 @@ class Sidebar(QTreeView):
 
         elif item == EItem.RemoteBranch:
             NewBranchFromRef.invoke(RefPrefix.REMOTES + data)
+
+        elif item == EItem.TagsHeader:
+            NewTag.invoke()
+
+        else:
+            QApplication.beep()
+
+    def onEntryDeletePressed(self, item: EItem, data: str):
+        if item == EItem.Spacer:
+            pass
+
+        elif item == EItem.LocalBranch:
+            DeleteBranch.invoke(data)
+
+        elif item == EItem.Remote:
+            DeleteRemote.invoke(data)
+
+        elif item == EItem.Stash:
+            oid = Oid(hex=data)
+            DropStash.invoke(oid)
+
+        elif item == EItem.RemoteBranch:
+            DeleteRemoteBranch.invoke(data)
+
+        elif item == EItem.Tag:
+            DeleteTag.invoke(data)
+
+        else:
+            QApplication.beep()
+
+    def onEntryRenamePressed(self, item: EItem, data: str):
+        if item == EItem.Spacer:
+            pass
+
+        elif item == EItem.LocalBranch:
+            RenameBranch.invoke(data)
+
+        elif item == EItem.Remote:
+            EditRemote.invoke(data)
+
+        elif item == EItem.RemoteBranch:
+            RenameRemoteBranch.invoke(data)
+
+        else:
+            QApplication.beep()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        k = event.key()
+
+        def getValidIndex():
+            try:
+                index: QModelIndex = self.selectedIndexes()[0]
+                if index.isValid():
+                    return index
+            except IndexError:
+                return None
+
+        if k in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
+            index = getValidIndex()
+            if index:
+                self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))
+            else:
+                QApplication.beep()
+
+        elif k in [Qt.Key.Key_Delete]:
+            index = getValidIndex()
+            if index:
+                self.onEntryDeletePressed(*SidebarModel.unpackItemAndData(index))
+            else:
+                QApplication.beep()
+
+        elif k in [Qt.Key.Key_F2]:
+            index = getValidIndex()
+            if index:
+                self.onEntryRenamePressed(*SidebarModel.unpackItemAndData(index))
+            else:
+                QApplication.beep()
+
+        else:
+            super().keyPressEvent(event)
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         super().selectionChanged(selected, deselected)
