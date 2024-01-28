@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
             editMenu,
 
             ActionDef(self.tr("&Find..."), lambda: self.dispatchSearchCommand(),
-                      shortcuts=QKeySequence.StandardKey.Find, icon="edit-find",
+                      shortcuts=GlobalShortcuts.find, icon="edit-find",
                       statusTip=self.tr("Search for a piece of text in commit messages or in the current diff")),
 
             ActionDef(self.tr("Find Next"), lambda: self.dispatchSearchCommand(SearchBar.Op.NEXT),

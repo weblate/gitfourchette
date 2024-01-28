@@ -6,6 +6,7 @@ class GlobalShortcuts:
     NO_SHORTCUT = []
 
     copy: MultiShortcut = NO_SHORTCUT
+    find: MultiShortcut = NO_SHORTCUT
     refresh: MultiShortcut = NO_SHORTCUT
     pushBranch: MultiShortcut = NO_SHORTCUT
     openRepoFolder: MultiShortcut = NO_SHORTCUT
@@ -25,6 +26,7 @@ class GlobalShortcuts:
         assert QApplication.instance(), "QApplication must have been created before instantiating QKeySequence"
 
         cls.copy = makeMultiShortcut(QKeySequence.StandardKey.Copy)
+        cls.find = makeMultiShortcut(QKeySequence.StandardKey.Find, "/")
         cls.refresh = makeMultiShortcut(QKeySequence.StandardKey.Refresh, "Ctrl+R", "F5")
         cls.pushBranch = makeMultiShortcut("Ctrl+P")
         cls.closeTab = makeMultiShortcut(QKeySequence.StandardKey.Close)
