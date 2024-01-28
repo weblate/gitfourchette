@@ -163,7 +163,7 @@ class Sidebar(QTreeView):
                     enabled=hasUpstream,
                 ),
 
-                TaskBook.action(EditTrackedBranch, self.tr("Set &Tracked Branch..."), taskArgs=data),
+                TaskBook.action(EditUpstreamBranch, self.tr("Set &Upstream Branch..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 

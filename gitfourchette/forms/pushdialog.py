@@ -352,7 +352,7 @@ class PushDialog(QDialog):
                 link.discoverKeyFiles(remote)
                 remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
-                    self.repo.edit_tracking_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
+                    self.repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
 
                 yield from self.flowEnterUiThread()
                 pushDialog.pushInProgress = False

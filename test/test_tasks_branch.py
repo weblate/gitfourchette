@@ -20,7 +20,7 @@ def testNewBranch(qtbot, tempDir, mainWindow):
     assert repo.branches.local['hellobranch'] is not None
 
 
-def testSetTrackedBranch(qtbot, tempDir, mainWindow):
+def testSetUpstreamBranch(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -29,10 +29,10 @@ def testSetTrackedBranch(qtbot, tempDir, mainWindow):
 
     menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
 
-    findMenuAction(menu, "tracked branch").trigger()
+    findMenuAction(menu, "(tracked|upstream) branch").trigger()
 
     # Change tracking from origin/master to nothing
-    q = findQDialog(rw, "tracked branch")
+    q = findQDialog(rw, "(tracked|upstream) branch")
     combobox: QComboBox = q.findChild(QComboBox)
     assert "origin/master" in combobox.currentText()
     assert re.match(r".*don.t track.*", combobox.itemText(0).lower())
@@ -41,8 +41,8 @@ def testSetTrackedBranch(qtbot, tempDir, mainWindow):
     assert repo.branches.local['master'].upstream is None
 
     # Change tracking back to origin/master
-    findMenuAction(menu, "tracked branch").trigger()
-    q = findQDialog(rw, "tracked branch")
+    findMenuAction(menu, "(tracked|upstream) branch").trigger()
+    q = findQDialog(rw, "(tracked|upstream) branch")
     combobox: QComboBox = q.findChild(QComboBox)
     assert re.match(r".*don.t track.*", combobox.currentText().lower())
     for i in range(combobox.count()):

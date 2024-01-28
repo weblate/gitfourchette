@@ -67,7 +67,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>&amp;Track remote branch</string>
+        <string>&amp;Track upstream branch:</string>
        </property>
       </widget>
      </item>

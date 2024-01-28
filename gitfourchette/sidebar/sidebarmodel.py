@@ -459,7 +459,7 @@ class SidebarModel(QAbstractItemModel):
                 # TODO no-GIL: try to lock the repo here - if we can't, skip upstream info and don't cache the tooltip
                 upstream = self.repo.branches.local[branchName].upstream  # a bit costly
                 if upstream:
-                    text += "\n" + self.tr("Tracking remote branch {0}").format(hquo(upstream.shorthand))
+                    text += "\n" + self.tr("Upstream branch is {0}").format(hquo(upstream.shorthand))
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:

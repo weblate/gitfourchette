@@ -6,7 +6,7 @@ from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskE
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
-from gitfourchette.forms.trackedbranchdialog import TrackedBranchDialog
+from gitfourchette.forms.upstreambranchdialog import UpstreamBranchDialog
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ class _NewBranchBaseTask(RepoTask):
 
         # Optionally make it track a remote branch
         if trackUpstream:
-            repo.edit_tracking_branch(localName, trackUpstream)
+            repo.edit_upstream_branch(localName, trackUpstream)
 
         # Switch to it last (if user wants to)
         if switchTo:
@@ -219,16 +219,16 @@ class NewBranchFromRef(_NewBranchBaseTask):
         yield from self._internalFlow(branch.target, name, trackUpstream=upstream)
 
 
-class EditTrackedBranch(RepoTask):
+class EditUpstreamBranch(RepoTask):
     def effects(self):
         return TaskEffects.Refs
 
     def flow(self, localBranchName: str):
-        dlg = TrackedBranchDialog(self.repo, localBranchName, self.parentWidget())
+        dlg = UpstreamBranchDialog(self.repo, localBranchName, self.parentWidget())
         setWindowModal(dlg)
         yield from self.flowDialog(dlg)
 
-        remoteBranchName = dlg.newTrackedBranchName
+        remoteBranchName = dlg.newUpstreamBranchName
         dlg.deleteLater()
 
         # Bail if no-op
@@ -237,7 +237,7 @@ class EditTrackedBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
 
-        self.repo.edit_tracking_branch(localBranchName, remoteBranchName)
+        self.repo.edit_upstream_branch(localBranchName, remoteBranchName)
 
 
 class FastForwardBranch(RepoTask):

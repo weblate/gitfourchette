@@ -692,7 +692,7 @@ class Repo(_VanillaRepository):
             if name.startswith(RefPrefix.TAGS)
         ]
 
-    def edit_tracking_branch(self, local_branch_name: str, remote_branch_name: str):
+    def edit_upstream_branch(self, local_branch_name: str, remote_branch_name: str):
         local_branch = self.branches.local[local_branch_name]
         if remote_branch_name:
             remote_branch = self.branches.remote[remote_branch_name]

@@ -75,4 +75,4 @@ class Ui_NewBranchDialog(object):
         self.nameLabel.setText(_translate("NewBranchDialog", "Name"))
         self.optionsLabel.setText(_translate("NewBranchDialog", "Options"))
         self.switchToBranchCheckBox.setText(_translate("NewBranchDialog", "Switch to branch after creating"))
-        self.upstreamCheckBox.setText(_translate("NewBranchDialog", "&Track remote branch"))
+        self.upstreamCheckBox.setText(_translate("NewBranchDialog", "&Track upstream branch:"))
