@@ -216,6 +216,11 @@ class DiffView(QPlainTextEdit):
                 self.discardSelection()
             else:
                 QApplication.beep()
+        elif k == Qt.Key.Key_Escape:
+            if self.searchBar.isVisible():  # close search bar if it doesn't have focus
+                self.searchBar.hide()
+            else:
+                QApplication.beep()
         else:
             super().keyPressEvent(event)
 

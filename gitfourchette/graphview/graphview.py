@@ -180,6 +180,12 @@ class GraphView(QListView):
             else:
                 NewCommit.invoke()
 
+        elif k == Qt.Key.Key_Escape:
+            if self.searchBar.isVisible():  # close search bar if it doesn't have focus
+                self.searchBar.hide()
+            else:
+                QApplication.beep()
+
         else:
             super().keyPressEvent(event)
 

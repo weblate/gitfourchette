@@ -293,6 +293,11 @@ class FileList(QListView):
         # We want to copy the full path of the selected items instead.
         if event.matches(QKeySequence.StandardKey.Copy):
             self.copyPaths()
+        elif event.key() == Qt.Key.Key_Escape:
+            if self.searchBar.isVisible():  # close search bar if it doesn't have focus
+                self.searchBar.hide()
+            else:
+                QApplication.beep()
         else:
             super().keyPressEvent(event)
 
