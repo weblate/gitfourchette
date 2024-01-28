@@ -111,13 +111,15 @@ if MODAL_SIDEBAR: UNINDENT_ITEMS.update({
     EItem.SubmodulesHeader: -1,
 })
 
+
 class SidebarModel(QAbstractItemModel):
     repoState: RepoState | None
     repo: Repo | None
     _localBranches: list[str]
     _unbornHead: str
     _detachedHead: str
-    _checkedOut: str
+    _checkedOut: str; "Shorthand of checked-out local branch"
+    _checkedOutUpstream: str; "Shorthand of the checked-out branch's upstream"
     _stashes: list[Stash]
     _remotes: list[str]
     _remoteURLs: list[str]
@@ -189,6 +191,7 @@ class SidebarModel(QAbstractItemModel):
         self._unbornHead = ""
         self._detachedHead = ""
         self._checkedOut = ""
+        self._checkedOutUpstream = ""
         self._stashes = []
         self._remotes = []
         self._remoteURLs = []
@@ -262,14 +265,37 @@ class SidebarModel(QAbstractItemModel):
             self._unbornHead = ""
             self._detachedHead = ""
             self._checkedOut = ""
-            if repo.head_is_unborn:
+            self._checkedOutUpstream = ""
+
+            try:
+                # Try to get the name of the checked-out branch
+                checkedOut = repo.head.name
+
+            except GitError:
+                # Unborn HEAD - Get name of unborn branch
+                assert repo.head_is_unborn
                 target: str = repo.lookup_reference("HEAD").target
-                target = target.removeprefix("refs/heads/")
+                target = target.removeprefix(RefPrefix.HEADS)
                 self._unbornHead = target
-            elif repo.head_is_detached:
-                self._detachedHead = repo.head.target.hex
+
             else:
-                self._checkedOut = repo.head.shorthand
+                # It's not unborn
+                if checkedOut == 'HEAD':
+                    # Detached head, leave self._checkedOut blank
+                    assert repo.head_is_detached
+                    self._detachedHead = repo.head.target.hex
+                else:
+                    # We're on a branch
+                    assert checkedOut.startswith(RefPrefix.HEADS)
+                    checkedOut = checkedOut.removeprefix(RefPrefix.HEADS)
+                    self._checkedOut = checkedOut
+
+                    # Try to get the upstream (.upstream_name raises KeyError if there isn't one)
+                    with suppress(KeyError):
+                        branch = repo.branches.local[checkedOut]
+                        upstream = branch.upstream_name  # This can be a bit expensive
+                        upstream = upstream.removeprefix(RefPrefix.REMOTES)  # Convert to shorthand
+                        self._checkedOutUpstream = upstream
 
         # Stashes
         with Benchmark("Sidebar/Stashes"):
@@ -453,13 +479,11 @@ class SidebarModel(QAbstractItemModel):
                 return F"refs/heads/{branchName}"
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("Local branch {0}").format(bquo(branchName))
                 if branchName == self._checkedOut:
-                    text += "\n" + ACTIVE_BULLET + self.tr("Active branch")
-                # TODO no-GIL: try to lock the repo here - if we can't, skip upstream info and don't cache the tooltip
-                upstream = self.repo.branches.local[branchName].upstream  # a bit costly
-                if upstream:
-                    text += "\n" + self.tr("Upstream branch is {0}").format(hquo(upstream.shorthand))
+                    text += ACTIVE_BULLET + self.tr("This is the checked-out branch.") + "\n"
+                text += self.tr("Local branch {0}").format(bquo(branchName))
+                if self._checkedOutUpstream:
+                    text += "\n" + self.tr("Upstream branch is {0}").format(hquo(self._checkedOutUpstream))
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
@@ -467,6 +491,10 @@ class SidebarModel(QAbstractItemModel):
             elif fontRole:
                 if F"refs/heads/{branchName}" in self._hiddenBranches:
                     return self.hiddenBranchFont()
+                elif branchName == self._checkedOut:
+                    font = self._parentWidget.font()
+                    font.setWeight(QFont.Weight.Black)
+                    return font
                 else:
                     return None
             elif decorationRole:
@@ -527,11 +555,19 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return F"{remoteName}/{branchName}"
             elif toolTipRole:
-                return ("<p style='white-space: pre'>" + self.tr("Remote-tracking branch {0}")
+                text = ("<p style='white-space: pre'>" + self.tr("Remote-tracking branch {0}")
                         ).format(bquo(f"{remoteName}/{branchName}"))
+                if self._checkedOutUpstream == f"{remoteName}/{branchName}":
+                    text += "<br><i>" + self.tr("This is the upstream for the checked-out branch ({0}).").format(hquoe(self._checkedOut))
+                return text
             elif fontRole:
                 if F"refs/remotes/{remoteName}/{branchName}" in self._hiddenBranches:
                     return self.hiddenBranchFont()
+                elif self._checkedOutUpstream == f"{remoteName}/{branchName}":
+                    font = QFont(self._parentWidget.font())
+                    font.setItalic(True)
+                    font.setWeight(QFont.Weight.Medium)
+                    return font
                 else:
                     return None
             elif hiddenRole:
@@ -600,7 +636,7 @@ class SidebarModel(QAbstractItemModel):
                 return "UNCOMMITTED_CHANGES"
             elif fontRole:
                 font = self._parentWidget.font()
-                font.setBold(True)
+                font.setWeight(QFont.Weight.DemiBold)
                 return font
             elif hiddenRole:
                 return False
@@ -616,7 +652,7 @@ class SidebarModel(QAbstractItemModel):
                 return ""
             elif fontRole:
                 font = self._parentWidget.font()
-                font.setBold(True)
+                font.setWeight(QFont.Weight.DemiBold)
                 if item == EItem.StashesHeader and self._hideAllStashes:
                     font.setStrikeOut(True)
                 return font

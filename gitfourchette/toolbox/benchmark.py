@@ -35,7 +35,7 @@ class Benchmark:
     def __exit__(self, exc_type, exc_value, traceback):
         tt = time.perf_counter() - self.start
         rss = getRSS()
-        logger.debug(f"{int(tt * 1000):6d}ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
+        logger.debug(f"{tt*1000:8.2f} ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
         Benchmark.nesting.pop()
 
 

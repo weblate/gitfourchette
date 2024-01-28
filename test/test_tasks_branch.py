@@ -214,7 +214,7 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
 
     def getActiveBranchTooltipText():
         return next(tt for tt in rw.sidebar.datasForItemType(EItem.LocalBranch, Qt.ItemDataRole.ToolTipRole)
-                    if "active branch" in tt.lower())
+                    if re.search(r"(current|checked.out) branch", tt, re.I))
 
     # make sure initial branch state is correct
     assert localBranches['master'].is_checked_out()
