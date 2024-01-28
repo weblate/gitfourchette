@@ -68,14 +68,26 @@ class AboutDialog(QDialog):
             from qtpy import __version__ as qtpyVersion
             qtBindingSuffix = f" (via qtpy {qtpyVersion})"
 
-        components = dedent(f"""\
+        components = dedent(f"""<html>\
             {appName} {appVersion}{'-debug' if __debug__ else ''}
             {buildDate}
-            pygit2 {pygit2.__version__}
-            libgit2 {pygit2.LIBGIT2_VERSION} ({', '.join(getPygit2FeatureStrings())})
-            {qtBindingName} {qtBindingVersion}{qtBindingSuffix}
-            Qt {qVersion()}
-            Python {'.'.join(str(i) for i in sys.version_info)}
+            
+            <p>Powered by:</p>
+            <ul>
+            <li><b>pygit2</b> {pygit2.__version__}
+            <li><b>libgit2</b> {pygit2.LIBGIT2_VERSION} <small>({', '.join(getPygit2FeatureStrings())})</small>
+            <li><b>{qtBindingName}</b> {qtBindingVersion}{qtBindingSuffix}
+            <li><b>Qt</b> {qVersion()}
+            <li><b>Python</b> {'.'.join(str(i) for i in sys.version_info)}
+            </ul>
+            
+            <hr>
+            <p>Third-party credits:</p>
+            <p><small>
+            <a href='https://github.com/z3ntu/QtWaitingSpinner'>QtWaitingSpinner</a>
+            (used under the <a href='https://github.com/z3ntu/QtWaitingSpinner/blob/055517b18fe764c24ca4809d4a5de95c9febfceb/LICENSE.md'>MIT license</a>) 
+            - Copyright © 2012-2014 Alexander Turkin, © 2014 William Hallatt, © 2015 Jacob Dawid, © 2016 Luca Weiss.
+            </small></p>
             """)
         self.ui.componentsBlurb.setText(components)
 
