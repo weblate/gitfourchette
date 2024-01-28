@@ -781,13 +781,22 @@ class RepoWidget(QWidget):
             settings.history.setRepoNickname(self.workdir, newName)
             settings.history.write()
             self.nameChange.emit()
-        showTextInputDialog(
+
+        currentNickname = settings.history.getRepoNickname(self.workdir)
+        dlg = showTextInputDialog(
             self,
             self.tr("Edit repo nickname"),
-            self.tr("Enter new nickname for repo, or enter blank line to reset:"),
-            settings.history.getRepoNickname(self.workdir),
+            self.tr("Enter a new nickname for {0}.<br>This will only be visible within {app} on your machine."
+                    ).format(bquoe(currentNickname), app=qAppName()),
+            currentNickname,
             onAccept,
-            okButtonText=self.tr("Rename", "edit repo nickname"))
+            okButtonText=self.tr("Set nickname", "edit repo nickname"))
+
+        buttonBox: QDialogButtonBox = dlg.buttonBox
+        resetSB = QDialogButtonBox.StandardButton.RestoreDefaults
+        buttonBox.addButton(resetSB)
+        buttonBox.button(resetSB).clicked.connect(lambda: onAccept(""))
+        buttonBox.button(resetSB).clicked.connect(dlg.close)
 
     def setNoCommitSelected(self):
         self.saveFilePositions()

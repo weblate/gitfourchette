@@ -132,6 +132,8 @@ def showTextInputDialog(
 
     setWindowModal(dlg)
 
+    dlg.buttonBox = buttonBox
+
     dlg.show()
     dlg.setMinimumHeight(dlg.height())
     dlg.setMaximumHeight(dlg.height())

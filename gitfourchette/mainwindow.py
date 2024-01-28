@@ -482,7 +482,7 @@ class MainWindow(QMainWindow):
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw), shortcuts=GlobalShortcuts.openRepoFolder),
             ActionDef(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw)),
-            ActionDef(self.tr("Rename", "RepoTabCM"), lambda: self.renameRepo(rw)),
+            ActionDef(self.tr("Set Nickname...", "RepoTabCM"), lambda: self.renameRepo(rw)),
             ActionDef.SEPARATOR,
             ActionDef(superprojectLabel, lambda: self.openRepoNextTo(rw, superproject), enabled=bool(superproject)),
             ActionDef.SEPARATOR
@@ -557,8 +557,7 @@ class MainWindow(QMainWindow):
         # Hook RepoWidget signals
         rw.setSharedSplitterSizes(self.sharedSplitterSizes)
 
-        rw.nameChange.connect(lambda: self.refreshTabText(rw))
-        rw.nameChange.connect(lambda: rw.refreshWindowChrome())
+        rw.nameChange.connect(self.onRepoNameChange)
         rw.openRepo.connect(lambda path: self.openRepoNextTo(rw, path))
         rw.openPrefs.connect(self.openPrefsDialog)
 
@@ -593,6 +592,13 @@ class MainWindow(QMainWindow):
         if not settings.prefs.debug_autoRefresh:
             return
         rw.onRegainForeground()
+
+    def onRepoNameChange(self):
+        rw = self.currentRepoWidget()
+        if rw:
+            self.refreshTabText(rw)
+            rw.refreshWindowChrome()
+        self.fillRecentMenu()
 
     # -------------------------------------------------------------------------
     # Repo menu callbacks
