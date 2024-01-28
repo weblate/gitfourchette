@@ -16,6 +16,7 @@ from gitfourchette.exttools import openInTextEditor
 from gitfourchette.forms.aboutdialog import showAboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
+from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator
@@ -263,15 +264,15 @@ class MainWindow(QMainWindow):
         ActionDef.addToQMenu(
             editMenu,
 
-            ActionDef(self.tr("&Find..."), lambda: self.dispatchSearchCommand("start"),
+            ActionDef(self.tr("&Find..."), lambda: self.dispatchSearchCommand(),
                       shortcuts=QKeySequence.StandardKey.Find, icon="edit-find",
                       statusTip=self.tr("Search for a piece of text in commit messages or in the current diff")),
 
-            ActionDef(self.tr("Find Next"), lambda: self.dispatchSearchCommand("next"),
+            ActionDef(self.tr("Find Next"), lambda: self.dispatchSearchCommand(SearchBar.Op.NEXT),
                       shortcuts=QKeySequence.StandardKey.FindNext,
                       statusTip=self.tr("Find next occurrence")),
 
-            ActionDef(self.tr("Find Previous"), lambda: self.dispatchSearchCommand("previous"),
+            ActionDef(self.tr("Find Previous"), lambda: self.dispatchSearchCommand(SearchBar.Op.PREVIOUS),
                       shortcuts=QKeySequence.StandardKey.FindPrevious,
                       statusTip=self.tr("Find previous occurrence"))
         )
@@ -374,11 +375,12 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("Go to &HEAD Commit"), self.selectHead, shortcuts="Ctrl+D" if MACOS else "Ctrl+H"),
             ActionDef.SEPARATOR,
             *sideTabsGoMenu,
-            ActionDef(self.tr("&Next Tab"), self.nextTab, shortcuts="Ctrl+Shift+]" if MACOS else "Ctrl+Tab"),
-            ActionDef(self.tr("&Previous Tab"), self.previousTab, shortcuts="Ctrl+Shift+[" if MACOS else "Ctrl+Shift+Tab"),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Next File"), self.nextFile, shortcuts="Ctrl+]"),
             ActionDef(self.tr("Previous File"), self.previousFile, shortcuts="Ctrl+["),
+            ActionDef.SEPARATOR,
+            ActionDef(self.tr("&Next Tab"), self.nextTab, shortcuts="Ctrl+Shift+]" if MACOS else "Ctrl+Tab"),
+            ActionDef(self.tr("&Previous Tab"), self.previousTab, shortcuts="Ctrl+Shift+[" if MACOS else "Ctrl+Shift+Tab"),
             ActionDef.SEPARATOR,
             TaskBook.action(tasks.JumpBack),
             TaskBook.action(tasks.JumpForward),
@@ -1123,7 +1125,7 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Find
 
-    def dispatchSearchCommand(self, op: Literal["start", "next", "previous"] = "start"):
+    def dispatchSearchCommand(self, op: SearchBar.Op = SearchBar.Op.START):
         activeWindow = QApplication.activeWindow()
         if activeWindow is self and self.currentRepoWidget():
             self.currentRepoWidget().dispatchSearchCommand(op)

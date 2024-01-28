@@ -207,7 +207,6 @@ def testSearchInDiff(qtbot, tempDir, mainWindow):
     searchPrev = searchBar.ui.backwardButton
 
     assert not searchBar.isVisibleTo(rw)
-    mainWindow.show()
     diffView.setFocus()
     qtbot.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
     assert searchBar.isVisibleTo(rw)

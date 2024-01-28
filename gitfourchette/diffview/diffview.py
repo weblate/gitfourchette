@@ -178,8 +178,8 @@ class DiffView(QPlainTextEdit):
         self.searchBar = SearchBar(self, self.tr("Find in Diff"))
         # self.searchBar.textChanged.connect(self.onSearchTextChanged)
         self.searchBar.textChanged.connect(self.highlighter.rehighlight)
-        self.searchBar.searchNext.connect(lambda: self.search("next"))
-        self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
+        self.searchBar.searchNext.connect(lambda: self.search(SearchBar.Op.NEXT))
+        self.searchBar.searchPrevious.connect(lambda: self.search(SearchBar.Op.PREVIOUS))
         self.searchBar.hide()
 
         # Initialize font
@@ -913,13 +913,12 @@ class DiffView(QPlainTextEdit):
     # ---------------------------------------------
     # Search
 
-    def search(self, op: Literal["start", "next", "previous"]):
-        self.searchBar.popUp(forceSelectAll=op == "start")
+    def search(self, op: SearchBar.Op):
+        assert isinstance(op, SearchBar.Op)
+        self.searchBar.popUp(forceSelectAll=op == SearchBar.Op.START)
 
-        if op == "start":
+        if op == SearchBar.Op.START:
             return
-
-        forward = op != "previous"
 
         message = self.searchBar.searchTerm
         if not message:
@@ -928,7 +927,7 @@ class DiffView(QPlainTextEdit):
 
         doc: QTextDocument = self.document()
 
-        if forward:
+        if op == SearchBar.Op.NEXT:
             newCursor = doc.find(message, self.textCursor())
         else:
             newCursor = doc.find(message, self.textCursor(), QTextDocument.FindFlag.FindBackward)
@@ -939,7 +938,7 @@ class DiffView(QPlainTextEdit):
 
         def wrapAround():
             tc = self.textCursor()
-            if forward:
+            if op == SearchBar.Op.NEXT:
                 tc.movePosition(QTextCursor.MoveOperation.Start)
             else:
                 tc.movePosition(QTextCursor.MoveOperation.End)
@@ -947,7 +946,8 @@ class DiffView(QPlainTextEdit):
             self.search(op)
 
         prompt = [
-            self.tr("End of diff reached.") if forward else self.tr("Top of diff reached."),
+            self.tr("End of diff reached.") if op == SearchBar.Op.NEXT
+            else self.tr("Top of diff reached."),
             self.tr("No more occurrences of {0} found.").format(bquo(message))
         ]
         askConfirmation(self, self.tr("Find in Diff"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),

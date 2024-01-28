@@ -27,6 +27,7 @@ from .qtutils import (
     addComboBoxItem, setWindowModal, isImageFormatSupported,
     onAppThread, tweakWidgetFont, formatWidgetText,
     formatWidgetTooltip,
+    itemViewVisibleRowRange,
     isDarkTheme,
     stockIcon, clearStockIconCache,
     appendShortcutToToolTipText,

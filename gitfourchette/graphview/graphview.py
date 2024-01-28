@@ -58,10 +58,8 @@ class GraphView(QListView):
         self.customContextMenuRequested.connect(self.onContextMenuRequested)
 
         self.searchBar = SearchBar(self, self.tr("Find Commit"))
-        self.searchBar.textChanged.connect(lambda: self.model().layoutChanged.emit())  # Redraw graph view (is this efficient?)
-        self.searchBar.searchNext.connect(lambda: self.search("next"))
-        self.searchBar.searchPrevious.connect(lambda: self.search("previous"))
-        self.searchBar.searchPulse.connect(self.searchPulse)
+        self.searchBar.detectHashes = True
+        self.searchBar.setUpItemViewBuddy()
         self.searchBar.hide()
 
         self.refreshPrefs(invalidateMetrics=False)
@@ -402,85 +400,8 @@ class GraphView(QListView):
     # -------------------------------------------------------------------------
     # Find text in commit message or hash
 
-    def search(self, op: Literal["start", "next", "previous"], didWrap=False):
-        self.searchBar.popUp(forceSelectAll=op == "start")
-
-        if op == "start":
-            return
-
-        if not self.searchBar.searchTerm:  # user probably hit F3 without having searched before
-            return
-
-        forward = op != "previous"
-
-        if not didWrap and len(self.selectedIndexes()) != 0:
-            start = self.currentIndex().row()
-        elif forward:
-            start = 0
-        else:
-            start = self.model().rowCount()
-
-        if forward:
-            searchRange = range(1 + start, self.model().rowCount())
-        else:
-            searchRange = range(start - 1, -1, -1)
-
-        # Perform search within range
-        index = self.searchCommitInRange(searchRange)
-
-        # A valid index was found in the range, select it
-        if index:
-            # TODO: What happens if the index is filtered out?
-            self.setCurrentIndex(index)
-            return
-
-        # No valid index from this point on
-        if not didWrap:
-            # Wrap around once
-            self.search(op, didWrap=True)
-        else:
-            displayTerm = self.searchBar.rawSearchTerm
-            showInformation(self, self.tr("Find Commit"), self.tr("{0} not found.").format(bquo(displayTerm)))
-
-    def getVisibleRowRange(self) -> range:
-        model = self.model()  # to filter out hidden rows, don't use self.clModel directly
-
-        rect = self.viewport().contentsRect()
-        top = self.indexAt(rect.topLeft())
-        if not top.isValid():
-            return range(-1)
-
-        bottom = self.indexAt(rect.bottomLeft())
-        if not bottom.isValid():
-            bottom = model.index(model.rowCount() - 1, 0)
-
-        return range(top.row(), bottom.row()+1)
-
-    def searchPulse(self):
-        # First see if in visible range
-        visibleRange = self.getVisibleRowRange()
-        index = self.searchCommitInRange(visibleRange)
-        if index:
-            self.setCurrentIndex(index)
-            return
-
-        # It's not visible, so search below visible range first
-        searchRange = range(visibleRange.stop, self.model().rowCount())
-        index = self.searchCommitInRange(searchRange)
-        if index:
-            self.setCurrentIndex(index)
-            return
-
-        # Finally, search above the visible range
-        searchRange = range(0, visibleRange.start)
-        index = self.searchCommitInRange(searchRange)
-        if index:
-            self.setCurrentIndex(index)
-            return
-
-        self.searchBar.turnRed()
-
-    def searchCommitInRange(self, searchRange: range) -> QModelIndex | None:
+    def searchRange(self, searchRange: range) -> QModelIndex | None:
+        # print(searchRange)
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly
 
         term = self.searchBar.searchTerm

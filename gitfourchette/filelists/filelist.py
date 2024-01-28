@@ -2,9 +2,10 @@ import os
 from pathlib import Path
 from typing import Callable, Generator
 
-from gitfourchette import settings
+from gitfourchette import settings, colors
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
+from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -15,6 +16,72 @@ from gitfourchette.toolbox import *
 
 class SelectedFileBatchError(Exception):
     pass
+
+
+class _FileListDelegate(QStyledItemDelegate):
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        hasFocus = option.state & QStyle.StateFlag.State_HasFocus
+        isSelected = option.state & QStyle.StateFlag.State_Selected
+        style = option.widget.style()
+        palette: QPalette = option.palette
+        outlineColor = palette.color(QPalette.ColorRole.Base)
+        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
+
+        painter.save()
+        if isSelected & QStyle.StateFlag.State_Selected:
+            painter.setPen(palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
+
+        # Draw default background
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+
+        icon: QIcon = index.data(Qt.ItemDataRole.DecorationRole)
+        if icon is not None and not icon.isNull():
+            icon.paint(painter, option.rect.left() + 3, option.rect.top(), option.decorationSize.width(), option.decorationSize.height(), option.decorationAlignment)
+
+        textRect = QRect(option.rect)
+        textRect.setLeft(24)
+        textRect.setRight(textRect.right()-2)
+
+        fullText = index.data(Qt.ItemDataRole.DisplayRole)
+        elidedText = option.fontMetrics.elidedText(fullText, option.textElideMode, textRect.width())
+        painter.drawText(textRect, option.displayAlignment, elidedText)
+
+        searchBar: SearchBar = option.widget.searchBar
+        searchTerm = searchBar.searchTerm
+
+        if searchTerm and searchTerm in fullText.lower():
+            needleIndex = elidedText.lower().find(searchTerm)
+            if needleIndex < 0:
+                needleIndex = elidedText.find("…")
+                needleLength = 1
+            else:
+                needleLength = len(searchTerm)
+
+            x1 = option.fontMetrics.horizontalAdvance(elidedText, needleIndex)
+            x2 = option.fontMetrics.horizontalAdvance(elidedText, needleIndex + needleLength)
+
+            rargs = (textRect.left() + x1, option.rect.top(), x2 - x1, option.rect.height())
+            rargs1 = (textRect.left() + x1 - 1, option.rect.top() + 1, x2 - x1 + 2, option.rect.height() - 1)
+
+            """
+            if isDarkTheme():
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Overlay)
+                painter.fillRect(*rargs, Qt.GlobalColor.black)
+                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Exclusion)
+                painter.fillRect(*rargs, Qt.GlobalColor.white)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Darken)
+            painter.fillRect(*rargs, colors.yellow)
+            """
+            # Re-draw hilited portion on top
+            path = QPainterPath()
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            path.addRoundedRect(*rargs1, 4, 4)
+            painter.fillPath(path, colors.yellow)
+            # painter.fillRect(*rargs, colors.yellow)
+            painter.setPen(Qt.GlobalColor.black)
+            painter.drawText(*rargs, option.displayAlignment, elidedText[needleIndex:needleIndex+needleLength])
+
+        painter.restore()
 
 
 class FileList(QListView):
@@ -59,6 +126,14 @@ class FileList(QListView):
         self.setTextElideMode(Qt.TextElideMode.ElideMiddle)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
         self.setUniformItemSizes(True)  # potential perf boost with many files
+
+        self.searchBar = SearchBar(self, self.tr("Find a File"))
+        self.searchBar.setUpItemViewBuddy()
+        self.searchBar.ui.forwardButton.hide()
+        self.searchBar.ui.backwardButton.hide()
+        self.searchBar.hide()
+
+        self.setItemDelegate(_FileListDelegate(self))
 
         self.refreshPrefs()
 
@@ -453,3 +528,17 @@ class FileList(QListView):
                         action.caption = self.tr("Revert Mode to Executable")
 
         return action
+
+    def searchRange(self, searchRange: range) -> QModelIndex | None:
+        # print("Search range:", searchRange)
+        model = self.model()  # to filter out hidden rows, don't use self.clModel directly
+
+        term = self.searchBar.searchTerm
+        assert term
+        assert term == term.lower(), "search term should have been sanitized"
+
+        for i in searchRange:
+            index = model.index(i, 0)
+            path = model.data(index, FILEPATH_ROLE)
+            if path and term in path.lower():
+                return index

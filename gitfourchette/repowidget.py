@@ -18,6 +18,7 @@ from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.graphview import GraphView
@@ -272,7 +273,9 @@ class RepoWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(header, 0, 0)
         layout.addWidget(stageButton, 0, 1)
-        layout.addWidget(dirtyFiles, 1, 0, 1, 2)
+        layout.addWidget(dirtyFiles.searchBar,  1, 0, 1, 2)
+        layout.addWidget(dirtyFiles,            2, 0, 1, 2)
+        layout.setRowStretch(2, 100)
 
         header.setBuddy(dirtyFiles)
 
@@ -346,9 +349,10 @@ class RepoWidget(QWidget):
         layout.setSpacing(0)
         layout.addWidget(header, 0, 0)
         layout.addWidget(unstageButton, 0, 1)
-        layout.addWidget(stagedFiles, 1, 0, 1, 2)
-        layout.addWidget(commitButtonsStack, 2, 0, 1, 2)
-        layout.setRowStretch(1, 100)
+        layout.addWidget(stagedFiles.searchBar, 1, 0, 1, 2)  # row col rowspan colspan
+        layout.addWidget(stagedFiles,           2, 0, 1, 2)
+        layout.addWidget(commitButtonsStack,    3, 0, 1, 2)
+        layout.setRowStretch(2, 100)
         container = QWidget()
         container.setLayout(layout)
 
@@ -371,6 +375,7 @@ class RepoWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(1)
         layout.addWidget(header)
+        layout.addWidget(committedFiles.searchBar)
         layout.addWidget(committedFiles)
 
         container = QWidget()
@@ -423,7 +428,7 @@ class RepoWidget(QWidget):
         stack.addWidget(diffViewContainer)
         stack.addWidget(specialDiff)
         stack.addWidget(conflictScroll)
-        stack.setCurrentWidget(diff)
+        stack.setCurrentIndex(0)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
@@ -828,14 +833,42 @@ class RepoWidget(QWidget):
     # -------------------------------------------------------------------------
     # Entry point for generic "Find" command
 
-    def dispatchSearchCommand(self, op: Literal["start", "next", "previous"]):
-        diffSearchWidgets = (self.dirtyFiles, self.stagedFiles, self.committedFiles,
-                             self.diffView, self.diffView.searchBar.lineEdit)
+    def dispatchSearchCommand(self, op: SearchBar.Op):
+        focusSinks = [
+            [self.dirtyFiles,
+             self.dirtyFiles.searchBar.lineEdit, self.stageButton],
 
-        if self.diffView.isVisibleTo(self) and any(w.hasFocus() for w in diffSearchWidgets):
-            self.diffView.search(op)
+            [self.stagedFiles,
+             self.stagedFiles.searchBar.lineEdit, self.unstageButton,
+             self.commitButton, self.amendButton, self.unifiedCommitButton],
+
+            [self.committedFiles,
+             self.committedFiles.searchBar.lineEdit],
+
+            [self.diffView,
+             self.diffView.searchBar.lineEdit],
+
+            # Fallback (will be triggered if none of the sinks above have focus)
+            [self.graphView],
+        ]
+
+        # Find a sink to redirect search to
+        focus = self.focusWidget()
+        for sinkList in focusSinks:
+            # If any of the widgets in sinkList have focus,
+            # .search() will be called on the first item in sinkList
+            sink = sinkList[0]
+            if sink.isVisibleTo(self) and any(focus is widget for widget in sinkList):
+                break
         else:
-            self.graphView.search(op)
+            # Fallback
+            sink = focusSinks[-1][0]
+
+        # Forward search
+        if isinstance(sink, QAbstractItemView):
+            sink.searchBar.searchItemView(op)
+        else:
+            sink.search(op)
 
     # -------------------------------------------------------------------------
 
