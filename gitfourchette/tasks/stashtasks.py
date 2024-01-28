@@ -41,7 +41,7 @@ class NewStash(RepoTask):
         status = self.repo.status(untracked_files="all", ignored=False)
 
         if not status:
-            raise AbortTask(self.tr("There are no changes to stash."), "information")
+            raise AbortTask(self.tr("There are no uncommitted changes to stash."), "information")
 
         # Prevent stashing any submodules
         with Benchmark("NewStash/Query submodules"):
@@ -49,7 +49,7 @@ class NewStash(RepoTask):
                 status.pop(submo, None)
 
         if not status:
-            raise AbortTask(self.tr("There are no changes to stash (submodules cannot be stashed)."), "information")
+            raise AbortTask(self.tr("There are no uncommitted changes to stash (submodules cannot be stashed)."), "information")
 
         dlg = StashDialog(status, paths, self.parentWidget())
         setWindowModal(dlg)
