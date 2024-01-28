@@ -54,6 +54,10 @@ class RenameBranch(RepoTask):
         dlg.deleteLater()
         newBranchName = dlg.lineEdit.text()
 
+        # Bail if identical to dodge AlreadyExistsError
+        if newBranchName == oldBranchName:
+            raise AbortTask()
+
         yield from self.flowEnterWorkerThread()
         self.repo.rename_local_branch(oldBranchName, newBranchName)
         self.repo.scrub_empty_config_section(("branch", oldBranchName))
