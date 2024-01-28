@@ -77,6 +77,9 @@ class EditRemote(RepoTask):
         self.repo.edit_remote(oldRemoteName, newRemoteName, newRemoteUrl)
         repoconfig.setRemoteKeyFile(self.repo, newRemoteName, newRemoteKeyfile)
 
+        if newRemoteName != oldRemoteName:
+            self.repo.scrub_empty_config_section(("remote", oldRemoteName))
+
 
 class DeleteRemote(RepoTask):
     def effects(self) -> TaskEffects:
@@ -94,3 +97,4 @@ class DeleteRemote(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.delete_remote(remoteName)
+        self.repo.scrub_empty_config_section(("remote", remoteName))

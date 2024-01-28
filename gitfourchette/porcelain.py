@@ -1,6 +1,8 @@
 from __future__ import annotations as _annotations
 
+import configparser as _configparser
 import dataclasses as _dataclasses
+import datetime
 import enum
 import logging as _logging
 import os as _os
@@ -612,6 +614,62 @@ class Repo(_VanillaRepository):
         """Delete a local branch."""
         # TODO: if remote-tracking, let user delete upstream too?
         self.branches.local.delete(name)
+
+    def scrub_empty_config_section(self, section_key: str | tuple):
+        """
+        libgit2 leaves behind empty sections in the config file after deleting
+        or renaming a remote or branch. Over time, this litters the config
+        file with empty entries, which slows down operations that parse the
+        config. So, use this function to nip that in the bud.
+        """
+
+        if type(section_key) is tuple:
+            tokens = section_key
+            assert len(tokens) == 2
+            prefix, name = tokens
+            name = name.replace('"', r'\"')
+            section_key = f'{prefix} "{name}"'
+
+        config_path = _os.path.join(self.path, "config")
+
+        ini = _configparser.ConfigParser()
+        ini.read(_os.path.join(self.path, "config"))
+
+        if not ini.has_section(section_key):
+            # Section doesn't appear in file, let it be
+            _logger.debug(f".git/config: Section [{section_key}] doesn't appear, no scrubbing needed")
+            return
+
+        section = ini[section_key]
+        assert isinstance(section, _configparser.SectionProxy)
+
+        if len(section) != 0:
+            # Section isn't empty, leave it alone
+            _logger.debug(f".git/config: Section [{section_key}] isn't empty, won't scrub")
+            return
+
+        _logger.debug(f".git/config: Scrubbing empty section [{section_key}]")
+
+        # We could call ini.remove_section(section_key) and then write the ini back to disk.
+        # But this destroys the file's formatting. So, remove the offending line surgically.
+        with open(config_path, "rt") as f:
+            lines = f.readlines()
+        try:
+            lines.remove(f"[{section_key}]\n")
+        except ValueError:
+            _logger.warning(f".git/config: Standalone section line not found: [{section_key}]")
+            return
+
+        timestamp = datetime.datetime.now().timestamp()
+        temp_path = config_path + f".{timestamp}.new.tmp"
+        backup_path = config_path + f".{timestamp}.old.tmp"
+
+        with open(temp_path, "wt") as f:
+            f.writelines(lines)
+
+        _os.rename(config_path, backup_path)
+        _os.rename(temp_path, config_path)
+        _os.unlink(backup_path)
 
     def create_branch_on_head(self, name: str) -> Branch:
         """Create a local branch pointing to the commit at the current HEAD."""
