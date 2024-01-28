@@ -64,9 +64,6 @@ class AboutDialog(QDialog):
         self.ui.iconLabel.setPixmap(pixmap)
 
         qtBindingSuffix = ""
-        if QTPY:
-            from qtpy import __version__ as qtpyVersion
-            qtBindingSuffix = f" (via qtpy {qtpyVersion})"
 
         components = dedent(f"""<html>\
             {appName} {appVersion}{'-debug' if __debug__ else ''}
@@ -76,7 +73,7 @@ class AboutDialog(QDialog):
             <ul>
             <li><b>pygit2</b> {pygit2.__version__}
             <li><b>libgit2</b> {pygit2.LIBGIT2_VERSION} <small>({', '.join(getPygit2FeatureStrings())})</small>
-            <li><b>{qtBindingName}</b> {qtBindingVersion}{qtBindingSuffix}
+            <li><b>{QT_BINDING}</b> {QT_BINDING_VERSION}{qtBindingSuffix}
             <li><b>Qt</b> {qVersion()}
             <li><b>Python</b> {'.'.join(str(i) for i in sys.version_info)}
             </ul>

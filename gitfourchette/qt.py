@@ -6,11 +6,9 @@
 #       pyside6     (OK)
 #       pyside2     (avoid this one if possible)
 #
-# If your preferred binding has trouble running (especially if it's a bit out of date),
-# you can try to install "qtpy" (not to be confused with pyqt) and pass the QTPY=1 environment variable.
-#
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 
+from contextlib import suppress as _suppress
 import logging as _logging
 import json as _json
 import os as _os
@@ -22,7 +20,6 @@ _logger = _logging.getLogger(__name__)
 
 _qtBindingOrder = ["pyqt6", "pyqt5", "pyside6", "pyside2"]
 
-QTPY = False
 QT5 = False
 QT6 = False
 PYSIDE2 = False
@@ -37,102 +34,92 @@ DEVDEBUG = __debug__ and not APP_FROZEN
 
 if APP_FIXED_QT_BINDING:  # in frozen apps (PyInstaller, AppImage, Flatpak), target a fixed API
     _qtBindingOrder = [APP_FIXED_QT_BINDING]
-    qtBindingBootPref = _qtBindingOrder[0]
+    _qtBindingBootPref = _qtBindingOrder[0]
 else:
-    qtBindingBootPref = _os.environ.get("QT_API", "").lower()
+    _qtBindingBootPref = _os.environ.get("QT_API", "").lower()
 
-    # If QT_API isn't set, see if the app's prefs file specifies a preferred Qt binding
-    if not qtBindingBootPref:
-        _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
-        _prefsPath = _os.path.join(_prefsPath, "GitFourchette", "prefs.json")
-        _jsonPrefs = None
-        try:
-            with open(_prefsPath, 'rt', encoding='utf-8') as f:
-                _jsonPrefs = _json.load(f)
-            qtBindingBootPref = _jsonPrefs.get("debug_forceQtApi", "").lower()
-        except (IOError, ValueError):
-            pass
+# If QT_API isn't set, see if the app's prefs file specifies a preferred Qt binding
+if not _qtBindingBootPref:
+    _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
+    _prefsPath = _os.path.join(_prefsPath, APP_SYSTEM_NAME, "prefs.json")
+    _jsonPrefs = None
+    with _suppress(IOError, ValueError):
+        with open(_prefsPath, 'rt', encoding='utf-8') as _f:
+            _jsonPrefs = _json.load(_f)
+        _qtBindingBootPref = _jsonPrefs.get("debug_forceQtApi", "").lower()
 
-    QTPY = _os.environ.get("QTPY", "").lower() in ["1", "true", "yes"]
-
-if QTPY:
-    from qtpy.QtCore import *
-    from qtpy.QtWidgets import *
-    from qtpy.QtGui import *
-    from qtpy import API_NAME as qtBindingName
-    from qtpy.QtCore import __version__ as qtBindingVersion
-else:
-    if not qtBindingBootPref:
-        pass
-    elif qtBindingBootPref not in _qtBindingOrder:
+if _qtBindingBootPref:
+    if _qtBindingBootPref not in _qtBindingOrder:
         # Sanitize value if user passed in junk
-        _logger.warning(f"Unrecognized Qt binding name: '{qtBindingBootPref}'")
+        _logger.warning(f"Unrecognized Qt binding name: '{_qtBindingBootPref}'")
         _qtBindingBootPref = ""
     else:
         # Move preferred binding to front of list
-        _qtBindingOrder.remove(qtBindingBootPref)
-        _qtBindingOrder.insert(0, qtBindingBootPref)
+        _qtBindingOrder.remove(_qtBindingBootPref)
+        _qtBindingOrder.insert(0, _qtBindingBootPref)
 
-    if DEVDEBUG:
-        _logger.debug(f"Qt binding order is: {_qtBindingOrder}")
+_logger.debug(f"Qt binding order is: {_qtBindingOrder}")
 
-    qtBindingName = ""
-    for _tentative in _qtBindingOrder:
-        assert _tentative.islower()
+QT_BINDING = ""
+QT_BINDING_VERSION = ""
 
-        try:
-            if _tentative == "pyside6":
-                from PySide6.QtCore import *
-                from PySide6.QtWidgets import *
-                from PySide6.QtGui import *
-                from PySide6 import __version__ as qtBindingVersion
-                qtBindingName = "PySide6"
-                QT6 = PYSIDE6 = True
+for _tentative in _qtBindingOrder:
+    assert _tentative.islower()
 
-            elif _tentative == "pyqt6":
-                from PyQt6.QtCore import *
-                from PyQt6.QtWidgets import *
-                from PyQt6.QtGui import *
-                from PyQt6.QtCore import QT_VERSION_STR as qtBindingVersion
-                qtBindingName = "PyQt6"
-                QT6 = PYQT6 = True
-                Signal = pyqtSignal
-                Slot = pyqtSlot
+    try:
+        if _tentative == "pyside6":
+            from PySide6.QtCore import *
+            from PySide6.QtWidgets import *
+            from PySide6.QtGui import *
+            from PySide6 import __version__ as QT_BINDING_VERSION
+            QT_BINDING = "PySide6"
+            QT6 = PYSIDE6 = True
 
-            elif _tentative == "pyqt5":
-                from PyQt5.QtCore import *
-                from PyQt5.QtWidgets import *
-                from PyQt5.QtGui import *
-                from PyQt5.QtCore import QT_VERSION_STR as qtBindingVersion
-                qtBindingName = "PyQt5"
-                QT5 = PYQT5 = True
-                Signal = pyqtSignal
-                Slot = pyqtSlot
+        elif _tentative == "pyqt6":
+            from PyQt6.QtCore import *
+            from PyQt6.QtWidgets import *
+            from PyQt6.QtGui import *
+            from PyQt6.QtCore import QT_VERSION_STR as QT_BINDING_VERSION
+            QT_BINDING = "PyQt6"
+            QT6 = PYQT6 = True
+            Signal = pyqtSignal
+            Slot = pyqtSlot
 
-            elif _tentative == "pyside2":
-                from PySide2.QtCore import *
-                from PySide2.QtWidgets import *
-                from PySide2.QtGui import *
-                from PySide2 import __version__ as qtBindingVersion
-                qtBindingName = "PySide2"
-                QT5 = PYSIDE2 = True
+        elif _tentative == "pyqt5":
+            from PyQt5.QtCore import *
+            from PyQt5.QtWidgets import *
+            from PyQt5.QtGui import *
+            from PyQt5.QtCore import QT_VERSION_STR as QT_BINDING_VERSION
+            QT_BINDING = "PyQt5"
+            QT5 = PYQT5 = True
+            Signal = pyqtSignal
+            Slot = pyqtSlot
 
-            else:
-                _logger.warning(f"Unsupported Qt binding {_tentative}")
-                continue
+        elif _tentative == "pyside2":
+            from PySide2.QtCore import *
+            from PySide2.QtWidgets import *
+            from PySide2.QtGui import *
+            from PySide2 import __version__ as QT_BINDING_VERSION
+            QT_BINDING = "PySide2"
+            QT5 = PYSIDE2 = True
 
-            break
-
-        except ImportError:
+        else:
+            _logger.warning(f"Unsupported Qt binding {_tentative}")
             continue
 
-if not qtBindingName:
-    _sys.stderr.write("No Qt binding found. Please install either PyQt5, PyQt6, or PySide6.\n")
+        break
+
+    except ImportError:
+        continue
+
+if not QT_BINDING:
+    _sys.stderr.write("No Qt binding found. Please install either PyQt6, PySide6, or PyQt5.\n")
     _sys.exit(1)
 
 # -----------------------------------------------------------------------------
 # Set up platform constants
 
+QT_BINDING_BOOTPREF = _qtBindingBootPref
 KERNEL = QSysInfo.kernelType().lower()
 MACOS = KERNEL == "darwin"
 WINDOWS = KERNEL == "winnt"
@@ -147,14 +134,14 @@ if PYSIDE6:
         "6.4.0.1",  # PYSIDE-2104
         "6.5.1",  # PYSIDE-2346
     ]
-    if any(v == qtBindingVersion for v in _badPyside6Versions):
+    if any(v == QT_BINDING_VERSION for v in _badPyside6Versions):
         QApplication()
-        QMessageBox.critical(None, "", f"PySide6 version {qtBindingVersion} isn't supported.\n"
+        QMessageBox.critical(None, "", f"PySide6 version {QT_BINDING_VERSION} isn't supported.\n"
                                        f"Please upgrade to the latest version of PySide6.")
         _sys.exit(1)
 
 # -----------------------------------------------------------------------------
-# Patch some holes in Qt bindings with stuff that qtpy doesn't provide
+# Patch some holes in Qt bindings
 
 # QEvent::ThemeChange is still undocumented. It only seems to work in Qt 6.
 if PYQT5 or PYQT6:
@@ -186,9 +173,7 @@ if QT5:
 # Try to import QtDBus on Linux (note: PySide2 doesn't have it)
 HAS_QTDBUS = False
 if FREEDESKTOP and not PYSIDE2:
-    if QTPY:
-        from qtpy.QtDBus import *
-    elif PYSIDE6:
+    if PYSIDE6:
         from PySide6.QtDBus import *
     elif PYQT6:
         from PyQt6.QtDBus import *

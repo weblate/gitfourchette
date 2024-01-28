@@ -1029,7 +1029,7 @@ class RepoWidget(QWidget):
             if settings.SYNC_TASKS:
                 chain.append("SYNC_TASKS")
             chain.append(f"PID {os.getpid()}")
-            chain.append(qtBindingName)
+            chain.append(QT_BINDING)
             suffix += " - " + ", ".join(chain)
 
         if inBrackets:
