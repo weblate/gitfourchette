@@ -18,70 +18,73 @@ class SelectedFileBatchError(Exception):
     pass
 
 
-class _FileListDelegate(QStyledItemDelegate):
+class FileListDelegate(QStyledItemDelegate):
+    """
+    Item delegate for QListView that supports highlighting search terms from a SearchBar
+    """
+
+    def searchTerm(self, option: QStyleOptionViewItem):
+        searchBar: SearchBar = option.widget.searchBar
+        return searchBar.searchTerm if searchBar.isVisible() else ""
+
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
         style = option.widget.style()
-        palette: QPalette = option.palette
-        outlineColor = palette.color(QPalette.ColorRole.Base)
         colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
+        searchTerm = self.searchTerm(option)
 
         painter.save()
-        if isSelected & QStyle.StateFlag.State_Selected:
-            painter.setPen(palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
+
+        # Set highlighted text color if this item is selected
+        if isSelected:
+            painter.setPen(option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
 
         # Draw default background
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
+        # Draw icon
         icon: QIcon = index.data(Qt.ItemDataRole.DecorationRole)
         if icon is not None and not icon.isNull():
-            icon.paint(painter, option.rect.left() + 3, option.rect.top(), option.decorationSize.width(), option.decorationSize.height(), option.decorationAlignment)
+            iconRect = QRect(option.rect.topLeft() + QPoint(2, 0), option.decorationSize)
+            icon.paint(painter, iconRect, option.decorationAlignment)
+        else:
+            iconRect = QRect()
 
         textRect = QRect(option.rect)
-        textRect.setLeft(24)
-        textRect.setRight(textRect.right()-2)
+        textRect.setLeft(iconRect.right() + 4)
+        textRect.setRight(textRect.right() - 2)
 
+        # Draw text
         fullText = index.data(Qt.ItemDataRole.DisplayRole)
-        elidedText = option.fontMetrics.elidedText(fullText, option.textElideMode, textRect.width())
-        painter.drawText(textRect, option.displayAlignment, elidedText)
+        text = option.fontMetrics.elidedText(fullText, option.textElideMode, textRect.width())
+        painter.drawText(textRect, option.displayAlignment, text)
 
-        searchBar: SearchBar = option.widget.searchBar
-        searchTerm = searchBar.searchTerm
-        if not searchBar.isVisible():
-            searchTerm = ""
-
+        # Highlight search term
         if searchTerm and searchTerm in fullText.lower():
-            needleIndex = elidedText.lower().find(searchTerm)
-            if needleIndex < 0:
-                needleIndex = elidedText.find("…")
-                needleLength = 1
+            needlePos = text.lower().find(searchTerm)
+            if needlePos < 0:
+                needlePos = text.find("\u2026")  # unicode ellipsis character (...)
+                needleLen = 1
             else:
-                needleLength = len(searchTerm)
+                needleLen = len(searchTerm)
 
-            x1 = option.fontMetrics.horizontalAdvance(elidedText, needleIndex)
-            x2 = option.fontMetrics.horizontalAdvance(elidedText, needleIndex + needleLength)
+            widthUpToNeedle = option.fontMetrics.horizontalAdvance(text, needlePos)
+            widthPastNeedle = option.fontMetrics.horizontalAdvance(text, needlePos + needleLen)
+            needleWidth = widthPastNeedle - widthUpToNeedle
 
-            rargs = (textRect.left() + x1, option.rect.top(), x2 - x1, option.rect.height())
-            rargs1 = (textRect.left() + x1 - 1, option.rect.top() + 1, x2 - x1 + 2, option.rect.height() - 1)
+            needleRect = QRect(textRect.left() + widthUpToNeedle, textRect.top(), needleWidth, textRect.height())
+            hiliteRect = QRectF(needleRect).marginsAdded(QMarginsF(2, -1, 2, -1))
 
-            """
-            if isDarkTheme():
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Overlay)
-                painter.fillRect(*rargs, Qt.GlobalColor.black)
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Exclusion)
-                painter.fillRect(*rargs, Qt.GlobalColor.white)
-            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Darken)
-            painter.fillRect(*rargs, colors.yellow)
-            """
-            # Re-draw hilited portion on top
+            # Yellow rounded rect
             path = QPainterPath()
+            path.addRoundedRect(hiliteRect, 4, 4)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            path.addRoundedRect(*rargs1, 4, 4)
             painter.fillPath(path, colors.yellow)
-            # painter.fillRect(*rargs, colors.yellow)
-            painter.setPen(Qt.GlobalColor.black)
-            painter.drawText(*rargs, option.displayAlignment, elidedText[needleIndex:needleIndex+needleLength])
+
+            # Re-draw needle on top of highlight rect
+            painter.setPen(Qt.GlobalColor.black)  # force black-on-yellow regardless of dark/light theme
+            painter.drawText(needleRect, option.displayAlignment, text[needlePos:needlePos+needleLen])
 
         painter.restore()
 
@@ -135,7 +138,8 @@ class FileList(QListView):
         self.searchBar.ui.backwardButton.hide()
         self.searchBar.hide()
 
-        self.setItemDelegate(_FileListDelegate(self))
+        # Search result highlighter
+        self.setItemDelegate(FileListDelegate(self))
 
         self.refreshPrefs()
 
