@@ -750,10 +750,17 @@ class MainWindow(QMainWindow):
 
         parentRepo: str = ""
         if detectParentRepo:
-            parentRepo = pygit2.discover_repository(path)
+            # macOS's native file picker may return a directory that doesn't
+            # exist yet (it expects us to create it ourselves). libgit2 won't
+            # detect the parent repo if the directory doesn't exist.
+            parentDetectionPath = path
+            if not os.path.exists(parentDetectionPath):
+                parentDetectionPath = os.path.dirname(parentDetectionPath)
+
+            parentRepo = pygit2.discover_repository(parentDetectionPath)
 
         if not detectParentRepo or not parentRepo:
-            if not allowNonEmptyDirectory and os.listdir(path):
+            if not allowNonEmptyDirectory and os.path.exists(path) and os.listdir(path):
                 message = self.tr("Are you sure you want to initialize a Git repository in {0}? "
                                   "This directory isn’t empty.").format(bquo(path))
                 askConfirmation(self, self.tr("Directory isn’t empty"), message, messageBoxIcon='warning',
@@ -763,19 +770,22 @@ class MainWindow(QMainWindow):
             try:
                 pygit2.init_repository(path)
                 self.openRepo(path, exactMatch=True)
+                return
             except Exception as exc:
                 message = self.tr("Couldn’t create an empty repository in {0}.").format(bquo(path))
                 excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
 
         if parentRepo:
+            myBasename = os.path.basename(path)
+
             parentRepo = os.path.normpath(parentRepo)
             parentWorkdir = os.path.dirname(parentRepo) if os.path.basename(parentRepo) == ".git" else parentRepo
-            parentBasename = os.path.basename(parentRepo)
+            parentBasename = os.path.basename(parentWorkdir)
 
             if parentRepo == path or parentWorkdir == path:
                 message = paragraphs(
                     self.tr("A repository already exists here:"),
-                    "\t" + escape(parentWorkdir))
+                    "\t" + escape(compactPath(parentWorkdir)))
                 qmb = asyncMessageBox(
                     self, 'information', self.tr("Repository already exists"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel)
@@ -783,29 +793,37 @@ class MainWindow(QMainWindow):
                 qmb.accepted.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
                 qmb.show()
             else:
+                displayPath = escape(compactPath(path))
+                displayParent = escape(compactPath(parentWorkdir))
+                commonPath = os.path.commonprefix([displayPath, displayParent])
+                commonLength = len(commonPath)
+
+                try:
+                    accentColor = self.palette().color(QPalette.ColorRole.Accent)
+                except AttributeError:  # QPalette.ColorRole.Accent appeared in Qt 6.6+
+                    accentColor = self.palette().color(QPalette.ColorRole.Link)
+
                 message = paragraphs(
-                    self.tr("You want to create a repository in:"),
-                    "\t" + escape(path),
-                    self.tr("A repository already exists in a parent folder:"),
-                    "\t" + escape(parentWorkdir),
-                    self.tr("Do you want to create a new repository in the subfolder anyway?")
-                )
+                    self.tr("An existing repository {0} was detected in a parent folder "
+                            "of the repository that you’re about to create:"),
+                    "<div style='white-space: pre'>    <span style='color: {highlight}'>{dp1}</span>{dp2}</div>",
+                    self.tr("Do you want to create a new repository {1} in the subfolder anyway?"),
+                ).format(bquoe(parentBasename), bquoe(myBasename), highlight=accentColor.name(),
+                         dp1=displayPath[:commonLength], dp2=displayPath[commonLength:])
 
                 qmb = asyncMessageBox(
                     self, 'information', self.tr("Repository found in parent folder"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
                 openButton = qmb.button(QMessageBox.StandardButton.Open)
-                openButton.setText(self.tr("&Open parent repo {0}").format(lquo(parentBasename)))
+                openButton.setText(self.tr("&Open parent {0}").format(lquoe(parentBasename)))
                 openButton.clicked.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
 
                 createButton = qmb.button(QMessageBox.StandardButton.Ok)
-                createButton.setText(self.tr("&Create repo in subfolder"))
+                createButton.setText(self.tr("&Create {0} in subfolder").format(lquoe(myBasename)))
                 createButton.clicked.connect(lambda: self.newRepo(path, detectParentRepo=False))
 
                 qmb.show()
-
-            return
 
     def cloneDialog(self, initialUrl: str = ""):
         dlg = CloneDialog(initialUrl, self)
