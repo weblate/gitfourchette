@@ -522,9 +522,12 @@ class SidebarModel(QAbstractItemModel):
             elif userRole:
                 return self._detachedHead
             elif toolTipRole:
-                return self.tr("Detached HEAD") + " @ " + bquo(self._detachedHead)
+                caption = self.tr("Detached HEAD")
+                return f"<p style='white-space: pre'>{caption} @ {self._detachedHead[:settings.prefs.shortHashChars]}"
             elif hiddenRole:
                 return False
+            elif refRole:
+                return "HEAD"
             elif role == decorationRole:
                 if MACOS or WINDOWS:
                     return stockIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
