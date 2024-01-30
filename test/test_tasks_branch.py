@@ -257,3 +257,25 @@ def testSwitchBranchWorkdirConflicts(qtbot, tempDir, mainWindow):
     assert localBranches['master'].is_checked_out()
 
 
+def testMergeUpToDate(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, 'origin/first-merge')
+    findMenuAction(menu, "merge").trigger()
+    acceptQMessageBox(rw, "already up.to.date")
+
+
+def testMergeFastForward(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.checkout_local_branch('no-parent')
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.repo.head.target != rw.repo.branches.local['master'].target
+
+    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'master')
+    findMenuAction(menu, "merge").trigger()
+    acceptQMessageBox(rw, "can .*fast.forward")
+
+    assert rw.repo.head.target == rw.repo.branches.local['master'].target
