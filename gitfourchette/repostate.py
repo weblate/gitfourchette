@@ -171,7 +171,9 @@ class RepoState(QObject):
         refresh, or False if nothing changed.
         """
 
-        if self.repo.head_is_detached or self.repo.head_is_unborn:
+        self.headIsDetached = self.repo.head_is_detached
+
+        if self.headIsDetached or self.repo.head_is_unborn:
             self.homeBranch = ""
         else:
             self.homeBranch = self.repo.head_branch_shorthand
