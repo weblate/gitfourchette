@@ -178,10 +178,15 @@ def clearStockIconCache():
 
 
 def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
+    mutedColor = QApplication.palette().toolTipText().color()
+    mutedColor.setAlphaF(.6)
+    mutedColor = mutedColor.name(QColor.NameFormat.HexArgb)
+
     if type(shortcut) in [QKeySequence.StandardKey, Qt.Key]:
         shortcut = QKeySequence(shortcut)
+
     hint = shortcut.toString(QKeySequence.SequenceFormat.NativeText)
-    hint = f"<span style='color: palette(mid)'> {hint}</span>"
+    hint = f"<span style='color: {mutedColor}'> &nbsp;{hint}</span>"
     prefix = ""
     if singleLine:
         prefix = "<p style='white-space: pre'>"
