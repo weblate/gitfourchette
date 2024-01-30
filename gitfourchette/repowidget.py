@@ -629,7 +629,7 @@ class RepoWidget(QStackedWidget):
     # Navigation
 
     def saveFilePositions(self):
-        if self.diffStack.currentWidget() is self.diffView:
+        if self.diffView.isVisibleTo(self):
             newLocator = self.diffView.getPreciseLocator()
             if not newLocator.isSimilarEnoughTo(self.navLocator):
                 logger.warning(f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")

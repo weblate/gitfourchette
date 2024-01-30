@@ -247,3 +247,46 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
     rw.navigateForward()  # skip automatically selected file in 6e14752
     rw.navigateForward()
     assertHistoryMatches(rw, NavLocator.inCommit(oid2, "b/b2.txt"))
+
+
+def testSaveScrollPosition(qtbot, tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/long.txt", "\n".join(f"cats are cute {i}" for i in range(1, 10_000)))
+    writeFile(F"{wd}/memo.txt", "feed the cat")
+    rw = mainWindow.openRepo(wd)
+    vsb: QScrollBar = rw.diffView.verticalScrollBar()
+
+    locLong = NavLocator.inUnstaged("long.txt")
+    locMemo = NavLocator.inUnstaged("memo.txt")
+
+    # Jump to very long file
+    rw.jump(locLong)
+    assert rw.diffView.isVisibleTo(rw)
+    assert vsb.value() == 0
+
+    vsb.setValue(1)  # note: line 0 is hunk header
+    assert rw.diffView.firstVisibleBlock().text().startswith("cats are cute 1")
+
+    # Scroll down halfway through
+    vsb.setValue(5000)
+    assert rw.diffView.firstVisibleBlock().text().startswith("cats are cute 5000")
+
+    # Jump to some other file, scroll bar gets reset
+    rw.jump(locMemo)
+    assert rw.navLocator.isSimilarEnoughTo(locMemo)
+    assert vsb.value() == 0
+
+    # Jump back to long file, we should land on the same line
+    rw.jump(locLong)
+    assert rw.navLocator.isSimilarEnoughTo(locLong)
+    assert vsb.value() == 5000
+
+    # Navigate away from long file via history
+    rw.navigateBack()
+    assert rw.navLocator.isSimilarEnoughTo(locMemo)
+    assert vsb.value() == 0
+
+    # Come back to long file
+    rw.navigateBack()
+    assert rw.navLocator.isSimilarEnoughTo(locLong)
+    assert vsb.value() == 5000
