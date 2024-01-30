@@ -242,3 +242,12 @@ def testSearchInDiff(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, "no more occurrences")
     reverse3: QTextCursor = diffView.textCursor()
     assert reverse3 == reverse1
+
+    # Search for nonexistent text
+    qtbot.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
+    assert searchBar.isVisibleTo(rw)
+    assert searchBar.lineEdit.hasSelectedText()  # hitting ctrl+f should reselect text
+    qtbot.keyClicks(searchLine, "MadeUpGarbage")
+    assert searchBar.lineEdit.text() == "MadeUpGarbage"
+    qtbot.keyPress(searchLine, Qt.Key.Key_Return)
+    acceptQMessageBox(rw, "no.+occurrence.+of.+MadeUpGarbage.+found")
