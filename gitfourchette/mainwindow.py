@@ -46,6 +46,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        self.welcomeStack = QStackedWidget(self)
+        self.setCentralWidget(self.welcomeStack)
+
         # Initialize global shortcuts
         GlobalShortcuts.initialize()
 
@@ -73,17 +76,15 @@ class MainWindow(QMainWindow):
         self.welcomeWidget.openRepo.connect(self.openDialog)
         self.welcomeWidget.cloneRepo.connect(self.cloneDialog)
 
-        self.welcomeStack = QStackedWidget()
         self.welcomeStack.addWidget(self.welcomeWidget)
         self.welcomeStack.addWidget(self.tabs)
         self.welcomeStack.setCurrentWidget(self.welcomeWidget)
-        self.setCentralWidget(self.welcomeStack)
 
         self.globalMenuBar = QMenuBar(self)
         self.globalMenuBar.setObjectName("GFMainMenuBar")
+        self.setMenuBar(self.globalMenuBar)
         self.autoHideMenuBar = AutoHideMenuBar(self.globalMenuBar)
         self.fillGlobalMenuBar()
-        self.setMenuBar(self.globalMenuBar)
 
         self.statusBar2 = QStatusBar2(self)
         self.setStatusBar(self.statusBar2)
@@ -932,8 +933,11 @@ class MainWindow(QMainWindow):
     # Session management
 
     def restoreSession(self, session: settings.Session):
+        # Note: window geometry, despite being part of the session file, is
+        # restored in application.py to avoid flashing a window with incorrect
+        # dimensions on boot
+
         self.sharedSplitterSizes = copy.deepcopy(session.splitterSizes)
-        self.restoreGeometry(session.windowGeometry)
 
         # Stop here if there are no tabs to load
         if not session.tabs:

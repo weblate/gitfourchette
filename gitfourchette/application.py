@@ -114,9 +114,13 @@ class GFApplication(QApplication):
 
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
-        self.mainWindow.show()
 
         if self.initialSession:
+            # To prevent flashing a window with incorrect dimensions,
+            # restore the geometry BEFORE calling show()
+            self.mainWindow.restoreGeometry(self.initialSession.windowGeometry)
+            self.mainWindow.show()
+
             self.mainWindow.restoreSession(self.initialSession)
             self.initialSession = None
 
