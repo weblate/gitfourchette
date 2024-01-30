@@ -61,7 +61,7 @@ class Banner(QFrame):
 
         markup = ""
         if title:
-            markup += f"<b>{title.upper()}</b>"
+            markup += f"<b>{title}</b>"
             if text:
                 markup += f"<br><small>{text}</small>"
         else:

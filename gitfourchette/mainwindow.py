@@ -450,6 +450,9 @@ class MainWindow(QMainWindow):
         # Get out of welcome widget
         self.welcomeStack.setCurrentWidget(self.tabs)
 
+        if not w.uiReady:
+            w.setupUi()
+
         w.refreshWindowChrome()  # Refresh window title before loading
         w.restoreSplitterStates()
 
@@ -552,12 +555,11 @@ class MainWindow(QMainWindow):
                     return existingRW
 
         # Create a RepoWidget
-        rw = RepoWidget(self)
+        rw = RepoWidget(self, lazy=not foreground)
         rw.setPendingWorkdir(workdir)
-
-        # Hook RepoWidget signals
         rw.setSharedSplitterSizes(self.sharedSplitterSizes)
 
+        # Hook RepoWidget signals
         rw.nameChange.connect(self.onRepoNameChange)
         rw.openRepo.connect(lambda path: self.openRepoNextTo(rw, path))
         rw.openPrefs.connect(self.openPrefsDialog)

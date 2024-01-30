@@ -90,13 +90,8 @@ class RepoWidget(QStackedWidget):
         else:
             return self.pathPending
 
-    @benchmark
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QWidget, lazy=False):
         super().__init__(parent)
-
-        mainLayout = self.layout()
-        assert isinstance(mainLayout, QStackedLayout)
-
         self.setObjectName("RepoWidget")
 
         # Use RepoTaskRunner to schedule git operations to run on a separate thread.
@@ -117,6 +112,20 @@ class RepoWidget(QStackedWidget):
         self.navLocator = NavLocator()
         self.navHistory = NavHistory()
 
+        # To be replaced with a shared reference
+        self.sharedSplitterSizes = {}
+
+        self.uiReady = False
+        if not lazy:
+            self.setupUi()
+
+    def setupUi(self):
+        if self.uiReady:
+            return
+
+        mainLayout = self.layout()
+        assert isinstance(mainLayout, QStackedLayout)
+
         # ----------------------------------
         # Splitters
 
@@ -130,8 +139,6 @@ class RepoWidget(QStackedWidget):
         splitterC.setObjectName("Split_FL_Diff")
 
         mainLayout.addWidget(splitterA)
-
-        self.sharedSplitterSizes = {}
 
         splitters: list[QSplitter] = self.findChildren(QSplitter)
         assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
@@ -242,6 +249,13 @@ class RepoWidget(QStackedWidget):
         self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
         self.connectTask(self.stagedFiles.unstageModeChanges,   tasks.UnstageModeChanges)
         self.connectTask(self.unifiedCommitButton.clicked,      tasks.NewCommit, argc=0)
+
+        self.restoreSplitterStates()
+        self.uiReady = True
+
+        # Huh? Gotta refresh the stylesheet after calling setupUi on a lazy-inited RepoWidget,
+        # otherwise fonts somehow appear slightly too large within the RepoWidget on macOS.
+        self.setStyleSheet("* {}")
 
     # -------------------------------------------------------------------------
     # Initial layout
@@ -560,7 +574,8 @@ class RepoWidget(QStackedWidget):
 
     def setSharedSplitterSizes(self, splitterSizes: dict[str, list[int]]):
         self.sharedSplitterSizes = splitterSizes
-        self.restoreSplitterStates()
+        if self.uiReady:
+            self.restoreSplitterStates()
 
     def saveSplitterState(self, splitter: QSplitter):
         # QSplitter.saveState() saves a bunch of properties that we may want to
@@ -711,15 +726,17 @@ class RepoWidget(QStackedWidget):
 
     def closeEvent(self, event: QCloseEvent):
         """ Called when closing a repo tab """
-        self.cleanup()
+        self.cleanup(doUi=False)
 
-    def cleanup(self, message: str = "", allowAutoReload: bool = True):
+    def cleanup(self, message: str = "", allowAutoReload: bool = True, doUi: bool = True):
         assert onAppThread()
 
+        # Don't do UI stuff if we've been lazy-initialized
+        doUi &= self.uiReady
         hasRepo = self.state and self.state.repo
 
         # Save sidebar collapse cache
-        if hasRepo:
+        if hasRepo and doUi:
             uiPrefs = self.state.uiPrefs
             if self.sidebar.collapseCacheValid:
                 uiPrefs.collapseCache = list(self.sidebar.collapseCache)
@@ -731,15 +748,16 @@ class RepoWidget(QStackedWidget):
                 logger.warning(f"IOError when writing prefs: {e}")
 
         # Clear UI
-        with QSignalBlockerContext(
-                self.committedFiles, self.dirtyFiles, self.stagedFiles,
-                self.graphView, self.sidebar):
-            self.committedFiles.clear()
-            self.dirtyFiles.clear()
-            self.stagedFiles.clear()
-            self.graphView.clear()
-            self.clearDiffView()
-            self.sidebar.model().clear()
+        if doUi:
+            with QSignalBlockerContext(
+                    self.committedFiles, self.dirtyFiles, self.stagedFiles,
+                    self.graphView, self.sidebar):
+                self.committedFiles.clear()
+                self.dirtyFiles.clear()
+                self.stagedFiles.clear()
+                self.graphView.clear()
+                self.clearDiffView()
+                self.sidebar.model().clear()
 
         if hasRepo:
             # Save path if we want to reload the repo later
@@ -758,23 +776,24 @@ class RepoWidget(QStackedWidget):
         self.state = None
 
         # Install placeholder widget
-        placeholder = UnloadedRepoPlaceholder(self)
-        placeholder.ui.nameLabel.setText(self.getTitle())
-        placeholder.ui.loadButton.clicked.connect(lambda: self.primeRepo())
-        placeholder.ui.icon.setVisible(False)
-        self.setPlaceholderWidget(placeholder)
+        if doUi:
+            placeholder = UnloadedRepoPlaceholder(self)
+            placeholder.ui.nameLabel.setText(self.getTitle())
+            placeholder.ui.loadButton.clicked.connect(lambda: self.primeRepo())
+            placeholder.ui.icon.setVisible(False)
+            self.setPlaceholderWidget(placeholder)
 
-        if message:
-            placeholder.ui.label.setText(message)
+            if message:
+                placeholder.ui.label.setText(message)
 
-        if not allowAutoReload:
-            placeholder.ui.icon.setText("")
-            placeholder.ui.icon.setPixmap(stockIcon("image-missing").pixmap(96))
-            placeholder.ui.icon.setVisible(True)
-            placeholder.ui.loadButton.setText(self.tr("Try to reload"))
+            if not allowAutoReload:
+                placeholder.ui.icon.setText("")
+                placeholder.ui.icon.setPixmap(stockIcon("image-missing").pixmap(96))
+                placeholder.ui.icon.setVisible(True)
+                placeholder.ui.loadButton.setText(self.tr("Try to reload"))
 
-        # Clean up status bar if there were repo-specific warnings in it
-        self.refreshWindowChrome()
+            # Clean up status bar if there were repo-specific warnings in it
+            self.refreshWindowChrome()
 
     def clearDiffView(self, sourceFileList: FileList | None = None):
         # Ignore clear request if it comes from a widget that doesn't have focus
@@ -1024,7 +1043,9 @@ class RepoWidget(QStackedWidget):
             bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
 
         # Set up Banner
-        if bannerText:
+        if not self.uiReady:
+            pass
+        elif bannerText:
             self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False,
                                    buttonLabel=bannerAction, buttonCallback=bannerCallback)
         else:
@@ -1080,6 +1101,9 @@ class RepoWidget(QStackedWidget):
         self.nameChange.emit()
 
     def refreshPrefs(self):
+        if not self.uiReady:
+            return
+
         self.diffView.refreshPrefs()
         self.graphView.refreshPrefs()
         self.conflictView.refreshPrefs()
