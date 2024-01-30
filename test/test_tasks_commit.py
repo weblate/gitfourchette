@@ -93,6 +93,8 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
 
+    oldHeadCommit = rw.repo.head_commit
+
     # Kick off amend dialog
     rw.amendButton.click()
 
@@ -106,6 +108,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
         dialog.accept()
 
     headCommit = rw.repo.head_commit
+    assert headCommit.oid != oldHeadCommit.oid
     assert headCommit.message == newMessage
     assert headCommit.author.name == newAuthorName
     assert headCommit.author.email == newAuthorEmail
@@ -182,14 +185,14 @@ def testCommitStableDate(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, "empty commit")
 
     dialog: CommitDialog = findQDialog(rw, "commit")
-    qtbot.keyClicks(dialog.ui.summaryEditor, "hold on a sec...")
+    dialog.ui.summaryEditor.setText("hold on a sec...")
 
     qtbot.wait(1500)  # wait for next second
     dialog.accept()
 
     headCommit = rw.repo.head_commit
     assert headCommit.message == "hold on a sec..."
-    assert headCommit.author == headCommit.committer
+    assert signatures_equalish(headCommit.author, headCommit.committer)
 
 
 def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
@@ -197,17 +200,21 @@ def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
 
+    headCommit = rw.repo.head_commit
+    headInitialAuthor = headCommit.author
+    headInitialCommitter = headCommit.committer
     rw.amendButton.click()
 
     dialog: CommitDialog = findQDialog(rw, "amend")
-    qtbot.keyClicks(dialog.ui.summaryEditor, "hold on a sec...")
+    dialog.ui.summaryEditor.setText("hold on a sec...")
 
     qtbot.wait(1500)  # wait for next second
     dialog.accept()
 
-    headCommit = rw.repo.head_commit
-    assert headCommit.message == "hold on a sec..."
-    assert headCommit.author != headCommit.committer
+    amendedHeadCommit = rw.repo.head_commit
+    assert amendedHeadCommit.message == "hold on a sec..."
+    assert signatures_equalish(amendedHeadCommit.author, headCommit.author)
+    assert not signatures_equalish(amendedHeadCommit.author, amendedHeadCommit.committer)
 
 
 def testResetHeadToCommit(qtbot, tempDir, mainWindow):

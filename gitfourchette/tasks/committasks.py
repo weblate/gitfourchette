@@ -126,12 +126,10 @@ class AmendCommit(RepoTask):
         self.setDraftMessage(message)
 
         if cd.result() == QDialog.DialogCode.Rejected:
-            cd.deleteLater()
             raise AbortTask()
 
-        author = cd.getOverriddenAuthorSignature() or fallbackSignature
+        author = cd.getOverriddenAuthorSignature()  # no "or fallback" here - leave author intact for amending
         committer = cd.getOverriddenCommitterSignature() or fallbackSignature
-        cd.deleteLater()
 
         yield from self.flowEnterWorkerThread()
         self.repo.amend_commit_on_head(message, author, committer)

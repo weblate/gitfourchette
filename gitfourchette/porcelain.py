@@ -341,6 +341,27 @@ def validate_signature_item(s: str):
         raise E(E.CANNOT_BE_EMPTY)
 
 
+def signatures_equalish(a: Signature, b: Signature):
+    """
+    Sometimes two signature objects differ only by the encoding field.
+    """
+
+    if a == b:
+        return True
+
+    if a._encoding == b._encoding:
+        # If the encodings match and a != b, then the signatures are really different
+        return False
+
+    return (a.email == b.email
+        and a.name == b.name
+        and a.raw_email == b.raw_email
+        and a.raw_name == b.raw_name
+        and a.time == b.time
+        and a.offset == b.offset
+    )
+
+
 def get_git_global_identity() -> tuple[str, str]:
     """
     Returns the name and email set in the global `.gitconfig` file.
