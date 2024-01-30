@@ -40,7 +40,7 @@ FileStackPage = Literal["workdir", "commit"]
 DiffStackPage = Literal["text", "special", "conflict"]
 
 
-class RepoWidget(QWidget):
+class RepoWidget(QStackedWidget):
     nameChange = Signal()
     openRepo = Signal(str)
     openPrefs = Signal(str)
@@ -64,6 +64,10 @@ class RepoWidget(QWidget):
 
     def __del__(self):
         logger.debug(f"__del__ RepoWidget {self.pathPending}")
+
+    def __bool__(self):
+        """ Override QStackedWidget.__bool__ so we can do quick None comparisons """
+        return True
 
     @property
     def repo(self) -> Repo:
@@ -90,6 +94,9 @@ class RepoWidget(QWidget):
     def __init__(self, parent: QWidget):
         super().__init__(parent)
 
+        mainLayout = self.layout()
+        assert isinstance(mainLayout, QStackedLayout)
+
         self.setObjectName("RepoWidget")
 
         # Use RepoTaskRunner to schedule git operations to run on a separate thread.
@@ -111,6 +118,26 @@ class RepoWidget(QWidget):
         self.navHistory = NavHistory()
 
         # ----------------------------------
+        # Splitters
+
+        splitterA = QSplitter(Qt.Orientation.Horizontal, self)
+        splitterA.setObjectName("Split_Side")
+
+        splitterB = QSplitter(Qt.Orientation.Vertical, self)
+        splitterB.setObjectName("Split_Central")
+
+        splitterC = QSplitter(Qt.Orientation.Horizontal, self)
+        splitterC.setObjectName("Split_FL_Diff")
+
+        mainLayout.addWidget(splitterA)
+
+        self.sharedSplitterSizes = {}
+
+        splitters: list[QSplitter] = self.findChildren(QSplitter)
+        assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
+        self.splittersToSave = splitters
+
+        # ----------------------------------
         # Build widgets
 
         sidebarContainer = self._makeSidebarContainer()
@@ -123,52 +150,36 @@ class RepoWidget(QWidget):
         diffBanner.setVisible(False)
         self.diffBanner = diffBanner
 
+        filesDiffContainer = QWidget(self)
+        filesDiffLayout = QVBoxLayout(filesDiffContainer)
+        filesDiffLayout.setContentsMargins(QMargins())
+        filesDiffLayout.setSpacing(2)
+        filesDiffContainer.setLayout(filesDiffLayout)
+        filesDiffLayout.addWidget(splitterC, 1)
+        filesDiffLayout.addWidget(diffBanner)
+
         # ----------------------------------
-        # Splitters
+        # Add widgets in splitters
 
-        bottomSplitter = QSplitter(Qt.Orientation.Horizontal)
-        bottomSplitter.setObjectName("BottomSplitter")
-        bottomSplitter.addWidget(self.filesStack)
-        bottomSplitter.addWidget(diffContainer)
-        bottomSplitter.setSizes([100, 300])
-        bottomSplitter.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
-        bottomSplitter.setStretchFactor(1, 1)
-        bottomSplitter.setChildrenCollapsible(False)
+        splitterA.addWidget(sidebarContainer)
+        splitterA.addWidget(splitterB)
+        splitterA.setSizes([100, 500])
+        splitterA.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
+        splitterA.setStretchFactor(1, 1)
 
-        bottomContainerLayout = QVBoxLayout()
-        bottomContainerLayout.setContentsMargins(0,0,0,0)
-        bottomContainerLayout.setSpacing(2)
-        bottomContainerLayout.addWidget(bottomSplitter, 1)
-        bottomContainerLayout.addWidget(diffBanner)
-        bottomContainer = QWidget()
-        bottomContainer.setLayout(bottomContainerLayout)
+        splitterB.addWidget(graphContainer)
+        splitterB.addWidget(filesDiffContainer)
+        splitterB.setSizes([100, 150])
 
-        mainSplitter = QSplitter(Qt.Orientation.Vertical)
-        mainSplitter.setObjectName("CentralSplitter")
-        mainSplitter.addWidget(graphContainer)
-        mainSplitter.addWidget(bottomContainer)
-        mainSplitter.setSizes([100, 150])
-        mainSplitter.setChildrenCollapsible(False)
+        splitterC.addWidget(self.filesStack)
+        splitterC.addWidget(diffContainer)
+        splitterC.setSizes([100, 300])
+        splitterC.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
+        splitterC.setStretchFactor(1, 1)
 
-        sideSplitter = QSplitter(Qt.Orientation.Horizontal)
-        sideSplitter.setChildrenCollapsible(False)
-        sideSplitter.setObjectName("SideSplitter")
-        sideSplitter.addWidget(sidebarContainer)
-        sideSplitter.addWidget(mainSplitter)
-        sideSplitter.setSizes([100, 500])
-        sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
-        sideSplitter.setStretchFactor(1, 1)
-        sideSplitter.setChildrenCollapsible(False)
-
-        mainLayout = QStackedLayout()
-        mainLayout.addWidget(sideSplitter)
-        self.setLayout(mainLayout)
-
-        self.sharedSplitterSizes = {}
-
-        splitters: list[QSplitter] = self.findChildren(QSplitter)
-        assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
-        self.splittersToSave = splitters
+        splitterA.setChildrenCollapsible(False)
+        splitterB.setChildrenCollapsible(False)
+        splitterC.setChildrenCollapsible(False)
 
         # ----------------------------------
         # Styling
@@ -180,7 +191,7 @@ class RepoWidget(QWidget):
 
         # save splitter state in splitterMoved signal
         for splitter in self.splittersToSave:
-            splitter.splitterMoved.connect(lambda pos, index, splitter=splitter: self.saveSplitterState(splitter))
+            splitter.splitterMoved.connect(lambda pos, index, s=splitter: self.saveSplitterState(s))
 
         for fileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
             # File list view selections are mutually exclusive.
@@ -240,10 +251,10 @@ class RepoWidget(QWidget):
         stageContainer = self._makeStageContainer()
         committedFilesContainer = self._makeCommittedFilesContainer()
 
-        workdirSplitter = QSplitter(Qt.Orientation.Vertical)
+        workdirSplitter = QSplitter(Qt.Orientation.Vertical, self)
         workdirSplitter.addWidget(dirtyContainer)
         workdirSplitter.addWidget(stageContainer)
-        workdirSplitter.setObjectName("WorkdirSplitter")
+        workdirSplitter.setObjectName("Split_Workdir")
         workdirSplitter.setChildrenCollapsible(False)
 
         filesStack = QStackedWidget()
