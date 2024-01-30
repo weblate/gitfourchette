@@ -26,23 +26,43 @@ class Benchmark:
 
     def __init__(self, name):
         self.name = name
+        self.phase = ""
+        self.startTime = 0
+        self.startBytes = 0
+
+    def enter(self, phase=""):
+        if self.startTime:
+            self.exit()
+
+        Benchmark.nesting.append(self.name)
+        self.startBytes = getRSS()
+        self.startTime = time.perf_counter()
+        self.phase = phase
+
+    def exit(self):
+        ms = 1000 * (time.perf_counter() - self.startTime)
+        kb = (getRSS() - self.startBytes) // 1024
+
+        description = "/".join(Benchmark.nesting)
+        if self.phase:
+            description += f" ({self.phase})"
+        logger.log(BENCHMARK_LOGGING_LEVEL, f"{ms:8.2f} ms {kb:6,d}K {description}")
+
+        Benchmark.nesting.pop()
+        self.startTime = 0
+        self.phase = ""
 
     def __enter__(self):
-        Benchmark.nesting.append(self.name)
-        self.rssAtStart = getRSS()
-        self.start = time.perf_counter()
+        self.enter()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        tt = time.perf_counter() - self.start
-        rss = getRSS()
-        logger.log(BENCHMARK_LOGGING_LEVEL, f"{tt*1000:8.2f} ms {(rss - self.rssAtStart) // 1024:6,d}K {'/'.join(Benchmark.nesting)}")
-        Benchmark.nesting.pop()
+    def __exit__(self, exc_type=None, exc_value=None, traceback=None):
+        self.exit()
 
 
 def benchmark(func):
-    """ Decorator that reports how long a function takes to run. """
+    """ Function decorator that reports how long the function takes to run. """
     def wrapper(*args, **kwargs):
-        with Benchmark(func.__name__):
+        with Benchmark(func.__qualname__):
             return func(*args, **kwargs)
     return wrapper

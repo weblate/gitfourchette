@@ -86,6 +86,7 @@ class RepoWidget(QWidget):
         else:
             return self.pathPending
 
+    @benchmark
     def __init__(self, parent: QWidget):
         super().__init__(parent)
 
