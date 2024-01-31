@@ -1480,6 +1480,8 @@ class ConflictSides(enum.IntEnum):
     DELETED_BY_THEM  = 0b011
     DELETED_BY_US    = 0b101
     DELETED_BY_BOTH  = 0b001
+    ADDED_BY_US      = 0b010
+    ADDED_BY_THEM    = 0b100
     ADDED_BY_BOTH    = 0b110
 
 
@@ -1512,6 +1514,14 @@ class DiffConflict:
     @property
     def modified_by_both(self):
         return self.sides == ConflictSides.MODIFIED_BY_BOTH
+
+    @property
+    def added_by_them(self):
+        return self.sides == ConflictSides.ADDED_BY_THEM
+
+    @property
+    def added_by_us(self):
+        return self.sides == ConflictSides.ADDED_BY_US
 
     @property
     def added_by_both(self):

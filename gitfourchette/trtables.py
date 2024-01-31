@@ -287,6 +287,10 @@ class TrTables:
                 "both <i>our</i> branch and <i>their</i> branch, independently "
                 "from each other. So, there is no common ancestor."),
 
+            "ADDED_BY_THEM": translate("ConflictView", "<b>Added by them</b>, no common ancestor."),
+
+            "ADDED_BY_US": translate("ConflictView", "<b>Added by us</b>, no common ancestor."),
+
             "tool": translate(
                 "ConflictView",
                 "You will be able to merge the changes in {tool}. When you are done merging, "
