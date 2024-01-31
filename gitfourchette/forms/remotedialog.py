@@ -53,12 +53,12 @@ class RemoteDialog(QDialog):
         if edit:
             title = self.tr("Edit remote {0}").format(hquoe(remoteName))
             self.setWindowTitle(self.tr("Edit remote"))
-            okButton.setText(self.tr("Save changes"))
+            okButton.setText(self.tr("Save"))
             self.ui.fetchAfterAddCheckBox.setVisible(False)
         else:
             title = self.tr("Add remote")
             self.setWindowTitle(self.tr("Add remote"))
-            okButton.setText(self.tr("Add remote"))
+            okButton.setText(self.tr("Add"))
             self.ui.fetchAfterAddCheckBox.setVisible(True)
 
         convertToBrandedDialog(self, title)

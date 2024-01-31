@@ -20,7 +20,7 @@ class Banner(QFrame):
         button.setText(self.tr("Abort"))
 
         dismissButton = QToolButton(self)
-        dismissButton.setText(self.tr("Dismiss"))
+        dismissButton.setText(self.tr("Dismiss", "clicking the Dismiss button will make the info banner disappear"))
         dismissButton.clicked.connect(self.dismiss)
         dismissButton.clicked.connect(self.hide)
 

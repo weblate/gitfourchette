@@ -49,6 +49,7 @@ class Ui_AbsorbSubmodule(object):
         self.comboBox.setSizePolicy(sizePolicy)
         self.comboBox.setObjectName("comboBox")
         self.comboBox.addItem("")
+        self.comboBox.setItemText(0, "origin")
         self.horizontalLayout.addWidget(self.comboBox)
         self.verticalLayout.addWidget(self.widget)
         self.label2 = QLabel(parent=AbsorbSubmodule)
@@ -76,5 +77,4 @@ class Ui_AbsorbSubmodule(object):
         AbsorbSubmodule.setWindowTitle(_translate("AbsorbSubmodule", "Absorb submodule"))
         self.label1.setText(_translate("AbsorbSubmodule", "Do you want the Git repository {sub} to be absorbed as a submodule of {super}?"))
         self.label.setText(_translate("AbsorbSubmodule", "Submodule remote:"))
-        self.comboBox.setItemText(0, _translate("AbsorbSubmodule", "origin"))
         self.label2.setText(_translate("AbsorbSubmodule", "If you choose to proceed, {super} will assume control of the “.git” directory in {sub}. You will not be able to use {sub} as an independent repository. This cannot be undone!"))

@@ -31,6 +31,7 @@ class NewCommit(RepoTask):
         if not self.repo.any_staged_changes:
             yield from self.flowConfirm(
                 title=self.tr("Create empty commit"),
+                verb=self.tr("Empty commit"),
                 text=paragraphs(
                     self.tr("No files are staged for commit."),
                     self.tr("Do you want to create an empty commit anyway?")))

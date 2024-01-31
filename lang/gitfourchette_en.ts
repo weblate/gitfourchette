@@ -4,17 +4,31 @@
 <context>
     <name></name>
     <message numerus="yes">
-        <source>%n conflicting file(s)</source>
+        <source>%n conflicting files</source>
         <translation>
             <numerusform>%n conflicting file</numerusform>
             <numerusform>%n conflicting files</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>&lt;b&gt;%n file(s)&lt;/b&gt;</source>
+        <source>%n files</source>
         <translation>
-            <numerusform>&lt;b&gt;%n file&lt;/b&gt;</numerusform>
-            <numerusform>&lt;b&gt;%n files&lt;/b&gt;</numerusform>
+            <numerusform>%n file</numerusform>
+            <numerusform>%n files</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Skip %n more errors</source>
+        <translation>
+            <numerusform>Skip %n more error</numerusform>
+            <numerusform>Skip %n more errors</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n lines copied to clipboard.</source>
+        <translation>
+            <numerusform>%n line copied to clipboard.</numerusform>
+            <numerusform>%n lines copied to clipboard.</numerusform>
         </translation>
     </message>
 </context>
@@ -98,6 +112,14 @@
         </translation>
     </message>
     <message numerus="yes">
+        <source>%n Merge Conflicts</source>
+        <comment>singular form should simply say &apos;Merge Conflict&apos;</comment>
+        <translation>
+            <numerusform>Merge Conflict</numerusform>
+            <numerusform>%n Merge Conflicts</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
         <source>&amp;Edit in {0}</source>
         <translation>
             <numerusform>&amp;Edit in {0}</numerusform>
@@ -156,7 +178,7 @@
 <context>
     <name>FileList</name>
     <message numerus="yes">
-        <source>Revert Mode Change(s)</source>
+        <source>Revert Mode Change</source>
         <translation>
             <numerusform>Revert Mode Change</numerusform>
             <numerusform>Revert Mode Changes</numerusform>
@@ -166,10 +188,11 @@
 <context>
     <name>GraphView</name>
     <message numerus="yes">
-        <source>%n parent(s)</source>
+        <source>%n parents</source>
+        <comment>singular form can just say &apos;Parent&apos;</comment>
         <translation>
             <numerusform>Parent</numerusform>
-            <numerusform>%n parents</numerusform>
+            <numerusform>%n Parents</numerusform>
         </translation>
     </message>
 </context>
@@ -178,29 +201,47 @@
     <message numerus="yes">
         <source>%n dirty:</source>
         <translation>
-            <numerusform>%n dirty:</numerusform>
-            <numerusform>%n dirty:</numerusform>
+            <numerusform variants="yes">
+                <lengthvariant>%n dirty file:</lengthvariant>
+                <lengthvariant>%n dirty:</lengthvariant>
+            </numerusform>
+            <numerusform variants="yes">
+                <lengthvariant>%n dirty files:</lengthvariant>
+                <lengthvariant>%n dirty file:</lengthvariant>
+            </numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n staged:</source>
         <translation>
-            <numerusform>%n staged:</numerusform>
-            <numerusform>%n staged:</numerusform>
+            <numerusform variants="yes">
+                <lengthvariant>%n staged file:</lengthvariant>
+                <lengthvariant>%n staged:</lengthvariant>
+            </numerusform>
+            <numerusform variants="yes">
+                <lengthvariant>%n staged files:</lengthvariant>
+                <lengthvariant>%n staged:</lengthvariant>
+            </numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n change(s) in {0}:</source>
+        <source>%n changes in {0}:</source>
         <translation>
-            <numerusform>%n change in {0}:</numerusform>
-            <numerusform>%n changes in {0}:</numerusform>
+            <numerusform variants="yes">
+                <lengthvariant>%n change in {0}:</lengthvariant>
+                <lengthvariant>%n chg. in {0}:</lengthvariant>
+            </numerusform>
+            <numerusform variants="yes">
+                <lengthvariant>%n changes in {0}:</lengthvariant>
+                <lengthvariant>%n chgs. in {0}:</lengthvariant>
+            </numerusform>
         </translation>
     </message>
 </context>
 <context>
     <name>MainWindow</name>
     <message numerus="yes">
-        <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch(es)?</source>
+        <source>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patches?</source>
         <translation>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch?</numerusform>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patches?</numerusform>
@@ -209,7 +250,7 @@
     <message numerus="yes">
         <source>The session couldn’t be restored fully because %n repositories failed to load:</source>
         <translation>
-            <numerusform>The session couldn’t be restored fully because %n repository failed to load:</numerusform>
+            <numerusform>The session couldn’t be restored fully because a repository failed to load:</numerusform>
             <numerusform>The session couldn’t be restored fully because %n repositories failed to load:</numerusform>
         </translation>
     </message>
@@ -249,6 +290,39 @@
         <translation>
             <numerusform>&amp;Copy Path</numerusform>
             <numerusform>&amp;Copy Paths</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>_BaseStagingTask</name>
+    <message numerus="yes">
+        <source>You have selected %n merge conflicts that are still unsolved.</source>
+        <translation>
+            <numerusform>You have selected a merge conflict that is still unsolved.</numerusform>
+            <numerusform>You have selected %n merge conflicts that are still unsolved.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>There are %n unsolved merge conflicts among your selection.</source>
+        <translation>
+            <numerusform>There’s an unsolved merge conflict among your selection.</numerusform>
+            <numerusform>There are %n unsolved merge conflicts among your selection.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Please fix it/them before staging:</source>
+        <comment>&apos;it/them&apos; refers to the selected merge conflicts</comment>
+        <translation>
+            <numerusform>Please fix it before staging:</numerusform>
+            <numerusform>Please fix them before staging:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Please fix it/them before discarding:</source>
+        <comment>&apos;it/them&apos; refers to the selected merge conflicts</comment>
+        <translation>
+            <numerusform>Please fix it before discarding:</numerusform>
+            <numerusform>Please fix them before discarding:</numerusform>
         </translation>
     </message>
 </context>

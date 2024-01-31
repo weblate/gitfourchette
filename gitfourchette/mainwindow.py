@@ -807,8 +807,8 @@ class MainWindow(QMainWindow):
                     accentColor = self.palette().color(QPalette.ColorRole.Link)
 
                 message = paragraphs(
-                    self.tr("An existing repository {0} was detected in a parent folder "
-                            "of the repository that you’re about to create:"),
+                    self.tr("There exists a repository {0} in a parent folder "
+                            "of the repo that you were about to create:"),
                     "<div style='white-space: pre'>    <span style='color: {highlight}'>{dp1}</span>{dp2}</div>",
                     self.tr("Do you want to create a new repository {1} in the subfolder anyway?"),
                 ).format(bquoe(parentBasename), bquoe(myBasename), highlight=accentColor.name(),
@@ -819,11 +819,11 @@ class MainWindow(QMainWindow):
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
                 openButton = qmb.button(QMessageBox.StandardButton.Open)
-                openButton.setText(self.tr("&Open parent {0}").format(lquoe(parentBasename)))
+                openButton.setText(self.tr("&Open {0}").format(lquoe(parentBasename)))
                 openButton.clicked.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
 
                 createButton = qmb.button(QMessageBox.StandardButton.Ok)
-                createButton.setText(self.tr("&Create {0} in subfolder").format(lquoe(myBasename)))
+                createButton.setText(self.tr("&Create {0}").format(lquoe(myBasename)))
                 createButton.clicked.connect(lambda: self.newRepo(path, detectParentRepo=False))
 
                 qmb.show()
@@ -987,6 +987,7 @@ class MainWindow(QMainWindow):
         # Set current tab and load its repo.
         if activeTab >= 0:
             self.tabs.setCurrentIndex(activeTab)
+            self.tabs.widget(activeTab).setupUi()
             self.onTabCurrentWidgetChanged()  # needed to trigger loading on tab #0
 
     def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):

@@ -19,7 +19,8 @@ def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operat
 
     # lupdate doesn't pick up the plural form with translate("Context", "%n", "", numConflicts)
     title = tr("%n conflicting files", "", numConflicts)
-    nFilesSubmessage = tr("<b>%n files</b>", "", numConflicts)
+    nFilesSubmessage = tr("%n files", "", numConflicts)
+    nFilesSubmessage = f"<b>{nFilesSubmessage}</b>"
 
     if exc.description == "workdir":
         message = translate("Conflict", "Operation {0} conflicts with {1} in the working directory:"

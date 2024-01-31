@@ -132,7 +132,7 @@ class FileList(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
         self.setUniformItemSizes(True)  # potential perf boost with many files
 
-        self.searchBar = SearchBar(self, self.tr("Find a File"))
+        self.searchBar = SearchBar(self, self.tr("Find a file by pathFind file"))
         self.searchBar.setUpItemViewBuddy()
         self.searchBar.ui.forwardButton.hide()
         self.searchBar.ui.backwardButton.hide()

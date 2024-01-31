@@ -202,7 +202,7 @@ class Jump(RepoTask):
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
             rw.setFileStackPage("workdir")
             rw.setDiffStackPage("special")
-            rw.diffHeader.setText(self.tr("Working directory clean"))
+            rw.diffHeader.setText(self.tr("Working directory cleanWorkdir clean"))
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 self.tr("The working directory is clean."),
                 self.tr("There aren’t any changes to commit."),
@@ -243,7 +243,7 @@ class Jump(RepoTask):
                 oid = rw.state.refCache[locator.ref]
                 locator = locator.replace(commit=oid, ref="")
             except KeyError:
-                raise AbortTask(self.tr("Unknown reference “{0}”.").format(locator.ref))
+                raise AbortTask(self.tr("Unknown reference {0}.").format(tquo(locator.ref)))
 
         assert locator.commit
         assert not locator.ref

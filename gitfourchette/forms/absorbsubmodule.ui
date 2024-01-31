@@ -62,7 +62,7 @@
         </property>
         <item>
          <property name="text">
-          <string>origin</string>
+          <string notr="true">origin</string>
          </property>
         </item>
        </widget>

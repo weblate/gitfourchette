@@ -214,7 +214,8 @@ class SearchBar(QWidget):
             self.searchItemView(op, wrappedFrom=start)
         else:
             displayTerm = self.rawSearchTerm
-            showInformation(self, self.lineEdit.placeholderText(), self.tr("{0} not found.").format(bquo(displayTerm)))
+            title = self.lineEdit.placeholderText().split("")[0]
+            showInformation(self, title, self.tr("{0} not found.").format(bquo(displayTerm)))
 
     def pulseItemView(self):
         view: QAbstractItemView = self.buddy
