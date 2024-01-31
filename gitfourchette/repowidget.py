@@ -1032,20 +1032,22 @@ class RepoWidget(QStackedWidget):
             bannerAction = self.tr("Abort Cherry-Pick")
             bannerCallback = lambda: self.runTask(AbortMerge)
 
-        elif rstate in [RepositoryState.REBASE, RepositoryState.REBASE_MERGE]:
-            bannerTitle = self.tr("Rebasing")
+        elif rstate == RepositoryState.NONE:
+            if repo.any_conflicts:
+                bannerTitle = self.tr("Conflicts")
+                bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
 
-        elif rstate == RepositoryState.REBASE_INTERACTIVE:
-            bannerTitle = self.tr("Rebasing interactively")
-
-        elif repo.any_conflicts:
-            bannerTitle = self.tr("Conflicts")
-            bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
+        else:
+            bannerTitle = self.tr("Warning")
+            bannerText = self.tr(
+                "The repo is currently in state {state}, which {app} doesn’t support yet. "
+                "Use <code>git</code> on the command line to continue."
+            ).format(app=qAppName(), state=bquo(rstate.name.replace("_", " ").title()))
 
         # Set up Banner
         if not self.uiReady:
             pass
-        elif bannerText:
+        elif bannerText or bannerTitle:
             self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False,
                                    buttonLabel=bannerAction, buttonCallback=bannerCallback)
         else:
