@@ -2,6 +2,7 @@ import enum
 import re
 from typing import Literal
 
+from gitfourchette import colors
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
@@ -244,3 +245,32 @@ class SearchBar(QWidget):
                 return index
 
         self.turnRed()
+
+    @staticmethod
+    def highlightNeedle(painter: QPainter, rect: QRect, text: str,
+                        needlePos: int, needleLen: int,
+                        widthUpToNeedle: int = -1, widthPastNeedle: int = -1):
+
+        if widthUpToNeedle < 0 or widthPastNeedle < 0:
+            fontMetrics = painter.fontMetrics()
+            widthUpToNeedle = fontMetrics.horizontalAdvance(text, needlePos)
+            widthPastNeedle = fontMetrics.horizontalAdvance(text, needlePos + needleLen)
+        needleWidth = widthPastNeedle - widthUpToNeedle
+
+        needleRect = QRect(rect.left() + widthUpToNeedle, rect.top(), needleWidth, rect.height())
+        hiliteRect = QRectF(needleRect).marginsAdded(QMarginsF(2, -1, 2, -1))
+
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Yellow rounded rect
+        path = QPainterPath()
+        path.addRoundedRect(hiliteRect, 4, 4)
+        painter.fillPath(path, colors.yellow)
+
+        # Re-draw needle on top of highlight rect
+        painter.setPen(Qt.GlobalColor.black)  # force black-on-yellow regardless of dark/light theme
+        needleText = text[needlePos:needlePos + needleLen]
+        painter.drawText(needleRect, Qt.AlignmentFlag.AlignCenter, needleText)
+
+        painter.restore()

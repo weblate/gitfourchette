@@ -1,4 +1,3 @@
-from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.forms.searchbar import SearchBar
@@ -195,17 +194,8 @@ class CommitLogDelegate(QStyledItemDelegate):
         def elide(text):
             return metrics.elidedText(text, Qt.TextElideMode.ElideRight, rect.width())
 
-        def highlight(x1: int, x2: int):
-            if isSelected:
-                painter.drawRect(rect.left() + x1, rect.top() + 1, x2 - x1, rect.height() - 2)
-            else:
-                painter.fillRect(rect.left() + x1, rect.top(), x2 - x1, rect.height(), colors.yellow)
-
-        # ------ Highlight searched hash
-        if searchTerm and searchTermLooksLikeHash and commit and commit.hex.startswith(searchTerm):
-            x1 = 0
-            x2 = min(len(hashText), len(searchTerm)) * hcw
-            highlight(x1, x2)
+        def highlight(fullText: str, needlePos: int, needleLen: int):
+            SearchBar.highlightNeedle(painter, rect, fullText, needlePos, needleLen)
 
         # ------ Hash
         charRect = QRect(leftBoundHash, rect.top(), hcw, rect.height())
@@ -217,9 +207,14 @@ class CommitLogDelegate(QStyledItemDelegate):
             charRect.translate(hcw, 0)
         painter.restore()
 
+        # ------ Highlight searched hash
+        if searchTerm and searchTermLooksLikeHash and commit and commit.hex.startswith(searchTerm):
+            x1 = 0
+            x2 = min(len(hashText), len(searchTerm)) * hcw
+            SearchBar.highlightNeedle(painter, rect, hashText, 0, len(searchTerm), x1, x2)
+
         # ------ Graph
         rect.setLeft(leftBoundSummary)
-        # if commit is not None:
         paintGraphFrame(self.state, oid, painter, rect, outlineColor)
 
         # ------ Callouts
@@ -266,36 +261,29 @@ class CommitLogDelegate(QStyledItemDelegate):
             painter.setPen(Qt.GlobalColor.gray)
         rect.setLeft(rect.right())
         rect.setRight(leftBoundName - XMARGIN)
+        elidedSummaryText = elide(summaryText)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elidedSummaryText)
 
         # ------ Highlight search term
         if searchTerm and commit and searchTerm in commit.message.lower():
-            needleIndex = summaryText.lower().find(searchTerm)
-            if needleIndex < 0:
-                needleIndex = len(summaryText) - ELISION_LENGTH
-                needleLength = ELISION_LENGTH
+            needlePos = summaryText.lower().find(searchTerm)
+            if needlePos < 0:
+                needlePos = len(summaryText) - ELISION_LENGTH
+                needleLen = ELISION_LENGTH
             else:
-                needleLength = len(searchTerm)
-            x1 = metrics.horizontalAdvance(summaryText, needleIndex)
-            x2 = metrics.horizontalAdvance(summaryText, needleIndex + needleLength)
-            highlight(x1, x2)
-
-        elidedSummaryText = elide(summaryText)
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elidedSummaryText)
+                needleLen = len(searchTerm)
+            highlight(summaryText, needlePos, needleLen)
 
         # ------ Author
         rect.setLeft(leftBoundName)
         rect.setRight(leftBoundDate - XMARGIN)
-
-        # Highlight searched author
-        if searchTerm and commit:
-            needleIndex = authorText.lower().find(searchTerm)
-            if needleIndex >= 0:
-                x1 = metrics.horizontalAdvance(authorText, needleIndex)
-                x2 = metrics.horizontalAdvance(authorText, needleIndex + len(searchTerm))
-                highlight(x1, x2)
-
-        # Draw author name
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText) + "  ")
+
+        # ------ Highlight searched author
+        if searchTerm and commit:
+            needlePos = authorText.lower().find(searchTerm)
+            if needlePos >= 0:
+                highlight(authorText, needlePos, len(searchTerm))
 
         # ------ Date
         rect.setLeft(leftBoundDate)

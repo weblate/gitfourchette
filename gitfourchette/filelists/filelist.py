@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Callable, Generator
 
-from gitfourchette import settings, colors
+from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
 from gitfourchette.forms.searchbar import SearchBar
@@ -69,22 +69,7 @@ class FileListDelegate(QStyledItemDelegate):
             else:
                 needleLen = len(searchTerm)
 
-            widthUpToNeedle = option.fontMetrics.horizontalAdvance(text, needlePos)
-            widthPastNeedle = option.fontMetrics.horizontalAdvance(text, needlePos + needleLen)
-            needleWidth = widthPastNeedle - widthUpToNeedle
-
-            needleRect = QRect(textRect.left() + widthUpToNeedle, textRect.top(), needleWidth, textRect.height())
-            hiliteRect = QRectF(needleRect).marginsAdded(QMarginsF(2, -1, 2, -1))
-
-            # Yellow rounded rect
-            path = QPainterPath()
-            path.addRoundedRect(hiliteRect, 4, 4)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.fillPath(path, colors.yellow)
-
-            # Re-draw needle on top of highlight rect
-            painter.setPen(Qt.GlobalColor.black)  # force black-on-yellow regardless of dark/light theme
-            painter.drawText(needleRect, option.displayAlignment, text[needlePos:needlePos+needleLen])
+            SearchBar.highlightNeedle(painter, textRect, text, needlePos, needleLen)
 
         painter.restore()
 
