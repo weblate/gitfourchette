@@ -146,7 +146,6 @@ class QtApiNames(enum.StrEnum):
     QTAPI_PYQT6 = "pyqt6"
     QTAPI_PYQT5 = "pyqt5"
     QTAPI_PYSIDE6 = "pyside6"
-    QTAPI_PYSIDE2 = "pyside2"
 
 
 class LoggingLevel(enum.IntEnum):

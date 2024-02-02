@@ -17,8 +17,7 @@ GitFourchette strives to provide:
 
 The main target OS is Linux. 
 
-\* If you don’t have PyQt6, GitFourchette is also compatible with PyQt5 and PySide2.
-However, PySide6 is highly recommended.
+\* If you don’t have PyQt6, GitFourchette is also compatible with PySide6 and PyQt5.
 
 ## License
 

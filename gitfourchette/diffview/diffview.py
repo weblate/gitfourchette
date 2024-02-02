@@ -131,10 +131,7 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
 
 
 class DiffView(QPlainTextEdit):
-    if PYSIDE2:  # SIGSEGV when a Signal has an IntEnum arg
-        applyPatch = Signal(Patch, bytes, int)
-    else:
-        applyPatch = Signal(Patch, bytes, PatchPurpose)
+    applyPatch = Signal(Patch, bytes, PatchPurpose)
     revertPatch = Signal(Patch, bytes)
     contextualHelp = Signal(str)
 

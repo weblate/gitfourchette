@@ -1,12 +1,13 @@
-# GitFourchette's preferred Qt binding is PyQt6, but it is compatibile with other Qt bindings.
+# GitFourchette's preferred Qt binding is PyQt6, but it is compatible with other Qt bindings.
 # You can force a specific binding with the QT_API environment variable.
 # Values recognized by QT_API:
 #       pyqt6       (highly recommended, first-class support)
 #       pyqt5       (OK if you can't use Qt 6 yet)
 #       pyside6     (OK)
-#       pyside2     (avoid this one if possible)
 #
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
+#
+# Note: PySide2 is NOT supported at all.
 
 from contextlib import suppress as _suppress
 import logging as _logging
@@ -18,11 +19,10 @@ from gitfourchette.appconsts import *
 
 _logger = _logging.getLogger(__name__)
 
-_qtBindingOrder = ["pyqt6", "pyqt5", "pyside6", "pyside2"]
+_qtBindingOrder = ["pyqt6", "pyqt5", "pyside6"]
 
 QT5 = False
 QT6 = False
-PYSIDE2 = False
 PYSIDE6 = False
 PYQT5 = False
 PYQT6 = False
@@ -39,7 +39,6 @@ else:
 if not _qtBindingBootPref:
     _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
     _prefsPath = _os.path.join(_prefsPath, APP_SYSTEM_NAME, "prefs.json")
-    _jsonPrefs = None
     with _suppress(IOError, ValueError):
         with open(_prefsPath, 'rt', encoding='utf-8') as _f:
             _jsonPrefs = _json.load(_f)
@@ -47,9 +46,9 @@ if not _qtBindingBootPref:
 
 if _qtBindingBootPref:
     if _qtBindingBootPref not in _qtBindingOrder:
-        # Sanitize value if user passed in junk
+        # Don't touch default binding order if user passed in an unsupported binding name.
+        # Pass _qtBindingBootPref on to application code so it can complain.
         _logger.warning(f"Unrecognized Qt binding name: '{_qtBindingBootPref}'")
-        _qtBindingBootPref = ""
     else:
         # Move preferred binding to front of list
         _qtBindingOrder.remove(_qtBindingBootPref)
@@ -92,14 +91,6 @@ for _tentative in _qtBindingOrder:
             Signal = pyqtSignal
             Slot = pyqtSlot
 
-        elif _tentative == "pyside2":
-            from PySide2.QtCore import *
-            from PySide2.QtWidgets import *
-            from PySide2.QtGui import *
-            from PySide2 import __version__ as QT_BINDING_VERSION
-            QT_BINDING = "PySide2"
-            QT5 = PYSIDE2 = True
-
         else:
             _logger.warning(f"Unsupported Qt binding {_tentative}")
             continue
@@ -123,6 +114,35 @@ WINDOWS = KERNEL == "winnt"
 FREEDESKTOP = (KERNEL == "linux") or ("bsd" in KERNEL)
 
 # -----------------------------------------------------------------------------
+# Try to import optional modules
+
+# Test mode stuff
+QAbstractItemModelTester = None
+QTest = None
+QSignalSpy = None
+with _suppress(ImportError):
+    if PYQT6:
+        from PyQt6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+    elif PYQT5:
+        from PyQt5.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+    elif PYSIDE6:
+        from PySide6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+
+# Try to import QtDBus on Linux
+HAS_QTDBUS = False
+if FREEDESKTOP:
+    with _suppress(ImportError):
+        if PYSIDE6:
+            from PySide6.QtDBus import *
+        elif PYQT6:
+            from PyQt6.QtDBus import *
+        elif PYQT5:
+            from PyQt5.QtDBus import *
+        else:
+            raise ImportError("QtDBus")
+        HAS_QTDBUS = True
+
+# -----------------------------------------------------------------------------
 # Exclude some known bad PySide6 versions
 
 if PYSIDE6:
@@ -144,17 +164,10 @@ if PYSIDE6:
 if PYQT5 or PYQT6:
     QEvent.Type.ThemeChange = 0xD2
 
-# Patch PySide2's exec_ functions
-if PYSIDE2:
-    def qMenuExec(menu: QMenu, *args, **kwargs):
-        menu.exec_(*args, **kwargs)
-    QApplication.exec = QApplication.exec_
-    QMenu.exec = qMenuExec
-
-# Work around PYSIDE-2234 for PySide2 and PySide6. PySide6 6.5.0+ does implement QRunnable.create,
-# but its implementation sometimes causes random QRunnable objects to bubble up to MainWindow.eventFilter
-# as the 'event' arg, somehow. So just replace PySide6's implementation.
-if PYSIDE2 or PYSIDE6:
+# Work around PYSIDE-2234. PySide6 6.5.0+ does implement QRunnable.create, but
+# its implementation sometimes causes random QRunnable objects to bubble up to
+# MainWindow.eventFilter as the 'event' arg, somehow.
+if PYSIDE6:
     class QRunnableFunctionWrapper(QRunnable):
         def __init__(self, func):
             super().__init__()
@@ -166,19 +179,6 @@ if PYSIDE2 or PYSIDE6:
 # Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
 if QT5:
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
-
-# Try to import QtDBus on Linux (note: PySide2 doesn't have it)
-HAS_QTDBUS = False
-if FREEDESKTOP and not PYSIDE2:
-    if PYSIDE6:
-        from PySide6.QtDBus import *
-    elif PYQT6:
-        from PyQt6.QtDBus import *
-    elif PYQT5:
-        from PyQt5.QtDBus import *
-    else:
-        assert False
-    HAS_QTDBUS = True
 
 
 # -----------------------------------------------------------------------------

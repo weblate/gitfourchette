@@ -288,7 +288,6 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
 
     def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, widget: QWidget = None):
         if element == QStyle.ControlElement.CE_TabBarTabLabel:
-            assert not PYSIDE2, "don't use QTabBarStyleNoRotatedText with PySide2"
             assert isinstance(option, QStyleOptionTab)
             option: QStyleOptionTab = QStyleOptionTab(option)  # copy
             option.shape = QTabBar.Shape.RoundedNorth  # override shape
@@ -359,9 +358,6 @@ def makeMultiShortcut(*args) -> MultiShortcut:
             shortcuts.append(alt)
 
     # Ensure no duplicates (stable order since Python 3.7+)
-    if PYSIDE2:  # QKeySequence isn't hashable in PySide2
-        shortcuts = list(dict((str(s), s) for s in shortcuts).values())
-    else:
-        shortcuts = list(dict.fromkeys(shortcuts))
+    shortcuts = list(dict.fromkeys(shortcuts))
 
     return shortcuts

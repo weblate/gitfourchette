@@ -68,10 +68,9 @@ class SidebarModeTabs(QTabBar):
 
         # Pass a string to the proxy's ctor, NOT QApplication.style() as this would transfer the ownership
         # of the style to the proxy!!!
-        if not PYSIDE2:  # could never get this to work with PySide2
-            from gitfourchette import settings
-            proxyStyle = _SidebarModeTabStyle(settings.prefs.qtStyle)
-            self.setStyle(proxyStyle)
+        from gitfourchette import settings
+        proxyStyle = _SidebarModeTabStyle(settings.prefs.qtStyle)
+        self.setStyle(proxyStyle)
 
         self.setMinimumWidth(4*16)
 

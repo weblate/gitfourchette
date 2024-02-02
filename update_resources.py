@@ -155,11 +155,9 @@ def compileUi(uic, uiPath, pyPath, force=False, cleanupOutput=True):
                        "# Created by: PyQt6 UI code generator",]
     elif "from PySide" in text:
         text = re.sub(r"^# -\*- coding:.*$", "", text, flags=re.M)
-        text = re.sub(r"^from PySide2.* import .+$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
         text = re.sub(r"^from PySide6.* import \([^\)]+\)$", "from gitfourchette.qt import *", text, count=1, flags=re.M)
         for nukePattern in [
                 r"^# -\*- coding:.*$",
-                r"^from PySide2.* import .+$\n",
                 r"^from PySide6.* import \([^\)]+\)$\n",
                 r"^ {4}# (setupUi|retranslateUi)$\n",
         ]:

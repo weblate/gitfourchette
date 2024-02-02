@@ -83,8 +83,8 @@ class PrefsDialog(QDialog):
 
         tabWidget = QTabWidget(self)
 
-        # Make tabs vertical if possible (PySide2: broken; macOS style: too messy)
-        if PYSIDE2 or qtIsNativeMacosStyle():
+        # Make tabs vertical if possible (macOS style: too messy)
+        if qtIsNativeMacosStyle():
             tabWidget.setTabPosition(QTabWidget.TabPosition.North)
         else:
             # Pass a string to the proxy's ctor, NOT QApplication.style() as this would transfer the ownership

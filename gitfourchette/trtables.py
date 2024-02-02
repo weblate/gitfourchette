@@ -253,7 +253,6 @@ class TrTables:
 
             "QTAPI_AUTOMATIC": translate("Prefs", "Automatic (recommended)", "automatic choice of qt binding"),
             "QTAPI_PYSIDE6": "PySide6",
-            "QTAPI_PYSIDE2": "PySide2 " + translate("Prefs", "(not recommended)"),
             "QTAPI_PYQT6": "PyQt6",
             "QTAPI_PYQT5": "PyQt5",
         }

@@ -111,6 +111,7 @@ class GFApplication(QApplication):
     def bootUi(self):
         from gitfourchette.mainwindow import MainWindow
         from gitfourchette.toolbox import bquo
+        from gitfourchette.settings import QtApiNames
 
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
@@ -125,11 +126,18 @@ class GFApplication(QApplication):
             self.initialSession = None
 
         if QT_BINDING_BOOTPREF and QT_BINDING_BOOTPREF.lower() != QT_BINDING.lower():
-            QMessageBox.information(
-                self.mainWindow,
-                translate("Prefs", "Qt binding unavailable"),
-                translate("Prefs", "Your preferred Qt binding {0} is not available.<br>Using {1} instead."
-                          ).format(bquo(QT_BINDING_BOOTPREF), bquo(QT_BINDING.lower())))
+            try:
+                QtApiNames(QT_BINDING_BOOTPREF.lower())  # raises ValueError if not recognized
+                text = translate("Prefs", "Your preferred Qt binding {0} is not available on this machine.")
+            except ValueError:
+                text = translate("Prefs", "Your preferred Qt binding {0} is not recognized by {app}. "
+                                          "(Supported values: {known})")
+            text += "<p>"
+            text += translate("Prefs", "Using {1} instead.", "falling back to default Qt binding instead of the user's choice")
+            text = text.format(bquo(QT_BINDING_BOOTPREF), bquo(QT_BINDING.lower()), app=qAppName(),
+                               known=", ".join(e for e in QtApiNames if e))
+
+            QMessageBox.information(self.mainWindow, translate("Prefs", "Qt binding unavailable"), text)
 
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:
