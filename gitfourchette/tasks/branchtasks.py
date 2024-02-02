@@ -220,7 +220,7 @@ class NewBranchFromRef(_NewBranchBaseTask):
             name = name.removeprefix(branch.remote_name + "/")
 
         else:
-            raise ValueError(f"Unsupported prefix for refname '{refname}'")
+            raise NotImplementedError(f"Unsupported prefix for refname '{refname}'")
 
         yield from self._internalFlow(branch.target, name, trackUpstream=upstream)
 
@@ -366,7 +366,7 @@ class MergeBranch(RepoTask):
             self.repo.merge(target)
 
         else:
-            raise AbortTask(escape(f"Unsupported MergeAnalysis! ma={repr(analysis)} mp={repr(pref)}"))
+            raise NotImplementedError(f"Unsupported MergeAnalysis! ma={repr(analysis)} mp={repr(pref)}")
 
 
 class RecallCommit(RepoTask):

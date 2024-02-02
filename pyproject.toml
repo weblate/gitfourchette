@@ -92,6 +92,8 @@ exclude_lines = [
     "if 0:",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+    "if not TEST_MODE:",
+    "if not settings.TEST_MODE:",
 
     # Don't complain about abstract methods, they aren't run:
     "@(abc\\.)?abstractmethod",

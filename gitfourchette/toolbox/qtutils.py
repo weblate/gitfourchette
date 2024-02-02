@@ -26,7 +26,7 @@ def openFolder(path: str):
     QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
 
-def showInFolder(path: str):
+def showInFolder(path: str):  # pragma: no cover (platform-specific)
     """
     Show a file or folder with explorer/finder.
     Source for Windows & macOS: https://stackoverflow.com/a/46019091/3388962
@@ -227,7 +227,7 @@ class DisableWidgetContext:
         self.objectToBlock.setEnabled(True)
 
 
-class MakeNonNativeDialog(QObject):
+class MakeNonNativeDialog(QObject):  # pragma: no cover (macOS-specific)
     """
     Enables the AA_DontUseNativeDialogs attribute, and disables it when the dialog is shown.
     Meant to be used to disable the iOS-like styling of dialog boxes on modern macOS.

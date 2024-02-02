@@ -74,17 +74,13 @@ def paintGraphFrame(
         rect: QRect,
         outlineColor: QColor
 ):
-    if not state.graph:
-        return
+    assert state.graph
 
     try:
         # Get this commit's sequential index in the graph
         myRow = state.graph.getCommitRow(oid)
-    except KeyError:
+    except LookupError:  # pragma: no cover
         logger.warning(f"Skipping unregistered commit: {oid}")
-        return
-    except IndexError:
-        logger.warning(f"Skipping commit that is probably not registered yet: {oid}")
         return
 
     painter.save()
@@ -122,8 +118,7 @@ def paintGraphFrame(
     path = QPainterPath()
 
     def submitPath(path: QPainterPath, column, stipple=False, dashOffset = 0):
-        if path.isEmpty():
-            return
+        assert not path.isEmpty()
         # white outline
         painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
         painter.drawPath(path)

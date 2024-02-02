@@ -99,7 +99,7 @@ DEFAULT_DIFF_TOOL_PRESET = ""
 DEFAULT_MERGE_TOOL_PRESET = ""
 
 
-def _filterToolPresets():
+def _filterToolPresets():  # pragma: no cover
     freedesktopTools = ["Kate", "KWrite"]
     macTools = ["FileMerge", "MacVim", "BBEdit"]
     winTools = ["WinMerge"]
@@ -342,7 +342,7 @@ prefs = Prefs()
 history = History()
 
 
-def qtIsNativeMacosStyle():
+def qtIsNativeMacosStyle():  # pragma: no cover
     if not MACOS:
         return False
     return (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")

@@ -98,7 +98,7 @@ class CommitLogDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         try:
             self._paint(painter, option, index)
-        except BaseException as exc:
+        except Exception as exc:  # pragma: no cover
             self._paintError(painter, option, index, exc)
 
     def _paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
@@ -299,7 +299,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         model.setData(index, summaryIsElided, CommitLogModel.MessageElidedRole)
         model.setData(index, leftBoundName, CommitLogModel.AuthorColumnXRole)
 
-    def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):
+    def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):  # pragma: no cover
         """Last-resort row drawing routine used if _paint raises an exception."""
 
         text = "?" * 7

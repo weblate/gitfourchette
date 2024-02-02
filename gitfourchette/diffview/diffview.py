@@ -61,10 +61,10 @@ class DiffGutter(QWidget):
         assert isinstance(parent, DiffView)
         self.diffView = parent
 
-        if MACOS or WINDOWS:
-            dpr = 4
-        else:
+        dpr = 4
+        if FREEDESKTOP:  # pragma: no cover
             dpr = 1  # On Linux, Qt doesn't seem to support cursors at non-1 DPR
+
         pix = QPixmap(f"assets:right_ptr@{dpr}x")
         pix.setDevicePixelRatio(dpr)
         flippedCursor = QCursor(pix, hotX=19, hotY=5)

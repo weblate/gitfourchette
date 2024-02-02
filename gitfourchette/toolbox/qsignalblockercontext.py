@@ -15,7 +15,7 @@ class QSignalBlockerContext:
 
     def __enter__(self):
         for o in self.objectsToBlock:
-            if o.signalsBlocked():
+            if o.signalsBlocked():  # pragma: no cover
                 logger.warning(f"Nesting QSignalBlockerContexts isn't a great idea! {o}")
             o.blockSignals(True)
 

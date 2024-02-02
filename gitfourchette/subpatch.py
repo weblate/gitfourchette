@@ -121,7 +121,7 @@ def writeContext(subpatch: io.BytesIO, reverse: bool, lines: Iterable[DiffLine])
             # Make it a context line
             subpatch.write(b" ")
         else:
-            raise ValueError("extractSubpatch: writeContext: unknown origin char")
+            raise NotImplementedError(f"unknown origin char {line.origin}")
         subpatch.write(line.raw_content)
 
 

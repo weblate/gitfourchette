@@ -216,7 +216,6 @@ class ApplyPatch(RepoTask):
 class RevertPatch(RepoTask):
     def effects(self) -> TaskEffects:
         # Patched file stays dirty
-        # TODO: Show Patched File In Workdir
         return TaskEffects.Workdir | TaskEffects.ShowWorkdir
 
     def flow(self, fullPatch: Patch, patchData: bytes):
