@@ -345,18 +345,6 @@ def parseAncestryOneLiner(text):
     return parseAncestryDefinition(re.split(r"\s+", text))
 
 
-def verifyKeyframes(g: Graph):
-    playback = g.startPlayback(0)
-
-    for row, keyframe in zip(g.keyframeRows, g.keyframes):
-        playback.advanceToCommit(keyframe.commit)
-
-        frame1 = playback.sealCopy()
-        frame2 = keyframe.sealCopy()
-
-        assert frame1 == frame2, F"Keyframe at row {row} doesn't reflect reality"
-
-
 @pytest.mark.parametrize('scenarioKey', SCENARIOS.keys())
 def testGraphSplicing(scenarioKey):
     textGraph1, textGraph2, expectEquilibrium = SCENARIOS[scenarioKey]

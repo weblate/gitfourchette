@@ -105,9 +105,6 @@ class BatchRow:
     def __str__(self):
         return str(int(self))
 
-    def toGlobalPosition(self) -> int:
-        return int(self)
-
     def __int__(self) -> int:
         """Any BatchRow is convertible to int, giving a global row index.
         Note that the int value of any given BatchRow may change over time
@@ -206,8 +203,7 @@ class ChainHandle:
     @bottomRow.setter
     def bottomRow(self, value):
         self._b = value
-        if self.alias is not None:
-            raise ValueError("Cannot modify row in aliased ChainHandle")
+        assert self.alias is None, "Cannot modify row in aliased ChainHandle"
 
     def setAliasOf(self, master: ChainHandle):
         if self.alias is not None:
@@ -216,10 +212,6 @@ class ChainHandle:
         self.alias = master
         self._t = BATCHROW_UNDEF
         self._b = BATCHROW_UNDEF
-
-    def invalidate(self):
-        self.t = BATCHROW_UNDEF
-        self.b = BATCHROW_UNDEF
 
 
 @dataclass
@@ -397,26 +389,6 @@ class Frame:
         assert all(arc is None or arc.chain.isValid() for arc in solvedArcsCopy)
 
         return Frame(self.row, self.commit, solvedArcsCopy, openArcsCopy, self.lastArc)
-
-    def isEquilibriumReached(self, peer: Frame):
-        for mine, theirs in itertools.zip_longest(self.openArcs, peer.openArcs):
-            mineIsStale = (not mine) or (0 <= mine.closedAt < self.row)
-            theirsIsStale = (not theirs) or (0 <= theirs.closedAt < peer.row)
-
-            if mineIsStale != theirsIsStale:
-                return False
-
-            if mineIsStale:
-                assert theirsIsStale
-                continue
-
-            assert mine.lane == theirs.lane
-
-            if not (mine.openedBy == theirs.openedBy and mine.closedBy == theirs.closedBy):
-                return False
-
-        # Do NOT test non-open arcs!
-        return True
 
     @staticmethod
     def reserveArcListCapacity(theList, newLength):
