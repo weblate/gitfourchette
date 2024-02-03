@@ -1461,13 +1461,16 @@ class Repo(_VanillaRepository):
 
 
 class RepoContext:
-    def __init__(self, path: str | _Path, flags: RepositoryOpenFlag = 0):
+    def __init__(self, path: str | _Path, flags: RepositoryOpenFlag = 0, write_index = False):
         self.repo = Repo(path, flags)
+        self.write_index = write_index
 
     def __enter__(self) -> Repo:
         return self.repo
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.write_index:
+            self.repo.index.write()
         # repo.free() is necessary for correct test teardown on Windows
         self.repo.free()
         del self.repo

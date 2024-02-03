@@ -84,6 +84,16 @@ def qlvGetRowData(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     return data
 
 
+def qlvFindRow(view: QListView, data: str, role=Qt.ItemDataRole.DisplayRole):
+    model = view.model()
+    for row in range(model.rowCount()):
+        index = model.index(row, 0)
+        assert index.isValid()
+        if index.data(role) == data:
+            return row
+    raise IndexError(f"didn't find a row containing '{data}'")
+
+
 def qlvClickNthRow(view: QListView, n: int):
     index = view.model().index(n, 0)
     assert index.isValid()
