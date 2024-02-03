@@ -59,14 +59,17 @@ class Banner(QFrame):
         self.setProperty("heeded", str(heeded).lower())
         self.setStyleSheet("* {}")  # reset stylesheet to percolate property change
 
-        markup = ""
+        smallPt = adjustedWidgetFontSize(self.label, 90)
+
+        markup = f"<style>sm {{ font-size: {smallPt}pt; }}</style>"
         if title:
             markup += f"<b>{title}</b>"
             if text:
-                markup += f"<br><small>{text}</small>"
+                markup += f"<br><sm>{text}</sm>"
         else:
-            markup = f"<small>{text}</small>"
+            markup += f"<sm>{text}</sm>"
 
+        self.label.setTextFormat(Qt.TextFormat.RichText)
         self.label.setText(markup)
         self.icon.setVisible(withIcon)
 

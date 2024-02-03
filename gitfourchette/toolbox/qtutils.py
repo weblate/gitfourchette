@@ -97,6 +97,10 @@ def isImageFormatSupported(filename: str):
     return ext in _supportedImageFormats
 
 
+def adjustedWidgetFontSize(widget: QWidget, relativeSize: int = 100):
+    return round(widget.font().pointSize() * relativeSize / 100.0)
+
+
 def tweakWidgetFont(widget: QWidget, relativeSize: int = 100, bold: bool = False):
     font: QFont = widget.font()
     font.setPointSize(round(font.pointSize() * relativeSize / 100.0))
