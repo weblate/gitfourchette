@@ -39,6 +39,8 @@ logger = logging.getLogger(__name__)
 FileStackPage = Literal["workdir", "commit"]
 DiffStackPage = Literal["text", "special", "conflict"]
 
+FILEHEADER_HEIGHT = 20
+
 
 class RepoWidget(QStackedWidget):
     nameChange = Signal()
@@ -189,11 +191,6 @@ class RepoWidget(QStackedWidget):
         splitterC.setChildrenCollapsible(False)
 
         # ----------------------------------
-        # Styling
-
-        self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
-
-        # ----------------------------------
         # Connect signals
 
         # save splitter state in splitterMoved signal
@@ -253,9 +250,20 @@ class RepoWidget(QStackedWidget):
         self.restoreSplitterStates()
         self.uiReady = True
 
+        # ----------------------------------
+        # Styling
+
         # Huh? Gotta refresh the stylesheet after calling setupUi on a lazy-inited RepoWidget,
         # otherwise fonts somehow appear slightly too large within the RepoWidget on macOS.
         self.setStyleSheet("* {}")
+
+        # Remove sidebar frame
+        self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
+
+        # Smaller font for header text
+        for h in (self.diffHeader, self.committedHeader, self.dirtyHeader, self.stagedHeader,
+                  self.stageButton, self.unstageButton):
+            tweakWidgetFont(h, 90)
 
     # -------------------------------------------------------------------------
     # Initial layout
@@ -279,14 +287,17 @@ class RepoWidget(QStackedWidget):
 
     def _makeDirtyContainer(self):
         header = QElidedLabel(" ")
+        header.setObjectName("dirtyHeader")
         header.setToolTip(self.tr("Unstaged files: will not be included in the commit unless you stage them."))
+        header.setMinimumHeight(FILEHEADER_HEIGHT)
 
         dirtyFiles = DirtyFiles(self)
 
         stageButton = QToolButton()
+        stageButton.setObjectName("stageButton")
         stageButton.setText(self.tr("Stage"))
         stageButton.setToolTip(self.tr("Stage selected files"))
-        stageButton.setMaximumHeight(24)
+        stageButton.setMaximumHeight(FILEHEADER_HEIGHT)
         stageButton.setEnabled(False)
         appendShortcutToToolTip(stageButton, GlobalShortcuts.stageHotkeys[0])
 
@@ -319,14 +330,17 @@ class RepoWidget(QStackedWidget):
 
     def _makeStageContainer(self):
         header = QElidedLabel(" ")
+        header.setObjectName("stagedHeader")
         header.setToolTip(self.tr("Staged files: will be included in the commit."))
+        header.setMinimumHeight(FILEHEADER_HEIGHT)
 
         stagedFiles = StagedFiles(self)
 
         unstageButton = QToolButton()
+        unstageButton.setObjectName("unstageButton")
         unstageButton.setText(self.tr("Unstage"))
         unstageButton.setToolTip(self.tr("Unstage selected files"))
-        unstageButton.setMaximumHeight(24)
+        unstageButton.setMaximumHeight(FILEHEADER_HEIGHT)
         unstageButton.setEnabled(False)
         appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
 
@@ -372,7 +386,7 @@ class RepoWidget(QStackedWidget):
         # Lay out container
         layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(1)
         layout.addWidget(header, 0, 0)
         layout.addWidget(unstageButton, 0, 1)
         layout.addWidget(stagedFiles.searchBar, 1, 0, 1, 2)  # row col rowspan colspan
@@ -396,6 +410,8 @@ class RepoWidget(QStackedWidget):
         committedFiles = CommittedFiles(self)
 
         header = QElidedLabel(" ")
+        header.setObjectName("committedHeader")
+        header.setMinimumHeight(FILEHEADER_HEIGHT)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -428,9 +444,10 @@ class RepoWidget(QStackedWidget):
 
     def _makeDiffContainer(self):
         header = QElidedLabel(" ")
+        header.setObjectName("diffHeader")
         header.setElideMode(Qt.TextElideMode.ElideMiddle)
         header.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        header.setMinimumHeight(24)
+        header.setMinimumHeight(FILEHEADER_HEIGHT)
 
         diff = DiffView()
 
