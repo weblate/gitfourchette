@@ -169,9 +169,6 @@ class DiffView(QPlainTextEdit):
         # self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateGutterWidth(0)
 
-        # Work around control characters inserted by Qt 6 when copying text
-        self.copyAvailable.connect(self.onCopyAvailable)
-
         # Emit contextual help with non-empty selection
         self.cursorPositionChanged.connect(self.emitSelectionHelp)
         self.selectionChanged.connect(self.emitSelectionHelp)
@@ -870,52 +867,6 @@ class DiffView(QPlainTextEdit):
             discardkey=QKeySequence(GlobalShortcuts.discardHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText))
 
         self.contextualHelp.emit("💡 " + help)
-
-    # ---------------------------------------------
-    # Clipboard U+2029 fix
-    # TODO: Do we still need this stuff with recent versions of Qt 6?
-
-    def onCopyAvailable(self, yes: bool):
-        if not WINDOWS and settings.prefs.debug_fixU2029InClipboard:
-            if yes:
-                QApplication.clipboard().changed.connect(self.fixU2029InClipboard)
-            else:
-                QApplication.clipboard().changed.disconnect(self.fixU2029InClipboard)
-
-    def fixU2029InClipboard(self, mode: QClipboard.Mode):
-        """
-        Qt 6 replaces line breaks with U+2029 (PARAGRAPH SEPARATOR) when copying
-        text from a QPlainTextEdit. Let's restore the line breaks.
-
-        https://doc.qt.io/qt-6/qtextcursor.html#selectedText
-        "If the selection obtained from an editor spans a line break, the text
-        will contain a Unicode U+2029 paragraph separator character instead of
-        a newline \n character. Use QString::replace() to replace these
-        characters with newlines."
-        """
-
-        # The copied data probably didn't originate from the DiffView if it doesn't have focus
-        if not self.hasFocus():
-            return
-
-        clipboard = QApplication.clipboard()
-
-        if __debug__ and "\u2029" not in clipboard.text(mode):
-            logger.info("Scrubbing U+2029 would be useless in this buffer!")
-            return
-
-        # Even if we have focus, another process might have modified the clipboard in the background.
-        # So, make sure our application owns the data in the clipboard.
-        ownsData = ((mode == QClipboard.Mode.Clipboard and clipboard.ownsClipboard())
-                    or (mode == QClipboard.Mode.Selection and clipboard.ownsSelection())
-                    or (mode == QClipboard.Mode.FindBuffer and clipboard.ownsFindBuffer()))
-        if not ownsData:
-            return
-
-        logger.info(f"Scrubbing U+2029 characters from clipboard ({mode})")
-        text = clipboard.text(mode).replace("\u2029", "\n")
-        with QSignalBlockerContext(clipboard):
-            clipboard.setText(text, mode)
 
     # ---------------------------------------------
     # Search

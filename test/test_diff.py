@@ -251,3 +251,47 @@ def testSearchInDiff(qtbot, tempDir, mainWindow):
     assert searchBar.lineEdit.text() == "MadeUpGarbage"
     qtbot.keyPress(searchLine, Qt.Key.Key_Return)
     acceptQMessageBox(rw, "no.+occurrence.+of.+MadeUpGarbage.+found")
+
+
+def testCopyFromDiffWithoutU2029(qtbot, tempDir, mainWindow):
+    """
+    WARNING: THIS TEST MODIFIES THE SYSTEM'S CLIPBOARD.
+
+    At some point, Qt 6 used to replace line breaks with U+2029 (PARAGRAPH
+    SEPARATOR) when copying text from a QPlainTextEdit. We used to have a
+    workaround that scrubbed this character from the clipboard.
+
+    As of 2/2024, I haven't noticed this behavior in over a year, so I nuked
+    the workaround. This test ensures that the clipboard is still clean.
+
+    This behavior is still documented in the Qt docs, though...
+    https://doc.qt.io/qt-6/qtextcursor.html#selectedText
+    "If the selection obtained from an editor spans a line break, the text
+    will contain a Unicode U+2029 paragraph separator character instead of
+    a newline \n character. Use QString::replace() to replace these
+    characters with newlines."
+    """
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex='0966a434eb1a025db6b71485ab63a3bfbea520b6')
+    rw.jump(NavLocator.inCommit(oid, path="master.txt"))
+
+    # Make sure the clipboard is clean before we begin
+    clipboard = QApplication.clipboard()
+    clipboard.clear()
+    assert not clipboard.text()
+
+    diffView = rw.diffView
+    diffView.setFocus()
+    diffView.selectAll()
+    diffView.copy()
+
+    clipped = clipboard.text()
+    assert "\u2029" not in clipped
+    assert clipped == (
+        "@@ -1 +1,2 @@\n"
+        "On master\n"
+        "On master"
+    )

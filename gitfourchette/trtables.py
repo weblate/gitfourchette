@@ -209,7 +209,6 @@ class TrTables:
 
             "debug_verbosity": translate("Prefs", "Logging verbosity"),
             "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
-            "debug_fixU2029InClipboard": translate("Prefs", "Fix U+2029 in text copied from diff editor"),
             "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
             "debug_modalSidebar": translate("Prefs", "Modal sidebar"),
             "debug_smoothScroll": translate("Prefs", "Smooth scrolling (where applicable)"),

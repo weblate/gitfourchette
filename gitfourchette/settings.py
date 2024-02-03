@@ -188,7 +188,6 @@ class Prefs(PrefsFile):
     external_merge              : str           = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]
     trash_maxFiles              : int           = 250
     trash_maxFileSizeKB         : int           = 1024
-    debug_fixU2029InClipboard   : bool          = False
     debug_smoothScroll          : bool          = True
     debug_hideStashJunkParents  : bool          = True
     debug_autoRefresh           : bool          = True
