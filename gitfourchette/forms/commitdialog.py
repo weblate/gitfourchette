@@ -86,6 +86,9 @@ class CommitDialog(QDialog):
         self.updateCounterLabel()
         self.validator.run()
 
+        # Focus on summary editor before showing
+        self.ui.summaryEditor.setFocus()
+
     def updateCounterLabel(self):
         text = self.ui.summaryEditor.text()
         self.ui.counterLabel.setText(str(len(text)))
