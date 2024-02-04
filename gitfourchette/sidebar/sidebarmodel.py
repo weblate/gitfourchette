@@ -135,6 +135,7 @@ class SidebarNode:
         self.data = data
 
     def appendChild(self, node: SidebarNode):
+        assert self is not node
         assert not node.parent
         assert self.kind not in LEAF_ITEMS
         node.row = len(self.children)
@@ -282,7 +283,8 @@ class SidebarModel(QAbstractItemModel):
                         upstream = upstream.removeprefix(RefPrefix.REMOTES)  # Convert to shorthand
                         self._checkedOutUpstream = upstream
 
-        # Remote list
+        # Remote list - We could infer remotes from refCache, but we don't want
+        # to miss any "blank" remotes that don't have any branches yet.
         with Benchmark("Remotes"):
             # RemoteCollection.names() is much faster than iterating on RemoteCollection itself
             for i, name in enumerate(repo.remotes.names()):
@@ -291,7 +293,7 @@ class SidebarModel(QAbstractItemModel):
                 remoteRoot.appendChild(node)
 
         # Refs
-        with Benchmark("Refs"):
+        with Benchmark("Refs1"):
             for name in reversed(refCache):  # reversed because refCache sorts tips by ASCENDING commit time
                 prefix, shorthand = RefPrefix.split(name)
 
@@ -320,49 +322,42 @@ class SidebarModel(QAbstractItemModel):
                 else:
                     logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
 
-            # Sort remote branches
-            for remote in remoteBranchesDict:
+        with Benchmark("Refs2"):
+            for remote, branches in remoteBranchesDict.items():
                 remoteNode = remoteRoot.findChild(EItem.Remote, remote)
                 assert remoteNode is not None
 
-                remoteBranchesDict[remote] = sorted(remoteBranchesDict[remote])
+                # Sort remote branches
+                branches.sort(key=str.lower)
 
                 if not BRANCH_FOLDERS:
-                    for rb in remoteBranchesDict[remote]:
-                        node = SidebarNode(EItem.RemoteBranch, RefPrefix.REMOTES + f"{remote}/{rb}")
+                    for b in branches:
+                        node = SidebarNode(EItem.RemoteBranch, RefPrefix.REMOTES + f"{remote}/{b}")
                         remoteNode.appendChild(node)
                         self.nodesByRef[refName] = node
                 else:
-                    pFolder = ""
-                    folderNode = remoteNode
+                    pendingFolderNodes = {}
 
-                    for rb in remoteBranchesDict[remote]:
-                        if "/" not in rb:
-                            folderName = ""
+                    for b in branches:
+                        if "/" not in b:
+                            folderNode = remoteNode
                         else:
-                            folderName, _ = rb.rsplit("/", 1)
-
-                        if pFolder != folderName:
-                            pFolder = folderName
-                            if folderName:
-                                assert (not settings.DEVDEBUG
-                                        or not remoteNode.findChild(EItem.RemoteBranchFolder, folderName)), \
-                                    "remote branch folder already created"
+                            folderName = b.rsplit("/", 1)[0]
+                            try:
+                                folderNode = pendingFolderNodes[folderName]
+                            except KeyError:
+                                # Create node for folder, but add it to remoteNode later
+                                # so that all folders are grouped together.
                                 folderNode = SidebarNode(EItem.RemoteBranchFolder, folderName)
-                                remoteNode.appendChild(folderNode)
-                            else:
-                                folderNode = remoteNode
+                                pendingFolderNodes[folderName] = folderNode
 
-                        if settings.DEVDEBUG:
-                            if folderName:
-                                assert folderNode is not remoteNode and folderNode.kind == EItem.RemoteBranchFolder and folderNode.data == folderName
-                            else:
-                                assert folderNode is remoteNode
-
-                        refName = RefPrefix.REMOTES + f"{remote}/{rb}"
+                        refName = RefPrefix.REMOTES + f"{remote}/{b}"
                         node = SidebarNode(EItem.RemoteBranch, refName)
                         folderNode.appendChild(node)
                         self.nodesByRef[refName] = node
+
+                    for folderNode in pendingFolderNodes.values():
+                        remoteNode.appendChild(folderNode)
 
         # Stashes
         with Benchmark("Stashes"):
