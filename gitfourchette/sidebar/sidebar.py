@@ -311,8 +311,11 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.Tag:
+            prefix, shorthand = RefPrefix.split(data)
+            assert prefix == RefPrefix.TAGS
+
             actions += [
-                TaskBook.action(DeleteTag, self.tr("&Delete Tag"), taskArgs=data),
+                TaskBook.action(DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
             ]
 
         elif item == EItem.Submodule:
@@ -347,7 +350,7 @@ class Sidebar(QTreeView):
             menu.deleteLater()
 
     def refresh(self, repoState: RepoState):
-        self.sidebarModel.refreshCache(repoState)
+        self.sidebarModel.rebuild(repoState)
         self.restoreExpandedItems()
 
     def refreshPrefs(self):

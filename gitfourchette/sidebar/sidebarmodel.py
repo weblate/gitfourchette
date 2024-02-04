@@ -47,9 +47,9 @@ class EItem(enum.IntEnum):
     Stash = enum.auto()
     Remote = enum.auto()
     RemoteBranch = enum.auto()
-    RemoteBranchFolder = enum.auto()
     Tag = enum.auto()
     Submodule = enum.auto()
+    RefFolder = enum.auto()
 
 
 HEADER_ITEMS_NONMODAL = [
@@ -106,7 +106,7 @@ UNINDENT_ITEMS = {
     EItem.Submodule: -1,
     EItem.Remote: -1,
     EItem.RemoteBranch: -1,
-    EItem.RemoteBranchFolder: -1,
+    EItem.RefFolder: -1,
 }
 
 if MODAL_SIDEBAR: UNINDENT_ITEMS.update({
@@ -221,17 +221,21 @@ class SidebarModel(QAbstractItemModel):
         self.endResetModel()
 
     @benchmark
-    def refreshCache(self, repoState: RepoState):
+    def rebuild(self, repoState: RepoState):
         self.beginResetModel()
 
         repo = repoState.repo
         refCache = repoState.refCache
-        remoteBranchesDict = {}
 
         self.clear(emitSignals=False)
         self.repo = repo
         self.repoState = repoState
         self.nodesByRef = {}
+
+        # Pending ref shorthands for _makeRefTreeNodes
+        localBranches = []
+        remoteBranchesDict = {}
+        tags = []
 
         # Set up root nodes
         with Benchmark("Set up root nodes"):
@@ -293,14 +297,12 @@ class SidebarModel(QAbstractItemModel):
                 remoteRoot.appendChild(node)
 
         # Refs
-        with Benchmark("Refs1"):
+        with Benchmark("Refs-Init"):
             for name in reversed(refCache):  # reversed because refCache sorts tips by ASCENDING commit time
                 prefix, shorthand = RefPrefix.split(name)
 
                 if prefix == RefPrefix.HEADS:
-                    node = SidebarNode(EItem.LocalBranch, name)
-                    branchRoot.appendChild(node)
-                    self.nodesByRef[name] = node
+                    localBranches.append(shorthand)
                     # We're not caching upstreams because it's very expensive to do
 
                 elif prefix == RefPrefix.REMOTES:
@@ -309,12 +311,9 @@ class SidebarModel(QAbstractItemModel):
                         remoteBranchesDict[remote].append(branchName)
                     except KeyError:
                         logger.warning(f"Refresh cache: missing remote: {remote}")
-                    # Remote branches are added later
 
                 elif prefix == RefPrefix.TAGS:
-                    node = SidebarNode(EItem.Tag, name)
-                    tagRoot.appendChild(node)
-                    self.nodesByRef[name] = node
+                    tags.append(shorthand)
 
                 elif name == "HEAD" or name.startswith("stash@{"):
                     pass  # handled separately
@@ -322,7 +321,10 @@ class SidebarModel(QAbstractItemModel):
                 else:
                     logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
 
-        with Benchmark("Refs2"):
+        with Benchmark("Refs-LB"):
+            self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS)
+
+        with Benchmark("Refs-RB"):
             for remote, branches in remoteBranchesDict.items():
                 remoteNode = remoteRoot.findChild(EItem.Remote, remote)
                 assert remoteNode is not None
@@ -330,34 +332,10 @@ class SidebarModel(QAbstractItemModel):
                 # Sort remote branches
                 branches.sort(key=str.lower)
 
-                if not BRANCH_FOLDERS:
-                    for b in branches:
-                        node = SidebarNode(EItem.RemoteBranch, RefPrefix.REMOTES + f"{remote}/{b}")
-                        remoteNode.appendChild(node)
-                        self.nodesByRef[refName] = node
-                else:
-                    pendingFolderNodes = {}
+                self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, f"{RefPrefix.REMOTES}{remote}/")
 
-                    for b in branches:
-                        if "/" not in b:
-                            folderNode = remoteNode
-                        else:
-                            folderName = b.rsplit("/", 1)[0]
-                            try:
-                                folderNode = pendingFolderNodes[folderName]
-                            except KeyError:
-                                # Create node for folder, but add it to remoteNode later
-                                # so that all folders are grouped together.
-                                folderNode = SidebarNode(EItem.RemoteBranchFolder, folderName)
-                                pendingFolderNodes[folderName] = folderNode
-
-                        refName = RefPrefix.REMOTES + f"{remote}/{b}"
-                        node = SidebarNode(EItem.RemoteBranch, refName)
-                        folderNode.appendChild(node)
-                        self.nodesByRef[refName] = node
-
-                    for folderNode in pendingFolderNodes.values():
-                        remoteNode.appendChild(folderNode)
+        with Benchmark("Refs-T"):
+            self.populateRefNodeTree(tags, tagRoot, EItem.Tag, RefPrefix.TAGS)
 
         # Stashes
         with Benchmark("Stashes"):
@@ -381,6 +359,30 @@ class SidebarModel(QAbstractItemModel):
 
         with Benchmark("endResetModel" + ("[ModelTester might slow this down]" if settings.DEVDEBUG else "")):
             self.endResetModel()
+
+    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str = ""):
+        pendingFolders = {}
+
+        for b in shorthands:
+            if not BRANCH_FOLDERS or "/" not in b:
+                folderNode = containerNode
+            else:
+                folderName = b.rsplit("/", 1)[0]
+                try:
+                    folderNode = pendingFolders[folderName]
+                except KeyError:
+                    # Create node for folder, but add it to containerNode later
+                    # so that all folders are grouped together.
+                    folderNode = SidebarNode(EItem.RefFolder, folderName)
+                    pendingFolders[folderName] = folderNode
+
+            refName = refNamePrefix + b
+            node = SidebarNode(kind, refName)
+            folderNode.appendChild(node)
+            self.nodesByRef[refName] = node
+
+        for folderNode in pendingFolders.values():
+            containerNode.appendChild(folderNode)
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
         # Return an index given a parent and a row (i.e. child number within parent)
@@ -594,7 +596,7 @@ class SidebarModel(QAbstractItemModel):
             elif decorationRole:
                 return stockIcon("git-branch")
 
-        elif item == EItem.RemoteBranchFolder:
+        elif item == EItem.RefFolder:
             if displayRole:
                 return node.data
             elif decorationRole:
