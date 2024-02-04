@@ -154,6 +154,7 @@ class SidebarModel(QAbstractItemModel):
     repoState: RepoState | None
     repo: Repo | None
     rootNode: SidebarNode
+    nodesByRef: dict[str, SidebarNode]
     _unbornHead: str
     _detachedHead: str
     _checkedOut: str; "Shorthand of checked-out local branch"
@@ -199,6 +200,7 @@ class SidebarModel(QAbstractItemModel):
 
         self.repo = None
         self.rootNode = SidebarNode(EItem.Root)
+        self.nodesByRef = {}
         self._unbornHead = ""
         self._detachedHead = ""
         self._checkedOut = ""
@@ -231,6 +233,7 @@ class SidebarModel(QAbstractItemModel):
         self.clear(emitSignals=False)
         self.repo = repo
         self.repoState = repoState
+        self.nodesByRef = {}
 
         # Set up root nodes
         with Benchmark("Set up root nodes"):
@@ -260,6 +263,7 @@ class SidebarModel(QAbstractItemModel):
                 if prefix == RefPrefix.HEADS:
                     node = SidebarNode(EItem.LocalBranch, name)
                     branchRoot.appendChild(node)
+                    self.nodesByRef[name] = node
                     # We're not caching upstreams because it's very expensive to do
 
                 elif prefix == RefPrefix.REMOTES:
@@ -273,6 +277,7 @@ class SidebarModel(QAbstractItemModel):
                 elif prefix == RefPrefix.TAGS:
                     node = SidebarNode(EItem.Tag, name)
                     tagRoot.appendChild(node)
+                    self.nodesByRef[name] = node
 
                 elif name == "HEAD" or name.startswith("stash@{"):
                     pass  # handled separately
@@ -291,6 +296,7 @@ class SidebarModel(QAbstractItemModel):
                     for rb in remoteBranchesDict[remote]:
                         node = SidebarNode(EItem.RemoteBranch, RefPrefix.REMOTES + f"{remote}/{rb}")
                         remoteNode.appendChild(node)
+                        self.nodesByRef[refName] = node
                 else:
                     pFolder = ""
                     folderNode = remoteNode
@@ -318,8 +324,10 @@ class SidebarModel(QAbstractItemModel):
                             else:
                                 assert folderNode is remoteNode
 
-                        node = SidebarNode(EItem.RemoteBranch, RefPrefix.REMOTES + f"{remote}/{rb}")
+                        refName = RefPrefix.REMOTES + f"{remote}/{rb}"
+                        node = SidebarNode(EItem.RemoteBranch, refName)
                         folderNode.appendChild(node)
+                        self.nodesByRef[refName] = node
 
         # HEAD
         # TODO: New model
@@ -362,9 +370,11 @@ class SidebarModel(QAbstractItemModel):
         # Stashes
         with Benchmark("Stashes"):
             self._stashes = repo.listall_stashes()
-            for stash in self._stashes:
+            for i, stash in enumerate(self._stashes):
+                refName = f"stash@{{{i}}}"
                 node = SidebarNode(EItem.Stash, stash.commit_id.hex)
                 stashRoot.appendChild(node)
+                self.nodesByRef[refName] = node
 
         # Submodules
         with Benchmark("Submodules"):
@@ -393,6 +403,7 @@ class SidebarModel(QAbstractItemModel):
             parentNode = SidebarNode.fromIndex(parent)
 
         childNode = parentNode.children[row]
+        assert childNode.row == row
 
         return self.createIndex(row, 0, childNode)
 

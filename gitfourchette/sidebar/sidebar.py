@@ -1,5 +1,6 @@
 from contextlib import suppress
 import logging
+import warnings
 
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator
@@ -568,6 +569,8 @@ class Sidebar(QTreeView):
 
     def indicesForItemType(self, item: EItem) -> list[QModelIndex]:
         """ Unit testing helper. Not efficient! """
+        if not settings.TEST_MODE:
+            warnings.warn("Avoid using this outside of unit testing contexts")
         model: QAbstractItemModel = self.model()
         value = item.value
         indexList: list[QModelIndex] = model.match(model.index(0, 0), ROLE_EITEM, value, hits=-1, flags=Qt.MatchFlag.MatchRecursive)
@@ -575,19 +578,18 @@ class Sidebar(QTreeView):
 
     def datasForItemType(self, item: EItem, role: int = ROLE_USERDATA) -> list[str]:
         """ Unit testing helper. Not efficient! """
+        if not settings.TEST_MODE:
+            warnings.warn("Avoid using this outside of unit testing contexts")
         model: QAbstractItemModel = self.model()
         indices = self.indicesForItemType(item)
         return [model.data(index, role) for index in indices]
 
     def indexForRef(self, ref: str) -> QModelIndex | None:
-        model: QAbstractItemModel = self.model()
-
-        index = model.match(model.index(0, 0), ROLE_REF, ref, hits=1,
-                            flags=Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchRecursive)
-
-        if index:
-            return index[0]
-        else:
+        model = self.sidebarModel
+        try:
+            node = model.nodesByRef[ref]
+            return model.createIndex(node.row, 0, node)
+        except KeyError:
             return None
 
     def selectAnyRef(self, *refCandidates: str) -> QModelIndex | None:
