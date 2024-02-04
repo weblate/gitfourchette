@@ -105,6 +105,20 @@ if not QT_BINDING:
     _sys.exit(1)
 
 # -----------------------------------------------------------------------------
+# Try to import test stuff
+
+QAbstractItemModelTester = None
+QTest = None
+QSignalSpy = None
+with _suppress(ImportError):
+    if QT_BINDING.lower() == "pyqt6":
+        from PyQt6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+    elif QT_BINDING.lower() == "pyqt5":
+        from PyQt5.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+    elif QT_BINDING.lower() == "pyside6":
+        from PySide6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+
+# -----------------------------------------------------------------------------
 # Set up platform constants
 
 QT_BINDING_BOOTPREF = _qtBindingBootPref

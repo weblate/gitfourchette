@@ -13,7 +13,9 @@ EXCLUDES = [
     'PySide6',
     'PySide2',
     'PyQt5',
+    'PyQt5.QtTest',
     'PyQt6',
+    'PyQt6.QtTest',
     'PySide6.QtNetwork',
     'PySide6.QtOpenGL',
     'PySide6.QtQml',
@@ -21,6 +23,7 @@ EXCLUDES = [
     'PySide6.QtQuick3D',
     'PySide6.QtQuickControls2',
     'PySide6.QtQuickWidgets',
+    'PySide6.QtTest',
 ]
 
 

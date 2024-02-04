@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.sidebar.sidebarmodel import SidebarModel, EItem, UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND
+from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem, UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND
 
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
@@ -36,7 +36,9 @@ class SidebarDelegate(QStyledItemDelegate):
         """
 
         view: QTreeView = option.widget
-        item = SidebarModel.unpackItem(index)
+
+        node = SidebarNode.fromIndex(index)
+        item = node.kind
 
         # Don't draw spacers at all (Windows theme has mouse hover effect by default)
         if item == EItem.Spacer:

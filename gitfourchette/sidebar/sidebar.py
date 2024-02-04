@@ -1,4 +1,5 @@
 from contextlib import suppress
+import logging
 
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator
@@ -8,9 +9,14 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
-from gitfourchette.sidebar.sidebarmodel import (SidebarModel, EItem, UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND,
-                                                ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA)
+from gitfourchette.sidebar.sidebarmodel import (
+    SidebarModel, SidebarNode, EItem,
+    UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND,
+    ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA,
+)
 from gitfourchette.toolbox import *
+
+logger = logging.getLogger(__name__)
 
 
 class Sidebar(QTreeView):
@@ -27,6 +33,12 @@ class Sidebar(QTreeView):
     openSubmoduleFolder = Signal(str)
 
     statusMessage = Signal(str)
+
+    @property
+    def sidebarModel(self) -> SidebarModel:
+        model = self.model()
+        assert isinstance(model, SidebarModel)
+        return model
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -45,6 +57,10 @@ class Sidebar(QTreeView):
 
         self.setModel(SidebarModel(self))
 
+        if settings.DEVDEBUG and QAbstractItemModelTester is not None:
+            self.modelTester = QAbstractItemModelTester(self.model())
+            logger.debug("ModelTester enabled. This will significantly slow down refreshes!")
+
         self.setAnimated(True)
         self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thin spacers
 
@@ -59,8 +75,7 @@ class Sidebar(QTreeView):
         self.refreshPrefs()
 
     def switchMode(self, modeId: int):
-        model: SidebarModel = self.model()
-        model.switchMode(modeId)
+        self.sidebarModel.switchMode(modeId)
         self.restoreExpandedItems()
 
     def visualRect(self, index: QModelIndex) -> QRect:
@@ -72,9 +87,8 @@ class Sidebar(QTreeView):
         vr = super().visualRect(index)
 
         if index.isValid():
-            with suppress(ValueError):
-                item = SidebarModel.unpackItem(index)
-                SidebarDelegate.unindentRect(item, vr, self.indentation())
+            node = SidebarNode.fromIndex(index)
+            SidebarDelegate.unindentRect(node.kind, vr, self.indentation())
 
         return vr
 
@@ -88,7 +102,7 @@ class Sidebar(QTreeView):
 
         actions = []
 
-        model: SidebarModel = self.model()
+        model = self.sidebarModel
         repo = model.repo
 
         if item == EItem.UncommittedChanges:
@@ -106,8 +120,10 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.LocalBranch:
-            branch = repo.branches.local[data]
-            refName = RefPrefix.HEADS + data
+            refName = data
+            prefix, branchName = RefPrefix.split(data)
+            assert prefix == RefPrefix.HEADS
+            branch = repo.branches.local[branchName]
 
             activeBranchName = repo.head_branch_shorthand
             isCurrentBranch = branch and branch.is_checked_out()
@@ -120,7 +136,7 @@ class Sidebar(QTreeView):
             if index:  # in test mode, we may not have an index
                 isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
-            thisBranchDisplay = lquoe(data)
+            thisBranchDisplay = lquoe(branchName)
             activeBranchDisplay = lquoe(activeBranchName)
             upstreamBranchDisplay = lquoe(upstreamBranchName)
 
@@ -144,7 +160,7 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Push..."),
-                          lambda: self.pushBranch.emit(data),
+                          lambda: self.pushBranch.emit(branchName),
                           "vcs-push",
                           shortcuts=GlobalShortcuts.pushBranch,
                           statusTip=self.tr("Upload your commits to the remote server")),
@@ -159,17 +175,17 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     FastForwardBranch,
                     self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
-                    taskArgs=data,
+                    taskArgs=branchName,
                     enabled=hasUpstream,
                 ),
 
-                TaskBook.action(EditUpstreamBranch, self.tr("Set &Upstream Branch..."), taskArgs=data),
+                TaskBook.action(EditUpstreamBranch, self.tr("Set &Upstream Branch..."), taskArgs=branchName),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(RenameBranch, self.tr("Re&name..."), taskArgs=data),
+                TaskBook.action(RenameBranch, self.tr("Re&name..."), taskArgs=branchName),
 
-                TaskBook.action(DeleteBranch, self.tr("&Delete..."), taskArgs=data),
+                TaskBook.action(DeleteBranch, self.tr("&Delete..."), taskArgs=branchName),
 
                 ActionDef.SEPARATOR,
 
@@ -195,8 +211,10 @@ class Sidebar(QTreeView):
 
             activeBranchName = repo.head_branch_shorthand
 
-            refName = RefPrefix.REMOTES + data
-            thisBranchDisplay = lquoe(data)
+            refName = data
+            prefix, shorthand = RefPrefix.split(refName)
+            assert prefix == RefPrefix.REMOTES
+            thisBranchDisplay = lquoe(shorthand)
             activeBranchDisplay = lquoe(activeBranchName)
 
             actions += [
@@ -206,7 +224,7 @@ class Sidebar(QTreeView):
                     taskArgs=refName,
                 ),
 
-                TaskBook.action(FetchRemoteBranch, self.tr("Fetch Remote Changes..."), taskArgs=data),
+                TaskBook.action(FetchRemoteBranch, self.tr("Fetch Remote Changes..."), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
@@ -218,9 +236,9 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(RenameRemoteBranch, self.tr("Rename branch on remote..."), taskArgs=data),
+                TaskBook.action(RenameRemoteBranch, self.tr("Rename branch on remote..."), taskArgs=shorthand),
 
-                TaskBook.action(DeleteRemoteBranch, self.tr("Delete branch on remote..."), taskArgs=data),
+                TaskBook.action(DeleteRemoteBranch, self.tr("Delete branch on remote..."), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
@@ -297,7 +315,7 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.Submodule:
-            model: SidebarModel = self.model()
+            model = self.sidebarModel
             repo = model.repo
 
             actions += [
@@ -321,20 +339,26 @@ class Sidebar(QTreeView):
         globalPoint = self.mapToGlobal(localPoint)
         index: QModelIndex = self.indexAt(localPoint)
         if index.isValid():
-            menu = self.generateMenuForEntry(*SidebarModel.unpackItemAndData(index), index=index)
+            node = SidebarNode.fromIndex(index)
+            menu = self.generateMenuForEntry(node.kind, node.data, index=index)
             if menu.actions():
                 menu.exec(globalPoint)
             menu.deleteLater()
 
     def refresh(self, repoState: RepoState):
-        model: SidebarModel = self.model()
-        model.refreshCache(repoState)
+        self.sidebarModel.refreshCache(repoState)
         self.restoreExpandedItems()
 
     def refreshPrefs(self):
         self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
 
-    def onEntryClicked(self, item: EItem, data: str):
+    def wantSelectNode(self, node: SidebarNode):
+        if node is None:
+            return
+        assert isinstance(node, SidebarNode)
+
+        item = node.kind
+
         if item == EItem.UncommittedChanges:
             locator = NavLocator.inWorkdir()
         elif item == EItem.UnbornHead:
@@ -342,27 +366,34 @@ class Sidebar(QTreeView):
         elif item == EItem.DetachedHead:
             locator = NavLocator.inRef("HEAD")
         elif item == EItem.LocalBranch:
-            locator = NavLocator.inRef(RefPrefix.HEADS + data)
+            locator = NavLocator.inRef(node.data)
         elif item == EItem.RemoteBranch:
-            locator = NavLocator.inRef(RefPrefix.REMOTES + data)
+            locator = NavLocator.inRef(node.data)
         elif item == EItem.Tag:
-            locator = NavLocator.inRef(RefPrefix.TAGS + data)
+            locator = NavLocator.inRef(node.data)
         elif item == EItem.Stash:
-            locator = NavLocator.inCommit(Oid(hex=data))
+            locator = NavLocator.inCommit(Oid(hex=node.data))
         else:
             return None
 
         self.jump.emit(locator)
 
-    def onEntryDoubleClicked(self, item: EItem, data: str):
+    def wantEnterNode(self, node: SidebarNode):
+        if node is None:
+            QApplication.beep()
+            return
+        assert isinstance(node, SidebarNode)
+
+        item = node.kind
+
         if item == EItem.Spacer:
             pass
 
         elif item == EItem.LocalBranch:
-            SwitchBranch.invoke(data, True)  # True: ask for confirmation
+            SwitchBranch.invoke(node.data.removeprefix(RefPrefix.HEADS), True)  # True: ask for confirmation
 
         elif item == EItem.Remote:
-            EditRemote.invoke(data)
+            EditRemote.invoke(node.data)
 
         elif item == EItem.RemotesHeader:
             NewRemote.invoke()
@@ -374,17 +405,17 @@ class Sidebar(QTreeView):
             NewCommit.invoke()
 
         elif item == EItem.Submodule:
-            self.openSubmoduleRepo.emit(data)
+            self.openSubmoduleRepo.emit(node.data)
 
         elif item == EItem.StashesHeader:
             NewStash.invoke()
 
         elif item == EItem.Stash:
-            oid = Oid(hex=data)
+            oid = Oid(hex=node.data)
             ApplyStash.invoke(oid)
 
         elif item == EItem.RemoteBranch:
-            NewBranchFromRef.invoke(RefPrefix.REMOTES + data)
+            NewBranchFromRef.invoke(node.data)
 
         elif item == EItem.TagsHeader:
             NewTag.invoke()
@@ -392,12 +423,19 @@ class Sidebar(QTreeView):
         else:
             QApplication.beep()
 
-    def onEntryDeletePressed(self, item: EItem, data: str):
+    def wantDeleteNode(self, node: SidebarNode):
+        if node is None:
+            QApplication.beep()
+            return
+
+        item = node.kind
+        data = node.data
+
         if item == EItem.Spacer:
             pass
 
         elif item == EItem.LocalBranch:
-            DeleteBranch.invoke(data)
+            DeleteBranch.invoke(data.removeprefix(RefPrefix.HEADS))
 
         elif item == EItem.Remote:
             DeleteRemote.invoke(data)
@@ -410,12 +448,19 @@ class Sidebar(QTreeView):
             DeleteRemoteBranch.invoke(data)
 
         elif item == EItem.Tag:
-            DeleteTag.invoke(data)
+            DeleteTag.invoke(data.removeprefix(RefPrefix.TAGS))
 
         else:
             QApplication.beep()
 
-    def onEntryRenamePressed(self, item: EItem, data: str):
+    def wantRenameNode(self, node: SidebarNode):
+        if node is None:
+            QApplication.beep()
+            return
+
+        item = node.kind
+        data = node.data
+
         if item == EItem.Spacer:
             pass
 
@@ -434,34 +479,21 @@ class Sidebar(QTreeView):
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
 
-        def getValidIndex():
+        def getValidNode():
             try:
                 index: QModelIndex = self.selectedIndexes()[0]
-                if index.isValid():
-                    return index
+                return SidebarNode.fromIndex(index)
             except IndexError:
                 return None
 
         if k in [Qt.Key.Key_Return, Qt.Key.Key_Enter]:
-            index = getValidIndex()
-            if index:
-                self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))
-            else:
-                QApplication.beep()
+            self.wantEnterNode(getValidNode())
 
         elif k in [Qt.Key.Key_Delete]:
-            index = getValidIndex()
-            if index:
-                self.onEntryDeletePressed(*SidebarModel.unpackItemAndData(index))
-            else:
-                QApplication.beep()
+            self.wantDeleteNode(getValidNode())
 
         elif k in [Qt.Key.Key_F2]:
-            index = getValidIndex()
-            if index:
-                self.onEntryRenamePressed(*SidebarModel.unpackItemAndData(index))
-            else:
-                QApplication.beep()
+            self.wantRenameNode(getValidNode())
 
         else:
             super().keyPressEvent(event)
@@ -476,8 +508,7 @@ class Sidebar(QTreeView):
         if not current.isValid():
             return
 
-        unpacked = SidebarModel.unpackItemAndData(current)
-        self.onEntryClicked(*unpacked)
+        self.wantSelectNode(SidebarNode.fromIndex(current))
 
     def clickFallsInExpandTriangle(self, index, x):
         if not index.isValid():
@@ -510,8 +541,8 @@ class Sidebar(QTreeView):
             # Let user collapse/expand in quick succession without triggering a double click
             self.eatDoubleClickTimer.restart()
             # Toggle expanded state
-            item = SidebarModel.unpackItem(index)
-            if item in ALWAYS_EXPAND or item in LEAF_ITEMS:
+            assert index.isValid()
+            if SidebarNode.fromIndex(index).kind in (ALWAYS_EXPAND, LEAF_ITEMS):
                 pass
             elif self.isExpanded(index):
                 self.collapse(index)
@@ -533,7 +564,7 @@ class Sidebar(QTreeView):
 
         index: QModelIndex = self.indexAt(event.pos())
         if event.button() == Qt.MouseButton.LeftButton and index.isValid():
-            self.onEntryDoubleClicked(*SidebarModel.unpackItemAndData(index))
+            self.wantEnterNode(SidebarNode.fromIndex(index))
 
     def indicesForItemType(self, item: EItem) -> list[QModelIndex]:
         """ Unit testing helper. Not efficient! """
@@ -595,21 +626,24 @@ class Sidebar(QTreeView):
             self.collapseCacheValid = True
             return
 
-        model: SidebarModel = self.model()
+        model = self.sidebarModel
 
-        frontier = [(0, model.index(row, 0)) for row in range(model.rowCount())]
+        frontier = [(0, model.index(row, 0)) for row in range(model.rowCount(QModelIndex()))]
         while frontier:
             depth, index = frontier.pop()
-            item = SidebarModel.unpackItem(index)
-            if item in LEAF_ITEMS:
+            node = SidebarNode.fromIndex(index)
+
+            if node.kind in LEAF_ITEMS:
                 continue
-            if item in ALWAYS_EXPAND:
+
+            if node.kind in ALWAYS_EXPAND:
                 self.expand(index)
             else:
                 h = SidebarModel.getCollapseHash(index)
                 if h not in self.collapseCache:
                     self.expand(index)
-            if item == EItem.RemotesHeader:  # Only RemotesHeader has children that can themselves be expanded
+
+            if node.kind == EItem.RemotesHeader:  # Only RemotesHeader has children that can themselves be expanded
                 for subrow in range(model.rowCount(index)):
                     frontier.append((depth+1, model.index(subrow, 0, index)))
 

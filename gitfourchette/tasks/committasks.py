@@ -398,6 +398,8 @@ class DeleteTag(RepoTask):
     def flow(self, tagName: str):
         # TODO: This won't delete the tag on remotes
 
+        assert not tagName.startswith("refs/")
+
         yield from self.flowConfirm(
             text=self.tr("Really delete tag {0}?").format(bquo(tagName)),
             verb=self.tr("Delete tag"),
