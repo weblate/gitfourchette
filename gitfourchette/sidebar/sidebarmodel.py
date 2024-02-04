@@ -321,7 +321,7 @@ class SidebarModel(QAbstractItemModel):
             return QModelIndex()
 
         if not parent or not parent.isValid():  # root
-            return self.createIndex(row, 0, self.rootLayoutDef[row].value)
+            return self.createIndex(row, 0, self.packId(self.rootLayoutDef[row]))
 
         item = self.unpackItem(parent)
 
@@ -674,9 +674,14 @@ class SidebarModel(QAbstractItemModel):
         item = self.unpackItem(index)
 
         if item == EItem.Spacer:
-            return Qt.ItemFlag.NoItemFlags
+            return Qt.ItemFlag.ItemNeverHasChildren
 
         if item in ALWAYS_EXPAND:
             return Qt.ItemFlag.NoItemFlags
 
-        return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+        f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+
+        if item in LEAF_ITEMS:
+            f |= Qt.ItemFlag.ItemNeverHasChildren
+
+        return f
