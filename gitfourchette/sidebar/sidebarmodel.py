@@ -156,7 +156,6 @@ class SidebarModel(QAbstractItemModel):
     rootNode: SidebarNode
     nodesByRef: dict[str, SidebarNode]
     _unbornHead: str
-    _detachedHead: str
     _checkedOut: str; "Shorthand of checked-out local branch"
     _checkedOutUpstream: str; "Shorthand of the checked-out branch's upstream"
     _stashes: list[Stash]
@@ -201,8 +200,6 @@ class SidebarModel(QAbstractItemModel):
         self.repo = None
         self.rootNode = SidebarNode(EItem.Root)
         self.nodesByRef = {}
-        self._unbornHead = ""
-        self._detachedHead = ""
         self._checkedOut = ""
         self._checkedOutUpstream = ""
         self._stashes = []
@@ -246,6 +243,44 @@ class SidebarModel(QAbstractItemModel):
             submoduleRoot = rootNode.findChild(EItem.SubmodulesHeader)
             stashRoot = rootNode.findChild(EItem.StashesHeader)
             self.rootNode = rootNode
+
+        # HEAD
+        with Benchmark("HEAD"):
+            self._checkedOut = ""
+            self._checkedOutUpstream = ""
+
+            try:
+                # Try to get the name of the checked-out branch
+                checkedOut = repo.head.name
+
+            except GitError:
+                # Unborn HEAD - Get name of unborn branch
+                assert repo.head_is_unborn
+                target: str = repo.lookup_reference("HEAD").target
+                target = target.removeprefix(RefPrefix.HEADS)
+                node = SidebarNode(EItem.UnbornHead, target)
+                branchRoot.appendChild(node)
+
+            else:
+                # It's not unborn
+                if checkedOut == 'HEAD':
+                    # Detached head, leave self._checkedOut blank
+                    assert repo.head_is_detached
+                    node = SidebarNode(EItem.DetachedHead, repo.head.target.hex)
+                    branchRoot.appendChild(node)
+
+                else:
+                    # We're on a branch
+                    assert checkedOut.startswith(RefPrefix.HEADS)
+                    checkedOut = checkedOut.removeprefix(RefPrefix.HEADS)
+                    self._checkedOut = checkedOut
+
+                    # Try to get the upstream (.upstream_name raises KeyError if there isn't one)
+                    with suppress(KeyError):
+                        branch = repo.branches.local[checkedOut]
+                        upstream = branch.upstream_name  # This can be a bit expensive
+                        upstream = upstream.removeprefix(RefPrefix.REMOTES)  # Convert to shorthand
+                        self._checkedOutUpstream = upstream
 
         # Remote list
         with Benchmark("Remotes"):
@@ -328,44 +363,6 @@ class SidebarModel(QAbstractItemModel):
                         node = SidebarNode(EItem.RemoteBranch, refName)
                         folderNode.appendChild(node)
                         self.nodesByRef[refName] = node
-
-        # HEAD
-        # TODO: New model
-        with Benchmark("HEAD"):
-            self._unbornHead = ""
-            self._detachedHead = ""
-            self._checkedOut = ""
-            self._checkedOutUpstream = ""
-
-            try:
-                # Try to get the name of the checked-out branch
-                checkedOut = repo.head.name
-
-            except GitError:
-                # Unborn HEAD - Get name of unborn branch
-                assert repo.head_is_unborn
-                target: str = repo.lookup_reference("HEAD").target
-                target = target.removeprefix(RefPrefix.HEADS)
-                self._unbornHead = target
-
-            else:
-                # It's not unborn
-                if checkedOut == 'HEAD':
-                    # Detached head, leave self._checkedOut blank
-                    assert repo.head_is_detached
-                    self._detachedHead = repo.head.target.hex
-                else:
-                    # We're on a branch
-                    assert checkedOut.startswith(RefPrefix.HEADS)
-                    checkedOut = checkedOut.removeprefix(RefPrefix.HEADS)
-                    self._checkedOut = checkedOut
-
-                    # Try to get the upstream (.upstream_name raises KeyError if there isn't one)
-                    with suppress(KeyError):
-                        branch = repo.branches.local[checkedOut]
-                        upstream = branch.upstream_name  # This can be a bit expensive
-                        upstream = upstream.removeprefix(RefPrefix.REMOTES)  # Convert to shorthand
-                        self._checkedOutUpstream = upstream
 
         # Stashes
         with Benchmark("Stashes"):
@@ -521,16 +518,17 @@ class SidebarModel(QAbstractItemModel):
                 return stockIcon("git-branch" if branchName != self._checkedOut else "git-home")
 
         elif item == EItem.UnbornHead:
+            target = node.data
             if displayRole:
-                return self.tr("[unborn]") + F" {self._unbornHead}"
+                return self.tr("[unborn]") + " " + target
             elif userRole:
-                return self._unbornHead
+                return target
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
                 text += self.tr("Local branch {0}")
                 text += "<br>" + self.tr("Unborn HEAD: does not point to a commit yet.")
                 text += "<br>" + self.tr("The branch will be created when you create the initial commit.")
-                text = text.format(bquo(self._unbornHead))
+                text = text.format(bquo(target))
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
