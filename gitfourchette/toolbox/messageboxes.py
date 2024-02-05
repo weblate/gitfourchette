@@ -129,9 +129,10 @@ def _popExcMessageBoxQueue(result = QMessageBox.StandardButton.Ok):
 
     qmb = _excMessageBoxQueue[0]
 
-    if len(_excMessageBoxQueue) >= 1:
+    numRemaining = len(_excMessageBoxQueue) - 1
+    if numRemaining >= 1:
         dismissAllButton = qmb.addButton(QMessageBox.StandardButton.NoToAll)
-        dismissAllButton.setText(tr("Skip %n more errors", "", len(_excMessageBoxQueue)-1))
+        dismissAllButton.setText(tr("Skip %n more errors", "", numRemaining))
 
     _showExcMessageBox(qmb)
 
