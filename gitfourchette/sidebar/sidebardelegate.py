@@ -1,5 +1,5 @@
 from gitfourchette.qt import *
-from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem, UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem, UNINDENT_ITEMS
 
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
@@ -49,7 +49,7 @@ class SidebarDelegate(QStyledItemDelegate):
         SidebarDelegate.unindentRect(item, opt.rect, view.indentation())
 
         # Draw expanding triangle
-        if item not in LEAF_ITEMS and item not in ALWAYS_EXPAND:
+        if node.mayHaveChildren() and not node.wantForceExpand():
             rtl = view.isRightToLeft()
 
             opt2 = QStyleOptionViewItem(opt)

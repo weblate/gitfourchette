@@ -12,7 +12,6 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
 from gitfourchette.sidebar.sidebarmodel import (
     SidebarModel, SidebarNode, EItem,
-    UNINDENT_ITEMS, LEAF_ITEMS, ALWAYS_EXPAND,
     ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA,
 )
 from gitfourchette.toolbox import *
@@ -546,12 +545,11 @@ class Sidebar(QTreeView):
             self.eatDoubleClickTimer.restart()
             # Toggle expanded state
             assert index.isValid()
-            if SidebarNode.fromIndex(index).kind in (ALWAYS_EXPAND, LEAF_ITEMS):
-                pass
-            elif self.isExpanded(index):
-                self.collapse(index)
-            else:
-                self.expand(index)
+            if SidebarNode.fromIndex(index).mayHaveChildren():
+                if self.isExpanded(index):
+                    self.collapse(index)
+                else:
+                    self.expand(index)
             event.accept()
         else:
             self.expandTriangleClickIndex = None
@@ -591,7 +589,7 @@ class Sidebar(QTreeView):
         model = self.sidebarModel
         try:
             node = model.nodesByRef[ref]
-            return model.createIndex(node.row, 0, node)
+            return node.createIndex(model)
         except KeyError:
             return None
 
@@ -633,27 +631,23 @@ class Sidebar(QTreeView):
             self.collapseCacheValid = True
             return
 
+        print(self.collapseCache)
+        assert self.collapseCacheValid
         model = self.sidebarModel
 
-        frontier = [model.index(row, 0) for row in range(model.rowCount(QModelIndex()))]
+        frontier = [node for node in model.rootNode.children]
         while frontier:
-            index = frontier.pop()
-            node = SidebarNode.fromIndex(index)
+            node = frontier.pop()
 
-            if node.kind in LEAF_ITEMS:
+            if not node.mayHaveChildren():
                 continue
 
-            if node.kind in ALWAYS_EXPAND:
+            if node.wantForceExpand() or node.getCollapseHash() not in self.collapseCache:
+                index = node.createIndex(model)
                 self.expand(index)
-            else:
-                h = node.getCollapseHash()
-                if h not in self.collapseCache:
-                    self.expand(index)
 
-            for subrow in range(model.rowCount(index)):
-                frontier.append(model.index(subrow, 0, index))
+            frontier.extend(node.children)
 
-    @benchmark
     def isAncestryChainExpanded(self, index: QModelIndex):
         # Assume everything is expanded if collapse cache is missing (see restoreExpandedItems).
         if not self.collapseCacheValid:
@@ -661,15 +655,15 @@ class Sidebar(QTreeView):
 
         # My collapsed state doesn't matter here - it only affects my children.
         # So start looking at my parent.
-        index = index.parent()
+        node = SidebarNode.fromIndex(index)
+        node = node.parent
 
         # Walk up parent chain until root index (row -1)
-        while index.row() >= 0:
-            node = SidebarNode.fromIndex(index)
+        while node.parent is not None:
             h = node.getCollapseHash()
             if h in self.collapseCache:
                 return False
-            index = index.parent()
+            node = node.parent
 
         return True
 

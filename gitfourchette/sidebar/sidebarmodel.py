@@ -77,25 +77,25 @@ HEADER_ITEMS_MODAL = [
     [EItem.SubmodulesHeader]
 ]
 
-ALWAYS_EXPAND = [] if not MODAL_SIDEBAR else [
+FORCE_EXPAND = [] if not MODAL_SIDEBAR else sorted([
     EItem.LocalBranchesHeader,
     EItem.RemotesHeader,
     EItem.TagsHeader,
     EItem.StashesHeader,
     EItem.SubmodulesHeader,
-]
+])
+""" SidebarNode kinds to always expand (in modal sidebars only) """
 
-LEAF_ITEMS = [
-    EItem.Spacer,
-    EItem.LocalBranch,
-    EItem.Stash,
-    EItem.RemoteBranch,
-    EItem.Tag,
-    EItem.UnbornHead,
-    EItem.DetachedHead,
-    EItem.UncommittedChanges,
-    EItem.Submodule,
-]
+NONLEAF_ITEMS = sorted([
+    EItem.Root,
+    EItem.LocalBranchesHeader,
+    EItem.RefFolder,
+    EItem.Remote,
+    EItem.RemotesHeader,
+    EItem.StashesHeader,
+    EItem.SubmodulesHeader,
+    EItem.TagsHeader,
+])
 
 UNINDENT_ITEMS = {
     EItem.LocalBranch: -1,
@@ -141,24 +141,34 @@ class SidebarNode:
         self.data = data
 
     def appendChild(self, node: SidebarNode):
+        assert self.mayHaveChildren()
         assert self is not node
         assert not node.parent
-        assert self.kind not in LEAF_ITEMS
         node.row = len(self.children)
         node.parent = self
         self.children.append(node)
 
     def findChild(self, kind: EItem, data: str = "") -> SidebarNode:
-        # TODO: Inefficient
+        """ Warning: this is inefficient - don't use this if there are many children! """
+        assert self.mayHaveChildren()
         with suppress(StopIteration):
             return next(c for c in self.children if c.kind == kind and c.data == data)
 
+    def createIndex(self, model: QAbstractItemModel) -> QModelIndex:
+        return model.createIndex(self.row, 0, self)
+
     def getCollapseHash(self) -> str:
-        assert self.kind not in LEAF_ITEMS, "it's futile to hash a leaf SidebarNode"
+        assert self.mayHaveChildren(), "it's futile to hash a leaf"
         return f"{self.kind.name}.{self.data}"
         # Warning: it's tempting to replace this with something like "hash(data) << 8 | item",
         # but hash(data) doesn't return stable values across different Python sessions,
         # so it's not suitable for persistent storage (in history.json).
+
+    def mayHaveChildren(self):
+        return self.kind in NONLEAF_ITEMS
+
+    def wantForceExpand(self):
+        return self.kind in FORCE_EXPAND
 
     def __repr__(self):
         return f"SidebarNode({self.kind.name} {self.data})"
@@ -401,10 +411,10 @@ class SidebarModel(QAbstractItemModel):
         else:
             parentNode = SidebarNode.fromIndex(parent)
 
-        childNode = parentNode.children[row]
-        assert childNode.row == row
+        node = parentNode.children[row]
+        assert node.row == row
 
-        return self.createIndex(row, 0, childNode)
+        return node.createIndex(self)
 
     def parent(self, index: QModelIndex) -> QModelIndex:
         # Return the parent of the given index
@@ -421,7 +431,7 @@ class SidebarModel(QAbstractItemModel):
         if node is self.rootNode:
             return QModelIndex()
 
-        return self.createIndex(node.row, 0, node)
+        return node.createIndex(self)
 
     """
     # What's the use of this if it works fine without?
@@ -704,17 +714,16 @@ class SidebarModel(QAbstractItemModel):
             return Qt.ItemFlag.NoItemFlags
 
         node = SidebarNode.fromIndex(index)
-        item = node.kind
 
-        if item == EItem.Spacer:
+        if node.kind == EItem.Spacer:
             return Qt.ItemFlag.ItemNeverHasChildren
 
-        if item in ALWAYS_EXPAND:
+        if node.kind in FORCE_EXPAND:
             return Qt.ItemFlag.NoItemFlags
 
         f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
-        if item in LEAF_ITEMS:
+        if not node.mayHaveChildren():
             assert not node.children
             f |= Qt.ItemFlag.ItemNeverHasChildren
 
