@@ -119,6 +119,12 @@ if MODAL_SIDEBAR: UNINDENT_ITEMS.update({
 
 
 class SidebarNode:
+    children: list[SidebarNode]
+    parent: SidebarNode | None
+    row: int
+    kind: EItem
+    data: str
+
     @staticmethod
     def fromIndex(index: QModelIndex) -> SidebarNode | None:
         if not index.isValid():
@@ -147,6 +153,13 @@ class SidebarNode:
         with suppress(StopIteration):
             return next(c for c in self.children if c.kind == kind and c.data == data)
 
+    def getCollapseHash(self) -> str:
+        assert self.kind not in LEAF_ITEMS, "it's futile to hash a leaf SidebarNode"
+        return f"{self.kind.name}.{self.data}"
+        # Warning: it's tempting to replace this with something like "hash(data) << 8 | item",
+        # but hash(data) doesn't return stable values across different Python sessions,
+        # so it's not suitable for persistent storage (in history.json).
+
     def __repr__(self):
         return f"SidebarNode({self.kind.name} {self.data})"
 
@@ -169,14 +182,6 @@ class SidebarModel(QAbstractItemModel):
     _cachedTooltipText: str
 
     modeId: int
-
-    @staticmethod
-    def getCollapseHash(index: QModelIndex):
-        node = SidebarNode.fromIndex(index)
-        return f"{node.kind}.{node.data}"
-        # Warning: it's tempting to replace this with something like "hash(data) << 8 | item",
-        # but hash(data) doesn't return stable values across different Python sessions,
-        # so it's not suitable for persistent storage (in history.json).
 
     @property
     def _parentWidget(self) -> QWidget:

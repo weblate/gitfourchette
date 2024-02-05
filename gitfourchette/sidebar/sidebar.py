@@ -614,11 +614,13 @@ class Sidebar(QTreeView):
         return None
 
     def onExpanded(self, index: QModelIndex):
-        h = SidebarModel.getCollapseHash(index)
+        node = SidebarNode.fromIndex(index)
+        h = node.getCollapseHash()
         self.collapseCache.discard(h)
 
     def onCollapsed(self, index: QModelIndex):
-        h = SidebarModel.getCollapseHash(index)
+        node = SidebarNode.fromIndex(index)
+        h = node.getCollapseHash()
         self.collapseCache.add(h)
 
     @benchmark
@@ -633,9 +635,9 @@ class Sidebar(QTreeView):
 
         model = self.sidebarModel
 
-        frontier = [(0, model.index(row, 0)) for row in range(model.rowCount(QModelIndex()))]
+        frontier = [model.index(row, 0) for row in range(model.rowCount(QModelIndex()))]
         while frontier:
-            depth, index = frontier.pop()
+            index = frontier.pop()
             node = SidebarNode.fromIndex(index)
 
             if node.kind in LEAF_ITEMS:
@@ -644,14 +646,14 @@ class Sidebar(QTreeView):
             if node.kind in ALWAYS_EXPAND:
                 self.expand(index)
             else:
-                h = SidebarModel.getCollapseHash(index)
+                h = node.getCollapseHash()
                 if h not in self.collapseCache:
                     self.expand(index)
 
-            if node.kind == EItem.RemotesHeader:  # Only RemotesHeader has children that can themselves be expanded
-                for subrow in range(model.rowCount(index)):
-                    frontier.append((depth+1, model.index(subrow, 0, index)))
+            for subrow in range(model.rowCount(index)):
+                frontier.append(model.index(subrow, 0, index))
 
+    @benchmark
     def isAncestryChainExpanded(self, index: QModelIndex):
         # Assume everything is expanded if collapse cache is missing (see restoreExpandedItems).
         if not self.collapseCacheValid:
@@ -663,7 +665,8 @@ class Sidebar(QTreeView):
 
         # Walk up parent chain until root index (row -1)
         while index.row() >= 0:
-            h = SidebarModel.getCollapseHash(index)
+            node = SidebarNode.fromIndex(index)
+            h = node.getCollapseHash()
             if h in self.collapseCache:
                 return False
             index = index.parent()
