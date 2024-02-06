@@ -2,11 +2,12 @@ from contextlib import suppress
 import logging
 import warnings
 
+from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator
 from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.porcelain import *
+from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
@@ -15,6 +16,7 @@ from gitfourchette.sidebar.sidebarmodel import (
     ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA,
 )
 from gitfourchette.toolbox import *
+from gitfourchette.webhost import WebHost
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +219,20 @@ class Sidebar(QTreeView):
             thisBranchDisplay = lquoe(shorthand)
             activeBranchDisplay = lquoe(activeBranchName)
 
+            remoteName, remoteBranchName = porcelain.split_remote_branch_shorthand(shorthand)
+            remoteUrl = self.sidebarModel.repo.remotes[remoteName].url
+            webUrl, webHost = WebHost.makeLink(remoteUrl, shorthand)
+            webActions = []
+            if webUrl:
+                webActions = [
+                    ActionDef(
+                        self.tr("Browse on {0}...").format(escamp(webHost)),
+                        lambda: QDesktopServices.openUrl(QUrl(webUrl)),
+                        icon="internet-web-browser",
+                    ),
+                    ActionDef.SEPARATOR,
+                ]
+
             actions += [
                 TaskBook.action(
                     NewBranchFromRef,
@@ -242,12 +258,28 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
+                *webActions,
+
                 ActionDef(self.tr("&Hide in Graph"),
                           lambda: self.toggleHideBranch.emit(refName),
                           checkState=1 if isBranchHidden else -1),
             ]
 
         elif item == EItem.Remote:
+            remoteUrl = self.sidebarModel.repo.remotes[data].url
+            webUrl, webHost = WebHost.makeLink(remoteUrl)
+
+            webActions = []
+            if webUrl:
+                webActions = [
+                    ActionDef(
+                        self.tr("Browse on {0}...").format(escamp(webHost)),
+                        lambda: QDesktopServices.openUrl(QUrl(webUrl)),
+                        icon="internet-web-browser",
+                    ),
+                    ActionDef.SEPARATOR,
+                ]
+
             actions += [
                 TaskBook.action(EditRemote, self.tr("&Edit Remote..."), taskArgs=data),
 
@@ -258,6 +290,8 @@ class Sidebar(QTreeView):
                 TaskBook.action(DeleteRemote, self.tr("&Remove Remote..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
+
+                *webActions,
 
                 ActionDef(self.tr("&Hide Remote in Graph"),
                           lambda: self.toggleHideRemote.emit(data),
