@@ -19,7 +19,7 @@ from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.nav import NavLocator
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
@@ -376,6 +376,10 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("Go to &HEAD Commit"), self.selectHead, shortcuts="Ctrl+D" if MACOS else "Ctrl+H"),
             ActionDef.SEPARATOR,
             *sideTabsGoMenu,
+            ActionDef(self.tr("Focus on Sidebar"), self.focusSidebar, shortcuts="Alt+1"),
+            ActionDef(self.tr("Focus on Commit Log"), self.focusGraph, shortcuts="Alt+2"),
+            ActionDef(self.tr("Focus on File List"), self.focusFiles, shortcuts="Alt+3"),
+            ActionDef(self.tr("Focus on Code View"), self.focusDiff, shortcuts="Alt+4"),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Next File"), self.nextFile, shortcuts="Ctrl+]"),
             ActionDef(self.tr("Previous File"), self.previousFile, shortcuts="Ctrl+["),
@@ -684,6 +688,32 @@ class MainWindow(QMainWindow):
     @needRepoWidget
     def selectHead(self, rw: RepoWidget):
         rw.jump(NavLocator.inRef("HEAD"))
+
+    @needRepoWidget
+    def focusSidebar(self, rw: RepoWidget):
+        rw.sidebar.setFocus()
+
+    @needRepoWidget
+    def focusGraph(self, rw: RepoWidget):
+        rw.graphView.setFocus()
+
+    @needRepoWidget
+    def focusFiles(self, rw: RepoWidget):
+        if rw.navLocator.context == NavContext.COMMITTED:
+            rw.committedFiles.setFocus()
+        elif rw.navLocator.context == NavContext.STAGED:
+            rw.stagedFiles.setFocus()
+        else:
+            rw.dirtyFiles.setFocus()
+
+    @needRepoWidget
+    def focusDiff(self, rw: RepoWidget):
+        if rw.specialDiffView.isVisibleTo(rw):
+            rw.specialDiffView.setFocus()
+        elif rw.conflictView.isVisibleTo(rw):
+            rw.conflictView.setFocus()
+        else:
+            rw.diffView.setFocus()
 
     @needRepoWidget
     def selectSidebarTab(self, rw: RepoWidget, mode: SidebarTabMode):
