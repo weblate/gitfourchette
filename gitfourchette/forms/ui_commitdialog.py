@@ -92,6 +92,7 @@ class Ui_CommitDialog(object):
         _translate = QCoreApplication.translate
         CommitDialog.setWindowTitle(_translate("CommitDialog", "Commit"))
         self.summaryEditor.setPlaceholderText(_translate("CommitDialog", "Enter commit summary"))
+        self.counterLabel.setToolTip(_translate("CommitDialog", "<p>Length of the summary. Convention is to stay under 50 characters and avoid going over 72. If that’s not enough, use the long-form description.</p>"))
         self.descriptionEditor.setPlaceholderText(_translate("CommitDialog", "Long-form description (optional)"))
         self.revealAuthor.setText(_translate("CommitDialog", "&Edit author"))
         self.overrideCommitterSignature.setToolTip(_translate("CommitDialog", "<p>Check this to use the same custom signature for the author and committer.</p>\n"

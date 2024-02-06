@@ -31,6 +31,9 @@
        <property name="enabled">
         <bool>false</bool>
        </property>
+       <property name="toolTip">
+        <string>&lt;p&gt;Length of the summary. Convention is to stay under 50 characters and avoid going over 72. If that’s not enough, use the long-form description.&lt;/p&gt;</string>
+       </property>
        <property name="text">
         <string notr="true">000</string>
        </property>
