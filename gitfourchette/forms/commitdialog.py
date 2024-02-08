@@ -30,11 +30,11 @@ class CommitDialog(QDialog):
 
         if amendingCommitHash:
             prompt = self.tr("Amend commit message")
-            buttonCaption = self.tr("&Amend")
+            buttonCaption = self.tr("A&mend")
             self.setWindowTitle(self.tr("Amend Commit {0}").format(amendingCommitHash))
         else:
             prompt = self.tr("Enter commit summary")
-            buttonCaption = self.tr("&Commit")
+            buttonCaption = self.tr("Co&mmit")
             self.setWindowTitle(self.tr("Commit"))
 
         committerQDT = QDateTime.fromSecsSinceEpoch(committerSignature.time, Qt.TimeSpec.OffsetFromUTC, committerSignature.offset * 60)
