@@ -536,7 +536,7 @@ class MainWindow(QMainWindow):
         self.saveSession()
         return rw
 
-    def _openRepo(self, path: str, foreground=True, tabIndex=-1, exactMatch=True) -> RepoWidget:
+    def _openRepo(self, path: str, foreground=True, tabIndex=-1, exactMatch=True, locator=NavLocator()) -> RepoWidget:
         # Make sure the path exists
         if not os.path.exists(path):
             raise FileNotFoundError(self.tr("There’s nothing at this path."))
@@ -555,6 +555,7 @@ class MainWindow(QMainWindow):
             existingRW: RepoWidget = self.tabs.widget(i)
             with suppress(FileNotFoundError):  # if existingRW has illegal workdir, this exception may be raised
                 if os.path.samefile(workdir, existingRW.workdir):
+                    existingRW.pendingLocator = locator
                     self.tabs.setCurrentIndex(i)
                     return existingRW
 
@@ -565,7 +566,7 @@ class MainWindow(QMainWindow):
 
         # Hook RepoWidget signals
         rw.nameChange.connect(self.onRepoNameChange)
-        rw.openRepo.connect(lambda path: self.openRepoNextTo(rw, path))
+        rw.openRepo.connect(lambda path, locator: self.openRepoNextTo(rw, path, locator))
         rw.openPrefs.connect(self.openPrefsDialog)
 
         rw.statusMessage.connect(self.statusBar2.showMessage)
@@ -584,6 +585,7 @@ class MainWindow(QMainWindow):
 
         # Load repo now
         if foreground:
+            rw.pendingLocator = locator
             rw.primeRepo()
 
         return rw
@@ -937,11 +939,11 @@ class MainWindow(QMainWindow):
         rw : RepoWidget = self.tabs.widget(index)
         rw.primeRepo()
 
-    def openRepoNextTo(self, rw, path: str):
+    def openRepoNextTo(self, rw, path: str, locator: NavLocator = NavLocator()):
         index = self.tabs.indexOf(rw)
         if index >= 0:
             index += 1
-        return self._openRepo(path, tabIndex=index, exactMatch=True)
+        return self._openRepo(path, tabIndex=index, exactMatch=True, locator=locator)
 
     def nextTab(self):
         if self.tabs.count() == 0:

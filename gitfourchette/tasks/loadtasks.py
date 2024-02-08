@@ -217,8 +217,14 @@ class PrimeRepo(RepoTask):
         # (delay to next event loop so Qt has time to show the widget first)
         QTimer.singleShot(0, rw.setInitialFocus)
 
-        # Load the workdir
-        yield from self.flowSubtask(Jump, NavLocator(NavContext.WORKDIR))
+        # Jump to workdir (or pending locator, if any)
+        if not rw.pendingLocator:
+            initialLocator = NavLocator(NavContext.WORKDIR)
+        else:
+            # Consume pending locator
+            initialLocator = rw.pendingLocator
+            rw.pendingLocator = NavLocator()
+        yield from self.flowSubtask(Jump, initialLocator)
 
     def onError(self, exc: Exception):
         self.rw.cleanup(str(exc), allowAutoReload=False)

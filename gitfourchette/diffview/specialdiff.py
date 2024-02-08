@@ -135,36 +135,51 @@ class SpecialDiffError(Exception):
             dirty = False
 
             if not match:
-                suffix = translate("Diff", "N/A")
+                suffix = translate("Diff", "(none)", "no commit")
             else:
                 hashText = match.group(1)
                 if hashText.endswith("-dirty"):
                     hashText = hashText.removesuffix("-dirty")
                     suffix = translate("Diff", "(with uncommitted changes)")
                     dirty = True
-                with suppress(ValueError):
-                    oid = Oid(hex=hashText)
-                    hashText = shortHash(oid)
 
             return hashText, suffix, dirty
+
+        shortName = os.path.basename(submodule.name)
+        localPath = os.path.join(repo.workdir, submodule.path)
+        url1 = QUrl.fromLocalFile(localPath)
 
         oldMatch = re.search(r"^-Subproject commit (.+)$", patch.text, re.MULTILINE)
         newMatch = re.search(r"^\+Subproject commit (.+)$", patch.text, re.MULTILINE)
         oldHash, oldSuffix, _ = parseSubprojectCommit(oldMatch)
         newHash, newSuffix, newDirty = parseSubprojectCommit(newMatch)
 
-        shortName = os.path.basename(submodule.name)
-        localPath = os.path.join(repo.workdir, submodule.path)
-        linkHref = QUrl.fromLocalFile(localPath).toString()
-        linkText = translate("Diff", "Open submodule {0}").format(bquo(shortName))
+        try:
+            oid = Oid(hex=oldHash)
+            url2 = QUrl(url1)
+            url2.setFragment(oid.hex)
+            oldTarget = f"<a href='{url2.toString()}'>{shortHash(oid)}</a>"
+        except ValueError:
+            oldTarget = oldHash
 
+        try:
+            oid = Oid(hex=newHash)
+            url3 = QUrl(url1)
+            url3.setFragment(oid.hex)
+            newTarget = f"<a href='{url3.toString()}'>{shortHash(oid)}</a>"
+        except ValueError:
+            newTarget = newHash
+
+        linkText = translate("Diff", "Open submodule {0}").format(bquo(shortName))
         oldText = translate("Diff", "Old commit:")
         newText = translate("Diff", "New commit:")
 
         text1 = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
-        text2 = f"<a href='{linkHref}'>{linkText}</a>"
-        text3 = (f"<table><tr><td>{oldText} </td><td><code>{oldHash}</code> {oldSuffix}</td></tr>"
-                 f"<tr><td>{newText} </td><td><code>{newHash}</code> {newSuffix}</td></tr></table>")
+        text2 = f"<a href='{url1.toString()}'>{linkText}</a>"
+        text3 = ("<table>"
+                 f"<tr><td>{oldText} </td><td><code>{oldTarget}</code> {oldSuffix}</td></tr>"
+                 f"<tr><td>{newText} </td><td><code>{newTarget}</code> {newSuffix}</td></tr>"
+                 "</table>")
 
         if newDirty:
             warning = translate("Diff", "You won’t be able to stage this update "

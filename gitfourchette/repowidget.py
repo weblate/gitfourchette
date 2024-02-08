@@ -44,7 +44,7 @@ FILEHEADER_HEIGHT = 20
 
 class RepoWidget(QStackedWidget):
     nameChange = Signal()
-    openRepo = Signal(str)
+    openRepo = Signal(str, NavLocator)
     openPrefs = Signal(str)
 
     busyMessage = Signal(str)
@@ -53,8 +53,10 @@ class RepoWidget(QStackedWidget):
 
     state: RepoState | None
 
-    pathPending: str
+    pendingPath: str
     "Path of the repository if it isn't loaded yet (state=None)"
+
+    pendingLocator: NavLocator
 
     allowAutoLoad: bool
 
@@ -65,7 +67,7 @@ class RepoWidget(QStackedWidget):
     sharedSplitterSizes: dict[str, list[int]]
 
     def __del__(self):
-        logger.debug(f"__del__ RepoWidget {self.pathPending}")
+        logger.debug(f"__del__ RepoWidget {self.pendingPath}")
 
     def __bool__(self):
         """ Override QStackedWidget.__bool__ so we can do quick None comparisons """
@@ -90,7 +92,7 @@ class RepoWidget(QStackedWidget):
         if self.state:
             return os.path.normpath(self.state.repo.workdir)
         else:
-            return self.pathPending
+            return self.pendingPath
 
     def __init__(self, parent: QWidget, lazy=False):
         super().__init__(parent)
@@ -103,7 +105,8 @@ class RepoWidget(QStackedWidget):
         self.repoTaskRunner.repoGone.connect(self.onRepoGone)
 
         self.state = None
-        self.pathPending = ""
+        self.pendingPath = ""
+        self.pendingLocator = NavLocator()
         self.allowAutoLoad = True
 
         self.busyCursorDelayer = QTimer(self)
@@ -582,7 +585,7 @@ class RepoWidget(QStackedWidget):
             logger.debug(f"Repo is being primed: {path}")
             return primingTask
 
-        path = path or self.pathPending
+        path = path or self.pendingPath
         assert path
         return self.runTask(tasks.PrimeRepo, path)
 
@@ -736,8 +739,8 @@ class RepoWidget(QStackedWidget):
     def getTitle(self) -> str:
         if self.state:
             return self.state.shortName
-        elif self.pathPending:
-            return settings.history.getRepoTabName(self.pathPending)
+        elif self.pendingPath:
+            return settings.history.getRepoTabName(self.pendingPath)
         else:
             return "???"
 
@@ -778,7 +781,7 @@ class RepoWidget(QStackedWidget):
 
         if hasRepo:
             # Save path if we want to reload the repo later
-            self.pathPending = os.path.normpath(self.state.repo.workdir)
+            self.pendingPath = os.path.normpath(self.state.repo.workdir)
             self.allowAutoLoad = allowAutoReload
 
             # Kill any ongoing task then block UI thread until the task dies cleanly
@@ -788,7 +791,7 @@ class RepoWidget(QStackedWidget):
             # Free the repository
             self.state.repo.free()
             self.state.repo = None
-            logger.info(f"Repository freed: {self.pathPending}")
+            logger.info(f"Repository freed: {self.pendingPath}")
 
         self.state = None
 
@@ -822,7 +825,7 @@ class RepoWidget(QStackedWidget):
         self.diffHeader.setText(" ")
 
     def setPendingWorkdir(self, path):
-        self.pathPending = os.path.normpath(path)
+        self.pendingPath = os.path.normpath(path)
 
     def renameRepo(self):
         def onAccept(newName):
@@ -871,7 +874,7 @@ class RepoWidget(QStackedWidget):
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = self.repo.get_submodule_workdir(submoduleKey)
-        self.openRepo.emit(path)
+        self.openRepo.emit(path, NavLocator())
 
     def openSubmoduleFolder(self, submoduleKey: str):
         path = self.repo.get_submodule_workdir(submoduleKey)
@@ -980,10 +983,15 @@ class RepoWidget(QStackedWidget):
         if (not self.isLoaded) or self.isPriming:
             return
 
-        if self.isVisible() and not self.repoTaskRunner.isBusy():
-            self.refreshRepo(TaskEffects.DefaultRefresh | TaskEffects.Workdir)
-        else:
+        if not self.isVisible() or self.repoTaskRunner.isBusy():
             self.state.workdirStale = True
+        elif self.pendingLocator:
+            self.state.workdirStale = True
+            pendingLocator = self.pendingLocator
+            self.pendingLocator = NavLocator()  # Consume it
+            self.jump(pendingLocator)
+        else:
+            self.refreshRepo(TaskEffects.DefaultRefresh | TaskEffects.Workdir)
 
     def refreshWindowChrome(self):
         shortname = self.getTitle()
@@ -1111,7 +1119,7 @@ class RepoWidget(QStackedWidget):
             self.busyCursorDelayer.start()
 
     def onRepoGone(self):
-        message = self.tr("Repository folder went missing:") + "\n" + escamp(self.pathPending)
+        message = self.tr("Repository folder went missing:") + "\n" + escamp(self.pendingPath)
 
         # Unload the repo
         self.cleanup(message=message, allowAutoReload=False)
@@ -1142,7 +1150,13 @@ class RepoWidget(QStackedWidget):
             url = QUrl(url)
 
         if url.isLocalFile():
-            self.openRepo.emit(url.toLocalFile())
+            locator = NavLocator()
+            fragment = url.fragment()
+            if fragment:
+                with suppress(ValueError):
+                    locator = NavLocator.inCommit(Oid(hex=fragment))
+
+            self.openRepo.emit(url.toLocalFile(), locator)
             return
 
         if url.scheme() != APP_URL_SCHEME:
@@ -1160,7 +1174,7 @@ class RepoWidget(QStackedWidget):
             p = url.path()
             p = p.removeprefix("/")
             p = os.path.join(self.repo.workdir, p)
-            self.openRepo.emit(p)
+            self.openRepo.emit(p, NavLocator())
         elif url.authority() == "prefs":
             p = url.path().removeprefix("/")
             self.openPrefs.emit(p)
