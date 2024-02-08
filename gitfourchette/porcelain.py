@@ -1216,7 +1216,7 @@ class Repo(_VanillaRepository):
         return diff
 
     def get_submodule_workdir(self, submo_key: str) -> str:
-        submo = self.lookup_submodule(submo_key)
+        submo = self.submodules[submo_key]
         return self.in_workdir(submo.path)
 
     def listall_submodules_fast(self) -> list[str]:

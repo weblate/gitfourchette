@@ -291,7 +291,7 @@ class LoadPatch(RepoTask):
               suppress(ValueError),  # "submodule <whatever> has not been added yet" (GIT_EEXISTS)
               Benchmark("Submodule detection")
               ):
-            submodule = self.repo.lookup_submodule(patch.delta.new_file.path)
+            submodule = self.repo.submodules[patch.delta.new_file.path]
         if submodule:
             return SpecialDiffError.submoduleDiff(self.repo, submodule, patch)
 
