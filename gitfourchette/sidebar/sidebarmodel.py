@@ -21,6 +21,9 @@ ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 1
 MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.debug_modalSidebar  # do not change while app is running
 BRANCH_FOLDERS = True
 
+UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /refs/, so this name is safe
+"Fake reference for Uncommitted Changes."
+
 
 class SidebarTabMode(enum.IntEnum):
     NonModal = -1
@@ -262,12 +265,15 @@ class SidebarModel(QAbstractItemModel):
             rootNode = SidebarNode(EItem.Root)
             for eitem in self.rootLayoutDef:
                 rootNode.appendChild(SidebarNode(eitem))
+            uncommittedNode = rootNode.findChild(EItem.UncommittedChanges)
             branchRoot = rootNode.findChild(EItem.LocalBranchesHeader)
             remoteRoot = rootNode.findChild(EItem.RemotesHeader)
             tagRoot = rootNode.findChild(EItem.TagsHeader)
             submoduleRoot = rootNode.findChild(EItem.SubmodulesHeader)
             stashRoot = rootNode.findChild(EItem.StashesHeader)
+
             self.rootNode = rootNode
+            self.nodesByRef[UC_FAKEREF] = uncommittedNode
 
         # HEAD
         with Benchmark("HEAD"):
@@ -681,7 +687,7 @@ class SidebarModel(QAbstractItemModel):
                 return changesText
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere
-                return "UNCOMMITTED_CHANGES"
+                return UC_FAKEREF
             elif fontRole:
                 font = self._parentWidget.font()
                 font.setWeight(QFont.Weight.DemiBold)

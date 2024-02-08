@@ -12,6 +12,7 @@ from gitfourchette.porcelain import NULL_OID
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.settings import DEVDEBUG
+from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
 from gitfourchette.diffview.diffdocument import DiffDocument
@@ -152,7 +153,7 @@ class Jump(RepoTask):
             QScrollBackupContext(rw.sidebar),  # Stabilize scroll bar value
         ):
             rw.graphView.selectUncommittedChanges()
-            rw.sidebar.selectAnyRef("UNCOMMITTED_CHANGES")
+            rw.sidebar.selectAnyRef(UC_FAKEREF)
 
         # Reset diff banner
         rw.diffBanner.setVisible(False)
