@@ -504,7 +504,10 @@ class SidebarModel(QAbstractItemModel):
             refName = node.data
             branchName = refName.removeprefix(RefPrefix.HEADS)
             if displayRole:
-                return branchName
+                if BRANCH_FOLDERS:
+                    return branchName.rsplit("/", 1)[-1]
+                else:
+                    return branchName
             elif refRole:
                 return refName
             elif toolTipRole:
@@ -581,7 +584,10 @@ class SidebarModel(QAbstractItemModel):
             shorthand = refName.removeprefix(RefPrefix.REMOTES)
             remoteName, branchName = split_remote_branch_shorthand(shorthand)
             if displayRole:
-                return branchName.rsplit("/", 1)[-1]
+                if BRANCH_FOLDERS:
+                    return branchName.rsplit("/", 1)[-1]
+                else:
+                    return branchName
             elif refRole:
                 return refName
             elif toolTipRole:
@@ -613,10 +619,19 @@ class SidebarModel(QAbstractItemModel):
                 return stockIcon("git-folder")
 
         elif item == EItem.Tag:
+            refName = node.data
+            tagName = refName.removeprefix(RefPrefix.TAGS)
             if displayRole:
-                return node.data.removeprefix(RefPrefix.TAGS)
+                if BRANCH_FOLDERS:
+                    return tagName.rsplit("/", 1)[-1]
+                else:
+                    return tagName
             elif refRole:
-                return node.data
+                return refName
+            elif toolTipRole:
+                text = "<p style='white-space: pre'>"
+                text += self.tr("Tag {0}").format(bquo(tagName))
+                return text
             elif hiddenRole:
                 return False
             elif decorationRole:
