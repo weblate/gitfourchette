@@ -7,7 +7,8 @@ def testCurrentBranchCannotSwitchOrMerge(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
 
     assert not findMenuAction(menu, "switch to").isEnabled()
     assert not findMenuAction(menu, "merge").isEnabled()
@@ -22,6 +23,9 @@ def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
 
-    assert 1 == len(rw.sidebar.datasForItemType(EItem.DetachedHead))
-    assert {'no-parent', 'master'} == set(rw.sidebar.datasForItemType(EItem.LocalBranch))
+    headNode = rw.sidebar.findNodeByRef("HEAD")
+    assert headNode.kind == EItem.DetachedHead
+    assert [headNode] == list(rw.sidebar.findNodesByKind(EItem.DetachedHead))
 
+    assert {'refs/heads/master', 'refs/heads/no-parent'
+            } == set(n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))

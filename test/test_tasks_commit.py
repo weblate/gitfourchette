@@ -359,7 +359,8 @@ def testDeleteTag(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     assert tagToDelete in rw.repo.listall_tags()
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Tag, tagToDelete)
+    node = rw.sidebar.findNodeByRef(f"refs/tags/{tagToDelete}")
+    menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "delete")
 
     acceptQMessageBox(rw, "delete tag")

@@ -1,6 +1,6 @@
 from contextlib import suppress
 import logging
-import warnings
+from typing import Iterable
 
 from gitfourchette import porcelain
 from gitfourchette import settings
@@ -13,7 +13,7 @@ from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
 from gitfourchette.sidebar.sidebarmodel import (
     SidebarModel, SidebarNode, EItem,
-    ROLE_EITEM, ROLE_ISHIDDEN, ROLE_REF, ROLE_USERDATA,
+    ROLE_REF, ROLE_ISHIDDEN,
 )
 from gitfourchette.toolbox import *
 from gitfourchette.webhost import WebHost
@@ -97,7 +97,7 @@ class Sidebar(QTreeView):
     def updateHiddenBranches(self, hiddenBranches: list[str]):
         self.model().updateHiddenBranches(hiddenBranches)
 
-    def generateMenuForEntry(self, item: EItem, data: str = "", menu: QMenu = None, index: QModelIndex = None):
+    def makeNodeMenu(self, node: SidebarNode, menu: QMenu = None, index: QModelIndex = None):
         if menu is None:
             menu = QMenu(self)
             menu.setObjectName("SidebarContextMenu")
@@ -106,6 +106,8 @@ class Sidebar(QTreeView):
 
         model = self.sidebarModel
         repo = model.repo
+        item = node.kind
+        data = node.data
 
         if item == EItem.UncommittedChanges:
             actions += [
@@ -146,7 +148,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     SwitchBranch,
                     self.tr("&Switch to {0}").format(thisBranchDisplay),
-                    taskArgs=(data, False),  # False: don't ask for confirmation
+                    taskArgs=(branchName, False),  # False: don't ask for confirmation
                     enabled=not isCurrentBranch,
                 ),
 
@@ -377,7 +379,7 @@ class Sidebar(QTreeView):
         index: QModelIndex = self.indexAt(localPoint)
         if index.isValid():
             node = SidebarNode.fromIndex(index)
-            menu = self.generateMenuForEntry(node.kind, node.data, index=index)
+            menu = self.makeNodeMenu(node, index=index)
             if menu.actions():
                 menu.exec(globalPoint)
             menu.deleteLater()
@@ -602,22 +604,17 @@ class Sidebar(QTreeView):
         if event.button() == Qt.MouseButton.LeftButton and index.isValid():
             self.wantEnterNode(SidebarNode.fromIndex(index))
 
-    def indicesForItemType(self, item: EItem) -> list[QModelIndex]:
-        """ Unit testing helper. Not efficient! """
-        if not settings.TEST_MODE:
-            warnings.warn("Avoid using this outside of unit testing contexts")
-        model: QAbstractItemModel = self.model()
-        value = item.value
-        indexList: list[QModelIndex] = model.match(model.index(0, 0), ROLE_EITEM, value, hits=-1, flags=Qt.MatchFlag.MatchRecursive)
-        return indexList
+    def walk(self):
+        return self.sidebarModel.rootNode.walk()
 
-    def datasForItemType(self, item: EItem, role: int = ROLE_USERDATA) -> list[str]:
-        """ Unit testing helper. Not efficient! """
-        if not settings.TEST_MODE:
-            warnings.warn("Avoid using this outside of unit testing contexts")
-        model: QAbstractItemModel = self.model()
-        indices = self.indicesForItemType(item)
-        return [model.data(index, role) for index in indices]
+    def findNode(self, predicate) -> SidebarNode:
+        return next(node for node in self.walk() if predicate(node))
+
+    def findNodesByKind(self, kind: EItem) -> Iterable[SidebarNode]:
+        return (node for node in self.walk() if node.kind == kind)
+
+    def findNodeByRef(self, ref: str) -> SidebarNode:
+        return self.sidebarModel.nodesByRef[ref]
 
     def indexForRef(self, ref: str) -> QModelIndex | None:
         model = self.sidebarModel
@@ -665,11 +662,10 @@ class Sidebar(QTreeView):
             self.collapseCacheValid = True
             return
 
-        print(self.collapseCache)
         assert self.collapseCacheValid
         model = self.sidebarModel
 
-        frontier = [node for node in model.rootNode.children]
+        frontier = model.rootNode.children[:]
         while frontier:
             node = frontier.pop()
 

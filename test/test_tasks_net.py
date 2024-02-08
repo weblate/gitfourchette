@@ -4,6 +4,7 @@ Remote access tests.
 Note: these tests don't actually access the network.
 We use a bare repository on the local filesystem as a "remote server".
 """
+import pytest
 
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
@@ -16,13 +17,14 @@ def testFetchNewRemoteBranches(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     assert "localfs/master" not in rw.repo.branches.remote
-    assert all(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert all(n.data.startswith("refs/remotes/origin/") for n in rw.sidebar.walk() if n.kind == EItem.RemoteBranch)
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "localfs")
-    findMenuAction(menu, "fetch").trigger()
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "localfs")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fetch")
 
     assert "localfs/master" in rw.repo.branches.remote
-    assert any(userData.startswith("localfs/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert any(n.data.startswith("refs/remotes/localfs/") for n in rw.sidebar.walk() if n.kind == EItem.RemoteBranch)
 
 
 def testDeleteRemoteBranch(qtbot, tempDir, mainWindow):
@@ -31,14 +33,15 @@ def testDeleteRemoteBranch(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     assert "localfs/no-parent" in rw.repo.branches.remote
-    assert "localfs/no-parent" in rw.sidebar.datasForItemType(EItem.RemoteBranch)
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "localfs/no-parent")
-    findMenuAction(menu, "delete").trigger()
+    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "delete")
     acceptQMessageBox(rw, "really delete.+from.+remote repository")
 
     assert "localfs/no-parent" not in rw.repo.branches.remote
-    assert "localfs/no-parent" not in rw.sidebar.datasForItemType(EItem.RemoteBranch)
+    with pytest.raises(KeyError):
+        rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
 
 
 def testFetchRemote(qtbot, tempDir, mainWindow):
@@ -60,8 +63,9 @@ def testFetchRemote(qtbot, tempDir, mainWindow):
     assert {"localfs/master", "localfs/no-parent"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
 
     # Fetch the remote
-    menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "localfs")
-    findMenuAction(menu, "fetch").trigger()
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "localfs")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fetch")
 
     # We must see that no-parent is gone and that new-remote-branch appeared
     assert {"localfs/master", "localfs/new-remote-branch"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
@@ -89,8 +93,9 @@ def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
     assert rw.repo.branches.remote["localfs/master"].target == oldHead
 
     # Fetch the remote branch
-    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "localfs/master")
-    findMenuAction(menu, "fetch").trigger()
+    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fetch")
 
     # The position of the remote's master branch should be up-to-date now
     assert rw.repo.branches.remote["localfs/master"].target == newHead

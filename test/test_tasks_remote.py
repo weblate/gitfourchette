@@ -16,10 +16,11 @@ def testNewRemote(qtbot, tempDir, mainWindow):
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
-    assert "origin" in rw.sidebar.datasForItemType(EItem.Remote)
-    assert "otherremote" not in rw.sidebar.datasForItemType(EItem.Remote)
+    assert any("origin" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
+    assert not any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.RemotesHeader)
+    node = next(rw.sidebar.findNodesByKind(EItem.RemotesHeader))
+    menu = rw.sidebar.makeNodeMenu(node)
 
     findMenuAction(menu, "add remote").trigger()
 
@@ -32,8 +33,8 @@ def testNewRemote(qtbot, tempDir, mainWindow):
     assert len(repo.remotes) == 2
     assert repo.remotes[1].name == "otherremote"
     assert repo.remotes[1].url == "https://127.0.0.1/example-repo.git"
-    assert "origin" in rw.sidebar.datasForItemType(EItem.Remote)
-    assert "otherremote" in rw.sidebar.datasForItemType(EItem.Remote)
+    assert any("origin" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
+    assert any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
 
 
 def testEditRemote(qtbot, tempDir, mainWindow):
@@ -44,11 +45,11 @@ def testEditRemote(qtbot, tempDir, mainWindow):
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
-    assert any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
-
-    findMenuAction(menu, "edit remote").trigger()
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "edit remote")
 
     q: RemoteDialog = findQDialog(rw, "edit remote")
     q.ui.nameEdit.setText("mainremote")
@@ -58,8 +59,8 @@ def testEditRemote(qtbot, tempDir, mainWindow):
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "mainremote"
     assert repo.remotes[0].url == "https://127.0.0.1/example-repo.git"
-    assert any(userData.startswith("mainremote/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
-    assert not any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert any("/mainremote/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
+    assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
 
 def testDeleteRemote(qtbot, tempDir, mainWindow):
@@ -68,13 +69,13 @@ def testDeleteRemote(qtbot, tempDir, mainWindow):
     repo = rw.repo
 
     assert repo.remotes["origin"] is not None
-    assert any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Remote, "origin")
-
-    findMenuAction(menu, "remove remote").trigger()
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "remove remote")
     acceptQMessageBox(rw, "really remove remote")
 
     assert len(list(repo.remotes)) == 0
-    assert not any(userData.startswith("origin/") for userData in rw.sidebar.datasForItemType(EItem.RemoteBranch))
+    assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 

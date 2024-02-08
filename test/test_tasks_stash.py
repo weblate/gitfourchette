@@ -15,15 +15,17 @@ def testNewStash(qtbot, tempDir, mainWindow):
     with RepoContext(wd, write_index=True) as repo:
         repo.index.add("b/b1.txt")
     rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
     repo = rw.repo
 
     assert len(repo.listall_stashes()) == 0
 
-    assert len(rw.sidebar.datasForItemType(EItem.Stash)) == 0
+    assert not list(sb.findNodesByKind(EItem.Stash))
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/untracked.txt"]
     assert qlvGetRowData(rw.stagedFiles) == ["b/b1.txt"]
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
+    node = next(sb.findNodesByKind(EItem.StashesHeader))
+    menu = sb.makeNodeMenu(node)
     triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
@@ -35,7 +37,7 @@ def testNewStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == [], "workdir must be clean after stashing"
     assert qlvGetRowData(rw.stagedFiles) == [], "workdir must be clean after stashing"
     assert len(repo.listall_stashes()) == 1, "there must be one stash in the repo"
-    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.ItemDataRole.DisplayRole)], "stash must be in sidebar"
+    assert "helloworld" == sb.findNodeByRef("stash@{0}").createIndex(sb.sidebarModel).data(Qt.ItemDataRole.DisplayRole)
 
     rw.selectRef("refs/stash")
     assert rw.committedFiles.isVisibleTo(rw)
@@ -61,10 +63,11 @@ def testNewPartialStash(qtbot, tempDir, mainWindow):
 
     assert len(repo.listall_stashes()) == 0
 
-    assert len(rw.sidebar.datasForItemType(EItem.Stash)) == 0
+    assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     assert qlvGetRowData(rw.dirtyFiles) == dirtyFiles
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
+    node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+    menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
@@ -94,9 +97,11 @@ def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir, userName="", userEmail="")
     writeFile(F"{wd}/a/untracked.txt", "this file is untracked\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
     repo = rw.repo
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.StashesHeader)
+    node = next(sb.findNodesByKind(EItem.StashesHeader))
+    menu = sb.makeNodeMenu(node)
     triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
@@ -105,7 +110,7 @@ def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
 
     assert not os.path.isfile(f"{wd}/a/untracked.txt")
     assert len(repo.listall_stashes()) == 1
-    assert ["helloworld" == rw.sidebar.datasForItemType(EItem.Stash, Qt.ItemDataRole.DisplayRole)]
+    assert "helloworld" == sb.findNodeByRef("stash@{0}").createIndex(sb.sidebarModel).data(Qt.ItemDataRole.DisplayRole)
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
@@ -115,20 +120,18 @@ def testPopStash(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
-    assert len(stashDatas) == 1
-
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashDatas[0])
-    findMenuAction(menu, "^apply").trigger()
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "^apply")
 
     qmb = findQMessageBox(rw, "apply.*stash")
     assert "delete" in qmb.checkBox().text().lower()
     qmb.checkBox().setChecked(True)
     qmb.accept()
 
-    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
-    assert len(repo.listall_stashes()) == 0
-    assert [] == stashDatas
+    assert 0 == len(repo.listall_stashes())
+    assert [] == list(rw.sidebar.findNodesByKind(EItem.Stash))
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
@@ -138,20 +141,18 @@ def testApplyStash(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
-    assert len(stashDatas) == 1
-
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashDatas[0])
-    findMenuAction(menu, r"^apply").trigger()
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, r"^apply")
 
     qmb = findQMessageBox(rw, "apply.*stash")
     assert "delete" in qmb.checkBox().text().lower()
     qmb.checkBox().setChecked(False)
     qmb.accept()
 
-    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
-    assert len(repo.listall_stashes()) == 1
-    assert len(stashDatas) == 1
+    assert 1 == len(repo.listall_stashes())
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
@@ -163,17 +164,15 @@ def testDropStash(qtbot, tempDir, mainWindow):
 
     assert qlvGetRowData(rw.dirtyFiles) == []
 
-    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
-    assert len(stashDatas) == 1
-
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashDatas[0])
-    findMenuAction(menu, "^delete").trigger()
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "^delete")
 
     acceptQMessageBox(rw, "really delete.+stash")
 
-    stashDatas = rw.sidebar.datasForItemType(EItem.Stash)
-    assert len(repo.listall_stashes()) == 0
-    assert len(stashDatas) == 0
+    assert 0 == len(repo.listall_stashes())
+    assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
@@ -188,8 +187,9 @@ def testHideStash(qtbot, tempDir, mainWindow):
     assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
     rw.graphView.selectCommit(stashOid, silent=False)  # must not raise
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.Stash, stashOid.hex)
-    findMenuAction(menu, "^hide").trigger()
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "^hide")
 
     assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
     with pytest.raises(Exception):

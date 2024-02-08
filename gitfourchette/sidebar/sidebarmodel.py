@@ -15,10 +15,8 @@ from gitfourchette.repostate import RepoState
 
 logger = logging.getLogger(__name__)
 
-ROLE_USERDATA = Qt.ItemDataRole.UserRole + 0
-ROLE_EITEM = Qt.ItemDataRole.UserRole + 1
-ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 2
-ROLE_REF = Qt.ItemDataRole.UserRole + 3
+ROLE_REF = Qt.ItemDataRole.UserRole + 0
+ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 1
 
 MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.debug_modalSidebar  # do not change while app is running
 BRANCH_FOLDERS = True
@@ -170,6 +168,13 @@ class SidebarNode:
     def wantForceExpand(self):
         return self.kind in FORCE_EXPAND
 
+    def walk(self):
+        frontier = self.children[:]
+        while frontier:
+            node = frontier.pop()
+            yield node
+            frontier.extend(node.children)
+
     def __repr__(self):
         return f"SidebarNode({self.kind.name} {self.data})"
 
@@ -280,6 +285,7 @@ class SidebarModel(QAbstractItemModel):
                 target = target.removeprefix(RefPrefix.HEADS)
                 node = SidebarNode(EItem.UnbornHead, target)
                 branchRoot.appendChild(node)
+                self.nodesByRef["HEAD"] = node
 
             else:
                 # It's not unborn
@@ -288,6 +294,7 @@ class SidebarModel(QAbstractItemModel):
                     assert repo.head_is_detached
                     node = SidebarNode(EItem.DetachedHead, repo.head.target.hex)
                     branchRoot.appendChild(node)
+                    self.nodesByRef["HEAD"] = node
 
                 else:
                     # We're on a branch
@@ -478,15 +485,11 @@ class SidebarModel(QAbstractItemModel):
         sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
         fontRole = role == Qt.ItemDataRole.FontRole
         decorationRole = role == Qt.ItemDataRole.DecorationRole
-        userRole = role == ROLE_USERDATA
         hiddenRole = role == ROLE_ISHIDDEN
         refRole = role == ROLE_REF
 
         row = index.row()
         item = node.kind
-
-        if role == ROLE_EITEM:  # for testing (match by EItem type)
-            return item.value
 
         if item == EItem.Spacer:
             if sizeHintRole:
@@ -501,8 +504,6 @@ class SidebarModel(QAbstractItemModel):
             refName = node.data
             branchName = refName.removeprefix(RefPrefix.HEADS)
             if displayRole:
-                return branchName
-            elif userRole:
                 return branchName
             elif refRole:
                 return refName
@@ -533,8 +534,6 @@ class SidebarModel(QAbstractItemModel):
             target = node.data
             if displayRole:
                 return self.tr("[unborn]") + " " + target
-            elif userRole:
-                return target
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
                 text += self.tr("Local branch {0}")
@@ -549,8 +548,6 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.DetachedHead:
             if displayRole:
                 return self.tr("Detached HEAD")
-            elif userRole:
-                return self._detachedHead
             elif toolTipRole:
                 caption = self.tr("Detached HEAD")
                 return f"<p style='white-space: pre'>{caption} @ {self._detachedHead[:settings.prefs.shortHashChars]}"
@@ -566,7 +563,7 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.Remote:
             remoteName = node.data
-            if displayRole or userRole:
+            if displayRole:
                 return remoteName
             elif toolTipRole:
                 url = self.repo.remotes[remoteName].url
@@ -587,8 +584,6 @@ class SidebarModel(QAbstractItemModel):
                 return branchName.rsplit("/", 1)[-1]
             elif refRole:
                 return refName
-            elif userRole:
-                return shorthand
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
                 text += self.tr("Remote-tracking branch {0}").format(bquo(shorthand))
@@ -618,7 +613,7 @@ class SidebarModel(QAbstractItemModel):
                 return stockIcon("git-folder")
 
         elif item == EItem.Tag:
-            if displayRole or userRole:
+            if displayRole:
                 return node.data.removeprefix(RefPrefix.TAGS)
             elif refRole:
                 return node.data
@@ -642,8 +637,6 @@ class SidebarModel(QAbstractItemModel):
                 text += f"<b>{self.tr('date:')}</b> {commitTimeStr}"
                 self.cacheTooltip(index, text)
                 return text
-            elif userRole:
-                return stash.commit_id.hex
             elif fontRole:
                 if stash.commit_id.hex in self._hiddenStashCommits:
                     return self.hiddenBranchFont()
@@ -658,8 +651,6 @@ class SidebarModel(QAbstractItemModel):
             if displayRole:
                 return node.data.rsplit("/", 1)[-1]
             elif toolTipRole:
-                return node.data
-            elif userRole:
                 return node.data
             elif hiddenRole:
                 return False

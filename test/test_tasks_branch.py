@@ -10,7 +10,8 @@ def testNewBranch(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranchesHeader)
+    node = next(rw.sidebar.findNodesByKind(EItem.LocalBranchesHeader))
+    menu = rw.sidebar.makeNodeMenu(node)
     findMenuAction(menu, "new branch").trigger()
 
     q = findQDialog(rw, "new branch")
@@ -27,7 +28,8 @@ def testSetUpstreamBranch(qtbot, tempDir, mainWindow):
 
     assert repo.branches.local['master'].upstream_name == "refs/remotes/origin/master"
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
 
     findMenuAction(menu, "(tracked|upstream) branch").trigger()
 
@@ -63,7 +65,8 @@ def testRenameBranch(qtbot, tempDir, mainWindow):
     assert 'no-parent' in repo.branches.local
     assert 'mainbranch' not in repo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
 
     findMenuAction(menu, "rename").trigger()
 
@@ -94,15 +97,17 @@ def testRenameBranch(qtbot, tempDir, mainWindow):
 
 def testDeleteBranch(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        commit = repo['6e1475206e57110fcef4b92320436c1e9872a322']
+        repo.branches.create("somebranch", commit)
+        assert "somebranch" in repo.branches.local
+
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    commit = repo['6e1475206e57110fcef4b92320436c1e9872a322']
-    repo.branches.create("somebranch", commit)
-    assert "somebranch" in repo.branches.local
-
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "somebranch")
-    findMenuAction(menu, "delete").trigger()
+    node = rw.sidebar.findNodeByRef("refs/heads/somebranch")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "delete")
     acceptQMessageBox(rw, "really delete.+branch")
     assert "somebranch" not in repo.branches.local
 
@@ -114,8 +119,9 @@ def testDeleteCurrentBranch(qtbot, tempDir, mainWindow):
 
     assert "master" in repo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, "master")
-    findMenuAction(menu, "delete").trigger()
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "delete")
     acceptQMessageBox(rw, "can.+t delete.+current branch")
     assert "master" in repo.branches.local  # still there
 
@@ -127,9 +133,9 @@ def testNewBranchTrackingRemoteBranch1(qtbot, tempDir, mainWindow):
 
     assert "newmaster" not in repo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/master")
-
-    findMenuAction(menu, "(start|new).+local branch").trigger()
+    node = rw.sidebar.findNodeByRef("refs/remotes/origin/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "(start|new).+local branch")
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
     dlg.ui.nameEdit.setText("newmaster")
@@ -144,8 +150,9 @@ def testNewBranchTrackingRemoteBranch2(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, "origin/first-merge")
-    findMenuAction(menu, "(start|new).*local branch").trigger()
+    node = rw.sidebar.findNodeByRef("refs/remotes/origin/first-merge")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "(start|new).*local branch")
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
     assert dlg.ui.nameEdit.text() == "first-merge"
@@ -165,7 +172,7 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
     localBranches = rw.repo.branches.local
 
     assert "first-merge" not in localBranches
-    assert "first-merge" not in rw.sidebar.datasForItemType(EItem.LocalBranch)
+    assert not any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
     oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
 
@@ -180,7 +187,7 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
     assert "first-merge" in localBranches
     assert localBranches["first-merge"].target == oid1
     assert localBranches["first-merge"].is_checked_out()
-    assert "first-merge" in rw.sidebar.datasForItemType(EItem.LocalBranch)
+    assert any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
 
 def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
@@ -188,7 +195,8 @@ def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
     findMenuAction(menu, "new.+branch from here").trigger()
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
@@ -204,7 +212,7 @@ def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
 
     assert "no-parent-2" in localBranches
     assert localBranches["no-parent-2"].target == localBranches["no-parent"].target
-    assert "no-parent-2" in rw.sidebar.datasForItemType(EItem.LocalBranch)
+    assert any("no-parent-2" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
 
 def testSwitchBranch(qtbot, tempDir, mainWindow):
@@ -213,8 +221,11 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
     localBranches = rw.repo.branches.local
 
     def getActiveBranchTooltipText():
-        return next(tt for tt in rw.sidebar.datasForItemType(EItem.LocalBranch, Qt.ItemDataRole.ToolTipRole)
-                    if re.search(r"(current|checked.out) branch", tt, re.I))
+        node = rw.sidebar.findNodeByRef(rw.repo.head_branch_fullname)
+        index = node.createIndex(rw.sidebar.sidebarModel)
+        tip = index.data(Qt.ItemDataRole.ToolTipRole)
+        assert re.search(r"(current|checked.out) branch", tip, re.I)
+        return tip
 
     # make sure initial branch state is correct
     assert localBranches['master'].is_checked_out()
@@ -224,8 +235,9 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
     assert "master" in getActiveBranchTooltipText()
     assert "no-parent" not in getActiveBranchTooltipText()
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
-    findMenuAction(menu, "switch to").trigger()
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "switch to")
 
     assert not localBranches['master'].is_checked_out()
     assert localBranches['no-parent'].is_checked_out()
@@ -248,8 +260,9 @@ def testSwitchBranchWorkdirConflicts(qtbot, tempDir, mainWindow):
     assert not localBranches['no-parent'].is_checked_out()
     assert localBranches['master'].is_checked_out()
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'no-parent')
-    findMenuAction(menu, "switch to").trigger()
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "switch to")
 
     acceptQMessageBox(rw, "conflict.+with.+file")  # this will fail if the messagebox doesn't show up
 
@@ -261,8 +274,9 @@ def testMergeUpToDate(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.RemoteBranch, 'origin/first-merge')
-    findMenuAction(menu, "merge").trigger()
+    node = rw.sidebar.findNodeByRef("refs/remotes/origin/first-merge")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "merge")
     acceptQMessageBox(rw, "already up.to.date")
 
 
@@ -274,8 +288,9 @@ def testMergeFastForward(qtbot, tempDir, mainWindow):
 
     assert rw.repo.head.target != rw.repo.branches.local['master'].target
 
-    menu = rw.sidebar.generateMenuForEntry(EItem.LocalBranch, 'master')
-    findMenuAction(menu, "merge").trigger()
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "merge")
     acceptQMessageBox(rw, "can .*fast.forward")
 
     assert rw.repo.head.target == rw.repo.branches.local['master'].target
