@@ -1,3 +1,5 @@
+import pytest
+
 from . import reposcenario
 from .util import *
 from gitfourchette import porcelain
@@ -176,6 +178,7 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
     assert headCommit.author.email == "1e15sabords@example.com"
 
 
+@pytest.mark.skipif('FASTTEST' in os.environ, reason="skipping slow tests (FASTTEST env var)")
 def testCommitStableDate(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
@@ -195,6 +198,7 @@ def testCommitStableDate(qtbot, tempDir, mainWindow):
     assert signatures_equalish(headCommit.author, headCommit.committer)
 
 
+@pytest.mark.skipif('FASTTEST' in os.environ, reason="skipping slow tests (FASTTEST env var)")
 def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
