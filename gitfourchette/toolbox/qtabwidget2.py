@@ -80,6 +80,37 @@ class QTabBar2(QTabBar):
         self.visibilityChanged.emit(visible)
 
 
+class QTabWidget2OverflowGradient(QWidget):
+    def paintEvent(self, event: QPaintEvent):
+        W = 16  # gradient width
+        P = 4  # opaque padding inside the gradient
+
+        scrollArea = self.parentWidget()
+        assert isinstance(scrollArea, QAbstractScrollArea)
+        scrollBar = scrollArea.horizontalScrollBar()
+
+        saw = scrollArea.width()
+        sah = scrollArea.height()
+
+        opaque = self.palette().color(QPalette.ColorRole.Window)
+        transp = QColor(opaque)
+        transp.setAlpha(0)
+
+        painter = QPainter(self)
+
+        if scrollBar.value() != 0:
+            gradient = QLinearGradient(P, 0, W, 0)
+            gradient.setColorAt(0, opaque)
+            gradient.setColorAt(1, transp)
+            painter.fillRect(QRect(0, 0, W, sah-1), gradient)
+
+        if scrollBar.value() < scrollBar.maximum()-1:
+            gradient = QLinearGradient(saw-W, 0, saw-P, 0)
+            gradient.setColorAt(0, transp)
+            gradient.setColorAt(1, opaque)
+            painter.fillRect(QRect(saw-W, 0, W, sah-1), gradient)
+
+
 class QTabWidget2(QWidget):
     currentChanged: Signal = Signal(int)
     tabCloseRequested: Signal = Signal(int)
@@ -128,9 +159,14 @@ class QTabWidget2(QWidget):
         self.tabs.wheelDelta.connect(self.scrollTabs)
         self.tabs.layoutChanged.connect(self.updateOverflowDropdown)
 
+        self.overflowGradient = QTabWidget2OverflowGradient(self.tabScrollArea)
+        self.overflowGradient.setObjectName("QTW2OverflowGradient")
+        self.overflowGradient.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
         topWidget = QWidget(self)
         self.topWidget = topWidget
         topLayout = QHBoxLayout()
+        topLayout.setSpacing(2)
         topLayout.setContentsMargins(0, 0, 0, 0)
         topLayout.addWidget(self.tabScrollArea)
         topLayout.addWidget(self.overflowButton)
@@ -157,6 +193,7 @@ class QTabWidget2(QWidget):
         self.tabs.setTabsClosable(settings.prefs.tabs_closeButton)
         self.tabs.update()
         self.syncBarSize()
+        self.onResize()
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.tabs.mapToGlobal(localPoint)
@@ -241,6 +278,7 @@ class QTabWidget2(QWidget):
         h = self.tabs.sizeHint().height()
         if h != 0:
             self.tabScrollArea.setFixedHeight(self.tabs.sizeHint().height())
+            self.overflowGradient.resize(self.tabScrollArea.size())
 
     # I don't like deferring ensureCurrentTabVisible to the next event loop,
     # but the new tabbar width doesn't seem to be refreshed immediately in onCurrentChanged.
@@ -271,6 +309,7 @@ class QTabWidget2(QWidget):
     def updateOverflowDropdown(self):
         isOverflowing = self.topWidget.width() < self.tabs.width()
         self.overflowButton.setVisible(isOverflowing)
+        self.overflowGradient.setVisible(isOverflowing)
         if isOverflowing:
             self.overflowButton.setMaximumHeight(self.tabs.height())
 
@@ -289,4 +328,8 @@ class QTabWidget2(QWidget):
 
     def resizeEvent(self, event: QResizeEvent):
         super().resizeEvent(event)
+        self.onResize()
+
+    def onResize(self):
+        self.overflowGradient.resize(self.tabScrollArea.size())
         self.ensureCurrentTabVisible()
