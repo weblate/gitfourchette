@@ -42,6 +42,8 @@ MAX_AUTHOR_CHARS = {
 XMARGIN = 4
 XSPACING = 6
 
+NARROW_WIDTH = (500, 750)
+
 
 class CommitLogDelegate(QStyledItemDelegate):
     def __init__(self, repoWidget, parent=None):
@@ -128,10 +130,17 @@ class CommitLogDelegate(QStyledItemDelegate):
         rect.setRight(rect.right() - XMARGIN)
 
         # Compute column bounds
+        authorWidth = hcw * MAX_AUTHOR_CHARS.get(settings.prefs.authorDisplayStyle, 16)
+        dateWidth = self.dateMaxWidth
+        if rect.width() < NARROW_WIDTH[0]:
+            authorWidth = 0
+            dateWidth = 0
+        elif rect.width() <= NARROW_WIDTH[1]:
+            authorWidth = int(lerp(authorWidth/2, authorWidth, NARROW_WIDTH[0], NARROW_WIDTH[1], rect.width()))
         leftBoundHash = rect.left()
         leftBoundSummary = leftBoundHash + hcw * settings.prefs.shortHashChars + XSPACING
-        leftBoundDate = rect.width() - self.dateMaxWidth
-        leftBoundName = leftBoundDate - hcw * MAX_AUTHOR_CHARS.get(settings.prefs.authorDisplayStyle, 16)
+        leftBoundDate = rect.width() - dateWidth
+        leftBoundName = leftBoundDate - authorWidth
         rightBound = rect.right()
 
         # Get the info we need about the commit
@@ -297,7 +306,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         summaryIsElided = len(elidedSummaryText) == 0 or elidedSummaryText.endswith(("…", ELISION))
         model = index.model()
         model.setData(index, summaryIsElided, CommitLogModel.MessageElidedRole)
-        model.setData(index, leftBoundName, CommitLogModel.AuthorColumnXRole)
+        model.setData(index, leftBoundName if authorWidth != 0 else -1, CommitLogModel.AuthorColumnXRole)
 
     def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):  # pragma: no cover
         """Last-resort row drawing routine used if _paint raises an exception."""

@@ -77,14 +77,26 @@ class CommitLogModel(QAbstractListModel):
                 return None
 
         elif role == Qt.ItemDataRole.ToolTipRole:
+            tip = ""
             commit = self._commitSequence[index.row()]
+
             if not commit:
-                return None
-            x = self.parent().mapFromGlobal(QCursor.pos()).x()
-            if x >= self._authorColumnX:
-                return commitAuthorTooltip(commit)
-            elif index.row() in self._elidedRows:
-                return commitMessageTooltip(commit)
+                return tip
+
+            isCommitMessageElided = index.row() in self._elidedRows
+
+            if self._authorColumnX <= 0:  # author hidden in narrow window
+                if isCommitMessageElided:
+                    tip += commitMessageTooltip(commit)
+                tip += commitAuthorTooltip(commit)
+            else:
+                x = self.parent().mapFromGlobal(QCursor.pos()).x()
+                if x >= self._authorColumnX:
+                    tip = commitAuthorTooltip(commit)
+                elif isCommitMessageElided:
+                    tip = commitMessageTooltip(commit)
+
+            return tip
 
     def setData(self, index, value, role=None):
         if role == CommitLogModel.AuthorColumnXRole:

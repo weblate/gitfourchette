@@ -365,3 +365,11 @@ def makeMultiShortcut(*args) -> MultiShortcut:
     shortcuts = list(dict.fromkeys(shortcuts))
 
     return shortcuts
+
+
+def lerp(v1, v2, cmin, cmax, c):
+    p = (c-cmin) / (cmax-cmin)
+    p = max(p, 0)
+    p = min(p, 1)
+    v = v2*p + v1*(1-p)
+    return v
