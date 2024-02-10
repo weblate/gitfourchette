@@ -204,9 +204,20 @@ class RepoTask(QObject):
     def __str__(self):
         return self.objectName()
 
-    def canKill(self, task: RepoTask):
+    def canKill(self, task: RepoTask) -> bool:
         """
         Return true if this task is allowed to take precedence over the given running task.
+        """
+        return False
+
+    def isCritical(self) -> bool:
+        """
+        Return true if this task must be queued up to be run at a later date
+        if the TaskRunner isn't available immediately.
+
+        This is useful if the task is invoked to respond to an external event,
+        (e.g. the task fires when an external program quits),
+        and you don't want this task to be silently dropped.
         """
         return False
 
@@ -433,6 +444,7 @@ class RepoTaskRunner(QObject):
     refreshPostTask = Signal(RepoTask)
     progress = Signal(str, bool)
     repoGone = Signal()
+    ready = Signal()
 
     _continueFlow = Signal(object)
     "Connected to _iterateFlow"
@@ -448,12 +460,15 @@ class RepoTaskRunner(QObject):
     _currentTaskBenchmark = Benchmark | None
     "Context manager"
 
+    _criticalTaskQueue: list
+
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.setObjectName("RepoTaskRunner")
         self._currentTask = None
         self._zombieTask = None
         self._currentTaskBenchmark = None
+        self._criticalTaskQueue = []
 
         from gitfourchette import settings
         self.forceSerial = bool(settings.SYNC_TASKS)
@@ -520,6 +535,10 @@ class RepoTaskRunner(QObject):
             logger.info(f"Task {task} killed task {self._currentTask}")
             self.killCurrentTask()
             self._currentTask = task
+
+        elif task.isCritical():
+            logger.info(f"Enqueuing critical task {task}")
+            self._criticalTaskQueue.append((task, args, kwargs))
 
         else:
             logger.info(f"Task {task} cannot kill task {self._currentTask}")
@@ -621,6 +640,14 @@ class RepoTaskRunner(QObject):
             else:
                 assert False, ("In a RepoTask coroutine, you can only yield a FlowControlToken "
                                f"(you yielded: {type(result).__name__})")
+
+        if not self.isBusy():  # might've queued up another task...
+            if self._criticalTaskQueue:
+                criticalTask, args, kwargs = self._criticalTaskQueue.pop(0)
+                logger.debug(f"Popping critical task {criticalTask}")
+                self.put(criticalTask, *args, **kwargs)
+            else:
+                self.ready.emit()
 
     @staticmethod
     def _getNextToken(flow: RepoTask.FlowGeneratorType):

@@ -301,10 +301,34 @@ class MarkConflictSolved(RepoTask):
 
 
 class AcceptMergeConflictResolution(RepoTask):
+    def canKill(self, task: RepoTask) -> bool:
+        from gitfourchette.tasks import RefreshRepo, Jump
+        return isinstance(task, (RefreshRepo, Jump))
+
+    def isCritical(self) -> bool:
+        """
+        We can't control when this task is invoked -- it's invoked as soon as
+        the merge program exits. If the RepoTaskRunner is busy, don't interrupt
+        an active task and enqueue this one because we don't want to miss it.
+        (For example: this task is invoked while RepoTaskRunner is busy with
+        NewCommit because the commit dialog is open. Wait for NewCommit to
+        complete before executing this task.)
+        """
+        return True
+
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir
 
     def flow(self, umc: UnmergedConflict):
+        message = paragraphs(
+            self.tr("It looks like you’ve resolved the merge conflict in {0}."),
+            self.tr("Do you want to keep this resolution?")
+        ).format(bquo(umc.conflict.ours.path))
+
+        yield from self.flowConfirm(
+            self.tr("Merge conflict resolved"), message,
+            verb=self.tr("Confirm resolution"), cancelText=self.tr("Discard resolution"))
+
         yield from self.flowEnterWorkerThread()
         repo = self.repo
 

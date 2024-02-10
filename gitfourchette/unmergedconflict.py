@@ -62,15 +62,4 @@ class UnmergedConflict(QObject):
             self.mergeFailed.emit(exitCode)
             return
 
-        message = paragraphs(
-            self.tr("It looks like you’ve resolved the merge conflict in {0}."),
-            self.tr("Do you want to keep this resolution?")
-        ).format(bquo(self.conflict.ours.path))
-
-        qmb = asyncMessageBox(self.parent(), 'information', self.tr("Merge conflict resolved"), message,
-                              QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-        qmb.button(QMessageBox.StandardButton.Ok).setText(self.tr("Confirm resolution"))
-        qmb.button(QMessageBox.StandardButton.Cancel).setText(self.tr("Discard resolution"))
-        qmb.accepted.connect(self.mergeComplete)
-        qmb.rejected.connect(lambda: self.mergeFailed.emit(-1))
-        qmb.show()
+        self.mergeComplete.emit()
