@@ -187,6 +187,9 @@ class QTabWidget2(QWidget):
 
         self.refreshPrefs()
 
+    def __len__(self):
+        return self.tabs.count()
+
     def refreshPrefs(self):
         self.tabs.setExpanding(settings.prefs.tabs_expanding)
         self.tabs.setAutoHide(settings.prefs.tabs_autoHide)

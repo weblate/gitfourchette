@@ -1,3 +1,5 @@
+import tempfile
+
 from . import *
 from pytestqt.qtbot import QtBot as _QtBot
 import os
@@ -11,19 +13,28 @@ TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
 
 
 def unpackRepo(
-        tempDir,
+        tempDir: tempfile.TemporaryDirectory | str,
         testRepoName="TestGitRepository",
         userName=TEST_SIGNATURE.name,
         userEmail=TEST_SIGNATURE.email,
+        renameTo="",
 ) -> str:
+    tempDirPath = tempDir if type(tempDir) is str else tempDir.name
+
     testPath = os.path.realpath(__file__)
     testPath = os.path.dirname(testPath)
 
     with tarfile.open(F"{testPath}/data/{testRepoName}.tar") as tar:
-        tar.extractall(tempDir.name)
+        tar.extractall(tempDirPath)
 
-    path = F"{tempDir.name}/{testRepoName}"
+    path = F"{tempDirPath}/{testRepoName}"
     path = os.path.realpath(path)
+
+    if renameTo:
+        path2 = f"{tempDirPath}/{renameTo}"
+        shutil.move(path, path2)
+        path = path2
+
     path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
 
     with open(F"{path}/.git/config", "at") as configFile:
@@ -112,7 +123,7 @@ def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
 
 
 def findMenuAction(menu: QMenu, pattern: str):
-    assert menu
+    assert isinstance(menu, QMenu)
     for action in menu.actions():
         actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())
         if re.search(pattern, actionText, re.IGNORECASE):
