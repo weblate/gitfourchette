@@ -17,7 +17,6 @@ from gitfourchette.toolbox import *
 
 
 class GraphView(QListView):
-    jump = Signal(NavLocator)
     linkActivated = Signal(str)
     statusMessage = Signal(str)
 
@@ -75,7 +74,7 @@ class GraphView(QListView):
                 target = next(r for r in rrc if r.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
                 mergeCaption = self.tr("&Merge into {0}...").format(lquo(state.homeBranch))
                 mergeActions = [
-                    TaskBook.action(MergeBranch, name=mergeCaption, taskArgs=(target,)),
+                    TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),
                 ]
 
         stashActions = []
@@ -83,35 +82,35 @@ class GraphView(QListView):
             rrc = state.reverseRefCache[oid]
             target = next(r for r in rrc if r.startswith("stash@{"))
             stashActions = [
-                TaskBook.action(ApplyStash, taskArgs=oid),
-                TaskBook.action(DropStash, taskArgs=oid),
+                TaskBook.action(self, ApplyStash, taskArgs=oid),
+                TaskBook.action(self, DropStash, taskArgs=oid),
             ]
 
         if not oid:
             actions = [
-                TaskBook.action(NewCommit, "&C"),
-                TaskBook.action(AmendCommit, "&A"),
+                TaskBook.action(self, NewCommit, "&C"),
+                TaskBook.action(self, AmendCommit, "&A"),
                 ActionDef.SEPARATOR,
-                TaskBook.action(NewStash, "&S"),
-                TaskBook.action(ExportWorkdirAsPatch, "&X"),
+                TaskBook.action(self, NewStash, "&S"),
+                TaskBook.action(self, ExportWorkdirAsPatch, "&X"),
             ]
         else:
-            checkoutAction = TaskBook.action(CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
+            checkoutAction = TaskBook.action(self, CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
             checkoutAction.setShortcut(QKeySequence("Return"))
 
             actions = [
                 *mergeActions,
                 *stashActions,
                 ActionDef.SEPARATOR,
-                TaskBook.action(NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
-                TaskBook.action(NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
+                TaskBook.action(self, NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
+                TaskBook.action(self, NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 checkoutAction,
                 ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
                 ActionDef.SEPARATOR,
-                TaskBook.action(CherrypickCommit, self.tr("Cherry &Pick..."), taskArgs=oid),
-                TaskBook.action(RevertCommit, self.tr("Re&vert..."), taskArgs=oid),
-                TaskBook.action(ExportCommitAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
+                TaskBook.action(self, CherrypickCommit, self.tr("Cherry &Pick..."), taskArgs=oid),
+                TaskBook.action(self, RevertCommit, self.tr("Re&vert..."), taskArgs=oid),
+                TaskBook.action(self, ExportCommitAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard, shortcuts=GlobalShortcuts.copy),
                 ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation, shortcuts=QKeySequence("Space")),
@@ -154,9 +153,9 @@ class GraphView(QListView):
             event.accept()
             oid = self.currentCommitOid
             if oid:
-                CheckoutCommit.invoke(oid)
+                CheckoutCommit.invoke(self, oid)
             else:
-                NewCommit.invoke()
+                NewCommit.invoke(self)
         else:
             super().mouseDoubleClickEvent(event)
 
@@ -176,9 +175,9 @@ class GraphView(QListView):
 
         elif k in GlobalShortcuts.checkoutCommitFromGraphHotkeys:
             if oid:
-                CheckoutCommit.invoke(oid)
+                CheckoutCommit.invoke(self, oid)
             else:
-                NewCommit.invoke()
+                NewCommit.invoke(self)
 
         elif k == Qt.Key.Key_Escape:
             if self.searchBar.isVisible():  # close search bar if it doesn't have focus
@@ -323,7 +322,7 @@ class GraphView(QListView):
         def onAccept():
             resetMode = dlg.activeMode
             recurse = dlg.recurseSubmodules
-            ResetHead.invoke(oid, resetMode, recurse)
+            ResetHead.invoke(self, oid, resetMode, recurse)
 
         dlg.accepted.connect(onAccept)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
@@ -356,7 +355,7 @@ class GraphView(QListView):
                 locator = NavLocator(NavContext.COMMITTED, commit=oid)
             else:  # uncommitted changes
                 locator = NavLocator(NavContext.WORKDIR)
-        self.jump.emit(locator)
+        Jump.invoke(self, locator)
 
     def selectUncommittedChanges(self, force=False):
         if force or self.currentCommitOid is not None:

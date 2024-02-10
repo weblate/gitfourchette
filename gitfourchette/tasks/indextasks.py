@@ -2,13 +2,13 @@ from contextlib import suppress
 import os
 
 from gitfourchette import reverseunidiff
-from gitfourchette.diffview.diffview import PatchPurpose
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
+from gitfourchette.trtables import TrTables
 from gitfourchette.unmergedconflict import UnmergedConflict
 
 
@@ -153,7 +153,7 @@ class ApplyPatch(RepoTask):
             return
 
         if purpose & PatchPurpose.DISCARD:
-            title = PatchPurpose.getName(purpose)
+            title = TrTables.patchPurpose(purpose)
             textPara = []
             if purpose & PatchPurpose.HUNK:
                 textPara.append(self.tr("Really discard this hunk?"))
@@ -175,8 +175,8 @@ class ApplyPatch(RepoTask):
         self.repo.apply(subPatch, applyLocation)
 
     def _applyFullPatch(self, fullPatch: Patch, purpose: PatchPurpose):
-        action = PatchPurpose.getName(purpose)
-        verb = PatchPurpose.getName(purpose, verbOnly=True).lower()
+        action = TrTables.patchPurpose(purpose)
+        verb = TrTables.patchPurpose(purpose & PatchPurpose.VERB_MASK).lower()
         shortPath = os.path.basename(fullPatch.delta.new_file.path)
 
         questionText = paragraphs(

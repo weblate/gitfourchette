@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import enum
 import logging
-from typing import Any, Generator, Type
+from typing import Any, Generator, Type, TYPE_CHECKING
 
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, RepositoryState
 from gitfourchette.qt import *
 from gitfourchette.settings import DEVDEBUG
 from gitfourchette.toolbox import *
+
+if TYPE_CHECKING:
+    from gitfourchette.repowidget import RepoWidget
 
 logger = logging.getLogger(__name__)
 
@@ -155,8 +158,8 @@ class RepoTask(QObject):
         return TaskBook.names.get(cls, cls.__name__)
 
     @classmethod
-    def invoke(cls, *args):
-        TaskInvoker.invoke(cls, *args)
+    def invoke(cls, invoker: QObject, *args, **kwargs):
+        TaskInvoker.invoke(invoker, cls, *args, **kwargs)
 
     def __init__(self, parent: QObject):
         super().__init__(parent)
@@ -188,7 +191,7 @@ class RepoTask(QObject):
         raise ValueError(F"RepoTask {self} has no parent widget")
 
     @property
-    def rw(self) -> 'RepoWidget':  # hack for now - assume parent is a RepoWidget
+    def rw(self) -> RepoWidget:  # hack for now - assume parent is a RepoWidget
         pw = self.parentWidget()
         if DEVDEBUG:
             from gitfourchette.repowidget import RepoWidget
@@ -519,6 +522,7 @@ class RepoTaskRunner(QObject):
             self._currentTask = task
 
         else:
+            logger.info(f"Task {task} cannot kill task {self._currentTask}")
             message = self.tr("Please wait for the current operation to complete ({0})."
                               ).format(hquo(self._currentTask.name()))
             showInformation(task.parentWidget(), self.tr("Operation in progress"), "<html>" + message)
@@ -668,7 +672,7 @@ class RepoTaskRunner(QObject):
 class TaskInvoker(QObject):
     """Singleton that lets you dispatch tasks from anywhere in the application."""
 
-    invokeSignal = Signal(object, tuple)
+    invokeSignal = Signal(QObject, object, tuple, dict)
     _instance: TaskInvoker | None = None
 
     @staticmethod
@@ -679,7 +683,5 @@ class TaskInvoker(QObject):
         return TaskInvoker._instance
 
     @staticmethod
-    def invoke(taskType: Type[RepoTask], *taskArgs):
-        TaskInvoker.instance().invokeSignal.emit(taskType, taskArgs)
-
-
+    def invoke(invoker: QObject, taskType: Type[RepoTask], *args, **kwargs):
+        TaskInvoker.instance().invokeSignal.emit(invoker, taskType, args, kwargs)

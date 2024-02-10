@@ -200,11 +200,8 @@ class RepoWidget(QStackedWidget):
         for splitter in self.splittersToSave:
             splitter.splitterMoved.connect(lambda pos, index, s=splitter: self.saveSplitterState(s))
 
-        for fileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
+        for fileList in self.dirtyFiles, self.stagedFiles, self.committedFiles:
             # File list view selections are mutually exclusive.
-            for otherFileList in [self.dirtyFiles, self.stagedFiles, self.committedFiles]:
-                if fileList != otherFileList:
-                    fileList.jump.connect(otherFileList.clearSelection)
             fileList.nothingClicked.connect(lambda fl=fileList: self.clearDiffView(fl))
             fileList.statusMessage.connect(self.statusMessage)
 
@@ -231,24 +228,11 @@ class RepoWidget(QStackedWidget):
 
         # ----------------------------------
         # Connect signals to async tasks
+        # (Note: most widgets now use RepoTask.invoke() when they want to launch a task)
 
-        self.connectTask(self.amendButton.clicked,              tasks.AmendCommit, argc=0)
-        self.connectTask(self.commitButton.clicked,             tasks.NewCommit, argc=0)
-        self.connectTask(self.committedFiles.jump,              tasks.Jump)
-        self.connectTask(self.diffView.applyPatch,              tasks.ApplyPatch)
-        self.connectTask(self.diffView.revertPatch,             tasks.RevertPatch)
-        self.connectTask(self.dirtyFiles.discardFiles,          tasks.DiscardFiles)
-        self.connectTask(self.dirtyFiles.discardModeChanges,    tasks.DiscardModeChanges)
-        self.connectTask(self.dirtyFiles.jump,                  tasks.Jump)
-        self.connectTask(self.dirtyFiles.stageFiles,            tasks.StageFiles)
-        self.connectTask(self.dirtyFiles.stashFiles,            tasks.NewStash)
-        self.connectTask(self.graphView.jump,                   tasks.Jump)
-        self.connectTask(self.sidebar.jump,                     tasks.Jump)
-        self.connectTask(self.stagedFiles.jump,                 tasks.Jump)
-        self.connectTask(self.stagedFiles.stashFiles,           tasks.NewStash)
-        self.connectTask(self.stagedFiles.unstageFiles,         tasks.UnstageFiles)
-        self.connectTask(self.stagedFiles.unstageModeChanges,   tasks.UnstageModeChanges)
-        self.connectTask(self.unifiedCommitButton.clicked,      tasks.NewCommit, argc=0)
+        self.amendButton.clicked.connect(lambda: tasks.AmendCommit.invoke(self))
+        self.commitButton.clicked.connect(lambda: tasks.NewCommit.invoke(self))
+        self.unifiedCommitButton.clicked.connect(lambda: tasks.NewCommit.invoke(self))
 
         self.restoreSplitterStates()
         self.uiReady = True
@@ -358,7 +342,7 @@ class RepoWidget(QStackedWidget):
 
         unifiedCommitButton = QToolButton()
         unifiedCommitButton.setText(self.tr("Commit..."))
-        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [TaskBook.action(tasks.AmendCommit)])
+        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [TaskBook.action(self, tasks.AmendCommit)])
         unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [ActionDef(self.tr("Amend..."), amendButton.click)])
 
         def unifiedCommitButtonMenuAboutToShow():
@@ -554,23 +538,17 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
     # Tasks
 
-    def initTask(self, taskClass: Type[RepoTask]):
+    def runTask(self, taskClass: Type[RepoTask], *args, **kwargs) -> RepoTask:
         assert issubclass(taskClass, RepoTask)
+
+        # Initialize the task
         task = taskClass(self.repoTaskRunner)
         task.setRepo(self.repo)
-        return task
 
-    def runTask(self, taskClass: Type[RepoTask], *args, **kwargs) -> RepoTask:
-        task = self.initTask(taskClass)
+        # Enqueue the task
         self.repoTaskRunner.put(task, *args, **kwargs)
-        return task
 
-    def connectTask(self, signal: Signal, taskClass: Type[RepoTask], argc: int = -1):
-        def createTask(*args):
-            if argc >= 0:
-                args = args[:argc]
-            return self.runTask(taskClass, *args)
-        signal.connect(createTask)
+        return task
 
     # -------------------------------------------------------------------------
     # Initial repo priming

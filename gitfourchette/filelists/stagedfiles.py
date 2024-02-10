@@ -9,9 +9,6 @@ from gitfourchette.tasks import *
 
 
 class StagedFiles(FileList):
-    unstageFiles: Signal = Signal(list)
-    unstageModeChanges: Signal = Signal(list)
-
     def __init__(self, parent):
         super().__init__(parent, NavContext.STAGED)
 
@@ -35,7 +32,7 @@ class StagedFiles(FileList):
                 icon="vcs-stash",
             ),
 
-            self.revertModeActionDef(n, self.wantUnstageModeChange),
+            self.revertModeActionDef(n, self.unstageModeChange),
 
             ActionDef.SEPARATOR,
 
@@ -88,9 +85,9 @@ class StagedFiles(FileList):
             super().keyPressEvent(event)
 
     def unstage(self):
-        self.unstageFiles.emit(list(self.selectedPatches()))
+        patches = list(self.selectedPatches())
+        UnstageFiles.invoke(self, patches)
 
-    def wantUnstageModeChange(self):
-        self.unstageModeChanges.emit(list(self.selectedPatches()))
-
-
+    def unstageModeChange(self):
+        patches = list(self.selectedPatches())
+        UnstageModeChanges.invoke(self, patches)

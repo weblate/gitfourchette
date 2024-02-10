@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING, Type
 import logging
 import os
 
@@ -6,11 +7,18 @@ import os
 # from cascading imports before the QApplication has booted.
 from gitfourchette.qt import *
 
+if TYPE_CHECKING:
+    from gitfourchette.mainwindow import MainWindow
+    from gitfourchette.settings import Session
+    from gitfourchette.tasks import RepoTask
+
 logger = logging.getLogger(__name__)
 
 
 class GFApplication(QApplication):
-    _installedTranslators: list
+    mainWindow: MainWindow | None
+    initialSession: Session | None
+    installedTranslators: list
 
     @staticmethod
     def instance() -> GFApplication:
@@ -26,10 +34,9 @@ class GFApplication(QApplication):
 
         self.setObjectName("GFApplication")
 
-        self._installedTranslators = []
-
         self.mainWindow = None
         self.initialSession = None
+        self.installedTranslators = []
 
         # Don't use app.setOrganizationName because it changes QStandardPaths.
         self.setApplicationName(APP_SYSTEM_NAME)  # used by QStandardPaths
@@ -40,6 +47,8 @@ class GFApplication(QApplication):
         commandLine.process(argv)
 
         from gitfourchette.toolbox import NonCriticalOperation
+        from gitfourchette.globalshortcuts import GlobalShortcuts
+        from gitfourchette.tasks import TaskBook, TaskInvoker
         from gitfourchette import settings
 
         with NonCriticalOperation("Asset search"):
@@ -104,6 +113,13 @@ class GFApplication(QApplication):
         # Keep track of initial session
         self.initialSession = session
 
+        # Initialize global shortcuts
+        GlobalShortcuts.initialize()
+
+        # Initialize task book
+        TaskBook.initialize()
+        TaskInvoker.instance().invokeSignal.connect(self.onInvokeTask)
+
         # Boot main window first thing when event loop starts
         if not settings.TEST_MODE:
             QTimer.singleShot(0, self.bootUi)
@@ -113,10 +129,15 @@ class GFApplication(QApplication):
         from gitfourchette.toolbox import bquo
         from gitfourchette.settings import QtApiNames
 
+        assert self.mainWindow is None, "already have a MainWindow"
+
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
+        self.mainWindow.destroyed.connect(self.onMainWindowDestroyed)
 
-        if self.initialSession:
+        if self.initialSession is None:
+            self.mainWindow.show()
+        else:
             # To prevent flashing a window with incorrect dimensions,
             # restore the geometry BEFORE calling show()
             self.mainWindow.restoreGeometry(self.initialSession.windowGeometry)
@@ -139,6 +160,10 @@ class GFApplication(QApplication):
 
             QMessageBox.information(self.mainWindow, translate("Prefs", "Qt binding unavailable"), text)
 
+    def onMainWindowDestroyed(self):
+        logger.debug("Main window destroyed")
+        self.mainWindow = None
+
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:
         parser = QCommandLineParser()
@@ -150,16 +175,59 @@ class GFApplication(QApplication):
         parser.addPositionalArgument("repos", "Repository paths to open on launch.", "[repos...]")
         return parser
 
+    # -------------------------------------------------------------------------
+
+    def onInvokeTask(self, invoker: QObject, taskType: Type[RepoTask], args: tuple, kwargs: dict) -> RepoTask | None:
+        from gitfourchette.mainwindow import MainWindow
+        from gitfourchette.repowidget import RepoWidget
+        from gitfourchette.toolbox import showInformation
+
+        if self.mainWindow is None:
+            logging.warning(f"Ignoring task request {taskType.__name__} because we don't have a window")
+            return
+
+        assert isinstance(invoker, QObject)
+        if invoker.signalsBlocked():
+            logger.debug("Ignoring task request {0} from invoker with blocked signals: {1}"
+                         .format(taskType.__name__, invoker.objectName() or invoker.__class__.__name__))
+            return
+
+        # Find parent in hierarchy
+        candidate = invoker
+        while candidate is not None:
+            if isinstance(candidate, (RepoWidget, MainWindow)):
+                break
+            candidate = candidate.parent()
+
+        if isinstance(candidate, RepoWidget):
+            repoWidget = candidate
+        elif isinstance(candidate, MainWindow):
+            repoWidget = candidate.currentRepoWidget()
+            if repoWidget is None:
+                showInformation(candidate, taskType.name(),
+                                self.tr("Please open a repository before performing this action."))
+                return
+        else:
+            repoWidget = None
+
+        if repoWidget is None:
+            assert False, "RepoTasks must be invoked from a child of RepoWidget or MainWindow"
+            return
+
+        return repoWidget.runTask(taskType, *args, **kwargs)
+
+    # -------------------------------------------------------------------------
+
     def flushTranslators(self):
-        while self._installedTranslators:
-            self.removeTranslator(self._installedTranslators.pop())
+        while self.installedTranslators:
+            self.removeTranslator(self.installedTranslators.pop())
 
     def loadTranslator(self, locale, fileName: str, prefix: str = "", searchDelimiters: str = "", suffix: str = ""):
         newTranslator = QTranslator(self)
 
         if newTranslator.load(locale, fileName, prefix, searchDelimiters, suffix):
             self.installTranslator(newTranslator)
-            self._installedTranslators.append(newTranslator)
+            self.installedTranslators.append(newTranslator)
             return True
         else:
             # logger.info(f"The app does not support your locale: {locale.uiLanguages()}")

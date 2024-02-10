@@ -75,11 +75,9 @@ class FileListDelegate(QStyledItemDelegate):
 
 
 class FileList(QListView):
-    jump = Signal(NavLocator)
     nothingClicked = Signal()
     selectedCountChanged = Signal(int)
     openDiffInNewWindow = Signal(Patch, NavLocator)
-    stashFiles = Signal(list)  # list[str]
     statusMessage = Signal(str)
 
     navContext: NavContext
@@ -336,7 +334,7 @@ class FileList(QListView):
         if current and current.isValid():
             locator = self.getNavLocatorForIndex(current)
             locator = locator.withExtraFlags(NavFlags.AllowMultiSelect)
-            self.jump.emit(locator)
+            Jump.invoke(self, locator)
         else:
             self.nothingClicked.emit()
 
@@ -499,7 +497,7 @@ class FileList(QListView):
 
     def wantPartialStash(self):
         paths = [patch.delta.old_file.path for patch in self.selectedPatches()]
-        NewStash.invoke(paths)
+        NewStash.invoke(self, paths)
 
     def revertModeActionDef(self, n: int, callback: Callable):
         action = ActionDef(self.tr("Revert Mode Change", "", n), callback, enabled=False)

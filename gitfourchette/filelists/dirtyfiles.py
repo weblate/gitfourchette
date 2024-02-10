@@ -9,10 +9,6 @@ from gitfourchette.tasks import *
 
 
 class DirtyFiles(FileList):
-    stageFiles = Signal(list)
-    discardFiles = Signal(list)
-    discardModeChanges = Signal(list)
-
     def __init__(self, parent):
         super().__init__(parent, NavContext.UNSTAGED)
 
@@ -48,7 +44,7 @@ class DirtyFiles(FileList):
                     shortcuts=TaskBook.shortcuts.get(NewStash, [])
                 ),
 
-                self.revertModeActionDef(n, self.wantDiscardModeChanges),
+                self.revertModeActionDef(n, self.discardModeChanges),
 
                 ActionDef.SEPARATOR,
 
@@ -97,7 +93,6 @@ class DirtyFiles(FileList):
                     enabled=False,
                 ),
             ]
-            pass
 
         if actions:
             actions.append(ActionDef.SEPARATOR)
@@ -144,15 +139,15 @@ class DirtyFiles(FileList):
 
     def stage(self):
         patches = list(self.selectedPatches())
-        self.stageFiles.emit(patches)
+        StageFiles.invoke(self, patches)
 
     def discard(self):
         patches = list(self.selectedPatches())
-        self.discardFiles.emit(patches)
+        DiscardFiles.invoke(self, patches)
 
-    def wantDiscardModeChanges(self):
+    def discardModeChanges(self):
         patches = list(self.selectedPatches())
-        self.discardModeChanges.emit(patches)
+        DiscardModeChanges.invoke(self, patches)
 
     def _mergeKeep(self, keepOurs: bool):
         patches = list(self.selectedPatches())
@@ -171,7 +166,7 @@ class DirtyFiles(FileList):
             else:
                 table[path] = theirs.id
 
-        HardSolveConflicts.invoke(table)
+        HardSolveConflicts.invoke(self, table)
 
     def mergeKeepOurs(self):
         self._mergeKeep(keepOurs=True)

@@ -1,5 +1,11 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from gitfourchette.porcelain import *
 from gitfourchette.qt import translate
+
+if TYPE_CHECKING:
+    from gitfourchette.toolbox import PatchPurpose
 
 
 class TrTables:
@@ -10,6 +16,7 @@ class TrTables:
     _prefKeys = {}
     _diffStatusChars = {}
     _fileModes = {}
+    _patchPurposes = {}
     _conflictHelp = {}
 
     @classmethod
@@ -21,6 +28,7 @@ class TrTables:
         cls._prefKeys = cls._init_prefKeys()
         cls._diffStatusChars = cls._init_diffStatusChars()
         cls._fileModes = cls._init_fileModes()
+        cls._patchPurposes = cls._init_patchPurposes()
         cls._conflictHelp = cls._init_conflictHelp()
 
     @classmethod
@@ -59,11 +67,15 @@ class TrTables:
         return cls._diffStatusChars.get(c, c)
 
     @classmethod
-    def fileMode(cls, m: int):
+    def fileMode(cls, m: FileMode):
         try:
             return cls._fileModes[m]
         except KeyError:
             return f"{m:o}"
+
+    @classmethod
+    def patchPurpose(cls, purpose: PatchPurpose):
+        return cls._patchPurposes.get(purpose, "???")
 
     @classmethod
     def conflictHelp(cls, key: str):
@@ -147,6 +159,24 @@ class TrTables:
             FileMode.LINK: translate("git", "link", "as in 'symlink' - file mode 0o120000"),
             FileMode.TREE: translate("git", "tree", "as in 'directory tree' - file mode 0o40000"),
             FileMode.COMMIT: translate("git", "commit", "'commit' file mode 0o160000"),
+        }
+
+    @staticmethod
+    def _init_patchPurposes():
+        from gitfourchette.toolbox.gitutils import PatchPurpose as pp
+        return {
+            pp.STAGE: translate("PatchPurpose", "Stage"),
+            pp.UNSTAGE: translate("PatchPurpose", "Unstage"),
+            pp.DISCARD: translate("PatchPurpose", "Discard"),
+            pp.LINES | pp.STAGE: translate("PatchPurpose", "Stage lines"),
+            pp.LINES | pp.UNSTAGE: translate("PatchPurpose", "Unstage lines"),
+            pp.LINES | pp.DISCARD: translate("PatchPurpose", "Discard lines"),
+            pp.HUNK | pp.STAGE: translate("PatchPurpose", "Stage hunk"),
+            pp.HUNK | pp.UNSTAGE: translate("PatchPurpose", "Unstage hunk"),
+            pp.HUNK | pp.DISCARD: translate("PatchPurpose", "Discard hunk"),
+            pp.FILE | pp.STAGE: translate("PatchPurpose", "Stage file"),
+            pp.FILE | pp.UNSTAGE: translate("PatchPurpose", "Unstage file"),
+            pp.FILE | pp.DISCARD: translate("PatchPurpose", "Discard file"),
         }
 
     @staticmethod

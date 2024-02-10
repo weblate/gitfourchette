@@ -14,43 +14,10 @@ from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
+from gitfourchette.tasks import ApplyPatch, RevertPatch
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
-
-
-@enum.unique
-class PatchPurpose(enum.IntFlag):
-    STAGE = enum.auto()
-    UNSTAGE = enum.auto()
-    DISCARD = enum.auto()
-
-    LINES = enum.auto()
-    HUNK = enum.auto()
-    FILE = enum.auto()
-
-    VERB_MASK = STAGE | UNSTAGE | DISCARD
-
-    @staticmethod
-    def getName(purpose: 'PatchPurpose', verbOnly=False) -> str:
-        pp = PatchPurpose
-        if verbOnly:
-            purpose &= pp.VERB_MASK
-        dd = {
-            pp.STAGE: translate("PatchPurpose", "Stage"),
-            pp.UNSTAGE: translate("PatchPurpose", "Unstage"),
-            pp.DISCARD: translate("PatchPurpose", "Discard"),
-            pp.LINES | pp.STAGE: translate("PatchPurpose", "Stage lines"),
-            pp.LINES | pp.UNSTAGE: translate("PatchPurpose", "Unstage lines"),
-            pp.LINES | pp.DISCARD: translate("PatchPurpose", "Discard lines"),
-            pp.HUNK | pp.STAGE: translate("PatchPurpose", "Stage hunk"),
-            pp.HUNK | pp.UNSTAGE: translate("PatchPurpose", "Unstage hunk"),
-            pp.HUNK | pp.DISCARD: translate("PatchPurpose", "Discard hunk"),
-            pp.FILE | pp.STAGE: translate("PatchPurpose", "Stage file"),
-            pp.FILE | pp.UNSTAGE: translate("PatchPurpose", "Unstage file"),
-            pp.FILE | pp.DISCARD: translate("PatchPurpose", "Discard file"),
-        }
-        return dd.get(purpose, "???")
 
 
 class DiffGutter(QWidget):
@@ -131,8 +98,6 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
 
 
 class DiffView(QPlainTextEdit):
-    applyPatch = Signal(Patch, bytes, PatchPurpose)
-    revertPatch = Signal(Patch, bytes)
     contextualHelp = Signal(str)
 
     lineData: list[LineData]
@@ -609,19 +574,19 @@ class DiffView(QPlainTextEdit):
             qfd.show()
 
     def fireRevert(self, patchData: bytes):
-        self.revertPatch.emit(self.currentPatch, patchData)
+        RevertPatch.invoke(self, self.currentPatch, patchData)
 
     def fireApplyLines(self, purpose: PatchPurpose):
         purpose |= PatchPurpose.LINES
         reverse = not (purpose & PatchPurpose.STAGE)
         patchData = self.extractSelection(reverse)
-        self.applyPatch.emit(self.currentPatch, patchData, purpose)
+        ApplyPatch.invoke(self, self.currentPatch, patchData, purpose)
 
     def fireApplyHunk(self, hunkID: int, purpose: PatchPurpose):
         purpose |= PatchPurpose.HUNK
         reverse = not (purpose & PatchPurpose.STAGE)
         patchData = self.extractHunk(hunkID, reverse)
-        self.applyPatch.emit(self.currentPatch, patchData, purpose)
+        ApplyPatch.invoke(self, self.currentPatch, patchData, purpose)
 
     def stageSelection(self):
         self.fireApplyLines(PatchPurpose.STAGE)

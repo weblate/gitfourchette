@@ -9,6 +9,7 @@ from .excutils import shortenTracebackPath, excStrings
 from .gitutils import (
     shortHash, dumpTempBlob, nameValidationMessage,
     AuthorDisplayStyle, abbreviatePerson,
+    PatchPurpose,
     simplifyOctalFileMode,
 )
 from .memoryindicator import MemoryIndicator

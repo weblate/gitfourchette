@@ -178,17 +178,18 @@ class TaskBook:
     @classmethod
     def action(
             cls,
-            t: Type[RepoTask],
+            invoker: QObject,
+            taskType: Type[RepoTask],
             name="",
             enabled=True,
             menuRole=QAction.MenuRole.NoRole,
             taskArgs: Any = None
     ) -> QAction:
         if not name:
-            name = cls.autoActionName(t)
+            name = cls.autoActionName(taskType)
         elif len(name) == 2 and name[0] == "&":
             accel = name[1]
-            name = cls.autoActionName(t)
+            name = cls.autoActionName(taskType)
             i = name.lower().find(accel.lower())
             if i >= 0:
                 name = name[:i] + "&" + name[i:]
@@ -198,24 +199,26 @@ class TaskBook:
         action.setEnabled(bool(enabled))
         action.setMenuRole(menuRole)
 
-        TaskBook.fillAction(action, t, taskArgs)
+        cls._fillAction(action, invoker, taskType, taskArgs)
         return action
 
     @classmethod
-    def fillAction(cls, action: QAction, t: Type[RepoTask], taskArgs=None):
+    def _fillAction(cls, action: QAction, invoker: QObject, taskType: Type[RepoTask], taskArgs=None):
         assert cls.names
 
-        if t in cls.icons:
-            action.setIcon(stockIcon(cls.icons[t]))
-        if t in cls.shortcuts:
-            action.setShortcuts(cls.shortcuts[t])
-        if t in cls.tips:
-            action.setStatusTip(cls.tips[t])
+        if taskType in cls.icons:
+            action.setIcon(stockIcon(cls.icons[taskType]))
+        if taskType in cls.shortcuts:
+            action.setShortcuts(cls.shortcuts[taskType])
+        if taskType in cls.tips:
+            action.setStatusTip(cls.tips[taskType])
 
         if taskArgs is None:
             taskArgs = ()
         elif type(taskArgs) not in [tuple, list]:
             taskArgs = tuple([taskArgs])
-        action.triggered.connect(lambda: TaskInvoker.invoke(t, *taskArgs))
+
+        action.triggered.connect(lambda: TaskInvoker.invoke(invoker, taskType, *taskArgs))
+
         return action
 

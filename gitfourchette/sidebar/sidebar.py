@@ -22,8 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class Sidebar(QTreeView):
-    jump = Signal(NavLocator)
-
     toggleHideStash = Signal(Oid)
     toggleHideBranch = Signal(str)
     toggleHideAllStashes = Signal()
@@ -111,16 +109,16 @@ class Sidebar(QTreeView):
 
         if item == EItem.UncommittedChanges:
             actions += [
-                TaskBook.action(NewCommit, "&C"),
-                TaskBook.action(AmendCommit, "&A"),
+                TaskBook.action(self, NewCommit, "&C"),
+                TaskBook.action(self, AmendCommit, "&A"),
                 ActionDef.SEPARATOR,
-                TaskBook.action(NewStash, "&S"),
-                TaskBook.action(ExportWorkdirAsPatch, "&X"),
+                TaskBook.action(self, NewStash, "&S"),
+                TaskBook.action(self, ExportWorkdirAsPatch, "&X"),
             ]
 
         elif item == EItem.LocalBranchesHeader:
             actions += [
-                TaskBook.action(NewBranchFromHead, self.tr("&New Branch...")),
+                TaskBook.action(self, NewBranchFromHead, self.tr("&New Branch...")),
             ]
 
         elif item == EItem.LocalBranch:
@@ -145,7 +143,7 @@ class Sidebar(QTreeView):
             upstreamBranchDisplay = lquoe(upstreamBranchName)
 
             actions += [
-                TaskBook.action(
+                TaskBook.action(self, 
                     SwitchBranch,
                     self.tr("&Switch to {0}").format(thisBranchDisplay),
                     taskArgs=(branchName, False),  # False: don't ask for confirmation
@@ -154,7 +152,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(
+                TaskBook.action(self, 
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
@@ -169,31 +167,31 @@ class Sidebar(QTreeView):
                           shortcuts=GlobalShortcuts.pushBranch,
                           statusTip=self.tr("Upload your commits to the remote server")),
 
-                TaskBook.action(
+                TaskBook.action(self, 
                     FetchRemoteBranch,
                     self.tr("&Fetch..."),
                     taskArgs=branch.upstream.shorthand if hasUpstream else None,
                     enabled=hasUpstream,
                 ),
 
-                TaskBook.action(
+                TaskBook.action(self, 
                     FastForwardBranch,
                     self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
                     taskArgs=branchName,
                     enabled=hasUpstream,
                 ),
 
-                TaskBook.action(EditUpstreamBranch, self.tr("Set &Upstream Branch..."), taskArgs=branchName),
+                TaskBook.action(self, EditUpstreamBranch, self.tr("Set &Upstream Branch..."), taskArgs=branchName),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(RenameBranch, self.tr("Re&name..."), taskArgs=branchName),
+                TaskBook.action(self, RenameBranch, self.tr("Re&name..."), taskArgs=branchName),
 
-                TaskBook.action(DeleteBranch, self.tr("&Delete..."), taskArgs=branchName),
+                TaskBook.action(self, DeleteBranch, self.tr("&Delete..."), taskArgs=branchName),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(NewBranchFromRef, self.tr("New &Branch from Here..."), taskArgs=refName),
+                TaskBook.action(self, NewBranchFromRef, self.tr("New &Branch from Here..."), taskArgs=refName),
 
                 ActionDef.SEPARATOR,
 
@@ -206,7 +204,7 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.DetachedHead:
-            actions += [TaskBook.action(NewBranchFromHead, self.tr("New &Branch from Here...")), ]
+            actions += [TaskBook.action(self, NewBranchFromHead, self.tr("New &Branch from Here...")), ]
 
         elif item == EItem.RemoteBranch:
             isBranchHidden = False
@@ -236,17 +234,17 @@ class Sidebar(QTreeView):
                 ]
 
             actions += [
-                TaskBook.action(
+                TaskBook.action(self, 
                     NewBranchFromRef,
                     self.tr("Start Local Branch from Here..."),
                     taskArgs=refName,
                 ),
 
-                TaskBook.action(FetchRemoteBranch, self.tr("Fetch Remote Changes..."), taskArgs=shorthand),
+                TaskBook.action(self, FetchRemoteBranch, self.tr("Fetch Remote Changes..."), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(
+                TaskBook.action(self, 
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
@@ -254,9 +252,9 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(RenameRemoteBranch, self.tr("Rename branch on remote..."), taskArgs=shorthand),
+                TaskBook.action(self, RenameRemoteBranch, self.tr("Rename branch on remote..."), taskArgs=shorthand),
 
-                TaskBook.action(DeleteRemoteBranch, self.tr("Delete branch on remote..."), taskArgs=shorthand),
+                TaskBook.action(self, DeleteRemoteBranch, self.tr("Delete branch on remote..."), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
@@ -283,13 +281,13 @@ class Sidebar(QTreeView):
                 ]
 
             actions += [
-                TaskBook.action(EditRemote, self.tr("&Edit Remote..."), taskArgs=data),
+                TaskBook.action(self, EditRemote, self.tr("&Edit Remote..."), taskArgs=data),
 
-                TaskBook.action(FetchRemote, self.tr("&Fetch All Remote Branches..."), taskArgs=data),
+                TaskBook.action(self, FetchRemote, self.tr("&Fetch All Remote Branches..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(DeleteRemote, self.tr("&Remove Remote..."), taskArgs=data),
+                TaskBook.action(self, DeleteRemote, self.tr("&Remove Remote..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
@@ -303,12 +301,12 @@ class Sidebar(QTreeView):
 
         elif item == EItem.RemotesHeader:
             actions += [
-                TaskBook.action(NewRemote, "&A"),
+                TaskBook.action(self, NewRemote, "&A"),
             ]
 
         elif item == EItem.StashesHeader:
             actions += [
-                TaskBook.action(NewStash, "&S"),
+                TaskBook.action(self, NewStash, "&S"),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("&Hide All Stashes in Graph"),
                           lambda: self.toggleHideAllStashes.emit(),
@@ -324,13 +322,13 @@ class Sidebar(QTreeView):
                 isStashHidden = model.data(index, ROLE_ISHIDDEN)
 
             actions += [
-                TaskBook.action(ApplyStash, self.tr("&Apply"), taskArgs=oid),
+                TaskBook.action(self, ApplyStash, self.tr("&Apply"), taskArgs=oid),
 
-                TaskBook.action(ExportStashAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
+                TaskBook.action(self, ExportStashAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(DropStash, self.tr("&Delete"), taskArgs=oid),
+                TaskBook.action(self, DropStash, self.tr("&Delete"), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 
@@ -342,7 +340,7 @@ class Sidebar(QTreeView):
 
         elif item == EItem.TagsHeader:
             actions += [
-                TaskBook.action(NewTag, self.tr("&New Tag on HEAD Commit...")),
+                TaskBook.action(self, NewTag, self.tr("&New Tag on HEAD Commit...")),
             ]
 
         elif item == EItem.Tag:
@@ -350,7 +348,7 @@ class Sidebar(QTreeView):
             assert prefix == RefPrefix.TAGS
 
             actions += [
-                TaskBook.action(DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
+                TaskBook.action(self, DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
             ]
 
         elif item == EItem.Submodule:
@@ -365,7 +363,7 @@ class Sidebar(QTreeView):
                           lambda: self.openSubmoduleFolder.emit(data)),
 
                 ActionDef(self.tr("Copy &Path"),
-                          lambda: self.copyToClipboard(repo.in_workdir(data)))
+                          lambda: self.copyToClipboard(repo.in_workdir(data))),
             ]
 
         # --------------------
@@ -415,7 +413,7 @@ class Sidebar(QTreeView):
         else:
             return None
 
-        self.jump.emit(locator)
+        Jump.invoke(self, locator)
 
     def wantEnterNode(self, node: SidebarNode):
         if node is None:
@@ -429,35 +427,35 @@ class Sidebar(QTreeView):
             pass
 
         elif item == EItem.LocalBranch:
-            SwitchBranch.invoke(node.data.removeprefix(RefPrefix.HEADS), True)  # True: ask for confirmation
+            SwitchBranch.invoke(self, node.data.removeprefix(RefPrefix.HEADS), True)  # True: ask for confirmation
 
         elif item == EItem.Remote:
-            EditRemote.invoke(node.data)
+            EditRemote.invoke(self, node.data)
 
         elif item == EItem.RemotesHeader:
-            NewRemote.invoke()
+            NewRemote.invoke(self)
 
         elif item == EItem.LocalBranchesHeader:
-            NewBranchFromHead.invoke()
+            NewBranchFromHead.invoke(self)
 
         elif item == EItem.UncommittedChanges:
-            NewCommit.invoke()
+            NewCommit.invoke(self)
 
         elif item == EItem.Submodule:
             self.openSubmoduleRepo.emit(node.data)
 
         elif item == EItem.StashesHeader:
-            NewStash.invoke()
+            NewStash.invoke(self)
 
         elif item == EItem.Stash:
             oid = Oid(hex=node.data)
-            ApplyStash.invoke(oid)
+            ApplyStash.invoke(self, oid)
 
         elif item == EItem.RemoteBranch:
-            NewBranchFromRef.invoke(node.data)
+            NewBranchFromRef.invoke(self, node.data)
 
         elif item == EItem.TagsHeader:
-            NewTag.invoke()
+            NewTag.invoke(self)
 
         else:
             QApplication.beep()
@@ -474,20 +472,20 @@ class Sidebar(QTreeView):
             pass
 
         elif item == EItem.LocalBranch:
-            DeleteBranch.invoke(data.removeprefix(RefPrefix.HEADS))
+            DeleteBranch.invoke(self, data.removeprefix(RefPrefix.HEADS))
 
         elif item == EItem.Remote:
-            DeleteRemote.invoke(data)
+            DeleteRemote.invoke(self, data)
 
         elif item == EItem.Stash:
             oid = Oid(hex=data)
-            DropStash.invoke(oid)
+            DropStash.invoke(self, oid)
 
         elif item == EItem.RemoteBranch:
-            DeleteRemoteBranch.invoke(data)
+            DeleteRemoteBranch.invoke(self, data)
 
         elif item == EItem.Tag:
-            DeleteTag.invoke(data.removeprefix(RefPrefix.TAGS))
+            DeleteTag.invoke(self, data.removeprefix(RefPrefix.TAGS))
 
         else:
             QApplication.beep()
@@ -504,13 +502,13 @@ class Sidebar(QTreeView):
             pass
 
         elif item == EItem.LocalBranch:
-            RenameBranch.invoke(data)
+            RenameBranch.invoke(self, data)
 
         elif item == EItem.Remote:
-            EditRemote.invoke(data)
+            EditRemote.invoke(self, data)
 
         elif item == EItem.RemoteBranch:
-            RenameRemoteBranch.invoke(data)
+            RenameRemoteBranch.invoke(self, data)
 
         else:
             QApplication.beep()

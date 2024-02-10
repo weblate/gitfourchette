@@ -21,6 +21,19 @@ class AuthorDisplayStyle(enum.IntEnum):
     ABBREVIATED_EMAIL = 6
 
 
+@enum.unique
+class PatchPurpose(enum.IntFlag):
+    STAGE = enum.auto()
+    UNSTAGE = enum.auto()
+    DISCARD = enum.auto()
+
+    LINES = enum.auto()
+    HUNK = enum.auto()
+    FILE = enum.auto()
+
+    VERB_MASK = STAGE | UNSTAGE | DISCARD
+
+
 def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME):
     with suppress(IndexError):
         if style == AuthorDisplayStyle.FULL_NAME:

@@ -97,9 +97,8 @@ class ConflictView(QWidget):
 
         self.ui.explainer.setText(f"<b style='color: {colors.red.name()}'>" + message)
 
-    @staticmethod
-    def hardSolve(path: str, oid=NULL_OID):
-        HardSolveConflicts.invoke({path: oid})
+    def hardSolve(self, path: str, oid=NULL_OID):
+        HardSolveConflicts.invoke(self, {path: oid})
 
     def clear(self):
         self.currentConflict = None

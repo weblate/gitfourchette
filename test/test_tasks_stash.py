@@ -206,6 +206,6 @@ def testDropHiddenStash(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     rw.toggleHideStash(stashOid)
     assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
-    DropStash.invoke(stashOid)
+    DropStash.invoke(rw, stashOid)
     acceptQMessageBox(rw, "really delete.+stash")
     assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
