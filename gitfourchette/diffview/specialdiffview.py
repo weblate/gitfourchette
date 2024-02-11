@@ -1,9 +1,18 @@
+from gitfourchette import colors
 from gitfourchette.diffview.diffdocument import SpecialDiffError
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import stockIcon, escape
 
 IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
+
+HTML_HEADER = f"""\
+<html>
+<style>
+del {{ color: {colors.red.name()}; }}
+add {{ color: {colors.olive.name()}; }}
+</style>
+"""
 
 
 class SpecialDiffView(QTextBrowser):
@@ -25,6 +34,7 @@ class SpecialDiffView(QTextBrowser):
         document.addResource(IMAGE_RESOURCE_TYPE, QUrl("icon"), pixmap)
 
         markup = (
+            f"{HTML_HEADER}"
             "<table width='100%'>"
             "<tr>"
             f"<td width='{pixmap.width()}px'><img src='icon'/></td>"
@@ -54,20 +64,20 @@ class SpecialDiffView(QTextBrowser):
         textB = self.tr("New:") + " " + self.tr("{0}&times;{1} pixels, {2}").format(imageB.width(), imageB.height(), humanSizeB)
 
         if delta.old_file.id == NULL_OID:
-            header = f"<span class='add'>{textB}</span>"
+            header = f"<add>{textB}</add>"
             image = imageB
         elif delta.new_file.id == NULL_OID:
-            header = f"<span class='del'>{textA} " + self.tr("(<b>deleted file</b> displayed below)") + "</span>"
+            header = f"<del>{textA} " + self.tr("(<b>deleted file</b> displayed below)") + "</del>"
             image = imageA
         else:
-            header = f"<span class='del'>{textA}</span><br><span class='add'>{textB} " + self.tr("(<b>new file</b> displayed below)") + "</span>"
+            header = f"<del>{textA}</del><br><add>{textB} " + self.tr("(<b>new file</b> displayed below)") + "</add>"
             image = imageB
 
         image.setDevicePixelRatio(self.devicePixelRatio())
         document.addResource(IMAGE_RESOURCE_TYPE, QUrl("image"), image)
 
         document.setHtml(
-            "<style>.add{color: green;} .del{color: red;}</style>"
+            f"{HTML_HEADER}"
             f"<p>{header}</p>"
             "<p style='text-align: center'><img src='image' /></p>")
 

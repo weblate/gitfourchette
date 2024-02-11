@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 
 from gitfourchette import settings
-from gitfourchette.nav import NavLocator
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -59,6 +59,8 @@ class SpecialDiffError(Exception):
 
     @staticmethod
     def noChange(delta: DiffDelta):
+        from gitfourchette.tasks import AbsorbSubmodule
+
         message = translate("Diff", "File contents didn’t change.")
         details = []
         longform = []
@@ -84,7 +86,7 @@ class SpecialDiffError(Exception):
                 longform.append(f"<center><p><a href='{openLink}'>{prompt1}</a></p></center>")
 
                 prompt = translate("Diff", "Absorb {0} as submodule").format(bquo(treeName))
-                taskLink = makeInternalLink("exec", "AbsorbSubmodule", path=treePath)
+                taskLink = AbsorbSubmodule.makeInternalLink(path=treePath)
                 longform.append(f"<center><p><a href='{taskLink}'>{prompt}</a></p></center>")
             elif delta.status in [DeltaStatus.ADDED, DeltaStatus.UNTRACKED]:
                 message = translate("Diff", "New empty file.")
@@ -128,31 +130,28 @@ class SpecialDiffError(Exception):
                 f"{oldHumanSize} &rarr; {newHumanSize}")
 
     @staticmethod
-    def submoduleDiff(repo: Repo, submodule: Submodule, patch: Patch):
-        def parseSubprojectCommit(match: re.Match):
-            hashText = ""
-            suffix = ""
-            dirty = False
+    def submoduleDiff(repo: Repo, submodule: Submodule, patch: Patch, locator: NavLocator):
+        from gitfourchette.tasks import DiscardSubmoduleChanges
 
+        def parseSubprojectCommit(match: re.Match):
+            dirty = False
             if not match:
-                suffix = translate("Diff", "(none)", "no commit")
+                hashText = translate("Diff", "(none)", "no commit")
             else:
                 hashText = match.group(1)
                 if hashText.endswith("-dirty"):
                     hashText = hashText.removesuffix("-dirty")
-                    suffix = translate("Diff", "(with uncommitted changes)")
                     dirty = True
-
-            return hashText, suffix, dirty
+            return hashText, dirty
 
         shortName = os.path.basename(submodule.name)
-        localPath = os.path.join(repo.workdir, submodule.path)
+        localPath = repo.in_workdir(submodule.path)
         url1 = QUrl.fromLocalFile(localPath)
 
         oldMatch = re.search(r"^-Subproject commit (.+)$", patch.text, re.MULTILINE)
         newMatch = re.search(r"^\+Subproject commit (.+)$", patch.text, re.MULTILINE)
-        oldHash, oldSuffix, _ = parseSubprojectCommit(oldMatch)
-        newHash, newSuffix, newDirty = parseSubprojectCommit(newMatch)
+        oldHash, _ = parseSubprojectCommit(oldMatch)
+        newHash, newDirty = parseSubprojectCommit(newMatch)
 
         try:
             oid = Oid(hex=oldHash)
@@ -170,20 +169,49 @@ class SpecialDiffError(Exception):
         except ValueError:
             newTarget = newHash
 
-        linkText = translate("Diff", "Open submodule {0}").format(bquo(shortName))
-        oldText = translate("Diff", "Old commit:")
-        newText = translate("Diff", "New commit:")
+        text3 = []
+        if oldHash != newHash:
+            with RepoContext(localPath) as subRepo:
+                message1 = ""
+                message2 = ""
+                with suppress(LookupError, ValueError, GitError):
+                    message1 = subRepo[Oid(hex=oldHash)].peel(Commit).message
+                    message1 = messageSummary(message1)[0]
+                    message1 = elide(message1, Qt.TextElideMode.ElideRight, 25)
+                    message1 = hquo(message1)
+                with suppress(LookupError, ValueError, GitError):
+                    message2 = subRepo[Oid(hex=newHash)].peel(Commit).message
+                    message2 = messageSummary(message2)[0]
+                    message2 = elide(message2, Qt.TextElideMode.ElideRight, 25)
+                    message2 = hquo(message2)
 
-        text1 = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
-        text2 = f"<a href='{url1.toString()}'>{linkText}</a>"
-        text3 = ("<table>"
-                 f"<tr><td>{oldText} </td><td><code>{oldTarget}</code> {oldSuffix}</td></tr>"
-                 f"<tr><td>{newText} </td><td><code>{newTarget}</code> {newSuffix}</td></tr>"
-                 "</table>")
+            oldText = translate("Diff", "Old:")
+            newText = translate("Diff", "New:")
+            table = ("<table>"
+                     f"<tr><td><del><b>{oldText}</b></del> </td><td><code>{oldTarget} </code> {message1}</td></tr>"
+                     f"<tr><td><add><b>{newText}</b></add> </td><td><code>{newTarget} </code> {message2}</td></tr>"
+                     "</table>")
+
+            if locator.context == NavContext.UNSTAGED:
+                intro = translate("Diff", "<b>HEAD</b> was moved to another commit &ndash; you can stage this update:")
+            else:
+                intro = translate("Diff", "<b>HEAD</b> was moved to another commit:")
+            text3.append(f"<p>{intro}<p>{table}</p></p>")
 
         if newDirty:
-            warning = translate("Diff", "You won’t be able to stage this update "
-                                        "as long as the submodule contains uncommitted changes.")
-            text3 += f"<p>\u26a0 <strong>{warning}</strong></p>"
+            url2 = DiscardSubmoduleChanges.makeInternalLink(path=submodule.name)
+            if oldHash != newHash:
+                lead = translate("Diff", "In addition, there are <b>uncommitted changes</b> in the submodule.")
+            else:
+                lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
+            callToAction = linkify(translate("Diff", "[Open] the submodule to commit the changes, or [discard] them."),
+                                   url1, url2)
+            text3.append(f"<p>{lead}<br>{callToAction}</p>")
+
+        linkText = translate("Diff", "Open submodule {0}").format(bquo(shortName))
+
+        text1 = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
+        text2 = linkify(linkText, url1)
+        text3 = ulList(text3, -1)
 
         return SpecialDiffError(message=text1, details=text2, longform=text3)

@@ -44,7 +44,7 @@ from .qtutils import (
     lerp,
 )
 from .textutils import (
-    escape, escamp, paragraphs, messageSummary, elide, ulList,
+    escape, escamp, paragraphs, messageSummary, elide, ulList, linkify,
     clipboardStatusMessage,
     hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe
 )

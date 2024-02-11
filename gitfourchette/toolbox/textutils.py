@@ -137,14 +137,14 @@ def ulList(items: Iterable[str], limit: int = 10):
     text = "<ul>"
 
     for item in items:
-        if n < limit:
+        if limit < 0 or n < limit:
             text += f"\n<li>{item}</li>"
         n += 1
 
     if n == 0:
         return ""
 
-    if n > limit:
+    if 0 <= limit < n:
         unlisted = n - limit
         more = translate("Global", "(+ %n more)", "", unlisted)
         text += f"\n<li><i>{more}</i></li>"
@@ -152,3 +152,18 @@ def ulList(items: Iterable[str], limit: int = 10):
     text += "\n</ul>"
     return text
 
+
+def linkify(text, *hrefs: str | QUrl):
+    hrefs = [h.toString() if isinstance(h, QUrl) else h for h in hrefs]
+
+    assert all('"' not in href for href in hrefs)
+
+    if "[" not in text:
+        assert len(hrefs) == 1
+        return f"<a href=\"{hrefs[0]}\">{text}</a>"
+
+    for href in hrefs:
+        assert "[" in text
+        text = text.replace("[", f"<a href=\"{href}\">", 1).replace("]", "</a>", 1)
+
+    return text

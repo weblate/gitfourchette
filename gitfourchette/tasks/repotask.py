@@ -181,7 +181,6 @@ class RepoTask(QObject):
     def isRootTask(self) -> bool:
         return self.rootTask is self
 
-
     def parentWidget(self) -> QWidget:
         p = self.parent()
         while p:
@@ -209,6 +208,10 @@ class RepoTask(QObject):
         Return true if this task is allowed to take precedence over the given running task.
         """
         return False
+
+    @classmethod
+    def makeInternalLink(cls, **kwargs):
+        return makeInternalLink("exec", urlPath=cls.__name__, urlFragment="", **kwargs)
 
     def isCritical(self) -> bool:
         """

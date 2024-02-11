@@ -86,7 +86,10 @@ class DiscardSubmoduleChanges(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
 
-    def flow(self, paths: list[str]):
+    def flow(self, paths: list[str] = None, path: str = ""):
+        if not paths:
+            paths = [path]
+
         resetTo = []
         for path in paths:
             submo = self.repo.submodules[path]

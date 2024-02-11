@@ -295,7 +295,7 @@ class LoadPatch(RepoTask):
               ):
             submodule = self.repo.submodules[patch.delta.new_file.path]
         if submodule:
-            return SpecialDiffError.submoduleDiff(self.repo, submodule, patch)
+            return SpecialDiffError.submoduleDiff(self.repo, submodule, patch, locator)
 
         try:
             diffModel = DiffDocument.fromPatch(patch, locator)
