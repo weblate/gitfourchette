@@ -68,6 +68,8 @@ class PrefsDialog(QDialog):
             skipKeys.add("autoHideMenuBar")
         if not FREEDESKTOP:
             skipKeys.add("debug_forceQtApi")
+        if not QSoundEffect:
+            skipKeys.add("debug_taskClicks")
 
         self.setObjectName("PrefsDialog")
 

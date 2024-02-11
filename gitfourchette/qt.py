@@ -156,6 +156,15 @@ if FREEDESKTOP:
             raise ImportError("QtDBus")
         HAS_QTDBUS = True
 
+QSoundEffect = None
+with _suppress(ImportError):
+    if PYQT6:
+        from PyQt6.QtMultimedia import QSoundEffect
+    elif PYQT5:
+        from PyQt5.QtMultimedia import QSoundEffect
+    elif PYSIDE6:
+        from PySide6.QtMultimedia import QSoundEffect
+
 # -----------------------------------------------------------------------------
 # Exclude some known bad PySide6 versions
 

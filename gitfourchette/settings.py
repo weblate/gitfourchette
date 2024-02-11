@@ -192,6 +192,7 @@ class Prefs(PrefsFile):
     debug_hideStashJunkParents  : bool          = True
     debug_autoRefresh           : bool          = True
     debug_modalSidebar          : bool          = False
+    debug_taskClicks            : bool          = False
     debug_verbosity             : LoggingLevel  = LoggingLevel.WARNING
     debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
 

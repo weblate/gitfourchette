@@ -41,6 +41,13 @@ DiffStackPage = Literal["text", "special", "conflict"]
 
 FILEHEADER_HEIGHT = 20
 
+feedbackSounds = []
+if QSoundEffect:
+    for i in range(2):
+        snap = QSoundEffect()
+        snap.setSource(QUrl.fromLocalFile(f"assets:snap{i}.wav"))
+        feedbackSounds.append(snap)
+
 
 class RepoWidget(QStackedWidget):
     nameChange = Signal()
@@ -103,6 +110,7 @@ class RepoWidget(QStackedWidget):
         self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
         self.repoTaskRunner.progress.connect(self.onRepoTaskProgress)
         self.repoTaskRunner.repoGone.connect(self.onRepoGone)
+        self.repoTaskRunner.ready.connect(self.onRepoTaskReady)
 
         self.state = None
         self.pendingPath = ""
@@ -540,6 +548,9 @@ class RepoWidget(QStackedWidget):
 
     def runTask(self, taskClass: Type[RepoTask], *args, **kwargs) -> RepoTask:
         assert issubclass(taskClass, RepoTask)
+
+        if settings.prefs.debug_taskClicks and feedbackSounds:
+            feedbackSounds[0].play()
 
         # Initialize the task
         task = taskClass(self.repoTaskRunner)
@@ -1095,6 +1106,10 @@ class RepoWidget(QStackedWidget):
             self.setCursor(Qt.CursorShape.ArrowCursor)
         elif not self.busyCursorDelayer.isActive():
             self.busyCursorDelayer.start()
+
+    def onRepoTaskReady(self):
+        if settings.prefs.debug_taskClicks and feedbackSounds:
+            feedbackSounds[1].play()
 
     def onRepoGone(self):
         message = self.tr("Repository folder went missing:") + "\n" + escamp(self.pendingPath)
