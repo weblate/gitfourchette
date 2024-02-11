@@ -1301,24 +1301,29 @@ class Repo(_VanillaRepository):
         Equivalent to `git rev-parse --show-superproject-working-tree`.
         """
 
-        repo_path = self.path  # e.g. "/home/user/superproj/.git/modules/src/extern/subproj/"
-        git_modules_pos = repo_path.rfind("/.git/")
+        # Try to detect a "modern" submodule setup first
+        # (where the submodule's git dir is absorbed in the superproject's .git/modules)
+        gitpath = self.path  # e.g. "/home/user/superproj/.git/modules/src/extern/subproj/"
+        git_modules_pos = gitpath.rfind("/.git/modules/")
+        if git_modules_pos >= 0:
+            outer_wd = gitpath[:git_modules_pos]  # e.g. "/home/user/superproj"
+            with _suppress(KeyError):
+                tentative_wd = self.config['core.worktree']
+                if not _os.path.isabs(tentative_wd):
+                    tentative_wd = gitpath + "/" + tentative_wd
+                tentative_wd = _os.path.normpath(tentative_wd)
+                actual_wd = _os.path.normpath(self.workdir)
+                if actual_wd == tentative_wd:
+                    return outer_wd
 
-        if git_modules_pos < 0:
-            return ""
-
-        outer_wd = repo_path[:git_modules_pos]  # e.g. "/home/user/superproj"
-
-        try:
-            tentative_wd = self.config['core.worktree']
-            if not _os.path.isabs(tentative_wd):
-                tentative_wd = repo_path + "/" + tentative_wd
-            tentative_wd = _os.path.normpath(tentative_wd)
-            actual_wd = _os.path.normpath(self.workdir)
-            if actual_wd == tentative_wd:
-                return outer_wd
-        except KeyError:
-            pass
+        # Try to detect "legacy" submodule that manages its own .git dir
+        norm_wd = _os.path.normpath(self.workdir)
+        outer_seed = _os.path.dirname(norm_wd)
+        with _suppress(GitError), RepoContext(outer_seed) as outer_repo:
+            assert outer_repo.workdir.endswith("/")
+            likely_submo_key = norm_wd.removeprefix(outer_repo.workdir)
+            if likely_submo_key in outer_repo.listall_submodules_fast():
+                return _os.path.normpath(outer_repo.workdir)
 
         return ""
 
