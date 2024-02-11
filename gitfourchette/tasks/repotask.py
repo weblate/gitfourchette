@@ -570,7 +570,7 @@ class RepoTaskRunner(QObject):
         self._iterateFlow(task, FlowControlToken())
 
     def _iterateFlow(self, task: RepoTask, nextResult: FlowControlToken | BaseException):
-        while nextResult:
+        while nextResult is not None:
             result = nextResult
             nextResult = None
 
@@ -616,6 +616,8 @@ class RepoTaskRunner(QObject):
                 else:
                     # Get next continuation token on this thread then loop to beginning of _iterateFlow
                     nextResult = self._getNextToken(flow)
+
+                    assert nextResult is not None, "Do not yield None from a RepoTask coroutine"
 
             elif isinstance(result, BaseException):
                 exception: BaseException = result
