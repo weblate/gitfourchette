@@ -262,14 +262,19 @@ class History(PrefsFile):
         if superprojectPath:
             repo['superproject'] = superprojectPath
         else:
-            repo.pop('superprojectPath', None)
+            repo.pop('superproject', None)
 
     def getRepoTabName(self, path: str):
         name = self.getRepoNickname(path)
 
+        seen = {path}
         while path:
             path = self.getRepoSuperproject(path)
             if path:
+                if path in seen:
+                    logger.warning(f"Circular superproject in {self._filename}! {path}")
+                    return name
+                seen.add(path)
                 superprojectName = self.getRepoNickname(path)
                 name = f"{superprojectName}: {name}"
 
