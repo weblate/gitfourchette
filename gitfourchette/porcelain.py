@@ -1034,10 +1034,13 @@ class Repo(_VanillaRepository):
     def stage_files(self, patches: list[Patch]):
         index = self.index
         for patch in patches:
+            path = patch.delta.new_file.path
+            if patch.delta.new_file.mode == FileMode.TREE and path.endswith("/"):
+                path = path.removesuffix("/")
             if patch.delta.status == DeltaStatus.DELETED:
-                index.remove(patch.delta.new_file.path)
+                index.remove(path)
             else:
-                index.add(patch.delta.new_file.path)
+                index.add(path)
         index.write()
 
     def restore_files_from_head(self, paths: list[str], restore_all=False):
