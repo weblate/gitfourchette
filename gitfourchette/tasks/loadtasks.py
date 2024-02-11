@@ -40,8 +40,7 @@ class PrimeRepo(RepoTask):
         rw = self.rw
         assert isinstance(rw, RepoWidget)
 
-        progressWidget = OpenRepoProgress(rw)
-        rw.setPlaceholderWidget(progressWidget)
+        progressWidget = rw.setPlaceholderWidgetOpenRepoProgress()
 
         self._wantAbort = False
         self.progressRange.connect(progressWidget.ui.progressBar.setRange)
@@ -49,7 +48,6 @@ class PrimeRepo(RepoTask):
         self.progressMessage.connect(progressWidget.ui.label.setText)
         self.progressAbortable.connect(progressWidget.ui.abortButton.setEnabled)
         progressWidget.ui.abortButton.clicked.connect(self._onAbortButtonClicked)
-        progressWidget.ui.abortButton.setEnabled(False)
 
         # Create the repo
         repo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
@@ -57,8 +55,6 @@ class PrimeRepo(RepoTask):
 
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
-
-        self.progressMessage.emit(self.tr("Opening {0}...").format(tquo(settings.history.getRepoNickname(path))))
 
         # Create repo state
         state = RepoState(rw, repo)

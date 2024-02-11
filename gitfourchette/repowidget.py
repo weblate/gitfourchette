@@ -101,7 +101,7 @@ class RepoWidget(QStackedWidget):
         else:
             return self.pendingPath
 
-    def __init__(self, parent: QWidget, lazy=False):
+    def __init__(self, parent: QWidget, pendingWorkdir: str, lazy=False):
         super().__init__(parent)
         self.setObjectName("RepoWidget")
 
@@ -113,7 +113,7 @@ class RepoWidget(QStackedWidget):
         self.repoTaskRunner.ready.connect(self.onRepoTaskReady)
 
         self.state = None
-        self.pendingPath = ""
+        self.pendingPath = os.path.normpath(pendingWorkdir)
         self.pendingLocator = NavLocator()
         self.allowAutoLoad = True
 
@@ -129,8 +129,16 @@ class RepoWidget(QStackedWidget):
         self.sharedSplitterSizes = {}
 
         self.uiReady = False
+        self.mainWidgetPlaceholder = None
+
         if not lazy:
             self.setupUi()
+        else:
+            # To save some time on boot, we'll call setupUi later if this isn't the foreground RepoWidget.
+            # Create placeholder for the main UI until setupUi is called.
+            # This is because remove/setPlaceholderWidget expects QStackedLayout slot 0 to be taken by the main UI.
+            self.mainWidgetPlaceholder = QWidget(self)
+            self.addWidget(self.mainWidgetPlaceholder)
 
     def setupUi(self):
         if self.uiReady:
@@ -138,6 +146,12 @@ class RepoWidget(QStackedWidget):
 
         mainLayout = self.layout()
         assert isinstance(mainLayout, QStackedLayout)
+
+        if not mainLayout.isEmpty():
+            assert mainLayout.widget(0) is self.mainWidgetPlaceholder
+            mainLayout.removeWidget(self.mainWidgetPlaceholder)
+            self.mainWidgetPlaceholder.deleteLater()
+            self.mainWidgetPlaceholder = None
 
         # ----------------------------------
         # Splitters
@@ -151,7 +165,7 @@ class RepoWidget(QStackedWidget):
         splitterC = QSplitter(Qt.Orientation.Horizontal, self)
         splitterC.setObjectName("Split_FL_Diff")
 
-        mainLayout.addWidget(splitterA)
+        mainLayout.insertWidget(0, splitterA)
 
         splitters: list[QSplitter] = self.findChildren(QSplitter)
         assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
@@ -243,8 +257,12 @@ class RepoWidget(QStackedWidget):
         self.unifiedCommitButton.clicked.connect(lambda: tasks.NewCommit.invoke(self))
 
         self.restoreSplitterStates()
-        self.uiReady = True
 
+        # ----------------------------------
+        # Prepare placeholder "opening repository" widget
+
+        self.setPlaceholderWidgetOpenRepoProgress()
+        
         # ----------------------------------
         # Styling
 
@@ -259,6 +277,11 @@ class RepoWidget(QStackedWidget):
         for h in (self.diffHeader, self.committedHeader, self.dirtyHeader, self.stagedHeader,
                   self.stageButton, self.unstageButton):
             tweakWidgetFont(h, 90)
+
+        # ----------------------------------
+        # We're ready
+
+        self.uiReady = True
 
     # -------------------------------------------------------------------------
     # Initial layout
@@ -622,11 +645,20 @@ class RepoWidget(QStackedWidget):
         assert self.mainStack.count() <= 1
 
     def setPlaceholderWidget(self, w):
-        self.removePlaceholderWidget()
-        self.mainStack.addWidget(w)
+        if w is not self.placeholderWidget:
+            self.removePlaceholderWidget()
+            self.mainStack.addWidget(w)
         self.mainStack.setCurrentWidget(w)
         assert self.mainStack.currentIndex() != 0
         assert self.mainStack.count() <= 2
+
+    def setPlaceholderWidgetOpenRepoProgress(self):
+        pw = self.placeholderWidget
+        if type(pw) is not OpenRepoProgress:
+            name = self.getTitle()
+            pw = OpenRepoProgress(self, name)
+        self.setPlaceholderWidget(pw)
+        return pw
 
     @property
     def placeholderWidget(self):
@@ -813,9 +845,6 @@ class RepoWidget(QStackedWidget):
         self.diffView.clear()
         self.diffHeader.setText(" ")
 
-    def setPendingWorkdir(self, path):
-        self.pendingPath = os.path.normpath(path)
-
     def renameRepo(self):
         def onAccept(newName):
             settings.history.setRepoNickname(self.workdir, newName)
@@ -968,6 +997,8 @@ class RepoWidget(QStackedWidget):
 
     def onRegainForeground(self):
         """Refresh the repo as soon as possible."""
+
+        self.restoreSplitterStates()
 
         if (not self.isLoaded) or self.isPriming:
             return

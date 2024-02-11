@@ -15,6 +15,7 @@ from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.forms.aboutdialog import showAboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
+from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.welcomewidget import WelcomeWidget
@@ -451,11 +452,21 @@ class MainWindow(QMainWindow):
         # Get out of welcome widget
         self.welcomeStack.setCurrentWidget(self.tabs)
 
-        if not w.uiReady:
+        # Refresh window title before loading
+        w.refreshWindowChrome()
+
+        if w.uiReady:
+            # Refreshing the repo may lock up the UI for a split second.
+            # Respond to tab change now for snappiness.
+            GFApplication.instance().processEventsNoInput()
+        else:
+            # setupUi may take a sec, so show placeholder widget now.
+            w.setPlaceholderWidgetOpenRepoProgress()
+            GFApplication.instance().processEventsNoInput()
+            # And prime the UI
             w.setupUi()
 
-        w.refreshWindowChrome()  # Refresh window title before loading
-        w.restoreSplitterStates()
+        assert w.uiReady
 
         if w.isLoaded:
             # Trigger repo refresh.
@@ -557,8 +568,7 @@ class MainWindow(QMainWindow):
                     return existingRW
 
         # Create a RepoWidget
-        rw = RepoWidget(self, lazy=not foreground)
-        rw.setPendingWorkdir(workdir)
+        rw = RepoWidget(self, workdir, lazy=not foreground)
         rw.setSharedSplitterSizes(self.sharedSplitterSizes)
 
         # Hook RepoWidget signals

@@ -288,3 +288,9 @@ class GFApplication(QApplication):
         from gitfourchette import settings
 
         logging.root.setLevel(settings.prefs.debug_verbosity.value)
+
+    # -------------------------------------------------------------------------
+
+    def processEventsNoInput(self):
+        self.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
+
