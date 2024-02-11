@@ -20,11 +20,17 @@ class DirtyFiles(FileList):
         n = len(patches)
 
         statusSet = set(patch.delta.status for patch in patches)
+        modeSet = set(patch.delta.new_file.mode for patch in patches)
 
-        if DeltaStatus.CONFLICTED not in statusSet:
+        anyConflicts = DeltaStatus.CONFLICTED in statusSet
+        anySubmodules = FileMode.COMMIT in modeSet
+        onlyConflicts = anyConflicts and len(statusSet) == 1
+        onlySubmodules = anySubmodules and len(modeSet) == 1
+
+        if not anyConflicts and not anySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("&Stage %n File(s)", "", n),
+                    self.tr("&Stage %n Files", "", n),
                     self.stage,
                     icon="list-add",  # QStyle.StandardPixmap.SP_ArrowDown,
                     shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
@@ -59,10 +65,11 @@ class DirtyFiles(FileList):
                     self.savePatchAs
                 ),
             ]
-        elif len(statusSet) == 1:  # Only conflicted files
+
+        elif onlyConflicts:
             actions += [
                 ActionDef(
-                    self.tr("%n Merge Conflicts", "singular form should simply say 'Merge Conflict'", n),
+                    self.tr("%n Merge Conflicts", "singular form should simply say 'Merge Conflict' without the %n", n),
                     isSection=True,
                 ),
 
@@ -81,44 +88,57 @@ class DirtyFiles(FileList):
                 #     self.mergeInTool,
                 # )
             ]
-        else:
-            # Conflicted + non-conflicted files selected
+
+        elif onlySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("Mixed conflicts"),
-                    isSection=True,
+                    self.tr("%n Submodules", "singular form should simply say 'Submodule' without the %n", n),
+                    isSection=True
                 ),
                 ActionDef(
-                    self.tr("Selected files must be reviewed individually."),
-                    enabled=False,
+                    self.tr("Stage Updated HEAD in %n Submodules", "singular form should simply say 'Stage HEAD Change in Submodule' without the %n", n),
+                    self.stage,
                 ),
+                ActionDef(
+                    self.tr("Discard Changes in %n Submodules", "singular form should simply say 'Discard Changes in Submodule' without the %n", n),
+                    self.discardSubmoduleChanges,
+                ),
+            ]
+
+        else:
+            # Conflicted + non-conflicted files selected
+            # or Submodules + non-submodules selected
+            actions += [
+                # ActionDef(self.tr("Mixed conflicts"), isSection=True),
+                ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False),
             ]
 
         if actions:
             actions.append(ActionDef.SEPARATOR)
 
+        if not onlySubmodules:
+            actions += [
+                ActionDef(
+                    self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
+                    self.openWorkdirFile,
+                    icon=QStyle.StandardPixmap.SP_FileIcon,
+                ),
+                ActionDef(
+                    self.tr("Edit HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),
+                    self.openHeadRevision,
+                ),
+                ActionDef.SEPARATOR,
+            ]
+
         actions += [
             ActionDef(
-                self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
-                self.openWorkdirFile,
-                icon=QStyle.StandardPixmap.SP_FileIcon,
-            ),
-
-            ActionDef(
-                self.tr("Edit HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
-                self.openHeadRevision,
-            ),
-
-            ActionDef.SEPARATOR,
-
-            ActionDef(
-                self.tr("Open &Folder(s)", "", n),
+                self.tr("Open &Folders", "", n),
                 self.showInFolder,
                 icon=QStyle.StandardPixmap.SP_DirIcon,
             ),
 
             ActionDef(
-                self.tr("&Copy Path(s)", "", n),
+                self.tr("&Copy Paths", "", n),
                 self.copyPaths,
                 shortcuts=GlobalShortcuts.copy,
             ),
@@ -148,6 +168,11 @@ class DirtyFiles(FileList):
     def discardModeChanges(self):
         patches = list(self.selectedPatches())
         DiscardModeChanges.invoke(self, patches)
+
+    def discardSubmoduleChanges(self):
+        patches = list(self.selectedPatches())
+        paths = [p.delta.new_file.path for p in patches]
+        DiscardSubmoduleChanges.invoke(self, paths)
 
     def _mergeKeep(self, keepOurs: bool):
         patches = list(self.selectedPatches())

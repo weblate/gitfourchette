@@ -1040,23 +1040,23 @@ class Repo(_VanillaRepository):
                 index.add(patch.delta.new_file.path)
         index.write()
 
-    def restore_files_from_head(self, paths: list[str]):
+    def restore_files_from_head(self, paths: list[str], restore_all=False):
         """
         Reset the given files to their state at the HEAD commit.
         Any staged, unstaged, or untracked changes in those files will be lost.
         """
-        if not paths:
-            raise ValueError("passing an empty list to checkout_tree would reset all files")
+        assert bool(paths) ^ restore_all, "if you want to reset all files, pass empty path list and restore_all=True"
         assert not self.head_is_unborn
+
         self.checkout_tree(self.head_tree, paths=paths, strategy=_RESTORE_STRATEGY)
 
-    def restore_files_from_index(self, paths: list[str]):
+    def restore_files_from_index(self, paths: list[str], restore_all=False):
         """
         Discard unstaged changes in the given files.
         Staged changes will remain.
         """
-        if not paths:
-            raise ValueError("passing an empty list to checkout_index would reset all files")
+        assert bool(paths) ^ restore_all, "if you want to reset all files, pass empty path list and restore_all=True"
+
         self.refresh_index()  # in case an external program modified the staging area
         self.checkout_index(paths=paths, strategy=_RESTORE_STRATEGY)
 

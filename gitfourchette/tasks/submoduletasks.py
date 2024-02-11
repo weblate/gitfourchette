@@ -77,3 +77,40 @@ class AbsorbSubmodule(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         subrepo = self.repo.add_inner_repo_as_submodule(str(subWD.relative_to(thisWD)), remoteUrl)
+
+
+class DiscardSubmoduleChanges(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts
+
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
+
+    def flow(self, paths: list[str]):
+        resetTo = []
+        for path in paths:
+            submo = self.repo.submodules[path]
+            resetTo.append(submo.head_id)
+
+        if len(paths) == 1:
+            text = paragraphs(
+                self.tr("Do you want to discard ALL changes in submodule {0}?"),
+                self.tr("Any uncommitted changes will be cleared and the submodule’s HEAD will be reset to {1}."),
+            ).format(bquo(paths[0]), bquo(shortHash(resetTo[0])))
+            detailText = ""
+        else:
+            text = paragraphs(
+                self.tr("Do you want to discard ALL changes in %n submodules?", "", len(paths)),
+                self.tr("Any uncommitted changes will be cleared and the submodules’ HEADs will be reset."),
+            )
+            detailText = self.tr("The following submodules will be reset:") + ulList(paths)
+
+        yield from self.flowConfirm(text=text, detailText=detailText, verb=self.tr("Discard"))
+        yield from self.flowEnterWorkerThread()
+
+        for path, head in zip(paths, resetTo):
+            with RepoContext(self.repo.in_workdir(path)) as subRepo:
+                # Reset HEAD to the target commit
+                subRepo.reset(head, ResetMode.HARD)
+                # Nuke uncommitted files as well
+                subRepo.checkout_head(strategy=CheckoutStrategy.REMOVE_UNTRACKED | CheckoutStrategy.FORCE | CheckoutStrategy.RECREATE_MISSING)
