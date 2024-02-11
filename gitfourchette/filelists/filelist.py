@@ -56,8 +56,11 @@ class FileListDelegate(QStyledItemDelegate):
         textRect.setRight(textRect.right() - 2)
 
         # Draw text
+        font: QFont = index.data(Qt.ItemDataRole.FontRole)
+        if font:
+            painter.setFont(font)
         fullText = index.data(Qt.ItemDataRole.DisplayRole)
-        text = option.fontMetrics.elidedText(fullText, option.textElideMode, textRect.width())
+        text = painter.fontMetrics().elidedText(fullText, option.textElideMode, textRect.width())
         painter.drawText(textRect, option.displayAlignment, text)
 
         # Highlight search term
