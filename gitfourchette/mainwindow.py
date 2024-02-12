@@ -1166,7 +1166,7 @@ class MainWindow(QMainWindow):
             "graph_chronologicalOrder",  # need to reload entire commit sequence
             "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
             "diff_showStrayCRs",  # GF isn't able to re-render a single diff yet
-            "diff_colorblindFriendlyColors",  # ditto
+            "diff_colorblind",  # ditto
             "diff_largeFileThresholdKB",  # ditto
             "diff_imageFileThresholdKB",  # ditto
         ]

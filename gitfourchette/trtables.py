@@ -206,7 +206,11 @@ class TrTables:
             "diff_imageFileThresholdKB": translate("Prefs", "Load images up to # KB"),
             "diff_wordWrap": translate("Prefs", "Word wrap"),
             "diff_showStrayCRs": translate("Prefs", "Highlight alien line endings (CRLF)"),
-            "diff_colorblindFriendlyColors": translate("Prefs", "Colorblind-friendly color scheme"),
+            "diff_colorblind": translate("Prefs", "Colorblind-friendly color scheme"),
+            "diff_colorblind_help": "<html>" + translate(
+                "Prefs",
+                "Tick this if you have trouble distinguishing red and green. "
+                "The diff will use a yellow and blue color scheme instead."),
 
             "tabs_closeButton": translate("Prefs", "Show tab close button"),
             "tabs_expanding": translate("Prefs", "Tab bar takes all available width"),
@@ -214,8 +218,8 @@ class TrTables:
             "tabs_doubleClickOpensFolder": translate("Prefs", "Double-click a tab to open repo folder"),
 
             "graph_chronologicalOrder": translate("Prefs", "Sort commits"),
-            "graph_chronologicalOrder_true": translate("Prefs", "Chronologically – Most recent commits always on top"),
-            "graph_chronologicalOrder_false": translate("Prefs", "Topologically – Neater branches in graph"),
+            "graph_chronologicalOrder_true": translate("Prefs", "Chronologically"),
+            "graph_chronologicalOrder_false": translate("Prefs", "Topologically"),
             "graph_chronologicalOrder_help": translate(
                 "Prefs",
                 "<p><b>Chronological mode</b> lets you stay on top of the latest activity in the repository. "
@@ -227,7 +231,17 @@ class TrTables:
 
             "graph_rowHeight": translate("Prefs", "Row spacing"),
             "graph_flattenLanes": translate("Prefs", "Squeeze branch lanes in graph"),
-            "graph_authorDiffAsterisk": translate("Prefs", "Mark name/date differences between author && committer (*)"),
+            "graph_authorDiffAsterisk": translate("Prefs", "Mark author/committer signature differences"),
+            "graph_authorDiffAsterisk_help": "<html>" + translate(
+                "Prefs",
+                "<p>The commit history displays information about a commit’s <b>author</b> &ndash; "
+                "their name and the date at which they made the commit. But in some cases, a commit "
+                "might have been revised by someone else than the original author &ndash; "
+                "this person is called the <b>committer</b>.</p>"
+                "<p>If this option is ticked, an asterisk (*) will appear after the author’s name "
+                "and/or date if they differ from the committer’s for any given commit.</p>"
+                "<p>Note that you can always hover over the author’s name or date to obtain "
+                "detailed information about the author and the committer.</p>"),
 
             "trash_maxFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
             "trash_maxFileSizeKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),

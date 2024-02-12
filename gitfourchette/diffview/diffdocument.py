@@ -40,7 +40,7 @@ class LineData:
 
 class DiffStyle:
     def __init__(self):
-        colorblind = settings.prefs.diff_colorblindFriendlyColors
+        colorblind = settings.prefs.diff_colorblind
 
         if colorblind:
             delColor1 = QColor(colors.orange)

@@ -668,7 +668,7 @@ class DiffView(QPlainTextEdit):
         bottom = top + round(self.blockBoundingRect(block).height())
 
         # Draw line numbers and hunk separator lines
-        if settings.prefs.diff_colorblindFriendlyColors:
+        if settings.prefs.diff_colorblind:
             noOldPlaceholder = "+"
             noNewPlaceholder = "-"
         else:

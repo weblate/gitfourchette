@@ -174,7 +174,7 @@ class Prefs(PrefsFile):
     diff_imageFileThresholdKB   : int           = 5000
     diff_wordWrap               : bool          = False
     diff_showStrayCRs           : bool          = True
-    diff_colorblindFriendlyColors : bool        = False
+    diff_colorblind             : bool          = False
     tabs_closeButton            : bool          = True
     tabs_expanding              : bool          = True
     tabs_autoHide               : bool          = False

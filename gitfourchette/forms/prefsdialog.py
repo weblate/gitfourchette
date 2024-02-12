@@ -175,25 +175,46 @@ class PrefsDialog(QDialog):
                     control.stateChanged.connect(lambda v, k=prefKey, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
                     caption = None  # The checkbox contains its own caption
 
-            if suffix:
-                hbl = QHBoxLayout()
-                hbl.addWidget(control)
-                hbl.addWidget(QLabel(suffix))
-                control = hbl
-
             toolTip = TrTables.prefKeyNoDefault(prefKey + "_help")
+
+            extraWidgets = []
+
+            if suffix:
+                extraWidgets.append(QLabel(suffix))
+
             if toolTip:
                 toolTip = toolTip.format(app=qAppName())
                 control.setToolTip(toolTip)
 
+                hintButton = QToolButton(self)
+                hintButton.setIcon(stockIcon("hint"))
+                hintButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+                hintButton.setAutoRaise(True)
+                hintButton.setToolTip(toolTip)
+                hintButton.clicked.connect(lambda _, w=hintButton, t=toolTip: QToolTip.showText(QCursor.pos(), t, w))
+                extraWidgets.append(hintButton)
+
+            if extraWidgets:
+                hbl = QHBoxLayout()
+                hbl.addWidget(control)
+                for w in extraWidgets:
+                    hbl.addWidget(w)
+                if control.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Minimum:
+                    # Stick help button to the right edge of non-expanding widget
+                    hbl.addStretch()
+                addToForm = hbl
+            else:
+                addToForm = control
+
             if caption:
+                caption += self.tr(":", "caption suffix in prefs dialog")
                 captionLabel = QLabel(caption)
                 if toolTip:
                     captionLabel.setToolTip(toolTip)
-                    captionLabel.setCursor(Qt.CursorShape.WhatsThisCursor)
-                form.addRow(captionLabel, control)
+                    # captionLabel.setCursor(Qt.CursorShape.WhatsThisCursor)
+                form.addRow(captionLabel, addToForm)
             else:
-                form.addRow(control)
+                form.addRow(addToForm)
 
             if focusOn == prefKey:
                 tabWidget.setCurrentWidget(formContainer)
