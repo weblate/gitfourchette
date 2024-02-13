@@ -119,6 +119,12 @@ def tquoe(text):
     return text
 
 
+def btag(text):
+    text = escape(text)
+    text = f"<b>{text}</b>"
+    return text
+
+
 def elide(text: str, mode: Qt.TextElideMode = Qt.TextElideMode.ElideMiddle, ems: int = 20):
     maxWidth = _generalFontMetrics.horizontalAdvance(ems * 'M')
     return _generalFontMetrics.elidedText(text, mode, maxWidth)

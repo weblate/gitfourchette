@@ -46,6 +46,10 @@ class _BaseStagingTask(RepoTask):
         message += ulList(p.delta.new_file.path for p in conflicts)
         raise AbortTask(message)
 
+    def anySubmodules(self, patches: list[Patch], purpose: PatchPurpose):
+        submos = [p for p in patches if p.delta.new_file.mode == FileMode.COMMIT]
+        return submos
+
 
 class StageFiles(_BaseStagingTask):
     def flow(self, patches: list[Patch]):
@@ -74,24 +78,47 @@ class DiscardFiles(_BaseStagingTask):
 
         self.denyConflicts(patches, PatchPurpose.DISCARD)
 
+        submos = self.anySubmodules(patches, PatchPurpose.DISCARD)
+        anySubmos = bool(submos)
+        allSubmos = len(submos) == len(patches)
+        really = ""
+
         if len(patches) == 1:
             patch = patches[0]
-            path = patch.delta.new_file.path
+            bpath = bquo(patch.delta.new_file.path)
             if patch.delta.status == DeltaStatus.UNTRACKED:
-                textPara.append(self.tr("Really delete {0}?").format(bquo(path)))
-                verb = self.tr("Delete file", "Button label")
+                really = self.tr("Really delete {0}?", "delete an untracked file").format(bpath)
+                really += " " + self.tr("(This file is untracked – it’s never been committed yet.)")
+                verb = self.tr("Delete", "button label to delete an untracked file")
+            elif patch.delta.new_file.mode == FileMode.COMMIT:
+                really = self.tr("Really discard changes in submodule {0}?").format(bpath)
             else:
-                textPara.append(self.tr("Really discard changes to {0}?").format(bquo(path)))
+                really = self.tr("Really discard changes to {0}?", "to [a specific file]").format(bpath)
         else:
-            textPara.append(self.tr("Really discard changes to <b>%n files</b>?", "", len(patches)))
-        textPara.append(tr("This cannot be undone!"))
+            nFiles = btag(self.tr("%n files", "(discard changes to) %n files", len(patches) - len(submos)))
+            nSubmos = btag(self.tr("%n submodules", "(discard changes in) %n submodules", len(submos)))
+            if allSubmos:
+                really = self.tr("Really discard changes in {0}?", "in [n submodules]").format(nSubmos)
+            elif anySubmos:
+                really = self.tr("Really discard changes to {0} and in {1}?", "to [n files] and in [n submodules]").format(nFiles, nSubmos)
+            else:
+                really = self.tr("Really discard changes to {0}?", "to [n files]").format(nFiles)
 
-        yield from self.flowConfirm(
-            text=paragraphs(textPara),
-            verb=verb,
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+        textPara.append(really)
+        if anySubmos:
+            submoPostamble = self.tr("Any uncommitted changes in %n submodules will be <b>cleared</b> "
+                                     "and the submodules’ HEAD will be reset.", "", len(submos))
+            textPara.append(submoPostamble)
+
+        textPara.append(tr("This cannot be undone!"))
+        text = paragraphs(textPara)
+
+        yield from self.flowConfirm(text=text, verb=verb,
+                                    buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
 
         yield from self.flowEnterWorkerThread()
+
+        # TODO: Actually reset submodules if any!
         paths = [patch.delta.new_file.path for patch in patches]
         Trash.instance().backupPatches(self.repo.workdir, patches)
         self.repo.restore_files_from_index(paths)
