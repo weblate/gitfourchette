@@ -1370,7 +1370,7 @@ class Repo(_VanillaRepository):
         assert refname in self.references
         self.references.delete(refname)
 
-    def add_inner_repo_as_submodule(self, inner_w: str, remote_url: str, absorb_git_dirs: bool = True):
+    def add_inner_repo_as_submodule(self, inner_w: str, remote_url: str, absorb_git_dir: bool = False):
         outer_w = _Path(self.workdir)
         inner_w = _Path(outer_w, inner_w)  # normalize
 
@@ -1389,9 +1389,10 @@ class Repo(_VanillaRepository):
 
         dot_gitmodules = GitConfig(str(outer_w / ".gitmodules"))
         dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.path"] = inner_w.relative_to(outer_w)
-        dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.url"] = remote_url
+        if remote_url:
+            dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.url"] = remote_url
 
-        if absorb_git_dirs:
+        if absorb_git_dir:
             inner_g2 = _Path(self.path, "modules", inner_w.relative_to(outer_w))
             if inner_g2.exists():
                 raise FileExistsError(f"Directory already exists: {inner_g2}")
