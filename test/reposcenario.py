@@ -1,3 +1,5 @@
+import shutil
+
 from .util import *
 from gitfourchette.porcelain import *
 
@@ -26,4 +28,12 @@ def stashedChange(path):
         writeFile(F"{path}/a/a1.txt", "a1\nPENDING CHANGE\n")
         repo.stash(TEST_SIGNATURE, "helloworld")
         assert repo.status() == {}
+
+
+def submodule(path):
+    shutil.copytree(path, path + "/submo")
+    with RepoContext(path, write_index=True) as repo:
+        repo.add_inner_repo_as_submodule("submo", "", absorb_git_dir=False)
+        repo.create_commit_on_head("Add Submodule for Test Purposes")
+    return path + "/submo"
 

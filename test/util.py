@@ -136,6 +136,22 @@ def triggerMenuAction(menu: QMenu, pattern: str):
     action.trigger()
 
 
+def qteFind(qte: QTextEdit, pattern: str, plainText=False):
+    if plainText:
+        found = re.search(pattern, qte.toPlainText(), re.I | re.M)
+    else:
+        regex = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption | QRegularExpression.PatternOption.MultilineOption)
+        found = qte.find(regex)
+
+    assert found
+    return found
+
+
+def qteClickLink(qte: QTextEdit, pattern: str):
+    qteFind(qte, pattern)
+    QTest.keyPress(qte, Qt.Key.Key_Enter)
+
+
 def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     dlg: QDialog
     for dlg in parent.findChildren(QDialog):
