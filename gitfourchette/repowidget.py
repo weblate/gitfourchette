@@ -229,7 +229,7 @@ class RepoWidget(QStackedWidget):
 
         self.diffView.contextualHelp.connect(self.statusMessage)
 
-        self.specialDiffView.anchorClicked.connect(self.processInternalLink)
+        self.specialDiffView.linkActivated.connect(self.processInternalLink)
         self.graphView.linkActivated.connect(self.processInternalLink)
         self.graphView.statusMessage.connect(self.statusMessage)
 

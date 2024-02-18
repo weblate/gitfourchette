@@ -2,7 +2,7 @@ from gitfourchette import colors
 from gitfourchette.diffview.diffdocument import SpecialDiffError
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.toolbox import stockIcon, escape
+from gitfourchette.toolbox import stockIcon, escape, DocumentLinks
 
 IMAGE_RESOURCE_TYPE = QTextDocument.ResourceType.ImageResource
 
@@ -16,7 +16,23 @@ add {{ color: {colors.olive.name()}; }}
 
 
 class SpecialDiffView(QTextBrowser):
+    linkActivated = Signal(QUrl)
+
+    documentLinks: DocumentLinks | None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.documentLinks = None
+        self.anchorClicked.connect(self.onAnchorClicked)
+
+    def onAnchorClicked(self, link: QUrl):
+        if self.documentLinks is not None and self.documentLinks.processLink(link, self):
+            return
+        self.linkActivated.emit(link)
+
     def replaceDocument(self, newDocument: QTextDocument):
+        self.documentLinks = None
+
         if self.document():
             self.document().deleteLater()
 
@@ -52,6 +68,9 @@ class SpecialDiffView(QTextBrowser):
 
         document.setHtml(markup)
         self.replaceDocument(document)
+
+        assert self.documentLinks is None
+        self.documentLinks = err.links
 
     def displayImageDiff(self, delta: DiffDelta, imageA: QImage, imageB: QImage):
         document = QTextDocument(self)

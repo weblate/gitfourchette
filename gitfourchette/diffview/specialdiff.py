@@ -56,6 +56,7 @@ class SpecialDiffError(Exception):
         self.icon = icon
         self.preformatted = preformatted
         self.longform = longform
+        self.links = DocumentLinks()
 
     @staticmethod
     def noChange(delta: DiffDelta):

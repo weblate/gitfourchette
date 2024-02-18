@@ -1,3 +1,4 @@
+import base64
 import os
 from typing import Callable
 
@@ -373,3 +374,22 @@ def lerp(v1, v2, cmin, cmax, c):
     p = min(p, 1)
     v = v2*p + v1*(1-p)
     return v
+
+
+class DocumentLinks:
+    AUTHORITY = "adhoc"
+
+    def __init__(self):
+        self.callbacks = {}
+
+    def new(self, func: Callable[[QObject], None]) -> str:
+        key = base64.urlsafe_b64encode(os.urandom(16)).decode("ascii")
+        self.callbacks[key] = func
+        return makeInternalLink(self.AUTHORITY, urlPath="", urlFragment=key)
+
+    def processLink(self, url: QUrl, invoker: QObject) -> bool:
+        if url.scheme() == APP_URL_SCHEME and url.authority() == self.AUTHORITY:
+            cb = self.callbacks[url.fragment()]
+            cb(invoker)
+            return True
+        return False

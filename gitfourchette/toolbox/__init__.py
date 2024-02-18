@@ -42,6 +42,7 @@ from .qtutils import (
     MultiShortcut, makeMultiShortcut,
     CallbackAccumulator,
     lerp,
+    DocumentLinks,
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide, ulList, linkify,
