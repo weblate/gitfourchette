@@ -1,3 +1,6 @@
+import pytest
+
+from gitfourchette.nav import NavLocator
 from . import reposcenario
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
@@ -5,14 +8,20 @@ from gitfourchette.forms.newbranchdialog import NewBranchDialog
 import re
 
 
-def testNewBranch(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebar", "shortcut"])
+def testNewBranch(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    node = next(rw.sidebar.findNodesByKind(EItem.LocalBranchesHeader))
-    menu = rw.sidebar.makeNodeMenu(node)
-    findMenuAction(menu, "new branch").trigger()
+    if method == "sidebar":
+        node = next(rw.sidebar.findNodesByKind(EItem.LocalBranchesHeader))
+        menu = rw.sidebar.makeNodeMenu(node)
+        findMenuAction(menu, "new branch").trigger()
+    elif method == "shortcut":
+        qtbot.keySequence(rw, "Ctrl+B")
+    else:
+        raise NotImplementedError("unknown method")
 
     q = findQDialog(rw, "new branch")
     q.findChild(QLineEdit).setText("hellobranch")
@@ -166,7 +175,8 @@ def testNewBranchTrackingRemoteBranch2(qtbot, tempDir, mainWindow):
     assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"
 
 
-def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["graphstart", "graphcheckout"])
+def testNewBranchFromCommit(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
@@ -175,9 +185,17 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
     assert not any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
     oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    rw.jump(NavLocator.inCommit(oid1))
 
-    rw.graphView.selectCommit(oid1)
-    triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
+    if method == "graphstart":
+        triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
+    elif method == "graphcheckout":
+        QTest.keyPress(rw.graphView, Qt.Key.Key_Return)
+        qd = findQDialog(rw, r"check ?out")
+        qd.findChild(QRadioButton, "createBranchRadioButton").setChecked(True)
+        qd.accept()
+    else:
+        raise NotImplementedError("unknown method")
 
     dlg: NewBranchDialog = findQDialog(rw, "new branch")
     assert dlg.ui.nameEdit.text() == "first-merge"  # nameEdit should be pre-filled with name of a (remote) branch pointing to this commit
@@ -190,14 +208,65 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow):
     assert any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
 
-def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
+def testNewBranchFromDetachedHead(qtbot, tempDir, mainWindow, method):
+    wd = unpackRepo(tempDir)
+    oid = Oid(hex="f73b95671f326616d66b2afb3bdfcdbbce110b44")
+
+    with RepoContext(wd) as repo:
+        repo.checkout_commit(oid)
+        assert repo.head_is_detached
+
+    rw = mainWindow.openRepo(wd)
+    localBranches = rw.repo.branches.local
+    rw.jump(NavLocator.inCommit(oid))
+
+    if method == "sidebar":
+        node = next(rw.sidebar.findNodesByKind(EItem.DetachedHead))
+        triggerMenuAction(rw.sidebar.makeNodeMenu(node), r"(start|new) branch")
+    elif method == "graphstart":
+        triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
+    elif method == "graphcheckout":
+        QTest.keyPress(rw.graphView, Qt.Key.Key_Return)
+        qd = findQDialog(rw, r"check ?out")
+        qd.findChild(QRadioButton, "createBranchRadioButton").setChecked(True)
+        qd.accept()
+    else:
+        raise NotImplementedError("unknown method")
+
+    dlg: NewBranchDialog = findQDialog(rw, "new branch")
+    dlg.ui.nameEdit.setText("coucou")
+    dlg.ui.switchToBranchCheckBox.setChecked(True)
+    dlg.accept()
+
+    assert "coucou" in localBranches
+    assert localBranches["coucou"].target == oid
+    assert localBranches["coucou"].is_checked_out()
+    assert any("coucou" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
+
+
+
+@pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
+def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
 
-    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
-    menu = rw.sidebar.makeNodeMenu(node)
-    findMenuAction(menu, "new.+branch from here").trigger()
+    if method == "sidebar":
+        node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+        menu = rw.sidebar.makeNodeMenu(node)
+        findMenuAction(menu, "new.+branch from here").trigger()
+    elif method == "graphstart":
+        rw.jump(NavLocator.inRef("refs/heads/no-parent"))
+        triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
+    elif method == "graphcheckout":
+        rw.jump(NavLocator.inRef("refs/heads/no-parent"))
+        QTest.keyPress(rw.graphView, Qt.Key.Key_Return)
+        qd = findQDialog(rw, r"check ?out")
+        qd.findChild(QRadioButton, "createBranchRadioButton").setChecked(True)
+        qd.accept()
+    else:
+        raise NotImplementedError("unknown method")
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
     assert dlg.ui.nameEdit.text() == "no-parent-2"
@@ -215,7 +284,8 @@ def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow):
     assert any("no-parent-2" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
 
-def testSwitchBranch(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "graphmenu", "graphkey"])
+def testSwitchBranch(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
@@ -235,9 +305,25 @@ def testSwitchBranch(qtbot, tempDir, mainWindow):
     assert "master" in getActiveBranchTooltipText()
     assert "no-parent" not in getActiveBranchTooltipText()
 
-    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "switch to")
+    if method == "sidebarmenu":
+        node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "switch to")
+    elif method == "sidebarkey":
+        rw.sidebar.selectAnyRef("refs/heads/no-parent")
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
+        acceptQMessageBox(rw, "switch to")
+    elif method in ["graphmenu", "graphkey"]:
+        rw.jump(NavLocator.inRef("refs/heads/no-parent"))
+        if method == "graphmenu":
+            triggerMenuAction(rw.graphView.makeContextMenu(), "check out")
+        else:
+            QTest.keyPress(rw.graphView, Qt.Key.Key_Return)
+        qd = findQDialog(rw, "check out")
+        assert qd.findChild(QRadioButton, "switchToLocalBranchRadioButton").isChecked()
+        qd.accept()
+    else:
+        raise NotImplementedError("unknown method")
 
     assert not localBranches['master'].is_checked_out()
     assert localBranches['no-parent'].is_checked_out()

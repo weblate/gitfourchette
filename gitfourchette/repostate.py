@@ -105,7 +105,7 @@ class RepoState(QObject):
         # with the official installer, e.g. via scoop. If a repo was cloned with
         # autocrlf=true, GF's staging area would be unusable on Windows without
         # setting autocrlf=true in the config.
-        if WINDOWS and "core.autocrlf" not in self.repo.config:
+        if WINDOWS and "core.autocrlf" not in self.repo.config:  # pragma: no cover
             tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
             logger.info(f"Forcing core.autocrlf=true in: {tempConfigPath}")
             tempConfig = GitConfig(tempConfigPath)
