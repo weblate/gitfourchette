@@ -1,8 +1,44 @@
+import pytest
+
 from . import reposcenario
 from .util import *
 
 
-def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow):
+def doStage(rw, method):
+    if method == "key":
+        QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    elif method == "menu":
+        triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "stage")
+    elif method == "button":
+        rw.stageButton.click()
+    else:
+        raise NotImplementedError("unknown method")
+
+
+def doDiscard(rw, method):
+    if method == "key":
+        QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    elif method == "menu":
+        triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "discard")
+    elif method == "button":
+        triggerMenuAction(rw.stageButton.menu(), "discard")
+    else:
+        raise NotImplementedError("unknown method")
+
+
+def doUnstage(rw, method):
+    if method == "key":
+        QTest.keyPress(rw.stagedFiles, Qt.Key.Key_Delete)
+    elif method == "menu":
+        triggerMenuAction(rw.stagedFiles.makeContextMenu(), "unstage")
+    elif method == "button":
+        rw.unstageButton.click()
+    else:
+        raise NotImplementedError("unknown method")
+
+
+@pytest.mark.parametrize("method", ["key", "menu", "button"])
+def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/SomeNewFile.txt")
     rw = mainWindow.openRepo(wd)
@@ -11,22 +47,23 @@ def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == []
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    doStage(rw, method)
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
     assert rw.repo.status() == {"SomeNewFile.txt": FileStatus.INDEX_NEW}
 
 
-def testDiscardUntrackedFile(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["key", "menu", "button"])
+def testDiscardUntrackedFile(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/SomeNewFile.txt")
     rw = mainWindow.openRepo(wd)
 
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
-    qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    doDiscard(rw, method)
     acceptQMessageBox(rw, "really delete")
 
     assert rw.dirtyFiles.model().rowCount() == 0
@@ -34,7 +71,8 @@ def testDiscardUntrackedFile(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {}
 
 
-def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["key", "menu", "button"])
+def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
@@ -42,8 +80,8 @@ def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
+    doDiscard(rw, method)
     acceptQMessageBox(rw, "really discard changes")
 
     assert qlvGetRowData(rw.dirtyFiles) == []
@@ -51,7 +89,8 @@ def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {}
 
 
-def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["key", "menu", "button"])
+def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
     rw = mainWindow.openRepo(wd)
@@ -59,8 +98,8 @@ def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, main
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
 
+    doDiscard(rw, method)
     acceptQMessageBox(rw, "really discard changes")
 
     assert qlvGetRowData(rw.dirtyFiles) == []
@@ -87,7 +126,8 @@ def testDiscardModeChange(qtbot, tempDir, mainWindow):
     assert os.lstat(path).st_mode & 0o777 == 0o644
 
 
-def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["key", "menu", "button"])
+def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir, "TestEmptyRepository")
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
@@ -95,7 +135,8 @@ def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
     qlvClickNthRow(rw.stagedFiles, 0)
-    qtbot.keyPress(rw.stagedFiles, Qt.Key.Key_Delete)
+
+    doUnstage(rw, method)
 
     assert qlvGetRowData(rw.dirtyFiles) == ["SomeNewFile.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []

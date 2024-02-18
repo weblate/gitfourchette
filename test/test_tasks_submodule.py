@@ -1,6 +1,7 @@
 import pygit2.enums
 
 from gitfourchette.nav import NavLocator
+from .test_tasks_stage import doStage, doDiscard
 from . import reposcenario
 from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
@@ -24,7 +25,8 @@ def testOpenSubmoduleWithinApp(qtbot, tempDir, mainWindow):
     assert mainWindow.currentRepoWidget().repo.workdir == os.path.join(wd, "submo/")
 
 
-def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["key", "menu", "button"])
+def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     subWd = reposcenario.submodule(wd)
     subHead = Oid(hex='49322bb17d3acc9146f98c97d078513228bbf3c0')
@@ -41,13 +43,14 @@ def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow):
     assert qteFind(special, r"submodule.+submo.+was updated")
     assert qteFind(special, r"new:\s+49322bb", plainText=True)
 
-    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)  # stage it
+    doStage(rw, method)
+
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["submo"]
 
 
-@pytest.mark.parametrize("discardMethod", ["key", "menu", "button", "link"])
-def testSubmoduleDirty(qtbot, tempDir, mainWindow, discardMethod):
+@pytest.mark.parametrize("method", ["key", "menu", "button", "link"])
+def testSubmoduleDirty(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     subWd = reposcenario.submodule(wd)
     writeFile(f"{subWd}/dirty.txt", "coucou")
@@ -65,18 +68,10 @@ def testSubmoduleDirty(qtbot, tempDir, mainWindow, discardMethod):
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)  # attempt to stage it
     assert rw.repo.status() == {"submo": FileStatus.WT_MODIFIED}  # shouldn't do anything (the actual app will emit a beep)
 
-    if discardMethod == "key":
-        QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)  # attempt to discard it
-    elif discardMethod == "menu":
-        menu = rw.dirtyFiles.makeContextMenu()
-        triggerMenuAction(menu, "discard.+submodule")
-    elif discardMethod == "link":
+    if method == "link":
         qteClickLink(special, r"discard them\.")
-    elif discardMethod == "button":
-        menu = rw.stageButton.menu()
-        triggerMenuAction(menu, "discard")
     else:
-        raise NotImplementedError("unknown discard method")
+        doDiscard(rw, method)
 
     acceptQMessageBox(rw, r"discard changes in submodule.+submo.+uncommitted changes")
     assert rw.repo.status() == {}  # should've cleared everything
