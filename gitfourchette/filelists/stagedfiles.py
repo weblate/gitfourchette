@@ -15,67 +15,83 @@ class StagedFiles(FileList):
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
     def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+        actions = []
+
         n = len(patches)
+        modeSet = set(patch.delta.new_file.mode for patch in patches)
+        anySubmodules = FileMode.COMMIT in modeSet
+        onlySubmodules = anySubmodules and len(modeSet) == 1
 
-        return [
-            ActionDef(
-                self.tr("&Unstage %n File(s)", "", n),
-                self.unstage,
-                icon="list-remove",  # QStyle.StandardPixmap.SP_ArrowUp,
-                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
-            ),
+        if not anySubmodules:
+            actions += [
+                ActionDef(
+                    self.tr("&Unstage %n File(s)", "", n),
+                    self.unstage,
+                    icon="list-remove",  # QStyle.StandardPixmap.SP_ArrowUp,
+                    shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
+                ),
 
-            ActionDef(
-                self.tr("Stas&h Changes..."),
-                self.wantPartialStash,
-                shortcuts=TaskBook.shortcuts.get(NewStash, []),
-                icon="vcs-stash",
-            ),
+                ActionDef(
+                    self.tr("Stas&h Changes..."),
+                    self.wantPartialStash,
+                    shortcuts=TaskBook.shortcuts.get(NewStash, []),
+                    icon="vcs-stash",
+                ),
 
-            self.revertModeActionDef(n, self.unstageModeChange),
+                self.revertModeActionDef(n, self.unstageModeChange),
 
-            ActionDef.SEPARATOR,
+                ActionDef.SEPARATOR,
 
-            ActionDef(
-                self.tr("Compare in {0}").format(settings.getDiffToolName()),
-                self.wantOpenInDiffTool,
-                icon="vcs-diff",
-            ),
+                ActionDef(
+                    self.tr("Compare in {0}").format(settings.getDiffToolName()),
+                    self.wantOpenInDiffTool,
+                    icon="vcs-diff",
+                ),
 
-            ActionDef(
-                self.tr("E&xport Diff(s) As Patch...", "", n),
-                self.savePatchAs,
-            ),
+                ActionDef(
+                    self.tr("E&xport Diff(s) As Patch...", "", n),
+                    self.savePatchAs,
+                ),
 
-            ActionDef.SEPARATOR,
+                ActionDef.SEPARATOR,
 
-            ActionDef(
-                self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
-                self.openWorkdirFile,
-                icon=QStyle.StandardPixmap.SP_FileIcon,
-            ),
+                ActionDef(
+                    self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
+                    self.openWorkdirFile,
+                    icon=QStyle.StandardPixmap.SP_FileIcon,
+                ),
 
-            ActionDef(
-                self.tr("Edit &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
-                self.openHeadRevision,
-            ),
+                ActionDef(
+                    self.tr("Edit &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                    self.openHeadRevision,
+                ),
+            ]
 
-            ActionDef.SEPARATOR,
+        elif onlySubmodules:
+            actions += [
+                ActionDef(
+                    self.tr("%n Submodules", "please omit %n in singular form", n),
+                    isSection=True
+                ),
 
-            ActionDef(
-                self.tr("Open &Folder(s)", "", n),
-                self.showInFolder,
-                icon=QStyle.StandardPixmap.SP_DirIcon,
-            ),
+                ActionDef(
+                    self.tr("Unstage Updated HEAD in %n Submodules", "please omit %n in singular form", n),
+                    self.unstage,
+                ),
 
-            ActionDef(
-                self.tr("&Copy Path(s)", "", n),
-                self.copyPaths,
-                shortcuts=GlobalShortcuts.copy
-            ),
+                ActionDef(
+                    self.tr("Open %n Submodules in New Tabs", "please omit %n in singular form", n),
+                    self.openSubmoduleTabs,
+                ),
+            ]
 
-            self.pathDisplayStyleSubmenu(),
-        ] + super().createContextMenuActions(n)
+        else:
+            actions += [
+                ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False)
+            ]
+
+        actions += super().createContextMenuActions(patches)
+        return actions
 
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()

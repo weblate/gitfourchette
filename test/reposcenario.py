@@ -31,9 +31,10 @@ def stashedChange(path):
 
 
 def submodule(path):
-    shutil.copytree(path, path + "/submo")
+    submoPath = os.path.join(path, "submo")
+    shutil.copytree(path, submoPath)
     with RepoContext(path, write_index=True) as repo:
         repo.add_inner_repo_as_submodule("submo", "", absorb_git_dir=False)
-        repo.create_commit_on_head("Add Submodule for Test Purposes")
-    return path + "/submo"
+        submoAddCommitOid = repo.create_commit_on_head("Add Submodule for Test Purposes")
+    return submoPath, submoAddCommitOid
 

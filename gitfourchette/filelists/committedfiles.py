@@ -17,62 +17,73 @@ class CommittedFiles(FileList):
         super().__init__(parent, NavContext.COMMITTED)
 
     def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+        actions = []
+
         n = len(patches)
+        modeSet = set(patch.delta.new_file.mode for patch in patches)
+        anySubmodules = FileMode.COMMIT in modeSet
+        onlySubmodules = anySubmodules and len(modeSet) == 1
 
-        return [
-            ActionDef(
-                self.tr("Open Diff in New &Window"),
-                self.wantOpenDiffInNewWindow,
-            ),
+        if not anySubmodules:
+            actions += [
+                ActionDef(
+                    self.tr("Open Diff in New &Window"),
+                    self.wantOpenDiffInNewWindow,
+                ),
 
-            ActionDef(
-                self.tr("Compare in {0}").format(settings.getDiffToolName()),
-                self.wantOpenInDiffTool,
-                icon="vcs-diff"
-            ),
+                ActionDef(
+                    self.tr("Compare in {0}").format(settings.getDiffToolName()),
+                    self.wantOpenInDiffTool,
+                    icon="vcs-diff"
+                ),
 
-            ActionDef(
-                self.tr("E&xport Diff(s) As Patch...", "", n),
-                self.savePatchAs
-            ),
+                ActionDef(
+                    self.tr("E&xport Diff(s) As Patch...", "", n),
+                    self.savePatchAs
+                ),
 
-            ActionDef.SEPARATOR,
+                ActionDef.SEPARATOR,
 
-            ActionDef(
-                self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
-                icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
-                [
-                    ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
-                    ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitOid)), self.openOldRevision),
-                    ActionDef(self.tr("Open &Current Version"), self.openHeadRevision),
-                ]
-            ),
+                ActionDef(
+                    self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
+                    icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
+                    [
+                        ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
+                        ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitOid)), self.openOldRevision),
+                        ActionDef(self.tr("Open &Current Version"), self.openHeadRevision),
+                    ]
+                ),
 
-            ActionDef(
-                self.tr("Sa&ve a Copy..."),
-                icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
-                [
-                    ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitOid)), self.saveNewRevision),
-                    ActionDef(self.tr("Save Version &Before {0}".format(shortHash(self.commitOid))), self.saveOldRevision),
-                ]
-            ),
+                ActionDef(
+                    self.tr("Sa&ve a Copy..."),
+                    icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
+                    [
+                        ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitOid)), self.saveNewRevision),
+                        ActionDef(self.tr("Save Version &Before {0}".format(shortHash(self.commitOid))), self.saveOldRevision),
+                    ]
+                ),
+            ]
 
-            ActionDef.SEPARATOR,
+        elif onlySubmodules:
+            actions += [
+                ActionDef(
+                    self.tr("%n Submodules", "please omit %n in singular form", n),
+                    isSection=True
+                ),
 
-            ActionDef(
-                self.tr("Open &Folder(s)", "", n),
-                self.showInFolder,
-                QStyle.StandardPixmap.SP_DirIcon,
-            ),
+                ActionDef(
+                    self.tr("Open %n Submodules in New Tabs", "please omit %n in singular form", n),
+                    self.openSubmoduleTabs,
+                ),
+            ]
 
-            ActionDef(
-                self.tr("&Copy Path(s)", "", n),
-                self.copyPaths,
-                shortcuts=GlobalShortcuts.copy,
-            ),
+        else:
+            actions += [
+                ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False)
+            ]
 
-            self.pathDisplayStyleSubmenu()
-        ]
+        actions += super().createContextMenuActions(patches)
+        return actions
 
     def setCommit(self, oid: Oid):
         self.commitOid = oid

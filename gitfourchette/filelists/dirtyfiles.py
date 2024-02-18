@@ -92,16 +92,20 @@ class DirtyFiles(FileList):
         elif onlySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("%n Submodules", "singular form should simply say 'Submodule' without the %n", n),
+                    self.tr("%n Submodules", "please omit %n in singular form", n),
                     isSection=True
                 ),
                 ActionDef(
-                    self.tr("Stage Updated HEAD in %n Submodules", "singular form should simply say 'Stage HEAD Change in Submodule' without the %n", n),
+                    self.tr("Stage Updated HEAD in %n Submodules", "please omit %n in singular form", n),
                     self.stage,
                 ),
                 ActionDef(
-                    self.tr("Discard Changes in %n Submodules", "singular form should simply say 'Discard Changes in Submodule' without the %n", n),
+                    self.tr("Discard Changes in %n Submodules", "please omit %n in singular form", n),
                     self.discard,
+                ),
+                ActionDef(
+                    self.tr("Open %n Submodules in New Tabs", "please omit %n in singular form", n),
+                    self.openSubmoduleTabs,
                 ),
             ]
 
@@ -130,22 +134,7 @@ class DirtyFiles(FileList):
                 ActionDef.SEPARATOR,
             ]
 
-        actions += [
-            ActionDef(
-                self.tr("Open &Folders", "", n),
-                self.showInFolder,
-                icon=QStyle.StandardPixmap.SP_DirIcon,
-            ),
-
-            ActionDef(
-                self.tr("&Copy Paths", "", n),
-                self.copyPaths,
-                shortcuts=GlobalShortcuts.copy,
-            ),
-
-            self.pathDisplayStyleSubmenu()
-        ]
-
+        actions += super().createContextMenuActions(patches)
         return actions
 
     def keyPressEvent(self, event: QKeyEvent):

@@ -226,6 +226,7 @@ class RepoWidget(QStackedWidget):
             # File list view selections are mutually exclusive.
             fileList.nothingClicked.connect(lambda fl=fileList: self.clearDiffView(fl))
             fileList.statusMessage.connect(self.statusMessage)
+            fileList.openSubRepo.connect(lambda path: self.openRepo.emit(self.repo.in_workdir(path), NavLocator()))
 
         self.diffView.contextualHelp.connect(self.statusMessage)
 

@@ -9,26 +9,58 @@ import os
 import pytest
 
 
-def testOpenSubmoduleWithinApp(qtbot, tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebar", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
+def testOpenSubmoduleWithinApp(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
-    reposcenario.submodule(wd)
+    submoAbsPath, submoCommit = reposcenario.submodule(wd)
+    writeFile(f"{submoAbsPath}/dirty.txt", "coucou")
 
     rw = mainWindow.openRepo(wd)
-    submoNode = next(rw.sidebar.findNodesByKind(EItem.Submodule))
-    assert "submo" == submoNode.data
-
-    menu = rw.sidebar.makeNodeMenu(submoNode)
-
     assert mainWindow.currentRepoWidget() is rw
-    triggerMenuAction(menu, r"open submodule.+tab")
+
+    if method == "sidebar":
+        submoNode = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+        assert "submo" == submoNode.data
+        menu = rw.sidebar.makeNodeMenu(submoNode)
+        triggerMenuAction(menu, r"open submodule.+tab")
+
+    elif method == "commitSpecialDiff":
+        rw.jump(NavLocator.inCommit(oid=submoCommit, path="submo"))
+        assert rw.specialDiffView.isVisibleTo(rw)
+        assert qteFind(rw.specialDiffView, r"submodule.+submo.+was updated")
+        qteClickLink(rw.specialDiffView, r"open submodule.+submo")
+
+    elif method == "commitFileList":
+        rw.jump(NavLocator.inCommit(oid=submoCommit, path="submo"))
+        menu = rw.committedFiles.makeContextMenu()
+        triggerMenuAction(menu, r"open.+submodule.+in new tab")
+
+    elif method == "dirtyFileList":
+        rw.jump(NavLocator.inUnstaged(path="submo"))
+        menu = rw.dirtyFiles.makeContextMenu()
+        triggerMenuAction(menu, r"open.+submodule.+in new tab")
+
+    elif method == "stagedFileList":
+        with RepoContext(submoAbsPath, write_index=True) as submoRepo:
+            submoRepo.reset(Oid(hex="ac7e7e44c1885efb472ad54a78327d66bfc4ecef"), ResetMode.HARD)
+        rw.repo.index.add("submo")
+        rw.refreshRepo()
+
+        rw.jump(NavLocator.inStaged(path="submo"))
+        menu = rw.stagedFiles.makeContextMenu()
+        triggerMenuAction(menu, r"open.+submodule.+in new tab")
+
+    else:
+        raise NotImplementedError("unknown method")
+
     assert mainWindow.currentRepoWidget() is not rw
-    assert mainWindow.currentRepoWidget().repo.workdir == os.path.join(wd, "submo/")
+    assert mainWindow.currentRepoWidget().repo.workdir == submoAbsPath + "/"
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
 def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
-    subWd = reposcenario.submodule(wd)
+    subWd, _ = reposcenario.submodule(wd)
     subHead = Oid(hex='49322bb17d3acc9146f98c97d078513228bbf3c0')
     with RepoContext(subWd) as submo:
         submo.checkout_commit(subHead)
@@ -52,7 +84,7 @@ def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow, method):
 @pytest.mark.parametrize("method", ["key", "menu", "button", "link"])
 def testSubmoduleDirty(qtbot, tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
-    subWd = reposcenario.submodule(wd)
+    subWd, _ = reposcenario.submodule(wd)
     writeFile(f"{subWd}/dirty.txt", "coucou")
 
     rw = mainWindow.openRepo(wd)

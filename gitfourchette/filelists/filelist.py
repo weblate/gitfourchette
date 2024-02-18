@@ -6,12 +6,14 @@ from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
 from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
 from gitfourchette.forms.searchbar import SearchBar
+from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks import *
 from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 
 class SelectedFileBatchError(Exception):
@@ -81,6 +83,7 @@ class FileList(QListView):
     nothingClicked = Signal()
     selectedCountChanged = Signal(int)
     openDiffInNewWindow = Signal(Patch, NavLocator)
+    openSubRepo = Signal(str)
     statusMessage = Signal(str)
 
     navContext: NavContext
@@ -180,22 +183,36 @@ class FileList(QListView):
 
     def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
         """ To be overridden """
-        return []
 
-    def pathDisplayStyleSubmenu(self):
-        def pdsAction(name: str, pds: PathDisplayStyle):
+        def pathDisplayStyleAction(pds: PathDisplayStyle):
             def setIt():
                 settings.prefs.pathDisplayStyle = pds
             isCurrent = settings.prefs.pathDisplayStyle == pds
+            name = TrTables.prefKey(pds.name)
             return ActionDef(name, setIt, checkState=isCurrent)
 
-        return ActionDef(
-            translate("Prefs", "Path Display Style"),
-            submenu=[
-                pdsAction(translate("Prefs", "Full paths"), PathDisplayStyle.FULL_PATHS),
-                pdsAction(translate("Prefs", "Abbreviate directories"), PathDisplayStyle.ABBREVIATE_DIRECTORIES),
-                pdsAction(translate("Prefs", "Show filename only"), PathDisplayStyle.SHOW_FILENAME_ONLY),
-            ])
+        n = len(patches)
+
+        return [
+            ActionDef.SEPARATOR,
+
+            ActionDef(
+                self.tr("Open &Folder(s)", "", n),
+                self.showInFolder,
+                QStyle.StandardPixmap.SP_DirIcon,
+            ),
+
+            ActionDef(
+                self.tr("&Copy Path(s)", "", n),
+                self.copyPaths,
+                shortcuts=GlobalShortcuts.copy,
+            ),
+
+            ActionDef(
+                TrTables.prefKey("pathDisplayStyle"),
+                submenu=[pathDisplayStyleAction(style) for style in PathDisplayStyle],
+            ),
+        ]
 
     def confirmBatch(self, callback: Callable[[Patch], None], title: str, prompt: str, threshold: int = 3):
         patches = list(self.selectedPatches())
@@ -501,6 +518,11 @@ class FileList(QListView):
     def wantPartialStash(self):
         paths = [patch.delta.old_file.path for patch in self.selectedPatches()]
         NewStash.invoke(self, paths)
+
+    def openSubmoduleTabs(self):
+        patches = list(p for p in self.selectedPatches() if p.delta.new_file.mode in [FileMode.COMMIT])
+        for patch in patches:
+            self.openSubRepo.emit(patch.delta.new_file.path)
 
     def revertModeActionDef(self, n: int, callback: Callable):
         action = ActionDef(self.tr("Revert Mode Change", "", n), callback, enabled=False)
