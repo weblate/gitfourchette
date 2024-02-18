@@ -19,6 +19,7 @@ def testNewBranch(tempDir, mainWindow, method):
         menu = rw.sidebar.makeNodeMenu(node)
         findMenuAction(menu, "new branch").trigger()
     elif method == "shortcut":
+        QTest.qWait(0)
         QTest.keySequence(rw, "Ctrl+B")
     else:
         raise NotImplementedError("unknown method")

@@ -101,9 +101,8 @@ def testCommitSearch(tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
 
-    # QTest.keySequence(mainWindow, "Ctrl+F") doesn't work unless we show the window first...
-    mainWindow.dispatchSearchCommand()
-
+    QTest.qWait(0)
+    QTest.keySequence(mainWindow, "Ctrl+F")
     assert searchBar.isVisibleTo(rw)
 
     QTest.keyClicks(searchEdit, "first")

@@ -55,6 +55,9 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
     yield mw
 
+    # Qt 5 may need a breather to collect the window
+    qt.QTest.qWait(0)
+
     # The main window must be gone after this test
     assert app.mainWindow is None
 

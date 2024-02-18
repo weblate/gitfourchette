@@ -189,7 +189,7 @@ def testDiffInNewWindow(tempDir, mainWindow):
 
     # Make sure the diff is closed when the repowidget is gone
     mainWindow.closeAllTabs()
-    QTest.qWait(1)  # doesn't get a chance to clean up windows without this...
+    QTest.qWait(0)  # doesn't get a chance to clean up windows without this...
     assert 1 == len(QGuiApplication.topLevelWindows())
 
 
@@ -208,6 +208,7 @@ def testSearchInDiff(tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
     diffView.setFocus()
+    QTest.qWait(0)
     QTest.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
     assert searchBar.isVisibleTo(rw)
 
