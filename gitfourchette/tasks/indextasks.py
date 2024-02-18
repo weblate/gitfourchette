@@ -46,7 +46,7 @@ class _BaseStagingTask(RepoTask):
         message += ulList(p.delta.new_file.path for p in conflicts)
         raise AbortTask(message)
 
-    def anySubmodules(self, patches: list[Patch], purpose: PatchPurpose):
+    def filterSubmodules(self, patches: list[Patch]) -> list[Patch]:
         submos = [p for p in patches if p.delta.new_file.mode == FileMode.COMMIT]
         return submos
 
@@ -64,8 +64,18 @@ class StageFiles(_BaseStagingTask):
 
 
 class DiscardFiles(_BaseStagingTask):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.anySubmos = False
+
     def effects(self):
-        return TaskEffects.Workdir
+        effects = TaskEffects.Workdir
+
+        if self.anySubmos:
+            # We don't have TaskEffects.Submodules so .Refs is the next best thing
+            effects |= TaskEffects.Refs
+
+        return effects
 
     def flow(self, patches: list[Patch]):
         textPara = []
@@ -78,10 +88,12 @@ class DiscardFiles(_BaseStagingTask):
 
         self.denyConflicts(patches, PatchPurpose.DISCARD)
 
-        submos = self.anySubmodules(patches, PatchPurpose.DISCARD)
+        submos = self.filterSubmodules(patches)
         anySubmos = bool(submos)
         allSubmos = len(submos) == len(patches)
         really = ""
+
+        self.anySubmos = anySubmos
 
         if len(patches) == 1:
             patch = patches[0]
@@ -118,10 +130,25 @@ class DiscardFiles(_BaseStagingTask):
 
         yield from self.flowEnterWorkerThread()
 
-        # TODO: Actually reset submodules if any!
-        paths = [patch.delta.new_file.path for patch in patches]
-        Trash.instance().backupPatches(self.repo.workdir, patches)
-        self.repo.restore_files_from_index(paths)
+        if submos:
+            pass
+
+        paths = [patch.delta.new_file.path for patch in patches
+                 if patch not in submos]
+        if paths:
+            Trash.instance().backupPatches(self.repo.workdir, patches)
+            self.repo.restore_files_from_index(paths)
+
+        if submos:
+            for patch in submos:
+                path = patch.delta.new_file.path
+                submo = self.repo.submodules[path]
+                resetTo = submo.head_id
+                with RepoContext(self.repo.in_workdir(path)) as subRepo:
+                    # Reset HEAD to the target commit
+                    subRepo.reset(resetTo, ResetMode.HARD)
+                    # Nuke uncommitted files as well
+                    subRepo.checkout_head(strategy=CheckoutStrategy.REMOVE_UNTRACKED | CheckoutStrategy.FORCE | CheckoutStrategy.RECREATE_MISSING)
 
 
 class UnstageFiles(_BaseStagingTask):

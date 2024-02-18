@@ -40,7 +40,6 @@ class TaskBook:
             tasks.DeleteTag: translate("task", "Delete tag"),
             tasks.DiscardFiles: translate("task", "Discard files"),
             tasks.DiscardModeChanges: translate("task", "Discard mode changes"),
-            tasks.DiscardSubmoduleChanges: translate("task", "Discard changes in submodule"),
             tasks.DropStash: translate("task", "Drop stash"),
             tasks.EditRemote: translate("task", "Edit remote"),
             tasks.EditUpstreamBranch: translate("task", "Edit upstream branch"),

@@ -132,7 +132,7 @@ class SpecialDiffError(Exception):
 
     @staticmethod
     def submoduleDiff(repo: Repo, submodule: Submodule, patch: Patch, locator: NavLocator):
-        from gitfourchette.tasks import DiscardSubmoduleChanges
+        from gitfourchette.tasks import DiscardFiles
 
         def parseSubprojectCommit(match: re.Match):
             dirty = False
@@ -147,7 +147,10 @@ class SpecialDiffError(Exception):
 
         shortName = os.path.basename(submodule.name)
         localPath = repo.in_workdir(submodule.path)
-        url1 = QUrl.fromLocalFile(localPath)
+        openLink = QUrl.fromLocalFile(localPath)
+
+        titleText = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
+        specialDiff = SpecialDiffError(titleText)
 
         oldMatch = re.search(r"^-Subproject commit (.+)$", patch.text, re.MULTILINE)
         newMatch = re.search(r"^\+Subproject commit (.+)$", patch.text, re.MULTILINE)
@@ -156,21 +159,21 @@ class SpecialDiffError(Exception):
 
         try:
             oid = Oid(hex=oldHash)
-            url2 = QUrl(url1)
-            url2.setFragment(oid.hex)
-            oldTarget = f"<a href='{url2.toString()}'>{shortHash(oid)}</a>"
+            oldCommitLink = QUrl(openLink)
+            oldCommitLink.setFragment(oid.hex)
+            oldTarget = f"<a href='{oldCommitLink.toString()}'>{shortHash(oid)}</a>"
         except ValueError:
             oldTarget = oldHash
 
         try:
             oid = Oid(hex=newHash)
-            url3 = QUrl(url1)
-            url3.setFragment(oid.hex)
-            newTarget = f"<a href='{url3.toString()}'>{shortHash(oid)}</a>"
+            newCommitLink = QUrl(openLink)
+            newCommitLink.setFragment(oid.hex)
+            newTarget = f"<a href='{newCommitLink.toString()}'>{shortHash(oid)}</a>"
         except ValueError:
             newTarget = newHash
 
-        text3 = []
+        longformParts = []
         if oldHash != newHash:
             with RepoContext(localPath) as subRepo:
                 message1 = ""
@@ -197,22 +200,22 @@ class SpecialDiffError(Exception):
                 intro = translate("Diff", "<b>HEAD</b> was moved to another commit &ndash; you can stage this update:")
             else:
                 intro = translate("Diff", "<b>HEAD</b> was moved to another commit:")
-            text3.append(f"<p>{intro}<p>{table}</p></p>")
+            longformParts.append(f"<p>{intro}<p>{table}</p></p>")
 
         if newDirty:
-            url2 = DiscardSubmoduleChanges.makeInternalLink(path=submodule.name)
+            discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
+
             if oldHash != newHash:
                 lead = translate("Diff", "In addition, there are <b>uncommitted changes</b> in the submodule.")
             else:
                 lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
             callToAction = linkify(translate("Diff", "[Open] the submodule to commit the changes, or [discard] them."),
-                                   url1, url2)
-            text3.append(f"<p>{lead}<br>{callToAction}</p>")
+                                   openLink, discardLink)
+            longformParts.append(f"<p>{lead}<br>{callToAction}</p>")
 
-        linkText = translate("Diff", "Open submodule {0}").format(bquo(shortName))
+        subtitle = translate("Diff", "Open submodule {0}").format(bquo(shortName))
+        subtitle = linkify(subtitle, openLink)
 
-        text1 = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
-        text2 = linkify(linkText, url1)
-        text3 = ulList(text3, -1)
-
-        return SpecialDiffError(message=text1, details=text2, longform=text3)
+        specialDiff.details = subtitle
+        specialDiff.longform = ulList(longformParts, -1)
+        return specialDiff

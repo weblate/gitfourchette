@@ -101,7 +101,7 @@ class DirtyFiles(FileList):
                 ),
                 ActionDef(
                     self.tr("Discard Changes in %n Submodules", "singular form should simply say 'Discard Changes in Submodule' without the %n", n),
-                    self.discardSubmoduleChanges,
+                    self.discard,
                 ),
             ]
 
@@ -168,11 +168,6 @@ class DirtyFiles(FileList):
     def discardModeChanges(self):
         patches = list(self.selectedPatches())
         DiscardModeChanges.invoke(self, patches)
-
-    def discardSubmoduleChanges(self):
-        patches = list(self.selectedPatches())
-        paths = [p.delta.new_file.path for p in patches]
-        DiscardSubmoduleChanges.invoke(self, paths)
 
     def _mergeKeep(self, keepOurs: bool):
         patches = list(self.selectedPatches())
