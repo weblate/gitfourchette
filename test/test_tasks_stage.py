@@ -38,7 +38,7 @@ def doUnstage(rw, method):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
-def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow, method):
+def testStageEmptyUntrackedFile(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/SomeNewFile.txt")
     rw = mainWindow.openRepo(wd)
@@ -55,7 +55,7 @@ def testStageEmptyUntrackedFile(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
-def testDiscardUntrackedFile(qtbot, tempDir, mainWindow, method):
+def testDiscardUntrackedFile(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/SomeNewFile.txt")
     rw = mainWindow.openRepo(wd)
@@ -72,7 +72,7 @@ def testDiscardUntrackedFile(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
-def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow, method):
+def testDiscardUnstagedFileModification(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
@@ -90,7 +90,7 @@ def testDiscardUnstagedFileModification(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
-def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, mainWindow, method):
+def testDiscardFileModificationWithoutAffectingStagedChange(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
     rw = mainWindow.openRepo(wd)
@@ -107,7 +107,7 @@ def testDiscardFileModificationWithoutAffectingStagedChange(qtbot, tempDir, main
     assert rw.repo.status() == {"a/a1.txt": FileStatus.INDEX_MODIFIED}
 
 
-def testDiscardModeChange(qtbot, tempDir, mainWindow):
+def testDiscardModeChange(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     path = f"{wd}/a/a1.txt"
     assert os.lstat(path).st_mode & 0o777 == 0o644
@@ -127,7 +127,7 @@ def testDiscardModeChange(qtbot, tempDir, mainWindow):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
-def testUnstageChangeInEmptyRepo(qtbot, tempDir, mainWindow, method):
+def testUnstageChangeInEmptyRepo(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir, "TestEmptyRepository")
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)

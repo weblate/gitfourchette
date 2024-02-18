@@ -10,19 +10,19 @@ from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
-def testCommit(qtbot, tempDir, mainWindow):
+def testCommit(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
     rw.commitButton.click()
 
     dialog: CommitDialog = findQDialog(rw, "commit")
-    qtbot.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
+    QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
 
     dialog.ui.revealAuthor.click()
     dialog.ui.overrideCommitterSignature.setChecked(False)
@@ -47,20 +47,20 @@ def testCommit(qtbot, tempDir, mainWindow):
     assert patches[0].delta.new_file.path == "a/a1.txt"
 
 
-def testCommitUntrackedFileInEmptyRepo(qtbot, tempDir, mainWindow):
+def testCommitUntrackedFileInEmptyRepo(tempDir, mainWindow):
     wd = unpackRepo(tempDir, "TestEmptyRepository")
     touchFile(F"{wd}/SomeNewFile.txt")
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
 
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
 
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
-    qtbot.keyClicks(dialog.ui.summaryEditor, "Initial commit")
+    QTest.keyClicks(dialog.ui.summaryEditor, "Initial commit")
     dialog.accept()
 
     rows = qlvGetRowData(rw.graphView, CommitLogModel.CommitRole)
@@ -68,7 +68,7 @@ def testCommitUntrackedFileInEmptyRepo(qtbot, tempDir, mainWindow):
     assert commit.message == "Initial commit"
 
 
-def testCommitMessageDraftSavedOnCancel(qtbot, tempDir, mainWindow):
+def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
@@ -76,7 +76,7 @@ def testCommitMessageDraftSavedOnCancel(qtbot, tempDir, mainWindow):
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
-    qtbot.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
+    QTest.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
     dialog.reject()
 
     rw.commitButton.click()
@@ -142,14 +142,14 @@ def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
     assert not mainWindow.findChildren(QDialog)
 
 
-def testEmptyCommitRaisesWarning(qtbot, tempDir, mainWindow):
+def testEmptyCommitRaisesWarning(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     rw.commitButton.click()
     rejectQMessageBox(rw, "create.+empty commit")
 
 
-def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
+def testCommitWithoutUserIdentity(tempDir, mainWindow):
     wd = unpackRepo(tempDir, userName="", userEmail="")
     rw = mainWindow.openRepo(wd)
 
@@ -179,7 +179,7 @@ def testCommitWithoutUserIdentity(qtbot, tempDir, mainWindow):
 
 
 @pytest.mark.skipif('FASTTEST' in os.environ, reason="skipping slow tests (FASTTEST env var)")
-def testCommitStableDate(qtbot, tempDir, mainWindow):
+def testCommitStableDate(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
@@ -190,7 +190,7 @@ def testCommitStableDate(qtbot, tempDir, mainWindow):
     dialog: CommitDialog = findQDialog(rw, "commit")
     dialog.ui.summaryEditor.setText("hold on a sec...")
 
-    qtbot.wait(1500)  # wait for next second
+    QTest.qWait(1500)  # wait for next second
     dialog.accept()
 
     headCommit = rw.repo.head_commit
@@ -199,7 +199,7 @@ def testCommitStableDate(qtbot, tempDir, mainWindow):
 
 
 @pytest.mark.skipif('FASTTEST' in os.environ, reason="skipping slow tests (FASTTEST env var)")
-def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
+def testAmendAltersCommitterDate(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
@@ -212,7 +212,7 @@ def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
     dialog: CommitDialog = findQDialog(rw, "amend")
     dialog.ui.summaryEditor.setText("hold on a sec...")
 
-    qtbot.wait(1500)  # wait for next second
+    QTest.qWait(1500)  # wait for next second
     dialog.accept()
 
     amendedHeadCommit = rw.repo.head_commit
@@ -221,7 +221,7 @@ def testAmendAltersCommitterDate(qtbot, tempDir, mainWindow):
     assert not signatures_equalish(amendedHeadCommit.author, amendedHeadCommit.committer)
 
 
-def testResetHeadToCommit(qtbot, tempDir, mainWindow):
+def testResetHeadToCommit(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -241,7 +241,7 @@ def testResetHeadToCommit(qtbot, tempDir, mainWindow):
     assert rw.repo.branches.local['master'].target == oid1
 
 
-def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
+def testCheckoutCommitDetachedHead(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -262,7 +262,7 @@ def testCheckoutCommitDetachedHead(qtbot, tempDir, mainWindow):
         assert rw.graphView.currentCommitOid == oid, "graphview's selected commit has jumped around"
 
 
-def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
+def testCommitOnDetachedHead(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     oid = Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
@@ -294,7 +294,7 @@ def testCommitOnDetachedHead(qtbot, tempDir, mainWindow):
     assert newHeadCommit in displayedCommits
 
 
-def testRevertCommit(qtbot, tempDir, mainWindow):
+def testRevertCommit(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -307,7 +307,7 @@ def testRevertCommit(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"c/c2-2.txt": FileStatus.INDEX_NEW}
 
 
-def testCherrypick(qtbot, tempDir, mainWindow):
+def testCherrypick(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -336,7 +336,7 @@ def testCherrypick(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
 
 
-def testNewTag(qtbot, tempDir, mainWindow):
+def testNewTag(tempDir, mainWindow):
     newTag = "cool-tag"
 
     wd = unpackRepo(tempDir)
@@ -350,13 +350,13 @@ def testNewTag(qtbot, tempDir, mainWindow):
 
     dlg: QDialog = findQDialog(rw, "new tag")
     lineEdit = dlg.findChild(QLineEdit)
-    qtbot.keyClicks(lineEdit, newTag)
+    QTest.keyClicks(lineEdit, newTag)
     dlg.accept()
 
     assert newTag in rw.repo.listall_tags()
 
 
-def testDeleteTag(qtbot, tempDir, mainWindow):
+def testDeleteTag(tempDir, mainWindow):
     tagToDelete = "annotated_tag"
 
     wd = unpackRepo(tempDir)

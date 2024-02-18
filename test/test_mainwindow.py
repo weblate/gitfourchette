@@ -4,7 +4,7 @@ from gitfourchette.forms.clonedialog import CloneDialog
 import os
 
 
-def testDropDirectoryOntoMainWindowOpensRepository(qtbot, tempDir, mainWindow):
+def testDropDirectoryOntoMainWindowOpensRepository(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     wdUrl = QUrl.fromLocalFile(wd)
     mime = QMimeData()
@@ -22,7 +22,7 @@ def testDropDirectoryOntoMainWindowOpensRepository(qtbot, tempDir, mainWindow):
     assert os.path.normpath(mainWindow.currentRepoWidget().repo.workdir) == os.path.normpath(wd)
 
 
-def testDropUrlOntoMainWindowBringsUpCloneDialog(qtbot, mainWindow):
+def testDropUrlOntoMainWindowBringsUpCloneDialog(mainWindow):
     assert mainWindow.tabs.count() == 0
     assert mainWindow.currentRepoWidget() is None
 
@@ -43,7 +43,7 @@ def testDropUrlOntoMainWindowBringsUpCloneDialog(qtbot, mainWindow):
     cloneDialog.reject()
 
 
-def testOpenSameRepoTwice(qtbot, tempDir, mainWindow):
+def testOpenSameRepoTwice(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     rw1 = mainWindow.openRepo(wd)

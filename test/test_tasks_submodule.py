@@ -10,7 +10,7 @@ import pytest
 
 
 @pytest.mark.parametrize("method", ["sidebar", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
-def testOpenSubmoduleWithinApp(qtbot, tempDir, mainWindow, method):
+def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     submoAbsPath, submoCommit = reposcenario.submodule(wd)
     writeFile(f"{submoAbsPath}/dirty.txt", "coucou")
@@ -58,7 +58,7 @@ def testOpenSubmoduleWithinApp(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
-def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow, method):
+def testSubmoduleHeadUpdate(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     subWd, _ = reposcenario.submodule(wd)
     subHead = Oid(hex='49322bb17d3acc9146f98c97d078513228bbf3c0')
@@ -82,7 +82,7 @@ def testSubmoduleHeadUpdate(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button", "link"])
-def testSubmoduleDirty(qtbot, tempDir, mainWindow, method):
+def testSubmoduleDirty(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     subWd, _ = reposcenario.submodule(wd)
     writeFile(f"{subWd}/dirty.txt", "coucou")
@@ -109,7 +109,7 @@ def testSubmoduleDirty(qtbot, tempDir, mainWindow, method):
     assert rw.repo.status() == {}  # should've cleared everything
 
 
-def testAbsorbSubmodule(qtbot, tempDir, mainWindow):
+def testAbsorbSubmodule(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     subWd = unpackRepo(wd, renameTo="submo")
     rw = mainWindow.openRepo(wd)

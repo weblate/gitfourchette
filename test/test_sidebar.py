@@ -4,7 +4,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
-def testCurrentBranchCannotSwitchOrMerge(qtbot, tempDir, mainWindow):
+def testCurrentBranchCannotSwitchOrMerge(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -16,7 +16,7 @@ def testCurrentBranchCannotSwitchOrMerge(qtbot, tempDir, mainWindow):
     # assert not findMenuAction(menu, "rebase").isEnabled()
 
 
-def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
+def testSidebarWithDetachedHead(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -32,7 +32,7 @@ def testSidebarWithDetachedHead(qtbot, tempDir, mainWindow):
             } == set(n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
 
-def testSidebarSelectionSync(qtbot, tempDir, mainWindow):
+def testSidebarSelectionSync(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar

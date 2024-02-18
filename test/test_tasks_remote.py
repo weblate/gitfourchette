@@ -8,7 +8,7 @@ from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
-def testNewRemote(qtbot, tempDir, mainWindow):
+def testNewRemote(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -37,7 +37,7 @@ def testNewRemote(qtbot, tempDir, mainWindow):
     assert any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
 
 
-def testEditRemote(qtbot, tempDir, mainWindow):
+def testEditRemote(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -63,7 +63,7 @@ def testEditRemote(qtbot, tempDir, mainWindow):
     assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
 
-def testDeleteRemote(qtbot, tempDir, mainWindow):
+def testDeleteRemote(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo

@@ -22,7 +22,7 @@ def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
         assert qlvGetSelection(rw.committedFiles) == [locator.path]
 
 
-def testNavigation(qtbot, tempDir, mainWindow):
+def testNavigation(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
     rw = mainWindow.openRepo(wd)
@@ -112,7 +112,7 @@ def testNavigation(qtbot, tempDir, mainWindow):
     assertHistoryMatches(rw, historyFork)
 
 
-def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, tempDir, mainWindow):
+def testNavigationAfterDiscardingChangeInMiddleOfHistory(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     writeFile(F"{wd}/a/a1", "blah blah a1")
@@ -154,7 +154,7 @@ def testNavigationAfterDiscardingChangeInMiddleOfHistory(qtbot, tempDir, mainWin
     assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
 
-def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow):
+def testNavigationAfterDiscardingChangeAtTopOfHistory(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1", "blah blah a1")
     writeFile(F"{wd}/a/a1.txt", "blah blah a1.txt")
@@ -190,7 +190,7 @@ def testNavigationAfterDiscardingChangeAtTopOfHistory(qtbot, tempDir, mainWindow
     assertHistoryMatches(rw, NavLocator.inUnstaged("b/b1.txt"))
 
 
-def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
+def testRestoreLastSelectedFileInContext(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1", "blah blah a1")
     writeFile(F"{wd}/a/a1.txt", "blah blah a1.txt")
@@ -249,7 +249,7 @@ def testRestoreLastSelectedFileInContext(qtbot, tempDir, mainWindow):
     assertHistoryMatches(rw, NavLocator.inCommit(oid2, "b/b2.txt"))
 
 
-def testSaveScrollPosition(qtbot, tempDir, mainWindow):
+def testSaveScrollPosition(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/long.txt", "\n".join(f"cats are cute {i}" for i in range(1, 10_000)))
     writeFile(F"{wd}/memo.txt", "feed the cat")

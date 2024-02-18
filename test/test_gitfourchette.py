@@ -4,7 +4,7 @@ from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 
 
-def testEmptyRepo(qtbot, tempDir, mainWindow):
+def testEmptyRepo(tempDir, mainWindow):
     wd = unpackRepo(tempDir, "TestEmptyRepository")
     assert mainWindow.openRepo(wd)
     assert mainWindow.tabs.count() == 1
@@ -12,7 +12,7 @@ def testEmptyRepo(qtbot, tempDir, mainWindow):
     assert mainWindow.tabs.count() == 0
 
 
-def testChangedFilesShownAtStart(qtbot, tempDir, mainWindow):
+def testChangedFilesShownAtStart(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/SomeNewFile.txt")
     rw = mainWindow.openRepo(wd)
@@ -25,7 +25,7 @@ def testChangedFilesShownAtStart(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == []
 
 
-def testDisplayAllNestedUntrackedFiles(qtbot, tempDir, mainWindow):
+def testDisplayAllNestedUntrackedFiles(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     os.mkdir(F"{wd}/N")
     touchFile(F"{wd}/N/tata.txt")
@@ -36,7 +36,7 @@ def testDisplayAllNestedUntrackedFiles(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == []
 
 
-def testParentlessCommitFileList(qtbot, tempDir, mainWindow):
+def testParentlessCommitFileList(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -45,7 +45,7 @@ def testParentlessCommitFileList(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["c/c1.txt"]
 
 
-def testSaveOldRevision(qtbot, tempDir, mainWindow):
+def testSaveOldRevision(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -61,7 +61,7 @@ def testSaveOldRevision(qtbot, tempDir, mainWindow):
         assert contents == b"c2\n"
 
 
-def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
+def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -77,7 +77,7 @@ def testSaveOldRevisionOfDeletedFile(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
-def testCommitSearch(qtbot, tempDir, mainWindow):
+def testCommitSearch(tempDir, mainWindow):
     # Commits that contain "first" in their summary
     matchingCommits = [
         Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4"),
@@ -101,23 +101,23 @@ def testCommitSearch(qtbot, tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
 
-    # qtbot.keySequence(mainWindow, "Ctrl+F") doesn't work unless we show the window first...
+    # QTest.keySequence(mainWindow, "Ctrl+F") doesn't work unless we show the window first...
     mainWindow.dispatchSearchCommand()
 
     assert searchBar.isVisibleTo(rw)
 
-    qtbot.keyClicks(searchEdit, "first")
+    QTest.keyClicks(searchEdit, "first")
 
     previousRow = -1
     for oid in matchingCommits:
-        qtbot.keySequence(searchEdit, "Return")
+        QTest.keySequence(searchEdit, "Return")
         assert oid == rw.graphView.currentCommitOid
 
         assert getGraphRow() > previousRow  # go down
         previousRow = getGraphRow()
 
     # end of log
-    qtbot.keySequence(searchEdit, "Return")
+    QTest.keySequence(searchEdit, "Return")
     assert getGraphRow() < previousRow  # wrap around to top of graph
     previousRow = getGraphRow()
 
@@ -128,23 +128,23 @@ def testCommitSearch(qtbot, tempDir, mainWindow):
 
     # now search backwards
     for oid in reversed(matchingCommits):
-        qtbot.keySequence(searchEdit, "Shift+Return")
+        QTest.keySequence(searchEdit, "Shift+Return")
         assert oid == rw.graphView.currentCommitOid
 
         assert getGraphRow() < previousRow  # go up
         previousRow = getGraphRow()
 
     # top of log
-    qtbot.keySequence(searchEdit, "Shift+Return")
+    QTest.keySequence(searchEdit, "Shift+Return")
     assert getGraphRow() > previousRow
     previousRow = getGraphRow()
 
     # escape closes search bar
-    qtbot.keySequence(searchEdit, "Escape")
+    QTest.keySequence(searchEdit, "Escape")
     assert not searchBar.isVisibleTo(rw)
 
 
-def testUnloadRepoWhenFolderGoesMissing(qtbot, tempDir, mainWindow):
+def testUnloadRepoWhenFolderGoesMissing(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     assert rw.isLoaded

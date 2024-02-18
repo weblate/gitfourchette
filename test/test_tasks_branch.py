@@ -9,7 +9,7 @@ import re
 
 
 @pytest.mark.parametrize("method", ["sidebar", "shortcut"])
-def testNewBranch(qtbot, tempDir, mainWindow, method):
+def testNewBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -19,7 +19,7 @@ def testNewBranch(qtbot, tempDir, mainWindow, method):
         menu = rw.sidebar.makeNodeMenu(node)
         findMenuAction(menu, "new branch").trigger()
     elif method == "shortcut":
-        qtbot.keySequence(rw, "Ctrl+B")
+        QTest.keySequence(rw, "Ctrl+B")
     else:
         raise NotImplementedError("unknown method")
 
@@ -30,7 +30,7 @@ def testNewBranch(qtbot, tempDir, mainWindow, method):
     assert repo.branches.local['hellobranch'] is not None
 
 
-def testSetUpstreamBranch(qtbot, tempDir, mainWindow):
+def testSetUpstreamBranch(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -65,7 +65,7 @@ def testSetUpstreamBranch(qtbot, tempDir, mainWindow):
     assert repo.branches.local['master'].upstream == repo.branches.remote['origin/master']
 
 
-def testRenameBranch(qtbot, tempDir, mainWindow):
+def testRenameBranch(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -104,7 +104,7 @@ def testRenameBranch(qtbot, tempDir, mainWindow):
     assert 'mainbranch' in repo.branches.local
 
 
-def testDeleteBranch(qtbot, tempDir, mainWindow):
+def testDeleteBranch(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:
         commit = repo['6e1475206e57110fcef4b92320436c1e9872a322']
@@ -121,7 +121,7 @@ def testDeleteBranch(qtbot, tempDir, mainWindow):
     assert "somebranch" not in repo.branches.local
 
 
-def testDeleteCurrentBranch(qtbot, tempDir, mainWindow):
+def testDeleteCurrentBranch(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -135,7 +135,7 @@ def testDeleteCurrentBranch(qtbot, tempDir, mainWindow):
     assert "master" in repo.branches.local  # still there
 
 
-def testNewBranchTrackingRemoteBranch1(qtbot, tempDir, mainWindow):
+def testNewBranchTrackingRemoteBranch1(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -154,7 +154,7 @@ def testNewBranchTrackingRemoteBranch1(qtbot, tempDir, mainWindow):
     assert repo.branches.local["newmaster"].upstream == repo.branches.remote["origin/master"]
 
 
-def testNewBranchTrackingRemoteBranch2(qtbot, tempDir, mainWindow):
+def testNewBranchTrackingRemoteBranch2(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -176,7 +176,7 @@ def testNewBranchTrackingRemoteBranch2(qtbot, tempDir, mainWindow):
 
 
 @pytest.mark.parametrize("method", ["graphstart", "graphcheckout"])
-def testNewBranchFromCommit(qtbot, tempDir, mainWindow, method):
+def testNewBranchFromCommit(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
@@ -209,7 +209,7 @@ def testNewBranchFromCommit(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
-def testNewBranchFromDetachedHead(qtbot, tempDir, mainWindow, method):
+def testNewBranchFromDetachedHead(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     oid = Oid(hex="f73b95671f326616d66b2afb3bdfcdbbce110b44")
 
@@ -247,7 +247,7 @@ def testNewBranchFromDetachedHead(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
-def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow, method):
+def testNewBranchFromLocalBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
@@ -285,7 +285,7 @@ def testNewBranchFromLocalBranch(qtbot, tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "graphmenu", "graphkey"])
-def testSwitchBranch(qtbot, tempDir, mainWindow, method):
+def testSwitchBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     localBranches = rw.repo.branches.local
@@ -335,7 +335,7 @@ def testSwitchBranch(qtbot, tempDir, mainWindow, method):
     assert "no-parent" in getActiveBranchTooltipText()
 
 
-def testSwitchBranchWorkdirConflicts(qtbot, tempDir, mainWindow):
+def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     writeFile(f"{wd}/c/c1.txt", "la menuiserie et toute la clique")
@@ -356,7 +356,7 @@ def testSwitchBranchWorkdirConflicts(qtbot, tempDir, mainWindow):
     assert localBranches['master'].is_checked_out()
 
 
-def testMergeUpToDate(qtbot, tempDir, mainWindow):
+def testMergeUpToDate(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -366,7 +366,7 @@ def testMergeUpToDate(qtbot, tempDir, mainWindow):
     acceptQMessageBox(rw, "already up.to.date")
 
 
-def testMergeFastForward(qtbot, tempDir, mainWindow):
+def testMergeFastForward(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:
         repo.checkout_local_branch('no-parent')

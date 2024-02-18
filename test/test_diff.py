@@ -4,7 +4,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.diffview.diffview import DiffView
 
 
-def testEmptyDiffEmptyFile(qtbot, tempDir, mainWindow):
+def testEmptyDiffEmptyFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     touchFile(F"{wd}/NewEmptyFile.txt")
     rw = mainWindow.openRepo(wd)
@@ -16,7 +16,7 @@ def testEmptyDiffEmptyFile(qtbot, tempDir, mainWindow):
     assert re.search(r"empty file", rw.specialDiffView.toPlainText(), re.I)
 
 
-def testEmptyDiffWithModeChange(qtbot, tempDir, mainWindow):
+def testEmptyDiffWithModeChange(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     os.chmod(f"{wd}/a/a1", 0o755)
     rw = mainWindow.openRepo(wd)
@@ -25,7 +25,7 @@ def testEmptyDiffWithModeChange(qtbot, tempDir, mainWindow):
     assert re.search(r"mode change:.+normal.+executable", rw.specialDiffView.toPlainText(), re.I)
 
 
-def testEmptyDiffWithNameChange(qtbot, tempDir, mainWindow):
+def testEmptyDiffWithNameChange(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     os.rename(f"{wd}/master.txt", f"{wd}/mastiff.txt")
     with RepoContext(wd) as repo:
@@ -38,7 +38,7 @@ def testEmptyDiffWithNameChange(qtbot, tempDir, mainWindow):
     assert re.search(r"renamed:.+master\.txt.+mastiff\.txt", rw.specialDiffView.toPlainText(), re.I)
 
 
-def testDiffDeletedFile(qtbot, tempDir, mainWindow):
+def testDiffDeletedFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     os.unlink(f"{wd}/master.txt")
     rw = mainWindow.openRepo(wd)
@@ -47,7 +47,7 @@ def testDiffDeletedFile(qtbot, tempDir, mainWindow):
     rw.diffView.toPlainText().startswith("@@ -1,2 +0,0 @@")
 
 
-def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
+def testStagePartialPatchInUntrackedFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/NewFile.txt", "line A\nline B\nline C\n")
     rw = mainWindow.openRepo(wd)
@@ -56,7 +56,7 @@ def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"NewFile.txt": FileStatus.WT_NEW}
 
     rw.diffView.setFocus()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"NewFile.txt": FileStatus.INDEX_NEW | FileStatus.WT_MODIFIED}
 
@@ -65,7 +65,7 @@ def testStagePartialPatchInUntrackedFile(qtbot, tempDir, mainWindow):
     assert stagedBlob.data == b"line A\n"
 
 
-def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
+def testPartialPatchSpacesInFilename(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/file with spaces.txt", "line A\nline B\nline C\n")
     rw = mainWindow.openRepo(wd)
@@ -74,7 +74,7 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"file with spaces.txt": FileStatus.WT_NEW}
 
     rw.diffView.setFocus()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"file with spaces.txt": FileStatus.INDEX_NEW | FileStatus.WT_MODIFIED}
 
@@ -83,7 +83,7 @@ def testPartialPatchSpacesInFilename(qtbot, tempDir, mainWindow):
     assert stagedBlob.data == b"line A\n"
 
 
-def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
+def testPartialPatchPreservesExecutableFileMode(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -99,8 +99,8 @@ def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
     # Partial patch of first modified line
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Down)    # Skip hunk line (@@...@@)
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Down)    # Skip hunk line (@@...@@)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)  # Stage first modified line
     assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED | FileStatus.INDEX_MODIFIED}
 
     staged = rw.repo.get_staged_changes()
@@ -114,7 +114,7 @@ def testPartialPatchPreservesExecutableFileMode(qtbot, tempDir, mainWindow):
     assert delta.new_file.mode & 0o777 == 0o755
 
 
-def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
+def testDiscardHunkNoEOL(tempDir, mainWindow):
     NEW_CONTENTS = "change without eol"
 
     wd = unpackRepo(tempDir)
@@ -131,7 +131,7 @@ def testDiscardHunkNoEOL(qtbot, tempDir, mainWindow):
     assert NEW_CONTENTS not in readFile(f"{wd}/master.txt").decode('utf-8')
 
 
-def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
+def testSubpatchNoEOL(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -150,26 +150,26 @@ def testSubpatchNoEOL(qtbot, tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
     assert rw.repo.status() == {"master.txt": FileStatus.INDEX_MODIFIED}
 
     # It must also work in reverse - let's unstage this change via a subpatch
     qlvClickNthRow(rw.stagedFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Delete)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
     assert rw.repo.status() == {"master.txt": FileStatus.WT_MODIFIED}
 
     # Finally, let's discard this change via a subpatch
     qlvClickNthRow(rw.dirtyFiles, 0)
     rw.diffView.setFocus()
     rw.diffView.selectAll()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Delete)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "discard")
     assert rw.repo.status() == {}
 
 
-def testDiffInNewWindow(qtbot, tempDir, mainWindow):
+def testDiffInNewWindow(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     assert mainWindow in QApplication.topLevelWidgets()
@@ -189,11 +189,11 @@ def testDiffInNewWindow(qtbot, tempDir, mainWindow):
 
     # Make sure the diff is closed when the repowidget is gone
     mainWindow.closeAllTabs()
-    qtbot.wait(1)  # doesn't get a chance to clean up windows without this...
+    QTest.qWait(1)  # doesn't get a chance to clean up windows without this...
     assert 1 == len(QGuiApplication.topLevelWindows())
 
 
-def testSearchInDiff(qtbot, tempDir, mainWindow):
+def testSearchInDiff(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -208,10 +208,10 @@ def testSearchInDiff(qtbot, tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
     diffView.setFocus()
-    qtbot.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
+    QTest.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
     assert searchBar.isVisibleTo(rw)
 
-    qtbot.keyClicks(searchLine, "master")
+    QTest.keyClicks(searchLine, "master")
     searchNext.click()
     forward1 = diffView.textCursor()
     assert forward1.selectedText() == "master"
@@ -244,16 +244,16 @@ def testSearchInDiff(qtbot, tempDir, mainWindow):
     assert reverse3 == reverse1
 
     # Search for nonexistent text
-    qtbot.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
+    QTest.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
     assert searchBar.isVisibleTo(rw)
     assert searchBar.lineEdit.hasSelectedText()  # hitting ctrl+f should reselect text
-    qtbot.keyClicks(searchLine, "MadeUpGarbage")
+    QTest.keyClicks(searchLine, "MadeUpGarbage")
     assert searchBar.lineEdit.text() == "MadeUpGarbage"
-    qtbot.keyPress(searchLine, Qt.Key.Key_Return)
+    QTest.keyPress(searchLine, Qt.Key.Key_Return)
     acceptQMessageBox(rw, "no.+occurrence.+of.+MadeUpGarbage.+found")
 
 
-def testCopyFromDiffWithoutU2029(qtbot, tempDir, mainWindow):
+def testCopyFromDiffWithoutU2029(tempDir, mainWindow):
     """
     WARNING: THIS TEST MODIFIES THE SYSTEM'S CLIPBOARD.
 

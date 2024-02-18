@@ -7,7 +7,7 @@ import os
 import pytest
 
 
-def testNewStash(qtbot, tempDir, mainWindow):
+def testNewStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     writeFile(F"{wd}/b/b1.txt", "b1\nPENDING CHANGE (staged)\n")  # staged change
@@ -44,7 +44,7 @@ def testNewStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt", "a/untracked.txt", "b/b1.txt"]
 
 
-def testNewPartialStash(qtbot, tempDir, mainWindow):
+def testNewPartialStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE 1\n")  # unstaged change
     writeFile(F"{wd}/a/a2.txt", "a2\nPENDING CHANGE 2\n")  # unstaged change
@@ -93,7 +93,7 @@ def testNewPartialStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == stashedFiles
 
 
-def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
+def testNewStashWithoutIdentity(tempDir, mainWindow):
     wd = unpackRepo(tempDir, userName="", userEmail="")
     writeFile(F"{wd}/a/untracked.txt", "this file is untracked\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
@@ -114,7 +114,7 @@ def testNewStashWithoutIdentity(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
-def testPopStash(qtbot, tempDir, mainWindow):
+def testPopStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
@@ -135,7 +135,7 @@ def testPopStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
-def testApplyStash(qtbot, tempDir, mainWindow):
+def testApplyStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
@@ -156,7 +156,7 @@ def testApplyStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
-def testDropStash(qtbot, tempDir, mainWindow):
+def testDropStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
@@ -176,7 +176,7 @@ def testDropStash(qtbot, tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
-def testHideStash(qtbot, tempDir, mainWindow):
+def testHideStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -196,7 +196,7 @@ def testHideStash(qtbot, tempDir, mainWindow):
         rw.graphView.selectCommit(stashOid, silent=False)
 
 
-def testDropHiddenStash(qtbot, tempDir, mainWindow):
+def testDropHiddenStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:

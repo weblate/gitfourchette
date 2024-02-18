@@ -3,7 +3,7 @@ from .util import *
 import subprocess
 
 
-def testExternalUnstage(qtbot, tempDir, mainWindow):
+def testExternalUnstage(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/master.txt", "same old file -- brand new contents!\n")
 
@@ -13,7 +13,7 @@ def testExternalUnstage(qtbot, tempDir, mainWindow):
     # Stage master.txt
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == ([], ["master.txt"])
 
     # Unstage master.txt with git itself, outside of GF
@@ -25,7 +25,7 @@ def testExternalUnstage(qtbot, tempDir, mainWindow):
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
 
 
-def testHiddenBranchGotDeleted(qtbot, tempDir, mainWindow):
+def testHiddenBranchGotDeleted(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     subprocess.run(["git", "branch", "master2", "master"], check=True, cwd=wd)
@@ -40,7 +40,7 @@ def testHiddenBranchGotDeleted(qtbot, tempDir, mainWindow):
     mainWindow.openRepo(wd)  # reopening the repo must not crash
 
 
-def testStayOnFileAfterPartialPatchDespiteExternalChange(qtbot, tempDir, mainWindow):
+def testStayOnFileAfterPartialPatchDespiteExternalChange(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     writeFile(f"{wd}/a/a2.txt", "change a\nchange b\nchange c\n")
@@ -57,7 +57,7 @@ def testStayOnFileAfterPartialPatchDespiteExternalChange(qtbot, tempDir, mainWin
     # Stage a single line
     qlvClickNthRow(rw.dirtyFiles, 1)
     rw.diffView.setFocus()
-    qtbot.keyPress(rw.diffView, Qt.Key.Key_Return)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     # This was a partial patch, so b2 is both dirty and staged;
     # also, a1 should appear among the dirty files now
@@ -68,7 +68,7 @@ def testStayOnFileAfterPartialPatchDespiteExternalChange(qtbot, tempDir, mainWin
     assert qlvGetSelection(rw.dirtyFiles) == ["b/b2.txt"]
 
 
-def testPatchBecameInvalid(qtbot, tempDir, mainWindow):
+def testPatchBecameInvalid(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     writeFile(f"{wd}/a/a2.txt", "change a\nchange b\nchange c\n")

@@ -3,7 +3,7 @@ from .util import *
 from gitfourchette.trash import Trash
 
 
-def testBackupDiscardedPatches(qtbot, tempDir, mainWindow):
+def testBackupDiscardedPatches(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -23,7 +23,7 @@ def testBackupDiscardedPatches(qtbot, tempDir, mainWindow):
     trash.refreshFiles()
     assert len(trash.trashFiles) == 0
 
-    qtbot.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
+    QTest.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
     acceptQMessageBox(rw, "really discard changes")
 
     assert len(trash.trashFiles) == 2
@@ -33,7 +33,7 @@ def testBackupDiscardedPatches(qtbot, tempDir, mainWindow):
     assert not any("MassiveFile.txt" in f for f in trash.trashFiles)  # file is too large to be backed up
 
 
-def testTrashFull(qtbot, tempDir, mainWindow):
+def testTrashFull(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
@@ -52,7 +52,7 @@ def testTrashFull(qtbot, tempDir, mainWindow):
     trash.refreshFiles()
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "really discard changes")
 
     # Trash should have been purged to make room for new patch

@@ -11,7 +11,7 @@ from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette import porcelain
 
 
-def testFetchNewRemoteBranches(qtbot, tempDir, mainWindow):
+def testFetchNewRemoteBranches(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     makeBareCopy(wd, addAsRemote="localfs", preFetch=False)
     rw = mainWindow.openRepo(wd)
@@ -27,7 +27,7 @@ def testFetchNewRemoteBranches(qtbot, tempDir, mainWindow):
     assert any(n.data.startswith("refs/remotes/localfs/") for n in rw.sidebar.walk() if n.kind == EItem.RemoteBranch)
 
 
-def testDeleteRemoteBranch(qtbot, tempDir, mainWindow):
+def testDeleteRemoteBranch(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
     rw = mainWindow.openRepo(wd)
@@ -44,7 +44,7 @@ def testDeleteRemoteBranch(qtbot, tempDir, mainWindow):
         rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
 
 
-def testFetchRemote(qtbot, tempDir, mainWindow):
+def testFetchRemote(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
@@ -71,7 +71,7 @@ def testFetchRemote(qtbot, tempDir, mainWindow):
     assert {"localfs/master", "localfs/new-remote-branch"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
 
 
-def testFetchRemoteBranch(qtbot, tempDir, mainWindow):
+def testFetchRemoteBranch(tempDir, mainWindow):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     newHead = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
 

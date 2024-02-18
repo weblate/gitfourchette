@@ -3,7 +3,7 @@ from .util import *
 from gitfourchette.porcelain import *
 
 
-def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
+def testConflictDeletedByUs(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -44,7 +44,7 @@ def testConflictDeletedByUs(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"a/a2.txt": FileStatus.INDEX_NEW}
 
 
-def testConflictDeletedByThem(qtbot, tempDir, mainWindow):
+def testConflictDeletedByThem(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -88,7 +88,7 @@ def testConflictDeletedByThem(qtbot, tempDir, mainWindow):
     assert rw.repo.status() == {"a/a2.txt": FileStatus.INDEX_DELETED}
 
 
-def testConflictDoesntPreventManipulatingIndexOnOtherFile(qtbot, tempDir, mainWindow):
+def testConflictDoesntPreventManipulatingIndexOnOtherFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -111,14 +111,14 @@ def testConflictDoesntPreventManipulatingIndexOnOtherFile(qtbot, tempDir, mainWi
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "b/b1.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     qlvClickNthRow(rw.dirtyFiles, 1)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert qlvGetRowData(rw.stagedFiles) == ["b/b1.txt"]
 
     writeFile(f"{wd}/b/b1.txt", "b1\nb1\nunstaged change\nstaged change\n")
     rw.refreshRepo()
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "b/b1.txt"]
     qlvClickNthRow(rw.dirtyFiles, 1)
-    qtbot.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
+    QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, r"really discard changes.+b1\.txt")
 
     assert readFile(f"{wd}/b/b1.txt").decode() == "b1\nb1\nstaged change\n"
