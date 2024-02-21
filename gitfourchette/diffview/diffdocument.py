@@ -223,12 +223,12 @@ class DiffDocument:
 
             # Process line ending
             trailer = ""
-            if ld.text.endswith('\n'):
-                trimBack = -1
-            elif ld.text.endswith('\r\n'):
+            if ld.text.endswith('\r\n'):
                 trimBack = -2
                 if showStrayCRs:
                     trailer = "<CRLF>"
+            elif ld.text.endswith('\n'):
+                trimBack = -1
             elif ld.text.endswith('\r'):
                 trimBack = -1
                 if showStrayCRs:

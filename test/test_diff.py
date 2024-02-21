@@ -296,3 +296,60 @@ def testCopyFromDiffWithoutU2029(tempDir, mainWindow):
         "On master\n"
         "On master"
     )
+
+
+def testDiffStrayLineEndings(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/crlf.txt", "hi\r\nhow you doin\r\nbye")
+    writeFile(f"{wd}/cr.txt", "ancient mac file\r")
+
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inUnstaged(path="crlf.txt"))
+    assert rw.diffView.isVisibleTo(rw)
+    assert rw.diffView.toPlainText().lower() == (
+        "@@ -0,0 +1,3 @@\n"
+        "hi<crlf>\n"
+        "how you doin<crlf>\n"
+        "bye<no newline at end of file>"
+    )
+
+    # We're kinda cheating here - cr.txt consists of a single line because
+    # libgit2 doesn't consider CR to be a linebreak when creating a Diff.
+    # Even then, what we have is still better than nothing for the rare use
+    # case of importing an ancient Mac file from the 80s/90s into a Git repo.
+    rw.jump(NavLocator.inUnstaged(path="cr.txt"))
+    assert rw.diffView.isVisibleTo(rw)
+    assert rw.diffView.toPlainText().lower() == (
+        "@@ -0,0 +1 @@\n"
+        "ancient mac file<cr>"
+    )
+
+
+def testDiffBinaryWarning(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with open(f"{wd}/binary.whatever", "wb") as f:
+        f.write(b"\x00\x00\x00\x00")
+
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inUnstaged(path="binary.whatever"))
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert "binary" in rw.specialDiffView.toPlainText().lower()
+
+
+def testDiffVeryLongLines(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    contents = " ".join(f"foo{i}" for i in range(5000)) + "\n"
+    writeFile(f"{wd}/longlines.txt", contents)
+
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inUnstaged(path="longlines.txt"))
+    assert not rw.diffView.isVisibleTo(rw)
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert "long lines" in rw.specialDiffView.toPlainText().lower()
+
+    qteClickLink(rw.specialDiffView, "load.+anyway")
+    assert rw.diffView.isVisibleTo(rw)
+    assert rw.diffView.toPlainText().rstrip() == "@@ -0,0 +1 @@\n" + contents.rstrip()
