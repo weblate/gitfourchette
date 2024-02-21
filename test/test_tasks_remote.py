@@ -13,6 +13,9 @@ def testNewRemote(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
+    # Make a bare copy of the repo to use as a remote "server"
+    barePath = makeBareCopy(wd, addAsRemote="", preFetch=False)
+
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
@@ -26,15 +29,18 @@ def testNewRemote(tempDir, mainWindow):
 
     q: RemoteDialog = findQDialog(rw, "add remote")
     q.ui.nameEdit.setText("otherremote")
-    q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
-    q.ui.fetchAfterAddCheckBox.setChecked(False)
+    q.ui.urlEdit.setText(barePath)
+    q.ui.fetchAfterAddCheckBox.setChecked(True)
     q.accept()
 
     assert len(repo.remotes) == 2
     assert repo.remotes[1].name == "otherremote"
-    assert repo.remotes[1].url == "https://127.0.0.1/example-repo.git"
+    assert repo.remotes[1].url == barePath
     assert any("origin" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
     assert any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
+
+    # Ensure that fetch-after-add did work
+    assert repo.branches.remote["otherremote/master"].target == repo.branches.local["master"].target
 
 
 def testEditRemote(tempDir, mainWindow):

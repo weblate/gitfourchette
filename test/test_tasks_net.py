@@ -7,6 +7,7 @@ We use a bare repository on the local filesystem as a "remote server".
 import pytest
 
 from .util import *
+from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette import porcelain
 
@@ -99,3 +100,60 @@ def testFetchRemoteBranch(tempDir, mainWindow):
 
     # The position of the remote's master branch should be up-to-date now
     assert rw.repo.branches.remote["localfs/master"].target == newHead
+
+
+@pytest.mark.parametrize("asNewBranch", [False, True])
+def testPush(tempDir, mainWindow, asNewBranch):
+    oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+
+    wd = unpackRepo(tempDir)
+    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
+
+    # Make some update in our repo
+    with RepoContext(wd) as repo:
+        writeFile(f"{wd}/pushme.txt", "till I can get my satisfaction")
+        repo.index.add("pushme.txt")
+        repo.index.write()
+        newHead = repo.create_commit_on_head("push this commit to the remote")
+
+    rw = mainWindow.openRepo(wd)
+
+    # We still think the remote's master branch is on the old head for now
+    assert rw.repo.branches.remote["localfs/master"].target == oldHead
+    assert "localfs/new" not in rw.repo.branches.remote
+
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "push")
+
+    dlg: PushDialog = findQDialog(rw, "push.+branch")
+    assert isinstance(dlg, PushDialog)
+
+    i = dlg.ui.remoteBranchEdit.currentIndex()
+    assert dlg.ui.remoteBranchEdit.itemText(i).startswith("origin/master")
+    assert dlg.ui.trackCheckBox.isChecked()
+    assert re.search(r"already tracks.+origin/master", dlg.ui.trackingLabel.text(), re.I)
+
+    if not asNewBranch:
+        i = dlg.ui.remoteBranchEdit.findText("localfs/master")
+    else:
+        i = dlg.ui.remoteBranchEdit.findText(r"new.+branch on.+localfs", Qt.MatchFlag.MatchRegularExpression)
+    assert i >= 0
+    dlg.ui.remoteBranchEdit.setCurrentIndex(i)
+    dlg.ui.remoteBranchEdit.activated.emit(i)  # this signal is normally only emitted on user interaction, so fake it
+
+    if not asNewBranch:
+        assert not dlg.ui.trackCheckBox.isChecked()
+    else:
+        assert dlg.ui.trackCheckBox.isChecked()
+        assert dlg.ui.newRemoteBranchNameEdit.text() == "master-2"
+        dlg.ui.newRemoteBranchNameEdit.clear()
+        QTest.keyClicks(dlg.ui.newRemoteBranchNameEdit, "new")  # keyClicks ensures the correct signal is emitted
+        assert re.search(r"will track.+localfs/new.+instead of.+origin/master", dlg.ui.trackingLabel.text(), re.I)
+
+    dlg.startOperationButton.click()
+
+    if not asNewBranch:
+        assert rw.repo.branches.remote["localfs/master"].target == newHead
+    else:
+        assert rw.repo.branches.remote["localfs/new"].target == newHead
