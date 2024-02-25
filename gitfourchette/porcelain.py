@@ -728,12 +728,14 @@ class Repo(_VanillaRepository):
         # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server
         branch = self.branches.local[name]
         branch.rename(new_name)
+        self.scrub_empty_config_section("branch", name)
         return branch
 
     def delete_local_branch(self, name: str):
         """Delete a local branch."""
         # TODO: if remote-tracking, let user delete upstream too?
         self.branches.local.delete(name)
+        self.scrub_empty_config_section("branch", name)
 
     def scrub_empty_config_section(self, *section_key_tokens: str):
         """
@@ -840,9 +842,11 @@ class Repo(_VanillaRepository):
         self.remotes.set_url(name, new_url)
         if name != new_name:
             self.remotes.rename(name, new_name)  # rename AFTER setting everything else!
+            self.scrub_empty_config_section("remote", name)
 
     def delete_remote(self, name: str):
         self.remotes.delete(name)
+        self.scrub_empty_config_section("remote", name)
 
     def delete_remote_branch(self, remote_branch_name: str, remoteCallbacks: RemoteCallbacks):
         remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
