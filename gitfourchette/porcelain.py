@@ -7,6 +7,7 @@ import enum
 import logging as _logging
 import os as _os
 import re as _re
+import shutil as _shutil
 import typing as _typing
 from contextlib import suppress as _suppress
 from pathlib import Path as _Path
@@ -69,6 +70,7 @@ from pygit2.remotes import TransferProgress
 _logger = _logging.getLogger(__name__)
 
 NULL_OID = Oid(raw=b'')
+DOT_GITMODULES = ".gitmodules"
 
 CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = _re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", _re.IGNORECASE)
@@ -429,6 +431,77 @@ def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
     return old_oid, new_oid, new_dirty
 
 
+class GitConfigHelper:
+    @staticmethod
+    def is_empty(config_path: str):
+        with open(config_path, "rt") as f:
+            data = f.read()
+        return not data or data.isspace()
+
+    @staticmethod
+    def delete_section(config_path: str, *section_key_tokens: str):
+        config = GitConfig(config_path)
+
+        assert len(section_key_tokens) == 2
+        section_key = ".".join(section_key_tokens)
+        section_prefix = section_key + "."
+
+        to_delete = [entry.name for entry in config if entry.name.startswith(section_prefix)]
+
+        for entry_name in to_delete:
+            del config[entry_name]
+
+        GitConfigHelper.scrub_empty_section(config_path, *section_key_tokens)
+
+        return bool(to_delete)
+
+    @staticmethod
+    def scrub_empty_section(config_path: str, *section_key_tokens: str):
+        assert len(section_key_tokens) == 2
+        prefix, name = section_key_tokens
+        name = name.replace('"', r'\"')
+        section_key = f'{prefix} "{name}"'
+
+        ini = _configparser.ConfigParser()
+        ini.read(config_path)
+
+        if not ini.has_section(section_key):
+            # Section doesn't appear in file, let it be
+            _logger.debug(f".git/config: Section [{section_key}] doesn't appear, no scrubbing needed")
+            return
+
+        section = ini[section_key]
+        assert isinstance(section, _configparser.SectionProxy)
+
+        if len(section) != 0:
+            # Section isn't empty, leave it alone
+            _logger.debug(f".git/config: Section [{section_key}] isn't empty, won't scrub")
+            return
+
+        _logger.debug(f".git/config: Scrubbing empty section [{section_key}]")
+
+        # We could call ini.remove_section(section_key) and then write the ini back to disk.
+        # But this destroys the file's formatting. So, remove the offending line surgically.
+        with open(config_path, "rt") as f:
+            lines = f.readlines()
+        try:
+            lines.remove(f"[{section_key}]\n")
+        except ValueError:
+            _logger.warning(f".git/config: Standalone section line not found: [{section_key}]")
+            return
+
+        timestamp = datetime.datetime.now().timestamp()
+        temp_path = config_path + f".{timestamp}.new.tmp"
+        backup_path = config_path + f".{timestamp}.old.tmp"
+
+        with open(temp_path, "wt") as f:
+            f.writelines(lines)
+
+        _os.rename(config_path, backup_path)
+        _os.rename(temp_path, config_path)
+        _os.unlink(backup_path)
+
+
 class Repo(_VanillaRepository):
     """
     Drop-in replacement for pygit2.Repository with convenient front-ends to common git operations.
@@ -474,7 +547,10 @@ class Repo(_VanillaRepository):
     def in_workdir(self, path: str) -> str:
         """Return an absolutized version of `path` within this repo's workdir."""
         assert not _os.path.isabs(path)
-        return _os.path.join(self.workdir, path)
+        p = _os.path.join(self.workdir, path)
+        if not p.startswith(self.workdir):
+            raise ValueError("Won't create absolute path outside workdir")
+        return p
 
     def refresh_index(self, force: bool = False):
         """
@@ -659,61 +735,15 @@ class Repo(_VanillaRepository):
         # TODO: if remote-tracking, let user delete upstream too?
         self.branches.local.delete(name)
 
-    def scrub_empty_config_section(self, section_key: str | tuple):
+    def scrub_empty_config_section(self, *section_key_tokens: str):
         """
         libgit2 leaves behind empty sections in the config file after deleting
         or renaming a remote or branch. Over time, this litters the config
         file with empty entries, which slows down operations that parse the
         config. So, use this function to nip that in the bud.
         """
-
-        if type(section_key) is tuple:
-            tokens = section_key
-            assert len(tokens) == 2
-            prefix, name = tokens
-            name = name.replace('"', r'\"')
-            section_key = f'{prefix} "{name}"'
-
         config_path = _os.path.join(self.path, "config")
-
-        ini = _configparser.ConfigParser()
-        ini.read(_os.path.join(self.path, "config"))
-
-        if not ini.has_section(section_key):
-            # Section doesn't appear in file, let it be
-            _logger.debug(f".git/config: Section [{section_key}] doesn't appear, no scrubbing needed")
-            return
-
-        section = ini[section_key]
-        assert isinstance(section, _configparser.SectionProxy)
-
-        if len(section) != 0:
-            # Section isn't empty, leave it alone
-            _logger.debug(f".git/config: Section [{section_key}] isn't empty, won't scrub")
-            return
-
-        _logger.debug(f".git/config: Scrubbing empty section [{section_key}]")
-
-        # We could call ini.remove_section(section_key) and then write the ini back to disk.
-        # But this destroys the file's formatting. So, remove the offending line surgically.
-        with open(config_path, "rt") as f:
-            lines = f.readlines()
-        try:
-            lines.remove(f"[{section_key}]\n")
-        except ValueError:
-            _logger.warning(f".git/config: Standalone section line not found: [{section_key}]")
-            return
-
-        timestamp = datetime.datetime.now().timestamp()
-        temp_path = config_path + f".{timestamp}.new.tmp"
-        backup_path = config_path + f".{timestamp}.old.tmp"
-
-        with open(temp_path, "wt") as f:
-            f.writelines(lines)
-
-        _os.rename(config_path, backup_path)
-        _os.rename(temp_path, config_path)
-        _os.unlink(backup_path)
+        GitConfigHelper.scrub_empty_section(config_path, *section_key_tokens)
 
     def create_branch_on_head(self, name: str) -> Branch:
         """Create a local branch pointing to the commit at the current HEAD."""
@@ -1253,7 +1283,7 @@ class Repo(_VanillaRepository):
 
         # return self.listall_submodules()
 
-        config_path = self.in_workdir(".gitmodules")
+        config_path = self.in_workdir(DOT_GITMODULES)
         if not _os.path.isfile(config_path):
             return []
 
@@ -1410,10 +1440,11 @@ class Repo(_VanillaRepository):
         if not inner_g.is_relative_to(outer_w):
             raise ValueError("Subrepo .git dir must be relative to superrepo workdir")
 
-        dot_gitmodules = GitConfig(str(outer_w / ".gitmodules"))
-        dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.path"] = inner_w.relative_to(outer_w)
+        gitmodules = GitConfig(self.in_workdir(DOT_GITMODULES))
+        config_prefix = f"submodule.{inner_w.relative_to(outer_w)}"
+        gitmodules[f"{config_prefix}.path"] = inner_w.relative_to(outer_w)
         if remote_url:
-            dot_gitmodules[f"submodule.{inner_w.relative_to(outer_w)}.url"] = remote_url
+            gitmodules[f"{config_prefix}.url"] = remote_url
 
         if absorb_git_dir:
             inner_g2 = _Path(self.path, "modules", inner_w.relative_to(outer_w))
@@ -1435,7 +1466,25 @@ class Repo(_VanillaRepository):
         self.index.add(entry)
 
         # While we're here also add .gitmodules
-        self.index.add(".gitmodules")
+        self.index.add(DOT_GITMODULES)
+
+    def remove_submodule(self, inner_w: str):
+        config_abspath = self.in_workdir(DOT_GITMODULES)
+
+        did_delete = GitConfigHelper.delete_section(config_abspath, "submodule", inner_w)
+
+        if GitConfigHelper.is_empty(config_abspath):
+            # That was the only submodule, so remove .gitmodules
+            _os.unlink(config_abspath)
+            self.index.remove(DOT_GITMODULES)
+        else:
+            self.index.add(DOT_GITMODULES)
+
+        if did_delete:
+            _shutil.rmtree(self.in_workdir(inner_w))
+            self.index.remove(inner_w)
+
+        self.index.write()
 
     @staticmethod
     def _sanitize_config_key(key: str | tuple) -> str:

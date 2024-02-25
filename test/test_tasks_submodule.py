@@ -133,6 +133,21 @@ def testSubmoduleDeletedDiff(tempDir, mainWindow):
     assert re.search(r"submodule.+submo.+(deleted|removed)", rw.specialDiffView.toPlainText(), re.I)
 
 
+def testDeleteSubmodule(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.submodule(wd)
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNode(lambda n: n.data == "submo")
+    assert node.kind == EItem.Submodule
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, r"remove submodule")
+
+    acceptQMessageBox(rw, r"remove submodule")
+    assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert set(qlvGetRowData(rw.stagedFiles)) == {"submo", ".gitmodules"}
+
+
 def testAbsorbSubmodule(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     subWd = unpackRepo(wd, renameTo="submo")

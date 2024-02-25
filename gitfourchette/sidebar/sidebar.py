@@ -364,6 +364,10 @@ class Sidebar(QTreeView):
 
                 ActionDef(self.tr("Copy &Path"),
                           lambda: self.copyToClipboard(repo.in_workdir(data))),
+
+                ActionDef.SEPARATOR,
+
+                TaskBook.action(self, RemoveSubmodule, taskArgs=data),
             ]
 
         # --------------------

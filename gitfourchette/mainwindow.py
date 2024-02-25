@@ -769,7 +769,7 @@ class MainWindow(QMainWindow):
         askPrompt = (
                 self.tr("Do you want to permanently delete <b>%n</b> discarded patches?", "", patchCount) + "<br>" +
                 self.tr("This will free up {0} on disk.").format(escape(humanSize)) + "<br>" +
-                translate("Global", "This cannot be undone!"))
+                tr("This cannot be undone!"))
 
         askConfirmation(
             parent=self,

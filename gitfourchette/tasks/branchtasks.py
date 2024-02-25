@@ -60,7 +60,7 @@ class RenameBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.rename_local_branch(oldBranchName, newBranchName)
-        self.repo.scrub_empty_config_section(("branch", oldBranchName))
+        self.repo.scrub_empty_config_section("branch", oldBranchName)
 
     def effects(self):
         return TaskEffects.Refs
@@ -86,7 +86,7 @@ class DeleteBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.delete_local_branch(localBranchName)
-        self.repo.scrub_empty_config_section(("branch", localBranchName))
+        self.repo.scrub_empty_config_section("branch", localBranchName)
 
     def effects(self):
         return TaskEffects.Refs
