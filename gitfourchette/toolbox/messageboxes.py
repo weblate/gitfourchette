@@ -55,11 +55,14 @@ def excMessageBox(
             message = tr("An exception was raised.")
 
         if showExcSummary:
-            summary = traceback.format_exception_only(exc.__class__, exc)
-            summary = ''.join(summary).strip()
-            if summary.startswith("_pygit2.GitError:"):
-                summary = summary.removeprefix("_pygit2.GitError:")
-                summary = tr("Git error:") + summary
+            try:
+                from gitfourchette.trtables import TrTables
+                TrTables.init()
+                summary = f"{TrTables.exceptionName(exc)}: {exc}"
+            except:
+                summary = traceback.format_exception_only(exc.__class__, exc)
+                summary = ''.join(summary).strip()
+
             if len(summary) > 500:
                 summary = summary[:500] + "... " + tr("(MESSAGE TRUNCATED)")
             message += "<br><br>" + html.escape(summary)

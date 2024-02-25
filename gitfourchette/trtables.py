@@ -20,6 +20,11 @@ class TrTables:
     _conflictHelp = {}
 
     @classmethod
+    def init(cls):
+        if not cls._exceptionNames:
+            cls.retranslateAll()
+
+    @classmethod
     def retranslateAll(cls):
         cls._exceptionNames = cls._init_exceptionNames()
         cls._nameValidationCodes = cls._init_nameValidationCodes()
@@ -87,6 +92,7 @@ class TrTables:
             "ConnectionRefusedError": translate("Exception", "Connection refused"),
             "FileNotFoundError": translate("Exception", "File not found"),
             "PermissionError": translate("Exception", "Permission denied"),
+            "GitError": translate("Exception", "Git error"),
         }
 
     @staticmethod
