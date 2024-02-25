@@ -74,6 +74,9 @@ CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = _re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", _re.IGNORECASE)
 DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
 
+SUBPROJECT_COMMIT_MINUS_PATTERN = _re.compile(r"^-Subproject commit (.+)$", _re.M)
+SUBPROJECT_COMMIT_PLUS_PATTERN = _re.compile(r"^\+Subproject commit (.+)$", _re.M)
+
 FileStatus_INDEX_MASK = (
         FileStatus.INDEX_NEW
         | FileStatus.INDEX_MODIFIED
@@ -404,6 +407,26 @@ def strip_stash_message(stash_message: str) -> str:
         return m.group(2)
     else:
         return stash_message
+
+
+def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
+    def parse_subproject_line(match: _re.Match):
+        dirty = False
+        if not match:
+            oid = NULL_OID
+        else:
+            capture = match.group(1)
+            if capture.endswith("-dirty"):
+                capture = capture.removesuffix("-dirty")
+                dirty = True
+            oid = Oid(hex=capture)
+        return oid, dirty
+
+    old_match = SUBPROJECT_COMMIT_MINUS_PATTERN.search(text)
+    new_match = SUBPROJECT_COMMIT_PLUS_PATTERN.search(text)
+    old_oid, _ = parse_subproject_line(old_match)
+    new_oid, new_dirty = parse_subproject_line(new_match)
+    return old_oid, new_oid, new_dirty
 
 
 class Repo(_VanillaRepository):

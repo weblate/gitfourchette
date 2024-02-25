@@ -288,14 +288,8 @@ class LoadPatch(RepoTask):
             path = patch.delta.new_file.path
             return self.repo.wrap_conflict(path)
 
-        submodule = None
-        with (suppress(KeyError),
-              suppress(ValueError),  # "submodule <whatever> has not been added yet" (GIT_EEXISTS)
-              Benchmark("Submodule detection")
-              ):
-            submodule = self.repo.submodules[patch.delta.new_file.path]
-        if submodule:
-            return SpecialDiffError.submoduleDiff(self.repo, submodule, patch, locator)
+        if FileMode.COMMIT in (patch.delta.new_file.mode, patch.delta.old_file.mode):
+            return SpecialDiffError.submoduleDiff(self.repo, patch, locator)
 
         try:
             diffModel = DiffDocument.fromPatch(patch, locator)

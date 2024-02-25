@@ -131,69 +131,60 @@ class SpecialDiffError(Exception):
                 f"{oldHumanSize} &rarr; {newHumanSize}")
 
     @staticmethod
-    def submoduleDiff(repo: Repo, submodule: Submodule, patch: Patch, locator: NavLocator):
+    def submoduleDiff(repo: Repo, patch: Patch, locator: NavLocator):
         from gitfourchette.tasks import DiscardFiles
 
-        def parseSubprojectCommit(match: re.Match):
-            dirty = False
-            if not match:
-                hashText = translate("Diff", "(none)", "no commit")
-            else:
-                hashText = match.group(1)
-                if hashText.endswith("-dirty"):
-                    hashText = hashText.removesuffix("-dirty")
-                    dirty = True
-            return hashText, dirty
-
-        shortName = os.path.basename(submodule.name)
-        localPath = repo.in_workdir(submodule.path)
+        shortName = os.path.basename(patch.delta.new_file.path)
+        localPath = repo.in_workdir(patch.delta.new_file.path)
         openLink = QUrl.fromLocalFile(localPath)
+        stillExists = os.path.isdir(localPath)
+        isDeletion = patch.delta.status == DeltaStatus.DELETED
 
-        titleText = translate("Diff", "Submodule {0} was updated.").format(bquo(shortName))
+        isHastyAdd = False
+        if patch.delta.status == DeltaStatus.ADDED and locator.context == NavContext.STAGED:
+            isHastyAdd = True
+
+        if isDeletion:
+            titleText = translate("Diff", "Submodule {0} was removed.")
+        elif patch.delta.status == DeltaStatus.ADDED:
+            titleText = translate("Diff", "Submodule {0} was added.")
+        else:
+            titleText = translate("Diff", "Submodule {0} was updated.")
+        titleText = titleText.format(bquo(shortName))
+
         specialDiff = SpecialDiffError(titleText)
-
-        oldMatch = re.search(r"^-Subproject commit (.+)$", patch.text, re.MULTILINE)
-        newMatch = re.search(r"^\+Subproject commit (.+)$", patch.text, re.MULTILINE)
-        oldHash, _ = parseSubprojectCommit(oldMatch)
-        newHash, newDirty = parseSubprojectCommit(newMatch)
-
-        try:
-            oid = Oid(hex=oldHash)
-            oldCommitLink = QUrl(openLink)
-            oldCommitLink.setFragment(oid.hex)
-            oldTarget = f"<a href='{oldCommitLink.toString()}'>{shortHash(oid)}</a>"
-        except ValueError:
-            oldTarget = oldHash
-
-        try:
-            oid = Oid(hex=newHash)
-            newCommitLink = QUrl(openLink)
-            newCommitLink.setFragment(oid.hex)
-            newTarget = f"<a href='{newCommitLink.toString()}'>{shortHash(oid)}</a>"
-        except ValueError:
-            newTarget = newHash
-
         longformParts = []
-        if oldHash != newHash:
-            with RepoContext(localPath) as subRepo:
-                message1 = ""
-                message2 = ""
-                with suppress(LookupError, ValueError, GitError):
-                    message1 = subRepo[Oid(hex=oldHash)].peel(Commit).message
-                    message1 = messageSummary(message1)[0]
-                    message1 = elide(message1, Qt.TextElideMode.ElideRight, 25)
-                    message1 = hquo(message1)
-                with suppress(LookupError, ValueError, GitError):
-                    message2 = subRepo[Oid(hex=newHash)].peel(Commit).message
-                    message2 = messageSummary(message2)[0]
-                    message2 = elide(message2, Qt.TextElideMode.ElideRight, 25)
-                    message2 = hquo(message2)
+
+        oldOid, newOid, dirty = parse_submodule_patch(patch.text)
+        headDidMove = oldOid != newOid
+
+        # Create old/new table if the submodule's HEAD commit was moved
+        if headDidMove and not isDeletion:
+            targets = [shortHash(oldOid), shortHash(newOid)]
+            messages = ["", ""]
+
+            # Show additional details about the commits if there's still a workdir for this submo
+            if stillExists:
+                # Make links to specific commits
+                for i, h in enumerate([oldOid, newOid]):
+                    if h != NULL_OID:
+                        targets[i] = linkify(shortHash(h), f"{openLink.toString()}#{h.hex}")
+
+                # Show commit summaries
+                with RepoContext(localPath, RepositoryOpenFlag.NO_SEARCH) as subRepo:
+                    for i, h in enumerate([oldOid, newOid]):
+                        with suppress(LookupError, GitError):
+                            m = subRepo[h].peel(Commit).message
+                            m = messageSummary(m)[0]
+                            m = elide(m, Qt.TextElideMode.ElideRight, 25)
+                            m = hquo(m)
+                            messages[i] = m
 
             oldText = translate("Diff", "Old:")
             newText = translate("Diff", "New:")
             table = ("<table>"
-                     f"<tr><td><del><b>{oldText}</b></del> </td><td><code>{oldTarget} </code> {message1}</td></tr>"
-                     f"<tr><td><add><b>{newText}</b></add> </td><td><code>{newTarget} </code> {message2}</td></tr>"
+                     f"<tr><td><del><b>{oldText}</b></del> </td><td><code>{targets[0]} </code> {messages[0]}</td></tr>"
+                     f"<tr><td><add><b>{newText}</b></add> </td><td><code>{targets[1]} </code> {messages[1]}</td></tr>"
                      "</table>")
 
             if locator.context == NavContext.UNSTAGED:
@@ -202,10 +193,11 @@ class SpecialDiffError(Exception):
                 intro = translate("Diff", "<b>HEAD</b> was moved to another commit:")
             longformParts.append(f"<p>{intro}<p>{table}</p></p>")
 
-        if newDirty:
+        # Tell about any uncommitted changes
+        if dirty:
             discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
 
-            if oldHash != newHash:
+            if headDidMove:
                 lead = translate("Diff", "In addition, there are <b>uncommitted changes</b> in the submodule.")
             else:
                 lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
@@ -213,9 +205,23 @@ class SpecialDiffError(Exception):
                                    openLink, discardLink)
             longformParts.append(f"<p>{lead}<br>{callToAction}</p>")
 
-        subtitle = translate("Diff", "Open submodule {0}").format(bquo(shortName))
-        subtitle = linkify(subtitle, openLink)
+        # Add link to open the submodule as a subtitle
+        if stillExists:
+            subtitle = translate("Diff", "Open submodule {0}").format(bquo(shortName))
+            subtitle = linkify(subtitle, openLink)
+            specialDiff.details = subtitle
 
-        specialDiff.details = subtitle
+        if isHastyAdd:
+            text = translate(
+                "Diff",
+                "<b>WARNING:</b> You’ve added another Git repo inside your current repo, "
+                "but this does not actually embed the contents of the inner repo. "
+                "So, you should register the inner repo as a <i>submodule</i>. "
+                "This way, clones of the outer repo will know how to obtain the inner repo."
+            ).format(hquo(shortName), hquo(os.path.basename(repo.repo_name())))
+            longformParts.insert(0, f"<p>{text}</p>")
+
+        # Compile longform parts into an unordered list
         specialDiff.longform = ulList(longformParts, -1)
+
         return specialDiff

@@ -27,7 +27,7 @@ def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     elif method == "commitSpecialDiff":
         rw.jump(NavLocator.inCommit(oid=submoCommit, path="submo"))
         assert rw.specialDiffView.isVisibleTo(rw)
-        assert qteFind(rw.specialDiffView, r"submodule.+submo.+was updated")
+        assert qteFind(rw.specialDiffView, r"submodule.+submo.+was added")
         qteClickLink(rw.specialDiffView, r"open submodule.+submo")
 
     elif method == "commitFileList":
@@ -107,6 +107,30 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
 
     acceptQMessageBox(rw, r"discard changes in submodule.+submo.+uncommitted changes")
     assert rw.repo.status() == {}  # should've cleared everything
+
+
+def testSubmoduleDeletedDiff(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    subWd, subAddOid = reposcenario.submodule(wd)
+    with RepoContext(wd) as repo:
+        shutil.rmtree(f"{wd}/submo")
+        os.unlink(f"{wd}/.gitmodules")
+        repo.index.remove(".gitmodules")
+        repo.index.remove("submo")
+        subDelOid = repo.create_commit_on_head("delete submo")
+
+    rw = mainWindow.openRepo(wd)
+
+    assert not rw.repo.listall_submodules()
+    assert [] == list(rw.sidebar.findNodesByKind(EItem.Submodule))
+
+    rw.jump(NavLocator.inCommit(subAddOid, path="submo"))
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert re.search(r"submodule.+submo.+added", rw.specialDiffView.toPlainText(), re.I)
+
+    rw.jump(NavLocator.inCommit(subDelOid, path="submo"))
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert re.search(r"submodule.+submo.+(deleted|removed)", rw.specialDiffView.toPlainText(), re.I)
 
 
 def testAbsorbSubmodule(tempDir, mainWindow):
