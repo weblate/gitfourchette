@@ -1,5 +1,3 @@
-import pygit2.enums
-
 from gitfourchette.nav import NavLocator
 from .test_tasks_stage import doStage, doDiscard
 from . import reposcenario
@@ -193,3 +191,34 @@ def testAbsorbSubmodule(tempDir, mainWindow):
     triggerMenuAction(tabMenu, r"open superproject")
     assert 0 == mainWindow.tabs.currentIndex()  # back to first tab
     assert rw is mainWindow.tabs.currentWidget()  # back to first tab
+
+
+def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.submodule(wd, absorb=True)
+
+    rw = mainWindow.openRepo(wd)
+
+    # Delete the submodule
+    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert node.data == "submo"
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "remove")
+    acceptQMessageBox(rw, "remove submodule")
+
+    assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert set(qlvGetRowData(rw.stagedFiles)) == {".gitmodules", "submo"}
+
+    # Discard submodule deletion
+    qlvClickNthRow(rw.stagedFiles, 0)  # TODO: selectAll won't actually select everything without this first
+    rw.stagedFiles.selectAll()
+    rw.stagedFiles.unstage()
+    qlvClickNthRow(rw.dirtyFiles, 0)  # TODO: selectAll won't actually select everything without this first
+    rw.dirtyFiles.selectAll()
+    rw.dirtyFiles.discard()
+    acceptQMessageBox(rw, "discard changes")
+
+    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert node.data == "submo"
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "update")

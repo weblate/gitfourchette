@@ -126,3 +126,20 @@ class FetchRemoteBranch(_BaseNetTask):
         remoteName, _ = split_remote_branch_shorthand(remoteBranchName)
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
         self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
+
+
+class UpdateSubmodule(_BaseNetTask):
+    def flow(self, submodulePath: str, init=False):
+        self._showRemoteLinkDialog()
+        yield from self.flowEnterWorkerThread()
+
+        repo = self.repo
+        submo = repo.submodules[submodulePath]
+        subHeadOid = submo.head_id
+
+        if repo.restore_submodule_gitlink(submodulePath):
+            with RepoContext(repo.in_workdir(submodulePath)) as subrepo:
+                tree = subrepo[subHeadOid].peel(Tree)
+                subrepo.checkout_tree(tree)
+
+        self.repo.submodules.update([submodulePath], init=init, callbacks=self.remoteLink)

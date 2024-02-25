@@ -79,6 +79,7 @@ class TaskBook:
             tasks.SetUpRepoIdentity: translate("task", "Set up Git identity"),
             tasks.StageFiles: translate("task", "Stage files"),
             tasks.SwitchBranch: translate("task", "Switch to branch"),
+            tasks.UpdateSubmodule: translate("task", "Update submodule"),
             tasks.UnstageFiles: translate("task", "Unstage files"),
             tasks.UnstageModeChanges: translate("task", "Unstage mode changes"),
         }

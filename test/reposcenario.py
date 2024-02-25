@@ -30,11 +30,16 @@ def stashedChange(path):
         assert repo.status() == {}
 
 
-def submodule(path):
+def submodule(path, absorb=False):
     submoPath = os.path.join(path, "submo")
     shutil.copytree(path, submoPath)
+
+    # Nuke remote to prevent net access in UpdateSubmodule
+    with RepoContext(submoPath) as repo:
+        repo.remotes.delete("origin")
+
     with RepoContext(path, write_index=True) as repo:
-        repo.add_inner_repo_as_submodule("submo", "", absorb_git_dir=False)
+        repo.add_inner_repo_as_submodule("submo", "", absorb_git_dir=absorb)
         submoAddCommitOid = repo.create_commit_on_head("Add Submodule for Test Purposes")
     return submoPath, submoAddCommitOid
 

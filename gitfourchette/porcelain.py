@@ -10,6 +10,17 @@ import re as _re
 import shutil as _shutil
 import typing as _typing
 from contextlib import suppress as _suppress
+from os.path import (
+    abspath as _abspath,
+    basename as _basename,
+    dirname as _dirname,
+    exists as _exists,
+    isabs as _isabs,
+    isfile as _isfile,
+    join as _joinpath,
+    normpath as _normpath,
+    relpath as _relpath,
+)
 from pathlib import Path as _Path
 
 from pygit2 import (
@@ -546,8 +557,8 @@ class Repo(_VanillaRepository):
 
     def in_workdir(self, path: str) -> str:
         """Return an absolutized version of `path` within this repo's workdir."""
-        assert not _os.path.isabs(path)
-        p = _os.path.join(self.workdir, path)
+        assert not _isabs(path)
+        p = _joinpath(self.workdir, path)
         if not p.startswith(self.workdir):
             raise ValueError("Won't create absolute path outside workdir")
         return p
@@ -744,7 +755,7 @@ class Repo(_VanillaRepository):
         file with empty entries, which slows down operations that parse the
         config. So, use this function to nip that in the bud.
         """
-        config_path = _os.path.join(self.path, "config")
+        config_path = _joinpath(self.path, "config")
         GitConfigHelper.scrub_empty_section(config_path, *section_key_tokens)
 
     def create_branch_on_head(self, name: str) -> Branch:
@@ -1288,7 +1299,7 @@ class Repo(_VanillaRepository):
         # return self.listall_submodules()
 
         config_path = self.in_workdir(DOT_GITMODULES)
-        if not _os.path.isfile(config_path):
+        if not _isfile(config_path):
             return []
 
         config = GitConfig(config_path)
@@ -1369,21 +1380,21 @@ class Repo(_VanillaRepository):
             outer_wd = gitpath[:git_modules_pos]  # e.g. "/home/user/superproj"
             with _suppress(KeyError):
                 tentative_wd = self.config['core.worktree']
-                if not _os.path.isabs(tentative_wd):
+                if not _isabs(tentative_wd):
                     tentative_wd = gitpath + "/" + tentative_wd
-                tentative_wd = _os.path.normpath(tentative_wd)
-                actual_wd = _os.path.normpath(self.workdir)
+                tentative_wd = _normpath(tentative_wd)
+                actual_wd = _normpath(self.workdir)
                 if actual_wd == tentative_wd:
                     return outer_wd
 
         # Try to detect "legacy" submodule that manages its own .git dir
-        norm_wd = _os.path.normpath(self.workdir)
-        outer_seed = _os.path.dirname(norm_wd)
+        norm_wd = _normpath(self.workdir)
+        outer_seed = _dirname(norm_wd)
         with _suppress(GitError), RepoContext(outer_seed) as outer_repo:
             assert outer_repo.workdir.endswith("/")
             likely_submo_key = norm_wd.removeprefix(outer_repo.workdir)
             if likely_submo_key in outer_repo.listall_submodules_fast():
-                return _os.path.normpath(outer_repo.workdir)
+                return _normpath(outer_repo.workdir)
 
         return ""
 
@@ -1396,7 +1407,7 @@ class Repo(_VanillaRepository):
         raise ValueError("ref is not a local or remote branch")
 
     def repo_name(self):
-        return _os.path.basename(_os.path.normpath(self.workdir))
+        return _basename(_normpath(self.workdir))
 
     def get_local_identity(self) -> tuple[str, str]:
         """
@@ -1405,12 +1416,12 @@ class Repo(_VanillaRepository):
         """
 
         # Don't use repo.config because it merges global and local configs
-        local_config_path = _os.path.join(self.path, "config")
+        local_config_path = _joinpath(self.path, "config")
 
         name = ""
         email = ""
 
-        if _os.path.isfile(local_config_path):
+        if _isfile(local_config_path):
             local_config = GitConfig(local_config_path)
 
             with _suppress(KeyError):
@@ -1460,10 +1471,10 @@ class Repo(_VanillaRepository):
 
             # TODO: Use Path.relative_to(..., walk_up=True) once we drop support for all versions older than Python 3.13
             submodule_config = GitConfig(str(inner_g / "config"))
-            submodule_config["core.worktree"] = _os.path.relpath(inner_w, inner_g2)
+            submodule_config["core.worktree"] = _relpath(inner_w, inner_g2)
 
             with open(inner_w / ".git", "wt") as submodule_dotgit_file:
-                submodule_dotgit_file.write(f"gitdir: {_os.path.relpath(inner_g2, inner_w)}\n")
+                submodule_dotgit_file.write(f"gitdir: {_relpath(inner_g2, inner_w)}\n")
 
         # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
         entry = IndexEntry(inner_w.relative_to(outer_w), inner_head_oid, FileMode.COMMIT)
@@ -1489,6 +1500,52 @@ class Repo(_VanillaRepository):
             self.index.remove(inner_w)
 
         self.index.write()
+
+    def restore_submodule_gitlink(self, inner_wd: str) -> bool:
+        """
+        If a submodule's worktree was deleted, recreate the ".git" file that
+        connects the submodule's worktree to the repo within ".git/modules".
+
+        Return True if the gitlink file needed to be restored.
+        """
+        assert not _isabs(inner_wd)
+
+        sub_wd = self.in_workdir(inner_wd)
+        sub_dotgit = _joinpath(sub_wd, ".git")
+        sub_gitdir = _joinpath(self.path, "modules", inner_wd)
+
+        def can_restore():
+            if _exists(sub_dotgit):
+                # The .git file already exists in the submo's worktree
+                return False
+
+            sub_configpath = _joinpath(sub_gitdir, "config")
+            if not _isfile(sub_configpath):
+                # Can't find corresponding bare repo in .git/modules
+                return False
+
+            # Double-check worktree path...
+            try:
+                wd2 = GitConfig(sub_configpath)["core.worktree"]
+            except KeyError:
+                return False
+
+            # Make it an absolute path
+            if not _isabs(wd2):
+                wd2 = _joinpath(sub_gitdir, wd2)
+                wd2 = _abspath(wd2)
+
+            # The worktree that's configured for this submodule
+            # has to match the path we're given.
+            return sub_wd == wd2
+
+        if can_restore():
+            # Restore gitlink file
+            _os.makedirs(_dirname(sub_dotgit), exist_ok=True)
+            with open(sub_dotgit, "wt") as f:
+                rel_gitdir = _relpath(sub_gitdir, sub_wd)
+                f.write(f"gitdir: {rel_gitdir}\n")
+            return True
 
     @staticmethod
     def _sanitize_config_key(key: str | tuple) -> str:

@@ -143,7 +143,7 @@ class Sidebar(QTreeView):
             upstreamBranchDisplay = lquoe(upstreamBranchName)
 
             actions += [
-                TaskBook.action(self, 
+                TaskBook.action(self,
                     SwitchBranch,
                     self.tr("&Switch to {0}").format(thisBranchDisplay),
                     taskArgs=(branchName, False),  # False: don't ask for confirmation
@@ -152,7 +152,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, 
+                TaskBook.action(self,
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
@@ -167,14 +167,14 @@ class Sidebar(QTreeView):
                           shortcuts=GlobalShortcuts.pushBranch,
                           statusTip=self.tr("Upload your commits to the remote server")),
 
-                TaskBook.action(self, 
+                TaskBook.action(self,
                     FetchRemoteBranch,
                     self.tr("&Fetch..."),
                     taskArgs=branch.upstream.shorthand if hasUpstream else None,
                     enabled=hasUpstream,
                 ),
 
-                TaskBook.action(self, 
+                TaskBook.action(self,
                     FastForwardBranch,
                     self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
                     taskArgs=branchName,
@@ -234,7 +234,7 @@ class Sidebar(QTreeView):
                 ]
 
             actions += [
-                TaskBook.action(self, 
+                TaskBook.action(self,
                     NewBranchFromRef,
                     self.tr("Start Local Branch from Here..."),
                     taskArgs=refName,
@@ -244,7 +244,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, 
+                TaskBook.action(self,
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
@@ -364,6 +364,11 @@ class Sidebar(QTreeView):
 
                 ActionDef(self.tr("Copy &Path"),
                           lambda: self.copyToClipboard(repo.in_workdir(data))),
+
+                ActionDef.SEPARATOR,
+
+                TaskBook.action(self, UpdateSubmodule, taskArgs=[data]),
+                TaskBook.action(self, UpdateSubmodule, name="Init && " + TaskBook.autoActionName(UpdateSubmodule), taskArgs=[data, True]),
 
                 ActionDef.SEPARATOR,
 
