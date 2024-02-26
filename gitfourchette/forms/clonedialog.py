@@ -111,9 +111,6 @@ class CloneDialog(QDialog):
         cloneDialog = self
 
         class CloneTask(tasks.RepoTask):
-            def name(self):
-                return translate("Operation", "Clone repository")
-
             def flow(self):
                 yield from self.flowEnterWorkerThread()
                 link.discoverKeyFiles()

@@ -341,9 +341,6 @@ class PushDialog(QDialog):
         pushDialog = self
 
         class PushTask(tasks.RepoTask):
-            def name(self):
-                return translate("Operation", "Push")
-
             def effects(self) -> tasks.TaskEffects:
                 return tasks.TaskEffects.Remotes
 

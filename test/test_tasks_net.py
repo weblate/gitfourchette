@@ -4,12 +4,39 @@ Remote access tests.
 Note: these tests don't actually access the network.
 We use a bare repository on the local filesystem as a "remote server".
 """
+
+import os.path
 import pytest
 
 from .util import *
+from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette import porcelain
+
+
+def testCloneRepo(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, renameTo="unpacked-repo")
+    bare = makeBareCopy(wd, addAsRemote="", preFetch=False)
+    target = f"{tempDir.name}/the-clone"
+
+    assert not mainWindow.currentRepoWidget()  # no repo opened yet
+
+    triggerMenuAction(mainWindow.menuBar(), "file/clone")
+    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    cloneDialog.ui.urlEdit.setEditText(bare)
+    cloneDialog.ui.pathEdit.setText(target)
+    cloneDialog.cloneButton.click()
+
+    rw = mainWindow.currentRepoWidget()
+    assert rw is not None
+    assert os.path.samefile(rw.workdir, target)
+
+    # Look at some commit within the repo
+    oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+    rw.jump(NavLocator.inCommit(oid))
+    assert ["c/c1.txt"] == qlvGetRowData(rw.committedFiles)
 
 
 def testFetchNewRemoteBranches(tempDir, mainWindow):

@@ -45,9 +45,12 @@ def unpackRepo(
     return path
 
 
-def makeBareCopy(path: str, addAsRemote: str, preFetch: bool):
-    basename = os.path.basename(os.path.normpath(path))  # normpath first, because basename may return an empty string if path ends with a slash
-    barePath = os.path.normpath(F"{path}/../{basename}-bare.git")  # create bare repo besides real repo in temporary directory
+def makeBareCopy(path: str, addAsRemote: str, preFetch: bool, barePath=""):
+    if not barePath:
+        basename = os.path.basename(os.path.normpath(path))  # normpath first, because basename may return an empty string if path ends with a slash
+        barePath = f"{path}/../{basename}-bare.git"  # create bare repo besides real repo in temporary directory
+    barePath = os.path.normpath(barePath)
+
     shutil.copytree(F"{path}/.git", barePath)
 
     conf = GitConfig(F"{barePath}/config")
@@ -121,7 +124,16 @@ def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     return data
 
 
-def findMenuAction(menu: QMenu, pattern: str):
+def findMenuAction(menu: QMenu | QMenuBar, pattern: str):
+    if isinstance(menu, QMenuBar):
+        menuBar = menu
+        menuName, pattern = pattern.split("/", 1)
+        for menu in menuBar.children():
+            if isinstance(menu, QMenu) and re.search(menuName, menu.title(), re.I):
+                break
+        else:
+            assert False, "didn't find menu '{menuName}' in QMenuBar"
+
     assert isinstance(menu, QMenu)
     for action in menu.actions():
         actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())
@@ -129,7 +141,7 @@ def findMenuAction(menu: QMenu, pattern: str):
             return action
 
 
-def triggerMenuAction(menu: QMenu, pattern: str):
+def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):
     action = findMenuAction(menu, pattern)
     assert action is not None, f"did not find menu action matching \"{pattern}\""
     action.trigger()
