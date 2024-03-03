@@ -1304,12 +1304,29 @@ class Repo(_VanillaRepository):
 
         config = GitConfig(config_path)
         submo_paths = []
-        for configEntry in config:
-            key: str = configEntry.name
+        for entry in config:
+            key: str = entry.name
             if key.startswith("submodule.") and key.endswith(".path"):
-                submo_paths.append(configEntry.value)
+                submo_paths.append(entry.value)
 
         return submo_paths
+
+    def listall_initialized_submodules(self) -> list[str]:
+        config = self.config
+        submo_names = []
+        for entry in config:
+            key: str = entry.name
+            if key.startswith("submodule."):
+                i = len("submodule.")
+                j = key.rfind(".")
+                name = key[i:j]
+                submo_names.append(name)
+        return submo_names
+
+    def submodule_dotgit_present(self, submo_path: str) -> bool:
+        path = self.in_workdir(submo_path)
+        path = _joinpath(path, ".git")
+        return _exists(path)
 
     def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
         """

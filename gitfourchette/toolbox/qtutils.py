@@ -147,6 +147,10 @@ def stockIcon(iconId: str | QStyle.StandardPixmap) -> QIcon:
     If SVG icons don't show up, you may need to install the 'qt6-svg' package.
     """
 
+    # Special cases
+    if (MACOS or WINDOWS) and iconId == "achtung":
+        iconId = QStyle.StandardPixmap.SP_MessageBoxWarning
+
     # Attempt to get cached icon
     if iconId in _stockIconCache:
         return _stockIconCache[iconId]

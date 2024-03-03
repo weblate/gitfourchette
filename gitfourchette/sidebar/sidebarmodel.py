@@ -125,6 +125,7 @@ class SidebarNode:
     row: int
     kind: EItem
     data: str
+    warning: str
 
     @staticmethod
     def fromIndex(index: QModelIndex) -> SidebarNode | None:
@@ -140,6 +141,7 @@ class SidebarNode:
         self.row = -1
         self.kind = kind
         self.data = data
+        self.warning = ""
 
     def appendChild(self, node: SidebarNode):
         assert self.mayHaveChildren()
@@ -376,9 +378,19 @@ class SidebarModel(QAbstractItemModel):
 
         # Submodules
         with Benchmark("Submodules"):
+            initializedSubmodules = None  # defer to first loop iteration
+
             for submodule in repo.listall_submodules_fast():
                 node = SidebarNode(EItem.Submodule, submodule)
                 submoduleRoot.appendChild(node)
+
+                if initializedSubmodules is None:
+                    initializedSubmodules = repo.listall_initialized_submodules()
+
+                if submodule not in initializedSubmodules:
+                    node.warning = self.tr("Submodule not initialized.")
+                elif not repo.submodule_dotgit_present(submodule):
+                    node.warning = self.tr("Contents missing.")
 
         self._hiddenBranches = repoState.uiPrefs.hiddenBranches
         self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
@@ -672,11 +684,14 @@ class SidebarModel(QAbstractItemModel):
             if displayRole:
                 return node.data.rsplit("/", 1)[-1]
             elif toolTipRole:
-                return node.data
+                text = node.data
+                if node.warning:
+                    text += "<br>\u26a0 " + node.warning
+                return text
             elif hiddenRole:
                 return False
             elif decorationRole:
-                return stockIcon("git-submodule")
+                return stockIcon("achtung" if node.warning else "git-submodule")
 
         elif item == EItem.UncommittedChanges:
             if displayRole:
