@@ -325,15 +325,14 @@ class RepoWidget(QStackedWidget):
         stageButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
 
         layout = QGridLayout()
-        layout.setSpacing(1)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(header, 0, 0)
-        layout.addWidget(stageButton, 0, 1)
-        layout.addWidget(dirtyFiles.searchBar,  1, 0, 1, 2)
-        layout.addWidget(dirtyFiles,            2, 0, 1, 2)
-        layout.setRowStretch(2, 100)
-
-        header.setBuddy(dirtyFiles)
+        layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
+        layout.setContentsMargins(QMargins())
+        layout.addWidget(header,                0, 0)
+        layout.addWidget(stageButton,           0, 1)
+        layout.addItem(QSpacerItem(1, 1),       1, 0)
+        layout.addWidget(dirtyFiles.searchBar,  2, 0, 1, 2)
+        layout.addWidget(dirtyFiles,            3, 0, 1, 2)
+        layout.setRowStretch(3, 100)
 
         stageButton.clicked.connect(dirtyFiles.stage)
         dirtyFiles.selectedCountChanged.connect(lambda n: stageButton.setEnabled(n > 0))
@@ -397,21 +396,21 @@ class RepoWidget(QStackedWidget):
         # QToolButtons are unsightly on macOS
         commitButtonsStack.setCurrentIndex(0 if settings.qtIsNativeMacosStyle() else 1)
 
-        # Connect signals and buddies
-        header.setBuddy(stagedFiles)
+        # Connect signals
         unstageButton.clicked.connect(stagedFiles.unstage)
         stagedFiles.selectedCountChanged.connect(lambda n: unstageButton.setEnabled(n > 0))
 
         # Lay out container
         layout = QGridLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(1)
-        layout.addWidget(header, 0, 0)
-        layout.addWidget(unstageButton, 0, 1)
-        layout.addWidget(stagedFiles.searchBar, 1, 0, 1, 2)  # row col rowspan colspan
-        layout.addWidget(stagedFiles,           2, 0, 1, 2)
-        layout.addWidget(commitButtonsStack,    3, 0, 1, 2)
-        layout.setRowStretch(2, 100)
+        layout.setContentsMargins(QMargins())
+        layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
+        layout.addWidget(header,                0, 0)
+        layout.addWidget(unstageButton,         0, 1)
+        layout.addItem(QSpacerItem(1, 1),       1, 0)
+        layout.addWidget(stagedFiles.searchBar, 2, 0, 1, 2)  # row col rowspan colspan
+        layout.addWidget(stagedFiles,           3, 0, 1, 2)
+        layout.addWidget(commitButtonsStack,    4, 0, 1, 2)
+        layout.setRowStretch(3, 100)
         container = QWidget()
         container.setLayout(layout)
 
@@ -433,10 +432,11 @@ class RepoWidget(QStackedWidget):
         header.setMinimumHeight(FILEHEADER_HEIGHT)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(1)
+        layout.setContentsMargins(QMargins())
+        layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
         layout.addWidget(header)
         layout.addWidget(committedFiles.searchBar)
+        layout.addSpacing(1)
         layout.addWidget(committedFiles)
 
         container = QWidget()

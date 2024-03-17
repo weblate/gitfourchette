@@ -209,6 +209,7 @@ class PrefsDialog(QDialog):
             if caption:
                 caption += self.tr(":", "caption suffix in prefs dialog")
                 captionLabel = QLabel(caption)
+                captionLabel.setBuddy(control)
                 if toolTip:
                     captionLabel.setToolTip(toolTip)
                     # captionLabel.setCursor(Qt.CursorShape.WhatsThisCursor)
