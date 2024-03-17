@@ -5,7 +5,8 @@ from .util import *
 from gitfourchette.sidebar.sidebarmodel import EItem
 import os
 import pytest
-
+import pygit2
+import shutil
 
 @pytest.mark.parametrize("method", ["sidebar", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
 def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
@@ -222,3 +223,96 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
     assert node.data == "submo"
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "update")
+
+
+def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
+    sm = "submosub"
+
+    # Unpack full-blown repo (complete with submodule) as our upstream
+    upstreamWd = unpackRepo(tempDir, "submoroot", renameTo="upstream")
+    upstreamSub = f"{upstreamWd}/{sm}"
+
+    # Do a non-recursive clone (using the local filesystem as an upstream)
+    repo = pygit2.clone_repository(upstreamWd, f"{tempDir.name}/submoroot")
+    wd = repo.workdir
+    repo.free()
+    del repo
+
+    # Prevent submo from hitting network
+    # NOTE: We're modifying .gitmodules, NOT .git/config, so that the module appears UNinitialized!
+    GitConfig(f"{wd}/.gitmodules")[f"submodule.{sm}.url"] = upstreamSub
+    assert f"submodule.{sm}.url" not in GitConfig(f"{wd}/.git/config")
+
+    # Open the repo
+    rw = mainWindow.openRepo(wd)
+
+    # At this point the submodule isn't initialized and its worktree is empty
+    assert [] == os.listdir(f"{wd}/{sm}")
+    assert [] == rw.repo.listall_initialized_submodules()
+
+    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert node.data == sm
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "init")
+
+    assert ".git" in os.listdir(f"{wd}/{sm}")
+    assert [sm] == rw.repo.listall_initialized_submodules()
+
+
+def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
+    sm = "submosub"
+
+    # Unpack full-blown repo (complete with submodule) as our upstream
+    upstreamWd = unpackRepo(tempDir, "submoroot", renameTo="upstream")
+    upstreamSub = f"{upstreamWd}/{sm}"
+
+    # Do a non-recursive clone (using the local filesystem as an upstream) and init the submodule
+    repo = pygit2.clone_repository(upstreamWd, f"{tempDir.name}/submoroot")
+    wd = repo.workdir
+    GitConfig(f"{wd}/.git/config")[f"submodule.{sm}.url"] = upstreamSub  # don't hit the network during update!
+    repo.submodules.update(init=True)
+    repo.free()
+    del repo
+
+    # Create new commit in UPSTREAM submo
+    with RepoContext(upstreamSub, write_index=True) as sub:
+        oldSubCommit = sub.head_commit_oid
+        writeFile(f"{upstreamSub}/foo.txt", "bar baz")
+        sub.index.add("foo.txt")
+        newSubCommit = sub.create_commit_on_head("yet another new commit in submodule", TEST_SIGNATURE, TEST_SIGNATURE)
+
+    # In the outer repo, create a commit that moves the submodule's HEAD to newSubCommit.
+    # (i.e. simulate a scenario where the user does a non-recursive fetch of the root repo,
+    # and they receive this commit, but they don't have newSubCommit in the submodule)
+    with RepoContext(wd, write_index=True) as repo:
+        treeBuilder = repo.TreeBuilder(repo.head_tree.id)
+        treeBuilder.insert(sm, newSubCommit, FileMode.COMMIT)
+        newTreeId = treeBuilder.write()
+        newTree = repo[newTreeId].peel(Tree)
+        repo.index.read_tree(newTree)
+        repo.create_commit("HEAD", TEST_SIGNATURE, TEST_SIGNATURE, f"move submo to {newSubCommit.hex[:7]}",
+                           newTreeId, [repo.head_commit_oid])
+
+    # Now open the outer repo...
+    rw = mainWindow.openRepo(wd)
+
+    # The submodule will appear as dirty; the diff says that the submodule's head is being moved
+    # from newSubCommit to the previous commit. This tracks with vanilla git status.
+    # In fact, the submodule's gitlink file points to our local copy of the submodule,
+    # which is indeed still on the previous commit, so this technically makes sense (although unintuitive).
+    assert sm in qlvGetRowData(rw.dirtyFiles)
+    assert sm not in qlvGetRowData(rw.stagedFiles)
+    rw.jump(NavLocator.inUnstaged(sm))
+    newHash = newSubCommit.hex[:7]
+    oldHash = oldSubCommit.hex[:7]
+    assert qteFind(rw.specialDiffView, fr"old.+{newHash}.+new.+{oldHash}", True)  # yes, old/new look inverted, that's on purpose
+
+    # Update the submodule
+    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert node.data == sm
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "update")
+
+    QTest.qWait(0)
+    assert sm not in qlvGetRowData(rw.dirtyFiles)
+    assert sm not in qlvGetRowData(rw.stagedFiles)

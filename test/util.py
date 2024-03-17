@@ -3,7 +3,6 @@ import tempfile
 from . import *
 import os
 import re
-import tarfile
 import shutil
 from gitfourchette.porcelain import *
 
@@ -23,24 +22,31 @@ def unpackRepo(
     testPath = os.path.realpath(__file__)
     testPath = os.path.dirname(testPath)
 
-    with tarfile.open(F"{testPath}/data/{testRepoName}.tar") as tar:
-        tar.extractall(tempDirPath)
-
-    path = F"{tempDirPath}/{testRepoName}"
+    path = f"{tempDirPath}/{testRepoName}"
     path = os.path.realpath(path)
+    assert not os.path.exists(path)
+
+    for ext in ".tar", ".zip":
+        archivePath = f"{testPath}/data/{testRepoName}{ext}"
+        if os.path.isfile(archivePath):
+            shutil.unpack_archive(archivePath, os.path.dirname(path))
+            assert os.path.isdir(path)
+            break
+    else:
+        raise FileNotFoundError(f"can't find archive '{testRepoName}' in test data ({testPath}/data)")
 
     if renameTo:
         path2 = f"{tempDirPath}/{renameTo}"
         shutil.move(path, path2)
         path = path2
 
-    path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
-
     with open(F"{path}/.git/config", "at") as configFile:
         configFile.write(
             "\n[user]\n"
             F"name = {userName}\n"
             F"email = {userEmail}\n")
+
+    path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
 
     return path
 
@@ -149,9 +155,9 @@ def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):
 
 def qteFind(qte: QTextEdit, pattern: str, plainText=False):
     if plainText:
-        found = re.search(pattern, qte.toPlainText(), re.I | re.M)
+        found = re.search(pattern, qte.toPlainText(), re.I | re.M | re.DOTALL)
     else:
-        regex = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption | QRegularExpression.PatternOption.MultilineOption)
+        regex = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption | QRegularExpression.PatternOption.MultilineOption | QRegularExpression.PatternOption.DotMatchesEverythingOption)
         found = qte.find(regex)
 
     assert found
