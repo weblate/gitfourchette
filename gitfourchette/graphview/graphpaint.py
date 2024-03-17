@@ -86,6 +86,10 @@ def paintGraphFrame(
     painter.save()
     painter.setRenderHints(QPainter.RenderHint.Antialiasing, True)
 
+    # Lines are drawn with SquareCap to fill in gaps at fractional display scaling factors.
+    # This may cause the painter to overflow to neighboring rows, so set a clip rect.
+    painter.setClipRect(rect)
+
     # Ensure all coordinates below are integers so our straight lines don't look blurry
     x = int(rect.left() + LANE_WIDTH // 2)
     top = int(rect.y())
@@ -120,11 +124,12 @@ def paintGraphFrame(
     def submitPath(path: QPainterPath, column, stipple=False, dashOffset = 0):
         assert not path.isEmpty()
         # white outline
-        painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin))
+        painter.setPen(QPen(outlineColor, LANE_THICKNESS + 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.SquareCap, Qt.PenJoinStyle.BevelJoin))
         painter.drawPath(path)
         # actual color
         color = UC_COLOR if stipple else getColor(column)
-        pen = QPen(color, LANE_THICKNESS, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.BevelJoin)
+        cap = Qt.PenCapStyle.FlatCap if stipple else Qt.PenCapStyle.SquareCap
+        pen = QPen(color, LANE_THICKNESS, Qt.PenStyle.SolidLine, cap, Qt.PenJoinStyle.BevelJoin)
         if stipple:
             interval = rect.height()/(UC_STIPPLE*LANE_THICKNESS)
             pen.setDashPattern([interval, interval])
