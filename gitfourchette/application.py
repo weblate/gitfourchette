@@ -42,6 +42,7 @@ class GFApplication(QApplication):
         self.setApplicationName(APP_SYSTEM_NAME)  # used by QStandardPaths
         self.setApplicationDisplayName(APP_DISPLAY_NAME)  # user-friendly name
         self.setApplicationVersion(APP_VERSION)
+        self.setDesktopFileName(APP_IDENTIFIER)  # Wayland uses this to resolve window icons
 
         commandLine = GFApplication.makeCommandLineParser()
         commandLine.process(argv)
