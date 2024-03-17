@@ -1,13 +1,12 @@
-# GitFourchette's preferred Qt binding is PyQt6, but it is compatible with other Qt bindings.
-# You can force a specific binding with the QT_API environment variable.
-# Values recognized by QT_API:
-#       pyqt6       (highly recommended, first-class support)
-#       pyqt5       (OK if you can't use Qt 6 yet)
-#       pyside6     (OK)
+# GitFourchette's preferred Qt binding is PyQt6, but you can use another
+# binding via the QT_API environment variable. Values recognized by QT_API:
+#       pyqt6
+#       pyside6
+#       pyqt5
+# (Note: PySide2 is not supported.)
 #
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
-#
-# Note: PySide2 is NOT supported at all.
+# If you're packaging the app, you may prefer to force a binding via appconsts.py.
 
 from contextlib import suppress as _suppress
 import logging as _logging
@@ -19,7 +18,7 @@ from gitfourchette.appconsts import *
 
 _logger = _logging.getLogger(__name__)
 
-_qtBindingOrder = ["pyqt6", "pyqt5", "pyside6"]
+_qtBindingOrder = ["pyqt6", "pyside6", "pyqt5"]
 
 QT5 = False
 QT6 = False
