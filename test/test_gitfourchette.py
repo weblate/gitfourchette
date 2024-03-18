@@ -2,6 +2,7 @@ from . import reposcenario
 from .util import *
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
+from gitfourchette.nav import NavLocator
 
 
 def testEmptyRepo(tempDir, mainWindow):
@@ -165,3 +166,33 @@ def testUnloadRepoWhenFolderGoesMissing(tempDir, mainWindow):
 
     # Make sure we're not writing the prefs to a ghost directory structure upon exiting
     assert not os.path.isfile(f"{wd}/.git/gitfourchette.json")
+
+
+def testSkipRenameDetection(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd, write_index=True) as repo:
+        os.rename(f"{wd}/a/a2.txt", f"{wd}/a/a2-renamed.txt")
+        repo.index.remove("a/a2.txt")
+        repo.index.add("a/a2-renamed.txt")
+        for i in range(100):
+            writeFile(f"{wd}/bogus{i:03}.txt", f"hello {i}\n")
+            repo.index.add(f"bogus{i:03}.txt")
+        oid = repo.create_commit_on_head("renamed a2.txt and added a ton of files")
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.isLoaded
+    assert not rw.diffBanner.isVisibleTo(rw)
+
+    rw.jump(NavLocator.inCommit(oid))
+    assert 102 == len(qlvGetRowData(rw.committedFiles))
+    assert rw.diffBanner.isVisibleTo(rw)
+    assert rw.diffBanner.button.isVisibleTo(rw)
+    assert "rename" in rw.diffBanner.label.text().lower()
+    assert "detect" in rw.diffBanner.button.text().lower()
+
+    rw.diffBanner.button.click()
+    assert 101 == len(qlvGetRowData(rw.committedFiles))
+    assert rw.diffBanner.isVisibleTo(rw)
+    print(rw.diffBanner.label.text())
+    assert re.search(r"1 rename.* detected", rw.diffBanner.label.text(), re.I)

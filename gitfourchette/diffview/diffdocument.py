@@ -104,10 +104,10 @@ class DiffDocument:
 
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
-        if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeDiffs):
+        if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
             locale = QLocale()
             humanSize = locale.formattedDataSize(len(patch.data))
-            target = locator.withExtraFlags(NavFlags.AllowLargeDiffs)
+            target = locator.withExtraFlags(NavFlags.AllowLargeFiles)
             raise SpecialDiffError(
                 translate("Diff", "This patch is too large to be previewed ({0}).").format(humanSize),
                 target.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),

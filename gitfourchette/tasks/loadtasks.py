@@ -253,15 +253,19 @@ class LoadCommit(RepoTask):
     def canKill(self, task: RepoTask):
         return type(task) in [LoadWorkdir, LoadCommit, LoadPatch]
 
-    def flow(self, oid: Oid):
+    def flow(self, locator: NavLocator):
         yield from self.flowEnterWorkerThread()
-        self.diffs = self.repo.commit_diffs(oid, find_similar_threshold=RENAME_COUNT_THRESHOLD)
+
+        oid = locator.commit
+        largeCommitThreshold = -1 if locator.hasFlags(NavFlags.AllowLargeCommits) else RENAME_COUNT_THRESHOLD
+
+        self.diffs = self.repo.commit_diffs(oid, find_similar_threshold=largeCommitThreshold)
         self.message = self.repo.get_commit_message(oid)
 
         self.skippedRenameDetection = False
         if len(self.diffs) > 0:
             mainDiff = self.diffs[0]
-            self.skippedRenameDetection = len(mainDiff) >= RENAME_COUNT_THRESHOLD
+            self.skippedRenameDetection = 0 <= largeCommitThreshold <= len(mainDiff)
 
 
 class LoadPatch(RepoTask):
@@ -274,7 +278,7 @@ class LoadPatch(RepoTask):
     def _processPatch(self, patch: Patch, locator: NavLocator
                       ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:
         if not patch:
-            locator = locator.withExtraFlags(NavFlags.ForceRefreshWorkdir)
+            locator = locator.withExtraFlags(NavFlags.Force)
             message = locator.toHtml(self.tr("The file appears to have changed on disk since we cached it. "
                                              "[Try to refresh it.]"))
             return SpecialDiffError(self.tr("Outdated diff."), message,

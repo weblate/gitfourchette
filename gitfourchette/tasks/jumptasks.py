@@ -8,7 +8,7 @@ import os
 
 from gitfourchette import tasks
 from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
-from gitfourchette.porcelain import NULL_OID
+from gitfourchette.porcelain import NULL_OID, DeltaStatus
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.settings import DEVDEBUG
@@ -160,7 +160,7 @@ class Jump(RepoTask):
 
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY
-                or locator.hasFlags(NavFlags.ForceRefreshWorkdir)
+                or locator.hasFlags(NavFlags.Force)
                 or rw.state.workdirStale):
             # Don't clear stale flag until AFTER we're done reloading the workdir
             # so that it stays stale if this task gets interrupted.
@@ -272,7 +272,7 @@ class Jump(RepoTask):
         flv = rw.committedFiles
         rw.diffBanner.setVisible(False)
 
-        if flv.commitOid == locator.commit:
+        if locator.commit == flv.commitOid and not locator.hasFlags(NavFlags.Force):
             # No need to reload the same commit
             # (if this flv was dormant and is sent back to the foreground).
             pass
@@ -282,7 +282,7 @@ class Jump(RepoTask):
             rw.diffBanner.lastWarningWasDismissed = False
 
             # Load commit (async)
-            subtask = yield from self.flowSubtask(tasks.LoadCommit, locator.commit)
+            subtask = yield from self.flowSubtask(tasks.LoadCommit, locator)
             assert isinstance(subtask, tasks.LoadCommit)
 
             # Get data from subtask
@@ -318,12 +318,24 @@ class Jump(RepoTask):
             self.setFinalLocator(locator.replace(path=""))
             return None  # Force early out
 
-        if flv.skippedRenameDetection:
-            warnings.append(self.tr("Rename detection was skipped to load this large commit faster."))
-
         # Warning banner
-        if warnings and not rw.diffBanner.lastWarningWasDismissed:
-            rw.diffBanner.popUp("", "<br>".join(warnings), canDismiss=True, withIcon=True)
+        if not rw.diffBanner.lastWarningWasDismissed:
+            buttonLabel = ""
+            buttonCallback = None
+
+            if flv.skippedRenameDetection:
+                warnings.append(self.tr("Rename detection was skipped to load this large commit faster."))
+                buttonLabel = self.tr("Detect Renames")
+                buttonCallback = lambda: Jump.invoke(rw, locator.withExtraFlags(NavFlags.AllowLargeCommits | NavFlags.Force))
+            elif locator.hasFlags(NavFlags.AllowLargeCommits | NavFlags.Force):
+                n = sum(sum(1 if delta.status == DeltaStatus.RENAMED else 0 for delta in diff.deltas) for diff in diffs)
+                warnings.append(self.tr("%n renames detected.", "", n))
+
+            if warnings:
+                warningText = "<br>".join(warnings)
+                rw.diffBanner.setVisible(True)
+                rw.diffBanner.popUp("", warningText, canDismiss=True, withIcon=True,
+                                    buttonLabel=buttonLabel, buttonCallback=buttonCallback)
 
         return locator
 
@@ -331,6 +343,10 @@ class Jump(RepoTask):
         from gitfourchette.repowidget import RepoWidget
         rw: RepoWidget = self.rw
         assert isinstance(rw, RepoWidget)
+
+        # Clear Force flag before saving the locator
+        # (otherwise switching back and forth into the app may reload a commit)
+        locator = locator.withoutFlags(NavFlags.Force)
 
         rw.navLocator = locator
         rw.navHistory.push(locator)
@@ -463,7 +479,7 @@ class RefreshRepo(tasks.RepoTask):
                 jumpTo = NavLocator(NavContext.WORKDIR)
 
             if effectFlags & TaskEffects.Workdir:
-                newFlags = jumpTo.flags | NavFlags.ForceRefreshWorkdir | NavFlags.AllowWriteIndex
+                newFlags = jumpTo.flags | NavFlags.Force | NavFlags.AllowWriteIndex
                 jumpTo = jumpTo.replace(flags=newFlags)
 
         elif initialLocator and initialLocator.context == NavContext.COMMITTED:

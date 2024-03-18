@@ -14,12 +14,12 @@ PUSH_INTERVAL = 0.5
 
 
 class NavFlags(enum.IntFlag):
-    IgnoreInvalidLocation = enum.auto()
-    ForceRefreshWorkdir = enum.auto()
+    Force = enum.auto()
     AllowWriteIndex = enum.auto()
     AllowLongLines = enum.auto()
-    AllowLargeDiffs = enum.auto()
+    AllowLargeFiles = enum.auto()
     AllowMultiSelect = enum.auto()
+    AllowLargeCommits = enum.auto()
 
     DefaultFlags = 0
 
@@ -183,8 +183,11 @@ class NavLocator:
     def coarse(self, keepFlags=False):
         return NavLocator(context=self.context, commit=self.commit, path=self.path)
 
-    def withExtraFlags(self, extraFlags: NavFlags) -> NavLocator:
-        return self.replace(flags=self.flags | extraFlags)
+    def withExtraFlags(self, flags: NavFlags) -> NavLocator:
+        return self.replace(flags=self.flags | flags)
+
+    def withoutFlags(self, flags: NavFlags) -> NavLocator:
+        return self.replace(flags=self.flags & ~flags)
 
     @staticmethod
     def parseUrl(url: QUrl):
