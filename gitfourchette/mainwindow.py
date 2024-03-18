@@ -1169,6 +1169,7 @@ class MainWindow(QMainWindow):
             "diff_colorblind",  # ditto
             "diff_largeFileThresholdKB",  # ditto
             "diff_imageFileThresholdKB",  # ditto
+            "diff_contextLines",  # ditto
         ]
 
         warnIfNeedRestart = [

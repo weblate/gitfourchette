@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 RENAME_COUNT_THRESHOLD = 100
 """ Don't find_similar beyond this number of files in the main diff """
 
+def contextLines():
+    return settings.prefs.diff_contextLines
+
 
 class PrimeRepo(RepoTask):
     progressRange = Signal(int, int)
@@ -242,11 +245,11 @@ class LoadWorkdir(RepoTask):
 
         yield from self.flowEnterWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Staged"):
-            self.stageDiff = self.repo.get_staged_changes()
+            self.stageDiff = self.repo.get_staged_changes(context_lines=contextLines())
 
         yield from self.flowEnterWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Unstaged"):
-            self.dirtyDiff = self.repo.get_unstaged_changes(allowWriteIndex)
+            self.dirtyDiff = self.repo.get_unstaged_changes(allowWriteIndex, context_lines=contextLines())
 
 
 class LoadCommit(RepoTask):
@@ -259,7 +262,7 @@ class LoadCommit(RepoTask):
         oid = locator.commit
         largeCommitThreshold = -1 if locator.hasFlags(NavFlags.AllowLargeCommits) else RENAME_COUNT_THRESHOLD
 
-        self.diffs = self.repo.commit_diffs(oid, find_similar_threshold=largeCommitThreshold)
+        self.diffs = self.repo.commit_diffs(oid, find_similar_threshold=largeCommitThreshold, context_lines=contextLines())
         self.message = self.repo.get_commit_message(oid)
 
         self.skippedRenameDetection = False

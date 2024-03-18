@@ -573,7 +573,7 @@ class Repo(_VanillaRepository):
         """
         self.index.read(force)
 
-    def get_uncommitted_changes(self, show_binary: bool = False) -> Diff:
+    def get_uncommitted_changes(self, show_binary: bool = False, context_lines: int = 3) -> Diff:
         """
         Get a Diff of all uncommitted changes in the working directory,
         compared to the commit at HEAD.
@@ -589,11 +589,11 @@ class Repo(_VanillaRepository):
         if show_binary:
             flags |= DiffOption.SHOW_BINARY
 
-        dirty_diff = self.diff('HEAD', None, cached=False, flags=flags)
+        dirty_diff = self.diff('HEAD', None, cached=False, flags=flags, context_lines=context_lines)
         dirty_diff.find_similar()
         return dirty_diff
 
-    def get_unstaged_changes(self, update_index: bool = False, show_binary: bool = False) -> Diff:
+    def get_unstaged_changes(self, update_index: bool = False, show_binary: bool = False, context_lines: int = 3) -> Diff:
         """
         Get a Diff of unstaged changes in the working directory.
 
@@ -617,11 +617,11 @@ class Repo(_VanillaRepository):
         if show_binary:
             flags |= DiffOption.SHOW_BINARY
 
-        dirty_diff = self.diff(None, None, flags=flags)
+        dirty_diff = self.diff(None, None, flags=flags, context_lines=context_lines)
         # dirty_diff.find_similar()  #-- it seems that find_similar cannot find renames in unstaged changes, so don't bother
         return dirty_diff
 
-    def get_staged_changes(self, fast: bool = False, show_binary: bool = False) -> Diff:
+    def get_staged_changes(self, fast: bool = False, show_binary: bool = False, context_lines: int = 3) -> Diff:
         """
         Get a Diff of the staged changes.
 
@@ -636,9 +636,10 @@ class Repo(_VanillaRepository):
         if self.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
             index_tree_oid = self.index.write_tree()
             tree = self.peel_tree(index_tree_oid)
-            return tree.diff_to_tree(swap=True, flags=flags)
+            return tree.diff_to_tree(swap=True, flags=flags, context_lines=context_lines)
         else:
-            stage_diff: Diff = self.diff('HEAD', None, cached=True, flags=flags)  # compare HEAD to index
+            # compare HEAD to index
+            stage_diff: Diff = self.diff('HEAD', None, cached=True, flags=flags, context_lines=context_lines)
             if not fast:
                 stage_diff.find_similar()
             return stage_diff
@@ -651,12 +652,12 @@ class Repo(_VanillaRepository):
     @property
     def any_staged_changes(self) -> bool:
         """True if there are any staged changes in the index."""
-        return 0 != len(self.get_staged_changes(fast=True))
+        return 0 != len(self.get_staged_changes(fast=True, context_lines=0))
         # ---This also works, but it's slower.
         # status = repo.status(untracked_files="no")
         # return any(0 != (flag & FileStatus.INDEX_MASK) for flag in status.values())
 
-    def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1) -> list[Diff]:
+    def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1, context_lines: int = 3) -> list[Diff]:
         """
         Get a list of Diffs of a commit compared to its parents.
         """
@@ -673,7 +674,7 @@ class Repo(_VanillaRepository):
             parent: Commit
             for i, parent in enumerate(commit.parents):
                 if i == 0:
-                    diff = self.diff(parent, commit, flags=flags)
+                    diff = self.diff(parent, commit, flags=flags, context_lines=context_lines)
                     if find_similar_threshold < 0 or len(diff) < find_similar_threshold:
                         diff.find_similar()
                     all_diffs.append(diff)
@@ -681,7 +682,7 @@ class Repo(_VanillaRepository):
                     # This parent is parentless: assume merging in new files from this parent
                     # (e.g. "untracked files on ..." parents of stash commits)
                     tree: Tree = parent.peel(Tree)
-                    diff = tree.diff_to_tree(swap=True, flags=flags)
+                    diff = tree.diff_to_tree(swap=True, flags=flags, context_lines=context_lines)
                     all_diffs.append(diff)
                 else:
                     # Skip non-parentless parent in merge commits
@@ -692,7 +693,7 @@ class Repo(_VanillaRepository):
         else:
             # Parentless commit: diff with empty tree
             # (no tree passed to diff_to_tree == force diff against empty tree)
-            diff = commit.tree.diff_to_tree(swap=True, flags=flags)
+            diff = commit.tree.diff_to_tree(swap=True, flags=flags, context_lines=context_lines)
             return [diff]
 
     def checkout_local_branch(self, name: str):

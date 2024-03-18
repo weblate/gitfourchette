@@ -169,6 +169,7 @@ class Prefs(PrefsFile):
     showStatusBar               : bool          = True
     autoHideMenuBar             : bool          = False
     diff_font                   : str           = ""
+    diff_contextLines           : int           = 3
     diff_tabSpaces              : int           = 4
     diff_largeFileThresholdKB   : int           = 512
     diff_imageFileThresholdKB   : int           = 5000

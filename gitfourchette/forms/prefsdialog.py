@@ -147,9 +147,13 @@ class PrefsDialog(QDialog):
             elif prefKey == 'authorDisplayStyle':
                 control = self.enumControl(prefKey, prefValue, prefType, previewCallback=lambda v: abbreviatePerson(SAMPLE_SIGNATURE, v))
             elif prefKey == 'shortHashChars':
-                control = self.boundedIntControl(prefKey, prefValue, 0, 40)
+                control = self.boundedIntControl(prefKey, prefValue, 4, 40)
             elif prefKey == 'maxRecentRepos':
                 control = self.boundedIntControl(prefKey, prefValue, 0, 50)
+            elif prefKey == 'diff_contextLines':  # staging/discarding individual lines is flaky with 0 context lines
+                control = self.boundedIntControl(prefKey, prefValue, 1, 32)
+            elif prefKey == 'diff_tabSpaces':
+                control = self.boundedIntControl(prefKey, prefValue, 1, 16)
             elif prefKey == 'external_editor':
                 control = self.strControlWithPresets(prefKey, prefValue, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
             elif prefKey == 'external_diff':

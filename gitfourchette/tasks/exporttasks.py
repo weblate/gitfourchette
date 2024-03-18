@@ -1,7 +1,12 @@
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette import settings
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
+
+
+def contextLines():
+    return settings.prefs.diff_contextLines
 
 
 class ComposePatch(RepoTask):
@@ -40,7 +45,7 @@ class ExportCommitAsPatch(ComposePatch):
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
 
-        diffs = self.repo.commit_diffs(oid, show_binary=True)
+        diffs = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
 
         commit = self.repo.peel_commit(oid)
         summary, _ = messageSummary(commit.message, elision="")
@@ -55,7 +60,7 @@ class ExportStashAsPatch(ExportCommitAsPatch):
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
 
-        diffs = self.repo.commit_diffs(oid, show_binary=True)
+        diffs = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
 
         commit = self.repo.peel_commit(oid)
         coreMessage = strip_stash_message(commit.message)
@@ -69,7 +74,7 @@ class ExportWorkdirAsPatch(ComposePatch):
     def flow(self):
         yield from self.flowEnterWorkerThread()
 
-        diff = self.repo.get_uncommitted_changes(show_binary=True)
+        diff = self.repo.get_uncommitted_changes(show_binary=True, context_lines=contextLines())
 
         headOid = self.repo.head_commit_oid
         initialName = f"{self.repo.repo_name()} - uncommitted changes on {shortHash(headOid)}.patch"
