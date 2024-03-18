@@ -5,13 +5,17 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
 
+HORIZONTAL_CONTENT_HEIGHT = 24
+FONT_POINT_PERCENT = 90
+
+
 class Banner(QFrame):
     def __init__(self, parent, orientation: Qt.Orientation):
         super().__init__(parent)
         self.setObjectName("StateBox")
 
         icon = QLabel(self)
-        icon.setPixmap(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(16))
+        icon.setPixmap(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(HORIZONTAL_CONTENT_HEIGHT))
 
         label = QLabel(__name__, self)
         label.setWordWrap(True)
@@ -40,11 +44,17 @@ class Banner(QFrame):
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
+        if orientation == Qt.Orientation.Horizontal:
+            for b in button, dismissButton:
+                tweakWidgetFont(b, FONT_POINT_PERCENT)
+                b.setMaximumHeight(HORIZONTAL_CONTENT_HEIGHT)
+
         self.icon = icon
         self.label = label
         self.button = button
         self.dismissButton = dismissButton
         self.lastWarningWasDismissed = False
+        self.orientation = orientation
 
     def popUp(
             self,
@@ -59,8 +69,7 @@ class Banner(QFrame):
         self.setProperty("heeded", str(heeded).lower())
         self.setStyleSheet("* {}")  # reset stylesheet to percolate property change
 
-        smallPt = adjustedWidgetFontSize(self.label, 90)
-
+        smallPt = adjustedWidgetFontSize(self.label, FONT_POINT_PERCENT)
         markup = f"<style>sm {{ font-size: {smallPt}pt; }}</style>"
         if title:
             markup += f"<b>{title}</b>"
