@@ -656,6 +656,10 @@ class DiffView(QPlainTextEdit):
         gutterRect = self.gutter.rect()
         fontHeight = self.fontMetrics().height()
 
+        # Clip painting to QScrollArea viewport rect (don't draw beneath horizontal scroll bar)
+        paintRect = paintRect.intersected(self.viewport().rect())
+        painter.setClipRect(paintRect)
+
         # Draw background
         painter.fillRect(paintRect, gutterColor)
 
