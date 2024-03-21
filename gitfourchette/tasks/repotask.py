@@ -144,6 +144,7 @@ class RepoTask(QObject):
     repo: Repo | None
     taskID: int
     jumpTo: NavLocator | None
+    didSucceed: bool
 
     _currentFlow: FlowGeneratorType | None
     _currentIteration: int
@@ -170,6 +171,7 @@ class RepoTask(QObject):
         RepoTask._globalTaskCounter += 1
         self.setObjectName(self.__class__.__name__)
         self.jumpTo = None
+        self.didSucceed = True
         self._taskStack = [self]
 
     @property
@@ -444,7 +446,7 @@ class RepoTask(QObject):
 
 
 class RepoTaskRunner(QObject):
-    refreshPostTask = Signal(RepoTask)
+    postTask = Signal(RepoTask)
     progress = Signal(str, bool)
     repoGone = Signal()
     ready = Signal()
@@ -630,15 +632,19 @@ class RepoTaskRunner(QObject):
 
                 if isinstance(exception, StopIteration):
                     # No more steps in the flow
-                    self.refreshPostTask.emit(task)
+                    task.didSucceed = True
                 elif isinstance(exception, AbortTask):
                     # Controlled exit, show message (if any)
                     self.reportAbortTask(task, exception)
                 elif isinstance(exception, RepoGoneError):
+                    # Repo directory vanished
                     self.repoGone.emit()
                 else:
                     # Run task's error callback
                     task.onError(exception)
+
+                # Emit postTask signal whether the task succeeded or not
+                self.postTask.emit(task)
 
                 task.deleteLater()
 

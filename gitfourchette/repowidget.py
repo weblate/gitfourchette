@@ -64,6 +64,7 @@ class RepoWidget(QStackedWidget):
     "Path of the repository if it isn't loaded yet (state=None)"
 
     pendingLocator: NavLocator
+    pendingRefresh: TaskEffects
 
     allowAutoLoad: bool
 
@@ -107,7 +108,7 @@ class RepoWidget(QStackedWidget):
 
         # Use RepoTaskRunner to schedule git operations to run on a separate thread.
         self.repoTaskRunner = tasks.RepoTaskRunner(self)
-        self.repoTaskRunner.refreshPostTask.connect(self.refreshPostTask)
+        self.repoTaskRunner.postTask.connect(self.refreshPostTask)
         self.repoTaskRunner.progress.connect(self.onRepoTaskProgress)
         self.repoTaskRunner.repoGone.connect(self.onRepoGone)
         self.repoTaskRunner.ready.connect(self.onRepoTaskReady)
@@ -115,6 +116,7 @@ class RepoWidget(QStackedWidget):
         self.state = None
         self.pendingPath = os.path.normpath(pendingWorkdir)
         self.pendingLocator = NavLocator()
+        self.pendingRefresh = TaskEffects.Nothing
         self.allowAutoLoad = True
 
         self.busyCursorDelayer = QTimer(self)
@@ -976,18 +978,6 @@ class RepoWidget(QStackedWidget):
     def isWorkdirShown(self):
         return self.fileStackPage() == "workdir"
 
-    def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
-        if not self.state:
-            return
-
-        if flags == TaskEffects.Nothing:
-            return
-
-        if flags & TaskEffects.Workdir:
-            self.state.workdirStale = True
-
-        self.runTask(tasks.RefreshRepo, flags, jumpTo)
-
     def setInitialFocus(self):
         """
         Focus on some useful widget within RepoWidget.
@@ -996,23 +986,42 @@ class RepoWidget(QStackedWidget):
         if not self.focusWidget():  # only if nothing has the focus yet
             self.graphView.setFocus()
 
-    def onRegainForeground(self):
+    def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
         """Refresh the repo as soon as possible."""
-
-        self.restoreSplitterStates()
 
         if (not self.isLoaded) or self.isPriming:
             return
+        assert self.state is not None
+
+        # Break refresh chain?
+        if flags == TaskEffects.Nothing:
+            if jumpTo:
+                logger.warning(f"Refresh chain stopped + dangling jump {jumpTo}")
+            return
 
         if not self.isVisible() or self.repoTaskRunner.isBusy():
-            self.state.workdirStale = True
-        elif self.pendingLocator:
-            self.state.workdirStale = True
-            pendingLocator = self.pendingLocator
+            # Can't refresh right now. Stash the effect bits for later.
+            logger.debug(f"Stashing refresh bits {repr(flags)}")
+            self.pendingRefresh |= flags
+            if jumpTo:
+                logger.warning(f"Ignoring post-refresh jump {jumpTo} because can't refresh yet")
+            return
+
+        # Consume pending effect bits, if any
+        if self.pendingRefresh != TaskEffects.Nothing:
+            logger.debug(f"Consuming pending refresh bits {self.pendingRefresh}")
+            flags |= self.pendingRefresh
+            self.pendingRefresh = TaskEffects.Nothing
+
+        # Consume pending locator, if any
+        if self.pendingLocator:
+            if not jumpTo:
+                jumpTo = self.pendingLocator
+            else:
+                logger.warning(f"Dropping pendingLocator {self.pendingLocator} - overridden by {jumpTo}")
             self.pendingLocator = NavLocator()  # Consume it
-            self.jump(pendingLocator)
-        else:
-            self.refreshRepo(TaskEffects.DefaultRefresh | TaskEffects.Workdir)
+
+        tasks.RefreshRepo.invoke(self, flags, jumpTo)
 
     def refreshWindowChrome(self):
         shortname = self.getTitle()
@@ -1123,7 +1132,10 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, task: tasks.RepoTask):
-        self.refreshRepo(task.effects(), task.jumpTo)
+        if task.didSucceed:
+            self.refreshRepo(task.effects(), task.jumpTo)
+        else:
+            self.refreshRepo()
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
         if withSpinner:
@@ -1140,6 +1152,7 @@ class RepoWidget(QStackedWidget):
             self.busyCursorDelayer.start()
 
     def onRepoTaskReady(self):
+        assert onAppThread()
         if settings.prefs.debug_taskClicks and feedbackSounds:
             feedbackSounds[1].play()
 

@@ -90,3 +90,18 @@ def testPatchBecameInvalid(tempDir, mainWindow):
     assert "changed on disk" in text.lower()
 
 
+def testExternalChangeWhileTaskIsBusyThenAborts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    rw = mainWindow.openRepo(wd)
+
+    rw.commitButton.click()
+    assert findQMessageBox(rw, r"empty commit")
+
+    writeFile(f"{wd}/sneaky.txt", "tee hee")
+    assert QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationInactive
+    mainWindow.onRegainForeground()
+    rejectQMessageBox(rw, r"empty commit")
+
+    # Even though the task aborts, the repo should auto-refresh
+    assert qlvGetRowData(rw.dirtyFiles) == ["sneaky.txt"]

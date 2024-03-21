@@ -470,7 +470,8 @@ class MainWindow(QMainWindow):
 
         if w.isLoaded:
             # Trigger repo refresh.
-            w.onRegainForeground()
+            w.restoreSplitterStates()
+            w.refreshRepo()
             w.refreshWindowChrome()
         elif w.allowAutoLoad:
             # Tab was lazy-loaded.
@@ -600,14 +601,14 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def onRegainForeground(self):
-        rw = self.currentRepoWidget()
-        if not rw:
-            return
         if QGuiApplication.applicationState() != Qt.ApplicationState.ApplicationActive:
             return
         if not settings.prefs.debug_autoRefresh:
             return
-        rw.onRegainForeground()
+        rw = self.currentRepoWidget()
+        if not rw:
+            return
+        rw.refreshRepo()
 
     def onRepoNameChange(self):
         rw = self.currentRepoWidget()
