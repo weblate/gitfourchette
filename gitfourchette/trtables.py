@@ -16,6 +16,7 @@ class TrTables:
     _prefKeys = {}
     _diffStatusChars = {}
     _fileModes = {}
+    _shortFileModes = {}
     _patchPurposes = {}
     _conflictHelp = {}
 
@@ -33,6 +34,7 @@ class TrTables:
         cls._prefKeys = cls._init_prefKeys()
         cls._diffStatusChars = cls._init_diffStatusChars()
         cls._fileModes = cls._init_fileModes()
+        cls._shortFileModes = cls._init_shortFileModes()
         cls._patchPurposes = cls._init_patchPurposes()
         cls._conflictHelp = cls._init_conflictHelp()
 
@@ -75,6 +77,13 @@ class TrTables:
     def fileMode(cls, m: FileMode):
         try:
             return cls._fileModes[m]
+        except KeyError:
+            return f"{m:o}"
+
+    @classmethod
+    def shortFileModes(cls, m: FileMode):
+        try:
+            return cls._shortFileModes[m]
         except KeyError:
             return f"{m:o}"
 
@@ -160,11 +169,23 @@ class TrTables:
     def _init_fileModes():
         return {
             0: translate("git", "deleted", "unreadable/deleted file mode 0o000000"),
-            FileMode.BLOB: translate("git", "normal", "default file mode 0o100644"),
-            FileMode.BLOB_EXECUTABLE: translate("git", "executable", "executable file mode 0o100755"),
-            FileMode.LINK: translate("git", "link", "as in 'symlink' - file mode 0o120000"),
-            FileMode.TREE: translate("git", "tree", "as in 'directory tree' - file mode 0o40000"),
+            FileMode.BLOB: translate("git", "regular file", "default file mode 0o100644"),
+            FileMode.BLOB_EXECUTABLE: translate("git", "executable file", "executable file mode 0o100755"),
+            FileMode.LINK: translate("git", "symbolic link", "as in 'symlink' - file mode 0o120000"),
+            FileMode.TREE: translate("git", "directory tree", "as in 'directory tree' - file mode 0o40000"),
             FileMode.COMMIT: translate("git", "commit", "'commit' file mode 0o160000"),
+        }
+
+    @staticmethod
+    def _init_shortFileModes():
+        # Intentionally untranslated.
+        return {
+            0: "",
+            FileMode.BLOB: "",
+            FileMode.BLOB_EXECUTABLE: "+x",
+            FileMode.LINK: "link",
+            FileMode.TREE: "tree",
+            FileMode.COMMIT: "commit",
         }
 
     @staticmethod

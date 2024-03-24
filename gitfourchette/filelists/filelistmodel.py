@@ -27,16 +27,13 @@ def deltaModeText(delta: DiffDelta):
             return "+x"
         elif om == FileMode.BLOB_EXECUTABLE:
             return "-x"
+        elif nm != FileMode.BLOB:
+            return TrTables.shortFileModes(nm)
         else:
             return ""
     elif om == 0:
         # New file
-        if nm in [0, FileMode.BLOB]:
-            pass
-        elif nm == FileMode.BLOB_EXECUTABLE:
-            return "+x"
-        else:
-            return TrTables.fileMode(nm)
+        return TrTables.shortFileModes(nm)
 
 
 def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):

@@ -22,7 +22,7 @@ def testEmptyDiffWithModeChange(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
-    assert re.search(r"mode change:.+normal.+executable", rw.specialDiffView.toPlainText(), re.I)
+    assert re.search(r"mode change:.+(normal|regular).+executable", rw.specialDiffView.toPlainText(), re.I)
 
 
 def testEmptyDiffWithNameChange(tempDir, mainWindow):

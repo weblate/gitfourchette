@@ -584,6 +584,7 @@ class Repo(_VanillaRepository):
         flags = (DiffOption.INCLUDE_UNTRACKED
                  | DiffOption.RECURSE_UNTRACKED_DIRS
                  | DiffOption.SHOW_UNTRACKED_CONTENT
+                 | DiffOption.INCLUDE_TYPECHANGE
                  )
 
         if show_binary:
@@ -603,6 +604,7 @@ class Repo(_VanillaRepository):
         flags = (DiffOption.INCLUDE_UNTRACKED
                  | DiffOption.RECURSE_UNTRACKED_DIRS
                  | DiffOption.SHOW_UNTRACKED_CONTENT
+                 | DiffOption.INCLUDE_TYPECHANGE
                  )
 
         # Don't attempt to update the index if the repo is locked for writing
@@ -628,7 +630,7 @@ class Repo(_VanillaRepository):
         In other words, this function compares the index to HEAD.
         """
 
-        flags = DiffOption.NORMAL
+        flags = DiffOption.INCLUDE_TYPECHANGE
 
         if show_binary:
             flags |= DiffOption.SHOW_BINARY
@@ -661,7 +663,7 @@ class Repo(_VanillaRepository):
         """
         Get a list of Diffs of a commit compared to its parents.
         """
-        flags = DiffOption.NORMAL
+        flags = DiffOption.INCLUDE_TYPECHANGE
 
         if show_binary:
             flags |= DiffOption.SHOW_BINARY

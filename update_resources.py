@@ -274,11 +274,12 @@ if __name__ == '__main__':
 
     # Generate status icons.
     # 'U' (unmerged) has custom colors/text, so don't generate it automatically.
-    # 'C' (copied) and 'T' (typechange) don't appear in GitFourchette.
+    # 'C' (copied) doesn't appear in GitFourchette.
     writeStatusIcon('#0EDF00', 'A')  # add
     writeStatusIcon('#FE635F', 'D')  # delete
     writeStatusIcon('#F7C342', 'M')  # modify
     writeStatusIcon('#D18DE1', 'R')  # rename
+    writeStatusIcon('#85144B', 'T')  # typechange
     writeStatusIcon('#ff00ff', 'X')  # unknown
 
     # Generate .py files from .ui files

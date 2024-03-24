@@ -105,6 +105,20 @@ class SpecialDiffError(Exception):
         return SpecialDiffError(message, "\n".join(details), longform="\n".join(longform))
 
     @staticmethod
+    def typeChange(delta: DiffDelta):
+        oldFile = delta.old_file
+        newFile = delta.new_file
+        oldText = translate("Diff", "Old type:")
+        newText = translate("Diff", "New type:")
+        oldMode = TrTables.fileMode(oldFile.mode)
+        newMode = TrTables.fileMode(newFile.mode)
+        table = ("<table>"
+                 f"<tr><td><del><b>{oldText}</b></del> </td><td>{oldMode}</tr>"
+                 f"<tr><td><add><b>{newText}</b></add> </td><td>{newMode}</td></tr>"
+                 "</table>")
+        return SpecialDiffError(translate("Diff", "This file’s type has changed."), table)
+
+    @staticmethod
     def binaryDiff(delta: DiffDelta):
         locale = QLocale()
         of = delta.old_file

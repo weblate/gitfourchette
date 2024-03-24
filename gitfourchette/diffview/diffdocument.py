@@ -102,6 +102,10 @@ class DiffDocument:
         if patch.delta.is_binary:
             raise SpecialDiffError.binaryDiff(patch.delta)
 
+        # Special formatting for TYPECHANGE.
+        if patch.delta.status == DeltaStatus.TYPECHANGE:
+            raise SpecialDiffError.typeChange(patch.delta)
+
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
         if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
