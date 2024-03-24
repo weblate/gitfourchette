@@ -1,6 +1,6 @@
 from contextlib import suppress
 import logging
-from typing import Iterable
+from typing import Iterable, Callable
 
 from gitfourchette import porcelain
 from gitfourchette import settings
@@ -392,8 +392,20 @@ class Sidebar(QTreeView):
             menu.deleteLater()
 
     def refresh(self, repoState: RepoState):
+        try:
+            oldSelectedNode = SidebarNode.fromIndex(self.selectedIndexes()[0])
+        except IndexError:
+            oldSelectedNode = None
+
         self.sidebarModel.rebuild(repoState)
         self.restoreExpandedItems()
+
+        # Restore selected node, if any
+        if oldSelectedNode is not None:
+            with suppress(StopIteration), QSignalBlockerContext(self, skipAlreadyBlocked=True):
+                newNode = self.findNode(oldSelectedNode.isSimilarEnoughTo)
+                restoreIndex = newNode.createIndex(self.sidebarModel)
+                self.setCurrentIndex(restoreIndex)
 
     def refreshPrefs(self):
         self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
@@ -614,7 +626,7 @@ class Sidebar(QTreeView):
     def walk(self):
         return self.sidebarModel.rootNode.walk()
 
-    def findNode(self, predicate) -> SidebarNode:
+    def findNode(self, predicate: Callable[[SidebarNode], bool]) -> SidebarNode:
         return next(node for node in self.walk() if predicate(node))
 
     def findNodesByKind(self, kind: EItem) -> Iterable[SidebarNode]:
@@ -637,6 +649,14 @@ class Sidebar(QTreeView):
             index = self.selectedIndexes()[0]
             if index and index.data(ROLE_REF) in refCandidates:
                 return index
+
+        # If several refs point to the same commit, attempt to select
+        # the checked-out branch first (or its upstream, if any)
+        model = self.sidebarModel
+        if model._checkedOut:
+            favorRefs = [RefPrefix.HEADS + model._checkedOut,
+                         RefPrefix.REMOTES + model._checkedOutUpstream]
+            refCandidates = sorted(refCandidates, key=favorRefs.__contains__, reverse=True)
 
         # Find a visible index that matches any of the candidates
         for ref in refCandidates:

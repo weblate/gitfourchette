@@ -10,8 +10,10 @@ class QSignalBlockerContext:
     Context manager wrapper around QSignalBlocker.
     """
 
-    def __init__(self, *objectsToBlock: QObject | QWidget):
+    def __init__(self, *objectsToBlock: QObject | QWidget, skipAlreadyBlocked=False):
         self.objectsToBlock = objectsToBlock
+        if skipAlreadyBlocked:
+            self.objectsToBlock = [o for o in objectsToBlock if not o.signalsBlocked()]
 
     def __enter__(self):
         for o in self.objectsToBlock:

@@ -253,7 +253,7 @@ class Jump(RepoTask):
 
         # Select row in commit log
         from gitfourchette.graphview.graphview import GraphView
-        with QSignalBlockerContext(rw.graphView, rw.sidebar):  # Don't emit jump signals
+        with QSignalBlockerContext(rw.graphView):  # Don't emit jump signals
             try:
                 rw.graphView.selectCommit(locator.commit, silent=False)
             except GraphView.SelectCommitError as e:

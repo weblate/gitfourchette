@@ -180,6 +180,10 @@ class SidebarNode:
             yield node
             frontier.extend(node.children)
 
+    def isSimilarEnoughTo(self, other: SidebarNode):
+        """ Use this to compare SidebarNodes from two different models. """
+        return self.kind == other.kind and self.data == other.data
+
     def __repr__(self):
         return f"SidebarNode({self.kind.name} {self.data})"
 
