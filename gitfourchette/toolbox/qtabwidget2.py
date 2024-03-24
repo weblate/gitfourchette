@@ -322,7 +322,7 @@ class QTabWidget2(QWidget):
             action = QAction(self.overflowMenu)
             action.setText(self.tabs.tabText(i))
             action.setStatusTip(self.tabs.tabToolTip(i))
-            action.triggered.connect(lambda _, j=i: self.setCurrentIndex(j))  # requires PySide6 6.6.1 (PYSIDE-2524) - PyQt6 is fine
+            action.triggered[bool].connect(lambda _, j=i: self.setCurrentIndex(j))  # [bool] for PySide6 <6.7.0 (PYSIDE-2524)
             self.overflowMenu.addAction(action)
 
         pos = self.mapToGlobal(self.overflowButton.pos() + self.overflowButton.rect().bottomLeft())

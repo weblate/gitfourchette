@@ -195,7 +195,7 @@ class PrefsDialog(QDialog):
                 hintButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
                 hintButton.setAutoRaise(True)
                 hintButton.setToolTip(toolTip)
-                hintButton.clicked.connect(lambda _, w=hintButton, t=toolTip: QToolTip.showText(QCursor.pos(), t, w))
+                hintButton.clicked[bool].connect(lambda _, w=hintButton, t=toolTip: QToolTip.showText(QCursor.pos(), t, w))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
                 extraWidgets.append(hintButton)
 
             if extraWidgets:
