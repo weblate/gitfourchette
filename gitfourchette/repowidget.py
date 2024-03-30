@@ -320,6 +320,7 @@ class RepoWidget(QStackedWidget):
         stageButton.setToolTip(self.tr("Stage selected files"))
         stageButton.setMaximumHeight(FILEHEADER_HEIGHT)
         stageButton.setEnabled(False)
+        stageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         appendShortcutToToolTip(stageButton, GlobalShortcuts.stageHotkeys[0])
 
         stageMenu = ActionDef.makeQMenu(stageButton, [ActionDef(self.tr("Discard..."), dirtyFiles.discard)])
@@ -362,6 +363,7 @@ class RepoWidget(QStackedWidget):
         unstageButton.setToolTip(self.tr("Unstage selected files"))
         unstageButton.setMaximumHeight(FILEHEADER_HEIGHT)
         unstageButton.setEnabled(False)
+        unstageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
 
         commitButtonsLayout = QHBoxLayout()

@@ -175,20 +175,27 @@ class FileListModel(QAbstractListModel):
         if role == PATCH_ROLE:
             return self.getPatchAt(index)
 
-        elif role == FILEPATH_ROLE or role == Qt.ItemDataRole.DisplayRole:
+        elif role == FILEPATH_ROLE:
+            delta = self.getDeltaAt(index)
+            if not delta:
+                return ""
+
+            path: str = self.getDeltaAt(index).new_file.path
+            return path
+
+        elif role == Qt.ItemDataRole.DisplayRole:
             delta = self.getDeltaAt(index)
             if not delta:
                 return "<NO DELTA>"
 
             path: str = self.getDeltaAt(index).new_file.path
 
-            if role == Qt.ItemDataRole.DisplayRole:
-                path = abbreviatePath(path, settings.prefs.pathDisplayStyle)
+            path = abbreviatePath(path, settings.prefs.pathDisplayStyle)
 
-                # Show important mode info in brackets
-                modeInfo = deltaModeText(delta)
-                if modeInfo:
-                    path = f"[{modeInfo}] {path}"
+            # Show important mode info in brackets
+            modeInfo = deltaModeText(delta)
+            if modeInfo:
+                path = f"[{modeInfo}] {path}"
 
             return path
 

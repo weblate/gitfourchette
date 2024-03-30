@@ -4,7 +4,7 @@ from typing import Callable, Generator
 
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
-from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE
+from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE, PATCH_ROLE
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
@@ -38,6 +38,17 @@ class FileListDelegate(QStyledItemDelegate):
 
         painter.save()
 
+        # Prepare icon and text rects
+        icon: QIcon = index.data(Qt.ItemDataRole.DecorationRole)
+        if icon is not None and not icon.isNull():
+            iconRect = QRect(option.rect.topLeft() + QPoint(2, 0), option.decorationSize)
+        else:
+            iconRect = QRect()
+
+        textRect = QRect(option.rect)
+        textRect.setLeft(iconRect.right() + 4)
+        textRect.setRight(textRect.right() - 2)
+
         # Set highlighted text color if this item is selected
         if isSelected:
             painter.setPen(option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
@@ -45,17 +56,15 @@ class FileListDelegate(QStyledItemDelegate):
         # Draw default background
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
-        # Draw icon
-        icon: QIcon = index.data(Qt.ItemDataRole.DecorationRole)
-        if icon is not None and not icon.isNull():
-            iconRect = QRect(option.rect.topLeft() + QPoint(2, 0), option.decorationSize)
-            icon.paint(painter, iconRect, option.decorationAlignment)
-        else:
-            iconRect = QRect()
+        # Draw focus rect (necessary with Breeze/Plasma 6)
+        if hasFocus:
+            o2 = QStyleOptionViewItem(option)
+            o2.rect = textRect
+            style.drawPrimitive(QStyle.PrimitiveElement.PE_FrameFocusRect, o2, painter, option.widget)
 
-        textRect = QRect(option.rect)
-        textRect.setLeft(iconRect.right() + 4)
-        textRect.setRight(textRect.right() - 2)
+        # Draw icon
+        if not iconRect.isEmpty():
+            icon.paint(painter, iconRect, option.decorationAlignment)
 
         # Draw text
         font: QFont = index.data(Qt.ItemDataRole.FontRole)
@@ -311,8 +320,7 @@ class FileList(QListView):
             super().keyPressEvent(event)
 
     def copyPaths(self):
-        text = '\n'.join(self.repo.in_workdir(patch.delta.new_file.path)
-                         for patch in self.selectedPatches())
+        text = '\n'.join(self.repo.in_workdir(path) for path in self.selectedPaths())
         if not text:
             return
 
@@ -406,11 +414,19 @@ class FileList(QListView):
     def selectedPatches(self) -> Generator[Patch, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():
-            patch: Patch = index.data(Qt.ItemDataRole.UserRole)
+            patch: Patch = index.data(PATCH_ROLE)
             if not patch or not patch.delta:
                 raise ValueError(self.tr("This file appears to have changed since we last read it. Try refreshing the window."))
             assert isinstance(patch, Patch)
             yield patch
+
+    def selectedPaths(self) -> Generator[str, None, None]:
+        index: QModelIndex
+        for index in self.selectedIndexes():
+            path: str = index.data(FILEPATH_ROLE)
+            if not path:
+                continue
+            yield path
 
     @property
     def repo(self) -> Repo:
