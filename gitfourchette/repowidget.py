@@ -757,6 +757,16 @@ class RepoWidget(QStackedWidget):
                     w.setFocus()
                     break
 
+    def fileListByContext(self, context: NavContext) -> FileList:
+        if context == NavContext.STAGED:
+            return self.stagedFiles
+        elif context == NavContext.UNSTAGED:
+            return self.dirtyFiles
+        elif context == NavContext.COMMITTED:
+            return self.committedFiles
+        else:
+            raise ValueError("context must be STAGED, UNSTAGED or COMMITTED")
+
     # -------------------------------------------------------------------------
 
     def __repr__(self):

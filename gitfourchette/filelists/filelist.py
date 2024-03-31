@@ -1,4 +1,5 @@
 import os
+from contextlib import suppress
 from pathlib import Path
 from typing import Callable, Generator
 
@@ -117,10 +118,12 @@ class FileList(QListView):
 
         flModel = FileListModel(self, navContext)
         self.setModel(flModel)
+        self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
         self.navContext = navContext
         self.commitOid = NULL_OID
         self.skippedRenameDetection = False
+        self._selectionBackup = None
 
         self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -492,20 +495,25 @@ class FileList(QListView):
             qfd.fileSelected.connect(dump)
             qfd.show()
 
-    def getFirstPath(self) -> str:
-        model: FileListModel = self.model()
-        index: QModelIndex = model.index(0)
+    def firstPath(self) -> str:
+        index: QModelIndex = self.flModel.index(0)
         if index.isValid():
-            return model.getPatchAt(index).delta.new_file.path
+            return index.data(FILEPATH_ROLE)
         else:
             return ""
+
+    def paths(self) -> Generator[str, None, None]:
+        flModel = self.flModel
+        for row in range(flModel.rowCount()):
+            index = flModel.index(row)
+            yield index.data(FILEPATH_ROLE)
 
     def selectFile(self, file: str) -> bool:
         if not file:
             return False
 
         try:
-            row = self.model().getRowForFile(file)
+            row = self.flModel.getRowForFile(file)
         except KeyError:
             return False
 
@@ -577,3 +585,48 @@ class FileList(QListView):
             path = model.data(index, FILEPATH_ROLE)
             if path and term in path.lower():
                 return index
+
+    def backUpSelection(self):
+        oldSelected = list(self.selectedPaths())
+        self._selectionBackup = oldSelected
+
+    def clearSelectionBackup(self):
+        self._selectionBackup = None
+
+    def restoreSelectionBackup(self):
+        if self._selectionBackup is None:
+            return False
+
+        paths = self._selectionBackup
+        self._selectionBackup = None
+
+        currentIndex: QModelIndex = self.currentIndex()
+        cPath = currentIndex.data(FILEPATH_ROLE)
+
+        if cPath not in paths:
+            # Don't attempt to restore if we've jumped to another file
+            return False
+
+        if len(paths) == 1 and paths[0] == cPath:
+            # Don't bother if the one file that we've selected is still the current one
+            return False
+
+        flModel = self.flModel
+        selectionModel = self.selectionModel()
+        SF = QItemSelectionModel.SelectionFlag
+
+        with QSignalBlockerContext(self):
+            # If we directly manipulate the QItemSelectionModel by calling .select() row-by-row,
+            # then shift-selection may act counter-intuitively if the selection was discontiguous.
+            # Preparing a QItemSelection upfront mitigates the strange shift-select behavior.
+            newItemSelection = QItemSelection()
+            for path in paths:
+                with suppress(KeyError):
+                    row = flModel.fileRows[path]
+                    index = flModel.index(row, 0)
+                    newItemSelection.select(index, index)
+            selectionModel.clearSelection()
+            selectionModel.select(newItemSelection, SF.Rows | SF.Select)
+            selectionModel.setCurrentIndex(currentIndex, SF.Rows | SF.Current)
+
+        return True

@@ -1,8 +1,9 @@
+import pytest
+
 from . import reposcenario
 from .util import *
-from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
-from gitfourchette.nav import NavLocator
+from gitfourchette.nav import NavLocator, NavContext
 
 
 def testEmptyRepo(tempDir, mainWindow):
@@ -196,3 +197,21 @@ def testSkipRenameDetection(tempDir, mainWindow):
     assert rw.diffBanner.isVisibleTo(rw)
     print(rw.diffBanner.label.text())
     assert re.search(r"1 rename.* detected", rw.diffBanner.label.text(), re.I)
+
+
+@pytest.mark.parametrize("context", [NavContext.UNSTAGED, NavContext.STAGED])
+def testRefreshKeepsMultiFileSelection(tempDir, mainWindow, context):
+    wd = unpackRepo(tempDir)
+    N = 10
+    for i in range(N):
+        writeFile(f"{wd}/UNSTAGED{i}", f"dirty{i}")
+        writeFile(f"{wd}/STAGED{i}", f"staged{i}")
+    with RepoContext(wd) as repo:
+        repo.index.add_all([f"STAGED{i}" for i in range(N)])
+        repo.index.write()
+
+    rw = mainWindow.openRepo(wd)
+    fl = rw.fileListByContext(context)
+    fl.selectAll()
+    rw.refreshRepo()
+    assert list(fl.selectedPaths()) == [f"{context.name}{i}" for i in range(N)]

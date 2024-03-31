@@ -64,7 +64,7 @@ class Jump(RepoTask):
 
         # If we still don't have a path in the locator, fall back to first path in file list.
         if not locator.path:
-            locator = locator.replace(path=flv.getFirstPath())
+            locator = locator.replace(path=flv.firstPath())
             locator = rw.navHistory.refine(locator)
 
         with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles, rw.committedFiles):
@@ -430,9 +430,14 @@ class RefreshRepo(tasks.RepoTask):
 
         rw.state.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
 
-        oldActiveCommit = rw.state.activeCommitOid
         initialLocator = rw.navLocator
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
+
+        try:
+            previousFileList = rw.fileListByContext(initialLocator.context)
+            previousFileList.backUpSelection()
+        except ValueError:
+            previousFileList = None
 
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
@@ -494,6 +499,14 @@ class RefreshRepo(tasks.RepoTask):
                 jumpTo = NavLocator.inCommit(rw.state.activeCommitOid)
 
         yield from self.flowSubtask(Jump, jumpTo)
+
+        # Try to restore path selection
+        if previousFileList is None:
+            pass
+        elif initialLocator.isSimilarEnoughTo(jumpTo):
+            previousFileList.restoreSelectionBackup()
+        else:
+            previousFileList.clearSelectionBackup()
 
         # Refresh window title and status bar warning bubbles.
         # Do this last because it requires the index to be fresh (updated by the Jump subtask)
