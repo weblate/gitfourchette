@@ -132,6 +132,8 @@ class GFApplication(QApplication):
 
         assert self.mainWindow is None, "already have a MainWindow"
 
+        self.aboutToQuit.connect(self.onAboutToQuit)
+
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
         self.mainWindow.destroyed.connect(self.onMainWindowDestroyed)
@@ -164,6 +166,11 @@ class GFApplication(QApplication):
     def onMainWindowDestroyed(self):
         logger.debug("Main window destroyed")
         self.mainWindow = None
+
+    def onAboutToQuit(self):
+        from gitfourchette import settings
+        if settings.prefs.isDirty():
+            settings.prefs.write()
 
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:

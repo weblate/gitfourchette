@@ -225,6 +225,7 @@ class TrTables:
             "authorDisplayStyle": translate("Prefs", "Author display style"),
             "maxRecentRepos": translate("Prefs", "Remember up to # recent repositories"),
             "showStatusBar": translate("Prefs", "Show status bar"),
+            "showToolBar": translate("Prefs", "Show toolbar"),
             "autoHideMenuBar": translate("Prefs", "Toggle menu bar visibility with Alt key"),
 
             "diff_font": translate("Prefs", "Font"),

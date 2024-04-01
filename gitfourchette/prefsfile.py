@@ -17,7 +17,7 @@ class PrefsJSONEncoder(json.JSONEncoder):
             return {"_type": "bytes", "data": obj.hex()}
         elif isinstance(obj, Signature):
             return { "_type": "Signature", "name": obj.name, "email": obj.email, "time": obj.time, "offset": obj.offset }
-        return super(self).default(obj)
+        return super().default(obj)
 
 
 class PrefsJSONDecoder(json.JSONDecoder):
@@ -62,6 +62,15 @@ class PrefsFile:
 
         return fullPath
 
+    def setDirty(self):
+        self._dirty = True
+
+    def isDirty(self):
+        try:
+            return self._dirty
+        except AttributeError:
+            return False
+
     def write(self, force=False):
         # Prepare the path
         prefsPath = self._getFullPath(forWriting=True)
@@ -91,6 +100,8 @@ class PrefsFile:
                 continue
             v = self.__dict__[k]
             if (k not in defaults) or (defaults[k] != v):
+                if isinstance(v, enum.Enum):  # Convert Qt enums to plain old data type
+                    v = v.value
                 filtered[k] = v
 
         # If the filtered object comes out empty (all defaults)
@@ -107,6 +118,8 @@ class PrefsFile:
         # Dump the object to disk
         with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
             json.dump(obj=filtered, fp=jsonFile, indent='\t', cls=PrefsJSONEncoder)
+
+        self._dirty = False
 
         logger.info(f"Wrote {prefsPath}")
         return prefsPath
@@ -135,10 +148,10 @@ class PrefsFile:
                     continue
 
                 originalType = self.__dataclass_fields__[k].type
-                if issubclass(originalType, enum.IntEnum):
-                    acceptedType = int
-                elif issubclass(originalType, enum.StrEnum):
+                if issubclass(originalType, enum.StrEnum):
                     acceptedType = str
+                elif issubclass(originalType, (enum.IntEnum, enum.Enum)):
+                    acceptedType = int
                 else:
                     acceptedType = originalType
 
@@ -148,4 +161,5 @@ class PrefsFile:
                 else:
                     self.__dict__[k] = obj[k]
 
+        self._dirty = False
         return True

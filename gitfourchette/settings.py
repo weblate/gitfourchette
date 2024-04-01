@@ -167,6 +167,9 @@ class Prefs(PrefsFile):
     authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME
     maxRecentRepos              : int           = 20
     showStatusBar               : bool          = True
+    showToolBar                 : bool          = True
+    toolBarButtonStyle          : Qt.ToolButtonStyle = Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    toolBarIconSize             : int           = 16
     autoHideMenuBar             : bool          = False
     diff_font                   : str           = ""
     diff_contextLines           : int           = 3

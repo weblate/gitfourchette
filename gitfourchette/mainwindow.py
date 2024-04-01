@@ -15,7 +15,7 @@ from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.forms.aboutdialog import showAboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
-from gitfourchette.forms.maintoolbar import MainToolbar
+from gitfourchette.forms.maintoolbar import MainToolBar
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
@@ -40,8 +40,10 @@ class MainWindow(QMainWindow):
     welcomeStack: QStackedWidget
     welcomeWidget: WelcomeWidget
     tabs: QTabWidget2
+
     recentMenu: QMenu
     repoMenu: QMenu
+    showStatusBarAction: QAction
 
     sharedSplitterSizes: dict[str, list[int]]
 
@@ -83,12 +85,12 @@ class MainWindow(QMainWindow):
         self.statusBar2 = QStatusBar2(self)
         self.setStatusBar(self.statusBar2)
 
-        self.mainToolbar = MainToolbar(self)
-        self.addToolBar(self.mainToolbar)
-        self.mainToolbar.openDialog.connect(self.openDialog)
-        self.mainToolbar.push.connect(self.pushBranch)
-        self.mainToolbar.reveal.connect(self.openRepoFolder)
-        self.setUnifiedTitleAndToolBarOnMac(True)
+        self.mainToolBar = MainToolBar(self)
+        self.addToolBar(self.mainToolBar)
+        self.mainToolBar.openDialog.connect(self.openDialog)
+        self.mainToolBar.push.connect(self.pushBranch)
+        self.mainToolBar.reveal.connect(self.openRepoFolder)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
 
         self.fillGlobalMenuBar()
 
@@ -189,10 +191,23 @@ class MainWindow(QMainWindow):
         menubar = self.globalMenuBar
         menubar.clear()
 
-        # -------------------------------------------------------------
-
         fileMenu = menubar.addMenu(self.tr("&File"))
+        editMenu = menubar.addMenu(self.tr("&Edit"))
+        viewMenu = menubar.addMenu(self.tr("&View"))
+        repoMenu = menubar.addMenu(self.tr("&Repo"))
+        branchMenu = menubar.addMenu(self.tr("&Branch"))
+        helpMenu = menubar.addMenu(self.tr("&Help"))
+
         fileMenu.setObjectName("MWFileMenu")
+        editMenu.setObjectName("MWEditMenu")
+        viewMenu.setObjectName("MWViewMenu")
+        repoMenu.setObjectName("MWRepoMenu")
+        branchMenu.setObjectName("MWBranchMenu")
+        helpMenu.setObjectName("MWHelpMenu")
+
+        self.repoMenu = repoMenu
+
+        # -------------------------------------------------------------
 
         ActionDef.addToQMenu(
             fileMenu,
@@ -250,9 +265,6 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        editMenu: QMenu = menubar.addMenu(self.tr("&Edit"))
-        editMenu.setObjectName("MWEditMenu")
-
         ActionDef.addToQMenu(
             editMenu,
 
@@ -270,10 +282,6 @@ class MainWindow(QMainWindow):
         )
 
         # -------------------------------------------------------------
-
-        repoMenu: QMenu = menubar.addMenu(self.tr("&Repo"))
-        repoMenu.setObjectName("MWRepoMenu")
-        self.repoMenu = repoMenu
 
         ActionDef.addToQMenu(
             repoMenu,
@@ -333,9 +341,6 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        branchMenu = menubar.addMenu(self.tr("&Branch"))
-        branchMenu.setObjectName("MWBranchMenu")
-
         ActionDef.addToQMenu(
             branchMenu,
 
@@ -360,9 +365,6 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        goMenu: QMenu = menubar.addMenu(self.tr("&Go"))
-        goMenu.setObjectName("MWGoMenu")
-
         sideTabsGoMenu = []
         if settings.prefs.debug_modalSidebar:
             for i, mode in enumerate(SidebarTabMode):
@@ -378,7 +380,10 @@ class MainWindow(QMainWindow):
             sideTabsGoMenu.append(ActionDef.SEPARATOR)
 
         ActionDef.addToQMenu(
-            goMenu,
+            viewMenu,
+            self.mainToolBar.toggleViewAction(),
+            ActionDef(self.tr("Show Status Bar"), self.toggleStatusBar, objectName="ShowStatusBarAction"),
+            ActionDef.SEPARATOR,
             ActionDef(self.tr("Go to &Uncommitted Changes"), self.selectUncommittedChanges, shortcuts="Ctrl+U"),
             ActionDef(self.tr("Go to &HEAD Commit"), self.selectHead, shortcuts="Ctrl+D" if MACOS else "Ctrl+H"),
             ActionDef.SEPARATOR,
@@ -399,13 +404,13 @@ class MainWindow(QMainWindow):
         )
 
         if settings.DEVDEBUG:
-            a = goMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
+            a = viewMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
 
-        # -------------------------------------------------------------
+        showStatusBarAction = viewMenu.findChild(QAction, "ShowStatusBarAction")
+        self.showStatusBarAction = showStatusBarAction
 
-        helpMenu = menubar.addMenu(self.tr("&Help"))
-        helpMenu.setObjectName("MWHelpMenu")
+        # -------------------------------------------------------------
 
         a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
         a.setMenuRole(QAction.MenuRole.AboutRole)
@@ -447,7 +452,7 @@ class MainWindow(QMainWindow):
 
         self.welcomeWidget.ui.recentReposButton.setMenu(self.recentMenu)
 
-        self.mainToolbar.recentAction.setMenu(self.recentMenu)
+        self.mainToolBar.recentAction.setMenu(self.recentMenu)
 
     # -------------------------------------------------------------------------
     # Tabs
@@ -700,7 +705,12 @@ class MainWindow(QMainWindow):
         self._openLocalConfigFile(os.path.join(rw.repo.path, "info", "exclude"))
 
     # -------------------------------------------------------------------------
-    # Go menu
+    # View menu
+    
+    def toggleStatusBar(self):
+        settings.prefs.showStatusBar = not settings.prefs.showStatusBar
+        settings.prefs.setDirty()
+        self.refreshPrefs("showStatusBar")
 
     @needRepoWidget
     def selectUncommittedChanges(self, rw: RepoWidget):
@@ -1132,7 +1142,7 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Prefs
 
-    def refreshPrefs(self, prefDiff: dict = dict()):
+    def refreshPrefs(self, *prefDiff: str):
         app = GFApplication.instance()
 
         # Apply new style
@@ -1153,10 +1163,15 @@ class MainWindow(QMainWindow):
         self.statusBar2.setVisible(settings.prefs.showStatusBar)
         self.statusBar2.enableMemoryIndicator(settings.DEVDEBUG)
 
+        self.mainToolBar.setVisible(settings.prefs.showToolBar)
+
         self.tabs.refreshPrefs()
         self.autoHideMenuBar.refreshPrefs()
         for rw in self.tabs.widgets():
             rw.refreshPrefs()
+
+        self.showStatusBarAction.setCheckable(True)
+        self.showStatusBarAction.setChecked(settings.prefs.showStatusBar)
 
     def onAcceptPrefsDialog(self, prefDiff: dict):
         # Early out if the prefs didn't change
@@ -1171,7 +1186,7 @@ class MainWindow(QMainWindow):
         settings.prefs.write()
 
         # Notify widgets
-        self.refreshPrefs(prefDiff)
+        self.refreshPrefs(*prefDiff.keys())
 
         # Warn if changed any setting that requires a reload
         warnIfChanged = [

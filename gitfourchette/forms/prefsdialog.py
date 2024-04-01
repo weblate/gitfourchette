@@ -63,7 +63,7 @@ class PrefsDialog(QDialog):
         super().__init__(parent)
 
         # Hide irrelevant settings
-        skipKeys = {"shortHashChars"}
+        skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize"}
         if MACOS:
             skipKeys.add("autoHideMenuBar")
         if not FREEDESKTOP:
@@ -101,7 +101,7 @@ class PrefsDialog(QDialog):
         categoryForms = {}
 
         for prefKey in prefs.__dict__:
-            if prefKey in skipKeys:
+            if prefKey in skipKeys or prefKey.startswith("_"):
                 continue
 
             prefValue = prefs.__dict__[prefKey]
