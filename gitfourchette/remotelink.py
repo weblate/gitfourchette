@@ -2,8 +2,10 @@ import base64
 import logging
 import os.path
 import re
+from contextlib import suppress
 
 from gitfourchette import repoconfig
+from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -64,6 +66,10 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.keypairFiles = []
         self.usingCustomKeyFile = ""
 
+        self.lastAttemptKey = ""
+        self.lastAttemptUrl = ""
+        self.usingKnownKeyFirst = False  # for informative purposes only
+
         self.downloadRateTimer = QElapsedTimer()
         self.downloadRate = 0
         self.receivedBytesOnTimerStart = 0
@@ -76,9 +82,9 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.anyKeyIsPassphraseProtected = False
         self.anyKeyIsUnreadable = False
 
-    def discoverKeyFiles(self, remote: Remote | None = None):
+    def discoverKeyFiles(self, remote: Remote | str = ""):
         # Find remote-specific key files
-        if remote:
+        if isinstance(remote, Remote):
             privkey = repoconfig.getRemoteKeyFile(remote._repo, remote.name)
             self.usingCustomKeyFile = privkey
             if privkey:
@@ -104,8 +110,20 @@ class RemoteLink(QObject, RemoteCallbacks):
                     if pubkey.endswith(".pub"):
                         privkey = pubkey.removesuffix(".pub")
                         if os.path.isfile(privkey) and os.path.isfile(pubkey):
-                            logger.info(f"Discovered key pair {privkey}")
+                            logger.debug(f"Discovered key pair {privkey}")
                             self.keypairFiles.append((pubkey, privkey))
+
+            # If we've already connected to this host before,
+            # give higher priority to the key that we used last
+            if remote:
+                url = remote.url if isinstance(remote, Remote) else remote
+                assert type(url) is str
+                strippedUrl = stripRemoteUrlPath(url)
+                if strippedUrl and strippedUrl in settings.history.workingKeys:
+                    workingKey = settings.history.workingKeys[strippedUrl]
+                    self.keypairFiles.sort(key=lambda tup: tup[1] != workingKey)
+                    logger.debug(f"Will try key '{workingKey}' first because it has been used in the past to access '{strippedUrl}'")
+                    self.usingKnownKeyFirst = True
 
         # See if any of the keys are passphrase-protected or unreadable
         for pubkey, privkey in self.keypairFiles:
@@ -136,10 +154,8 @@ class RemoteLink(QObject, RemoteCallbacks):
         # \r refreshes the current status line, and \n starts a new one.
         # Send the last complete line we have.
         split = string.replace("\r", "\n").rsplit("\n", 2)
-        try:
+        with suppress(IndexError):
             self.message.emit(self.tr("Remote:", "message from remote") + " " + split[-2])
-        except IndexError:
-            pass
 
         # Buffer partial message for next time.
         self._sidebandProgressBuffer = split[-1]
@@ -151,6 +167,7 @@ class RemoteLink(QObject, RemoteCallbacks):
     @mayAbortNetworkOperation
     def credentials(self, url, username_from_url, allowed_types):
         self.attempts += 1
+        self.lastAttemptKey = ""
 
         if self.attempts > 10:
             raise ConnectionRefusedError(self.tr("Too many credential retries."))
@@ -159,14 +176,18 @@ class RemoteLink(QObject, RemoteCallbacks):
             logger.info(f"Auths accepted by server: {getAuthNamesFromFlags(allowed_types)}")
 
         if self.keypairFiles and (allowed_types & CredentialType.SSH_KEY):
-            pubkey, privkey = self.keypairFiles.pop()
-            logger.info(f"Attempting login with: {compactPath(pubkey)}")
+            pubkey, privkey = self.keypairFiles.pop(0)
+            logger.info(f"Logging in with: {compactPath(pubkey)}")
 
             if self.usingCustomKeyFile:
                 self.message.emit(self.tr("Logging in with remote-specific key...") + "\n" + compactPath(pubkey))
+            elif self.attempts == 1 and self.usingKnownKeyFirst:
+                self.message.emit(self.tr("Logging in...") + "\n" + compactPath(pubkey))
             else:
                 self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
 
+            self.lastAttemptKey = privkey
+            self.lastAttemptUrl = url
             return Keypair(username_from_url, pubkey, privkey, "")
             # return KeypairFromAgent(username_from_url)
         elif self.attempts == 0:
@@ -235,3 +256,9 @@ class RemoteLink(QObject, RemoteCallbacks):
         if not message:
             message = ""
         self.message.emit(self.tr("Push update reference:") + f"\n{refname} {message}")
+
+    def rememberSuccessfulKeyFile(self):
+        if self.lastAttemptKey and self.lastAttemptUrl and not self.usingCustomKeyFile:
+            strippedUrl = stripRemoteUrlPath(self.lastAttemptUrl)
+            settings.history.setRemoteWorkingKey(strippedUrl, self.lastAttemptKey)
+            logger.debug(f"Remembering key '{self.lastAttemptKey}' for host '{strippedUrl}'")

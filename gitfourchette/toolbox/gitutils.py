@@ -12,6 +12,30 @@ INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
 FIRST_NAME_PATTERN = re.compile(r"(\w(\.?-|\.\s?|\s))*[\w.-]+")
 
 
+REMOTE_URL_PATTERNS = [
+    # HTTP/HTTPS
+    # http://example.com/user/repo
+    # https://example.com/user/repo
+    re.compile(r"^https?:\/\/(?P<host>[^\/]+?)\/(?P<path>.+)"),
+
+    # SSH (scp-like syntax)
+    # example.com:user/repo
+    # git@example.com:user/repo
+    re.compile(r"^(\w+?@)?(?P<host>[^\/]+?):(?!\/)(?P<path>.+)"),
+
+    # SSH (full syntax)
+    # ssh://example.com/user/repo
+    # ssh://git@example.com/user/repo
+    # ssh://git@example.com:1234/user/repo
+    re.compile(r"^ssh:\/\/(\w+?@)?(?P<host>[^\/]+?)(:\d+)?\/(?P<path>.+)"),
+
+    # Git protocol
+    # git://example.com/user/repo
+    # git://example.com:1234/user/repo
+    re.compile(r"^git:\/\/(?P<host>[^\/]+?)(:\d+)?\/(?P<path>.+)"),
+]
+
+
 class AuthorDisplayStyle(enum.IntEnum):
     FULL_NAME = 1
     FIRST_NAME = 2
@@ -109,3 +133,22 @@ def simplifyOctalFileMode(m: int):
     if m in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]:
         m &= ~0o100000
     return m
+
+
+def splitRemoteUrl(url: str):
+    for pattern in REMOTE_URL_PATTERNS:
+        m = pattern.match(url)
+        if m:
+            host = m.group("host")
+            path = m.group("path")
+            return host, path
+    return "", ""
+
+
+def stripRemoteUrlPath(url: str):
+    for pattern in REMOTE_URL_PATTERNS:
+        m = pattern.match(url)
+        if m:
+            path = m.group("path")
+            return url.removesuffix(path)
+    return ""

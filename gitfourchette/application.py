@@ -171,6 +171,8 @@ class GFApplication(QApplication):
         from gitfourchette import settings
         if settings.prefs.isDirty():
             settings.prefs.write()
+        if settings.history.isDirty():
+            settings.history.write()
 
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:

@@ -215,6 +215,7 @@ class History(PrefsFile):
     repos: dict = dataclasses.field(default_factory=dict)
     cloneHistory: list = dataclasses.field(default_factory=list)
     fileDialogPaths: dict = dataclasses.field(default_factory=dict)
+    workingKeys: dict = dataclasses.field(default_factory=dict)
 
     _maxSeq = -1
 
@@ -315,10 +316,8 @@ class History(PrefsFile):
             self.cloneHistory = self.cloneHistory[-n:]
 
     def addCloneUrl(self, url):
-        try:
+        with suppress(ValueError):
             self.cloneHistory.remove(url)
-        except ValueError:
-            pass
         self.cloneHistory.append(url)
 
     def clearCloneHistory(self):
@@ -332,6 +331,15 @@ class History(PrefsFile):
 
     def invalidateSequenceNumber(self):
         self._maxSeq = -1
+
+    def setRemoteWorkingKey(self, url: str, keyPath: str):
+        if not url:
+            return
+        if keyPath:
+            self.workingKeys[url] = keyPath
+        else:
+            self.workingKeys.pop(url, None)
+        self.setDirty()
 
 
 @dataclasses.dataclass

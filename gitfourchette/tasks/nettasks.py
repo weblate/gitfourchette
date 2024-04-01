@@ -71,8 +71,10 @@ class DeleteRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self.flowEnterWorkerThread()
-        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
+        remote = self.repo.remotes[remoteName]
+        self.remoteLink.discoverKeyFiles(remote)
         self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
+        self.remoteLink.rememberSuccessfulKeyFile()
 
 
 class RenameRemoteBranch(_BaseNetTask):
@@ -104,8 +106,10 @@ class RenameRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self.flowEnterWorkerThread()
-        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
+        remote = self.repo.remotes[remoteName]
+        self.remoteLink.discoverKeyFiles(remote)
         self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
+        self.remoteLink.rememberSuccessfulKeyFile()
 
 
 class FetchRemote(_BaseNetTask):
@@ -114,13 +118,17 @@ class FetchRemote(_BaseNetTask):
             upstream = self._autoDetectUpstream()
             remoteName = upstream.remote_name
 
+        remote = self.repo.remotes[remoteName]
+
         title = self.tr("Fetch remote {0}").format(lquo(remoteName))
+        connectingMessage = self.tr("Connecting to remote {0}...").format(lquo(remoteName)) + "\n" + remote.url
         self._showRemoteLinkDialog(title)
-        self.remoteLinkDialog.setLabelText("Connecting to remote...\n{0}".format(self.repo.remotes[remoteName].url))
+        self.remoteLinkDialog.setLabelText(connectingMessage)
 
         yield from self.flowEnterWorkerThread()
-        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
+        self.remoteLink.discoverKeyFiles(remote)
         self.repo.fetch_remote(remoteName, self.remoteLink)
+        self.remoteLink.rememberSuccessfulKeyFile()
 
 
 class FetchRemoteBranch(_BaseNetTask):
@@ -129,15 +137,17 @@ class FetchRemoteBranch(_BaseNetTask):
             upstream = self._autoDetectUpstream()
             remoteBranchName = upstream.shorthand
 
-            remoteBranchName = branch.upstream.shorthand
-
-        self._showRemoteLinkDialog()
+        title = self.tr("Fetch remote branch {0}").format(tquoe(remoteBranchName))
+        self._showRemoteLinkDialog(title)
 
         yield from self.flowEnterWorkerThread()
 
         remoteName, _ = split_remote_branch_shorthand(remoteBranchName)
-        self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
+        remote = self.repo.remotes[remoteName]
+
+        self.remoteLink.discoverKeyFiles(remote)
         self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
+        self.remoteLink.rememberSuccessfulKeyFile()
 
 
 class UpdateSubmodule(_BaseNetTask):
@@ -154,4 +164,5 @@ class UpdateSubmodule(_BaseNetTask):
                 tree = subrepo[subHeadOid].peel(Tree)
                 subrepo.checkout_tree(tree)
 
+        # TODO: Should we call discoverKeyFiles for each submodule?
         self.repo.submodules.update([submodulePath], init=init, callbacks=self.remoteLink)

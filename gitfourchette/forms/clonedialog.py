@@ -1,3 +1,5 @@
+import traceback
+
 from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.qt import *
@@ -113,8 +115,9 @@ class CloneDialog(QDialog):
         class CloneTask(tasks.RepoTask):
             def flow(self):
                 yield from self.flowEnterWorkerThread()
-                link.discoverKeyFiles()
+                link.discoverKeyFiles(url)
                 pygit2.clone_repository(url, path, callbacks=link)
+                link.rememberSuccessfulKeyFile()
 
                 yield from self.flowEnterUiThread()
                 cloneDialog.cloneInProgress = False
@@ -124,6 +127,7 @@ class CloneDialog(QDialog):
                 cloneDialog.accept()
 
             def onError(self, exc: BaseException):
+                traceback.print_exception(exc.__class__, exc, exc.__traceback__)
                 QApplication.beep()
                 QApplication.alert(cloneDialog, 500)
                 cloneDialog.cloneInProgress = False

@@ -11,6 +11,8 @@ from .gitutils import (
     AuthorDisplayStyle, abbreviatePerson,
     PatchPurpose,
     simplifyOctalFileMode,
+    splitRemoteUrl,
+    stripRemoteUrlPath,
 )
 from .memoryindicator import MemoryIndicator
 from .messageboxes import (
