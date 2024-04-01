@@ -36,7 +36,7 @@ class ActionDef:
 
         if self.callback is None:
             pass
-        elif type(self.callback) is Signal:
+        elif type(self.callback) is SignalInstance:
             action.triggered.connect(self.callback)
         else:
             action.triggered.connect(lambda: self.callback())

@@ -77,8 +77,6 @@ for _tentative in _qtBindingOrder:
             QT_BINDING_VERSION = PYQT_VERSION_STR
             QT_BINDING = "PyQt6"
             QT6 = PYQT6 = True
-            Signal = pyqtSignal
-            Slot = pyqtSlot
 
         elif _tentative == "pyqt5":
             from PyQt5.QtCore import *
@@ -87,8 +85,6 @@ for _tentative in _qtBindingOrder:
             QT_BINDING_VERSION = PYQT_VERSION_STR
             QT_BINDING = "PyQt5"
             QT5 = PYQT5 = True
-            Signal = pyqtSignal
-            Slot = pyqtSlot
 
         else:
             _logger.warning(f"Unsupported Qt binding {_tentative}")
@@ -180,11 +176,17 @@ if PYSIDE6:
         _sys.exit(1)
 
 # -----------------------------------------------------------------------------
-# Patch some holes in Qt bindings
+# Patch some holes and incompatibilities in Qt bindings
 
 # QEvent::ThemeChange is still undocumented. It only seems to work in Qt 6.
 if PYQT5 or PYQT6:
     QEvent.Type.ThemeChange = 0xD2
+
+# Match PyQt signal/slot names with PySide6
+if PYQT5 or PYQT6:
+    Signal = pyqtSignal
+    SignalInstance = pyqtBoundSignal
+    Slot = pyqtSlot
 
 # Work around PYSIDE-2234. PySide6 6.5.0+ does implement QRunnable.create, but
 # its implementation sometimes causes random QRunnable objects to bubble up to
