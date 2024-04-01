@@ -72,7 +72,7 @@ class NewStash(RepoTask):
 class ApplyStash(RepoTask):
     def prereqs(self):
         # libgit2 will refuse to apply a stash if there are conflicts (NoConflicts)
-        return TaskPrereqs.NoConflicts
+        return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
 
     def effects(self):
         # Refs only change if the stash is deleted after a successful application.
