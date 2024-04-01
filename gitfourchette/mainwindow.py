@@ -15,6 +15,7 @@ from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.forms.aboutdialog import showAboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
+from gitfourchette.forms.maintoolbar import MainToolbar
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
@@ -78,10 +79,18 @@ class MainWindow(QMainWindow):
         self.globalMenuBar.setObjectName("GFMainMenuBar")
         self.setMenuBar(self.globalMenuBar)
         self.autoHideMenuBar = AutoHideMenuBar(self.globalMenuBar)
-        self.fillGlobalMenuBar()
 
         self.statusBar2 = QStatusBar2(self)
         self.setStatusBar(self.statusBar2)
+
+        self.mainToolbar = MainToolbar(self)
+        self.addToolBar(self.mainToolbar)
+        self.mainToolbar.openDialog.connect(self.openDialog)
+        self.mainToolbar.push.connect(self.pushBranch)
+        self.mainToolbar.reveal.connect(self.openRepoFolder)
+        self.setUnifiedTitleAndToolBarOnMac(True)
+
+        self.fillGlobalMenuBar()
 
         self.setAcceptDrops(True)
         self.styleSheetReloadScheduled = False
@@ -437,6 +446,8 @@ class MainWindow(QMainWindow):
         clearAction.setIcon(stockIcon("edit-clear-history"))
 
         self.welcomeWidget.ui.recentReposButton.setMenu(self.recentMenu)
+
+        self.mainToolbar.recentAction.setMenu(self.recentMenu)
 
     # -------------------------------------------------------------------------
     # Tabs

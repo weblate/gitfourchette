@@ -5,7 +5,7 @@ from gitfourchette import settings
 
 
 class RemoteLinkProgressDialog(QProgressDialog):
-    def __init__(self, parent):
+    def __init__(self, title: str, parent: QWidget):
         super().__init__("", None, 0, 0, parent)
 
         # Init dialog with room to fit 2 lines vertically, so that it doesn't jump around when updating label text
@@ -14,7 +14,7 @@ class RemoteLinkProgressDialog(QProgressDialog):
         self.abortButton = QPushButton(stockIcon(QStyle.StandardPixmap.SP_DialogAbortButton), self.tr("Abort"))
         self.setCancelButton(self.abortButton)
 
-        self.setWindowTitle(self.tr("Remote operation"))
+        self.setWindowTitle(title or self.tr("Remote operation"))
         self.setMinimumWidth(self.fontMetrics().horizontalAdvance("W" * 40))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)  # hide close button
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)

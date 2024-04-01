@@ -7,7 +7,7 @@ from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.settings import DEVDEBUG
 from gitfourchette.tasks import RepoTask, TaskInvoker
-from gitfourchette.toolbox import stockIcon, MultiShortcut, makeMultiShortcut
+from gitfourchette.toolbox import stockIcon, MultiShortcut, makeMultiShortcut, appendShortcutToToolTipText
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ class TaskBook:
     """ Registry of metadata about task commands """
 
     names: dict[Type[RepoTask], str] = {}
+    toolbarNames: dict[Type[RepoTask], str] = {}
     tips: dict[Type[RepoTask], str] = {}
     shortcuts: dict[Type[RepoTask], MultiShortcut] = {}
     icons: dict[Type[RepoTask], Union[str, int]] = {}
@@ -84,6 +85,14 @@ class TaskBook:
             tasks.UnstageModeChanges: translate("task", "Unstage mode changes"),
         }
 
+        cls.toolbarNames = {
+            tasks.FetchRemote: translate("task", "Fetch"),
+            tasks.JumpBack: translate("task", "Back"),
+            tasks.JumpForward: translate("task", "Forward"),
+            tasks.NewBranchFromHead: translate("task", "Branch"),
+            tasks.NewStash: translate("task", "Stash"),
+        }
+
         cls.tips = {
             tasks.AmendCommit: translate("task", "Amend the last commit on the current branch with the staged changes in the working directory"),
             tasks.ApplyPatchFile: translate("task", "Apply a patch file to the working directory"),
@@ -125,14 +134,16 @@ class TaskBook:
         cls.icons = {
             tasks.AmendCommit: "document-save-as",
             tasks.DeleteBranch: "vcs-branch-delete",
-            tasks.DeleteTag: QStyle.StandardPixmap.SP_TrashIcon,
             tasks.DeleteRemote: QStyle.StandardPixmap.SP_TrashIcon,
             tasks.DeleteRemoteBranch: QStyle.StandardPixmap.SP_TrashIcon,
+            tasks.DeleteTag: QStyle.StandardPixmap.SP_TrashIcon,
             tasks.DropStash: QStyle.StandardPixmap.SP_TrashIcon,
             tasks.EditRemote: "document-edit",
             tasks.FastForwardBranch: "media-skip-forward",
             tasks.FetchRemote: QStyle.StandardPixmap.SP_BrowserReload,
             tasks.FetchRemoteBranch: QStyle.StandardPixmap.SP_BrowserReload,
+            tasks.JumpBack: QStyle.StandardPixmap.SP_ArrowBack,
+            tasks.JumpForward: QStyle.StandardPixmap.SP_ArrowForward,
             tasks.MergeBranch: "vcs-merge",
             tasks.NewBranchFromCommit: "vcs-branch",
             tasks.NewBranchFromHead: "vcs-branch",
@@ -206,13 +217,31 @@ class TaskBook:
         return action
 
     @classmethod
+    def toolbarAction(cls, invoker: QObject, taskType: Type[RepoTask]):
+        try:
+            name = cls.toolbarNames[taskType]
+        except KeyError:
+            name = ""
+
+        action = cls.action(invoker, taskType, name)
+
+        tip = cls.autoActionName(taskType)
+        if taskType in cls.shortcuts:
+            tip = appendShortcutToToolTipText(tip, cls.shortcuts[taskType][0])
+        action.setToolTip(tip)
+
+        return action
+
+    @classmethod
     def _fillAction(cls, action: QAction, invoker: QObject, taskType: Type[RepoTask], taskArgs=None):
         assert cls.names
 
         if taskType in cls.icons:
             action.setIcon(stockIcon(cls.icons[taskType]))
+
         if taskType in cls.shortcuts:
             action.setShortcuts(cls.shortcuts[taskType])
+
         if taskType in cls.tips:
             action.setStatusTip(cls.tips[taskType])
 

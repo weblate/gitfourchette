@@ -21,10 +21,10 @@ class _BaseNetTask(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Remotes
 
-    def _showRemoteLinkDialog(self):
+    def _showRemoteLinkDialog(self, title: str = ""):
         assert not self.remoteLinkDialog
         assert onAppThread()
-        self.remoteLinkDialog = RemoteLinkProgressDialog(self.parentWidget())
+        self.remoteLinkDialog = RemoteLinkProgressDialog(title, self.parentWidget())
 
     def cleanup(self):
         assert onAppThread()
@@ -36,6 +36,22 @@ class _BaseNetTask(RepoTask):
     @property
     def remoteLink(self):
         return self.remoteLinkDialog.remoteLink
+
+    def _autoDetectUpstream(self):
+        branchName = self.repo.head_branch_shorthand
+
+        try:
+            branch = self.repo.branches.local[branchName]
+        except KeyError:
+            message = tr("Please switch to a local branch before performing this action.")
+            raise AbortTask(message)
+
+        if not branch.upstream:
+            message = self.tr("Can’t fetch remote changes on {0} because this branch "
+                              "isn’t tracking a remote branch.").format(bquoe(branch.shorthand))
+            raise AbortTask(message)
+
+        return branch.upstream
 
 
 class DeleteRemoteBranch(_BaseNetTask):
@@ -93,8 +109,14 @@ class RenameRemoteBranch(_BaseNetTask):
 
 
 class FetchRemote(_BaseNetTask):
-    def flow(self, remoteName: str):
-        self._showRemoteLinkDialog()
+    def flow(self, remoteName: str = ""):
+        if not remoteName:
+            upstream = self._autoDetectUpstream()
+            remoteName = upstream.remote_name
+
+        title = self.tr("Fetch remote {0}").format(lquo(remoteName))
+        self._showRemoteLinkDialog(title)
+        self.remoteLinkDialog.setLabelText("Connecting to remote...\n{0}".format(self.repo.remotes[remoteName].url))
 
         yield from self.flowEnterWorkerThread()
         self.remoteLink.discoverKeyFiles(self.repo.remotes[remoteName])
@@ -104,18 +126,8 @@ class FetchRemote(_BaseNetTask):
 class FetchRemoteBranch(_BaseNetTask):
     def flow(self, remoteBranchName: str = ""):
         if not remoteBranchName:
-            branchName = self.repo.head_branch_shorthand
-
-            try:
-                branch = self.repo.branches.local[branchName]
-            except KeyError:
-                message = tr("Please switch to a local branch before performing this action.")
-                raise AbortTask(message)
-
-            if not branch.upstream:
-                message = self.tr("Can’t fetch remote changes on {0} because this branch "
-                                  "isn’t tracking a remote branch.").format(bquoe(branch.shorthand))
-                raise AbortTask(message)
+            upstream = self._autoDetectUpstream()
+            remoteBranchName = upstream.shorthand
 
             remoteBranchName = branch.upstream.shorthand
 

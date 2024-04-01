@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Type, ClassVar, Callable, Union
+from typing import ClassVar, Callable
 
 from gitfourchette.qt import *
-from gitfourchette.toolbox.qtutils import stockIcon, MultiShortcut
+from gitfourchette.toolbox.qtutils import stockIcon, MultiShortcut, appendShortcutToToolTipText
 
 
 @dataclass
@@ -18,9 +20,10 @@ class ActionDef:
     icon: str | QStyle.StandardPixmap = ""
     checkState: int = 0
     enabled: bool = True
-    submenu: list['ActionDef'] = field(default_factory=list)
+    submenu: list[ActionDef] = field(default_factory=list)
     shortcuts: MultiShortcut | str = field(default_factory=list)
     statusTip: str = ""
+    toolTip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
     isSection: bool = False
@@ -51,6 +54,15 @@ class ActionDef:
         if self.statusTip:
             action.setStatusTip(self.statusTip)
 
+        if self.toolTip:
+            tip = self.toolTip
+            if self.shortcuts:
+                if type(self.shortcuts) is list:
+                    tip = appendShortcutToToolTipText(tip, self.shortcuts[0])
+                else:
+                    tip = appendShortcutToToolTipText(tip, self.shortcuts)
+            action.setToolTip(tip)
+
         if self.menuRole != QAction.MenuRole.NoRole:
             action.setMenuRole(self.menuRole)
 
@@ -78,7 +90,7 @@ class ActionDef:
         return submenu
 
     @staticmethod
-    def addToQMenu(menu: QMenu, *actionDefs: Union['ActionDef', QAction]):
+    def addToQMenu(menu: QMenu, *actionDefs: ActionDef | QAction):
         for actionDef in actionDefs:
             if not actionDef:
                 menu.addSeparator()
@@ -95,9 +107,26 @@ class ActionDef:
                 menu.addAction(action)
 
     @staticmethod
+    def addToQToolBar(toolbar: QToolBar, *actionDefs: ActionDef | QAction):
+        for item in actionDefs:
+            if not item:
+                toolbar.addSeparator()
+            elif type(item) is QAction:
+                action: QAction = item
+                action.setParent(toolbar)  # reparent it
+                action.setShortcut("")  # clear shortcut for toolbar
+                toolbar.addAction(action)
+            elif item.submenu:
+                raise NotImplementedError("Cannot add ActionDef submenus to QToolbar")
+            else:
+                action = item.toQAction(parent=toolbar)
+                action.setShortcut("")
+                toolbar.addAction(action)
+
+    @staticmethod
     def makeQMenu(
             parent: QWidget,
-            actionDefs: list[Union['ActionDef', QAction]],
+            actionDefs: list[ActionDef | QAction],
             bottomEntries: QMenu | None = None
     ) -> QMenu:
 
