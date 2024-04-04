@@ -99,7 +99,10 @@ def testExternalChangeWhileTaskIsBusyThenAborts(tempDir, mainWindow):
     assert findQMessageBox(rw, r"empty commit")
 
     writeFile(f"{wd}/sneaky.txt", "tee hee")
-    assert QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationInactive
+
+    QTest.qWait(1)
+    assert QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationActive, "needed for onRegainForeground"
+
     mainWindow.onRegainForeground()
     rejectQMessageBox(rw, r"empty commit")
 

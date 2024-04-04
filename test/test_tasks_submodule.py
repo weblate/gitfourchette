@@ -313,6 +313,6 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "update")
 
-    QTest.qWait(0)
+    QTest.qWait(1)
     assert sm not in qlvGetRowData(rw.dirtyFiles)
     assert sm not in qlvGetRowData(rw.stagedFiles)

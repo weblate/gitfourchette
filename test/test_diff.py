@@ -208,7 +208,7 @@ def testSearchInDiff(tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
     diffView.setFocus()
-    QTest.qWait(0)
+    QTest.qWait(1)
     QTest.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
     assert searchBar.isVisibleTo(rw)
 
@@ -288,6 +288,7 @@ def testCopyFromDiffWithoutU2029(tempDir, mainWindow):
     diffView.setFocus()
     diffView.selectAll()
     diffView.copy()
+    QTest.qWait(1)
 
     clipped = clipboard.text()
     assert "\u2029" not in clipped
