@@ -337,6 +337,9 @@ class PrefsDialog(QDialog):
             if prefValue == presets[k]:
                 control.setCurrentIndex(control.count()-1)
 
+        if leaveBlankHint:
+            control.lineEdit().setPlaceholderText(translate("Prefs", "Leave blank for system default."))
+
         control.setEditText(prefValue)
         control.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred))
 
