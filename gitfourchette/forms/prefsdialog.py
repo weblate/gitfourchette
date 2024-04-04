@@ -65,7 +65,7 @@ class PrefsDialog(QDialog):
         # Hide irrelevant settings
         skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize"}
         if MACOS:
-            skipKeys.add("autoHideMenuBar")
+            skipKeys.add("showMenuBar")
         if not FREEDESKTOP:
             skipKeys.add("debug_forceQtApi")
         if not QSoundEffect:

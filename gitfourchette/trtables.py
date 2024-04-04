@@ -226,7 +226,7 @@ class TrTables:
             "maxRecentRepos": translate("Prefs", "Remember up to # recent repositories"),
             "showStatusBar": translate("Prefs", "Show status bar"),
             "showToolBar": translate("Prefs", "Show toolbar"),
-            "autoHideMenuBar": translate("Prefs", "Toggle menu bar visibility with Alt key"),
+            "showMenuBar": translate("Prefs", "Show menu bar (once hidden, press Alt to show it again)"),
 
             "diff_font": translate("Prefs", "Font"),
             "diff_tabSpaces": translate("Prefs", "One tab is # spaces"),

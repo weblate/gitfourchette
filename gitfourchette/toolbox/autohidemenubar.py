@@ -53,7 +53,7 @@ class AutoHideMenuBar(QObject):
 
     @property
     def enabled(self):
-        return settings.prefs.autoHideMenuBar
+        return not settings.prefs.showMenuBar
 
     @property
     def isHidden(self):

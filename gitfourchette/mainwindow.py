@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
     recentMenu: QMenu
     repoMenu: QMenu
     showStatusBarAction: QAction
+    showMenuBarAction: QAction
 
     sharedSplitterSizes: dict[str, list[int]]
 
@@ -383,6 +384,7 @@ class MainWindow(QMainWindow):
             viewMenu,
             self.mainToolBar.toggleViewAction(),
             ActionDef(self.tr("Show Status Bar"), self.toggleStatusBar, objectName="ShowStatusBarAction"),
+            ActionDef(self.tr("Show Menu Bar"), self.toggleMenuBar, objectName="ShowMenuBarAction"),
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Go to &Uncommitted Changes"), self.selectUncommittedChanges, shortcuts="Ctrl+U"),
             ActionDef(self.tr("Go to &HEAD Commit"), self.selectHead, shortcuts="Ctrl+D" if MACOS else "Ctrl+H"),
@@ -407,8 +409,9 @@ class MainWindow(QMainWindow):
             a = viewMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
 
-        showStatusBarAction = viewMenu.findChild(QAction, "ShowStatusBarAction")
-        self.showStatusBarAction = showStatusBarAction
+        self.showStatusBarAction = viewMenu.findChild(QAction, "ShowStatusBarAction")
+        self.showMenuBarAction = viewMenu.findChild(QAction, "ShowMenuBarAction")
+        self.showMenuBarAction.setVisible(not MACOS)
 
         # -------------------------------------------------------------
 
@@ -455,6 +458,11 @@ class MainWindow(QMainWindow):
         self.welcomeWidget.ui.recentReposButton.setMenu(self.recentMenu)
 
         self.mainToolBar.recentAction.setMenu(self.recentMenu)
+
+    def showMenuBarHiddenWarning(self):
+        return showInformation(
+            self, self.tr("Menu bar hidden"),
+            self.tr("The menu bar is now hidden. Press the Alt key to toggle it."))
 
     # -------------------------------------------------------------------------
     # Tabs
@@ -713,6 +721,13 @@ class MainWindow(QMainWindow):
         settings.prefs.showStatusBar = not settings.prefs.showStatusBar
         settings.prefs.setDirty()
         self.refreshPrefs("showStatusBar")
+
+    def toggleMenuBar(self):
+        settings.prefs.showMenuBar = not settings.prefs.showMenuBar
+        settings.prefs.setDirty()
+        self.refreshPrefs("showMenuBar")
+        if not settings.prefs.showMenuBar:
+            self.showMenuBarHiddenWarning()
 
     @needRepoWidget
     def selectUncommittedChanges(self, rw: RepoWidget):
@@ -1175,6 +1190,9 @@ class MainWindow(QMainWindow):
         self.showStatusBarAction.setCheckable(True)
         self.showStatusBarAction.setChecked(settings.prefs.showStatusBar)
 
+        self.showMenuBarAction.setCheckable(True)
+        self.showMenuBarAction.setChecked(settings.prefs.showMenuBar)
+
     def onAcceptPrefsDialog(self, prefDiff: dict):
         # Early out if the prefs didn't change
         if not prefDiff:
@@ -1211,6 +1229,9 @@ class MainWindow(QMainWindow):
             "debug_modalSidebar",
         ]
 
+        if "showMenuBar" in prefDiff and not prefDiff["showMenuBar"]:
+            self.showMenuBarHiddenWarning()
+
         if any(k in warnIfNeedRestart for k in prefDiff):
             showInformation(
                 self, self.tr("Apply Settings"),
@@ -1219,11 +1240,6 @@ class MainWindow(QMainWindow):
             showInformation(
                 self, self.tr("Apply Settings"),
                 self.tr("You may need to reload the current repository for all new settings to take effect."))
-
-        if "autoHideMenuBar" in prefDiff and prefDiff["autoHideMenuBar"]:
-            showInformation(
-                self, self.tr("Menu bar hidden"),
-                self.tr("The menu bar is now hidden. Press the Alt key to toggle it."))
 
         # If any changed setting matches autoReload, schedule a "forced" refresh of all loaded RepoWidgets
         if any(k in autoReload for k in prefDiff):

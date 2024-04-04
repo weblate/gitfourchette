@@ -166,11 +166,11 @@ class Prefs(PrefsFile):
     pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS
     authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME
     maxRecentRepos              : int           = 20
-    showStatusBar               : bool          = True
     showToolBar                 : bool          = True
+    showStatusBar               : bool          = True
+    showMenuBar                 : bool          = True
     toolBarButtonStyle          : Qt.ToolButtonStyle = Qt.ToolButtonStyle.ToolButtonTextBesideIcon
     toolBarIconSize             : int           = 16
-    autoHideMenuBar             : bool          = False
     diff_font                   : str           = ""
     diff_contextLines           : int           = 3
     diff_tabSpaces              : int           = 4
