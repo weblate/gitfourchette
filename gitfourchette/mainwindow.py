@@ -433,6 +433,8 @@ class MainWindow(QMainWindow):
         self.recentMenu.setObjectName("RecentMenu")
         self.fillRecentMenu()
 
+        self.autoHideMenuBar.reconnectToMenus()
+
     def fillRecentMenu(self):
         def onClearRecents():
             settings.history.clearRepoHistory()
@@ -1217,6 +1219,11 @@ class MainWindow(QMainWindow):
             showInformation(
                 self, self.tr("Apply Settings"),
                 self.tr("You may need to reload the current repository for all new settings to take effect."))
+
+        if "autoHideMenuBar" in prefDiff and prefDiff["autoHideMenuBar"]:
+            showInformation(
+                self, self.tr("Menu bar hidden"),
+                self.tr("The menu bar is now hidden. Press the Alt key to toggle it."))
 
         # If any changed setting matches autoReload, schedule a "forced" refresh of all loaded RepoWidgets
         if any(k in autoReload for k in prefDiff):
