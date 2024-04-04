@@ -8,9 +8,10 @@ from typing import Literal
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.diffview.diffdocument import DiffDocument, LineData
+from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
@@ -253,6 +254,9 @@ class DiffView(QPlainTextEdit):
                                 ) -> bool:
         """Detect if we're trying to reload the same patch that's already being displayed"""
 
+        if newLocator.hasFlags(NavFlags.Force):
+            return False
+
         if not self.currentLocator.isSimilarEnoughTo(newLocator):
             return False
 
@@ -480,6 +484,7 @@ class DiffView(QPlainTextEdit):
         actions += [
             ActionDef.SEPARATOR,
             ActionDef(self.tr("&Word wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
+            ActionDef(self.tr("Appearance..."), lambda: openPrefsDialog(self, "diff_font"), icon="configure"),
         ]
 
         bottom: QMenu = self.createStandardContextMenu()

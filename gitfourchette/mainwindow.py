@@ -21,7 +21,7 @@ from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.welcomewidget import WelcomeWidget
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
@@ -1189,14 +1189,18 @@ class MainWindow(QMainWindow):
         self.refreshPrefs(*prefDiff.keys())
 
         # Warn if changed any setting that requires a reload
+        autoReload = [
+            # Those settings a reload of the current diff
+            "diff_showStrayCRs",
+            "diff_colorblind",
+            "diff_largeFileThresholdKB",
+            "diff_imageFileThresholdKB",
+            "diff_contextLines",
+        ]
+
         warnIfChanged = [
             "graph_chronologicalOrder",  # need to reload entire commit sequence
             "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
-            "diff_showStrayCRs",  # GF isn't able to re-render a single diff yet
-            "diff_colorblind",  # ditto
-            "diff_largeFileThresholdKB",  # ditto
-            "diff_imageFileThresholdKB",  # ditto
-            "diff_contextLines",  # ditto
         ]
 
         warnIfNeedRestart = [
@@ -1213,6 +1217,16 @@ class MainWindow(QMainWindow):
             showInformation(
                 self, self.tr("Apply Settings"),
                 self.tr("You may need to reload the current repository for all new settings to take effect."))
+
+        # If any changed setting matches autoReload, schedule a "forced" refresh of all loaded RepoWidgets
+        if any(k in autoReload for k in prefDiff):
+            for rw in self.tabs.widgets():
+                assert isinstance(rw, RepoWidget)
+                if not rw.isLoaded:
+                    continue
+                locator = rw.pendingLocator or rw.navLocator
+                locator = locator.withExtraFlags(NavFlags.Force)
+                rw.refreshRepo(jumpTo=locator)
 
     def openPrefsDialog(self, focusOn: str = ""):
         dlg = PrefsDialog(self, focusOn)
