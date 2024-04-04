@@ -233,7 +233,11 @@ class PrefsDialog(QDialog):
         if not focusOn:
             # Restore last open tab
             tabWidget.setCurrentIndex(PrefsDialog.lastOpenTab)
+        else:
+            # Save this tab if we close the dialog without changing tabs
+            self.saveLastOpenTab(tabWidget.currentIndex())
 
+        # Remember which tab we've last clicked on for next time we open the dialog
         tabWidget.currentChanged.connect(PrefsDialog.saveLastOpenTab)
 
         self.setModal(True)

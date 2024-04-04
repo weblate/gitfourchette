@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 
 from gitfourchette import settings
-from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -105,6 +105,40 @@ class SpecialDiffError(Exception):
         return SpecialDiffError(message, "\n".join(details), longform="\n".join(longform))
 
     @staticmethod
+    def diffTooLarge(size, threshold, locator):
+        locale = QLocale()
+        humanSize = locale.formattedDataSize(size, 1)
+        humanThreshold = locale.formattedDataSize(threshold, 0)
+        loadAnyway = locator.withExtraFlags(NavFlags.AllowLargeFiles)
+        configure = makeInternalLink("prefs", "diff_largeFileThresholdKB")
+        longform = ulList([
+            linkify(translate("Diff", "[Load diff anyway] (this may take a moment)"), loadAnyway.url()),
+            linkify(translate("Diff", "[Configure diff preview limit] (currently: {0})"), configure).format(humanThreshold),
+        ])
+        return SpecialDiffError(
+            translate("Diff", "This diff is too large to be previewed."),
+            translate("Diff", "Diff size: {0}").format(humanSize),
+            QStyle.StandardPixmap.SP_MessageBoxWarning,
+            longform=longform)
+
+    @staticmethod
+    def imageTooLarge(size, threshold, locator):
+        locale = QLocale()
+        humanSize = locale.formattedDataSize(size, 1)
+        humanThreshold = locale.formattedDataSize(threshold, 0)
+        loadAnyway = locator.withExtraFlags(NavFlags.AllowLargeFiles)
+        configure = makeInternalLink("prefs", "diff_imageFileThresholdKB")
+        longform = ulList([
+            linkify(translate("Diff", "[Load image anyway] (this may take a moment)"), loadAnyway.url()),
+            linkify(translate("Diff", "[Configure image preview limit] (currently: {0})"), configure).format(humanThreshold),
+        ])
+        return SpecialDiffError(
+            translate("Diff", "This image is too large to be previewed."),
+            translate("Diff", "Image size: {0}").format(humanSize),
+            QStyle.StandardPixmap.SP_MessageBoxWarning,
+            longform=longform)
+
+    @staticmethod
     def typeChange(delta: DiffDelta):
         oldFile = delta.old_file
         newFile = delta.new_file
@@ -119,7 +153,7 @@ class SpecialDiffError(Exception):
         return SpecialDiffError(translate("Diff", "This file’s type has changed."), table)
 
     @staticmethod
-    def binaryDiff(delta: DiffDelta):
+    def binaryDiff(delta: DiffDelta, locator: NavLocator):
         locale = QLocale()
         of = delta.old_file
         nf = delta.new_file
@@ -127,14 +161,8 @@ class SpecialDiffError(Exception):
         if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
             largestSize = max(of.size, nf.size)
             threshold = settings.prefs.diff_imageFileThresholdKB * 1024
-            if largestSize > threshold:
-                humanSize = locale.formattedDataSize(largestSize)
-                humanThreshold = locale.formattedDataSize(threshold)
-                return SpecialDiffError(
-                    translate("Diff", "This image is too large to be previewed ({0}).").format(humanSize),
-                    translate("Diff", "You can change the size threshold in the Preferences (current limit: {0}).").format(
-                        humanThreshold),
-                    QStyle.StandardPixmap.SP_MessageBoxWarning)
+            if largestSize > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
+                return SpecialDiffError.imageTooLarge(largestSize, threshold, locator)
             else:
                 return ShouldDisplayPatchAsImageDiff()
         else:

@@ -100,7 +100,7 @@ class DiffDocument:
 
         # Don't show contents if file appears to be binary.
         if patch.delta.is_binary:
-            raise SpecialDiffError.binaryDiff(patch.delta)
+            raise SpecialDiffError.binaryDiff(patch.delta, locator)
 
         # Special formatting for TYPECHANGE.
         if patch.delta.status == DeltaStatus.TYPECHANGE:
@@ -109,13 +109,7 @@ class DiffDocument:
         # Don't load large diffs.
         threshold = settings.prefs.diff_largeFileThresholdKB * 1024
         if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
-            locale = QLocale()
-            humanSize = locale.formattedDataSize(len(patch.data))
-            target = locator.withExtraFlags(NavFlags.AllowLargeFiles)
-            raise SpecialDiffError(
-                translate("Diff", "This patch is too large to be previewed ({0}).").format(humanSize),
-                target.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
-                QStyle.StandardPixmap.SP_MessageBoxWarning)
+            raise SpecialDiffError.diffTooLarge(len(patch.data), threshold, locator)
 
         if len(patch.hunks) == 0:
             raise SpecialDiffError.noChange(patch.delta)
@@ -160,10 +154,10 @@ class DiffDocument:
                     continue
 
                 if len(content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
-                    target = locator.withExtraFlags(NavFlags.AllowLongLines)
+                    loadAnyway = locator.withExtraFlags(NavFlags.AllowLongLines)
                     raise SpecialDiffError(
                         translate("Diff", "This file contains very long lines."),
-                        target.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
+                        loadAnyway.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
                         QStyle.StandardPixmap.SP_MessageBoxWarning)
 
                 ld = LineData(text=content, hunkPos=DiffLinePos(hunkID, hunkLineNum), diffLine=diffLine)
