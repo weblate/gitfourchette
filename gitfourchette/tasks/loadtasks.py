@@ -13,6 +13,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
@@ -282,10 +283,17 @@ class LoadPatch(RepoTask):
                       ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:
         if not patch:
             locator = locator.withExtraFlags(NavFlags.Force)
-            message = locator.toHtml(self.tr("The file appears to have changed on disk since we cached it. "
-                                             "[Try to refresh it.]"))
-            return SpecialDiffError(self.tr("Outdated diff."), message,
-                                    icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+            longformItems = [locator.toHtml(self.tr("Try to reload the file."))]
+
+            if locator.context.isWorkdir() and not settings.prefs.debug_autoRefresh:
+                tip = self.tr("Consider re-enabling {0} in the Preferences to prevent this issue."
+                              ).format(hquo(TrTables.prefKey("debug_autoRefresh")))
+                longformItems.append(tip)
+
+            return SpecialDiffError(self.tr("Outdated diff."),
+                                    self.tr("The file appears to have changed on disk."),
+                                    icon=QStyle.StandardPixmap.SP_MessageBoxWarning,
+                                    longform=ulList(longformItems))
 
         if not patch.delta:
             # Rare libgit2 bug, should be fixed in 1.6.0
