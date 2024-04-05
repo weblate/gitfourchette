@@ -607,8 +607,10 @@ class Repo(_VanillaRepository):
                  | DiffOption.INCLUDE_TYPECHANGE
                  )
 
-        # Don't attempt to update the index if the repo is locked for writing
-        update_index &= _os.access(self.path, _os.W_OK)
+        # Don't attempt to update the index if the repo is locked for writing,
+        # or the index is locked by another program
+        update_index &= (_os.access(self.path, _os.W_OK) \
+            and not _exists(_joinpath(self.path, "index.lock")))
 
         # UPDATE_INDEX may improve performance for subsequent diffs if the
         # index was stale, but this requires the repo to be writable.
