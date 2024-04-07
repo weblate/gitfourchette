@@ -89,8 +89,10 @@ def excMessageBox(
         qmb.setWindowModality(Qt.WindowModality.ApplicationModal)
 
         if isCritical:
-            quitButton = qmb.addButton(QMessageBox.StandardButton.Reset)  # Reset button is leftmost in KDE
-            quitButton.setText(tr("Quit application"))
+            from gitfourchette.settings import DEVDEBUG
+            if DEVDEBUG:
+                quitButton = qmb.addButton(QMessageBox.StandardButton.Reset)  # Reset button is leftmost in KDE
+                quitButton.setText(tr("Quit application"))
 
         dismissButton = qmb.addButton(QMessageBox.StandardButton.Ok)
         qmb.setDefaultButton(dismissButton)
