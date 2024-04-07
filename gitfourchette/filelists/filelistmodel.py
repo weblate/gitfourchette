@@ -36,7 +36,7 @@ def deltaModeText(delta: DiffDelta):
         return TrTables.shortFileModes(nm)
 
 
-def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
+def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterpart: bool = False):
     if not delta:
         return ""
 
@@ -92,13 +92,22 @@ def fileTooltip(repo: Repo, delta: DiffDelta, isWorkdir: bool):
         text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size))
 
     # Modified time
-    if isWorkdir and sc not in 'DU':
+    if navContext.isWorkdir() and sc not in 'DU':
         with suppress(IOError):
             fullPath = os.path.join(repo.workdir, nf.path)
             fileStat = os.stat(fullPath)
             timeQdt = QDateTime.fromSecsSinceEpoch(int(fileStat.st_mtime))
             timeText = locale.toString(timeQdt, settings.prefs.shortTimeFormat)
             text += newLine(translate("FileList", "modified:"), timeText)
+
+    if isCounterpart:
+        if navContext == NavContext.UNSTAGED:
+            counterpartText = translate("FileList", "Currently viewing diff of staged changes "
+                                                    "in this file; it also has <u>unstaged</u> changes.")
+        else:
+            counterpartText = translate("FileList", "Currently viewing diff of unstaged changes "
+                                                    "in this file; it also has <u>staged</u> changes.")
+        text += f"<p>{counterpartText}</p>"
 
     return text
 
@@ -213,7 +222,8 @@ class FileListModel(QAbstractListModel):
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             delta = self.getDeltaAt(index)
-            return fileTooltip(self.repo, delta, self.navContext.isWorkdir())
+            isCounterpart = index.row() == self.highlightedCounterpartRow
+            return fileTooltip(self.repo, delta, self.navContext, isCounterpart)
 
         elif role == Qt.ItemDataRole.SizeHintRole:
             parentWidget: QWidget = self.parent()
