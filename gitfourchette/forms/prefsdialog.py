@@ -63,7 +63,7 @@ class PrefsDialog(QDialog):
         super().__init__(parent)
 
         # Hide irrelevant settings
-        skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize"}
+        skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize", "dontShowAgain"}
         if MACOS:
             skipKeys.add("showMenuBar")
         if not FREEDESKTOP:

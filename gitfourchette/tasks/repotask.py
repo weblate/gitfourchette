@@ -378,6 +378,7 @@ class RepoTask(QObject):
             cancelText: str = "",
             detailText: str = "",
             detailLink: str = "",
+            dontShowAgainKey: str = "",
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -388,6 +389,11 @@ class RepoTask(QObject):
 
         assert onAppThread()  # we'll touch the UI
 
+        if dontShowAgainKey:
+            from gitfourchette import settings
+            if dontShowAgainKey in settings.prefs.dontShowAgain:
+                return
+
         if not title:
             title = self.name()
 
@@ -396,6 +402,10 @@ class RepoTask(QObject):
 
         qmb = asyncMessageBox(self.parentWidget(), 'question', title, text,
                               QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+
+        if dontShowAgainKey:
+            dnsaCheckBox = QCheckBox(tr("Don’t ask me to confirm this action again"), qmb)
+            qmb.setCheckBox(dnsaCheckBox)
 
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
         # so it connects to the "accepted" signal.
@@ -421,6 +431,11 @@ class RepoTask(QObject):
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self.flowDialog(qmb)
+
+        if dontShowAgainKey and dnsaCheckBox.isChecked():
+            from gitfourchette import settings
+            settings.prefs.dontShowAgain.append(dontShowAgainKey)
+            settings.prefs.setDirty()
 
     def checkPrereqs(self):
         prereqs = self.prereqs()
