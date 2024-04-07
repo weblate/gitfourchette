@@ -782,7 +782,7 @@ class Repo(_VanillaRepository):
         branch = self.create_branch(name, commit)
         return branch
 
-    def listall_remote_branches(self) -> dict[str, list[str]]:
+    def listall_remote_branches(self, value_style: _typing.Literal["strip", "shorthand", "refname"] = "strip") -> dict[str, list[str]]:
         names = {}
 
         # Create empty lists for all remotes (including branchless remotes)
@@ -804,8 +804,16 @@ class Repo(_VanillaRepository):
                 # See: https://stackoverflow.com/questions/8839958
                 continue
 
-            remoteName, branchName = split_remote_branch_shorthand(shorthand)
-            names[remoteName].append(branchName)
+            remote_name, branch_name = split_remote_branch_shorthand(shorthand)
+            if value_style == "strip":
+                value = branch_name
+            elif value_style == "shorthand":
+                value = shorthand
+            elif value_style == "refname":
+                value = refname
+            else:
+                raise NotImplementedError(f"unsupported value_style {value_style}")
+            names[remote_name].append(value)
 
         return names
 

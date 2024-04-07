@@ -6,7 +6,6 @@ from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskE
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
-from gitfourchette.forms.upstreambranchdialog import UpstreamBranchDialog
 
 logger = logging.getLogger(__name__)
 
@@ -227,14 +226,7 @@ class EditUpstreamBranch(RepoTask):
     def effects(self):
         return TaskEffects.Refs
 
-    def flow(self, localBranchName: str):
-        dlg = UpstreamBranchDialog(self.repo, localBranchName, self.parentWidget())
-        setWindowModal(dlg)
-        yield from self.flowDialog(dlg)
-
-        remoteBranchName = dlg.newUpstreamBranchName
-        dlg.deleteLater()
-
+    def flow(self, localBranchName: str, remoteBranchName: str):
         # Bail if no-op
         if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
             raise AbortTask()

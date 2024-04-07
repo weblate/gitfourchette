@@ -39,30 +39,22 @@ def testSetUpstreamBranch(tempDir, mainWindow):
     assert repo.branches.local['master'].upstream_name == "refs/remotes/origin/master"
 
     node = rw.sidebar.findNodeByRef("refs/heads/master")
-    menu = rw.sidebar.makeNodeMenu(node)
-
-    findMenuAction(menu, "(tracked|upstream) branch").trigger()
 
     # Change tracking from origin/master to nothing
-    q = findQDialog(rw, "(tracked|upstream) branch")
-    combobox: QComboBox = q.findChild(QComboBox)
-    assert "origin/master" in combobox.currentText()
-    assert re.match(r".*don.t track.*", combobox.itemText(0).lower())
-    combobox.setCurrentIndex(0)
-    q.accept()
+    menu = rw.sidebar.makeNodeMenu(node)
+    originMasterAction = findMenuAction(menu, r"upstream branch/origin.master")
+    stopTrackingAction = findMenuAction(menu, r"upstream branch/stop tracking")
+    assert originMasterAction.isChecked()
+    stopTrackingAction.trigger()
     assert repo.branches.local['master'].upstream is None
 
     # Change tracking back to origin/master
-    findMenuAction(menu, "(tracked|upstream) branch").trigger()
-    q = findQDialog(rw, "(tracked|upstream) branch")
-    combobox: QComboBox = q.findChild(QComboBox)
-    assert re.match(r".*don.t track.*", combobox.currentText().lower())
-    for i in range(combobox.count()):
-        if "origin/master" in combobox.itemText(i):
-            combobox.setCurrentIndex(i)
-            break
-    q.accept()
-
+    menu = rw.sidebar.makeNodeMenu(node)
+    originMasterAction = findMenuAction(menu, r"upstream branch/origin.master")
+    notTrackingAction = findMenuAction(menu, r"upstream branch/not tracking")
+    assert not originMasterAction.isChecked()
+    assert notTrackingAction.isChecked()
+    originMasterAction.trigger()
     assert repo.branches.local['master'].upstream == repo.branches.remote['origin/master']
 
 

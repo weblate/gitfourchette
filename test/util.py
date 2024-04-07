@@ -130,21 +130,23 @@ def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
     return data
 
 
-def findMenuAction(menu: QMenu | QMenuBar, pattern: str):
-    if isinstance(menu, QMenuBar):
-        menuBar = menu
-        menuName, pattern = pattern.split("/", 1)
-        for menu in menuBar.children():
-            if isinstance(menu, QMenu) and re.search(menuName, menu.title(), re.I):
+def findMenuAction(menu: QMenu | QMenuBar, pattern: str) -> QAction:
+    patternParts = pattern.split("/")
+
+    for submenuPattern in patternParts[:-1]:
+        for submenu in menu.children():
+            if isinstance(submenu, QMenu) and re.search(submenuPattern, submenu.title(), re.I):
+                menu = submenu
                 break
         else:
-            assert False, "didn't find menu '{menuName}' in QMenuBar"
+            assert False, f"didn't find menu '{pattern}'"
 
     assert isinstance(menu, QMenu)
     for action in menu.actions():
         actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())
-        if re.search(pattern, actionText, re.IGNORECASE):
+        if re.search(patternParts[-1], actionText, re.IGNORECASE):
             return action
+    assert False, f"didn't find menu item '{pattern}' in menu"
 
 
 def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):

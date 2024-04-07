@@ -130,9 +130,7 @@ class Sidebar(QTreeView):
             activeBranchName = repo.head_branch_shorthand
             isCurrentBranch = branch and branch.is_checked_out()
             hasUpstream = bool(branch.upstream)
-            upstreamBranchName = ""
-            if branch.upstream:
-                upstreamBranchName = branch.upstream.shorthand
+            upstreamBranchName = "" if not hasUpstream else branch.upstream.shorthand
 
             isBranchHidden = False
             if index:  # in test mode, we may not have an index
@@ -181,7 +179,7 @@ class Sidebar(QTreeView):
                     enabled=hasUpstream,
                 ),
 
-                TaskBook.action(self, EditUpstreamBranch, self.tr("Set &Upstream Branch..."), taskArgs=branchName),
+                ActionDef(self.tr("&Upstream Branch"), submenu=self.makeUpstreamSubmenu(repo, activeBranchName, upstreamBranchName)),
 
                 ActionDef.SEPARATOR,
 
@@ -727,3 +725,35 @@ class Sidebar(QTreeView):
     def copyToClipboard(self, text: str):
         QApplication.clipboard().setText(text),
         self.statusMessage.emit(clipboardStatusMessage(text))
+
+    def makeUpstreamSubmenu(self, repo, lbName, ubName) -> list:
+        RADIO_GROUP = "UpstreamSelection"
+
+        menu = [
+            ActionDef(
+                self.tr("Stop tracking upstream branch") if ubName else self.tr("Not tracking any upstream branch"),
+                lambda: EditUpstreamBranch.invoke(self, lbName, ""),
+                checkState=1 if not ubName else -1,
+                radioGroup=RADIO_GROUP),
+        ]
+
+        for remoteName, remoteBranches in repo.listall_remote_branches(value_style="shorthand").items():
+            if not remoteBranches:
+                continue
+            menu.append(None)  # separator
+            for rbShorthand in remoteBranches:
+                menu.append(ActionDef(
+                    escamp(rbShorthand),
+                    lambda rb=rbShorthand: EditUpstreamBranch.invoke(self, lbName, rb),
+                    checkState=1 if ubName == rbShorthand else -1,
+                    radioGroup=RADIO_GROUP))
+
+        if len(menu) <= 1:
+            if not repo.remotes:
+                explainer = self.tr("No remotes.")
+            else:
+                explainer = self.tr("No remote branches found. Try fetching the remotes.")
+            menu.append(None)  # separator
+            menu.append(ActionDef(explainer, enabled=False))
+
+        return menu
