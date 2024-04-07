@@ -41,15 +41,15 @@ def showInFolder(path: str):  # pragma: no cover (platform-specific)
         if iface.isValid():
             if PYQT5 or PYQT6:
                 # PyQt5/6 needs the array of strings to be spelled out explicitly.
-                stringType = QMetaType.QString if PYQT5 else QMetaType.fromName(b"QString")
-                arg = QDBusArgument()
-                arg.beginArray(stringType)
-                arg.add(path)
-                arg.endArray()
-                iface.call("ShowItems", arg, "")
+                stringType = QMetaType.Type.QString
+                args = QDBusArgument()
+                args.beginArray(stringType if PYQT5 else stringType.value)
+                args.add(path)
+                args.endArray()
             else:
                 # Thankfully, PySide6 is more pythonic here.
-                iface.call("ShowItems", [path], "")
+                args = [path]
+            iface.call("ShowItems", args, "")
             iface.deleteLater()
             return
 
