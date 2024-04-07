@@ -599,7 +599,7 @@ class MainWindow(QMainWindow):
         rw.setSharedSplitterSizes(self.sharedSplitterSizes)
 
         # Hook RepoWidget signals
-        rw.nameChange.connect(self.onRepoNameChange)
+        rw.nameChange.connect(lambda: self.onRepoNameChange(rw))
         rw.openRepo.connect(lambda path, locator: self.openRepoNextTo(rw, path, locator))
         rw.openPrefs.connect(self.openPrefsDialog)
 
@@ -609,7 +609,8 @@ class MainWindow(QMainWindow):
 
         # Create a tab for the RepoWidget
         with QSignalBlockerContext(self.tabs):
-            tabIndex = self.tabs.insertTab(tabIndex, rw, rw.getTitle())
+            title = escamp(rw.getTitle())
+            tabIndex = self.tabs.insertTab(tabIndex, rw, title)
             self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
             if foreground:
                 self.tabs.setCurrentIndex(tabIndex)
@@ -636,10 +637,9 @@ class MainWindow(QMainWindow):
             return
         rw.refreshRepo()
 
-    def onRepoNameChange(self):
-        rw = self.currentRepoWidget()
-        if rw:
-            self.refreshTabText(rw)
+    def onRepoNameChange(self, rw: RepoWidget):
+        self.refreshTabText(rw)
+        if rw.isVisible():
             rw.refreshWindowChrome()
         self.fillRecentMenu()
 
@@ -973,7 +973,8 @@ class MainWindow(QMainWindow):
 
     def refreshTabText(self, rw):
         index = self.tabs.indexOf(rw)
-        self.tabs.tabs.setTabText(index, rw.getTitle())
+        title = escamp(rw.getTitle())
+        self.tabs.tabs.setTabText(index, title)
 
     def unloadTab(self, index: int):
         rw : RepoWidget = self.tabs.widget(index)
