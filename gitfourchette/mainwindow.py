@@ -446,8 +446,12 @@ class MainWindow(QMainWindow):
 
         self.recentMenu.clear()
         for path in settings.history.getRecentRepoPaths(settings.prefs.maxRecentRepos):
-            shortName = settings.history.getRepoTabName(path)
-            action = self.recentMenu.addAction(shortName, lambda p=path: self.openRepo(p, exactMatch=True))
+            nickname = settings.history.getRepoNickname(path, strict=True)
+            caption = compactPath(path)
+            if nickname:
+                caption += f" ({tquo(nickname)})"
+            caption = escamp(caption)
+            action = self.recentMenu.addAction(caption, lambda p=path: self.openRepo(p, exactMatch=True))
             action.setStatusTip(path)
         self.recentMenu.addSeparator()
 

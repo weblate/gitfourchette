@@ -234,10 +234,10 @@ class History(PrefsFile):
             self.repos[path] = repo
         return repo
 
-    def getRepoNickname(self, path):
+    def getRepoNickname(self, path: str, strict: bool = False) -> str:
         repo = self.getRepo(path)
         path = os.path.normpath(path)
-        return repo.get("nickname", os.path.basename(path))
+        return repo.get("nickname", "" if strict else os.path.basename(path))
 
     def setRepoNickname(self, path: str, nickname: str):
         repo = self.getRepo(path)
