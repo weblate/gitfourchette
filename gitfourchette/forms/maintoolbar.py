@@ -71,12 +71,14 @@ class MainToolBar(QToolBar):
         def textPositionAction(name, style):
             return ActionDef(name,
                              callback=lambda: self.setToolButtonStyle(style),
-                             checkState=1 if self.toolButtonStyle() == style else -1)
+                             checkState=1 if self.toolButtonStyle() == style else -1,
+                             radioGroup="TextPosition")
 
         def iconSizeAction(name, size):
             return ActionDef(name,
                              callback=lambda: self.setIconSize(QSize(size, size)),
-                             checkState=1 if self.iconSize().width() == size else -1)
+                             checkState=1 if self.iconSize().width() == size else -1,
+                             radioGroup="IconSize")
 
         menu = ActionDef.makeQMenu(self, [
             self.toggleViewAction(),

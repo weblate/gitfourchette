@@ -19,6 +19,7 @@ class ActionDef:
     callback: Signal | Callable | None = None
     icon: str | QStyle.StandardPixmap = ""
     checkState: int = 0
+    radioGroup: str = ""
     enabled: bool = True
     submenu: list[ActionDef] = field(default_factory=list)
     shortcuts: MultiShortcut | str = field(default_factory=list)
@@ -28,7 +29,7 @@ class ActionDef:
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
     isSection: bool = False
 
-    def toQAction(self, parent: QMenu) -> QAction:
+    def toQAction(self, parent: QMenu | QToolBar) -> QAction:
         if self.submenu:
             raise NotImplementedError("ActionDef.toQAction cannot be used for submenus")
 
@@ -91,20 +92,33 @@ class ActionDef:
 
     @staticmethod
     def addToQMenu(menu: QMenu, *actionDefs: ActionDef | QAction):
-        for actionDef in actionDefs:
-            if not actionDef:
+        radioGroups = {}
+
+        for item in actionDefs:
+            if not item:
                 menu.addSeparator()
-            elif type(actionDef) is QAction:
-                actionDef.setParent(menu)  # reparent it
-                menu.addAction(actionDef)
-            elif actionDef.isSection:
-                menu.addSection(actionDef.caption)
-            elif actionDef.submenu:
-                submenu = actionDef.makeSubmenu(parent=menu)
+            elif type(item) is QAction:
+                item.setParent(menu)  # reparent it
+                menu.addAction(item)
+            elif item.isSection:
+                menu.addSection(item.caption)
+            elif item.submenu:
+                submenu = item.makeSubmenu(parent=menu)
                 menu.addMenu(submenu)
             else:
-                action = actionDef.toQAction(parent=menu)
+                action = item.toQAction(parent=menu)
                 menu.addAction(action)
+
+                groupKey = item.radioGroup
+                if groupKey:
+                    try:
+                        group = radioGroups[groupKey]
+                    except KeyError:
+                        group = QActionGroup(menu)
+                        group.setObjectName(f"ActionDefGroup{groupKey}")
+                        group.setExclusive(True)
+                        radioGroups[groupKey] = group
+                    group.addAction(action)
 
     @staticmethod
     def addToQToolBar(toolbar: QToolBar, *actionDefs: ActionDef | QAction):
