@@ -283,13 +283,22 @@ class FastForwardBranch(RepoTask):
 
     def onError(self, exc):
         if isinstance(exc, DivergentBranchesError):
-            lb = exc.local_branch.shorthand
-            rb = exc.remote_branch.shorthand
+            parentWidget = self.parentWidget()
+
+            repo = self.repo
+            lb = exc.local_branch
+            rb = exc.remote_branch
             text = paragraphs(
                 self.tr("Can’t fast-forward {0} to {1}."),
                 self.tr("The branches are divergent."),
-            ).format(bquo(lb), bquo(rb))
-            showWarning(self.parentWidget(), self.name(), text)
+            ).format(bquo(lb.shorthand), bquo(rb.shorthand))
+            qmb = showWarning(parentWidget, self.name(), text)
+
+            # If it's the checked-out branch, suggest merging
+            if lb.is_checked_out():
+                mergeCaption = self.tr("Merge into {0}").format(lquoe(lb.shorthand))
+                mergeButton = qmb.addButton(mergeCaption, QMessageBox.ButtonRole.ActionRole)
+                mergeButton.clicked.connect(lambda: MergeBranch.invoke(parentWidget, rb.name))
         else:
             super().onError(exc)
 
@@ -351,7 +360,8 @@ class MergeBranch(RepoTask):
                 self.tr("In this case, {0} will be fast-forwarded to {1}."),
             ).format(bquo(myShorthand), bquo(shortHash(target)))
             yield from self.flowConfirm(text=message, verb=self.tr("Fast-Forward"),
-                                        detailText=details, detailLink=self.tr("What does this mean?"))
+                                        detailText=details, detailLink=self.tr("What does this mean?"),
+                                        dontShowAgainKey="MergeCanFF")
             yield from self.flowEnterWorkerThread()
             self.repo.fast_forward_branch(myShorthand, theirBranch.name)
 
@@ -359,7 +369,8 @@ class MergeBranch(RepoTask):
             message = paragraphs(
                 self.tr("Merging {0} into {1} may cause conflicts.").format(bquo(them), bquo(myShorthand)),
                 self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
-            yield from self.flowConfirm(text=message, verb=self.tr("Merge"))
+            yield from self.flowConfirm(text=message, verb=self.tr("Merge"),
+                                        dontShowAgainKey="MergeMayCauseConflicts")
             yield from self.flowEnterWorkerThread()
             self.repo.merge(target)
 
