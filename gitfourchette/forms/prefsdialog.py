@@ -55,35 +55,27 @@ def splitSettingKey(n):
 class PrefsDialog(QDialog):
     lastOpenTab = 0
 
-    @staticmethod
-    def saveLastOpenTab(i):
-        PrefsDialog.lastOpenTab = i
-
+    @benchmark
     def __init__(self, parent: QWidget, focusOn: str = ""):
         super().__init__(parent)
 
-        # Hide irrelevant settings
-        skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize", "dontShowAgain"}
-        if MACOS:
-            skipKeys.add("showMenuBar")
-        if not FREEDESKTOP:
-            skipKeys.add("debug_forceQtApi")
-        if not QSoundEffect:
-            skipKeys.add("debug_taskClicks")
-
         self.setObjectName("PrefsDialog")
-
         self.setWindowTitle(translate("Prefs", "{app} Preferences", "prefs dialog title").format(app=qAppName()))
+
+        # Delta to on-disk preferences.
+        self.prefDiff = {}
+
+        # Prepare main widgets & layout
+        tabWidget = QTabWidget(self)
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-
-        # Delta to on-disk preferences.
-        self.prefDiff = {}
-
-        tabWidget = QTabWidget(self)
+        layout = QVBoxLayout()
+        layout.addWidget(tabWidget)
+        layout.addWidget(buttonBox)
+        self.setLayout(layout)
 
         # Make tabs vertical if possible (macOS style: too messy)
         if qtIsNativeMacosStyle():
@@ -95,28 +87,40 @@ class PrefsDialog(QDialog):
             tabWidget.setStyle(proxyStyle)
             tabWidget.setTabPosition(QTabWidget.TabPosition.West if self.isLeftToRight() else QTabWidget.TabPosition.East)
 
-        pCategory = "~~~dummy~~~"
-        form: QFormLayout = None
-
-        categoryForms = {}
+        categoryForms: dict[str, QFormLayout] = {}
+        skipKeys = self.getHiddenSettingKeys()
 
         for prefKey in prefs.__dict__:
+            # Skip irrelevant settings
             if prefKey in skipKeys or prefKey.startswith("_"):
                 continue
 
+            # Get the value of this setting
             prefValue = prefs.__dict__[prefKey]
-            category, caption = splitSettingKey(prefKey)
-            prefType = type(prefValue)
 
-            if category != pCategory:
-                formContainer = QWidget(self)
-                form = QFormLayout(formContainer)
+            # Get category, caption, suffix
+            category, caption = splitSettingKey(prefKey)
+            suffix = ""
+            if caption:
+                caption = TrTables.prefKey(prefKey)
+                if "#" in caption:
+                    caption, suffix = caption.split("#")
+                    caption = caption.rstrip()
+                    suffix = suffix.lstrip()
+
+            # Get a QFormLayout for this setting's category
+            try:
+                # Get form for existing category
+                form = categoryForms[category]
+            except KeyError:
+                # Create form in new tab for this category
+                form = QFormLayout()
                 form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-                formContainer.setLayout(form)
-                tabName = TrTables.prefKey(category) if category else translate("Prefs", "General")
-                tabWidget.addTab(formContainer, tabName)
                 categoryForms[category] = form
-                pCategory = category
+                formContainer = QWidget(self)
+                formContainer.setLayout(form)
+                tabName = TrTables.prefKey(category)
+                tabWidget.addTab(formContainer, tabName)
 
                 headerText = TrTables.prefKey(f"{category}_HEADER")
                 if headerText != f"{category}_HEADER":
@@ -126,109 +130,53 @@ class PrefsDialog(QDialog):
                     explainer.setTextFormat(Qt.TextFormat.RichText)
                     form.addRow(explainer)
 
-            suffix = ""
-            if caption:
-                caption = TrTables.prefKey(prefKey)
-                if "#" in caption:
-                    caption, suffix = caption.split("#")
-                    caption = caption.rstrip()
-                    suffix = suffix.lstrip()
+            # Make the actual control widget
+            control = self.makeControlWidget(prefKey, prefValue, caption)
+            rowWidgets = [control]
 
-            if prefKey == 'language':
-                control = self.languageControl(prefKey, prefValue)
-            elif prefKey == 'qtStyle':
-                control = self.qtStyleControl(prefKey, prefValue)
-            elif prefKey == 'diff_font':
-                control = self.fontControl(prefKey)
-            elif prefKey == 'shortTimeFormat':
-                control = self.dateFormatControl(prefKey, prefValue, SHORT_DATE_PRESETS)
-            elif prefKey == 'pathDisplayStyle':
-                control = self.enumControl(prefKey, prefValue, prefType, previewCallback=lambda v: abbreviatePath(SAMPLE_FILE_PATH, v))
-            elif prefKey == 'authorDisplayStyle':
-                control = self.enumControl(prefKey, prefValue, prefType, previewCallback=lambda v: abbreviatePerson(SAMPLE_SIGNATURE, v))
-            elif prefKey == 'shortHashChars':
-                control = self.boundedIntControl(prefKey, prefValue, 4, 40)
-            elif prefKey == 'maxRecentRepos':
-                control = self.boundedIntControl(prefKey, prefValue, 0, 50)
-            elif prefKey == 'diff_contextLines':  # staging/discarding individual lines is flaky with 0 context lines
-                control = self.boundedIntControl(prefKey, prefValue, 1, 32)
-            elif prefKey == 'diff_tabSpaces':
-                control = self.boundedIntControl(prefKey, prefValue, 1, 16)
-            elif prefKey == 'external_editor':
-                control = self.strControlWithPresets(prefKey, prefValue, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
-            elif prefKey == 'external_diff':
-                control = self.strControlWithPresets(prefKey, prefValue, DIFF_TOOL_PRESETS)
-            elif prefKey == 'external_merge':
-                control = self.strControlWithPresets(prefKey, prefValue, MERGE_TOOL_PRESETS)
-            elif issubclass(prefType, enum.Enum):
-                control = self.enumControl(prefKey, prefValue, prefType)
-            elif prefType is str:
-                control = self.strControl(prefKey, prefValue)
-            elif prefType is int:
-                control = self.intControl(prefKey, prefValue)
-            elif prefType is float:
-                control = self.floatControl(prefKey, prefValue)
-            elif prefType is bool:
-                trueText = TrTables.prefKeyNoDefault(prefKey + "_true")
-                falseText = TrTables.prefKeyNoDefault(prefKey + "_false")
-                if trueText or falseText:
-                    control = self.boolComboBoxControl(prefKey, prefValue, trueName=trueText, falseName=falseText)
-                else:
-                    control = QCheckBox(caption, self)
-                    control.setCheckState(Qt.CheckState.Checked if prefValue else Qt.CheckState.Unchecked)
-                    control.stateChanged.connect(lambda v, k=prefKey, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
-                    caption = None  # The checkbox contains its own caption
-
-            toolTip = TrTables.prefKeyNoDefault(prefKey + "_help")
-
-            extraWidgets = []
-
+            # Tack an extra QLabel to the end if there's a suffix
             if suffix:
-                extraWidgets.append(QLabel(suffix))
+                rowWidgets.append(QLabel(suffix))
 
+            # Any help text? Then make a help button for it & set tooltip text on the main control
+            toolTip = TrTables.prefKeyNoDefault(prefKey + "_help")
             if toolTip:
                 toolTip = toolTip.format(app=qAppName())
                 control.setToolTip(toolTip)
+                hintButton = self.makeHintButton(toolTip)
+                rowWidgets.append(hintButton)
 
-                hintButton = QToolButton(self)
-                hintButton.setIcon(stockIcon("hint"))
-                hintButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-                hintButton.setAutoRaise(True)
-                hintButton.setToolTip(toolTip)
-                hintButton.clicked[bool].connect(lambda _, w=hintButton, t=toolTip: QToolTip.showText(QCursor.pos(), t, w))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
-                extraWidgets.append(hintButton)
-
-            if extraWidgets:
-                hbl = QHBoxLayout()
-                hbl.addWidget(control)
-                for w in extraWidgets:
-                    hbl.addWidget(w)
-                if control.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Minimum:
-                    # Stick help button to the right edge of non-expanding widget
-                    hbl.addStretch()
-                addToForm = hbl
+            # Gather what to add to the form as a single item.
+            # If we have more than a single widget to add to the form, lay them out in a row.
+            if len(rowWidgets) == 1:
+                formField = control
+                assert rowWidgets[0] is control
             else:
-                addToForm = control
+                rowLayout = QHBoxLayout()
+                for w in rowWidgets:
+                    rowLayout.addWidget(w)
+                if control.sizePolicy().horizontalPolicy() == QSizePolicy.Policy.Minimum:
+                    # Stick help button to right edge of non-expanding widget
+                    rowLayout.addStretch()
+                formField = rowLayout
 
-            if caption:
+            # Add `formField` to the form layout, with a leading caption if any
+            if not caption or type(control) is QCheckBox:
+                # No caption, make field span entire row
+                form.addRow(formField)
+            else:
+                # There's a leading caption, so add it as the label in the row
                 caption += self.tr(":", "caption suffix in prefs dialog")
                 captionLabel = QLabel(caption)
                 captionLabel.setBuddy(control)
                 if toolTip:
                     captionLabel.setToolTip(toolTip)
-                    # captionLabel.setCursor(Qt.CursorShape.WhatsThisCursor)
-                form.addRow(captionLabel, addToForm)
-            else:
-                form.addRow(addToForm)
+                form.addRow(captionLabel, formField)
 
+            # If the current key matches the setting we want to focus on, bring this tab to the foreground
             if focusOn == prefKey:
-                tabWidget.setCurrentWidget(formContainer)
+                tabWidget.setCurrentWidget(form.parentWidget())
                 control.setFocus()
-
-        layout = QVBoxLayout()
-        layout.addWidget(tabWidget)
-        layout.addWidget(buttonBox)
-        self.setLayout(layout)
 
         if not focusOn:
             # Restore last open tab
@@ -257,6 +205,89 @@ class PrefsDialog(QDialog):
             return prefs.__dict__[k]
         else:
             return None
+
+    @staticmethod
+    def saveLastOpenTab(i):
+        PrefsDialog.lastOpenTab = i
+
+    def getHiddenSettingKeys(self) -> set[str]:
+        skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize", "dontShowAgain"}
+
+        # Hide "reset don't show again" checkbox if we've never dismissed any of those dialogs yet
+        if not prefs.dontShowAgain:
+            skipKeys.add("resetDontShowAgain")
+
+        # Prevent hiding menubar on macOS
+        if MACOS:
+            skipKeys.add("showMenuBar")
+
+        # Only allow setting Qt API in non-frozen Linux environments
+        if not APP_FIXED_QT_BINDING and not FREEDESKTOP:
+            skipKeys.add("debug_forceQtApi")
+
+        if not QSoundEffect:
+            skipKeys.add("debug_taskClicks")
+
+        return skipKeys
+
+    def makeHintButton(self, toolTip: str) -> QToolButton:
+        hintButton = QToolButton()
+        hintButton.setText("\u24D8")  # circled 'i'
+        hintButton.setIcon(stockIcon("hint"))
+        hintButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        hintButton.setAutoRaise(True)
+        hintButton.setToolTip(toolTip)
+        hintButton.setMaximumHeight(2 + hintButton.fontMetrics().height())
+        hintButton.clicked[bool].connect(lambda _, w=hintButton, t=toolTip: QToolTip.showText(QCursor.pos(), t, w))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
+        return hintButton
+
+    def makeControlWidget(self, key: str, value, caption: str) -> QWidget:
+        valueType = type(value)
+
+        if key == 'language':
+            return self.languageControl(key, value)
+        elif key == 'qtStyle':
+            return self.qtStyleControl(key, value)
+        elif key == 'diff_font':
+            return self.fontControl(key)
+        elif key == 'shortTimeFormat':
+            return self.dateFormatControl(key, value, SHORT_DATE_PRESETS)
+        elif key == 'pathDisplayStyle':
+            return self.enumControl(key, value, valueType, previewCallback=lambda v: abbreviatePath(SAMPLE_FILE_PATH, v))
+        elif key == 'authorDisplayStyle':
+            return self.enumControl(key, value, valueType, previewCallback=lambda v: abbreviatePerson(SAMPLE_SIGNATURE, v))
+        elif key == 'shortHashChars':
+            return self.boundedIntControl(key, value, 4, 40)
+        elif key == 'maxRecentRepos':
+            return self.boundedIntControl(key, value, 0, 50)
+        elif key == 'diff_contextLines':  # staging/discarding individual lines is flaky with 0 context lines
+            return self.boundedIntControl(key, value, 1, 32)
+        elif key == 'diff_tabSpaces':
+            return self.boundedIntControl(key, value, 1, 16)
+        elif key == 'external_editor':
+            return self.strControlWithPresets(key, value, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
+        elif key == 'external_diff':
+            return self.strControlWithPresets(key, value, DIFF_TOOL_PRESETS)
+        elif key == 'external_merge':
+            return self.strControlWithPresets(key, value, MERGE_TOOL_PRESETS)
+        elif issubclass(valueType, enum.Enum):
+            return self.enumControl(key, value, type(value))
+        elif valueType is str:
+            return self.strControl(key, value)
+        elif valueType is int:
+            return self.intControl(key, value)
+        elif valueType is float:
+            return self.floatControl(key, value)
+        elif valueType is bool:
+            trueText = TrTables.prefKeyNoDefault(key + "_true")
+            falseText = TrTables.prefKeyNoDefault(key + "_false")
+            if trueText or falseText:
+                return self.boolComboBoxControl(key, value, trueName=trueText, falseName=falseText)
+            else:
+                control = QCheckBox(caption, self)
+                control.setCheckState(Qt.CheckState.Checked if value else Qt.CheckState.Unchecked)
+                control.stateChanged.connect(lambda v, k=key, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
+                return control
 
     def languageControl(self, prefKey: str, prefValue: str):
         defaultCaption = translate("Prefs", "System default", "system default language setting")
@@ -288,15 +319,15 @@ class PrefsDialog(QDialog):
             self.assign(prefKey, "")
             refreshFontButton()
 
+        def onFontSelected(newFont: QFont):
+            self.assign(prefKey, newFont.toString())
+            refreshFontButton()
+
         def pickFont():
-            result = QFontDialog.getFont(currentFont(), parent=self)
-            if PYQT5 or PYQT6:
-                newFont, ok = result
-            else:
-                ok, newFont = result
-            if ok:
-                self.assign(prefKey, newFont.toString())
-                refreshFontButton()
+            qfd = QFontDialog(currentFont(), parent=self)
+            qfd.fontSelected.connect(onFontSelected)
+            qfd.setModal(True)
+            qfd.show()
 
         fontButton = QPushButton(translate("Prefs", "Font"))
         fontButton.clicked.connect(lambda e: pickFont())

@@ -227,6 +227,7 @@ class TrTables:
             "showStatusBar": translate("Prefs", "Show status bar"),
             "showToolBar": translate("Prefs", "Show toolbar"),
             "showMenuBar": translate("Prefs", "Show menu bar (once hidden, press Alt to show it again)"),
+            "resetDontShowAgain": translate("Prefs", "Restore all “don’t show this again” messages"),
 
             "diff_font": translate("Prefs", "Font"),
             "diff_tabSpaces": translate("Prefs", "One tab is # spaces"),

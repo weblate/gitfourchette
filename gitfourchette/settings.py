@@ -200,6 +200,7 @@ class Prefs(PrefsFile):
     debug_verbosity             : LoggingLevel  = LoggingLevel.WARNING
     debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
     dontShowAgain               : list[str]     = dataclasses.field(default_factory=list)
+    resetDontShowAgain          : bool          = False
 
     @property
     def listViewScrollMode(self) -> QAbstractItemView.ScrollMode:

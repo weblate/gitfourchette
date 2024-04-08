@@ -286,8 +286,10 @@ class LoadPatch(RepoTask):
             longformItems = [locator.toHtml(self.tr("Try to reload the file."))]
 
             if locator.context.isWorkdir() and not settings.prefs.debug_autoRefresh:
-                tip = self.tr("Consider re-enabling {0} in the Preferences to prevent this issue."
-                              ).format(hquo(TrTables.prefKey("debug_autoRefresh")))
+                prefKey = "debug_autoRefresh"
+                tip = self.tr("Consider re-enabling [{0}] to prevent this issue."
+                              ).format(hquo(TrTables.prefKey(prefKey)))
+                tip = linkify(tip, makeInternalLink("prefs", prefKey))
                 longformItems.append(tip)
 
             return SpecialDiffError(self.tr("Outdated diff."),

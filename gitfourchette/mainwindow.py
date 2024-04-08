@@ -1207,6 +1207,11 @@ class MainWindow(QMainWindow):
         for k, v in prefDiff.items():
             settings.prefs.__dict__[k] = v
 
+        # Reset "don't show again" if necessary
+        if settings.prefs.resetDontShowAgain:
+            settings.prefs.dontShowAgain = []
+            settings.prefs.resetDontShowAgain = False
+
         # Write prefs to disk
         settings.prefs.write()
 
