@@ -225,9 +225,6 @@ class PrefsDialog(QDialog):
         if not APP_FIXED_QT_BINDING and not FREEDESKTOP:
             skipKeys.add("debug_forceQtApi")
 
-        if not QSoundEffect:
-            skipKeys.add("debug_taskClicks")
-
         return skipKeys
 
     def makeHintButton(self, toolTip: str) -> QToolButton:
