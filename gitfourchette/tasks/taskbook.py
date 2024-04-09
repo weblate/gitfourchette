@@ -68,6 +68,7 @@ class TaskBook:
             tasks.NewStash: translate("task", "Stash changes"),
             tasks.NewTag: translate("task", "New tag"),
             tasks.PrimeRepo: translate("task", "Open repo"),
+            tasks.PullBranch: translate("task", "Pull remote branch"),
             tasks.RecallCommit: translate("task", "Recall lost commit"),
             tasks.RefreshRepo: translate("task", "Refresh repo"),
             tasks.RemoveSubmodule: translate("task", "Remove submodule"),
@@ -91,6 +92,7 @@ class TaskBook:
             tasks.JumpForward: translate("task", "Forward"),
             tasks.NewBranchFromHead: translate("task", "Branch"),
             tasks.NewStash: translate("task", "Stash"),
+            tasks.PullBranch: translate("task", "Pull"),
         }
 
         cls.tips = {
@@ -112,6 +114,7 @@ class TaskBook:
             tasks.NewRemote: translate("task", "Add a remote server to this repo"),
             tasks.NewStash: translate("task", "Back up uncommitted changes and clean up the working directory"),
             tasks.NewTag: translate("task", "Tag this commit with a name"),
+            tasks.PullBranch: translate("task", "Fetch the latest commits from the remote, then integrate them into your local branch"),
             tasks.RemoveSubmodule: translate("task", "Remove this submodule from .gitmodules and delete its working copy from this repo"),
             tasks.RenameBranch: translate("task", "Rename this branch locally"),
             tasks.ResetHead: translate("task", "Make HEAD point to another commit"),
@@ -129,6 +132,7 @@ class TaskBook:
             tasks.NewStash: makeMultiShortcut("Ctrl+Alt+S"),
             tasks.JumpBack: makeMultiShortcut("Ctrl+Left" if MACOS else "Alt+Left"),
             tasks.JumpForward: makeMultiShortcut("Ctrl+Right" if MACOS else "Alt+Right"),
+            tasks.PullBranch: makeMultiShortcut("Ctrl+Shift+P"),
         }
 
         cls.icons = {
@@ -152,6 +156,7 @@ class TaskBook:
             tasks.NewRemote: "folder-remote",
             tasks.NewStash: "vcs-stash",
             tasks.NewTag: "tag-new",
+            tasks.PullBranch: "vcs-pull",
             tasks.SetUpIdentityFirstRun: "user-identity",
             tasks.SetUpRepoIdentity: "user-identity",
             tasks.SwitchBranch: "document-swap",

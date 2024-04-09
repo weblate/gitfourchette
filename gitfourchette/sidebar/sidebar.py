@@ -159,25 +159,33 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                ActionDef(self.tr("&Push..."),
-                          lambda: self.pushBranch.emit(branchName),
-                          "vcs-push",
-                          shortcuts=GlobalShortcuts.pushBranch,
-                          statusTip=self.tr("Upload your commits to the remote server")),
-
                 TaskBook.action(self,
                     FetchRemoteBranch,
-                    self.tr("&Fetch..."),
+                    self.tr("&Fetch {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fetch..."),
                     taskArgs=branch.upstream.shorthand if hasUpstream else None,
                     enabled=hasUpstream,
                 ),
 
+                TaskBook.action(
+                    self,
+                    PullBranch,
+                    self.tr("Pu&ll from {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Pull..."),
+                    enabled=hasUpstream and isCurrentBranch,
+                ),
+
                 TaskBook.action(self,
                     FastForwardBranch,
-                    self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if upstreamBranchName else self.tr("Fast-Forward..."),
+                    self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fast-Forward..."),
                     taskArgs=branchName,
                     enabled=hasUpstream,
                 ),
+
+                ActionDef(
+                    self.tr("&Push to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Push..."),
+                    lambda: self.pushBranch.emit(branchName),
+                    "vcs-push",
+                    shortcuts=GlobalShortcuts.pushBranch,
+                    statusTip=self.tr("Upload your commits to the remote server")),
 
                 ActionDef(self.tr("&Upstream Branch"), submenu=self.makeUpstreamSubmenu(repo, activeBranchName, upstreamBranchName)),
 
@@ -275,7 +283,6 @@ class Sidebar(QTreeView):
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
                     ),
-                    ActionDef.SEPARATOR,
                 ]
 
             actions += [
@@ -290,6 +297,11 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 *webActions,
+
+                ActionDef(self.tr("Copy Remote &URL"),
+                          lambda: self.copyToClipboard(remoteUrl)),
+
+                ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Hide Remote in Graph"),
                           lambda: self.toggleHideRemote.emit(data),

@@ -37,7 +37,9 @@ class MainToolBar(QToolBar):
             None,
 
             TaskBook.toolbarAction(self, tasks.FetchRemote),
-            # TODO --------- ActionDef(self.tr("Pull"), self.pull, icon="vcs-pull"),
+
+            TaskBook.toolbarAction(self, tasks.PullBranch),
+
             ActionDef(self.tr("Push"), self.push, icon="vcs-push",
                       toolTip=self.tr("Push local branch to remote"),
                       shortcuts=GlobalShortcuts.pushBranch),

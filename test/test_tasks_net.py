@@ -124,6 +124,7 @@ def testFetchRemoteBranch(tempDir, mainWindow):
     node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fetch")
+    acceptQMessageBox(rw, fr"localfs/master.+moved.+{oldHead.hex[:7]}.+{newHead.hex[:7]}")
 
     # The position of the remote's master branch should be up-to-date now
     assert rw.repo.branches.remote["localfs/master"].target == newHead

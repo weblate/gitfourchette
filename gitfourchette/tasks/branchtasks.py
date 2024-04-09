@@ -271,7 +271,7 @@ class FastForwardBranch(RepoTask):
             else:
                 message.append(self.tr("Your local branch {0} is already up-to-date with {1}."))
             message = paragraphs(message).format(bquo(localBranchName), bquo(remoteBranchName))
-            showInformation(self.parentWidget(), self.name(), message)
+            yield from self.flowConfirm(text=message, canCancel=False)
 
     def onError(self, exc):
         if isinstance(exc, DivergentBranchesError):
@@ -308,6 +308,7 @@ class MergeBranch(RepoTask):
 
         theirBranch, theirBranchIsLocal = self.repo.get_branch_from_refname(them)
         assert isinstance(theirBranch, Branch)
+        _, theirShorthand = RefPrefix.split(them)
 
         # Run merge analysis on background thread
         yield from self.flowEnterWorkerThread()
@@ -336,8 +337,9 @@ class MergeBranch(RepoTask):
         elif analysis == MergeAnalysis.UP_TO_DATE:
             message = paragraphs(
                 self.tr("No merge is necessary."),
-                self.tr("Your branch {0} is already up-to-date with {1}.").format(bquo(myShorthand), bquo(them)))
-            raise AbortTask(message)
+                self.tr("Your branch {0} is already up-to-date with {1}."),
+            ).format(bquo(myShorthand), bquo(theirShorthand))
+            raise AbortTask(message, icon="information")
 
         elif analysis == MergeAnalysis.UNBORN:
             message = self.tr("Cannot merge into an unborn head.")
@@ -345,7 +347,7 @@ class MergeBranch(RepoTask):
 
         elif analysis == MergeAnalysis.FASTFORWARD | MergeAnalysis.NORMAL:
             message = self.tr("Your branch {0} can simply be fast-forwarded to {1}."
-                              ).format(bquo(myShorthand), bquo(them))
+                              ).format(bquo(myShorthand), bquo(theirShorthand))
             details = paragraphs(
                 self.tr("<b>Fast-forwarding</b> means that the tip of your branch will be moved to a more "
                         "recent commit in a linear path, without the need to create a merge commit."),
@@ -359,7 +361,7 @@ class MergeBranch(RepoTask):
 
         elif analysis == MergeAnalysis.NORMAL:
             message = paragraphs(
-                self.tr("Merging {0} into {1} may cause conflicts.").format(bquo(them), bquo(myShorthand)),
+                self.tr("Merging {0} into {1} may cause conflicts.").format(bquo(theirShorthand), bquo(myShorthand)),
                 self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
             yield from self.flowConfirm(text=message, verb=self.tr("Merge"),
                                         dontShowAgainKey="MergeMayCauseConflicts")
@@ -398,11 +400,5 @@ class RecallCommit(RepoTask):
         self.repo.create_branch_from_commit(branchName, commit.oid)
 
         yield from self.flowEnterUiThread()
-
-        showInformation(
-            self.parentWidget(),
-            self.tr("Recall lost commit"),
-            paragraphs(
-                self.tr("Hurray, the commit was found! Find it on this branch:"),
-                "<b>{0}</b>".format(escape(branchName))
-            ))
+        debrief = paragraphs(self.tr("Hurray, the commit was found! Find it on this branch:"), bquo(branchName))
+        yield from self.flowConfirm(text=debrief, canCancel=False)

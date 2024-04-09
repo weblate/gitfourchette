@@ -379,6 +379,7 @@ class RepoTask(QObject):
             detailText: str = "",
             detailLink: str = "",
             dontShowAgainKey: str = "",
+            canCancel: bool = True,
     ):
         """
         Asks the user to confirm the operation via a message box.
@@ -392,29 +393,41 @@ class RepoTask(QObject):
         if dontShowAgainKey:
             from gitfourchette import settings
             if dontShowAgainKey in settings.prefs.dontShowAgain:
+                logger.debug(f"Skipping dontShowAgainMessage: {text}")
                 return
 
         if not title:
             title = self.name()
 
-        if not verb:
+        if not verb and canCancel:
             verb = title
 
-        qmb = asyncMessageBox(self.parentWidget(), 'question', title, text,
-                              QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+        buttonMask = QMessageBox.StandardButton.Ok
+        if canCancel:
+            iconName = "question"
+            buttonMask |= QMessageBox.StandardButton.Cancel
+        else:
+            iconName = "information"
 
+        qmb = asyncMessageBox(self.parentWidget(), iconName, title, text, buttonMask)
+
+        dontShowAgainCheckBox = None
         if dontShowAgainKey:
-            dnsaCheckBox = QCheckBox(tr("Don’t ask me to confirm this action again"), qmb)
-            qmb.setCheckBox(dnsaCheckBox)
+            dontShowAgainPrompt = tr("Don’t ask me to confirm this again") if canCancel else tr("Don’t show this again")
+            dontShowAgainCheckBox = QCheckBox(dontShowAgainPrompt, qmb)
+            tweakWidgetFont(dontShowAgainCheckBox, 80)
+            qmb.setCheckBox(dontShowAgainCheckBox)
 
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
         # so it connects to the "accepted" signal.
         yes: QAbstractButton = qmb.button(QMessageBox.StandardButton.Ok)
         if buttonIcon:
             yes.setIcon(stockIcon(buttonIcon))
-        yes.setText(verb)
+        if verb:
+            yes.setText(verb)
 
         if cancelText:
+            assert canCancel, "don't set cancelText when canCancel is False!"
             qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
 
         if detailText:
@@ -432,7 +445,7 @@ class RepoTask(QObject):
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self.flowDialog(qmb)
 
-        if dontShowAgainKey and dnsaCheckBox.isChecked():
+        if dontShowAgainKey and dontShowAgainCheckBox.isChecked():
             from gitfourchette import settings
             settings.prefs.dontShowAgain.append(dontShowAgainKey)
             settings.prefs.setDirty()

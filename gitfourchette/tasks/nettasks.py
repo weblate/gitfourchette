@@ -5,6 +5,7 @@ Remote access tasks.
 from contextlib import suppress
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.tasks.branchtasks import MergeBranch
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
@@ -37,7 +38,7 @@ class _BaseNetTask(RepoTask):
     def remoteLink(self):
         return self.remoteLinkDialog.remoteLink
 
-    def _autoDetectUpstream(self):
+    def _autoDetectUpstream(self, noUpstreamMessage: str = ""):
         branchName = self.repo.head_branch_shorthand
 
         try:
@@ -47,8 +48,8 @@ class _BaseNetTask(RepoTask):
             raise AbortTask(message)
 
         if not branch.upstream:
-            message = self.tr("Can’t fetch remote changes on {0} because this branch "
-                              "isn’t tracking a remote branch.").format(bquoe(branch.shorthand))
+            message = noUpstreamMessage or tr("Can’t fetch {0} because this branch isn’t tracking a remote branch.")
+            message = message.format(bquoe(branch.shorthand))
             raise AbortTask(message)
 
         return branch.upstream
@@ -132,7 +133,7 @@ class FetchRemote(_BaseNetTask):
 
 
 class FetchRemoteBranch(_BaseNetTask):
-    def flow(self, remoteBranchName: str = ""):
+    def flow(self, remoteBranchName: str = "", debrief: bool = True):
         if not remoteBranchName:
             upstream = self._autoDetectUpstream()
             remoteBranchName = upstream.shorthand
@@ -145,9 +146,44 @@ class FetchRemoteBranch(_BaseNetTask):
         remoteName, _ = split_remote_branch_shorthand(remoteBranchName)
         remote = self.repo.remotes[remoteName]
 
+        oldTarget = NULL_OID
+        newTarget = NULL_OID
+        with suppress(KeyError):
+            oldTarget = self.repo.branches.remote[remoteBranchName].target
+
         self.remoteLink.discoverKeyFiles(remote)
         self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
         self.remoteLink.rememberSuccessfulKeyFile()
+
+        with suppress(KeyError):
+            newTarget = self.repo.branches.remote[remoteBranchName].target
+
+        # Clean up remote link dialog before showing any debriefing text
+        yield from self.flowEnterUiThread()
+        self.cleanup()
+
+        if newTarget == NULL_OID:
+            # Raise exception to prevent PullBranch from continuing
+            raise AbortTask(self.tr("{0} has disappeared from the remote server.").format(bquoe(remoteBranchName)))
+
+        if debrief:
+            if oldTarget == newTarget:
+                text = self.tr("There are no new commits on {0}.").format(bquoe(remoteBranchName))
+                dontShowAgainKey = "FetchDebriefNoNewCommits"
+            else:
+                text = self.tr("{0} has moved from {1} to {2}.", "RemoteBranch has moved from OldCommit to NewCommit"
+                               ).format(bquoe(remoteBranchName), shortHash(oldTarget), shortHash(newTarget))
+                dontShowAgainKey = "FetchDebriefTargetChanged"
+            yield from self.flowConfirm(text=text, canCancel=False, dontShowAgainKey=dontShowAgainKey)
+
+
+class PullBranch(_BaseNetTask):
+    def flow(self):
+        noUpstreamMessage = self.tr("Can’t pull remote changes on {0} because this branch isn’t tracking a remote branch.")
+        upstreamBranch = self._autoDetectUpstream(noUpstreamMessage)
+
+        yield from self.flowSubtask(FetchRemoteBranch, debrief=False)
+        yield from self.flowSubtask(MergeBranch, upstreamBranch.name)
 
 
 class UpdateSubmodule(_BaseNetTask):
