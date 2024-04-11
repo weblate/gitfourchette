@@ -931,15 +931,21 @@ class Repo(_VanillaRepository):
     def fetch_remote_branch(
             self, remote_branch_name: str, remote_callbacks: RemoteCallbacks
     ) -> TransferProgress:
-        remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
+        """
+        Fetch a remote branch.
+        Prunes the remote branch if it has disappeared from the server.
+        """
+        remote_name, branch_name = split_remote_branch_shorthand(remote_branch_name)
 
-        # Delete .git/refs/{remoteName}/HEAD to work around a bug in libgit2
-        # where git_revwalk__push_glob chokes on refs/remotes/{remoteName}/HEAD
+        # Delete .git/refs/{remote_name}/HEAD to work around a bug in libgit2
+        # where git_revwalk__push_glob chokes on refs/remotes/{remote_name}/HEAD
         # if it points to a branch that doesn't exist anymore.
-        self.delete_stale_remote_head_symbolic_ref(remoteName)
+        self.delete_stale_remote_head_symbolic_ref(remote_name)
 
-        remote = self.remotes[remoteName]
-        transfer = remote.fetch(refspecs=[branchName], callbacks=remote_callbacks, prune=FetchPrune.NO_PRUNE)
+        remote = self.remotes[remote_name]
+        #            src (remote)........... : dst (local ref to update).............
+        refspec = f"+refs/heads/{branch_name}:refs/remotes/{remote_name}/{branch_name}"
+        transfer = remote.fetch(refspecs=[refspec], callbacks=remote_callbacks, prune=FetchPrune.PRUNE)
         return transfer
 
     def get_commit_message(self, oid: Oid) -> str:

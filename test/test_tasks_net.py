@@ -130,6 +130,38 @@ def testFetchRemoteBranch(tempDir, mainWindow):
     assert rw.repo.branches.remote["localfs/master"].target == newHead
 
 
+def testFetchRemoteBranchVanishes(tempDir, mainWindow):
+    oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    wd = unpackRepo(tempDir)
+
+    # Modify the master branch in the bare repository that serves as a remote.
+    # The client must pick up on this modification once it fetches the remote branch.
+    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
+    with RepoContext(barePath) as bareRepo:
+        assert bareRepo.is_bare
+        bareRepo.branches.local['master'].rename('switcheroo')
+
+    with RepoContext(wd) as repo:
+        repo.edit_upstream_branch('master', 'localfs/master')
+
+    rw = mainWindow.openRepo(wd)
+
+    # We still think the remote's master branch is on the old head for now
+    assert rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+    assert rw.repo.branches.remote["localfs/master"].target == oldHead
+
+    # Fetch the remote branch
+    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fetch")
+    acceptQMessageBox(rw, fr"localfs/master.+disappeared")
+
+    # It's gone
+    with pytest.raises(KeyError):
+        rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+    assert "localfs/master" not in rw.repo.branches.remote
+
+
 @pytest.mark.parametrize("asNewBranch", [False, True])
 def testPush(tempDir, mainWindow, asNewBranch):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
