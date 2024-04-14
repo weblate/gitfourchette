@@ -477,6 +477,7 @@ class MainWindow(QMainWindow):
     def onTabCurrentWidgetChanged(self):
         w = self.currentRepoWidget()
         if not w:
+            self.mainToolBar.observeRepoWidget(None)
             return
 
         # Get out of welcome widget
@@ -484,6 +485,7 @@ class MainWindow(QMainWindow):
 
         # Refresh window title before loading
         w.refreshWindowChrome()
+        self.mainToolBar.observeRepoWidget(w)
 
         if w.uiReady:
             # Refreshing the repo may lock up the UI for a split second.

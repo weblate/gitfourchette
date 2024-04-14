@@ -1,12 +1,13 @@
+from contextlib import suppress
+
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette import settings
 from gitfourchette import tasks
+from gitfourchette.nav import NavLocator
 from gitfourchette.tasks import TaskBook
-
-
-RECENT_OBJECT_NAME = "RecentMenuPlaceholder"
+from gitfourchette.repowidget import RepoWidget
 
 
 class MainToolBar(QToolBar):
@@ -15,8 +16,16 @@ class MainToolBar(QToolBar):
     pull = Signal()
     push = Signal()
 
+    observed: RepoWidget | None
+
+    backAction: QAction
+    forwardAction: QAction
+    recentAction: QAction
+
     def __init__(self, parent: QWidget):
         super().__init__(translate("General", "Show Toolbar"), parent)  # PYQT5 compat: Don't call self.tr here
+
+        self.observed = None
 
         self.setObjectName("GFToolbar")
         self.setMovable(False)
@@ -31,15 +40,19 @@ class MainToolBar(QToolBar):
         self.toolButtonStyleChanged.connect(self.onToolButtonStyleChanged)
         self.iconSizeChanged.connect(self.onIconSizeChanged)
 
+        self.backAction = TaskBook.toolbarAction(self, tasks.JumpBack)
+        self.forwardAction = TaskBook.toolbarAction(self, tasks.JumpForward)
+        self.recentAction = ActionDef(self.tr("Open..."), self.openDialog, icon="folder-open-recent",
+                  shortcuts=QKeySequence.StandardKey.Open,
+                  toolTip=self.tr("Open a Git repo on your machine")).toQAction(self)
+
         defs = [
-            TaskBook.toolbarAction(self, tasks.JumpBack),
-            TaskBook.toolbarAction(self, tasks.JumpForward),
+            self.backAction,
+            self.forwardAction,
             None,
 
             TaskBook.toolbarAction(self, tasks.FetchRemote),
-
             TaskBook.toolbarAction(self, tasks.PullBranch),
-
             ActionDef(self.tr("Push"), self.push, icon="vcs-push",
                       toolTip=self.tr("Push local branch to remote"),
                       shortcuts=GlobalShortcuts.pushBranch),
@@ -52,16 +65,11 @@ class MainToolBar(QToolBar):
             ActionDef(self.tr("Reveal"), self.reveal, icon="go-parent-folder",
                       shortcuts=GlobalShortcuts.openRepoFolder,
                       toolTip=self.tr("Open repo folder in file manager")),
-
-            ActionDef(self.tr("Open..."), self.openDialog, icon="folder-open-recent",
-                      shortcuts=QKeySequence.StandardKey.Open,
-                      toolTip=self.tr("Open a Git repo on your machine"),
-                      objectName=RECENT_OBJECT_NAME),
+            self.recentAction,
         ]
 
         ActionDef.addToQToolBar(self, *defs)
 
-        self.recentAction: QAction = self.findChild(QAction, RECENT_OBJECT_NAME)
         self.recentAction.setIconVisibleInMenu(True)
         recentButton: QToolButton = self.widgetForAction(self.recentAction)
         assert type(recentButton) is QToolButton
@@ -128,3 +136,25 @@ class MainToolBar(QToolBar):
             return
         settings.prefs.toolBarIconSize = w
         settings.prefs.setDirty()
+
+    def observeRepoWidget(self, rw: RepoWidget | None):
+        if rw is self.observed:
+            return
+
+        if self.observed is not None:
+            with suppress(RuntimeError, TypeError):
+                self.observed.historyChanged.disconnect(self.updateNavButtons)
+
+        self.observed = rw
+
+        if rw is not None:
+            rw.historyChanged.connect(self.updateNavButtons)
+
+        self.updateNavButtons()
+
+    def updateNavButtons(self):
+        rw = self.observed
+        if rw is None:
+            return
+        self.backAction.setEnabled(rw.navHistory.canGoBack())
+        self.forwardAction.setEnabled(rw.navHistory.canGoForward())

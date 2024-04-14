@@ -53,9 +53,6 @@ class NavContext(enum.IntEnum):
     def isDirty(self):
         return self == NavContext.UNTRACKED or self == NavContext.UNSTAGED
 
-    def allowsRawFileAccess(self):
-        return self != NavContext.COMMITTED
-
     def translateName(self):
         names = {
             NavContext.EMPTY: translate("NavContext", "Empty"),
@@ -139,12 +136,6 @@ class NavLocator:
         return (self.context == other.context
                 and self.commit == other.commit
                 and self.path == other.path)
-
-    def isInSameDiffSetAs(self, other: NavLocator):
-        if self.context.isWorkdir():
-            return other.context.isWorkdir()
-        else:
-            return self.commit == other.commit
 
     def hasFlags(self, flags: NavFlags):
         return flags == (self.flags & flags)
@@ -236,6 +227,18 @@ class NavHistory:
     History of the files that the user has viewed in a repository's commit log and workdir.
     """
 
+    class WriteLock:
+        def __init__(self):
+            self.locked = False
+
+        def __enter__(self):
+            if self.locked:
+                raise NotImplementedError("do not nest NavHistory.WriteLock")
+            self.locked = True
+
+        def __exit__(self, exc_type=None, exc_value=None, traceback=None):
+            self.locked = False
+
     history: list[NavLocator]
     "Stack of position snapshots."
 
@@ -249,12 +252,16 @@ class NavHistory:
     """Timestamp of the last modification to the history,
     to avoid pushing a million entries when dragging the mouse, etc."""
 
+    writeLock: WriteLock
+    "Context manager that prevents any changes to the history"
+
     def __init__(self):
         self.history = []
         self.recent = {}
         self.current = 0
         self.lastPushTime = 0.0
         self.ignoreDelay = False
+        self.writeLock = NavHistory.WriteLock()
 
         # In a real use case, locators are dropped from the history if push()
         # calls occur in quick succession. This avoids polluting the history
@@ -265,7 +272,16 @@ class NavHistory:
         from gitfourchette.settings import TEST_MODE
         self.ignoreDelay |= TEST_MODE
 
+    def isWriteLocked(self):
+        return self.writeLock.locked
+
+    def checkWriteLock(self):
+        if self.isWriteLocked():
+            raise PermissionError("history is locked")
+
     def push(self, pos: NavLocator):
+        self.checkWriteLock()
+
         if not pos:
             return
 
@@ -275,8 +291,6 @@ class NavHistory:
 
         self.recent[pos.contextKey] = pos
         self.recent[pos.fileKey] = pos
-        if pos.context.isWorkdir():
-            self.recent["WORKDIR"] = pos
 
         now = time.time()
         if self.ignoreDelay:
@@ -290,23 +304,15 @@ class NavHistory:
             self.history[self.current] = pos
         else:
             if self.current < len(self.history) - 1:
-                self.trim()
+                self.trimFuture()
             self.history.append(pos)
             self.current = len(self.history) - 1
             self.lastPushTime = now
 
-    def trim(self):
+    def trimFuture(self):
+        self.checkWriteLock()
         self.history = self.history[: self.current + 1]
         assert not self.canGoForward()
-
-    def recallWorkdir(self):
-        """
-        Attempt to return the most recent locator matching STAGED or UNSTAGED
-        contexts.
-
-        May return None there's no trace of the workdir in the history.
-        """
-        return self.recent.get("WORKDIR", None)
 
     def refine(self, locator: NavLocator):
         """
@@ -356,12 +362,14 @@ class NavHistory:
             return self.canGoBack()
 
     def navigateBack(self):
+        self.checkWriteLock()
         if not self.canGoBack():
             return None
         self.current -= 1
         return self.history[self.current]
 
     def navigateForward(self):
+        self.checkWriteLock()
         if not self.canGoForward():
             return None
         self.current += 1
@@ -375,12 +383,13 @@ class NavHistory:
             return self.navigateBack()
 
     def popCurrent(self):
+        self.checkWriteLock()
         if self.current < len(self.history):
             return self.history.pop(self.current)
         else:
             return None
 
-    def getTextLog(self):
+    def getTextLog(self):  # pragma: no cover
         s = "------------ NAV LOG ------------"
         i = len(self.history) - 1
         for h in reversed(self.history):

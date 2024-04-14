@@ -46,6 +46,8 @@ class RepoWidget(QStackedWidget):
     nameChange = Signal()
     openRepo = Signal(str, NavLocator)
     openPrefs = Signal(str)
+    locatorChanged = Signal(NavLocator)
+    historyChanged = Signal()
 
     busyMessage = Signal(str)
     statusMessage = Signal(str)
@@ -664,12 +666,17 @@ class RepoWidget(QStackedWidget):
     # Navigation
 
     def saveFilePositions(self):
+        if self.navHistory.isWriteLocked():
+            logger.warning("Ignoring saveFilePositions because history is locked")
+            return
+
         if self.diffView.isVisibleTo(self):
             newLocator = self.diffView.getPreciseLocator()
             if not newLocator.isSimilarEnoughTo(self.navLocator):
                 logger.warning(f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")
         else:
             newLocator = self.navLocator.coarse()
+
         self.navHistory.push(newLocator)
         self.navLocator = newLocator
         return self.navLocator

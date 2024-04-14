@@ -40,7 +40,8 @@ class Jump(RepoTask):
         assert isinstance(rw, RepoWidget)
 
         # Back up current locator
-        rw.saveFilePositions()
+        if not rw.navHistory.isWriteLocked():
+            rw.saveFilePositions()
 
         # Refine locator: Try to recall where we were last time we looked at this context.
         locator = rw.navHistory.refine(locator)
@@ -349,8 +350,10 @@ class Jump(RepoTask):
         locator = locator.withoutFlags(NavFlags.Force)
 
         rw.navLocator = locator
-        rw.navHistory.push(locator)
-        logger.debug(f"Jump to: {locator}")
+
+        if not rw.navHistory.isWriteLocked():
+            rw.navHistory.push(locator)
+            rw.historyChanged.emit()
 
 
 class JumpBackOrForward(tasks.RepoTask):
@@ -364,10 +367,7 @@ class JumpBackOrForward(tasks.RepoTask):
         assert isinstance(rw, RepoWidget)
 
         start = rw.saveFilePositions()
-
-        # Isolate history as we modify it so Jump task doesn't mess it up
         history = rw.navHistory
-        rw.navHistory = NavHistory()
 
         while history.canGoDelta(delta):
             # Move back or forward in the history
@@ -378,7 +378,9 @@ class JumpBackOrForward(tasks.RepoTask):
                 continue
 
             # Jump
-            yield from self.flowSubtask(Jump, locator)
+            # (lock history because we want full control over it)
+            with history.writeLock:
+                yield from self.flowSubtask(Jump, locator)
 
             # The jump was successful if the RepoWidget's locator
             # comes out similar enough to the one from the history.
@@ -388,9 +390,9 @@ class JumpBackOrForward(tasks.RepoTask):
             # This point in history is stale, nuke it and keep going
             history.popCurrent()
 
-        # Restore history
+        # Finalize history
         history.push(rw.navLocator)
-        rw.navHistory = history
+        rw.historyChanged.emit()
 
 
 class JumpBack(JumpBackOrForward):
