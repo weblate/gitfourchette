@@ -3,20 +3,21 @@ Tasks that navigate to a specific area of the repository.
 
 Unlike most other tasks, jump tasks directly manipulate the UI extensively, via RepoWidget.
 """
+import dataclasses
 import logging
 import os
 
 from gitfourchette import tasks
-from gitfourchette.nav import NavLocator, NavContext, NavHistory, NavFlags
-from gitfourchette.porcelain import NULL_OID, DeltaStatus
+from gitfourchette.diffview.diffdocument import DiffDocument
+from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
+from gitfourchette.nav import NavLocator, NavContext, NavFlags
+from gitfourchette.porcelain import NULL_OID, DeltaStatus, Patch
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.settings import DEVDEBUG
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
-from gitfourchette.diffview.diffdocument import DiffDocument
-from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +29,21 @@ class Jump(RepoTask):
     Only the Jump task may "cement" the RepoWidget's navLocator.
     """
 
-    def canKill(self, task: 'RepoTask'):
+    @dataclasses.dataclass
+    class Result(Exception):
+        locator: NavLocator
+        header: str
+        document: DiffDocument | DiffConflict | DiffImagePair | SpecialDiffError | None
+        patch: Patch = None
+
+    def canKill(self, task: RepoTask):
         return isinstance(task, (Jump, RefreshRepo))
 
     def flow(self, locator: NavLocator):
         if not locator:
             return
 
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.rw
-        assert isinstance(rw, RepoWidget)
+        rw = self.rw
 
         # Back up current locator
         if not rw.navHistory.isWriteLocked():
@@ -46,103 +52,38 @@ class Jump(RepoTask):
         # Refine locator: Try to recall where we were last time we looked at this context.
         locator = rw.navHistory.refine(locator)
 
-        # Show workdir or commit views (and update them if needed)
-        if locator.context.isWorkdir():
-            locator = yield from self.showWorkdir(locator)
-        else:
-            locator = yield from self.showCommit(locator)
-
-        # Early out?
-        if locator is None:
-            return
-
-        if locator.context == NavContext.COMMITTED:
-            flv = rw.committedFiles
-        elif locator.context == NavContext.STAGED:
-            flv = rw.stagedFiles
-        else:
-            flv = rw.dirtyFiles
-
-        # If we still don't have a path in the locator, fall back to first path in file list.
-        if not locator.path:
-            locator = locator.replace(path=flv.firstPath())
-            locator = rw.navHistory.refine(locator)
-
-        with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles, rw.committedFiles):
-            # Clear selection in other FileListViews
-            for otherFlv in rw.dirtyFiles, rw.stagedFiles, rw.committedFiles:
-                if otherFlv is not flv:
-                    otherFlv.clearSelection()
-
-            # Select correct row in file list
-            anyFile = False
-            if locator.path:
-                # Fix multiple "ghost" selections in DirtyFiles/StagedFiles with JumpBackOrForward.
-                if not locator.hasFlags(NavFlags.AllowMultiSelect):
-                    flv.clearSelection()
-
-                anyFile = flv.selectFile(locator.path)
-
-            rw.stageButton.setEnabled(False)
-            rw.unstageButton.setEnabled(False)
-            if anyFile:
-                if flv is rw.stagedFiles:
-                    rw.unstageButton.setEnabled(True)
-                    rw.dirtyFiles.highlightCounterpart(locator)
-                elif flv is rw.dirtyFiles:
-                    rw.stageButton.setEnabled(True)
-                    rw.stagedFiles.highlightCounterpart(locator)
-
-            # Set correct card in filesStack (after selecting the file to avoid flashing)
-            if locator.context == NavContext.COMMITTED:
-                rw.setFileStackPage("commit")
+        try:
+            # Show workdir or commit views (and update them if needed)
+            if locator.context.isWorkdir():
+                locator = yield from self.showWorkdir(locator)
             else:
-                rw.setFileStackPage("workdir")
+                locator = yield from self.showCommit(locator)
 
-            if not anyFile:
-                flv.clearSelection()
-                rw.clearDiffView()
-                return
+            # Select correct file in FileList
+            locator = self.selectCorrectFile(locator)
 
-        self.setFinalLocator(locator)
-        rw.diffHeader.setText(locator.asTitle())
+            # Load patch in DiffView
+            patch = rw.fileListByContext(locator.context).getPatchForFile(locator.path)
+            patchTask: tasks.LoadPatch = yield from self.flowSubtask(tasks.LoadPatch, patch, locator)
+            header = locator.asTitle()
+            result = Jump.Result(locator, header, patchTask.result, patch)
+        except Jump.Result as r:
+            # The block above may be stopped early by raising Jump.Result.
+            result = r
 
-        # Load patch in DiffView
-        patch = flv.getPatchForFile(locator.path)
-        patchTask: tasks.LoadPatch = yield from self.flowSubtask(tasks.LoadPatch, patch, locator)
-        result = patchTask.result
-        resultType = type(result)
+        locator = result.locator
+        self.saveFinalLocator(locator)
 
-        if resultType is DiffConflict:
-            rw.setDiffStackPage("conflict")
-            rw.conflictView.displayConflict(result)
-
-        elif resultType is SpecialDiffError:
-            rw.setDiffStackPage("special")
-            rw.specialDiffView.displaySpecialDiffError(result)
-
-        elif resultType is DiffDocument:
-            rw.setDiffStackPage("text")
-            if DEVDEBUG:
-                prefix = shortHash(patch.delta.old_file.id) + ".." + shortHash(patch.delta.new_file.id)
-                rw.diffHeader.setText(f"({prefix}) {rw.diffHeader.text()}")
-            rw.diffView.replaceDocument(rw.repo, patch, locator, result)
-
-        elif resultType is DiffImagePair:
-            rw.setDiffStackPage("special")
-            rw.specialDiffView.displayImageDiff(patch.delta, result.oldImage, result.newImage)
-
+        # Set correct card in filesStack (after selecting the file to avoid flashing)
+        if locator.context == NavContext.COMMITTED:
+            self.rw.setFileStackPage("commit")
         else:
-            rw.setDiffStackPage("special")
-            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
-                self.tr("Can’t display diff of type {0}.").format(escape(str(type(result)))),
-                icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
+            self.rw.setFileStackPage("workdir")
+
+        self.displayResult(result)
 
     def showWorkdir(self, locator: NavLocator):
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.rw
-        assert isinstance(rw, RepoWidget)
-
+        rw = self.rw
         previousLocator = rw.navLocator
 
         # Save selected row number for the end of the function
@@ -200,17 +141,14 @@ class Jump(RepoTask):
                 locator = locator.replace(context=NavContext.UNSTAGED)
             locator = rw.navHistory.refine(locator)
 
-        # Special case if workdir is clean
+        # Early out if workdir is clean
         if rw.dirtyFiles.isEmpty() and rw.stagedFiles.isEmpty():
-            rw.setFileStackPage("workdir")
-            rw.setDiffStackPage("special")
-            rw.diffHeader.setText(self.tr("Working directory cleanWorkdir clean"))
-            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
+            locator = locator.replace(path="")
+            header = self.tr("Working directory cleanWorkdir clean")
+            sde = SpecialDiffError(
                 self.tr("The working directory is clean."),
-                self.tr("There aren’t any changes to commit."),
-                QStyle.StandardPixmap.SP_MessageBoxInformation))
-            self.setFinalLocator(locator.replace(path=""))
-            return None  # Force early out
+                self.tr("There aren’t any changes to commit."))
+            raise Jump.Result(locator, header, sde)
 
         # (Un)Staging a file makes it vanish from its file list.
         # But we don't want the selection to go blank in this case.
@@ -232,10 +170,7 @@ class Jump(RepoTask):
         Return a refined NavLocator.
         """
 
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.rw
-        assert isinstance(rw, RepoWidget)
-
+        rw = self.rw
         assert locator.context == NavContext.COMMITTED
 
         # If it's a ref, look it up
@@ -297,27 +232,19 @@ class Jump(RepoTask):
                 flv.setContents(diffs, subtask.skippedRenameDetection)
                 numChanges = flv.model().rowCount()
 
-            # Show message if commit is empty
-            if flv.isEmpty():
-                rw.setDiffStackPage("special")
-                rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(self.tr("Empty commit.")))
-
             # Set header text
             rw.committedHeader.setText(self.tr("%n changes in {0}:", "", numChanges
                                                ).format(shortHash(locator.commit)))
             rw.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
-        # Special case if there are no changes
+        # Early out if the commit is empty
         if flv.isEmpty():
-            rw.setFileStackPage("commit")
-            rw.setDiffStackPage("special")
-            rw.diffHeader.setText(self.tr("Empty commit"))
-            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
+            locator = locator.replace(path="")
+            header = self.tr("Empty commit")
+            sde = SpecialDiffError(
                 self.tr("This commit is empty."),
-                self.tr("Commit {0} doesn’t affect any files.").format(hquo(shortHash(locator.commit))),
-                QStyle.StandardPixmap.SP_MessageBoxInformation))
-            self.setFinalLocator(locator.replace(path=""))
-            return None  # Force early out
+                self.tr("Commit {0} doesn’t affect any files.").format(hquo(shortHash(locator.commit))))
+            raise Jump.Result(locator, header, sde)
 
         # Warning banner
         if not rw.diffBanner.lastWarningWasDismissed:
@@ -340,20 +267,96 @@ class Jump(RepoTask):
 
         return locator
 
-    def setFinalLocator(self, locator: NavLocator):
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.rw
-        assert isinstance(rw, RepoWidget)
+    def selectCorrectFile(self, locator: NavLocator):
+        rw = self.rw
+        flv = rw.fileListByContext(locator.context)
 
+        # If we still don't have a path in the locator, fall back to first path in file list.
+        if not locator.path:
+            locator = locator.replace(path=flv.firstPath())
+            locator = rw.navHistory.refine(locator)
+
+        with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles, rw.committedFiles):
+            # Clear selection in other FileListViews
+            for otherFlv in rw.dirtyFiles, rw.stagedFiles, rw.committedFiles:
+                if otherFlv is not flv:
+                    otherFlv.clearSelection()
+
+            # Select correct row in file list
+            anyFile = False
+            if locator.path:
+                # Fix multiple "ghost" selections in DirtyFiles/StagedFiles with JumpBackOrForward.
+                if not locator.hasFlags(NavFlags.AllowMultiSelect):
+                    flv.clearSelection()
+
+                anyFile = flv.selectFile(locator.path)
+
+            # Special treatment for workdir
+            if locator.context.isWorkdir():
+                if not anyFile:
+                    rw.stageButton.setEnabled(False)
+                    rw.unstageButton.setEnabled(False)
+                elif locator.context == NavContext.STAGED:
+                    rw.unstageButton.setEnabled(True)
+                    rw.stageButton.setEnabled(False)
+                    rw.dirtyFiles.highlightCounterpart(locator)
+                else:
+                    rw.unstageButton.setEnabled(False)
+                    rw.stageButton.setEnabled(True)
+                    rw.stagedFiles.highlightCounterpart(locator)
+
+            # Early out if selection remains blank
+            if not anyFile:
+                flv.clearSelection()
+                locator = locator.replace(path="")
+                raise Jump.Result(locator, "", None)
+
+        return locator
+
+    def saveFinalLocator(self, locator: NavLocator):
         # Clear Force flag before saving the locator
         # (otherwise switching back and forth into the app may reload a commit)
         locator = locator.withoutFlags(NavFlags.Force)
 
-        rw.navLocator = locator
+        self.rw.navLocator = locator
 
-        if not rw.navHistory.isWriteLocked():
-            rw.navHistory.push(locator)
-            rw.historyChanged.emit()
+        if not self.rw.navHistory.isWriteLocked():
+            self.rw.navHistory.push(locator)
+            self.rw.historyChanged.emit()
+
+    def displayResult(self, result: Result):
+        rw = self.rw
+
+        # Set header
+        rw.diffHeader.setText(result.header)
+
+        document = result.document
+        documentType = type(document)
+
+        if document is None:
+            rw.clearDiffView()
+
+        elif documentType is DiffDocument:
+            rw.setDiffStackPage("text")
+            rw.diffView.replaceDocument(rw.repo, result.patch, result.locator, document)
+
+        elif documentType is DiffConflict:
+            rw.setDiffStackPage("conflict")
+            rw.conflictView.displayConflict(document)
+
+        elif documentType is SpecialDiffError:
+            rw.setDiffStackPage("special")
+            rw.specialDiffView.displaySpecialDiffError(document)
+
+        elif documentType is DiffImagePair:
+            rw.setDiffStackPage("special")
+            rw.specialDiffView.displayImageDiff(result.patch.delta, document.oldImage, document.newImage)
+
+        else:
+            rw.setDiffStackPage("special")
+            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
+                escape(f"Can't display {documentType}."),
+                icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
 
 
 class JumpBackOrForward(tasks.RepoTask):
@@ -362,9 +365,7 @@ class JumpBackOrForward(tasks.RepoTask):
     """
 
     def flow(self, delta: int):
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.rw
-        assert isinstance(rw, RepoWidget)
+        rw = self.rw
 
         start = rw.saveFilePositions()
         history = rw.navHistory
@@ -418,9 +419,7 @@ class RefreshRepo(tasks.RepoTask):
         return TaskEffects.Nothing
 
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
-        from gitfourchette.repowidget import RepoWidget
-        rw: RepoWidget = self.rw
-        assert isinstance(rw, RepoWidget)
+        rw = self.rw
         assert onAppThread()
 
         if effectFlags == TaskEffects.Nothing:

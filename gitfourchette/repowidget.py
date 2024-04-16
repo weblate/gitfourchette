@@ -852,8 +852,9 @@ class RepoWidget(QStackedWidget):
         if sourceFileList and not sourceFileList.hasFocus():
             return
 
-        self.setDiffStackPage("text")
-        self.diffView.clear()
+        self.setDiffStackPage("special")
+        self.specialDiffView.clear()
+        self.diffView.clear()  # might as well free up any memory taken by DiffView document
         self.diffHeader.setText(" ")
 
     def renameRepo(self):
