@@ -1,7 +1,7 @@
 from gitfourchette import settings
 from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.forms.searchbar import SearchBar
-from gitfourchette.graphview.commitlogmodel import CommitLogModel
+from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -174,27 +174,43 @@ class CommitLogDelegate(QStyledItemDelegate):
             if not searchBar.isVisible():
                 searchTerm = ""
         else:
-            oid = UC_FAKEID
             commit = None
-
-            prefix = ""
-            numUncommittedChanges = self.state.numUncommittedChanges
-            if numUncommittedChanges > 0:
-                prefix = f"({numUncommittedChanges}) "
-
+            oid = None
             hashText = "·" * settings.prefs.shortHashChars
             authorText = ""
             dateText = ""
-            painter.setFont(self.uncommittedFont)
-
-            summaryText = prefix + self.tr("Uncommitted Changes")
-            draftCommitMessage = self.state.getDraftCommitMessage()
-            if draftCommitMessage:
-                draftLine = messageSummary(draftCommitMessage)[0]
-                summaryText += ": " + tquo(draftLine.strip())
-
             searchTerm = ""
             searchTermLooksLikeHash = False
+            painter.setFont(self.uncommittedFont)
+
+            specialRowKind: SpecialRow = index.data(CommitLogModel.SpecialRowRole)
+
+            if specialRowKind == SpecialRow.UncommittedChanges:
+                oid = UC_FAKEID
+                summaryText = self.tr("Uncommitted changes")
+                # Append draft message if any
+                draftMessage = self.state.getDraftCommitMessage()
+                if draftMessage:
+                    draftMessage = messageSummary(draftMessage)[0].strip()
+                    draftIntro = self.tr("Commit draft:")
+                    summaryText += f" – {draftIntro} {tquo(draftMessage)}"
+                # Prefix with change count if available
+                numChanges = self.state.numUncommittedChanges
+                if numChanges > 0:
+                    summaryText = f"({numChanges}) {summaryText}"
+
+            elif specialRowKind == SpecialRow.TruncatedHistory:
+                if self.state.uiPrefs.hiddenRemotes or self.state.uiPrefs.hiddenStashCommits or self.state.uiPrefs.hiddenBranches:
+                    summaryText = self.tr("History truncated to {0} commits (including hidden branches)")
+                else:
+                    summaryText = self.tr("History truncated to {0} commits")
+                summaryText = summaryText.format(option.widget.locale().toString(self.state.numRealCommits))
+
+            elif specialRowKind == SpecialRow.EndOfShallowHistory:
+                summaryText = self.tr("Shallow clone – End of commit history")
+
+            else:
+                summaryText = f"*** Unsupported special row {specialRowKind}"
 
         # Get metrics now so the message gets elided according to the custom font style
         # that may have been just set for this commit.
@@ -224,7 +240,9 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Graph
         rect.setLeft(leftBoundSummary)
-        paintGraphFrame(self.state, oid, painter, rect, outlineColor)
+        if oid is not None:
+            paintGraphFrame(self.state, oid, painter, rect, outlineColor)
+            rect.setLeft(rect.right())
 
         # ------ Callouts
         if oid in self.state.reverseRefCache:
@@ -258,18 +276,21 @@ class CommitLogDelegate(QStyledItemDelegate):
 
                 painter.setFont(calloutFont)
                 painter.setPen(calloutColor)
-                rect.setLeft(rect.right())
                 label = F"[{calloutText}] "
                 rect.setWidth(int(calloutFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
                 painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, label)
+                rect.setLeft(rect.right())
             painter.restore()
 
         # ------ Message
         # use muted color for foreign commit messages if not selected
         if not isSelected and commit and commit.oid in self.state.foreignCommits:
             painter.setPen(Qt.GlobalColor.gray)
-        rect.setLeft(rect.right())
-        rect.setRight(leftBoundName - XMARGIN)
+        if oid is not None and oid != UC_FAKEID:
+            rect.setRight(leftBoundName - XMARGIN)
+        else:
+            rect.setRight(rightBound)
+
         elidedSummaryText = elide(summaryText)
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elidedSummaryText)
 

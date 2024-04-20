@@ -8,6 +8,7 @@ from gitfourchette.graphmarkers import ForeignCommitSolver
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
                                                 DiffConflict)
+from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavFlags, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -30,13 +31,15 @@ class PrimeRepo(RepoTask):
     progressMessage = Signal(str)
     progressAbortable = Signal(bool)
 
-    def _onAbortButtonClicked(self):
-        self._wantAbort = True
+    abortFlag: bool
 
-    def flow(self, path: str):
+    def onAbortButtonClicked(self):
+        self.abortFlag = True
+
+    def flow(self, path: str, maxCommits: int = -1):
         from gitfourchette.graph import KF_INTERVAL
         from gitfourchette.repowidget import RepoWidget
-        from gitfourchette.repostate import RepoState, UC_FAKEID, PROGRESS_INTERVAL
+        from gitfourchette.repostate import RepoState, UC_FAKEID
         from gitfourchette.tasks.jumptasks import Jump
 
         assert path
@@ -46,12 +49,12 @@ class PrimeRepo(RepoTask):
 
         progressWidget = rw.setPlaceholderWidgetOpenRepoProgress()
 
-        self._wantAbort = False
+        self.abortFlag = False
         self.progressRange.connect(progressWidget.ui.progressBar.setRange)
         self.progressValue.connect(progressWidget.ui.progressBar.setValue)
         self.progressMessage.connect(progressWidget.ui.label.setText)
         self.progressAbortable.connect(progressWidget.ui.abortButton.setEnabled)
-        progressWidget.ui.abortButton.clicked.connect(self._onAbortButtonClicked)
+        progressWidget.ui.abortButton.clicked.connect(self.onAbortButtonClicked)
 
         # Create the repo
         repo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
@@ -67,6 +70,8 @@ class PrimeRepo(RepoTask):
         # EXIT UI THREAD
         # ---------------------------------------------------------------------
         yield from self.flowEnterWorkerThread()
+
+        locale = QLocale()
 
         # Prime the walker (this might take a while)
         walker = state.initializeWalker(state.refCache.values())
@@ -88,33 +93,36 @@ class PrimeRepo(RepoTask):
         self.progressAbortable.emit(True)
 
         truncatedHistory = False
-        for offsetFromTop, commit in enumerate(walker):
+        if maxCommits < 0:  # -1 means take maxCommits from prefs. Warning, pref value can be 0, meaning infinity!
+            maxCommits = settings.prefs.graph_maxCommits
+        if maxCommits == 0:  # 0 means infinity
+            maxCommits = 2**63  # ought to be enough
+        progressInterval = 5000 if maxCommits >= 10000 else 1000
+
+        for i, commit in enumerate(walker):
             commitSequence.append(commit)
 
-            # Comment this out to waste CPU time and slow things down
-            if offsetFromTop == 0 or offsetFromTop % PROGRESS_INTERVAL != 0:
-                continue
-
-            message = self.tr("{0} commits...").format(QLocale().toString(offsetFromTop))
-            self.progressMessage.emit(message)
-            if numCommitsBallpark > 0 and offsetFromTop <= numCommitsBallpark:
-                self.progressValue.emit(offsetFromTop)
-
-            if self._wantAbort:
-                message = self.tr("{0} commits. Aborting...").format(QLocale().toString(offsetFromTop))
-                self.progressMessage.emit(message)
+            if i+1 >= maxCommits or (self.abortFlag and i+1 >= progressInterval):
                 truncatedHistory = True
                 break
+
+            # Report progress, not too often
+            if i != 0 and i % progressInterval == 0:
+                message = self.tr("{0} commits...").format(locale.toString(i))
+                self.progressMessage.emit(message)
+                if numCommitsBallpark > 0 and i <= numCommitsBallpark:
+                    self.progressValue.emit(i)
 
         # Can't abort anymore
         self.progressAbortable.emit(False)
 
         numCommits = len(commitSequence)
         logger.info(f"{state.shortName}: loaded {numCommits} commits")
-        graphMessage = self.tr("{0} commits total.").format(QLocale().toString(numCommits))
         if truncatedHistory:
-            graphMessage += " " + self.tr("(truncated)", "commit history truncated")
-        self.progressMessage.emit(graphMessage)
+            message = self.tr("{0} commits (truncated log).").format(locale.toString(numCommits))
+        else:
+            message = self.tr("{0} commits total.").format(locale.toString(numCommits))
+        self.progressMessage.emit(message)
 
         if numCommitsBallpark != 0:
             # First half of progress bar was for commit log
@@ -130,7 +138,7 @@ class PrimeRepo(RepoTask):
         graphGenerator = graph.startGenerator()
 
         # Generate fake "Uncommitted Changes" with HEAD as parent
-        commitSequence.insert(0, None)
+        commitSequence.insert(0, None)  # Uncommitted Changes
 
         state.hiddenCommits = set()
         state.foreignCommits = set()
@@ -167,6 +175,7 @@ class PrimeRepo(RepoTask):
         logger.debug(f"Peak arc count: {graphGenerator.peakArcCount}")
 
         state.commitSequence = commitSequence
+        state.truncatedHistory = truncatedHistory
         state.graph = graph
 
         # ---------------------------------------------------------------------
@@ -187,18 +196,37 @@ class PrimeRepo(RepoTask):
         settings.history.write()
         rw.window().fillRecentMenu()  # TODO: emit signal instead?
 
-        # Finally prime the UI
-        with QSignalBlockerContext(rw.graphView, rw.sidebar):
+        # Finally, prime the UI.
+
+        # Prime GraphView
+        with QSignalBlockerContext(rw.graphView):
+            if state.truncatedHistory:
+                extraRow = SpecialRow.TruncatedHistory
+                notFoundInfo = lambda: self.tr(  # lambda because commit count may change over time
+                    "Note: The search was limited to the top %n commits "
+                    "because the commit history is truncated.", "", rw.state.numRealCommits)
+            elif repo.is_shallow:
+                extraRow = SpecialRow.EndOfShallowHistory
+                notFoundInfo = lambda: self.tr(  # lambda because commit count may change over time
+                    "Note: The search was limited to the %n commits "
+                    "available in this shallow clone.", "", rw.state.numRealCommits)
+            else:
+                extraRow = SpecialRow.Invalid
+                notFoundInfo = None
+
+            rw.graphView.clModel._extraRow = extraRow
+            rw.graphView.searchBar.notFoundInfo = notFoundInfo
             rw.graphView.setHiddenCommits(state.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
+            rw.graphView.selectUncommittedChanges(force=True)
 
+        # Prime Sidebar
+        with QSignalBlockerContext(rw.sidebar):
             collapseCache = state.uiPrefs.collapseCache
             if collapseCache:
                 rw.sidebar.collapseCache = set(collapseCache)
                 rw.sidebar.collapseCacheValid = True
             rw.sidebar.refresh(state)
-
-            rw.graphView.selectUncommittedChanges(force=True)
 
         # Restore main UI
         rw.removePlaceholderWidget()
@@ -225,6 +253,8 @@ class PrimeRepo(RepoTask):
             initialLocator = rw.pendingLocator
             rw.pendingLocator = NavLocator()
         yield from self.flowSubtask(Jump, initialLocator)
+        if initialLocator.context == NavContext.COMMITTED:
+            rw.graphView.scrollToCommit(initialLocator.commit, QAbstractItemView.ScrollHint.PositionAtCenter)
 
     def onError(self, exc: Exception):
         self.rw.cleanup(str(exc), allowAutoReload=False)

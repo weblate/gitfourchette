@@ -8,7 +8,7 @@ from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.graphview.commitlogfilter import CommitLogFilter
-from gitfourchette.graphview.commitlogmodel import CommitLogModel
+from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -24,14 +24,17 @@ class GraphView(QListView):
     clFilter: CommitLogFilter
 
     class SelectCommitError(KeyError):
-        def __init__(self, oid: Oid, foundButHidden: bool):
+        def __init__(self, oid: Oid, foundButHidden: bool, likelyTruncated: bool = False):
             super().__init__()
             self.oid = oid
             self.foundButHidden = foundButHidden
+            self.likelyTruncated = likelyTruncated
 
         def __str__(self):
             if self.foundButHidden:
                 m = translate("GraphView", "Commit {0} isn’t shown in the graph because it is part of a hidden branch.")
+            elif self.likelyTruncated:
+                m = translate("GraphView", "Commit {0} isn’t shown in the graph because it isn’t part of the truncated commit history.")
             else:
                 m = translate("GraphView", "Commit {0} isn’t shown in the graph.")
             return m.format(tquo(shortHash(self.oid)))
@@ -64,29 +67,14 @@ class GraphView(QListView):
         self.refreshPrefs(invalidateMetrics=False)
 
     def makeContextMenu(self):
+        kind = self.currentRowKind
         oid = self.currentCommitOid
         state = self.repoWidget.state
 
         mergeActions = []
-        if state.homeBranch:
-            with suppress(KeyError, StopIteration):
-                rrc = state.reverseRefCache[oid]
-                target = next(r for r in rrc if r.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
-                mergeCaption = self.tr("&Merge into {0}...").format(lquo(state.homeBranch))
-                mergeActions = [
-                    TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),
-                ]
-
         stashActions = []
-        with suppress(KeyError, StopIteration):
-            rrc = state.reverseRefCache[oid]
-            target = next(r for r in rrc if r.startswith("stash@{"))
-            stashActions = [
-                TaskBook.action(self, ApplyStash, taskArgs=oid),
-                TaskBook.action(self, DropStash, taskArgs=oid),
-            ]
 
-        if not oid:
+        if kind == SpecialRow.UncommittedChanges:
             actions = [
                 TaskBook.action(self, NewCommit, "&C"),
                 TaskBook.action(self, AmendCommit, "&A"),
@@ -94,7 +82,43 @@ class GraphView(QListView):
                 TaskBook.action(self, NewStash, "&S"),
                 TaskBook.action(self, ExportWorkdirAsPatch, "&X"),
             ]
-        else:
+
+        elif kind == SpecialRow.EndOfShallowHistory:
+            return None
+
+        elif kind == SpecialRow.TruncatedHistory:
+            expandSome = makeInternalLink("expandlog")
+            expandAll = makeInternalLink("expandlog", n=str(0))
+            changePref = makeInternalLink("prefs", "graph_maxCommits")
+            actions = [
+                ActionDef(self.tr("Load up to {0} commits").format(QLocale().toString(state.nextTruncationThreshold)),
+                          lambda: self.linkActivated.emit(expandSome)),
+                ActionDef(self.tr("Load full commit history"),
+                          lambda: self.linkActivated.emit(expandAll)),
+                ActionDef(self.tr("Change threshold setting"),
+                          lambda: self.linkActivated.emit(changePref)),
+            ]
+
+        elif kind == SpecialRow.Commit:
+            # Merge actions
+            if state.homeBranch:
+                with suppress(KeyError, StopIteration):
+                    rrc = state.reverseRefCache[oid]
+                    target = next(ref for ref in rrc if ref.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
+                    mergeCaption = self.tr("&Merge into {0}...").format(lquo(state.homeBranch))
+                    mergeActions = [
+                        TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),
+                    ]
+
+            # Stash actions
+            with suppress(KeyError, StopIteration):
+                rrc = state.reverseRefCache[oid]
+                target = next(ref for ref in rrc if ref.startswith("stash@{"))
+                stashActions = [
+                    TaskBook.action(self, ApplyStash, taskArgs=oid),
+                    TaskBook.action(self, DropStash, taskArgs=oid),
+                ]
+
             checkoutAction = TaskBook.action(self, CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
             checkoutAction.setShortcut(QKeySequence("Return"))
 
@@ -122,10 +146,11 @@ class GraphView(QListView):
         return menu
 
     def onContextMenuRequested(self, point: QPoint):
-        globalPoint = self.mapToGlobal(point)
         menu = self.makeContextMenu()
-        menu.exec(globalPoint)
-        menu.deleteLater()
+        if menu is not None:
+            globalPoint = self.mapToGlobal(point)
+            menu.exec(globalPoint)
+            menu.deleteLater()
 
     def clear(self):
         self.setCommitSequence(None)
@@ -149,15 +174,19 @@ class GraphView(QListView):
         self.clModel.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, commitSequence)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            event.accept()
-            oid = self.currentCommitOid
-            if oid:
-                CheckoutCommit.invoke(self, oid)
-            else:
-                NewCommit.invoke(self)
-        else:
+        currentIndex = self.currentIndex()
+        if not currentIndex.isValid() or event.button() != Qt.MouseButton.LeftButton:
             super().mouseDoubleClickEvent(event)
+            return
+        event.accept()
+        rowKind = currentIndex.data(CommitLogModel.SpecialRowRole)
+        if rowKind == SpecialRow.UncommittedChanges:
+            NewCommit.invoke(self)
+        elif rowKind == SpecialRow.TruncatedHistory:
+            self.linkActivated.emit(makeInternalLink("expandlog"))
+        elif rowKind == SpecialRow.Commit:
+            oid = self.currentCommitOid
+            CheckoutCommit.invoke(self, oid)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.matches(QKeySequence.StandardKey.Copy):
@@ -191,6 +220,13 @@ class GraphView(QListView):
     @property
     def repo(self) -> Repo:
         return self.repoWidget.state.repo
+
+    @property
+    def currentRowKind(self) -> SpecialRow:
+        currentIndex = self.currentIndex()
+        if not currentIndex.isValid():
+            return SpecialRow.Invalid
+        return currentIndex.data(CommitLogModel.SpecialRowRole)
 
     @property
     def currentCommitOid(self) -> Oid | None:
@@ -347,18 +383,24 @@ class GraphView(QListView):
             self.onSetCurrent(selected.indexes()[0])
 
     def onSetCurrent(self, current: QModelIndex = None):
+        if self.signalsBlocked():  # Don't bother with the jump if our signals are blocked
+            return
+
         if current is None or not current.isValid():
             locator = NavLocator(NavContext.EMPTY)
         else:
-            oid = current.data(CommitLogModel.OidRole)
-            if oid:
-                locator = NavLocator(NavContext.COMMITTED, commit=oid)
-            else:  # uncommitted changes
+            special = current.data(CommitLogModel.SpecialRowRole)
+            if special == SpecialRow.UncommittedChanges:
                 locator = NavLocator(NavContext.WORKDIR)
+            elif special == SpecialRow.Commit:
+                oid = current.data(CommitLogModel.OidRole)
+                locator = NavLocator(NavContext.COMMITTED, commit=oid)
+            else:
+                locator = NavLocator(NavContext.SPECIAL, path=str(special))
         Jump.invoke(self, locator)
 
     def selectUncommittedChanges(self, force=False):
-        if force or self.currentCommitOid is not None:
+        if force or self.currentRowKind != SpecialRow.UncommittedChanges:
             # TODO: Actual lookup
             self.setCurrentIndex(self.model().index(0, 0))
 
@@ -366,7 +408,7 @@ class GraphView(QListView):
         try:
             rawIndex = self.repoWidget.state.graph.getCommitRow(oid)
         except KeyError:
-            raise GraphView.SelectCommitError(oid, foundButHidden=False)
+            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=self.repoWidget.state.truncatedHistory)
 
         newSourceIndex = self.clModel.index(rawIndex, 0)
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)

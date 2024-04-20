@@ -187,6 +187,7 @@ class Prefs(PrefsFile):
     graph_rowHeight             : GraphRowHeight= GraphRowHeight.RELAXED
     graph_flattenLanes          : bool          = True
     graph_authorDiffAsterisk    : bool          = True
+    graph_maxCommits            : int           = 10000
     external_editor             : str           = ""
     external_diff               : str           = DIFF_TOOL_PRESETS[DEFAULT_DIFF_TOOL_PRESET]
     external_merge              : str           = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]

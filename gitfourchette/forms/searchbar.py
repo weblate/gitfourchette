@@ -1,6 +1,6 @@
 import enum
 import re
-from typing import Literal
+from typing import Literal, Callable
 
 from gitfourchette import colors
 from gitfourchette.qt import *
@@ -23,11 +23,26 @@ class SearchBar(QWidget):
     searchPulse = Signal()
     visibilityChanged = Signal(bool)
 
+    buddy: QWidget
+    """ Widget in which the search is carried out.
+    Must implement the `searchRange` callback. """
+
+    detectHashes: bool
+    """ Try to optimize for 40-character SHA-1 hashes.
+    Set this flag before initiating a search.
+    Will cause `searchTermLooksLikeHash` to be updated. """
+
+    notFoundInfo: Callable[[], str] | None
+    """ When there are no more occurences of a search term, this function is
+    called to generate additional informative text for the message box. """
+
     searchTerm: str
-    "Sanitized search term (lowercase, stripped whitespace)"
+    """ Sanitized search term (lowercase, stripped whitespace).
+    Updated when the user edits the QLineEdit. """
 
     searchTermLooksLikeHash: bool
-    "True if the search term looks like the start of a 40-character SHA-1 hash"
+    """ True if the search term looks like the start of a 40-character SHA-1 hash.
+    Updated at the same time as searchTerm if detectHashes was enabled beforehand. """
 
     searchPulseTimer: QTimer
 
@@ -53,6 +68,7 @@ class SearchBar(QWidget):
         self.setObjectName(f"SearchBar({buddy.objectName()})")
         self.buddy = buddy
         self.detectHashes = False
+        self.notFoundInfo = None
 
         self.ui = Ui_SearchBar()
         self.ui.setupUi(self)
@@ -149,6 +165,11 @@ class SearchBar(QWidget):
         if wasRed ^ red:  # trigger stylesheet refresh
             self.setStyleSheet("* {}")
 
+    def searchRange(self, r: range) -> QModelIndex | None:
+        """ Proxy for buddy.searchRange """
+        assert hasattr(self.buddy, "searchRange"), "missing searchRange callback"
+        return self.buddy.searchRange(r)
+
     # --------------------------------
     # Ready-made QAbstractItemView search flow
 
@@ -165,7 +186,6 @@ class SearchBar(QWidget):
     def searchItemView(self, op: Op, wrappedFrom=-1) -> QModelIndex | None:
         view: QAbstractItemView = self.buddy
         assert isinstance(view, QAbstractItemView)
-        assert hasattr(view, "searchRange")
 
         model = view.model()  # use the view's top-level model to only search filtered rows
 
@@ -202,10 +222,10 @@ class SearchBar(QWidget):
             searchRange = range(start - 1, last - 1, -1)
 
         # Perform search within range
-        index: QModelIndex = view.searchRange(searchRange)
+        index = self.searchRange(searchRange)
 
         # A valid index was found in the range, select it
-        if index and index.isValid():
+        if index is not None and index.isValid():
             view.setCurrentIndex(index)
             return index
 
@@ -214,18 +234,20 @@ class SearchBar(QWidget):
             # Wrap around once
             self.searchItemView(op, wrappedFrom=start)
         else:
-            displayTerm = self.rawSearchTerm
             title = self.lineEdit.placeholderText().split("")[0]
-            showInformation(self, title, self.tr("{0} not found.").format(bquo(displayTerm)))
+            message = self.tr("{0} not found.").format(bquo(self.rawSearchTerm))
+            qmb = asyncMessageBox(self, 'information', title, message)
+            if self.notFoundInfo is not None:
+                qmb.setInformativeText(self.notFoundInfo())
+            qmb.show()
 
     def pulseItemView(self):
         view: QAbstractItemView = self.buddy
         assert isinstance(view, QAbstractItemView)
-        assert hasattr(view, "searchRange")
 
         def generateSearchRanges():
             # First see if in visible range
-            visibleRange = itemViewVisibleRowRange(self.buddy)
+            visibleRange = itemViewVisibleRowRange(view)
             yield visibleRange
 
             # It's not visible, so search below visible range first
@@ -239,8 +261,8 @@ class SearchBar(QWidget):
             if not searchRange:
                 continue
 
-            index = view.searchRange(searchRange)
-            if index:
+            index = self.searchRange(searchRange)
+            if index is not None and index.isValid():
                 view.setCurrentIndex(index)
                 return index
 

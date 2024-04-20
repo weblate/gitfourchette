@@ -20,8 +20,9 @@ class CommitLogFilter(QSortFilterProxyModel):
         self.hiddenOids = hiddenCommits
 
     def filterAcceptsRow(self, sourceRow: int, sourceParent: QModelIndex) -> bool:
-        commit = self.clModel._commitSequence[sourceRow]
-
-        return (not commit) or (commit.oid not in self.hiddenOids)
-
-
+        try:
+            commit = self.clModel._commitSequence[sourceRow]
+            return (not commit) or (commit.oid not in self.hiddenOids)
+        except IndexError:
+            # Probably an extra special row
+            return True

@@ -10,6 +10,7 @@ import os
 from gitfourchette import tasks
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
+from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import NULL_OID, DeltaStatus, Patch
 from gitfourchette.qt import *
@@ -54,7 +55,9 @@ class Jump(RepoTask):
 
         try:
             # Show workdir or commit views (and update them if needed)
-            if locator.context.isWorkdir():
+            if locator.context == NavContext.SPECIAL:
+                yield from self.showSpecial(locator)
+            elif locator.context.isWorkdir():
                 locator = yield from self.showWorkdir(locator)
             else:
                 locator = yield from self.showCommit(locator)
@@ -75,10 +78,10 @@ class Jump(RepoTask):
         self.saveFinalLocator(locator)
 
         # Set correct card in filesStack (after selecting the file to avoid flashing)
-        if locator.context == NavContext.COMMITTED:
-            self.rw.setFileStackPage("commit")
-        else:
+        if locator.context.isWorkdir():
             self.rw.setFileStackPage("workdir")
+        else:
+            self.rw.setFileStackPage("commit")
 
         self.displayResult(result)
 
@@ -163,6 +166,45 @@ class Jump(RepoTask):
             locator = rw.navHistory.refine(locator)
 
         return locator
+
+    def showSpecial(self, locator: NavLocator):
+        rw = self.rw
+        locale = QLocale()
+
+        with QSignalBlockerContext(rw.sidebar, rw.committedFiles):
+            rw.sidebar.clearSelection()
+            rw.committedFiles.clear()
+            rw.committedHeader.setText(" ")
+            rw.diffBanner.hide()
+
+        if locator.path == str(SpecialRow.EndOfShallowHistory):
+            sde = SpecialDiffError(
+                self.tr("Shallow clone – End of available history.").format(locale.toString(self.rw.state.numRealCommits)),
+                self.tr("More commits may be available in a full clone."))
+            raise Jump.Result(locator, self.tr("Shallow clone – End of commit history"), sde)
+
+        elif locator.path == str(SpecialRow.TruncatedHistory):
+            from gitfourchette import settings
+            prefThreshold = settings.prefs.graph_maxCommits
+            nextThreshold = rw.state.nextTruncationThreshold
+            expandSome = makeInternalLink("expandlog")
+            expandAll = makeInternalLink("expandlog", n=str(0))
+            changePref = makeInternalLink("prefs", "graph_maxCommits")
+            options = [
+                linkify(self.tr("Load up to {0} commits").format(locale.toString(nextThreshold)), expandSome),
+                linkify(self.tr("[Load full commit history] (this may take a moment)"), expandAll),
+                linkify(self.tr("[Change threshold setting] (currently {0} commits)"), changePref).format(locale.toString(prefThreshold)),
+            ]
+            sde = SpecialDiffError(
+                self.tr("History truncated to {0} commits.").format(locale.toString(self.rw.state.numRealCommits)),
+                self.tr("More commits may be available."),
+                longform=toRoomyUL(options))
+            raise Jump.Result(locator, self.tr("History truncated"), sde)
+
+        else:
+            raise Jump.Result(locator, "", SpecialDiffError(f"Unsupported special locator: {locator}"))
+
+        yield from self.flowEnterUiThread()  # dummy yield to make this a generator
 
     def showCommit(self, locator: NavLocator) -> NavLocator:
         """

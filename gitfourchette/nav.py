@@ -46,6 +46,7 @@ class NavContext(enum.IntEnum):
     UNTRACKED   = 3
     UNSTAGED    = 4
     STAGED      = 5
+    SPECIAL     = 6
 
     def isWorkdir(self):
         return self == NavContext.WORKDIR or self == NavContext.UNTRACKED or self == NavContext.UNSTAGED or self == NavContext.STAGED
@@ -209,7 +210,9 @@ class NavLocator:
 
     @property
     def contextKey(self):
-        if self.context != NavContext.COMMITTED:
+        if self.context == NavContext.SPECIAL:
+            return f"@special@{self.path}"
+        elif self.context != NavContext.COMMITTED:
             return self.context.name
         elif self.ref:
             return self.ref

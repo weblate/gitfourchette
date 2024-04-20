@@ -326,7 +326,7 @@ class CallbackAccumulator(QTimer):
         return wrapper
 
 
-def makeInternalLink(urlAuthority: str, urlPath: str, urlFragment: str = "", **urlQueryItems) -> str:
+def makeInternalLink(urlAuthority: str, urlPath: str = "", urlFragment: str = "", **urlQueryItems) -> str:
     url = QUrl()
     url.setScheme(APP_URL_SCHEME)
     url.setAuthority(urlAuthority)

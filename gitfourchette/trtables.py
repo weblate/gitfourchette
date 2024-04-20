@@ -272,6 +272,8 @@ class TrTables:
                 "and/or date if they differ from the committer’s for any given commit.</p>"
                 "<p>Note that you can always hover over the author’s name or date to obtain "
                 "detailed information about the author and the committer.</p>"),
+            "graph_maxCommits": translate("Prefs", "Load up to # commits in the history"),
+            "graph_maxCommits_help": translate("Prefs", "Set to 0 to always load the full commit history."),
 
             "trash_maxFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
             "trash_maxFileSizeKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),

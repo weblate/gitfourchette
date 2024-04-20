@@ -16,7 +16,6 @@ from gitfourchette.toolbox import *
 logger = logging.getLogger(__name__)
 
 UC_FAKEID = "UC_FAKEID"
-PROGRESS_INTERVAL = 5000
 
 
 def toggleListElement(l: list, e):
@@ -60,6 +59,8 @@ class RepoState(QObject):
     # ordered list of commits
     commitSequence: list[Commit]
     # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
+
+    truncatedHistory: bool
 
     graph: Graph | None
 
@@ -115,6 +116,7 @@ class RepoState(QObject):
         self.walker = None
 
         self.commitSequence = []
+        self.truncatedHistory = True
         self.hiddenCommits = set()
 
         self.graph = None
@@ -139,6 +141,11 @@ class RepoState(QObject):
         self.uiPrefs.load()
 
         self.resolveHiddenCommits()
+
+    @property
+    def numRealCommits(self):
+        # The first item in the commit sequence is the "fake commit" for Uncommitted Changes.
+        return max(0, len(self.commitSequence) - 1)
 
     def getDraftCommitMessage(self, forAmending = False) -> str:
         if forAmending:
@@ -251,6 +258,12 @@ class RepoState(QObject):
             return [head] + self.mergeheadsCache
         except KeyError:  # Unborn HEAD
             return []
+
+    @property
+    def nextTruncationThreshold(self) -> int:
+        n = self.numRealCommits * 2
+        n -= n % -1000  # round up to next thousand
+        return max(n, settings.prefs.graph_maxCommits)
 
     @benchmark
     def loadChangedRefs(self, oldRefCache: dict[str, Oid]):

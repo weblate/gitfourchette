@@ -1228,11 +1228,13 @@ class MainWindow(QMainWindow):
             "diff_largeFileThresholdKB",
             "diff_imageFileThresholdKB",
             "diff_contextLines",
+            "graph_maxCommits",
         ]
 
         warnIfChanged = [
             "graph_chronologicalOrder",  # need to reload entire commit sequence
             "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
+            "graph_maxCommits",
         ]
 
         warnIfNeedRestart = [

@@ -583,7 +583,7 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
     # Initial repo priming
 
-    def primeRepo(self, path: str = "", force: bool = False):
+    def primeRepo(self, path: str = "", force: bool = False, maxCommits: int = -1):
         if not force and self.isLoaded:
             logger.warning(f"Repo already primed! {path}")
             return None
@@ -595,7 +595,7 @@ class RepoWidget(QStackedWidget):
 
         path = path or self.pendingPath
         assert path
-        return self.runTask(tasks.PrimeRepo, path)
+        return self.runTask(tasks.PrimeRepo, path=path, maxCommits=maxCommits)
 
     # -------------------------------------------------------------------------
     # Splitter state
@@ -758,10 +758,8 @@ class RepoWidget(QStackedWidget):
             return self.stagedFiles
         elif context == NavContext.UNSTAGED:
             return self.dirtyFiles
-        elif context == NavContext.COMMITTED:
-            return self.committedFiles
         else:
-            raise ValueError("context must be STAGED, UNSTAGED or COMMITTED")
+            return self.committedFiles
 
     # -------------------------------------------------------------------------
 
@@ -1207,25 +1205,31 @@ class RepoWidget(QStackedWidget):
 
         logger.info(f"Internal link: {url.toDisplayString()}")
 
+        simplePath = url.path().removeprefix("/")
+        kwargs = {k: v for k, v in QUrlQuery(url).queryItems(QUrl.ComponentFormattingOption.FullyDecoded)}
+
         if url.authority() == NavLocator.URL_AUTHORITY:
             locator = NavLocator.parseUrl(url)
             self.jump(locator)
         elif url.authority() == "refresh":
             self.refreshRepo()
+        elif url.authority() == "expandlog":
+            try:
+                n = int(kwargs["n"])
+            except KeyError:
+                n = self.state.nextTruncationThreshold
+            # After loading, jump back to what is currently the last commit
+            self.pendingLocator = NavLocator.inCommit(self.state.commitSequence[-1].oid)
+            # Reload the repo
+            self.primeRepo(force=True, maxCommits=n)
         elif url.authority() == "opensubfolder":
-            p = url.path()
-            p = p.removeprefix("/")
-            p = os.path.join(self.repo.workdir, p)
+            p = os.path.join(self.repo.workdir, simplePath)
             self.openRepo.emit(p, NavLocator())
         elif url.authority() == "prefs":
-            p = url.path().removeprefix("/")
-            self.openPrefs.emit(p)
+            self.openPrefs.emit(simplePath)
         elif url.authority() == "exec":
-            query = QUrlQuery(url)
-            allqi = query.queryItems(QUrl.ComponentFormattingOption.FullyDecoded)
-            cmdName = url.path().removeprefix("/")
+            cmdName = simplePath
             taskClass = tasks.__dict__[cmdName]
-            kwargs = {k: v for k, v in allqi}
             self.runTask(taskClass, **kwargs)
         else:
             logger.warning(f"Unsupported authority in internal link: {url.toDisplayString()}")

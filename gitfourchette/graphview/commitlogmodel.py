@@ -1,3 +1,5 @@
+import enum
+
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -7,14 +9,24 @@ EPHEMERAL_ROW_CACHE = 150
 """ Number of rows to keep track of for MessageElidedRole """
 
 
+class SpecialRow(enum.IntEnum):
+    Invalid = enum.auto()
+    UncommittedChanges = enum.auto()
+    Commit = enum.auto()
+    TruncatedHistory = enum.auto()
+    EndOfShallowHistory = enum.auto()
+
+
 class CommitLogModel(QAbstractListModel):
     CommitRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 0
     OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
     MessageElidedRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 2
     AuthorColumnXRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 3
+    SpecialRowRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 4
 
     # Reference to RepoState.commitSequence
     _commitSequence: list[Commit] | None
+    _extraRow: SpecialRow
 
     _authorColumnX: int
     _elidedRows: dict[int, bool]
@@ -22,6 +34,7 @@ class CommitLogModel(QAbstractListModel):
     def __init__(self, parent):
         super().__init__(parent)
         self._commitSequence = None
+        self._extraRow = SpecialRow.Invalid
         self._authorColumnX = -1
         self._elidedRows = {}
 
@@ -32,6 +45,7 @@ class CommitLogModel(QAbstractListModel):
     def clear(self):
         self.setCommitSequence(None)
         self._elidedRows.clear()
+        self._extraRow = SpecialRow.Invalid
 
     def setCommitSequence(self, newCommitSequence: list[Commit] | None):
         self.beginResetModel()
@@ -57,30 +71,50 @@ class CommitLogModel(QAbstractListModel):
         if not self.isValid:
             return 0
         else:
-            return len(self._commitSequence)
+            n = len(self._commitSequence)
+            if self._extraRow != SpecialRow.Invalid:
+                n += 1
+            return n
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole):
         if not self.isValid:
             return None
 
+        row = index.row()
+
         if role == Qt.ItemDataRole.DisplayRole:
             return None
 
         elif role == CommitLogModel.CommitRole:
-            return self._commitSequence[index.row()]
+            try:
+                return self._commitSequence[row]
+            except IndexError:
+                pass
 
         elif role == CommitLogModel.OidRole:
-            commit = self._commitSequence[index.row()]
-            if commit:
-                return commit.oid
+            try:
+                commit = self._commitSequence[row]
+                if commit is not None:
+                    return commit.oid
+            except IndexError:
+                pass
+
+        elif role == CommitLogModel.SpecialRowRole:
+            if row == 0:
+                return SpecialRow.UncommittedChanges
+            elif row < len(self._commitSequence):
+                return SpecialRow.Commit
             else:
-                return None
+                return self._extraRow
 
         elif role == Qt.ItemDataRole.ToolTipRole:
             tip = ""
-            commit = self._commitSequence[index.row()]
 
-            if not commit:
+            try:
+                commit = self._commitSequence[row]
+            except IndexError:
+                return tip
+            if commit is None:
                 return tip
 
             isCommitMessageElided = index.row() in self._elidedRows

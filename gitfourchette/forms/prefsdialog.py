@@ -261,6 +261,10 @@ class PrefsDialog(QDialog):
             return self.boundedIntControl(key, value, 1, 32)
         elif key == 'diff_tabSpaces':
             return self.boundedIntControl(key, value, 1, 16)
+        elif key == 'graph_maxCommits':
+            control = self.boundedIntControl(key, value, 0, 999_999_999, 1000)
+            control.setSpecialValueText("\u221E")  # infinity
+            return control
         elif key == 'external_editor':
             return self.strControlWithPresets(key, value, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
         elif key == 'external_diff':
@@ -385,11 +389,15 @@ class PrefsDialog(QDialog):
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, int(v) if v else 0))
         return control
 
-    def boundedIntControl(self, prefKey, prefValue, minValue, maxValue):
+    def boundedIntControl(self, prefKey, prefValue, minValue, maxValue, step=1):
         control = QSpinBox(self)
         control.setMinimum(minValue)
         control.setMaximum(maxValue)
         control.setValue(prefValue)
+        control.setSingleStep(step)
+        control.setGroupSeparatorShown(True)
+        control.setAlignment(Qt.AlignmentFlag.AlignRight)
+        control.setStepType(QSpinBox.StepType.AdaptiveDecimalStepType)
         control.valueChanged.connect(lambda v, k=prefKey: self.assign(k, v))
         return control
 
