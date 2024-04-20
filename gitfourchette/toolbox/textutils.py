@@ -138,13 +138,13 @@ def clipboardStatusMessage(text: str):
         return tr("%n lines copied to clipboard.", "", n)
 
 
-def ulList(items: Iterable[str], limit: int = 10):
+def ulify(items: Iterable[str], limit: int = 10, prefix="", suffix="", moreText=""):
     n = 0
     text = "<ul>"
 
     for item in items:
         if limit < 0 or n < limit:
-            text += f"\n<li>{item}</li>"
+            text += f"\n<li>{prefix}{item}{suffix}</li>"
         n += 1
 
     if n == 0:
@@ -152,11 +152,22 @@ def ulList(items: Iterable[str], limit: int = 10):
 
     if 0 <= limit < n:
         unlisted = n - limit
-        more = translate("Global", "(+ %n more)", "", unlisted)
-        text += f"\n<li><i>{more}</i></li>"
+        if not moreText:
+            moreText = tr("(+ %n more)", "", unlisted)
+        else:
+            moreText = moreText.format(unlisted)
+        text += f"\n<li>{prefix}<i>{moreText}</i>{suffix}</li>"
 
     text += "\n</ul>"
     return text
+
+
+def toTightUL(items: Iterable[str], limit=10, moreText=""):
+    return ulify(items, limit=limit, moreText=moreText)
+
+
+def toRoomyUL(items: Iterable[str]):
+    return ulify(items, -1, "<p>", "</p>")
 
 
 def linkify(text, *hrefs: str | QUrl):

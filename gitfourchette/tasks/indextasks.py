@@ -43,7 +43,7 @@ class _BaseStagingTask(RepoTask):
             please = self.tr("Please fix it/them before discarding:", "'it/them' refers to the selected merge conflicts", numConflicts)
 
         message = paragraphs(intro, please)
-        message += ulList(p.delta.new_file.path for p in conflicts)
+        message += toTightUL(p.delta.new_file.path for p in conflicts)
         raise AbortTask(message)
 
     def filterSubmodules(self, patches: list[Patch]) -> list[Patch]:
@@ -449,7 +449,7 @@ class ApplyPatchFile(RepoTask):
             text = self.tr("Patch file {0} can be applied cleanly to your working directory.")
         text = text.format(bquoe(os.path.basename(path)))
         details = self.tr("It will modify <b>%n</b> files:", "", numDeltas)
-        details += ulList(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
+        details += toTightUL(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
         yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), detailText=details)
 
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
@@ -492,7 +492,7 @@ class AbortMerge(RepoTask):
                 message += paragraphs(self.tr("All <b>staged</b> changes will be lost."))
 
             details = paragraphs(self.tr("%n files will be reset:", "", len(abortList)))
-            details += "<span style='white-space: pre'>" + ulList(abortList)
+            details += "<span style='white-space: pre'>" + toTightUL(abortList)
 
         verb = self.tr("Abort merge") if isMerging else self.tr("Abort cherry-pick")
 

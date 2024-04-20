@@ -111,7 +111,7 @@ class SpecialDiffError(Exception):
         humanThreshold = locale.formattedDataSize(threshold, 0)
         loadAnyway = locator.withExtraFlags(NavFlags.AllowLargeFiles)
         configure = makeInternalLink("prefs", "diff_largeFileThresholdKB")
-        longform = ulList([
+        longform = toRoomyUL([
             linkify(translate("Diff", "[Load diff anyway] (this may take a moment)"), loadAnyway.url()),
             linkify(translate("Diff", "[Configure diff preview limit] (currently: {0})"), configure).format(humanThreshold),
         ])
@@ -128,7 +128,7 @@ class SpecialDiffError(Exception):
         humanThreshold = locale.formattedDataSize(threshold, 0)
         loadAnyway = locator.withExtraFlags(NavFlags.AllowLargeFiles)
         configure = makeInternalLink("prefs", "diff_imageFileThresholdKB")
-        longform = ulList([
+        longform = toRoomyUL([
             linkify(translate("Diff", "[Load image anyway] (this may take a moment)"), loadAnyway.url()),
             linkify(translate("Diff", "[Configure image preview limit] (currently: {0})"), configure).format(humanThreshold),
         ])
@@ -233,7 +233,7 @@ class SpecialDiffError(Exception):
                 intro = translate("Diff", "<b>HEAD</b> was moved to another commit &ndash; you can stage this update:")
             else:
                 intro = translate("Diff", "<b>HEAD</b> was moved to another commit:")
-            longformParts.append(f"<p>{intro}<p>{table}</p></p>")
+            longformParts.append(f"{intro}<p>{table}</p>")
 
         # Tell about any uncommitted changes
         if dirty:
@@ -245,7 +245,7 @@ class SpecialDiffError(Exception):
                 lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
             callToAction = linkify(translate("Diff", "[Open] the submodule to commit the changes, or [discard] them."),
                                    openLink, discardLink)
-            longformParts.append(f"<p>{lead}<br>{callToAction}</p>")
+            longformParts.append(f"{lead}<br>{callToAction}")
 
         # Add link to open the submodule as a subtitle
         if stillExists:
@@ -261,9 +261,9 @@ class SpecialDiffError(Exception):
                 "So, you should register the inner repo as a <i>submodule</i>. "
                 "This way, clones of the outer repo will know how to obtain the inner repo."
             ).format(hquo(shortName), hquo(os.path.basename(repo.repo_name())))
-            longformParts.insert(0, f"<p>{text}</p>")
+            longformParts.insert(0, text)
 
         # Compile longform parts into an unordered list
-        specialDiff.longform = ulList(longformParts, -1)
+        specialDiff.longform = toRoomyUL(longformParts)
 
         return specialDiff

@@ -35,18 +35,8 @@ def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operat
         message = translate("Conflict", "Operation {0} has caused a conflict with {1} ({2}):"
                             ).format(bquo(opName), nFilesSubmessage, exc.description)
 
-    # TODO: Use ulList?
-    message += f"<ul><li>"
-    message += "</li><li>".join(exc.conflicts[:maxConflicts])
-    if numConflicts > maxConflicts:
-        numHidden = numConflicts - maxConflicts
-        message += "</li><li><i>"
-        message += translate("Conflict",
-                             "...and {0} more. Only the first {1} conflicts are shown above; "
-                             "click “Show Details” to view all {2} conflicts."
-                             ).format(numHidden, maxConflicts, numConflicts)
-        message += "</li>"
-    message += "</li></ul>"
+    moreText = translate("Conflict", "...and {0} more. Click “Show Details” to view all conflicts.")
+    message += toTightUL(exc.conflicts, limit=maxConflicts, moreText=moreText)
 
     if exc.description == "workdir":
         message += translate("Conflict", "Before you try again, you should either "

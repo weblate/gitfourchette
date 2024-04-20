@@ -452,7 +452,7 @@ class FileList(QListView):
             message = paragraphs(
                 self.tr("For the time being, {0} is unable to export binary patches from a selection of files."),
                 self.tr("The following binary files were skipped in the patch:")).format(qAppName())
-            message += ulList(escape(f) for f in affectedPaths)
+            message += toTightUL(escape(f) for f in affectedPaths)
             showWarning(self, self.tr("Save patch file"), message)
 
         patches = list(self.selectedPatches())

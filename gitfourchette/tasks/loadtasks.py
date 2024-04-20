@@ -295,7 +295,7 @@ class LoadPatch(RepoTask):
             return SpecialDiffError(self.tr("Outdated diff."),
                                     self.tr("The file appears to have changed on disk."),
                                     icon=QStyle.StandardPixmap.SP_MessageBoxWarning,
-                                    longform=ulList(longformItems))
+                                    longform=toRoomyUL(longformItems))
 
         if not patch.delta:
             # Rare libgit2 bug, should be fixed in 1.6.0
