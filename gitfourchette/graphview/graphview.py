@@ -263,13 +263,14 @@ class GraphView(QListView):
         parentTitle = self.tr("%n parents", "singular form can just say 'Parent'", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
-        likelyShallowRoot = len(parentHashes) == 0 and self.repo.is_shallow
-        if likelyShallowRoot:
-            parentTitle += "*"
+        if len(parentHashes) == 0:
+            parentTitle = self.tr("No Parent")
 
-        #childHashes = [shortHash(c) for c in commit.children]
-        #childLabelMarkup = escape(fplural('# Child^ren', len(childHashes)))
-        #childValueMarkup = escape(', '.join(childHashes))
+            if self.repo.is_shallow:
+                parentTitle += "?"
+                parentValueMarkup += "<p><em>" + self.tr(
+                    "You’re working in a shallow clone. This commit may actually have parents in the full history."
+                ) + "</em></p>"
 
         authorMarkup = formatSignature(commit.author)
 
@@ -292,13 +293,19 @@ class GraphView(QListView):
         authorTitle = self.tr("Author")
         committerTitle = self.tr("Committer")
 
-        markup = F"""<big>{summary}</big>{postSummary}
-            <br>
+        stylesheet = """
+        table { margin-top: 16px; }
+        th { text-align: right; padding-right: 8px; }
+        th, td { padding-bottom: 4px; }
+        """
+
+        markup = F"""<style>{stylesheet}</style>
+            <big>{summary}</big>{postSummary}
             <table>
-            <tr><td><b>{hashTitle}&nbsp;</b></td><td>{commit.oid.hex}</td></tr>
-            <tr><td><b>{parentTitle}&nbsp;</b></td><td>{parentValueMarkup}</td></tr>
-            <tr><td><b>{authorTitle}&nbsp;</b></td><td>{authorMarkup}</td></tr>
-            <tr><td><b>{committerTitle}&nbsp;</b></td><td>{committerMarkup}</td></tr>
+            <tr><th>{hashTitle}</th><td>{commit.oid.hex}</td></tr>
+            <tr><th>{parentTitle}</th><td>{parentValueMarkup}</td></tr>
+            <tr><th>{authorTitle}</th><td>{authorMarkup}</td></tr>
+            <tr><th>{committerTitle}</th><td>{committerMarkup}</td></tr>
             """
 
         if debugInfoRequested:
@@ -309,20 +316,14 @@ class GraphView(QListView):
             homeChainTopOid = state.graph.getFrame(homeChainTopRow).commit
             homeChainLocator = NavLocator.inCommit(homeChainTopOid)
             markup += F"""
-                <tr><td><b>View row</b></td><td>{self.currentIndex().row()}</td></tr>
-                <tr><td><b>Graph row</b></td><td>{repr(state.graph.commitRows[oid])}</td></tr>
-                <tr><td><b>Home chain</b></td><td>{repr(homeChainTopRow)} ({homeChainLocator.toHtml(shortHash(homeChainTopOid))})</td></tr>
-                <tr><td><b>Arcs</b></td><td>{len(frame.openArcs)} open, {len(frame.solvedArcs)} solved</td></tr>
+                <tr><td>View row</td><td>{self.currentIndex().row()}</td></tr>
+                <tr><td>Graph row</td><td>{repr(state.graph.commitRows[oid])}</td></tr>
+                <tr><td>Home chain</td><td>{repr(homeChainTopRow)} ({homeChainLocator.toHtml(shortHash(homeChainTopOid))})</td></tr>
+                <tr><td>Arcs</td><td>{len(frame.openArcs)} open, {len(frame.solvedArcs)} solved</td></tr>
             """
             details = str(frame) + "\n\n" + details
 
         markup += "</table>"
-
-        if likelyShallowRoot:
-            markup += "<p>* <em>" + self.tr(
-                "You’re working in a shallow clone of the repository; the full commit log isn’t available. "
-                "This commit may actually have parents in the full history."
-            ) + "</em></p>"
 
         title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
 
