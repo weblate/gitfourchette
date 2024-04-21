@@ -541,6 +541,7 @@ class RepoTaskRunner(QObject):
             flags = QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
             flags |= QEventLoop.ProcessEventsFlag.WaitForMoreEvents
             QApplication.processEvents(flags, 30)
+        self._threadPool.waitForDone()
         assert not self.isBusy()
 
     def put(self, task: RepoTask, *args, **kwargs):
@@ -644,6 +645,11 @@ class RepoTaskRunner(QObject):
 
             elif isinstance(result, BaseException):
                 exception: BaseException = result
+
+                # Flush thread pool - Wait for task background thread to wrap up cleanly,
+                # otherwise we'll still appear to be busy for postTask callbacks.
+                if not self._threadPool.waitForDone():
+                    logger.warning("QThreadPool failed to flush")
 
                 # Stop tracking this task
                 self._releaseTask(task)
