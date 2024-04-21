@@ -421,8 +421,12 @@ class Sidebar(QTreeView):
         self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
 
     def wantSelectNode(self, node: SidebarNode):
+        if self.signalsBlocked():  # Don't bother with the jump if our signals are blocked
+            return
+
         if node is None:
             return
+
         assert isinstance(node, SidebarNode)
 
         item = node.kind

@@ -172,7 +172,7 @@ class RepoWidget(QStackedWidget):
 
         sidebarContainer = self._makeSidebarContainer()
         graphContainer = self._makeGraphContainer()
-        self.filesStack = self._makeFilesStack()
+        self.fileStack = self._makeFileStack()
         diffContainer = self._makeDiffContainer()
 
         diffBanner = Banner(self, orientation=Qt.Orientation.Horizontal)
@@ -201,7 +201,7 @@ class RepoWidget(QStackedWidget):
         splitterB.addWidget(filesDiffContainer)
         splitterB.setSizes([100, 150])
 
-        splitterC.addWidget(self.filesStack)
+        splitterC.addWidget(self.fileStack)
         splitterC.addWidget(diffContainer)
         splitterC.setSizes([100, 300])
         splitterC.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
@@ -283,7 +283,7 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
     # Initial layout
 
-    def _makeFilesStack(self):
+    def _makeFileStack(self):
         dirtyContainer = self._makeDirtyContainer()
         stageContainer = self._makeStageContainer()
         committedFilesContainer = self._makeCommittedFilesContainer()
@@ -294,11 +294,10 @@ class RepoWidget(QStackedWidget):
         workdirSplitter.setObjectName("Split_Workdir")
         workdirSplitter.setChildrenCollapsible(False)
 
-        filesStack = QStackedWidget()
-        filesStack.addWidget(workdirSplitter)
-        filesStack.addWidget(committedFilesContainer)
-
-        return filesStack
+        fileStack = QStackedWidget()
+        fileStack.addWidget(workdirSplitter)
+        fileStack.addWidget(committedFilesContainer)
+        return fileStack
 
     def _makeDirtyContainer(self):
         header = QElidedLabel(" ")
@@ -877,15 +876,6 @@ class RepoWidget(QStackedWidget):
         buttonBox.button(resetSB).clicked.connect(lambda: onAccept(""))
         buttonBox.button(resetSB).clicked.connect(dlg.close)
 
-    def setNoCommitSelected(self):
-        self.saveFilePositions()
-        self.navLocator = NavLocator()
-
-        self.setFileStackPage("workdir")
-        self.committedFiles.clear()
-
-        self.clearDiffView()
-
     def loadPatchInNewWindow(self, patch: Patch, locator: NavLocator):
         with NonCriticalOperation(self.tr("Load diff in new window")):
             diffWindow = DiffView(self)
@@ -1241,10 +1231,14 @@ class RepoWidget(QStackedWidget):
         return typing.get_args(FileStackPage)
 
     def fileStackPage(self) -> FileStackPage:
-        return self._fileStackPageValues[self.filesStack.currentIndex()]
+        return self._fileStackPageValues[self.fileStack.currentIndex()]
 
     def setFileStackPage(self, p: FileStackPage):
-        self.filesStack.setCurrentIndex(self._fileStackPageValues.index(p))
+        self.fileStack.setCurrentIndex(self._fileStackPageValues.index(p))
+
+    def setFileStackPageByContext(self, context: NavContext):
+        page: FileStackPage = "workdir" if context.isWorkdir() else "commit"
+        self.setFileStackPage(page)
 
     @property
     def _diffStackPageValues(self):

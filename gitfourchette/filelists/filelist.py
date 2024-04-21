@@ -340,6 +340,13 @@ class FileList(QListView):
     def selectionChanged(self, justSelected: QItemSelection, justDeselected: QItemSelection):
         super().selectionChanged(justSelected, justDeselected)
 
+        # We're the active FileList, clear counterpart.
+        self._setCounterpart(-1)
+
+        # Don't bother emitting signals if we're blocked
+        if self.signalsBlocked():
+            return
+
         selectedIndexes = self.selectedIndexes()
         numSelectedTotal = len(selectedIndexes)
 
@@ -358,9 +365,6 @@ class FileList(QListView):
                 current = None
 
         self.selectedCountChanged.emit(numSelectedTotal)
-
-        # We're the active FileList, clear counterpart.
-        self._setCounterpart(-1)
 
         if current and current.isValid():
             locator = self.getNavLocatorForIndex(current)

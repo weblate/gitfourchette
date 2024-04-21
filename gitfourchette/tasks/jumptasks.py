@@ -56,7 +56,7 @@ class Jump(RepoTask):
         try:
             # Show workdir or commit views (and update them if needed)
             if locator.context == NavContext.SPECIAL:
-                yield from self.showSpecial(locator)
+                self.showSpecial(locator)  # always raises Jump.Result
             elif locator.context.isWorkdir():
                 locator = yield from self.showWorkdir(locator)
             else:
@@ -77,11 +77,9 @@ class Jump(RepoTask):
         locator = result.locator
         self.saveFinalLocator(locator)
 
-        # Set correct card in filesStack (after selecting the file to avoid flashing)
-        if locator.context.isWorkdir():
-            self.rw.setFileStackPage("workdir")
-        else:
-            self.rw.setFileStackPage("commit")
+        # Set correct card in fileStack (may have been done by selectCorrectFile
+        # above, but do it again in case a Result was raised early)
+        self.rw.setFileStackPageByContext(locator.context)
 
         self.displayResult(result)
 
@@ -204,8 +202,6 @@ class Jump(RepoTask):
         else:
             raise Jump.Result(locator, "", SpecialDiffError(f"Unsupported special locator: {locator}"))
 
-        yield from self.flowEnterUiThread()  # dummy yield to make this a generator
-
     def showCommit(self, locator: NavLocator) -> NavLocator:
         """
         Jump to a commit.
@@ -319,22 +315,21 @@ class Jump(RepoTask):
             locator = rw.navHistory.refine(locator)
 
         with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles, rw.committedFiles):
-            # Clear selection in other FileListViews
-            for otherFlv in rw.dirtyFiles, rw.stagedFiles, rw.committedFiles:
-                if otherFlv is not flv:
-                    otherFlv.clearSelection()
-
             # Select correct row in file list
             anyFile = False
             if locator.path:
                 # Fix multiple "ghost" selections in DirtyFiles/StagedFiles with JumpBackOrForward.
                 if not locator.hasFlags(NavFlags.AllowMultiSelect):
                     flv.clearSelection()
-
+                # Select the file, if possible
                 anyFile = flv.selectFile(locator.path)
 
             # Special treatment for workdir
             if locator.context.isWorkdir():
+                # Clear selection in other workdir FileList
+                otherFlv = rw.stagedFiles if locator.context != NavContext.STAGED else rw.dirtyFiles
+                otherFlv.clearSelection()
+
                 if not anyFile:
                     rw.stageButton.setEnabled(False)
                     rw.unstageButton.setEnabled(False)
@@ -352,6 +347,9 @@ class Jump(RepoTask):
                 flv.clearSelection()
                 locator = locator.replace(path="")
                 raise Jump.Result(locator, "", None)
+
+        # Set correct card in fileStack (after selecting the file to avoid flashing)
+        self.rw.setFileStackPageByContext(locator.context)
 
         return locator
 
