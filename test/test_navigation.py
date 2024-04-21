@@ -249,6 +249,42 @@ def testRestoreLastSelectedFileInContext(tempDir, mainWindow):
     assertHistoryMatches(rw, NavLocator.inCommit(oid2, "b/b2.txt"))
 
 
+def testAbstractWorkdirLocatorRedirectsToConcreteLocator(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(F"{wd}/a/a1", "blah blah a1")
+    writeFile(F"{wd}/a/a1.txt", "blah blah a1.txt")
+    writeFile(F"{wd}/b/b1.txt", "blah blah b1")
+    writeFile(F"{wd}/c/c1.txt", "blah blah c1")
+    writeFile(F"{wd}/c/c2.txt", "blah blah c2")
+    rw = mainWindow.openRepo(wd)
+
+    oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
+    oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
+
+    # Ensure we're starting from the workdir
+    assertHistoryMatches(rw, NavLocator.inUnstaged("a/a1"))
+
+    # Stage c1 and c2
+    assert "c/c2.txt" == qlvClickNthRow(rw.dirtyFiles, 4); rw.dirtyFiles.stage()
+    assert "c/c1.txt" == qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()
+
+    # Select an unstaged file, jump to a commit, and then back to the workdir.
+    # Ensure our selection is kept.
+    qlvClickNthRow(rw.dirtyFiles, 1)  # select second unstaged file
+    assertHistoryMatches(rw, NavLocator.inUnstaged("a/a1.txt"))
+    rw.jump(NavLocator.inCommit(oid1))  # jump out of workdir
+    rw.jump(NavLocator.inWorkdir())  # jump to abstract workdir locator
+    assertHistoryMatches(rw, NavLocator.inUnstaged("a/a1.txt"))  # shouldn't have lost our position in the workidr
+
+    # Select a staged file, jump to a commit, and then back to the workdir.
+    # Ensure our selection is kept.
+    qlvClickNthRow(rw.stagedFiles, 1)  # select second staged file
+    assertHistoryMatches(rw, NavLocator.inStaged("c/c2.txt"))
+    rw.jump(NavLocator.inCommit(oid1))  # jump out of workdir
+    rw.jump(NavLocator.inWorkdir())  # jump to abstract workdir locator
+    assertHistoryMatches(rw, NavLocator.inStaged("c/c2.txt"))  # shouldn't have lost our position in the workdir
+
+
 def testSaveScrollPosition(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/long.txt", "\n".join(f"cats are cute {i}" for i in range(1, 10_000)))

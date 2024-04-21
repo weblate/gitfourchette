@@ -295,6 +295,11 @@ class NavHistory:
         self.recent[pos.contextKey] = pos
         self.recent[pos.fileKey] = pos
 
+        if pos.context in [NavContext.STAGED, NavContext.UNSTAGED]:
+            # This is a "concrete" workdir locator. Redirect to it when jumping to the
+            # "abstract" workdir locator (e.g. by clicking on Uncommitted Changes).
+            self.recent[NavContext.WORKDIR.name] = pos
+
         now = time.time()
         if self.ignoreDelay:
             recentPush = False

@@ -7,6 +7,7 @@ from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
@@ -219,6 +220,24 @@ def testAmendAltersCommitterDate(tempDir, mainWindow):
     assert amendedHeadCommit.message == "hold on a sec..."
     assert signatures_equalish(amendedHeadCommit.author, headCommit.author)
     assert not signatures_equalish(amendedHeadCommit.author, amendedHeadCommit.committer)
+
+
+def testCommitDialogJumpsToWorkdir(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.fileWithStagedAndUnstagedChanges(wd)
+    rw = mainWindow.openRepo(wd)
+
+    oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    rw.jump(NavLocator.inCommit(oid1))
+
+    triggerMenuAction(mainWindow.menuBar(), r"file/commit")
+    findQDialog(rw, r"commit").reject()
+    assert NavLocator.inUnstaged("a/a1.txt").isSimilarEnoughTo(rw.navLocator)
+
+    rw.jump(NavLocator.inStaged("a/a1.txt"))
+    triggerMenuAction(mainWindow.menuBar(), r"file/commit")
+    findQDialog(rw, r"commit").reject()
+    assert NavLocator.inStaged("a/a1.txt").isSimilarEnoughTo(rw.navLocator)
 
 
 def testResetHeadToCommit(tempDir, mainWindow):
