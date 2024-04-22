@@ -122,9 +122,8 @@ class CloneTask(RepoTask):
         dialog.aboutToReject.connect(self.remoteLink.raiseAbortFlag)
 
         yield from self.flowEnterWorkerThread()
-        self.remoteLink.discoverKeyFiles(url)
-        pygit2.clone_repository(url, path, callbacks=self.remoteLink)
-        self.remoteLink.rememberSuccessfulKeyFile()
+        with self.remoteLink.remoteKeyFileContext(url):
+            pygit2.clone_repository(url, path, callbacks=self.remoteLink)
 
         yield from self.flowEnterUiThread()
         settings.history.addCloneUrl(url)

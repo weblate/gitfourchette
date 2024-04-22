@@ -73,9 +73,8 @@ class DeleteRemoteBranch(_BaseNetTask):
 
         yield from self.flowEnterWorkerThread()
         remote = self.repo.remotes[remoteName]
-        self.remoteLink.discoverKeyFiles(remote)
-        self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
-        self.remoteLink.rememberSuccessfulKeyFile()
+        with self.remoteLink.remoteKeyFileContext(remote):
+            self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
 
 
 class RenameRemoteBranch(_BaseNetTask):
@@ -108,9 +107,8 @@ class RenameRemoteBranch(_BaseNetTask):
 
         yield from self.flowEnterWorkerThread()
         remote = self.repo.remotes[remoteName]
-        self.remoteLink.discoverKeyFiles(remote)
-        self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
-        self.remoteLink.rememberSuccessfulKeyFile()
+        with self.remoteLink.remoteKeyFileContext(remote):
+            self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
 
 
 class FetchRemote(_BaseNetTask):
@@ -127,9 +125,8 @@ class FetchRemote(_BaseNetTask):
         self.remoteLinkDialog.setLabelText(connectingMessage)
 
         yield from self.flowEnterWorkerThread()
-        self.remoteLink.discoverKeyFiles(remote)
-        self.repo.fetch_remote(remoteName, self.remoteLink)
-        self.remoteLink.rememberSuccessfulKeyFile()
+        with self.remoteLink.remoteKeyFileContext(remote):
+            self.repo.fetch_remote(remoteName, self.remoteLink)
 
 
 class FetchRemoteBranch(_BaseNetTask):
@@ -151,9 +148,8 @@ class FetchRemoteBranch(_BaseNetTask):
         with suppress(KeyError):
             oldTarget = self.repo.branches.remote[remoteBranchName].target
 
-        self.remoteLink.discoverKeyFiles(remote)
-        self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
-        self.remoteLink.rememberSuccessfulKeyFile()
+        with self.remoteLink.remoteKeyFileContext(remote):
+            self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
 
         with suppress(KeyError):
             newTarget = self.repo.branches.remote[remoteBranchName].target

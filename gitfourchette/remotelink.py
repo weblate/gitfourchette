@@ -262,3 +262,19 @@ class RemoteLink(QObject, RemoteCallbacks):
             strippedUrl = stripRemoteUrlPath(self.lastAttemptUrl)
             settings.history.setRemoteWorkingKey(strippedUrl, self.lastAttemptKey)
             logger.debug(f"Remembering key '{self.lastAttemptKey}' for host '{strippedUrl}'")
+
+    def remoteKeyFileContext(self, remote: Remote | str):
+        return RemoteLinkKeyFileContext(self, remote)
+
+
+class RemoteLinkKeyFileContext:
+    def __init__(self, remoteLink: RemoteLink, remote: Remote | str):
+        self.remoteLink = remoteLink
+        self.remote = remote
+
+    def __enter__(self):
+        self.remoteLink.discoverKeyFiles(self.remote)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.remoteLink.rememberSuccessfulKeyFile()
