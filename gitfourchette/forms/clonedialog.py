@@ -1,18 +1,18 @@
 import traceback
 
 from gitfourchette import settings
-from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
-from gitfourchette.tasks import RepoTaskRunner
+from gitfourchette.tasks import RepoTask, RepoTaskRunner
 import pygit2
 
 
 class CloneDialog(QDialog):
     cloneSuccessful = Signal(str)
+    aboutToReject = Signal()
 
     def initUrlComboBox(self):
         self.ui.urlEdit.clear()
@@ -35,7 +35,6 @@ class CloneDialog(QDialog):
     def __init__(self, initialUrl: str, parent: QWidget):
         super().__init__(parent)
 
-        self.cloneInProgress = False
         self.remoteLink = None
         self.taskRunner = RepoTaskRunner(self)
 
@@ -63,13 +62,13 @@ class CloneDialog(QDialog):
         convertToBrandedDialog(self)
 
         self.ui.urlEdit.setFocus()
-        #self.setMaximumHeight(self.height())
 
     def reject(self):
-        if self.cloneInProgress:
-            self.remoteLink.raiseAbortFlag()
-        else:
-            super().reject()
+        # Emit "aboutToReject" before destroying the dialog so TaskRunner has time to wrap up.
+        self.aboutToReject.emit()
+        self.taskRunner.killCurrentTask()
+        self.taskRunner.joinZombieTask()
+        super().reject()  # destroys the dialog then emits the "rejected" signal
 
     @property
     def url(self):
@@ -96,42 +95,47 @@ class CloneDialog(QDialog):
             widget.setEnabled(enable)
 
     def onCloneClicked(self):
-        self.enableInputs(False)
+        self.taskRunner.put(CloneTask(self), self.url, self.path)
 
-        url = self.url
-        path = self.path
 
-        self.cloneInProgress = True
+class CloneTask(RepoTask):
+    """
+    Even though we don't have a Repository yet, this is a RepoTask so we can
+    easily run the clone operation in a background thread.
+    """
 
-        link = RemoteLink(self)
-        self.remoteLink = link
+    def __init__(self, dialog: CloneDialog):
+        super().__init__(dialog)
+        self.cloneDialog = dialog
+        self.remoteLink = RemoteLink(self)
 
-        self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
-        link.message.connect(self.ui.statusForm.setProgressMessage)
-        link.progress.connect(self.ui.statusForm.setProgressValue)
+        dialog.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
+        self.remoteLink.message.connect(dialog.ui.statusForm.setProgressMessage)
+        self.remoteLink.progress.connect(dialog.ui.statusForm.setProgressValue)
 
-        cloneDialog = self
+    def abort(self):
+        self.remoteLink.raiseAbortFlag()
 
-        class CloneTask(tasks.RepoTask):
-            def flow(self):
-                yield from self.flowEnterWorkerThread()
-                link.discoverKeyFiles(url)
-                pygit2.clone_repository(url, path, callbacks=link)
-                link.rememberSuccessfulKeyFile()
+    def flow(self, url: str, path: str):
+        dialog = self.cloneDialog
+        dialog.enableInputs(False)
+        dialog.aboutToReject.connect(self.remoteLink.raiseAbortFlag)
 
-                yield from self.flowEnterUiThread()
-                cloneDialog.cloneInProgress = False
-                settings.history.addCloneUrl(url)
-                settings.history.write()
-                cloneDialog.cloneSuccessful.emit(path)
-                cloneDialog.accept()
+        yield from self.flowEnterWorkerThread()
+        self.remoteLink.discoverKeyFiles(url)
+        pygit2.clone_repository(url, path, callbacks=self.remoteLink)
+        self.remoteLink.rememberSuccessfulKeyFile()
 
-            def onError(self, exc: BaseException):
-                traceback.print_exception(exc.__class__, exc, exc.__traceback__)
-                QApplication.beep()
-                QApplication.alert(cloneDialog, 500)
-                cloneDialog.cloneInProgress = False
-                cloneDialog.enableInputs(True)
-                cloneDialog.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
+        yield from self.flowEnterUiThread()
+        settings.history.addCloneUrl(url)
+        settings.history.write()
+        dialog.cloneSuccessful.emit(path)
+        dialog.accept()
 
-        self.taskRunner.put(CloneTask(self))
+    def onError(self, exc: BaseException):
+        traceback.print_exception(exc.__class__, exc, exc.__traceback__)
+        dialog = self.cloneDialog
+        QApplication.beep()
+        QApplication.alert(dialog, 500)
+        dialog.enableInputs(True)
+        dialog.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
