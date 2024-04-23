@@ -1,39 +1,54 @@
 import logging
 
 from gitfourchette.qt import *
-from gitfourchette.forms.ui_statusform import Ui_StatusForm
 
 logger = logging.getLogger(__name__)
 
 
-class StatusForm(QWidget):
+class StatusForm(QStackedWidget):
     def __init__(self, parent):
         super().__init__(parent)
-        self.ui = Ui_StatusForm()
-        self.ui.setupUi(self)
 
-        self.ui.progressBar.setMinimum(0)
-        self.ui.progressBar.setMaximum(0)
-        self.ui.progressBar.setValue(0)
+        self.blurbLabel = QLabel("")
+        self.blurbLabel.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.blurbLabel.setWordWrap(True)
+        self.blurbLabel.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextSelectableByMouse)
+        blurbPage = QScrollArea()
+        blurbPage.setWidget(self.blurbLabel)
+        blurbPage.setFrameShape(QFrame.Shape.NoFrame)
+        blurbPage.setWidgetResizable(True)
 
-        self.setBlurb("")
+        self.progressMessage = QLabel("Line1\nLine2")
+        self.progressMessage.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.progressMessage.setWordWrap(True)
+        self.progressBar = QProgressBar()
+        progressPage = QWidget()
+        progressLayout = QVBoxLayout(progressPage)
+        progressLayout.addWidget(self.progressMessage)
+        progressLayout.addWidget(self.progressBar)
+
+        self.blurbLabel.setContentsMargins(4,4,4,4)
+        progressLayout.setContentsMargins(4,4,4,4)
+
+        self.addWidget(blurbPage)
+        self.addWidget(progressPage)
 
     def setBlurb(self, text: str):
-        self.ui.stackedWidget.setCurrentWidget(self.ui.blurbPage)
-        self.ui.blurbLabel.setText(text)
+        self.setCurrentIndex(0)
+        self.blurbLabel.setText(text)
 
     def initProgress(self, text: str):
-        self.ui.stackedWidget.setCurrentWidget(self.ui.progressPage)
-        self.ui.linkMessage.setText(text)
-        self.ui.progressBar.setMinimum(0)
-        self.ui.progressBar.setMaximum(0)
-        self.ui.progressBar.setValue(0)
+        self.setCurrentIndex(1)
+        self.progressMessage.setText(text)
+        self.progressBar.setMinimum(0)
+        self.progressBar.setMaximum(0)
+        self.progressBar.setValue(0)
 
     def setProgressValue(self, value: int, maximum: int):
-        self.ui.progressBar.setValue(value)
-        self.ui.progressBar.setMaximum(maximum)
+        self.progressBar.setValue(value)
+        self.progressBar.setMaximum(maximum)
 
     def setProgressMessage(self, message: str):
         if message.startswith("Sideband"):
             logger.info(f"Sideband >{message.encode('utf-8', errors='ignore')}<")
-        self.ui.linkMessage.setText(message)
+        self.progressMessage.setText(message)
