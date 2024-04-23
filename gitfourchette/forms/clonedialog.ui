@@ -72,7 +72,7 @@
     </widget>
    </item>
    <item row="1" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="pathLayout">
      <item>
       <widget class="QLineEdit" name="pathEdit"/>
      </item>
@@ -86,14 +86,67 @@
     </layout>
    </item>
    <item row="2" column="0">
-    <widget class="QLabel" name="label">
+    <widget class="QLabel" name="optionsLabel">
+     <property name="text">
+      <string>Options</string>
+     </property>
+     <property name="buddy">
+      <cstring>shallowCloneCheckBox</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <layout class="QHBoxLayout" name="shallowCloneLayout">
+     <item>
+      <widget class="QCheckBox" name="shallowCloneCheckBox">
+       <property name="toolTip">
+        <string>&lt;p&gt;Tick this to download just the latest commits, not the entire history of the repository.</string>
+       </property>
+       <property name="text">
+        <string notr="true">(SHALLOW CLONE)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="shallowCloneDepthSpinBox">
+       <property name="showGroupSeparator" stdset="0">
+        <bool>true</bool>
+       </property>
+       <property name="prefix">
+        <string/>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>999999</number>
+       </property>
+       <property name="stepType">
+        <enum>QAbstractSpinBox::AdaptiveDecimalStepType</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="shallowCloneSuffix">
+       <property name="text">
+        <string notr="true">(SUFFIX)</string>
+       </property>
+       <property name="buddy">
+        <cstring>shallowCloneDepthSpinBox</cstring>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="statusLabel">
      <property name="text">
       <string>Status</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
-    <widget class="QGroupBox" name="groupBox">
+   <item row="3" column="1">
+    <widget class="QGroupBox" name="statusGroupBox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -104,13 +157,25 @@
       <string/>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="StatusForm" name="statusForm" native="true"/>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="4" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -147,8 +212,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>195</x>
-     <y>186</y>
+     <x>290</x>
+     <y>254</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>

@@ -1,36 +1,23 @@
+import re
 import traceback
 
+import pygit2
+
 from gitfourchette import settings
-from gitfourchette.qt import *
-from gitfourchette.remotelink import RemoteLink
-from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
+from gitfourchette.qt import *
+from gitfourchette.remotelink import RemoteLink
 from gitfourchette.tasks import RepoTask, RepoTaskRunner
-import pygit2
+from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 
 class CloneDialog(QDialog):
     cloneSuccessful = Signal(str)
     aboutToReject = Signal()
 
-    def initUrlComboBox(self):
-        self.ui.urlEdit.clear()
-        self.ui.urlEdit.addItem("")
-        if settings.history.cloneHistory:
-            self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
-            for url in settings.history.cloneHistory:
-                self.ui.urlEdit.addItem(url)
-            self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
-            self.ui.urlEdit.addItem(stockIcon("edit-clear-history"), self.tr("Clear history"), "CLEAR")
-        self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
-
-    def onComboBoxItemActivated(self, index):
-        itemData = self.ui.urlEdit.itemData(index, Qt.ItemDataRole.UserRole)
-        if itemData == "CLEAR":  # clear history
-            settings.history.clearCloneHistory()
-            settings.history.write()
-            self.initUrlComboBox()
+    urlEditUserDataClearHistory = "CLEAR_HISTORY"
 
     def __init__(self, initialUrl: str, parent: QWidget):
         super().__init__(parent)
@@ -42,7 +29,7 @@ class CloneDialog(QDialog):
         self.ui.setupUi(self)
 
         self.initUrlComboBox()
-        self.ui.urlEdit.activated.connect(self.onComboBoxItemActivated)
+        self.ui.urlEdit.activated.connect(self.onUrlActivated)
 
         self.ui.browseButton.setIcon(stockIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
         self.ui.browseButton.clicked.connect(self.browse)
@@ -57,11 +44,50 @@ class CloneDialog(QDialog):
 
         self.ui.statusForm.setBlurb(self.tr("Hit “Clone” when ready."))
 
-        self.ui.urlEdit.setCurrentText(initialUrl)
+        self.ui.shallowCloneDepthSpinBox.valueChanged.connect(self.onShallowCloneDepthChanged)
+        self.ui.shallowCloneCheckBox.stateChanged.connect(self.onShallowCloneCheckBoxStateChanged)
+        self.ui.shallowCloneCheckBox.setMinimumHeight(max(self.ui.shallowCloneCheckBox.height(), self.ui.shallowCloneDepthSpinBox.height()))  # prevent jumping around
+        self.onShallowCloneCheckBoxStateChanged(self.ui.shallowCloneCheckBox.checkState())
 
         convertToBrandedDialog(self)
 
+        self.ui.urlEdit.setCurrentText(initialUrl)
         self.ui.urlEdit.setFocus()
+
+    def initUrlComboBox(self):
+        self.ui.urlEdit.clear()
+        self.ui.urlEdit.addItem("")
+        if settings.history.cloneHistory:
+            self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
+            for url in settings.history.cloneHistory:
+                self.ui.urlEdit.addItem(url)
+            self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
+            self.ui.urlEdit.addItem(stockIcon("edit-clear-history"), self.tr("Clear history"), CloneDialog.urlEditUserDataClearHistory)
+        self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+
+    def onUrlActivated(self, index: int):
+        itemData = self.ui.urlEdit.itemData(index, Qt.ItemDataRole.UserRole)
+        if itemData == CloneDialog.urlEditUserDataClearHistory:
+            settings.history.clearCloneHistory()
+            settings.history.write()
+            self.initUrlComboBox()
+
+    def onShallowCloneCheckBoxStateChanged(self, state):
+        isChecked = state not in [0, Qt.CheckState.Unchecked]
+        if isChecked:
+            self.onShallowCloneDepthChanged(self.ui.shallowCloneDepthSpinBox.value())
+        else:
+            self.ui.shallowCloneCheckBox.setText(self.tr("&Shallow clone"))
+        self.ui.shallowCloneDepthSpinBox.setVisible(isChecked)
+        self.ui.shallowCloneSuffix.setVisible(isChecked)
+
+    def onShallowCloneDepthChanged(self, depth: int):
+        # Re-translate text for correct plural form
+        text = self.tr("&Shallow clone: Fetch up to %n commits per branch", "", depth)
+        parts = re.split(r"\b\d(?:.*\d)?\b", text, 1)
+        assert len(parts) >= 2
+        self.ui.shallowCloneCheckBox.setText(parts[0].strip())
+        self.ui.shallowCloneSuffix.setText(parts[1].strip())
 
     def reject(self):
         # Emit "aboutToReject" before destroying the dialog so TaskRunner has time to wrap up.
@@ -88,14 +114,27 @@ class CloneDialog(QDialog):
         qfd.show()
 
     def enableInputs(self, enable):
-        for widget in [self.ui.urlLabel, self.ui.urlEdit,
-                       self.ui.pathLabel, self.ui.pathEdit,
-                       self.ui.browseButton,
-                       self.cloneButton]:
+        grayable = [
+            self.ui.urlLabel,
+            self.ui.urlEdit,
+            self.ui.pathLabel,
+            self.ui.pathEdit,
+            self.ui.browseButton,
+            self.ui.shallowCloneCheckBox,
+            self.ui.shallowCloneDepthSpinBox,
+            self.ui.shallowCloneSuffix,
+            self.cloneButton
+        ]
+        for widget in grayable:
             widget.setEnabled(enable)
 
     def onCloneClicked(self):
-        self.taskRunner.put(CloneTask(self), self.url, self.path)
+        depth = 0
+
+        if self.ui.shallowCloneCheckBox.isChecked():
+            depth = self.ui.shallowCloneDepthSpinBox.value()
+
+        self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth)
 
 
 class CloneTask(RepoTask):
@@ -116,14 +155,14 @@ class CloneTask(RepoTask):
     def abort(self):
         self.remoteLink.raiseAbortFlag()
 
-    def flow(self, url: str, path: str):
+    def flow(self, url: str, path: str, depth: int):
         dialog = self.cloneDialog
         dialog.enableInputs(False)
         dialog.aboutToReject.connect(self.remoteLink.raiseAbortFlag)
 
         yield from self.flowEnterWorkerThread()
         with self.remoteLink.remoteKeyFileContext(url):
-            pygit2.clone_repository(url, path, callbacks=self.remoteLink)
+            pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
 
         yield from self.flowEnterUiThread()
         settings.history.addCloneUrl(url)
@@ -137,4 +176,4 @@ class CloneTask(RepoTask):
         QApplication.beep()
         QApplication.alert(dialog, 500)
         dialog.enableInputs(True)
-        dialog.ui.statusForm.setBlurb(F"<b>{type(exc).__name__}:</b> {escape(str(exc))}")
+        dialog.ui.statusForm.setBlurb(f"<span style='white-space: pre;'><b>{TrTables.exceptionName(exc)}:</b> {escape(str(exc))}")
