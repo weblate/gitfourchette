@@ -29,10 +29,10 @@ class Banner(QFrame):
         dismissButton.clicked.connect(self.hide)
 
         if orientation == Qt.Orientation.Vertical:
-            layout = QVBoxLayout()
+            layout = QVBoxLayout(self)
         else:
             label.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Minimum)
-            layout = QHBoxLayout()
+            layout = QHBoxLayout(self)
 
         layout.setContentsMargins(0,0,0,0)
         # layout.setSpacing(0)
@@ -40,7 +40,6 @@ class Banner(QFrame):
         layout.addWidget(label)
         layout.addWidget(button)
         layout.addWidget(dismissButton)
-        self.setLayout(layout)
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 

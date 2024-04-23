@@ -21,7 +21,9 @@ SAMPLE_SIGNATURE = Signature("Jean-Michel Tartempion", "jm.tarte@example.com", 0
 SAMPLE_FILE_PATH = "spam/.ham/eggs/hello.c"
 
 
-def _boxWidget(layout, *controls):
+def _boxWidget(layoutType, *controls):
+    w = QWidget()
+    layout: QBoxLayout = layoutType(w)
     layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
     for control in controls:
@@ -29,17 +31,15 @@ def _boxWidget(layout, *controls):
             layout.addStretch()
         else:
             layout.addWidget(control)
-    w = QWidget()
-    w.setLayout(layout)
     return w
 
 
 def vBoxWidget(*controls):
-    return _boxWidget(QVBoxLayout(), *controls)
+    return _boxWidget(QVBoxLayout, *controls)
 
 
 def hBoxWidget(*controls):
-    return _boxWidget(QHBoxLayout(), *controls)
+    return _boxWidget(QHBoxLayout, *controls)
 
 
 def splitSettingKey(n):
@@ -72,10 +72,9 @@ class PrefsDialog(QDialog):
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
 
-        layout = QVBoxLayout()
+        layout = QVBoxLayout(self)
         layout.addWidget(tabWidget)
         layout.addWidget(buttonBox)
-        self.setLayout(layout)
 
         # Make tabs vertical if possible (macOS style: too messy)
         if qtIsNativeMacosStyle():
@@ -114,11 +113,10 @@ class PrefsDialog(QDialog):
                 form = categoryForms[category]
             except KeyError:
                 # Create form in new tab for this category
-                form = QFormLayout()
+                formContainer = QWidget(self)
+                form = QFormLayout(formContainer)
                 form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
                 categoryForms[category] = form
-                formContainer = QWidget(self)
-                formContainer.setLayout(form)
                 tabName = TrTables.prefKey(category)
                 tabWidget.addTab(formContainer, tabName)
 

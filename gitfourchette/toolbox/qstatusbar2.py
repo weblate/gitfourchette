@@ -26,11 +26,10 @@ class QStatusBar2(QStatusBar):
         # Emojis such as the lightbulb may increase the label's height
         self.busyWidget.setMaximumHeight(self.fontMetrics().height())
 
-        layout = QHBoxLayout()
+        layout = QHBoxLayout(self.busyWidget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.busySpinner)
         layout.addWidget(self.busyLabel, 1)
-        self.busyWidget.setLayout(layout)
 
         self.busyWidget.setVisible(False)
 

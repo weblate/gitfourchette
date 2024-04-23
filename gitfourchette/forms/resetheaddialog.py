@@ -111,7 +111,7 @@ class ResetHeadDialog(QDialog):
         vbar.setFrameShape(QFrame.Shape.VLine)
         vbar.setFrameShadow(QFrame.Shadow.Sunken)
 
-        mainVBL = QVBoxLayout()
+        mainVBL = QVBoxLayout(self)
         centerHBL = QHBoxLayout()
         buttonVBL = QVBoxLayout()
 
@@ -140,7 +140,6 @@ class ResetHeadDialog(QDialog):
         mainVBL.addWidget(buttonBox)
 
         self.resize(500, 400)
-        self.setLayout(mainVBL)
 
         self.modeButtons[DEFAULT_MODE].setChecked(True)
         self.modeButtons[DEFAULT_MODE].setFocus()

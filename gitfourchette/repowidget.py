@@ -184,7 +184,6 @@ class RepoWidget(QStackedWidget):
         filesDiffLayout = QVBoxLayout(filesDiffContainer)
         filesDiffLayout.setContentsMargins(QMargins())
         filesDiffLayout.setSpacing(2)
-        filesDiffContainer.setLayout(filesDiffLayout)
         filesDiffLayout.addWidget(splitterC, 1)
         filesDiffLayout.addWidget(diffBanner)
 
@@ -320,7 +319,8 @@ class RepoWidget(QStackedWidget):
         stageButton.setMenu(stageMenu)
         stageButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
 
-        layout = QGridLayout()
+        container = QWidget()
+        layout = QGridLayout(container)
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
         layout.setContentsMargins(QMargins())
         layout.addWidget(header,                0, 0)
@@ -332,9 +332,6 @@ class RepoWidget(QStackedWidget):
 
         stageButton.clicked.connect(dirtyFiles.stage)
         dirtyFiles.selectedCountChanged.connect(lambda n: stageButton.setEnabled(n > 0))
-
-        container = QWidget()
-        container.setLayout(layout)
 
         self.dirtyFiles = dirtyFiles
         self.dirtyHeader = header
@@ -359,14 +356,13 @@ class RepoWidget(QStackedWidget):
         unstageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
 
-        commitButtonsLayout = QHBoxLayout()
+        commitButtonsContainer = QWidget()
+        commitButtonsLayout = QHBoxLayout(commitButtonsContainer)
         commitButtonsLayout.setContentsMargins(0, 0, 0, 0)
         commitButton = QPushButton(self.tr("Commit"))
         amendButton = QPushButton(self.tr("Amend"))
         commitButtonsLayout.addWidget(commitButton)
         commitButtonsLayout.addWidget(amendButton)
-        commitButtonsContainer = QWidget()
-        commitButtonsContainer.setLayout(commitButtonsLayout)
 
         unifiedCommitButton = QToolButton()
         unifiedCommitButton.setText(self.tr("Commit..."))
@@ -398,7 +394,8 @@ class RepoWidget(QStackedWidget):
         stagedFiles.selectedCountChanged.connect(lambda n: unstageButton.setEnabled(n > 0))
 
         # Lay out container
-        layout = QGridLayout()
+        container = QWidget()
+        layout = QGridLayout(container)
         layout.setContentsMargins(QMargins())
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
         layout.addWidget(header,                0, 0)
@@ -408,8 +405,6 @@ class RepoWidget(QStackedWidget):
         layout.addWidget(stagedFiles,           3, 0, 1, 2)
         layout.addWidget(commitButtonsStack,    4, 0, 1, 2)
         layout.setRowStretch(3, 100)
-        container = QWidget()
-        container.setLayout(layout)
 
         # Save references
         self.stagedHeader = header
@@ -428,16 +423,14 @@ class RepoWidget(QStackedWidget):
         header.setObjectName("committedHeader")
         header.setMinimumHeight(FILEHEADER_HEIGHT)
 
-        layout = QVBoxLayout()
+        container = QWidget()
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(QMargins())
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
         layout.addWidget(header)
         layout.addWidget(committedFiles.searchBar)
         layout.addSpacing(1)
         layout.addWidget(committedFiles)
-
-        container = QWidget()
-        container.setLayout(layout)
 
         self.committedFiles = committedFiles
         self.committedHeader = header
@@ -446,14 +439,12 @@ class RepoWidget(QStackedWidget):
     def _makeGraphContainer(self):
         graphView = GraphView(self)
 
-        layout = QVBoxLayout()
+        container = QWidget()
+        layout = QVBoxLayout(container)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(graphView.searchBar)
         layout.addWidget(graphView)
-
-        container = QWidget()
-        container.setLayout(layout)
 
         self.graphView = graphView
         return container
@@ -467,13 +458,12 @@ class RepoWidget(QStackedWidget):
 
         diff = DiffView()
 
-        diffViewContainerLayout = QVBoxLayout()
+        diffViewContainer = QWidget()
+        diffViewContainerLayout = QVBoxLayout(diffViewContainer)
         diffViewContainerLayout.setSpacing(0)
         diffViewContainerLayout.setContentsMargins(0, 0, 0, 0)
         diffViewContainerLayout.addWidget(diff)
         diffViewContainerLayout.addWidget(diff.searchBar)
-        diffViewContainer = QWidget()
-        diffViewContainer.setLayout(diffViewContainerLayout)
 
         specialDiff = SpecialDiffView()
 
@@ -489,14 +479,12 @@ class RepoWidget(QStackedWidget):
         stack.addWidget(conflictScroll)
         stack.setCurrentIndex(0)
 
-        layout = QVBoxLayout()
+        stackContainer = QWidget()
+        layout = QVBoxLayout(stackContainer)
         layout.setContentsMargins(0,0,0,0)
         layout.setSpacing(1)
         layout.addWidget(header)
         layout.addWidget(stack)
-
-        stackContainer = QWidget()
-        stackContainer.setLayout(layout)
 
         self.diffHeader = header
         self.diffStack = stack
@@ -545,7 +533,8 @@ class RepoWidget(QStackedWidget):
         banner = Banner(self, orientation=Qt.Orientation.Vertical)
         banner.setProperty("class", "merge")
 
-        layout = QVBoxLayout()
+        container = QWidget()
+        layout = QVBoxLayout(container)
         layout.setContentsMargins(0,0,0,0)
         if MODAL_SIDEBAR:
             layout.setSpacing(0)
@@ -554,9 +543,6 @@ class RepoWidget(QStackedWidget):
             layout.addWidget(modeTabs)
         layout.addWidget(sidebar)
         layout.addWidget(banner)
-
-        container = QWidget()
-        container.setLayout(layout)
 
         self.sidebar = sidebar
         self.sidebarTabs = modeTabs

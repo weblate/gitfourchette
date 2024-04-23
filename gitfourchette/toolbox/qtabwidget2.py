@@ -165,19 +165,17 @@ class QTabWidget2(QWidget):
 
         topWidget = QWidget(self)
         self.topWidget = topWidget
-        topLayout = QHBoxLayout()
+        topLayout = QHBoxLayout(topWidget)
         topLayout.setSpacing(2)
         topLayout.setContentsMargins(0, 0, 0, 0)
         topLayout.addWidget(self.tabScrollArea)
         topLayout.addWidget(self.overflowButton)
-        topWidget.setLayout(topLayout)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(topWidget)
         layout.addWidget(self.stacked)
-        self.setLayout(layout)
 
         self.tabs.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabs.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
