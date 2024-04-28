@@ -110,10 +110,10 @@ class Ui_CloneDialog(object):
     def retranslateUi(self, CloneDialog):
         _translate = QCoreApplication.translate
         CloneDialog.setWindowTitle(_translate("CloneDialog", "Clone repository"))
-        self.urlLabel.setText(_translate("CloneDialog", "Remote &URL"))
-        self.pathLabel.setText(_translate("CloneDialog", "Clone in&to"))
+        self.urlLabel.setText(_translate("CloneDialog", "Remote &URL:"))
+        self.pathLabel.setText(_translate("CloneDialog", "Clone in&to:"))
         self.browseButton.setText(_translate("CloneDialog", "&Browse..."))
-        self.optionsLabel.setText(_translate("CloneDialog", "Options"))
+        self.optionsLabel.setText(_translate("CloneDialog", "Options:"))
         self.shallowCloneCheckBox.setToolTip(_translate("CloneDialog", "<p>Tick this to download just the latest commits, not the entire history of the repository."))
-        self.statusLabel.setText(_translate("CloneDialog", "Status"))
+        self.statusLabel.setText(_translate("CloneDialog", "Status:"))
 from gitfourchette.forms.statusform import StatusForm

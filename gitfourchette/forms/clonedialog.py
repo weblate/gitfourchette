@@ -1,5 +1,8 @@
 import re
 import traceback
+import urllib.parse
+from contextlib import suppress
+from pathlib import Path
 
 import pygit2
 
@@ -11,6 +14,15 @@ from gitfourchette.remotelink import RemoteLink
 from gitfourchette.tasks import RepoTask, RepoTaskRunner
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
+
+
+def _projectNameFromUrl(url: str) -> str:
+    name = url.rsplit("/", 1)[-1].removesuffix(".git")
+    name = urllib.parse.unquote(name)
+    # Sanitize name
+    for c in " ?/\\*~<>|:":
+        name = name.replace(c, "_")
+    return name
 
 
 class CloneDialog(QDialog):
@@ -51,12 +63,67 @@ class CloneDialog(QDialog):
 
         convertToBrandedDialog(self)
 
+        self.ui.urlEdit.editTextChanged.connect(self.autoFillDownloadPath)
         self.ui.urlEdit.setCurrentText(initialUrl)
         self.ui.urlEdit.setFocus()
 
+        validator = ValidatorMultiplexer(self)
+        validator.setGatedWidgets(self.cloneButton)
+        validator.connectInput(self.ui.urlEdit.lineEdit(), self.validateUrl)
+        validator.connectInput(self.ui.pathEdit, self.validatePath)
+        validator.run(silenceEmptyWarnings=True)
+
+    def validateUrl(self, i):
+        if not i:
+            return translate("NameValidationError", "Please fill in this field.")
+        return ""
+
+    def validatePath(self, i):
+        if not i:
+            # Avoid wording this as "cannot be empty" to prevent confusion with "directory not empty".
+            return translate("NameValidationError", "Please fill in this field.")
+        p = Path(i)
+        if not p.is_absolute():
+            return translate("NameValidationError", "Please enter an absolute path.")
+        if p.is_file():
+            return translate("NameValidationError", "There’s already a file at this path.")
+        if p.is_dir():
+            with suppress(StopIteration):
+                next(p.iterdir())  # raises StopIteration if directory is not empty
+                return translate("NameValidationError", "This directory isn’t empty.")
+        return ""
+
+    def autoFillDownloadPath(self, url):
+        # Get standard download location
+        downloadPath = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
+        if not downloadPath:
+            return
+        downloadPath = Path(downloadPath)
+
+        # Don't overwrite if user has set a custom path
+        currentPath = self.ui.pathEdit.text()
+        if currentPath and Path(currentPath).parent != downloadPath:
+            return
+
+        # Extract project name; clear target path if blank
+        projectName = _projectNameFromUrl(url)
+        if not projectName or projectName in [".", ".."]:
+            self.ui.pathEdit.setText("")
+            return
+
+        # Set target path to <downloadPath>/<projectName>
+        target = downloadPath / projectName
+
+        # Append differentiating number if this path already exists
+        differentiator = 1
+        while target.exists():
+            differentiator += 1
+            target = target.with_name(f"{projectName}_{differentiator}")
+
+        self.ui.pathEdit.setText(str(target))
+
     def initUrlComboBox(self):
         self.ui.urlEdit.clear()
-        self.ui.urlEdit.addItem("")
         if settings.history.cloneHistory:
             self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
             for url in settings.history.cloneHistory:
@@ -105,10 +172,26 @@ class CloneDialog(QDialog):
         return self.ui.pathEdit.text()
 
     def browse(self):
-        projectName = self.url.rsplit("/", 1)[-1].removesuffix(".git")
+        existingPath = Path(self.path) if self.path else None
 
-        qfd = PersistentFileDialog.saveFile(
-            self, "NewRepo", self.tr("Clone repository into"), projectName)
+        if existingPath:
+            initialName = existingPath.name
+        else:
+            initialName = _projectNameFromUrl(self.url)
+
+        qfd = PersistentFileDialog.saveFile(self, "NewRepo", self.tr("Clone repository into"), initialName)
+
+        # Rationale for omitting directory-related options that appear to make sense at first glance:
+        # - FileMode.Directory: forces user to hit "new folder" to enter the name of the repo
+        # - Options.ShowDirsOnly: KDE Plasma 6's native dialog forces user to hit "new folder" when this flag is set
+        qfd.setOption(QFileDialog.Option.DontConfirmOverwrite, True)  # we'll show our own warning if the file already exists
+        qfd.setOption(QFileDialog.Option.HideNameFilterDetails, True)  # not sure Qt honors this...
+
+        qfd.setLabelText(QFileDialog.DialogLabel.FileName, self.ui.pathLabel.text())  # "Clone into:"
+        qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("Clone here"))
+
+        if existingPath:
+            qfd.setDirectory(str(existingPath.parent))
 
         qfd.fileSelected.connect(self.ui.pathEdit.setText)
         qfd.show()
@@ -134,6 +217,7 @@ class CloneDialog(QDialog):
         if self.ui.shallowCloneCheckBox.isChecked():
             depth = self.ui.shallowCloneDepthSpinBox.value()
 
+        self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
         self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth)
 
 
@@ -147,8 +231,6 @@ class CloneTask(RepoTask):
         super().__init__(dialog)
         self.cloneDialog = dialog
         self.remoteLink = RemoteLink(self)
-
-        dialog.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
         self.remoteLink.message.connect(dialog.ui.statusForm.setProgressMessage)
         self.remoteLink.progress.connect(dialog.ui.statusForm.setProgressValue)
 

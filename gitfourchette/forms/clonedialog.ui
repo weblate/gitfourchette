@@ -38,7 +38,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="urlLabel">
      <property name="text">
-      <string>Remote &amp;URL</string>
+      <string>Remote &amp;URL:</string>
      </property>
      <property name="buddy">
       <cstring>urlEdit</cstring>
@@ -64,7 +64,7 @@
    <item row="1" column="0">
     <widget class="QLabel" name="pathLabel">
      <property name="text">
-      <string>Clone in&amp;to</string>
+      <string>Clone in&amp;to:</string>
      </property>
      <property name="buddy">
       <cstring>pathEdit</cstring>
@@ -88,7 +88,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="optionsLabel">
      <property name="text">
-      <string>Options</string>
+      <string>Options:</string>
      </property>
      <property name="buddy">
       <cstring>shallowCloneCheckBox</cstring>
@@ -141,7 +141,7 @@
    <item row="3" column="0">
     <widget class="QLabel" name="statusLabel">
      <property name="text">
-      <string>Status</string>
+      <string>Status:</string>
      </property>
     </widget>
    </item>

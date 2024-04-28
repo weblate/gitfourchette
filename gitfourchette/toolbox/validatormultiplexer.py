@@ -5,6 +5,12 @@ from gitfourchette.toolbox.qtutils import stockIcon
 from typing import Callable, Iterable, Optional
 
 
+def _showValidationToolTip(widget: QLineEdit, text: str):
+    p = QPoint(0, widget.height() // 2)
+    p = widget.mapToGlobal(p)
+    QToolTip.showText(p, text)
+
+
 class ValidatorMultiplexer(QObject):
     """
     Provides input validation in multiple QLineEdits and manages the enabled
@@ -62,18 +68,22 @@ class ValidatorMultiplexer(QObject):
         self.inputs.append(newInput)
         edit.textChanged.connect(self.run)
 
-    def run(self):
+    def run(self, silenceEmptyWarnings=False):
         # Run validator on inputs
         success = True
         errors: list[str] = []
         for input in self.inputs:
             if not input.edit.isEnabled():  # Skip disabled inputs
-                errors.append("")
+                newError = ""
             else:
-                newError = input.validate(input.edit.text())
-                errors.append(newError)
-                if newError and input.mustBeValid:
-                    success = False
+                inputText = input.edit.text()
+                newError = input.validate(inputText)
+                if newError:
+                    success &= not input.mustBeValid
+                    if silenceEmptyWarnings and not inputText:
+                        # Hide "cannot be empty" message, but do disable gated widgets if this input is required
+                        newError = ""
+            errors.append(newError)
 
         # Enable/disable gated widgets
         for w in self.gatedWidgets:
@@ -103,8 +113,7 @@ class ValidatorMultiplexer(QObject):
                     with suppress(BaseException):
                         self.timer.timeout.disconnect()
                     self.timer.stop()
-                    self.timer.timeout.connect(
-                        lambda t=input, err=err: QToolTip.showText(t.edit.mapToGlobal(QPoint(0, t.edit.height()//2)), err, t.edit))
+                    self.timer.timeout.connect(lambda edit=input.edit, text=err: _showValidationToolTip(edit, text))
                     self.timer.start()
 
             elif not err and input.inEditIcon:
