@@ -574,8 +574,9 @@ class SidebarModel(QAbstractItemModel):
             if displayRole:
                 return self.tr("Detached HEAD")
             elif toolTipRole:
+                oid = Oid(hex=node.data)
                 caption = self.tr("Detached HEAD")
-                return f"<p style='white-space: pre'>{caption} @ {self._detachedHead[:settings.prefs.shortHashChars]}"
+                return f"<p style='white-space: pre'>{caption} @ {shortHash(oid)}"
             elif hiddenRole:
                 return False
             elif refRole:
