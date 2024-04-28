@@ -102,6 +102,7 @@ class TrTables:
             "FileNotFoundError": translate("Exception", "File not found"),
             "PermissionError": translate("Exception", "Permission denied"),
             "GitError": translate("Exception", "Git error"),
+            "NotImplementedError": translate("Exception", "Unsupported feature"),
         }
 
     @staticmethod

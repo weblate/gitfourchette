@@ -65,6 +65,7 @@ class RemoteLink(QObject, RemoteCallbacks):
 
         self.keypairFiles = []
         self.usingCustomKeyFile = ""
+        self.moreDetailsOnCustomKeyFileFail = True
 
         self.lastAttemptKey = ""
         self.lastAttemptUrl = ""
@@ -82,27 +83,32 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.anyKeyIsPassphraseProtected = False
         self.anyKeyIsUnreadable = False
 
+    def forceCustomKeyFile(self, privKeyPath):
+        self.usingCustomKeyFile = privKeyPath
+        self.moreDetailsOnCustomKeyFileFail = False
+
     def discoverKeyFiles(self, remote: Remote | str = ""):
         # Find remote-specific key files
-        if isinstance(remote, Remote):
-            privkey = repoconfig.getRemoteKeyFile(remote._repo, remote.name)
-            self.usingCustomKeyFile = privkey
-            if privkey:
-                pubkey = privkey + ".pub"
-                self.keypairFiles.append((pubkey, privkey))
+        if isinstance(remote, Remote) and not self.usingCustomKeyFile:
+            self.usingCustomKeyFile = repoconfig.getRemoteKeyFile(remote._repo, remote.name)
 
-                if not os.path.isfile(pubkey):
-                    raise FileNotFoundError(self.tr("Remote-specific public key file not found:") + " " + compactPath(pubkey))
+        if self.usingCustomKeyFile:
+            privkey = self.usingCustomKeyFile
+            pubkey = privkey + ".pub"
+            self.keypairFiles.append((pubkey, privkey))
 
-                if not os.path.isfile(privkey):
-                    raise FileNotFoundError(self.tr("Remote-specific private key file not found:") + " " + compactPath(privkey))
+            if not os.path.isfile(pubkey):
+                raise FileNotFoundError(self.tr("Remote-specific public key file not found:") + " " + compactPath(pubkey))
 
-                logger.info(f"Using remote-specific key pair {privkey}")
+            if not os.path.isfile(privkey):
+                raise FileNotFoundError(self.tr("Remote-specific private key file not found:") + " " + compactPath(privkey))
 
-                self.keypairFiles.append((pubkey, privkey))
+            logger.info(f"Using remote-specific key pair {privkey}")
+
+            self.keypairFiles.append((pubkey, privkey))
 
         # Find user key files
-        if not self.usingCustomKeyFile:
+        else:
             sshDirectory = QStandardPaths.locate(QStandardPaths.StandardLocation.HomeLocation, ".ssh", QStandardPaths.LocateOption.LocateDirectory)
             if sshDirectory:
                 for file in os.listdir(sshDirectory):
@@ -199,16 +205,21 @@ class RemoteLink(QObject, RemoteCallbacks):
                 self.tr("Could not find suitable key files for this remote.") + " " +
                 self.tr("The key files couldn’t be opened (permission issues?)."))
         elif self.anyKeyIsPassphraseProtected:
-            raise ConnectionRefusedError(
-                self.tr("Could not find suitable key files for this remote.") + " " +
-                self.tr("Please note that {0} does not support passphrase-protected private keys yet. "
-                        "You may have better luck with a decrypted private key.").format(qAppName()))
+            if self.usingCustomKeyFile:
+                message = self.tr("Sorry, {app} does not support passphrase-protected private keys yet.")
+            else:
+                message = (self.tr("Could not find suitable key files for this remote.") + " " +
+                           self.tr("Please note that {app} does not support passphrase-protected private keys yet. "
+                                   "You may have better luck with a decrypted private key."))
+            message = message.format(app=qAppName())
+            raise NotImplementedError(message)
         elif self.usingCustomKeyFile:
-            raise ConnectionRefusedError(self.tr(
-                "The remote has rejected your custom key file ({0}). "
-                "To change key file settings for this remote, "
-                "right-click on the remote in the sidebar and pick “Edit Remote”."
-            ).format(compactPath(self.usingCustomKeyFile)))
+            message = self.tr("The remote has rejected your custom key file ({0})."
+                              ).format(compactPath(self.usingCustomKeyFile))
+            if self.moreDetailsOnCustomKeyFileFail:
+                message += " " + self.tr("To change key file settings for this remote, "
+                                         "right-click on the remote in the sidebar and pick “Edit Remote”.")
+            raise ConnectionRefusedError(message)
         else:
             raise ConnectionRefusedError(self.tr("Credentials rejected by remote."))
 

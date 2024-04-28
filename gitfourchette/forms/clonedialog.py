@@ -5,10 +5,13 @@ from contextlib import suppress
 from pathlib import Path
 
 import pygit2
+from pygit2.enums import RepositoryOpenFlag
 
+from gitfourchette import repoconfig
 from gitfourchette import settings
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
+from gitfourchette.porcelain import Repo
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.tasks import RepoTask, RepoTaskRunner
@@ -36,6 +39,7 @@ class CloneDialog(QDialog):
 
         self.remoteLink = None
         self.taskRunner = RepoTaskRunner(self)
+        self.keyFilePath = ""
 
         self.ui = Ui_CloneDialog()
         self.ui.setupUi(self)
@@ -61,6 +65,12 @@ class CloneDialog(QDialog):
         self.ui.shallowCloneCheckBox.setMinimumHeight(max(self.ui.shallowCloneCheckBox.height(), self.ui.shallowCloneDepthSpinBox.height()))  # prevent jumping around
         self.onShallowCloneCheckBoxStateChanged(self.ui.shallowCloneCheckBox.checkState())
 
+        self.ui.keyFileCheckBox.toggled.connect(self.autoBrowseKeyFile)
+        self.ui.keyFileBrowseButton.clicked.connect(self.browseKeyFile)
+        tweakWidgetFont(self.ui.keyFilePath, 90)
+        tweakWidgetFont(self.ui.keyFileBrowseButton, 90)
+        self.updateKeyFileControls()
+
         convertToBrandedDialog(self)
 
         self.ui.urlEdit.editTextChanged.connect(self.autoFillDownloadPath)
@@ -73,23 +83,23 @@ class CloneDialog(QDialog):
         validator.connectInput(self.ui.pathEdit, self.validatePath)
         validator.run(silenceEmptyWarnings=True)
 
-    def validateUrl(self, i):
-        if not i:
+    def validateUrl(self, url):
+        if not url:
             return translate("NameValidationError", "Please fill in this field.")
         return ""
 
-    def validatePath(self, i):
-        if not i:
+    def validatePath(self, path):
+        if not path:
             # Avoid wording this as "cannot be empty" to prevent confusion with "directory not empty".
             return translate("NameValidationError", "Please fill in this field.")
-        p = Path(i)
-        if not p.is_absolute():
+        path = Path(path)
+        if not path.is_absolute():
             return translate("NameValidationError", "Please enter an absolute path.")
-        if p.is_file():
+        if path.is_file():
             return translate("NameValidationError", "There’s already a file at this path.")
-        if p.is_dir():
+        if path.is_dir():
             with suppress(StopIteration):
-                next(p.iterdir())  # raises StopIteration if directory is not empty
+                next(path.iterdir())  # raises StopIteration if directory is not empty
                 return translate("NameValidationError", "This directory isn’t empty.")
         return ""
 
@@ -206,6 +216,9 @@ class CloneDialog(QDialog):
             self.ui.shallowCloneCheckBox,
             self.ui.shallowCloneDepthSpinBox,
             self.ui.shallowCloneSuffix,
+            self.ui.keyFileBrowseButton,
+            self.ui.keyFileCheckBox,
+            self.ui.keyFilePath,
             self.cloneButton
         ]
         for widget in grayable:
@@ -213,12 +226,59 @@ class CloneDialog(QDialog):
 
     def onCloneClicked(self):
         depth = 0
+        privKeyPath = ""
 
         if self.ui.shallowCloneCheckBox.isChecked():
             depth = self.ui.shallowCloneDepthSpinBox.value()
 
+        # Detect private key
+        if self.ui.keyFileCheckBox.isChecked() and self.keyFilePath:
+            privKeyPath = self.keyFilePath.removesuffix(".pub")
+
         self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
-        self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth)
+        self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth, privKeyPath=privKeyPath)
+
+    def autoBrowseKeyFile(self):
+        """
+        If checkbox is ticked and path is empty, bring up file browser.
+        """
+        if self.ui.keyFileCheckBox.isChecked() and not self.keyFilePath:
+            self.browseKeyFile()
+        else:
+            self.updateKeyFileControls()
+
+    def updateKeyFileControls(self):
+        if self.ui.keyFileCheckBox.isChecked() and self.keyFilePath:
+            self.ui.keyFileBrowseButton.setVisible(True)
+            self.ui.keyFilePath.setText(escamp(compactPath(self.keyFilePath)))
+            self.ui.keyFilePath.setVisible(True)
+        else:
+            self.ui.keyFileBrowseButton.setVisible(False)
+            self.ui.keyFilePath.setVisible(False)
+
+    def browseKeyFile(self):
+        sshDir = Path("~/ssh").expanduser()
+        if not sshDir.exists():
+            sshDir = ""
+
+        qfd = PersistentFileDialog.openFile(
+            self, "KeyFile", self.tr("Select public key file for this remote"),
+            filter=self.tr("Public key file") + " (*.pub)",
+            fallbackPath=sshDir)
+
+        def onReject():
+            # File browser canceled and lineedit empty, untick checkbox
+            if not self.keyFilePath:
+                self.ui.keyFileCheckBox.setChecked(False)
+                self.updateKeyFileControls()
+
+        def setKeyFilePath(path: str):
+            self.keyFilePath = path
+            self.updateKeyFileControls()
+
+        qfd.fileSelected.connect(setKeyFilePath)
+        qfd.rejected.connect(onReject)
+        qfd.show()
 
 
 class CloneTask(RepoTask):
@@ -237,16 +297,26 @@ class CloneTask(RepoTask):
     def abort(self):
         self.remoteLink.raiseAbortFlag()
 
-    def flow(self, url: str, path: str, depth: int):
+    def flow(self, url: str, path: str, depth: int, privKeyPath: str):
         dialog = self.cloneDialog
         dialog.enableInputs(False)
         dialog.aboutToReject.connect(self.remoteLink.raiseAbortFlag)
 
+        # Set private key
+        if privKeyPath:
+            self.remoteLink.forceCustomKeyFile(privKeyPath)
+
         yield from self.flowEnterWorkerThread()
         with self.remoteLink.remoteKeyFileContext(url):
-            pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
+            clonedRepo = pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
 
         yield from self.flowEnterUiThread()
+
+        # Store custom key (if any) in cloned repo config
+        clonedRepo = Repo(clonedRepo.workdir, RepositoryOpenFlag.NO_SEARCH)
+        if privKeyPath:
+            repoconfig.setRemoteKeyFile(clonedRepo, clonedRepo.remotes[0].name, privKeyPath)
+
         settings.history.addCloneUrl(url)
         settings.history.write()
         dialog.cloneSuccessful.emit(path)
