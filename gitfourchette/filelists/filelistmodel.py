@@ -100,6 +100,14 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
             timeText = locale.toString(timeQdt, settings.prefs.shortTimeFormat)
             text += newLine(translate("FileList", "modified:"), timeText)
 
+    # Blob IDs (DEVDEBUG only)
+    if settings.DEVDEBUG:
+        of, nf = delta.old_file, delta.new_file
+        nChars = settings.prefs.shortHashChars
+        oldBlobId = shortHash(of.id) if of.flags & DiffFlag.VALID_ID else "?" * nChars
+        newBlobId = shortHash(nf.id) if nf.flags & DiffFlag.VALID_ID else "?" * nChars
+        text += newLine(translate("FileList", "blob id:"), f"{oldBlobId} &rarr; {newBlobId}")
+
     if isCounterpart:
         if navContext == NavContext.UNSTAGED:
             counterpartText = translate("FileList", "Currently viewing diff of staged changes "

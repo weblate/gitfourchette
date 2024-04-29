@@ -61,6 +61,7 @@ from pygit2.enums import (
     CheckoutStrategy,
     CredentialType,
     DeltaStatus,
+    DiffFlag,
     DiffOption,
     FileStatus,
     FileMode,
