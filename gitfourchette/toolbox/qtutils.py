@@ -236,6 +236,25 @@ class DisableWidgetContext:
         self.objectToBlock.setEnabled(True)
 
 
+class DisableWidgetUpdatesContext:
+    def __init__(self, widget: QWidget):
+        self.widget = widget
+
+    def __enter__(self):
+        self.widget.setUpdatesEnabled(False)
+
+    def __exit__(self, excType, excValue, excTraceback):
+        self.widget.setUpdatesEnabled(True)
+
+    @staticmethod
+    def methodDecorator(func):
+        def wrapper(*args, **kwargs):
+            widget: QWidget = args[0]
+            with DisableWidgetUpdatesContext(widget):
+                return func(*args, **kwargs)
+        return wrapper
+
+
 class MakeNonNativeDialog(QObject):  # pragma: no cover (macOS-specific)
     """
     Enables the AA_DontUseNativeDialogs attribute, and disables it when the dialog is shown.

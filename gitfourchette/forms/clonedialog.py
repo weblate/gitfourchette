@@ -149,6 +149,7 @@ class CloneDialog(QDialog):
             settings.history.write()
             self.initUrlComboBox()
 
+    @DisableWidgetUpdatesContext.methodDecorator
     def onShallowCloneCheckBoxStateChanged(self, state):
         isChecked = state not in [0, Qt.CheckState.Unchecked]
         if isChecked:
