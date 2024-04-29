@@ -3,7 +3,7 @@
  <class>CloneDialog</class>
  <widget class="QDialog" name="CloneDialog">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="enabled">
    <bool>true</bool>
@@ -33,7 +33,7 @@
   </property>
   <layout class="QFormLayout" name="formLayout">
    <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::ExpandingFieldsGrow</enum>
+    <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
    </property>
    <item row="0" column="0">
     <widget class="QLabel" name="urlLabel">
@@ -57,7 +57,7 @@
       <bool>true</bool>
      </property>
      <property name="insertPolicy">
-      <enum>QComboBox::NoInsert</enum>
+      <enum>QComboBox::InsertPolicy::NoInsert</enum>
      </property>
     </widget>
    </item>
@@ -122,7 +122,7 @@
         <number>999999</number>
        </property>
        <property name="stepType">
-        <enum>QAbstractSpinBox::AdaptiveDecimalStepType</enum>
+        <enum>QAbstractSpinBox::StepType::AdaptiveDecimalStepType</enum>
        </property>
       </widget>
      </item>
@@ -139,47 +139,11 @@
     </layout>
    </item>
    <item row="3" column="1">
-    <layout class="QGridLayout" name="keyFileLayout">
-     <item row="0" column="0" colspan="2">
-      <widget class="QCheckBox" name="keyFileCheckBox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-         <horstretch>1</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>Log in with custom &amp;key file</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QToolButton" name="keyFileBrowseButton">
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Select...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QLabel" name="keyFilePath">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string notr="true">(KEY FILE PATH)</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
+    <widget class="KeyFilePickerCheckBox" name="keyFilePicker">
+     <property name="text">
+      <string>Log in with custom &amp;key file</string>
+     </property>
+    </widget>
    </item>
    <item row="4" column="0">
     <widget class="QLabel" name="statusLabel">
@@ -221,10 +185,10 @@
    <item row="5" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
      <property name="centerButtons">
       <bool>false</bool>
@@ -234,6 +198,11 @@
   </layout>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>KeyFilePickerCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>gitfourchette.forms.keyfilepickercheckbox</header>
+  </customwidget>
   <customwidget>
    <class>StatusForm</class>
    <extends>QWidget</extends>

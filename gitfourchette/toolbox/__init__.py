@@ -23,6 +23,7 @@ from .persistentfiledialog import PersistentFileDialog
 from .qbusyspinner import QBusySpinner
 from .qcomboboxwithpreview import QComboBoxWithPreview
 from .qelidedlabel import QElidedLabel
+from .qfilepickercheckbox import QFilePickerCheckBox
 from .qsignalblockercontext import QSignalBlockerContext
 from .qstatusbar2 import QStatusBar2
 from .qtabwidget2 import QTabWidget2, QTabBar2

@@ -103,9 +103,7 @@ class ValidatorMultiplexer(QObject):
 
             if err:
                 if not input.inEditIcon:
-                    input.inEditIcon = input.edit.addAction(
-                        stockIcon(QStyle.StandardPixmap.SP_MessageBoxWarning) if MACOS or WINDOWS else stockIcon("achtung"),
-                        QLineEdit.ActionPosition.TrailingPosition)
+                    input.inEditIcon = input.edit.addAction(stockIcon("achtung"), QLineEdit.ActionPosition.TrailingPosition)
 
                 input.inEditIcon.setToolTip(err)
 

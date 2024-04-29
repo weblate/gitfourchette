@@ -39,7 +39,6 @@ class CloneDialog(QDialog):
 
         self.remoteLink = None
         self.taskRunner = RepoTaskRunner(self)
-        self.keyFilePath = ""
 
         self.ui = Ui_CloneDialog()
         self.ui.setupUi(self)
@@ -64,12 +63,6 @@ class CloneDialog(QDialog):
         self.ui.shallowCloneCheckBox.stateChanged.connect(self.onShallowCloneCheckBoxStateChanged)
         self.ui.shallowCloneCheckBox.setMinimumHeight(max(self.ui.shallowCloneCheckBox.height(), self.ui.shallowCloneDepthSpinBox.height()))  # prevent jumping around
         self.onShallowCloneCheckBoxStateChanged(self.ui.shallowCloneCheckBox.checkState())
-
-        self.ui.keyFileCheckBox.toggled.connect(self.autoBrowseKeyFile)
-        self.ui.keyFileBrowseButton.clicked.connect(self.browseKeyFile)
-        tweakWidgetFont(self.ui.keyFilePath, 90)
-        tweakWidgetFont(self.ui.keyFileBrowseButton, 90)
-        self.updateKeyFileControls()
 
         convertToBrandedDialog(self)
 
@@ -214,12 +207,11 @@ class CloneDialog(QDialog):
             self.ui.pathLabel,
             self.ui.pathEdit,
             self.ui.browseButton,
+            self.ui.optionsLabel,
             self.ui.shallowCloneCheckBox,
             self.ui.shallowCloneDepthSpinBox,
             self.ui.shallowCloneSuffix,
-            self.ui.keyFileBrowseButton,
-            self.ui.keyFileCheckBox,
-            self.ui.keyFilePath,
+            self.ui.keyFilePicker,
             self.cloneButton
         ]
         for widget in grayable:
@@ -227,59 +219,13 @@ class CloneDialog(QDialog):
 
     def onCloneClicked(self):
         depth = 0
-        privKeyPath = ""
+        privKeyPath = self.ui.keyFilePicker.privateKeyPath()
 
         if self.ui.shallowCloneCheckBox.isChecked():
             depth = self.ui.shallowCloneDepthSpinBox.value()
 
-        # Detect private key
-        if self.ui.keyFileCheckBox.isChecked() and self.keyFilePath:
-            privKeyPath = self.keyFilePath.removesuffix(".pub")
-
         self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
         self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth, privKeyPath=privKeyPath)
-
-    def autoBrowseKeyFile(self):
-        """
-        If checkbox is ticked and path is empty, bring up file browser.
-        """
-        if self.ui.keyFileCheckBox.isChecked() and not self.keyFilePath:
-            self.browseKeyFile()
-        else:
-            self.updateKeyFileControls()
-
-    def updateKeyFileControls(self):
-        if self.ui.keyFileCheckBox.isChecked() and self.keyFilePath:
-            self.ui.keyFileBrowseButton.setVisible(True)
-            self.ui.keyFilePath.setText(escamp(compactPath(self.keyFilePath)))
-            self.ui.keyFilePath.setVisible(True)
-        else:
-            self.ui.keyFileBrowseButton.setVisible(False)
-            self.ui.keyFilePath.setVisible(False)
-
-    def browseKeyFile(self):
-        sshDir = Path("~/ssh").expanduser()
-        if not sshDir.exists():
-            sshDir = ""
-
-        qfd = PersistentFileDialog.openFile(
-            self, "KeyFile", self.tr("Select public key file for this remote"),
-            filter=self.tr("Public key file") + " (*.pub)",
-            fallbackPath=sshDir)
-
-        def onReject():
-            # File browser canceled and lineedit empty, untick checkbox
-            if not self.keyFilePath:
-                self.ui.keyFileCheckBox.setChecked(False)
-                self.updateKeyFileControls()
-
-        def setKeyFilePath(path: str):
-            self.keyFilePath = path
-            self.updateKeyFileControls()
-
-        qfd.fileSelected.connect(setKeyFilePath)
-        qfd.rejected.connect(onReject)
-        qfd.show()
 
 
 class CloneTask(RepoTask):
