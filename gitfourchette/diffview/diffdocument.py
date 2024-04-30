@@ -92,6 +92,8 @@ class DiffDocument:
     document: QTextDocument
     lineData: list[LineData]
     style: DiffStyle
+    pluses: int
+    minuses: int
 
     @staticmethod
     def fromPatch(patch: Patch, locator: NavLocator):
@@ -119,6 +121,8 @@ class DiffDocument:
         clumpID = 0
         numLinesInClump = 0
         perfectClumpTally = 0
+        pluses = 0
+        minuses = 0
 
         # For each line of the diff, create a LineData object.
         for hunkID, hunk in enumerate(patch.hunks):
@@ -170,6 +174,7 @@ class DiffDocument:
                     ld.clumpID = clumpID
                     numLinesInClump += 1
                     perfectClumpTally += 1
+                    pluses += 1
                 elif origin == '-':
                     assert diffLine.new_lineno == -1
                     assert diffLine.old_lineno == oldLine
@@ -177,6 +182,7 @@ class DiffDocument:
                     ld.clumpID = clumpID
                     numLinesInClump += 1
                     perfectClumpTally -= 1
+                    minuses += 1
                 else:
                     assert diffLine.new_lineno == newLine
                     assert diffLine.old_lineno == oldLine
@@ -280,7 +286,7 @@ class DiffDocument:
         # Done batching text insertions.
         cursor.endEditBlock()
 
-        return DiffDocument(document=document, lineData=lineData, style=style)
+        return DiffDocument(document=document, lineData=lineData, style=style, pluses=pluses, minuses=minuses)
 
 
 def _invertMatchingBlocks(blockList: list[difflib.Match], useA: bool) -> Generator[tuple[int, int], None, None]:

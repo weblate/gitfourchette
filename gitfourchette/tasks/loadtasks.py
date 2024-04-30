@@ -1,8 +1,7 @@
-from contextlib import suppress
 import logging
 
+from gitfourchette import colors
 from gitfourchette import settings
-from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.graph import Graph, BatchRow
 from gitfourchette.graphmarkers import ForeignCommitSolver
 from gitfourchette.diffview.diffdocument import DiffDocument
@@ -346,6 +345,34 @@ class LoadPatch(RepoTask):
             summary, details = excStrings(exc)
             return SpecialDiffError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
 
+    def _makeHeader(self, result, locator):
+        header = "<html>" + escape(locator.path)
+
+        if isinstance(result, DiffDocument):
+            if settings.prefs.diff_colorblind:
+                addColor = colors.teal
+                delColor = colors.orange
+            else:
+                addColor = colors.olive
+                delColor = colors.red
+            if result.pluses:
+                header += f" <span style='color: {addColor.name()};'>+{result.pluses}</span>"
+            if result.minuses:
+                header += f" <span style='color: {delColor.name()};'>-{result.minuses}</span>"
+
+        locationText = ""
+        if locator.context == NavContext.COMMITTED:
+            locationText = self.tr("at {0}", "at <specific commit>").format(shortHash(locator.commit))
+        elif locator.context.isWorkdir():
+            locationText = locator.context.translateName().lower()
+        if locationText:
+            header += f" <span style='color: gray;'>({locationText})</span>"
+
+        return header
+
     def flow(self, patch: Patch, locator: NavLocator):
-        yield from self.flowEnterWorkerThread()
+        # yield from self.flowEnterWorkerThread()
+        yield from self.flowEnterUiThread()
+        # QThread.msleep(500)
         self.result = self._processPatch(patch, locator)
+        self.header = self._makeHeader(self.result, locator)

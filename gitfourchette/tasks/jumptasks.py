@@ -7,7 +7,7 @@ import dataclasses
 import logging
 import os
 
-from gitfourchette import tasks
+from gitfourchette import tasks, colors, settings
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 from gitfourchette.graphview.commitlogmodel import SpecialRow
@@ -68,8 +68,7 @@ class Jump(RepoTask):
             # Load patch in DiffView
             patch = rw.fileListByContext(locator.context).getPatchForFile(locator.path)
             patchTask: tasks.LoadPatch = yield from self.flowSubtask(tasks.LoadPatch, patch, locator)
-            header = locator.asTitle()
-            result = Jump.Result(locator, header, patchTask.result, patch)
+            result = Jump.Result(locator, patchTask.header, patchTask.result, patch)
         except Jump.Result as r:
             # The block above may be stopped early by raising Jump.Result.
             result = r

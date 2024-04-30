@@ -258,7 +258,7 @@ class RepoWidget(QStackedWidget):
         # Prepare placeholder "opening repository" widget
 
         self.setPlaceholderWidgetOpenRepoProgress()
-        
+
         # ----------------------------------
         # Styling
 
@@ -450,11 +450,13 @@ class RepoWidget(QStackedWidget):
         return container
 
     def _makeDiffContainer(self):
-        header = QElidedLabel(" ")
+        header = QLabel(" ")
         header.setObjectName("diffHeader")
-        header.setElideMode(Qt.TextElideMode.ElideMiddle)
         header.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         header.setMinimumHeight(FILEHEADER_HEIGHT)
+        header.setContentsMargins(0, 0, 4, 0)
+        # Don't let header dictate window width if displaying long filename
+        header.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
 
         diff = DiffView()
 
