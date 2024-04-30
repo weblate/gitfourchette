@@ -293,13 +293,9 @@ class LoadCommit(RepoTask):
         oid = locator.commit
         largeCommitThreshold = -1 if locator.hasFlags(NavFlags.AllowLargeCommits) else RENAME_COUNT_THRESHOLD
 
-        self.diffs = self.repo.commit_diffs(oid, find_similar_threshold=largeCommitThreshold, context_lines=contextLines())
+        self.diffs, self.skippedRenameDetection = self.repo.commit_diffs(
+            oid, find_similar_threshold=largeCommitThreshold, context_lines=contextLines())
         self.message = self.repo.get_commit_message(oid)
-
-        self.skippedRenameDetection = False
-        if len(self.diffs) > 0:
-            mainDiff = self.diffs[0]
-            self.skippedRenameDetection = 0 <= largeCommitThreshold <= len(mainDiff)
 
 
 class LoadPatch(RepoTask):

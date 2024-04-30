@@ -662,9 +662,11 @@ class Repo(_VanillaRepository):
         # status = repo.status(untracked_files="no")
         # return any(0 != (flag & FileStatus.INDEX_MASK) for flag in status.values())
 
-    def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1, context_lines: int = 3) -> list[Diff]:
+    def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1, context_lines: int = 3
+                     ) -> tuple[list[Diff], bool]:
         """
         Get a list of Diffs of a commit compared to its parents.
+        Return tuple[list[Diff], bool]. The bool in the returned tuple indicates whether find_similar was skipped.
         """
         flags = DiffOption.INCLUDE_TYPECHANGE
 
@@ -672,6 +674,7 @@ class Repo(_VanillaRepository):
             flags |= DiffOption.SHOW_BINARY
 
         commit: Commit = self.get(oid)
+        skipped_find_similar = False
 
         if commit.parents:
             all_diffs = []
@@ -682,6 +685,8 @@ class Repo(_VanillaRepository):
                     diff = self.diff(parent, commit, flags=flags, context_lines=context_lines)
                     if find_similar_threshold < 0 or len(diff) < find_similar_threshold:
                         diff.find_similar()
+                    else:
+                        skipped_find_similar = True
                     all_diffs.append(diff)
                 elif not parent.parents:
                     # This parent is parentless: assume merging in new files from this parent
@@ -693,13 +698,13 @@ class Repo(_VanillaRepository):
                     # Skip non-parentless parent in merge commits
                     pass
 
-            return all_diffs
-
         else:
             # Parentless commit: diff with empty tree
             # (no tree passed to diff_to_tree == force diff against empty tree)
             diff = commit.tree.diff_to_tree(swap=True, flags=flags, context_lines=context_lines)
-            return [diff]
+            all_diffs = [diff]
+
+        return all_diffs, skipped_find_similar
 
     def checkout_local_branch(self, name: str):
         """Switch to a local branch."""

@@ -45,7 +45,7 @@ class ExportCommitAsPatch(ComposePatch):
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
 
-        diffs = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
+        diffs, _ = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
 
         commit = self.repo.peel_commit(oid)
         summary, _ = messageSummary(commit.message, elision="")
@@ -60,7 +60,7 @@ class ExportStashAsPatch(ExportCommitAsPatch):
     def flow(self, oid: Oid):
         yield from self.flowEnterWorkerThread()
 
-        diffs = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
+        diffs, _ = self.repo.commit_diffs(oid, show_binary=True, context_lines=contextLines())
 
         commit = self.repo.peel_commit(oid)
         coreMessage = strip_stash_message(commit.message)
