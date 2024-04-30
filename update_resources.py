@@ -7,8 +7,8 @@ from pathlib import Path
 REPO_ROOTDIR = os.path.dirname(os.path.realpath(sys.argv[0]))
 REPO_ROOTDIR = os.path.relpath(REPO_ROOTDIR)
 SRC_DIR = os.path.join(REPO_ROOTDIR, "gitfourchette")
-LANG_DIR = os.path.join(REPO_ROOTDIR, "lang")
 ASSETS_DIR = os.path.join(SRC_DIR, "assets")
+LANG_DIR = os.path.join(ASSETS_DIR, "lang")
 
 FORCE = False
 
@@ -28,11 +28,11 @@ def makeParser():
     parser.add_argument("--lupdate", default="pyside6-lupdate",
                         help="path to Python-compatible lupdate tool ('pyside6-lupdate' by default, 'pylupdate6' NOT supported)")
 
-    parser.add_argument("--lrelease", default="lrelease",
-                        help="path to lrelease tool ('lrelease' by default, 'pyside6-lrelease' also supported)")
+    parser.add_argument("--lrelease", default="pyside6-lrelease",
+                        help="path to lrelease tool ('pyside6-lrelease' by default)")
 
     parser.add_argument("--uic", default="pyuic6",
-                        help="path to Python-compatible uic tool ('pyuic6' by default, 'pyside6-uic' also supported)")
+                        help="path to Python-compatible uic tool ('pyuic6' by default; AVOID 'pyside6-uic' because its output doesn't work with PyQt6)")
 
     parser.add_argument("--no-uic-cleanup", action="store_true",
                         help="don't postprocess uic output")
@@ -205,7 +205,7 @@ def updateQmFiles(lrelease):
 
         filePath = os.path.join(LANG_DIR, file)
         basename = os.path.splitext(file)[0]
-        qmPath = os.path.join(ASSETS_DIR, F"{basename}.qm")
+        qmPath = os.path.join(LANG_DIR, F"{basename}.qm")
         call(lrelease, "-removeidentical", filePath, "-qm", qmPath)
 
         # Check placeholders in .ts files

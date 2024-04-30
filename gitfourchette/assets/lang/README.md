@@ -31,7 +31,7 @@ pyside6-lupdate \
     -extensions py,ui \
     -source-language en \
     -target-language nl \
-    -ts lang/gitfourchette_nl.ts \
+    -ts gitfourchette/assets/lang/gitfourchette_nl.ts \
     gitfourchette/
 ```
 
@@ -42,16 +42,18 @@ Once that’s done, read the following section for more information about updati
 
 ## How to update an existing translation
 
-There are two kinds of translation files:
-- `.ts` files in the `lang` directory, which you can edit in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html).
-- `.qm` files in `gitfourchette/assets` are “compiled” binary files that GitFourchette reads from.
+There are two kinds of translation files in `gitfourchette/assets/lang`:
+- `.ts` files, which you can edit in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html).
+- `.qm` files are “compiled” binary files that GitFourchette reads from.
 
 To update an existing translation:
 - Run `update_resources.py --lang` to sync the `.ts` files with any new translatable contents in the source code.
 - Edit the `.ts` file for your language in [Qt Linguist](https://doc.qt.io/qt-6/linguist-translators.html).
-- When you’re done editing the `.ts` file, run `update_resources.py --lang` again to update the `.qm` file.
+- When you’re done editing the `.ts` file, generate the `.qm` files to preview your changes in GitFourchette. This can be done in one of two ways:
+    - In Qt Linguist, run `File » Publish`;
+    - or, run `update_resources.py --lang` again, which also updates the `.qm` file.
 
-When you‘re ready to commit your changes:
+When you’re ready to commit your changes:
 - Run `update_resources.py --clean-lang` to clean up the `.ts` files.
 - Commit both the `.ts` file and the `.qm` file.
 

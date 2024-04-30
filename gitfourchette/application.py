@@ -266,7 +266,7 @@ class GFApplication(QApplication):
 
         # Try to load app translations for the preferred language first.
         # If that failed, load the English translations for proper numerus forms.
-        appTranslatorAssetParams = ["gitfourchette", "_", "assets:", ".qm"]
+        appTranslatorAssetParams = ["gitfourchette", "_", "assets:lang/", ".qm"]
         if not self.loadTranslator(locale, *appTranslatorAssetParams):
             self.loadTranslator(QLocale(QLocale.Language.English), *appTranslatorAssetParams)
 
