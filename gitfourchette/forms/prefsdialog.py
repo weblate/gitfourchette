@@ -6,7 +6,6 @@ from gitfourchette.qt import *
 from gitfourchette.settings import (
     DIFF_TOOL_PRESETS,
     EDITOR_TOOL_PRESETS,
-    LANGUAGES,
     MERGE_TOOL_PRESETS,
     SHORT_DATE_PRESETS,
     prefs,
@@ -295,9 +294,11 @@ class PrefsDialog(QDialog):
         if not prefValue:
             control.setCurrentIndex(0)
         control.insertSeparator(1)
-        for enumMember in LANGUAGES:
+        langDir = QDir("assets:lang", "gitfourchette_*.qm")
+        languages = [qmFile.removeprefix("gitfourchette_").removesuffix(".qm") for qmFile in langDir]
+        for enumMember in languages:
             lang = QLocale(enumMember)
-            control.addItem(lang.nativeLanguageName(), enumMember)
+            control.addItem(lang.nativeLanguageName().title(), enumMember)
             if prefValue == enumMember:
                 control.setCurrentIndex(control.count() - 1)
 

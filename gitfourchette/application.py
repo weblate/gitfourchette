@@ -77,8 +77,7 @@ class GFApplication(QApplication):
 
             # Force English in unit tests regardless of the host machine's locale
             # because many unit tests look for pieces of text in dialogs.
-            settings.prefs.language = settings.LANGUAGES[0]
-            assert settings.prefs.language.startswith("en")
+            settings.prefs.language = "en"
         else:
             # Load settings
             with NonCriticalOperation(F"Loading prefs"):

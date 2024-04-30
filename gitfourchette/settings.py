@@ -34,11 +34,6 @@ Useful for debugging.
 Can be forced with command-line switch "--no-threads".
 """
 
-LANGUAGES = [
-    "en_US",
-    "fr_FR",
-]
-
 SHORT_DATE_PRESETS = {
     "ISO": "yyyy-MM-dd HH:mm",
     "Universal 1": "dd MMM yyyy HH:mm",
