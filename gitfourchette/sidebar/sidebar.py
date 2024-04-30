@@ -489,6 +489,9 @@ class Sidebar(QTreeView):
         elif item == EItem.RemoteBranch:
             NewBranchFromRef.invoke(self, node.data)
 
+        elif item == EItem.DetachedHead:
+            NewBranchFromHead.invoke(self)
+
         elif item == EItem.TagsHeader:
             NewTag.invoke(self)
 
@@ -537,7 +540,9 @@ class Sidebar(QTreeView):
             pass
 
         elif item == EItem.LocalBranch:
-            RenameBranch.invoke(self, data)
+            prefix, name = RefPrefix.split(data)
+            assert prefix == RefPrefix.HEADS
+            RenameBranch.invoke(self, name)
 
         elif item == EItem.Remote:
             EditRemote.invoke(self, data)
@@ -656,6 +661,11 @@ class Sidebar(QTreeView):
             return node.createIndex(model)
         except KeyError:
             return None
+
+    def selectNode(self, node: SidebarNode) -> QModelIndex:
+        index = node.createIndex(self.sidebarModel)
+        self.setCurrentIndex(index)
+        return index
 
     def selectAnyRef(self, *refCandidates: str) -> QModelIndex | None:
         # Early out if any candidate ref is already selected

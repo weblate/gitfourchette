@@ -8,21 +8,25 @@ from gitfourchette.forms.newbranchdialog import NewBranchDialog
 import re
 
 
-@pytest.mark.parametrize("method", ["sidebar", "shortcut"])
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "shortcut"])
 def testNewBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    if method == "sidebar":
-        node = next(rw.sidebar.findNodesByKind(EItem.LocalBranchesHeader))
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.LocalBranchesHeader)
+
+    if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
-        findMenuAction(menu, "new branch").trigger()
+        triggerMenuAction(menu, "new branch")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Enter)
     elif method == "shortcut":
         QTest.qWait(0)
         QTest.keySequence(rw, "Ctrl+B")
     else:
-        raise NotImplementedError("unknown method")
+        raise NotImplementedError(f"unknown method {method}")
 
     q = findQDialog(rw, "new branch")
     q.findChild(QLineEdit).setText("hellobranch")
@@ -58,7 +62,8 @@ def testSetUpstreamBranch(tempDir, mainWindow):
     assert repo.branches.local['master'].upstream == repo.branches.remote['origin/master']
 
 
-def testRenameBranch(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testRenameBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -70,7 +75,13 @@ def testRenameBranch(tempDir, mainWindow):
     node = rw.sidebar.findNodeByRef("refs/heads/master")
     menu = rw.sidebar.makeNodeMenu(node)
 
-    findMenuAction(menu, "rename").trigger()
+    if method == "sidebarmenu":
+        triggerMenuAction(menu, "rename")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_F2)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     dlg = findQDialog(rw, "rename.+branch")
     nameEdit: QLineEdit = dlg.findChild(QLineEdit)
@@ -97,7 +108,8 @@ def testRenameBranch(tempDir, mainWindow):
     assert 'mainbranch' in repo.branches.local
 
 
-def testDeleteBranch(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDeleteBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:
         commit = repo['6e1475206e57110fcef4b92320436c1e9872a322']
@@ -108,13 +120,22 @@ def testDeleteBranch(tempDir, mainWindow):
     repo = rw.repo
 
     node = rw.sidebar.findNodeByRef("refs/heads/somebranch")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "delete")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "delete")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
     acceptQMessageBox(rw, "really delete.+branch")
     assert "somebranch" not in repo.branches.local
 
 
-def testDeleteCurrentBranch(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDeleteCurrentBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -122,8 +143,16 @@ def testDeleteCurrentBranch(tempDir, mainWindow):
     assert "master" in repo.branches.local
 
     node = rw.sidebar.findNodeByRef("refs/heads/master")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "delete")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "delete")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
     acceptQMessageBox(rw, "can.+t delete.+current branch")
     assert "master" in repo.branches.local  # still there
 
@@ -201,7 +230,7 @@ def testNewBranchFromCommit(tempDir, mainWindow, method):
     assert any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 
 
-@pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "graphstart", "graphcheckout"])
 def testNewBranchFromDetachedHead(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     oid = Oid(hex="f73b95671f326616d66b2afb3bdfcdbbce110b44")
@@ -214,9 +243,13 @@ def testNewBranchFromDetachedHead(tempDir, mainWindow, method):
     localBranches = rw.repo.branches.local
     rw.jump(NavLocator.inCommit(oid))
 
-    if method == "sidebar":
-        node = next(rw.sidebar.findNodesByKind(EItem.DetachedHead))
-        triggerMenuAction(rw.sidebar.makeNodeMenu(node), r"(start|new) branch")
+    sidebarNode = next(rw.sidebar.findNodesByKind(EItem.DetachedHead))
+
+    if method == "sidebarmenu":
+        triggerMenuAction(rw.sidebar.makeNodeMenu(sidebarNode), r"(start|new) branch")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(sidebarNode)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Enter)
     elif method == "graphstart":
         triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
     elif method == "graphcheckout":
@@ -236,7 +269,6 @@ def testNewBranchFromDetachedHead(tempDir, mainWindow, method):
     assert localBranches["coucou"].target == oid
     assert localBranches["coucou"].is_checked_out()
     assert any("coucou" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
-
 
 
 @pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
@@ -316,7 +348,7 @@ def testSwitchBranch(tempDir, mainWindow, method):
         assert qd.findChild(QRadioButton, "switchToLocalBranchRadioButton").isChecked()
         qd.accept()
     else:
-        raise NotImplementedError("unknown method")
+        raise NotImplementedError(f"unknown method {method}")
 
     assert not localBranches['master'].is_checked_out()
     assert localBranches['no-parent'].is_checked_out()

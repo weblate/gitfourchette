@@ -2,13 +2,15 @@
 Remote management tests.
 """
 
+import pytest
 from . import reposcenario
 from .util import *
 from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
-def testNewRemote(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["menubar", "sidebarmenu", "sidebarkey"])
+def testNewRemote(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -23,9 +25,17 @@ def testNewRemote(tempDir, mainWindow):
     assert not any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
 
     node = next(rw.sidebar.findNodesByKind(EItem.RemotesHeader))
-    menu = rw.sidebar.makeNodeMenu(node)
 
-    findMenuAction(menu, "add remote").trigger()
+    if method == "menubar":
+        triggerMenuAction(mainWindow.menuBar(), "repo/add remote")
+    elif method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "add remote")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Enter)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     q: RemoteDialog = findQDialog(rw, "add remote")
     q.ui.nameEdit.setText("otherremote")
@@ -43,7 +53,8 @@ def testNewRemote(tempDir, mainWindow):
     assert repo.branches.remote["otherremote/master"].target == repo.branches.local["master"].target
 
 
-def testEditRemote(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey1", "sidebarkey2"])
+def testEditRemote(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -54,8 +65,18 @@ def testEditRemote(tempDir, mainWindow):
     assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
     node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "edit remote")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "edit remote")
+    elif method == "sidebarkey1":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_F2)
+    elif method == "sidebarkey2":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Enter)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     q: RemoteDialog = findQDialog(rw, "edit remote")
     q.ui.nameEdit.setText("mainremote")
@@ -69,7 +90,8 @@ def testEditRemote(tempDir, mainWindow):
     assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
 
-def testDeleteRemote(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDeleteRemote(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -78,10 +100,17 @@ def testDeleteRemote(tempDir, mainWindow):
     assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
 
     node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "remove remote")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "remove remote")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
     acceptQMessageBox(rw, "really remove remote")
 
     assert len(list(repo.remotes)) == 0
     assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
-
