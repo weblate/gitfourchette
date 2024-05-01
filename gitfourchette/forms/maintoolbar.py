@@ -33,9 +33,6 @@ class MainToolBar(QToolBar):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
 
-        self.setToolButtonStyle(settings.prefs.toolBarButtonStyle)
-        self.setIconSize(QSize(settings.prefs.toolBarIconSize, settings.prefs.toolBarIconSize))
-
         self.visibilityChanged.connect(self.onVisibilityChanged)
         self.toolButtonStyleChanged.connect(self.onToolButtonStyleChanged)
         self.iconSizeChanged.connect(self.onIconSizeChanged)
@@ -74,6 +71,24 @@ class MainToolBar(QToolBar):
         recentButton: QToolButton = self.widgetForAction(self.recentAction)
         assert type(recentButton) is QToolButton
         recentButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+
+        self.setToolButtonStyle(settings.prefs.toolBarButtonStyle)
+        self.setIconSize(QSize(settings.prefs.toolBarIconSize, settings.prefs.toolBarIconSize))
+
+    def setToolButtonStyle(self, style: Qt.ToolButtonStyle):
+        # Resolve style
+        if style == Qt.ToolButtonStyle.ToolButtonFollowStyle:
+            style = QApplication.style().styleHint(QStyle.StyleHint.SH_ToolButtonStyle)
+
+        # Hide back/forward button text with ToolButtonTextBesideIcon
+        if style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
+            self.backAction.setText("")
+            self.forwardAction.setText("")
+        else:
+            self.backAction.setText(TaskBook.toolbarNames[tasks.JumpBack])
+            self.forwardAction.setText(TaskBook.toolbarNames[tasks.JumpForward])
+
+        super().setToolButtonStyle(style)
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.mapToGlobal(localPoint)
