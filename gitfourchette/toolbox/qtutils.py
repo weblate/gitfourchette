@@ -158,7 +158,7 @@ def stockIcon(iconId: str | QStyle.StandardPixmap) -> QIcon:
     def lookUpNamedIcon(name: str) -> QIcon:
         # First, attempt to get a matching icon from the assets
         def assetCandidates():
-            prefix = "assets:"
+            prefix = "assets:icons/"
             dark = isDarkTheme()
             for ext in ".svg", ".png":
                 if dark:  # attempt to get dark mode variant first

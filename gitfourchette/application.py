@@ -57,8 +57,8 @@ class GFApplication(QApplication):
             assetSearchPath = os.path.join(os.path.dirname(bootScriptPath), "assets")
             QDir.addSearchPath("assets", assetSearchPath)
 
-            if not MACOS:  # macOS automatically uses the .icns - it's designed to blend in well in a Mac environment
-                self.setWindowIcon(QIcon("assets:gitfourchette.png"))
+            if not (MACOS and APP_FROZEN):  # macOS app bundle automatically uses the .icns - it's designed to blend in well in a Mac environment
+                self.setWindowIcon(QIcon("assets:icons/gitfourchette.png"))
 
         # Get system default style name before applying further styling
         with NonCriticalOperation("Get system default style name"):

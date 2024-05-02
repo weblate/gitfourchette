@@ -14,7 +14,7 @@ def makeBrandedDialogLayout(
 
     iconLabel = QLabel(dialog)
     iconLabel.setMaximumSize(QSize(56, 56))
-    iconLabel.setPixmap(QPixmap("assets:gitfourchette.png"))
+    iconLabel.setPixmap(QPixmap("assets:icons/gitfourchette.png"))
     iconLabel.setScaledContents(True)
     iconLabel.setMargin(8)
 

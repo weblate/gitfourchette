@@ -129,7 +129,7 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
         svg += f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='{color}' stroke-width='1' fill='{fill}'/>\n"
         svg += f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='{color}'>{char}</text>\n"
         svg += f"</svg>"
-        svgFileName = F"{ASSETS_DIR}/status_{char.lower()}{suffix}.svg"
+        svgFileName = F"{ASSETS_DIR}/icons/status_{char.lower()}{suffix}.svg"
         writeIfDifferent(svgFileName, svg)
 
 

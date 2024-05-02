@@ -33,7 +33,7 @@ class DiffGutter(QWidget):
         if FREEDESKTOP:  # pragma: no cover
             dpr = 1  # On Linux, Qt doesn't seem to support cursors at non-1 DPR
 
-        pix = QPixmap(f"assets:right_ptr@{dpr}x")
+        pix = QPixmap(f"assets:icons/right_ptr@{dpr}x")
         pix.setDevicePixelRatio(dpr)
         flippedCursor = QCursor(pix, hotX=19, hotY=5)
         self.setCursor(flippedCursor)

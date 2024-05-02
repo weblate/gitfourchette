@@ -14,7 +14,7 @@ class WelcomeWidget(QFrame):
         self.ui.setupUi(self)
 
         logoText = self.ui.logoLabel.text().format(app=qAppName())
-        logoPixmap = QPixmap("assets:gitfourchette-banner.png")
+        logoPixmap = QPixmap("assets:icons/gitfourchette-banner.png")
         logoPixmap.setDevicePixelRatio(4)
         self.ui.logoLabel.setText(logoText)
         self.ui.logoLabel.setPixmap(logoPixmap)
