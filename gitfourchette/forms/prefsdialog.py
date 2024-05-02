@@ -66,6 +66,7 @@ class PrefsDialog(QDialog):
 
         # Prepare main widgets & layout
         tabWidget = QTabWidget(self)
+        self.tabs = tabWidget
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
@@ -129,6 +130,7 @@ class PrefsDialog(QDialog):
 
             # Make the actual control widget
             control = self.makeControlWidget(prefKey, prefValue, caption)
+            control.setObjectName(f"prefctl_{prefKey}")  # Name the control so that unit tests can find it
             rowWidgets = [control]
 
             # Tack an extra QLabel to the end if there's a suffix
@@ -295,7 +297,7 @@ class PrefsDialog(QDialog):
             control.setCurrentIndex(0)
         control.insertSeparator(1)
         langDir = QDir("assets:lang", "gitfourchette_*.qm")
-        languages = [qmFile.removeprefix("gitfourchette_").removesuffix(".qm") for qmFile in langDir]
+        languages = [qmFile.removeprefix("gitfourchette_").removesuffix(".qm") for qmFile in langDir.entryList()]
         for enumMember in languages:
             lang = QLocale(enumMember)
             control.addItem(lang.nativeLanguageName().title(), enumMember)

@@ -2,6 +2,7 @@ import pytest
 
 from . import reposcenario
 from .util import *
+from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.nav import NavLocator, NavContext
 
@@ -215,3 +216,37 @@ def testRefreshKeepsMultiFileSelection(tempDir, mainWindow, context):
     fl.selectAll()
     rw.refreshRepo()
     assert list(fl.selectedPaths()) == [f"{context.name}{i}" for i in range(N)]
+
+
+def testPrefsDialog(tempDir, mainWindow):
+    def openPrefs() -> PrefsDialog:
+        triggerMenuAction(mainWindow.menuBar(), "file/preferences")
+        return findQDialog(mainWindow, "preferences")
+
+    # Open prefs, navigate to some tab and reject
+    dlg = openPrefs()
+    assert dlg.tabs.currentIndex() == 0
+    dlg.tabs.setCurrentIndex(2)
+    dlg.reject()
+
+    # Open prefs again and check that the tab was restored
+    dlg = openPrefs()
+    assert dlg.tabs.currentIndex() == 2
+    dlg.reject()
+
+    # Change statusbar setting, and cancel
+    assert mainWindow.statusBar().isVisible()
+    dlg = openPrefs()
+    checkBox: QCheckBox = dlg.findChild(QCheckBox, "prefctl_showStatusBar")
+    assert checkBox.isChecked()
+    checkBox.setChecked(False)
+    dlg.reject()
+    assert mainWindow.statusBar().isVisible()
+
+    # Change statusbar setting, and accept
+    dlg = openPrefs()
+    checkBox: QCheckBox = dlg.findChild(QCheckBox, "prefctl_showStatusBar")
+    assert checkBox.isChecked()
+    checkBox.setChecked(False)
+    dlg.accept()
+    assert not mainWindow.statusBar().isVisible()

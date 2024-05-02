@@ -1270,6 +1270,7 @@ class MainWindow(QMainWindow):
         dlg.accepted.connect(lambda: self.onAcceptPrefsDialog(dlg.prefDiff))
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         dlg.show()
+        return dlg
 
     # -------------------------------------------------------------------------
     # Find
