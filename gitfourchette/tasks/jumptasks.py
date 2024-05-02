@@ -119,7 +119,7 @@ class Jump(RepoTask):
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
-            rw.dirtyHeader.setText(self.tr("%n dirty:", "", nDirty))
+            rw.dirtyHeader.setText(self.tr("%n unstaged:", "", nDirty))
             rw.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
 
             newNumChanges = nDirty + nStaged

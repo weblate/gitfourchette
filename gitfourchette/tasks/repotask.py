@@ -445,22 +445,22 @@ class RepoTask(QObject):
         repo = self.repo
 
         if TaskPrereqs.NoConflicts in prereqs and repo.any_conflicts:
-            raise AbortTask(self.tr("Fix merge conflicts before performing this action."))
+            raise AbortTask(translate("RepoTask", "Fix merge conflicts before performing this action."))
 
         if TaskPrereqs.NoUnborn in prereqs and repo.head_is_unborn:
             raise AbortTask(paragraphs(
-                self.tr("There are no commits in this repository yet."),
-                self.tr("Create the initial commit in this repository before performing this action.")))
+                translate("RepoTask", "There are no commits in this repository yet."),
+                translate("RepoTask", "Create the initial commit in this repository before performing this action.")))
 
         if TaskPrereqs.NoCherrypick in prereqs and repo.state() == RepositoryState.CHERRYPICK:
             raise AbortTask(paragraphs(
-                self.tr("You are in the middle of a cherry-pick."),
-                self.tr("Before performing this action, conclude the cherry-pick.")))
+                translate("RepoTask", "You are in the middle of a cherry-pick."),
+                translate("RepoTask", "Before performing this action, conclude the cherry-pick.")))
 
         if TaskPrereqs.NoStagedChanges in prereqs and repo.any_staged_changes:
             raise AbortTask(paragraphs(
-                self.tr("You have staged changes."),
-                self.tr("Before performing this action, commit your changes or stash them.")))
+                translate("RepoTask", "You have staged changes."),
+                translate("RepoTask", "Before performing this action, commit your changes or stash them.")))
 
 
 class RepoTaskRunner(QObject):

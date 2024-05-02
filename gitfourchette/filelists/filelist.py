@@ -127,7 +127,7 @@ class FileList(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)  # prevent editing text after double-clicking
         self.setUniformItemSizes(True)  # potential perf boost with many files
 
-        self.searchBar = SearchBar(self, self.tr("Find a file by pathFind file"))
+        self.searchBar = SearchBar(self, tr("Find a file by pathFind file"))
         self.searchBar.setUpItemViewBuddy()
         self.searchBar.ui.forwardButton.hide()
         self.searchBar.ui.backwardButton.hide()
@@ -203,13 +203,13 @@ class FileList(QListView):
             ActionDef.SEPARATOR,
 
             ActionDef(
-                self.tr("Open &Folder(s)", "", n),
+                tr("Open &Folder", "", n),
                 self.showInFolder,
                 QStyle.StandardPixmap.SP_DirIcon,
             ),
 
             ActionDef(
-                self.tr("&Copy Path(s)", "", n),
+                tr("&Copy Path", "", n),
                 self.copyPaths,
                 shortcuts=GlobalShortcuts.copy,
             ),
@@ -256,21 +256,21 @@ class FileList(QListView):
             entryPath = os.path.join(self.repo.workdir, patch.delta.new_file.path)
             openInTextEditor(self, entryPath)
 
-        self.confirmBatch(run, self.tr("Open in external editor"),
-                          self.tr("Really open <b>{0} files</b> in external editor?"))
+        self.confirmBatch(run, tr("Open in external editor"),
+                          tr("Really open <b>{0} files</b> in external editor?"))
 
     def wantOpenInDiffTool(self):
-        self.confirmBatch(self._openInDiffTool, self.tr("Open in external diff tool"),
-                          self.tr("Really open <b>{0} files</b> in external diff tool?"))
+        self.confirmBatch(self._openInDiffTool, tr("Open in external diff tool"),
+                          tr("Really open <b>{0} files</b> in external diff tool?"))
 
     def _openInDiffTool(self, patch: Patch):
         if patch.delta.new_file.id == NULL_OID:
             raise SelectedFileBatchError(
-                self.tr("{0}: Can’t open external diff tool on a deleted file.").format(patch.delta.new_file.path))
+                tr("{0}: Can’t open external diff tool on a deleted file.").format(patch.delta.new_file.path))
 
         if patch.delta.old_file.id == NULL_OID:
             raise SelectedFileBatchError(
-                self.tr("{0}: Can’t open external diff tool on a new file.").format(patch.delta.new_file.path))
+                tr("{0}: Can’t open external diff tool on a new file.").format(patch.delta.new_file.path))
 
         oldDiffFile = patch.delta.old_file
         newDiffFile = patch.delta.new_file
@@ -297,11 +297,11 @@ class FileList(QListView):
             path = os.path.join(self.repo.workdir, entry.delta.new_file.path)
             path = os.path.normpath(path)  # get rid of any trailing slashes (submodules)
             if not os.path.exists(path):  # check exists, not isfile, for submodules
-                raise SelectedFileBatchError(self.tr("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
+                raise SelectedFileBatchError(tr("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
             showInFolder(path)
 
-        self.confirmBatch(run, self.tr("Open paths"),
-                          self.tr("Really open <b>{0} folders</b>?"))
+        self.confirmBatch(run, tr("Open paths"),
+                          tr("Really open <b>{0} folders</b>?"))
 
     def keyPressEvent(self, event: QKeyEvent):
         # The default keyPressEvent copies the displayed label of the selected items.
@@ -417,7 +417,7 @@ class FileList(QListView):
         for index in self.selectedIndexes():
             patch: Patch = index.data(PATCH_ROLE)
             if not patch or not patch.delta:
-                raise ValueError(self.tr("This file appears to have changed since we last read it. Try refreshing the window."))
+                raise ValueError(tr("This file appears to have changed since we last read it. Try refreshing the window."))
             assert isinstance(patch, Patch)
             yield patch
 
@@ -448,10 +448,10 @@ class FileList(QListView):
     def savePatchAs(self, saveInto=None):
         def warnBinary(affectedPaths):
             message = paragraphs(
-                self.tr("For the time being, {0} is unable to export binary patches from a selection of files."),
-                self.tr("The following binary files were skipped in the patch:")).format(qAppName())
+                tr("For the time being, {0} is unable to export binary patches from a selection of files."),
+                tr("The following binary files were skipped in the patch:")).format(qAppName())
             message += toTightUL(escape(f) for f in affectedPaths)
-            showWarning(self, self.tr("Save patch file"), message)
+            showWarning(self, tr("Save patch file"), message)
 
         patches = list(self.selectedPatches())
         names = set()
@@ -474,7 +474,7 @@ class FileList(QListView):
             if skippedBinaryFiles:
                 warnBinary(skippedBinaryFiles)
             else:
-                showInformation(self, self.tr("Save patch file"), self.tr("The patch is empty."))
+                showInformation(self, tr("Save patch file"), tr("The patch is empty."))
             return
 
         name = ", ".join(sorted(names)) + ".patch"
@@ -489,7 +489,7 @@ class FileList(QListView):
             savePath = os.path.join(saveInto, name)
             dump(savePath)
         else:
-            qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Save patch file"), name)
+            qfd = PersistentFileDialog.saveFile(self, "SaveFile", tr("Save patch file"), name)
             qfd.fileSelected.connect(dump)
             qfd.show()
 
@@ -534,8 +534,8 @@ class FileList(QListView):
             tempPath = dumpTempBlob(self.repo, getSessionTemporaryDirectory(), patch.delta.old_file, "HEAD")
             openInTextEditor(self, tempPath)
 
-        self.confirmBatch(run, self.tr("Open HEAD version of file"),
-                          self.tr("Really open <b>{0} files</b> in external editor?"))
+        self.confirmBatch(run, tr("Open HEAD version of file"),
+                          tr("Really open <b>{0} files</b> in external editor?"))
 
     def wantPartialStash(self):
         paths = [patch.delta.old_file.path for patch in self.selectedPatches()]
@@ -547,7 +547,7 @@ class FileList(QListView):
             self.openSubRepo.emit(patch.delta.new_file.path)
 
     def revertModeActionDef(self, n: int, callback: Callable):
-        action = ActionDef(self.tr("Revert Mode Change", "", n), callback, enabled=False)
+        action = ActionDef(tr("Revert Mode Change", "", n), callback, enabled=False)
 
         try:
             patches = self.selectedPatches()
@@ -564,9 +564,9 @@ class FileList(QListView):
                 action.enabled = True
                 if n == 1:
                     if nm == FileMode.BLOB_EXECUTABLE:
-                        action.caption = self.tr("Revert Mode to Non-Executable")
+                        action.caption = tr("Revert Mode to Non-Executable")
                     elif nm == FileMode.BLOB:
-                        action.caption = self.tr("Revert Mode to Executable")
+                        action.caption = tr("Revert Mode to Executable")
 
         return action
 

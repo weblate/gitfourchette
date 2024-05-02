@@ -233,6 +233,7 @@ class TrTables:
             "diff_font": translate("Prefs", "Font"),
             "diff_tabSpaces": translate("Prefs", "One tab is # spaces"),
             "diff_contextLines": translate("Prefs", "Show up to # context lines"),
+            "diff_contextLines_help": translate("Prefs", "Amount of unmodified lines to show around red or green lines in a diff."),
             "diff_largeFileThresholdKB": translate("Prefs", "Load diffs up to # KB"),
             "diff_imageFileThresholdKB": translate("Prefs", "Load images up to # KB"),
             "diff_wordWrap": translate("Prefs", "Word wrap"),

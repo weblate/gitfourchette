@@ -244,7 +244,7 @@ class Sidebar(QTreeView):
             if webUrl:
                 webActions = [
                     ActionDef(
-                        self.tr("Browse on {0}...").format(escamp(webHost)),
+                        self.tr("Visit Web Page on {0}...").format(escamp(webHost)),
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
                     ),
@@ -254,11 +254,11 @@ class Sidebar(QTreeView):
             actions += [
                 TaskBook.action(self,
                     NewBranchFromRef,
-                    self.tr("Start Local Branch from Here..."),
+                    self.tr("Start Local &Branch from Here..."),
                     taskArgs=refName,
                 ),
 
-                TaskBook.action(self, FetchRemoteBranch, self.tr("Fetch Remote Changes..."), taskArgs=shorthand),
+                TaskBook.action(self, FetchRemoteBranch, self.tr("&Fetch New Commits..."), taskArgs=shorthand),
 
                 ActionDef.SEPARATOR,
 
@@ -291,7 +291,7 @@ class Sidebar(QTreeView):
             if webUrl:
                 webActions = [
                     ActionDef(
-                        self.tr("Browse on {0}...").format(escamp(webHost)),
+                        self.tr("Visit Web Page on {0}...").format(escamp(webHost)),
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
                     ),

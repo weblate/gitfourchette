@@ -33,14 +33,14 @@ class _BaseStagingTask(RepoTask):
         numConflicts = len(conflicts)
 
         if numPatches == numConflicts:
-            intro = self.tr("You have selected %n merge conflicts that are still unsolved.", "", numConflicts)
+            intro = tr("You have selected %n merge conflicts that are still unsolved.", "", numConflicts)
         else:
-            intro = self.tr("There are %n unsolved merge conflicts among your selection.", "", numConflicts)
+            intro = tr("There are %n unsolved merge conflicts among your selection.", "", numConflicts)
 
         if purpose == PatchPurpose.STAGE:
-            please = self.tr("Please fix it/them before staging:", "'it/them' refers to the selected merge conflicts", numConflicts)
+            please = tr("Please fix it/them before staging:", "'it/them' refers to the selected merge conflicts", numConflicts)
         else:
-            please = self.tr("Please fix it/them before discarding:", "'it/them' refers to the selected merge conflicts", numConflicts)
+            please = tr("Please fix it/them before discarding:", "'it/them' refers to the selected merge conflicts", numConflicts)
 
         message = paragraphs(intro, please)
         message += toTightUL(p.delta.new_file.path for p in conflicts)

@@ -57,7 +57,7 @@ class CloneDialog(QDialog):
         self.cancelButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel)
         self.cancelButton.setAutoDefault(False)
 
-        self.ui.statusForm.setBlurb(self.tr("Hit “Clone” when ready."))
+        self.ui.statusForm.setBlurb(self.tr("Hit {0} when ready.").format(tquo(self.cloneButton.text().replace("&", ""))))
 
         self.ui.shallowCloneDepthSpinBox.valueChanged.connect(self.onShallowCloneDepthChanged)
         self.ui.shallowCloneCheckBox.stateChanged.connect(self.onShallowCloneCheckBoxStateChanged)

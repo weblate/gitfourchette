@@ -59,7 +59,7 @@ class CommittedFiles(FileList):
                     icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
                     [
                         ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitOid)), self.saveNewRevision),
-                        ActionDef(self.tr("Save Version &Before {0}".format(shortHash(self.commitOid))), self.saveOldRevision),
+                        ActionDef(self.tr("Save Version &Before {0}").format(shortHash(self.commitOid)), self.saveOldRevision),
                     ]
                 ),
             ]

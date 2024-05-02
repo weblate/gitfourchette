@@ -48,7 +48,7 @@ class _BaseNetTask(RepoTask):
             raise AbortTask(message)
 
         if not branch.upstream:
-            message = noUpstreamMessage or tr("Can’t fetch {0} because this branch isn’t tracking a remote branch.")
+            message = noUpstreamMessage or tr("Can’t fetch new commits on {0} because this branch isn’t tracking an upstream branch.")
             message = message.format(bquoe(branch.shorthand))
             raise AbortTask(message)
 
@@ -91,7 +91,7 @@ class RenameRemoteBranch(_BaseNetTask):
         dlg = showTextInputDialog(
             self.parentWidget(),
             self.tr("Rename remote branch {0}").format(tquoe(remoteBranchName)),
-            self.tr("Enter new name:"),
+            self.tr("WARNING: This will rename the branch for all users of the remote!") + "<br>" + self.tr("Enter new name:"),
             newBranchName,
             okButtonText=self.tr("Rename on remote"),
             validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken),
@@ -175,7 +175,7 @@ class FetchRemoteBranch(_BaseNetTask):
 
 class PullBranch(_BaseNetTask):
     def flow(self):
-        noUpstreamMessage = self.tr("Can’t pull remote changes on {0} because this branch isn’t tracking a remote branch.")
+        noUpstreamMessage = self.tr("Can’t pull new commits into {0} because this branch isn’t tracking an upstream branch.")
         upstreamBranch = self._autoDetectUpstream(noUpstreamMessage)
 
         yield from self.flowSubtask(FetchRemoteBranch, debrief=False)

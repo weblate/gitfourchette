@@ -483,8 +483,8 @@ class DiffView(QPlainTextEdit):
 
         actions += [
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Word wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
-            ActionDef(self.tr("Appearance..."), lambda: openPrefsDialog(self, "diff_font"), icon="configure"),
+            ActionDef(self.tr("&Word Wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
+            ActionDef(self.tr("Configure Appearance..."), lambda: openPrefsDialog(self, "diff_font"), icon="configure"),
         ]
 
         bottom: QMenu = self.createStandardContextMenu()

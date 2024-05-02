@@ -249,7 +249,7 @@ class FastForwardBranch(RepoTask):
 
         upstream: Branch = branch.upstream
         if not upstream:
-            raise AbortTask(self.tr("Can’t fast-forward {0} because it isn’t tracking a remote branch."
+            raise AbortTask(self.tr("Can’t fast-forward {0} because it isn’t tracking an upstream branch."
                                     ).format(bquo(branch.shorthand)))
 
         remoteBranchName = upstream.shorthand

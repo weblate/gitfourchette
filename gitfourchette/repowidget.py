@@ -367,7 +367,7 @@ class RepoWidget(QStackedWidget):
         unifiedCommitButton = QToolButton()
         unifiedCommitButton.setText(self.tr("Commit..."))
         unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [TaskBook.action(self, tasks.AmendCommit)])
-        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [ActionDef(self.tr("Amend..."), amendButton.click)])
+        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [ActionDef(self.tr("Amend Last Commit...Amend Commit...Amend..."), amendButton.click)])
 
         def unifiedCommitButtonMenuAboutToShow():
             unifiedCommitButtonMenu.setMinimumWidth(unifiedCommitButton.width())
