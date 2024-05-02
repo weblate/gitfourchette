@@ -1,17 +1,31 @@
-from gitfourchette.qt import *
-from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem, UNINDENT_ITEMS
+import enum
 
+from gitfourchette.qt import *
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem, UNINDENT_ITEMS, SidebarModel
+from gitfourchette.toolbox import stockIcon
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
-PE_COLLAPSED_LTR = QStyle.PrimitiveElement.PE_IndicatorArrowRight
-PE_COLLAPSED_RTL = QStyle.PrimitiveElement.PE_IndicatorArrowLeft
+PE_COLLAPSED = QStyle.PrimitiveElement.PE_IndicatorArrowRight
 
 # These metrics are a good compromise for Breeze, macOS, and Fusion.
 EXPAND_TRIANGLE_WIDTH = 6
-EXPAND_TRIANGLE_PADDING = 4
+PADDING = 4
+EYE_WIDTH = 16
+
+
+class SidebarClickZone(enum.IntEnum):
+    Invalid = 0
+    Select = 1
+    Expand = 2
+    Hide = 3
 
 
 class SidebarDelegate(QStyledItemDelegate):
+    """
+    Draws custom tree expand/collapse indicator arrows,
+    and hide/show icons.
+    """
+
     def __init__(self, parent: QWidget):
         super().__init__(parent)
 
@@ -21,55 +35,88 @@ class SidebarDelegate(QStyledItemDelegate):
             return
         unindentLevels = UNINDENT_ITEMS[item]
         unindentPixels = unindentLevels * indentation
-        if QGuiApplication.isLeftToRight():
-            rect.adjust(unindentPixels, 0, 0, 0)
+        return rect.adjust(unindentPixels, 0, 0, 0)
+
+    @staticmethod
+    def getClickZone(node: SidebarNode, rect: QRect, x: int):
+        if node.kind == EItem.Spacer:
+            return SidebarClickZone.Invalid
+        elif node.mayHaveChildren() and x < rect.left():
+            return SidebarClickZone.Expand
+        elif node.canBeHidden() and x > rect.right() - EYE_WIDTH - PADDING:
+            return SidebarClickZone.Hide
         else:
-            rect.adjust(0, 0, -unindentPixels, 0)
+            return SidebarClickZone.Select
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        """
-        Draw custom branch indicator. The standard one is too cluttered in some
-        themes, e.g. Breeze, so I've disabled it in style.qss.
-
-        In the macOS theme, the default actually looks fine... but let's
-        override it anyway for consistency with other platforms.
-        """
-
-        view: QTreeView = option.widget
-
         node = SidebarNode.fromIndex(index)
-        item = node.kind
 
         # Don't draw spacers at all (Windows theme has mouse hover effect by default)
-        if item == EItem.Spacer:
+        if node.kind == EItem.Spacer:
             return
 
-        opt = QStyleOptionViewItem(option)
+        view = option.widget
+        sidebarModel: SidebarModel = view.sidebarModel
+        style: QStyle = view.style()
+        hasFocus = option.state & QStyle.StateFlag.State_HasFocus
+        isSelected = option.state & QStyle.StateFlag.State_Selected
+        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
+        nodeIsHidden = sidebarModel.isHidden(node)
+        mouseOver = option.state & QStyle.StateFlag.State_Enabled and option.state & QStyle.StateFlag.State_MouseOver
+        makeRoomForEye = nodeIsHidden or (mouseOver and node.canBeHidden())
 
-        SidebarDelegate.unindentRect(item, opt.rect, view.indentation())
+        painter.save()
+        option.showDecorationSelected = True  # ?
 
-        # Draw expanding triangle
+        # Unindent rect
+        SidebarDelegate.unindentRect(node.kind, option.rect, view.indentation())
+
+        # Draw expand/collapse triangle.
         if node.mayHaveChildren() and not node.wantForceExpand():
-            rtl = view.isRightToLeft()
-
-            opt2 = QStyleOptionViewItem(opt)
-            r: QRect = opt2.rect
-
-            if not rtl:
-                r.adjust(-(EXPAND_TRIANGLE_WIDTH + EXPAND_TRIANGLE_PADDING), 0, 0, 0)  # args must be integers for pyqt5!
-            else:
-                r.adjust(r.width() + EXPAND_TRIANGLE_PADDING, 0, 0, 0)
-
-            r.setWidth(EXPAND_TRIANGLE_WIDTH)
+            opt2 = QStyleOptionViewItem(option)
+            opt2.rect.adjust(-(EXPAND_TRIANGLE_WIDTH + PADDING), 0, 0, 0)  # args must be integers for pyqt5!
+            opt2.rect.setWidth(EXPAND_TRIANGLE_WIDTH)
 
             # See QTreeView::drawBranches() in qtreeview.cpp for other interesting states
             opt2.state &= ~QStyle.StateFlag.State_MouseOver
-
-            style: QStyle = view.style()
-            if view.isExpanded(index):
-                arrowPrimitive = PE_EXPANDED
-            else:
-                arrowPrimitive = PE_COLLAPSED_LTR if not rtl else PE_COLLAPSED_RTL
+            arrowPrimitive = PE_EXPANDED if view.isExpanded(index) else PE_COLLAPSED
             style.drawPrimitive(arrowPrimitive, opt2, painter, view)
 
-        super().paint(painter, opt, index)
+        # Draw control background
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
+
+        # Adjust contents
+        option.rect.adjust(PADDING, 0, -PADDING, 0)
+
+        # Set highlighted text color if this item is selected
+        if isSelected:
+            painter.setPen(option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
+
+        # Draw decoration icon
+        iconWidth = option.decorationSize.width()
+        icon: QIcon = index.data(Qt.ItemDataRole.DecorationRole)
+        if icon is not None and not icon.isNull():
+            r = QRect(option.rect)
+            r.setWidth(iconWidth)
+            icon.paint(painter, r, option.decorationAlignment)
+            option.rect.adjust(r.width() + PADDING*150//100, 0, 0, 0)
+
+        # Draw text
+        textRect = QRect(option.rect)
+        if makeRoomForEye:
+            textRect.adjust(0, 0, -EYE_WIDTH, 0)
+        font: QFont = index.data(Qt.ItemDataRole.FontRole) or option.font
+        painter.setFont(font)
+        fullText = index.data(Qt.ItemDataRole.DisplayRole)
+        text = painter.fontMetrics().elidedText(fullText, option.textElideMode, textRect.width())
+        painter.drawText(textRect, option.displayAlignment, text)
+
+        # Draw eye
+        if makeRoomForEye:
+            r = QRect(option.rect)
+            r.setLeft(textRect.right())
+            r.setWidth(EYE_WIDTH)
+            iconName = "view-hidden" if nodeIsHidden else "view-visible"
+            stockIcon(iconName).paint(painter, r)
+
+        painter.restore()

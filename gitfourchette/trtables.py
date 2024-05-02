@@ -123,8 +123,8 @@ class TrTables:
     def _init_sidebarItems():
         from gitfourchette.sidebar.sidebarmodel import EItem as E
         return {
-            E.UncommittedChanges: translate("SidebarModel", "Changes"),
-            E.LocalBranchesHeader: translate("SidebarModel", "Local Branches"),
+            E.UncommittedChanges: translate("SidebarModel", "Uncommitted ChangesChanges"),
+            E.LocalBranchesHeader: translate("SidebarModel", "Local BranchesBranches"),
             E.StashesHeader: translate("SidebarModel", "Stashes"),
             E.RemotesHeader: translate("SidebarModel", "Remotes"),
             E.TagsHeader: translate("SidebarModel", "Tags"),

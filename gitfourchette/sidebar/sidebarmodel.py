@@ -110,6 +110,14 @@ UNINDENT_ITEMS = {
     EItem.RefFolder: -1,
 }
 
+HIDEABLE_ITEMS = sorted([
+    EItem.LocalBranch,
+    EItem.Remote,
+    EItem.RemoteBranch,
+    EItem.Stash,
+    EItem.StashesHeader,
+])
+
 if MODAL_SIDEBAR: UNINDENT_ITEMS.update({
     EItem.LocalBranchesHeader: -1,
     EItem.RemotesHeader: -1,
@@ -172,6 +180,9 @@ class SidebarNode:
 
     def wantForceExpand(self):
         return self.kind in FORCE_EXPAND
+
+    def canBeHidden(self):
+        return self.kind in HIDEABLE_ITEMS
 
     def walk(self):
         frontier = self.children[:]
@@ -243,6 +254,16 @@ class SidebarModel(QAbstractItemModel):
 
         if emitSignals:
             self.endResetModel()
+
+    def isHidden(self, node: SidebarNode) -> bool:
+        if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
+            return node.data in self._hiddenBranches
+        elif node.kind == EItem.Remote:
+            return node.data in self._hiddenRemotes
+        elif node.kind == EItem.Stash:
+            return node.data in self._hiddenStashCommits
+        elif node.kind == EItem.StashesHeader:
+            return self._hideAllStashes
 
     def switchMode(self, i: int):
         self.beginResetModel()
@@ -482,11 +503,6 @@ class SidebarModel(QAbstractItemModel):
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return 1
 
-    def hiddenBranchFont(self) -> QFont:
-        font = self._parentWidget.font()
-        font.setStrikeOut(True)
-        return font
-
     def cacheTooltip(self, index: QModelIndex, text: str):
         self._cachedTooltipIndex = index
         self._cachedTooltipText = text
@@ -544,9 +560,7 @@ class SidebarModel(QAbstractItemModel):
             elif hiddenRole:
                 return refName in self._hiddenBranches
             elif fontRole:
-                if refName in self._hiddenBranches:
-                    return self.hiddenBranchFont()
-                elif branchName == self._checkedOut:
+                if branchName == self._checkedOut:
                     font = self._parentWidget.font()
                     font.setWeight(QFont.Weight.Black)
                     return font
@@ -594,9 +608,6 @@ class SidebarModel(QAbstractItemModel):
             elif toolTipRole:
                 url = self.repo.remotes[remoteName].url
                 return "<p style='white-space: pre'>" + escape(url)
-            elif fontRole:
-                if remoteName in self._hiddenRemotes:
-                    return self.hiddenBranchFont()
             elif hiddenRole:
                 return False
             elif decorationRole:
@@ -621,9 +632,7 @@ class SidebarModel(QAbstractItemModel):
                              ).format(hquoe(self._checkedOut))
                 return text
             elif fontRole:
-                if refName in self._hiddenBranches:
-                    return self.hiddenBranchFont()
-                elif self._checkedOutUpstream == shorthand:
+                if self._checkedOutUpstream == shorthand:
                     font = QFont(self._parentWidget.font())
                     font.setItalic(True)
                     font.setWeight(QFont.Weight.Medium)
@@ -675,11 +684,6 @@ class SidebarModel(QAbstractItemModel):
                 text += f"<b>{self.tr('date:')}</b> {commitTimeStr}"
                 self.cacheTooltip(index, text)
                 return text
-            elif fontRole:
-                if stash.commit_id.hex in self._hiddenStashCommits:
-                    return self.hiddenBranchFont()
-                else:
-                    return None
             elif hiddenRole:
                 return stash.commit_id.hex in self._hiddenStashCommits
             elif decorationRole:
@@ -700,10 +704,11 @@ class SidebarModel(QAbstractItemModel):
 
         elif item == EItem.UncommittedChanges:
             if displayRole:
-                changesText = self.tr("Uncommitted")
+                changesText = TrTables.sidebarItem(EItem.UncommittedChanges)
                 numUncommittedChanges = self.repoState.numUncommittedChanges
                 if numUncommittedChanges != 0:
-                    changesText = f"({numUncommittedChanges}) " + changesText
+                    ucPrefix = f"({numUncommittedChanges}) "
+                    changesText = ucPrefix + changesText.replace("", "" + ucPrefix)
                 return changesText
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere
@@ -727,8 +732,6 @@ class SidebarModel(QAbstractItemModel):
             elif fontRole:
                 font = self._parentWidget.font()
                 font.setWeight(QFont.Weight.DemiBold)
-                if item == EItem.StashesHeader and self._hideAllStashes:
-                    font.setStrikeOut(True)
                 return font
             elif hiddenRole:
                 return False

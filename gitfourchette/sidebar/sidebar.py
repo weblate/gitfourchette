@@ -10,7 +10,7 @@ from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
-from gitfourchette.sidebar.sidebardelegate import SidebarDelegate
+from gitfourchette.sidebar.sidebardelegate import SidebarDelegate, SidebarClickZone
 from gitfourchette.sidebar.sidebarmodel import (
     SidebarModel, SidebarNode, EItem,
     ROLE_REF, ROLE_ISHIDDEN,
@@ -19,6 +19,8 @@ from gitfourchette.toolbox import *
 from gitfourchette.webhost import WebHost
 
 logger = logging.getLogger(__name__)
+
+INVALID_MOUSEPRESS = (-1, SidebarClickZone.Invalid)
 
 
 class Sidebar(QTreeView):
@@ -43,10 +45,13 @@ class Sidebar(QTreeView):
     def __init__(self, parent):
         super().__init__(parent)
 
-        self.setObjectName("sidebar")  # for styling
+        self.setObjectName("Sidebar")
+        self.setMouseTracking(True)  # for eye icons
         self.setMinimumWidth(128)
         self.setIndentation(16)
         self.setHeaderHidden(True)
+        self.setAnimated(True)
+        self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thinner spacers
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -59,20 +64,28 @@ class Sidebar(QTreeView):
 
         if settings.DEVDEBUG and QAbstractItemModelTester is not None:
             self.modelTester = QAbstractItemModelTester(self.model())
-            logger.debug("ModelTester enabled. This will significantly slow down refreshes!")
-
-        self.setAnimated(True)
-        self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thin spacers
+            logger.warning("Sidebar model tester enabled. This will significantly slow down refreshes!")
 
         self.expanded.connect(self.onExpanded)
         self.collapsed.connect(self.onCollapsed)
         self.collapseCacheValid = False
         self.collapseCache = set()
 
-        self.expandTriangleClickIndex = None
-        self.eatDoubleClickTimer = QElapsedTimer()
+        # When clicking on a row, information about the clicked row and "zone"
+        # is kept until mouseReleaseEvent.
+        self.mousePressCache = INVALID_MOUSEPRESS
 
         self.refreshPrefs()
+
+    def drawBranches(self, painter, rect, index):
+        """
+        (overridden function)
+        Prevent drawing the default "branches" and expand/collapse indicators.
+        We draw the expand/collapse indicator ourselves in SidebarDelegate.
+        """
+        # Overriding this function has the same effect as adding this line in the QSS:
+        # Sidebar::branch { image: none; border-image: none; }
+        return
 
     def switchMode(self, modeId: int):
         self.sidebarModel.switchMode(modeId)
@@ -81,7 +94,6 @@ class Sidebar(QTreeView):
     def visualRect(self, index: QModelIndex) -> QRect:
         """
         Required so the theme can properly draw unindented rows.
-        TODO: Can we make it possible to click in blank space to select an item?
         """
 
         vr = super().visualRect(index)
@@ -553,6 +565,37 @@ class Sidebar(QTreeView):
         else:
             QApplication.beep()
 
+    def wantHideNode(self, node: SidebarNode):
+        if node is None:
+            # QApplication.beep()
+            return
+
+        item = node.kind
+        data = node.data
+
+        if item == EItem.Spacer:
+            pass
+
+        elif item in [EItem.LocalBranch, EItem.RemoteBranch]:
+            self.toggleHideBranch.emit(data)
+            self.repaint()
+
+        elif item == EItem.Remote:
+            self.toggleHideRemote.emit(data)
+            self.repaint()
+
+        elif item == EItem.Stash:
+            oid = Oid(hex=data)
+            self.toggleHideStash.emit(oid)
+            self.repaint()
+
+        elif item == EItem.StashesHeader:
+            self.toggleHideAllStashes.emit()
+            self.repaint()
+
+        else:
+            QApplication.beep()
+
     def keyPressEvent(self, event: QKeyEvent):
         k = event.key()
 
@@ -587,60 +630,79 @@ class Sidebar(QTreeView):
 
         self.wantSelectNode(SidebarNode.fromIndex(current))
 
-    def clickFallsInExpandTriangle(self, index, x):
-        if not index.isValid():
-            return False
-
-        rect = self.visualRect(index)
-        if not rect.isValid():
-            return False
-
-        if self.isLeftToRight():
-            return x < rect.left()
+    def resolveClick(self, pos: QPoint) -> tuple[QModelIndex, SidebarNode, SidebarClickZone]:
+        index = self.indexAt(pos)
+        if index.isValid():
+            rect = self.visualRect(index)
+            node = SidebarNode.fromIndex(index)
+            zone = SidebarDelegate.getClickZone(node, rect, pos.x())
         else:
-            return x > rect.right()
+            node = None
+            zone = SidebarClickZone.Invalid
+        return index, node, zone
+
+    def mouseMoveEvent(self, event):
+        """
+        Bypass QTreeView's mouseMoveEvent to prevent the original branch
+        expand indicator from taking over mouse input.
+        """
+        QAbstractItemView.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event: QMouseEvent):
-        index = self.indexAt(event.pos())
-        if self.clickFallsInExpandTriangle(index, event.pos().x()):
-            # Clicking collapse/expand triangle - will react in mouseReleaseEvent
-            self.expandTriangleClickIndex = index
-            event.accept()
-        elif index.isValid():
-            self.setCurrentIndex(index)
-            event.accept()
-        else:
+        index, node, zone = self.resolveClick(event.pos())
+
+        # Save click info for mouseReleaseEvent
+        self.mousePressCache = (index.row(), zone)
+
+        if zone == SidebarClickZone.Invalid:
             super().mousePressEvent(event)
+            return
+
+        if zone == SidebarClickZone.Select:
+            self.setCurrentIndex(index)
+
+        event.accept()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        index = self.indexAt(event.pos())
-        if self.clickFallsInExpandTriangle(index, event.pos().x()):
-            # Let user collapse/expand in quick succession without triggering a double click
-            self.eatDoubleClickTimer.restart()
+        index, node, zone = self.resolveClick(event.pos())
+
+        # Only perform special actions (hide, expand) if mouse was released
+        # on same row/zone as mousePressEvent
+        match = (index.row(), zone) == self.mousePressCache
+
+        # Clear mouse press info on release
+        self.mousePressCache = INVALID_MOUSEPRESS
+
+        if not match or zone in [SidebarClickZone.Invalid, SidebarClickZone.Select]:
+            super().mouseReleaseEvent(event)
+            return
+        elif zone == SidebarClickZone.Hide:
+            self.wantHideNode(node)
+            event.accept()
+        elif zone == SidebarClickZone.Expand:
             # Toggle expanded state
-            assert index.isValid()
-            if SidebarNode.fromIndex(index).mayHaveChildren():
+            if node.mayHaveChildren():
                 if self.isExpanded(index):
                     self.collapse(index)
                 else:
                     self.expand(index)
             event.accept()
         else:
-            self.expandTriangleClickIndex = None
-            super().mouseReleaseEvent(event)
+            logger.warning(f"Unknown click zone {zone}")
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.
 
-        # See if we should drop this double click (see mouseReleaseEvent)
-        eatTimer = self.eatDoubleClickTimer
-        if eatTimer.isValid() and eatTimer.elapsed() < QApplication.doubleClickInterval():
-            return
-        eatTimer.invalidate()
+        index, node, zone = self.resolveClick(event.pos())
 
-        index: QModelIndex = self.indexAt(event.pos())
-        if event.button() == Qt.MouseButton.LeftButton and index.isValid():
-            self.wantEnterNode(SidebarNode.fromIndex(index))
+        # Let user collapse/expand/hide a single node in quick succession
+        # without triggering a double click
+        if zone not in [SidebarClickZone.Invalid, SidebarClickZone.Select]:
+            self.mousePressEvent(event)
+            return
+
+        if event.button() == Qt.MouseButton.LeftButton and node is not None:
+            self.wantEnterNode(node)
 
     def walk(self):
         return self.sidebarModel.rootNode.walk()

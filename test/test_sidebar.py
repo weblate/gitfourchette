@@ -41,7 +41,7 @@ def testSidebarSelectionSync(tempDir, mainWindow):
     assert sb.selectedIndexes()[0].data() == "master"
 
     rw.jump(NavLocator.inWorkdir())
-    assert sb.selectedIndexes()[0].data().lower() == "uncommitted"
+    assert "uncommitted" in sb.selectedIndexes()[0].data().lower()
 
     rw.jump(NavLocator.inRef("refs/remotes/origin/first-merge"))
     assert sb.selectedIndexes()[0].data() == "first-merge"

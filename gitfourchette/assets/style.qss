@@ -8,11 +8,6 @@ Sidebar {
     background: palette(window);
 }
 
-Sidebar::branch {
-    image: none;
-    border-image: none;
-}
-
 Banner.diff {
     padding: 2px;
 }
