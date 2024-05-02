@@ -57,12 +57,6 @@ class FileListDelegate(QStyledItemDelegate):
         # Draw default background
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
 
-        # Draw focus rect (necessary with Breeze/Plasma 6)
-        if hasFocus:
-            o2 = QStyleOptionViewItem(option)
-            o2.rect = textRect
-            style.drawPrimitive(QStyle.PrimitiveElement.PE_FrameFocusRect, o2, painter, option.widget)
-
         # Draw icon
         if not iconRect.isEmpty():
             icon.paint(painter, iconRect, option.decorationAlignment)
