@@ -125,7 +125,7 @@ def patchSection(path: str, contents: str):
 
 def writeStatusIcon(fill='#ff00ff', char='X', round=2):
     for suffix, color in (["", "white"], ["@dark", "black"]):
-        svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>\n"
+        svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\n"
         svg += f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='{color}' stroke-width='1' fill='{fill}'/>\n"
         svg += f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='{color}'>{char}</text>\n"
         svg += f"</svg>"
