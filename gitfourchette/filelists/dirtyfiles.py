@@ -32,14 +32,14 @@ class DirtyFiles(FileList):
                 ActionDef(
                     self.tr("&Stage %n Files", "", n),
                     self.stage,
-                    icon="list-add",  # QStyle.StandardPixmap.SP_ArrowDown,
+                    icon="list-add",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
                 ),
 
                 ActionDef(
                     self.tr("&Discard Changes"),
                     self.discard,
-                    icon=QStyle.StandardPixmap.SP_TrashIcon,
+                    icon="SP_TrashIcon",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
                 ),
 
@@ -125,7 +125,7 @@ class DirtyFiles(FileList):
                 ActionDef(
                     self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
                     self.openWorkdirFile,
-                    icon=QStyle.StandardPixmap.SP_FileIcon,
+                    icon="SP_FileIcon",
                 ),
                 ActionDef(
                     self.tr("Edit HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),

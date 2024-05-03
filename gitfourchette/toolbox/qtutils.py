@@ -5,7 +5,6 @@ from typing import Callable
 from gitfourchette.qt import *
 
 _supportedImageFormats = None
-_stockIconCache = {}
 
 
 MultiShortcut = list[QKeySequence]
@@ -140,50 +139,6 @@ def isDarkTheme(palette: QPalette | None = None):
     themeBG = palette.color(QPalette.ColorRole.Base)  # standard theme background color
     themeFG = palette.color(QPalette.ColorRole.Text)  # standard theme foreground color
     return themeBG.value() < themeFG.value()
-
-
-def stockIcon(iconId: str | QStyle.StandardPixmap) -> QIcon:
-    """
-    If SVG icons don't show up, you may need to install the 'qt6-svg' package.
-    """
-
-    # Special cases
-    if (MACOS or WINDOWS) and iconId == "achtung":
-        iconId = QStyle.StandardPixmap.SP_MessageBoxWarning
-
-    # Attempt to get cached icon
-    if iconId in _stockIconCache:
-        return _stockIconCache[iconId]
-
-    def lookUpNamedIcon(name: str) -> QIcon:
-        # First, attempt to get a matching icon from the assets
-        def assetCandidates():
-            prefix = "assets:icons/"
-            dark = isDarkTheme()
-            for ext in ".svg", ".png":
-                if dark:  # attempt to get dark mode variant first
-                    yield f"{prefix}{name}@dark{ext}"
-                yield f"{prefix}{name}{ext}"
-
-        for candidate in assetCandidates():
-            f = QFile(candidate)
-            if f.exists():
-                return QIcon(f.fileName())
-
-        # Fall back to theme icons
-        return QIcon.fromTheme(name)
-
-    if type(iconId) is str:
-        icon = lookUpNamedIcon(iconId)
-    else:
-        icon = QApplication.style().standardIcon(iconId)
-
-    _stockIconCache[iconId] = icon
-    return icon
-
-
-def clearStockIconCache():
-    _stockIconCache.clear()
 
 
 def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):

@@ -1,7 +1,7 @@
 from contextlib import suppress
 from dataclasses import dataclass
 from gitfourchette.qt import *
-from gitfourchette.toolbox.qtutils import stockIcon
+from gitfourchette.toolbox.iconbank import stockIcon
 from typing import Callable, Iterable, Optional
 
 

@@ -54,7 +54,7 @@ class CommitDialog(QDialog):
 
         self.ui.infoBox.setVisible(bool(warning))
         self.ui.infoText.setText(warning)
-        self.ui.infoIcon.setPixmap(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(INFO_ICON_SIZE))
+        self.ui.infoIcon.setPixmap(stockIcon("SP_MessageBoxInformation").pixmap(INFO_ICON_SIZE))
         self.ui.infoIcon.setMaximumWidth(INFO_ICON_SIZE)
 
         self.ui.authorSignature.setSignature(authorSignature)

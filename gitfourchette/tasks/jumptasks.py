@@ -395,7 +395,7 @@ class Jump(RepoTask):
             rw.setDiffStackPage("special")
             rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 escape(f"Can't display {documentType}."),
-                icon=QStyle.StandardPixmap.SP_MessageBoxCritical))
+                icon="SP_MessageBoxCritical"))
 
 
 class JumpBackOrForward(tasks.RepoTask):

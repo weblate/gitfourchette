@@ -46,7 +46,7 @@ class SpecialDiffError(Exception):
             self,
             message: str,
             details: str = "",
-            icon=QStyle.StandardPixmap.SP_MessageBoxInformation,
+            icon: str = "SP_MessageBoxInformation",
             preformatted: str = "",
             longform: str = "",
     ):
@@ -118,7 +118,7 @@ class SpecialDiffError(Exception):
         return SpecialDiffError(
             translate("Diff", "This diff is too large to be previewed."),
             translate("Diff", "Diff size: {0}").format(humanSize),
-            QStyle.StandardPixmap.SP_MessageBoxWarning,
+            "SP_MessageBoxWarning",
             longform=longform)
 
     @staticmethod
@@ -135,7 +135,7 @@ class SpecialDiffError(Exception):
         return SpecialDiffError(
             translate("Diff", "This image is too large to be previewed."),
             translate("Diff", "Image size: {0}").format(humanSize),
-            QStyle.StandardPixmap.SP_MessageBoxWarning,
+            "SP_MessageBoxWarning",
             longform=longform)
 
     @staticmethod

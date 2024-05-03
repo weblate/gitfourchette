@@ -15,7 +15,7 @@ class Banner(QFrame):
         self.setObjectName("StateBox")
 
         icon = QLabel(self)
-        icon.setPixmap(stockIcon(QStyle.StandardPixmap.SP_MessageBoxInformation).pixmap(HORIZONTAL_CONTENT_HEIGHT))
+        icon.setPixmap(stockIcon("SP_MessageBoxInformation").pixmap(HORIZONTAL_CONTENT_HEIGHT))
 
         label = QLabel(__name__, self)
         label.setWordWrap(True)

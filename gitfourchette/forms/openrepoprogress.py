@@ -9,7 +9,7 @@ class OpenRepoProgress(QWidget):
         self.ui = Ui_OpenRepoProgress()
         self.ui.setupUi(self)
 
-        abortIcon = stockIcon(QStyle.StandardPixmap.SP_BrowserStop)
+        abortIcon = stockIcon("SP_BrowserStop")
 
         self.ui.abortButton.setIcon(abortIcon)
         self.ui.abortButton.setEnabled(False)

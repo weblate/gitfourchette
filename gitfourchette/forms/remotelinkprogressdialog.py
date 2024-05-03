@@ -11,7 +11,7 @@ class RemoteLinkProgressDialog(QProgressDialog):
         # Init dialog with room to fit 2 lines vertically, so that it doesn't jump around when updating label text
         self.setLabelText(self.tr("Connecting to remote...") + "\n")
 
-        self.abortButton = QPushButton(stockIcon(QStyle.StandardPixmap.SP_DialogAbortButton), self.tr("Abort"))
+        self.abortButton = QPushButton(stockIcon("SP_DialogAbortButton"), self.tr("Abort"))
         self.setCancelButton(self.abortButton)
 
         self.setWindowTitle(title or self.tr("Remote operation"))

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 ROLE_REF = Qt.ItemDataRole.UserRole + 0
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 1
+ROLE_ICONKEY = Qt.ItemDataRole.UserRole + 2
 
 MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.debug_modalSidebar  # do not change while app is running
 BRANCH_FOLDERS = True
@@ -522,9 +523,9 @@ class SidebarModel(QAbstractItemModel):
         toolTipRole = role == Qt.ItemDataRole.ToolTipRole
         sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
         fontRole = role == Qt.ItemDataRole.FontRole
-        decorationRole = role == Qt.ItemDataRole.DecorationRole
         hiddenRole = role == ROLE_ISHIDDEN
         refRole = role == ROLE_REF
+        iconKeyRole = role == ROLE_ICONKEY
 
         row = index.row()
         item = node.kind
@@ -566,8 +567,8 @@ class SidebarModel(QAbstractItemModel):
                     return font
                 else:
                     return None
-            elif decorationRole:
-                return stockIcon("git-branch" if branchName != self._checkedOut else "git-home")
+            elif iconKeyRole:
+                return "git-branch" if branchName != self._checkedOut else "git-home"
 
         elif item == EItem.UnbornHead:
             target = node.data
@@ -595,11 +596,8 @@ class SidebarModel(QAbstractItemModel):
                 return False
             elif refRole:
                 return "HEAD"
-            elif role == decorationRole:
-                if MACOS or WINDOWS:
-                    return stockIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
-                else:
-                    return stockIcon("achtung")
+            elif iconKeyRole:
+                return "achtung"
 
         elif item == EItem.Remote:
             remoteName = node.data
@@ -610,8 +608,8 @@ class SidebarModel(QAbstractItemModel):
                 return "<p style='white-space: pre'>" + escape(url)
             elif hiddenRole:
                 return False
-            elif decorationRole:
-                return stockIcon("git-remote")
+            elif iconKeyRole:
+                return "git-remote"
 
         elif item == EItem.RemoteBranch:
             refName = node.data
@@ -641,14 +639,14 @@ class SidebarModel(QAbstractItemModel):
                     return None
             elif hiddenRole:
                 return refName in self._hiddenBranches
-            elif decorationRole:
-                return stockIcon("git-branch")
+            elif iconKeyRole:
+                return "git-branch"
 
         elif item == EItem.RefFolder:
             if displayRole:
                 return node.data
-            elif decorationRole:
-                return stockIcon("git-folder")
+            elif iconKeyRole:
+                return "git-folder"
 
         elif item == EItem.Tag:
             refName = node.data
@@ -666,8 +664,8 @@ class SidebarModel(QAbstractItemModel):
                 return text
             elif hiddenRole:
                 return False
-            elif decorationRole:
-                return stockIcon("git-tag")
+            elif iconKeyRole:
+                return "git-tag"
 
         elif item == EItem.Stash:
             stash = self._stashes[row]
@@ -686,8 +684,8 @@ class SidebarModel(QAbstractItemModel):
                 return text
             elif hiddenRole:
                 return stash.commit_id.hex in self._hiddenStashCommits
-            elif decorationRole:
-                return stockIcon("git-stash")
+            elif iconKeyRole:
+                return "git-stash"
 
         elif item == EItem.Submodule:
             if displayRole:
@@ -699,8 +697,8 @@ class SidebarModel(QAbstractItemModel):
                 return text
             elif hiddenRole:
                 return False
-            elif decorationRole:
-                return stockIcon("achtung" if node.warning else "git-submodule")
+            elif iconKeyRole:
+                return "achtung" if node.warning else "git-submodule"
 
         elif item == EItem.UncommittedChanges:
             if displayRole:
@@ -719,8 +717,8 @@ class SidebarModel(QAbstractItemModel):
                 return font
             elif hiddenRole:
                 return False
-            elif decorationRole:
-                return stockIcon("git-workdir")
+            elif iconKeyRole:
+                return "git-workdir"
             elif toolTipRole:
                 return appendShortcutToToolTipText(self.tr("Go to Uncommitted Changes"), QKeySequence("Ctrl+U"))
 

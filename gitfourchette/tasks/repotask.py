@@ -363,7 +363,7 @@ class RepoTask(QObject):
             self,
             title: str = "",
             text: str = "",
-            buttonIcon: (QStyle.StandardPixmap | str | None) = None,
+            buttonIcon: str = "",
             verb: str = "",
             cancelText: str = "",
             detailText: str = "",

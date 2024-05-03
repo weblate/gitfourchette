@@ -126,7 +126,7 @@ class DiscardFiles(_BaseStagingTask):
         text = paragraphs(textPara)
 
         yield from self.flowConfirm(text=text, verb=verb,
-                                    buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+                                    buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
 
@@ -178,7 +178,7 @@ class DiscardModeChanges(_BaseStagingTask):
         yield from self.flowConfirm(
             text=paragraphs(textPara),
             verb=self.tr("Discard mode changes", "Button label"),
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         paths = [patch.delta.new_file.path for patch in patches]
@@ -218,7 +218,7 @@ class ApplyPatch(RepoTask):
                 title,
                 text=paragraphs(textPara),
                 verb=title,
-                buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+                buttonIcon="SP_DialogDiscardButton")
 
             Trash.instance().backupPatch(self.repo.workdir, subPatch, fullPatch.delta.new_file.path)
             applyLocation = ApplyLocation.WORKDIR

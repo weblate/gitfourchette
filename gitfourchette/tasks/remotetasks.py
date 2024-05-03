@@ -90,7 +90,7 @@ class DeleteRemote(RepoTask):
                         "The remote server itself will not be affected.")
             ).format(bquo(remoteName)),
             verb=self.tr("Remove remote", "Button label"),
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         self.repo.delete_remote(remoteName)

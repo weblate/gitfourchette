@@ -27,7 +27,7 @@ class StagedFiles(FileList):
                 ActionDef(
                     self.tr("&Unstage %n File(s)", "", n),
                     self.unstage,
-                    icon="list-remove",  # QStyle.StandardPixmap.SP_ArrowUp,
+                    icon="list-remove",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
                 ),
 
@@ -58,7 +58,7 @@ class StagedFiles(FileList):
                 ActionDef(
                     self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
                     self.openWorkdirFile,
-                    icon=QStyle.StandardPixmap.SP_FileIcon,
+                    icon="SP_FileIcon",
                 ),
 
                 ActionDef(

@@ -1,7 +1,8 @@
 from gitfourchette.qt import *
+from gitfourchette.toolbox.iconbank import stockIcon
 from gitfourchette.toolbox.pathutils import compactPath
 from gitfourchette.toolbox.qelidedlabel import QElidedLabel
-from gitfourchette.toolbox.qtutils import stockIcon, tweakWidgetFont, DisableWidgetUpdatesContext
+from gitfourchette.toolbox.qtutils import tweakWidgetFont, DisableWidgetUpdatesContext
 from gitfourchette.toolbox.textutils import escamp
 
 

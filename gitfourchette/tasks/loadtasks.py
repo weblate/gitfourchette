@@ -319,12 +319,12 @@ class LoadPatch(RepoTask):
 
             return SpecialDiffError(self.tr("Outdated diff."),
                                     self.tr("The file appears to have changed on disk."),
-                                    icon=QStyle.StandardPixmap.SP_MessageBoxWarning,
+                                    icon="SP_MessageBoxWarning",
                                     longform=toRoomyUL(longformItems))
 
         if not patch.delta:
             # Rare libgit2 bug, should be fixed in 1.6.0
-            return SpecialDiffError(self.tr("Patch has no delta!"), icon=QStyle.StandardPixmap.SP_MessageBoxWarning)
+            return SpecialDiffError(self.tr("Patch has no delta!"), icon="SP_MessageBoxWarning")
 
         if patch.delta.status == DeltaStatus.CONFLICTED:
             path = patch.delta.new_file.path
@@ -343,7 +343,7 @@ class LoadPatch(RepoTask):
             return DiffImagePair(self.repo, patch.delta, locator)
         except BaseException as exc:
             summary, details = excStrings(exc)
-            return SpecialDiffError(summary, icon=QStyle.StandardPixmap.SP_MessageBoxCritical, preformatted=details)
+            return SpecialDiffError(summary, icon="SP_MessageBoxCritical", preformatted=details)
 
     def _makeHeader(self, result, locator):
         header = "<html>" + escape(locator.path)

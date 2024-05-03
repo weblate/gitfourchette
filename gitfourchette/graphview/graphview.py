@@ -137,7 +137,7 @@ class GraphView(QListView):
                 TaskBook.action(self, ExportCommitAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Copy Commit &Hash"), self.copyCommitHashToClipboard, shortcuts=GlobalShortcuts.copy),
-                ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, QStyle.StandardPixmap.SP_MessageBoxInformation, shortcuts=QKeySequence("Space")),
+                ActionDef(self.tr("Get &Info..."), self.getInfoOnCurrentCommit, "SP_MessageBoxInformation", shortcuts=QKeySequence("Space")),
             ]
 
         menu = ActionDef.makeQMenu(self, actions)

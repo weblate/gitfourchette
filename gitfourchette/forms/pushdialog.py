@@ -214,7 +214,7 @@ class PushDialog(QDialog):
                     if br == self.currentLocalBranch.upstream:
                         caption = F"{identifier} " + self.tr("[tracked]")
                         self.trackedBranchIndex = comboBox.count()
-                        icon = stockIcon("vcs-branch")  # stockIcon(QStyle.StandardPixmap.SP_DirHomeIcon)
+                        icon = stockIcon("vcs-branch")
                         font = QFont()
                         font.setBold(True)
                     else:
@@ -232,7 +232,7 @@ class PushDialog(QDialog):
                 if firstRemote:
                     self.fallbackAutoNewIndex = comboBox.count()
                 comboBox.addItem(
-                    stockIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder),
+                    stockIcon("SP_FileDialogNewFolder"),
                     self.tr("New remote branch on {0}").format(lquo(remoteName)),
                     (ERemoteItem.NewRef, remoteName))
                 comboBox.setItemData(comboBox.count()-1, remoteUrl, Qt.ItemDataRole.ToolTipRole)

@@ -46,7 +46,7 @@ class CloneDialog(QDialog):
         self.initUrlComboBox()
         self.ui.urlEdit.activated.connect(self.onUrlActivated)
 
-        self.ui.browseButton.setIcon(stockIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
+        self.ui.browseButton.setIcon(stockIcon("SP_DialogOpenButton"))
         self.ui.browseButton.clicked.connect(self.browse)
 
         self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)

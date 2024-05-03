@@ -67,7 +67,7 @@ class DeleteRemoteBranch(_BaseNetTask):
             + " " + tr("This cannot be undone!")
         ).format(bquo(remoteBranchShorthand), bquo(remoteName))
         verb = self.tr("Delete on remote")
-        yield from self.flowConfirm(text=text, verb=verb, buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+        yield from self.flowConfirm(text=text, verb=verb, buttonIcon="SP_DialogDiscardButton")
 
         self._showRemoteLinkDialog()
 

@@ -131,7 +131,7 @@ class DropStash(RepoTask):
         yield from self.flowConfirm(
             text=self.tr("Really delete stash {0}?").format(bquoe(stashMessage)),
             verb=self.tr("Delete stash"),
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         backupStash(self.repo, stashCommitId)

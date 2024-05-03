@@ -97,7 +97,7 @@ class RemoveSubmodule(RepoTask):
                 self.tr("Any changes in the submodule that haven’t been pushed will be lost."),
                 tr("This cannot be undone!"),
             ).format(bquo(submoName), hquo(".gitmodules")),
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton,
+            buttonIcon="SP_DialogDiscardButton",
             verb="Remove")
 
         yield from self.flowEnterWorkerThread()

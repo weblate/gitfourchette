@@ -403,7 +403,7 @@ class DeleteTag(RepoTask):
         yield from self.flowConfirm(
             text=self.tr("Really delete tag {0}?").format(bquo(tagName)),
             verb=self.tr("Delete tag"),
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
 

@@ -46,7 +46,7 @@ class CommittedFiles(FileList):
 
                 ActionDef(
                     self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
-                    icon=QStyle.StandardPixmap.SP_FileIcon, submenu=
+                    icon="SP_FileIcon", submenu=
                     [
                         ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
                         ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitOid)), self.openOldRevision),
@@ -56,7 +56,7 @@ class CommittedFiles(FileList):
 
                 ActionDef(
                     self.tr("Sa&ve a Copy..."),
-                    icon=QStyle.StandardPixmap.SP_DialogSaveButton, submenu=
+                    icon="SP_DialogSaveButton", submenu=
                     [
                         ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitOid)), self.saveNewRevision),
                         ActionDef(self.tr("Save Version &Before {0}").format(shortHash(self.commitOid)), self.saveOldRevision),

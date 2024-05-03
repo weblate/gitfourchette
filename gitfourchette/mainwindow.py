@@ -328,7 +328,7 @@ class MainWindow(QMainWindow):
                 self.tr("&Refresh"),
                 self.refreshRepo,
                 shortcuts=GlobalShortcuts.refresh,
-                icon=QStyle.StandardPixmap.SP_BrowserReload,
+                icon="SP_BrowserReload",
                 statusTip=self.tr("Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
             ),
 
@@ -422,7 +422,7 @@ class MainWindow(QMainWindow):
         helpMenu.addSeparator()
 
         a = helpMenu.addAction(self.tr("Open Trash..."), self.openRescueFolder)
-        a.setIcon(stockIcon(QStyle.StandardPixmap.SP_TrashIcon))
+        a.setIcon(stockIcon("SP_TrashIcon"))
         a.setStatusTip(self.tr("Explore changes that you may have discarded by mistake"))
 
         a = helpMenu.addAction(self.tr("Empty Trash..."), self.clearRescueFolder)
@@ -822,7 +822,7 @@ class MainWindow(QMainWindow):
             text=askPrompt,
             callback=lambda: trash.clear(),
             okButtonText=self.tr("Delete permanently"),
-            okButtonIcon=stockIcon(QStyle.StandardPixmap.SP_DialogDiscardButton))
+            okButtonIcon=stockIcon("SP_DialogDiscardButton"))
 
     # -------------------------------------------------------------------------
     # File menu callbacks

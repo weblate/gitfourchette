@@ -18,6 +18,7 @@ from .memoryindicator import MemoryIndicator
 from .messageboxes import (
     MessageBoxIconName, excMessageBox, asyncMessageBox,
     showWarning, showInformation, askConfirmation, NonCriticalOperation)
+from .iconbank import stockIcon, clearStockIconCache
 from .pathutils import PathDisplayStyle, abbreviatePath, compactPath
 from .persistentfiledialog import PersistentFileDialog
 from .qbusyspinner import QBusySpinner
@@ -36,7 +37,6 @@ from .qtutils import (
     formatWidgetTooltip,
     itemViewVisibleRowRange,
     isDarkTheme,
-    stockIcon, clearStockIconCache,
     appendShortcutToToolTipText,
     appendShortcutToToolTip,
     openFolder, showInFolder,

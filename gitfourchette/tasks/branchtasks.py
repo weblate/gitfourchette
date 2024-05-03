@@ -80,7 +80,7 @@ class DeleteBranch(RepoTask):
         yield from self.flowConfirm(
             text=text,
             verb=self.tr("Delete branch", "Button label"),
-            buttonIcon=QStyle.StandardPixmap.SP_DialogDiscardButton)
+            buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
         self.repo.delete_local_branch(localBranchName)

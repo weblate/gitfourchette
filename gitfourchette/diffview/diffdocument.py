@@ -162,7 +162,7 @@ class DiffDocument:
                     raise SpecialDiffError(
                         translate("Diff", "This file contains very long lines."),
                         loadAnyway.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
-                        QStyle.StandardPixmap.SP_MessageBoxWarning)
+                        "SP_MessageBoxWarning")
 
                 ld = LineData(text=content, hunkPos=DiffLinePos(hunkID, hunkLineNum), diffLine=diffLine)
 

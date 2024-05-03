@@ -1,7 +1,7 @@
 import enum
 
 from gitfourchette.qt import *
-from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem, UNINDENT_ITEMS, SidebarModel
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarModel, EItem, UNINDENT_ITEMS, ROLE_ICONKEY
 from gitfourchette.toolbox import stockIcon
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
@@ -89,15 +89,19 @@ class SidebarDelegate(QStyledItemDelegate):
         option.rect.adjust(PADDING, 0, -PADDING, 0)
 
         # Set highlighted text color if this item is selected
+        iconCLUT = ""
         if isSelected:
-            painter.setPen(option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText))
+            hlColor = option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText)
+            painter.setPen(hlColor)
+            iconCLUT = f"gray={hlColor.name()}"
 
         # Draw decoration icon
         iconWidth = option.decorationSize.width()
-        icon: QIcon = index.data(Qt.ItemDataRole.DecorationRole)
-        if icon is not None and not icon.isNull():
+        iconKey = index.data(ROLE_ICONKEY)
+        if iconKey:
             r = QRect(option.rect)
             r.setWidth(iconWidth)
+            icon = stockIcon(iconKey, iconCLUT)
             icon.paint(painter, r, option.decorationAlignment)
             option.rect.adjust(r.width() + PADDING*150//100, 0, 0, 0)
 
@@ -116,7 +120,8 @@ class SidebarDelegate(QStyledItemDelegate):
             r = QRect(option.rect)
             r.setLeft(textRect.right())
             r.setWidth(EYE_WIDTH)
-            iconName = "view-hidden" if nodeIsHidden else "view-visible"
-            stockIcon(iconName).paint(painter, r)
+            eyeIconName = "view-hidden" if nodeIsHidden else "view-visible"
+            eyeIcon = stockIcon(eyeIconName, iconCLUT)
+            eyeIcon.paint(painter, r)
 
         painter.restore()

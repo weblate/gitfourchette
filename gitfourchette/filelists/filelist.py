@@ -205,7 +205,7 @@ class FileList(QListView):
             ActionDef(
                 tr("Open &Folder", "", n),
                 self.showInFolder,
-                QStyle.StandardPixmap.SP_DirIcon,
+                "SP_DirIcon",
             ),
 
             ActionDef(

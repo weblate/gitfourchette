@@ -4,7 +4,8 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Callable
 
 from gitfourchette.qt import *
-from gitfourchette.toolbox.qtutils import stockIcon, MultiShortcut, appendShortcutToToolTipText
+from gitfourchette.toolbox.iconbank import stockIcon
+from gitfourchette.toolbox.qtutils import MultiShortcut, appendShortcutToToolTipText
 
 
 @dataclass
@@ -17,7 +18,7 @@ class ActionDef:
 
     caption: str = ""
     callback: Signal | Callable | None = None
-    icon: str | QStyle.StandardPixmap = ""
+    icon: str = ""
     checkState: int = 0
     radioGroup: str = ""
     enabled: bool = True

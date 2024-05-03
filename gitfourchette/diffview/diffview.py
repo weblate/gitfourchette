@@ -435,7 +435,7 @@ class DiffView(QPlainTextEdit):
                     ActionDef(
                         self.tr("Discard Lines"),
                         self.discardSelection,
-                        QStyle.StandardPixmap.SP_TrashIcon,
+                        "SP_TrashIcon",
                         shortcuts=GlobalShortcuts.discardHotkeys,
                     ),
                     ActionDef(
