@@ -27,8 +27,6 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebar import Sidebar
-from gitfourchette.sidebar.sidebarmodel import SidebarTabMode, MODAL_SIDEBAR
-from gitfourchette.sidebar.sidebarmodetabs import SidebarModeTabs
 from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
@@ -499,55 +497,17 @@ class RepoWidget(QStackedWidget):
     def _makeSidebarContainer(self):
         sidebar = Sidebar(self)
 
-        modeTabs = None
-        if MODAL_SIDEBAR:
-            repoName = QElidedLabel("RepoName")
-            self.nameChange.connect(lambda: repoName.setText(self.getTitle()))
-            tweakWidgetFont(repoName, 110)
-            repoName.setContentsMargins(4, 8, 0, 0)
-
-            modeTabs = SidebarModeTabs(self)
-            modeTabs.setUsesScrollButtons(False)
-            modeTabs.currentChanged.connect(lambda i: sidebar.switchMode(modeTabs.tabData(i)))
-            modeTabs.setSizePolicy(QSizePolicy.Policy.Minimum, modeTabs.sizePolicy().verticalPolicy())
-
-            tweakWidgetFont(modeTabs, 80)
-            with QSignalBlockerContext(modeTabs):
-                iconTable = {
-                    SidebarTabMode.Tags: "git-tag",
-                    SidebarTabMode.Submodules: "git-submodule",
-                    SidebarTabMode.Stashes: "git-stash",
-                    SidebarTabMode.Branches: "git-branch",
-                }
-                for mode in SidebarTabMode:
-                    if mode == SidebarTabMode.NonModal:
-                        continue
-                    i = modeTabs.count()
-                    name = TrTables.sidebarMode(mode)
-                    tip = appendShortcutToToolTipText(name, QKeySequence(f"Ctrl+{i+1}"))
-                    modeTabs.addTab(name[:2])
-                    modeTabs.setTabData(i, mode)
-                    modeTabs.setTabToolTip(i, tip)
-                    modeTabs.setTabIcon(i, stockIcon(iconTable[mode]))
-
-            modeTabs.currentChanged.emit(modeTabs.currentIndex())
-
         banner = Banner(self, orientation=Qt.Orientation.Vertical)
         banner.setProperty("class", "merge")
 
         container = QWidget()
         layout = QVBoxLayout(container)
-        layout.setContentsMargins(0,0,0,0)
-        if MODAL_SIDEBAR:
-            layout.setSpacing(0)
-            layout.addWidget(repoName)
-            layout.addSpacing(8)
-            layout.addWidget(modeTabs)
+        layout.setContentsMargins(QMargins())
+        layout.setSpacing(0)
         layout.addWidget(sidebar)
         layout.addWidget(banner)
 
         self.sidebar = sidebar
-        self.sidebarTabs = modeTabs
         self.mergeBanner = banner
 
         return container

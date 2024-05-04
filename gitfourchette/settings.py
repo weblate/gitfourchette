@@ -202,7 +202,6 @@ class Prefs(PrefsFile):
     smoothScroll                : bool                  = True
     hideStashJunkParents        : bool                  = True
     autoRefresh                 : bool                  = True
-    modalSidebar                : bool                  = False
     verbosity                   : LoggingLevel          = LoggingLevel.WARNING
     forceQtApi                  : QtApiNames            = QtApiNames.QTAPI_AUTOMATIC
 

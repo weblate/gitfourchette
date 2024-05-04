@@ -18,19 +18,10 @@ ROLE_REF = Qt.ItemDataRole.UserRole + 0
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 1
 ROLE_ICONKEY = Qt.ItemDataRole.UserRole + 2
 
-MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.modalSidebar  # do not change while app is running
 BRANCH_FOLDERS = True
 
 UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /refs/, so this name is safe
 "Fake reference for Uncommitted Changes."
-
-
-class SidebarTabMode(enum.IntEnum):
-    NonModal = -1
-    Branches = 0
-    Stashes = 1
-    Tags = 2
-    Submodules = 3
 
 
 class EItem(enum.IntEnum):
@@ -53,7 +44,7 @@ class EItem(enum.IntEnum):
     RefFolder = enum.auto()
 
 
-HEADER_ITEMS_NONMODAL = [
+HEADER_ITEMS = [
     EItem.UncommittedChanges,
     EItem.Spacer,
     EItem.LocalBranchesHeader,
@@ -67,24 +58,7 @@ HEADER_ITEMS_NONMODAL = [
     EItem.SubmodulesHeader,
 ]
 
-HEADER_ITEMS_MODAL = [
-    [
-        EItem.LocalBranchesHeader,
-        EItem.Spacer,
-        EItem.RemotesHeader,
-    ],
-    [EItem.StashesHeader],
-    [EItem.TagsHeader],
-    [EItem.SubmodulesHeader]
-]
-
-FORCE_EXPAND = [] if not MODAL_SIDEBAR else sorted([
-    EItem.LocalBranchesHeader,
-    EItem.RemotesHeader,
-    EItem.TagsHeader,
-    EItem.StashesHeader,
-    EItem.SubmodulesHeader,
-])
+FORCE_EXPAND = []
 """ SidebarNode kinds to always expand (in modal sidebars only) """
 
 NONLEAF_ITEMS = sorted([
@@ -117,14 +91,6 @@ HIDEABLE_ITEMS = sorted([
     EItem.Stash,
     EItem.StashesHeader,
 ])
-
-if MODAL_SIDEBAR: UNINDENT_ITEMS.update({
-    EItem.LocalBranchesHeader: -1,
-    EItem.RemotesHeader: -1,
-    EItem.StashesHeader: -1,
-    EItem.TagsHeader: -1,
-    EItem.SubmodulesHeader: -1,
-})
 
 
 class SidebarNode:
@@ -227,13 +193,6 @@ class SidebarModel(QAbstractItemModel):
         self.modeId = -1
         self.clear()
 
-    @property
-    def rootLayoutDef(self):
-        if self.modeId == SidebarTabMode.NonModal:
-            return HEADER_ITEMS_NONMODAL
-        else:
-            return HEADER_ITEMS_MODAL[self.modeId]
-
     def clear(self, emitSignals=True):
         if emitSignals:
             self.beginResetModel()
@@ -265,11 +224,6 @@ class SidebarModel(QAbstractItemModel):
         elif node.kind == EItem.StashesHeader:
             return self._hideAllStashes
 
-    def switchMode(self, i: int):
-        self.beginResetModel()
-        self.modeId = i
-        self.endResetModel()
-
     @benchmark
     def rebuild(self, repoState: RepoState):
         self.beginResetModel()
@@ -290,7 +244,7 @@ class SidebarModel(QAbstractItemModel):
         # Set up root nodes
         with Benchmark("Set up root nodes"):
             rootNode = SidebarNode(EItem.Root)
-            for eitem in self.rootLayoutDef:
+            for eitem in HEADER_ITEMS:
                 rootNode.appendChild(SidebarNode(eitem))
             uncommittedNode = rootNode.findChild(EItem.UncommittedChanges)
             branchRoot = rootNode.findChild(EItem.LocalBranchesHeader)

@@ -87,10 +87,6 @@ class Sidebar(QTreeView):
         # Sidebar::branch { image: none; border-image: none; }
         return
 
-    def switchMode(self, modeId: int):
-        self.sidebarModel.switchMode(modeId)
-        self.restoreExpandedItems()
-
     def visualRect(self, index: QModelIndex) -> QRect:
         """
         Required so the theme can properly draw unindented rows.

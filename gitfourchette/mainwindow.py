@@ -25,7 +25,6 @@ from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
-from gitfourchette.sidebar.sidebarmodel import SidebarTabMode
 from gitfourchette.tasks import TaskInvoker, TaskBook, RepoTask
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
@@ -366,20 +365,6 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        sideTabsGoMenu = []
-        if settings.prefs.modalSidebar:
-            for i, mode in enumerate(SidebarTabMode):
-                if mode == SidebarTabMode.NonModal:
-                    assert i == 0
-                    continue
-                assert i >= 1
-                sideTabsGoMenu.append(ActionDef(
-                    escamp(TrTables.sidebarMode(mode)),
-                    lambda m=mode: self.selectSidebarTab(None, m),
-                    shortcuts=f"Ctrl+{i}"
-                ))
-            sideTabsGoMenu.append(ActionDef.SEPARATOR)
-
         ActionDef.addToQMenu(
             viewMenu,
             self.mainToolBar.toggleViewAction(),
@@ -389,7 +374,6 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("Go to &Uncommitted Changes"), self.selectUncommittedChanges, shortcuts="Ctrl+U"),
             ActionDef(self.tr("Go to &HEAD Commit"), self.selectHead, shortcuts="Ctrl+D" if MACOS else "Ctrl+H"),
             ActionDef.SEPARATOR,
-            *sideTabsGoMenu,
             ActionDef(self.tr("Focus on Sidebar"), self.focusSidebar, shortcuts="Alt+1"),
             ActionDef(self.tr("Focus on Commit Log"), self.focusGraph, shortcuts="Alt+2"),
             ActionDef(self.tr("Focus on File List"), self.focusFiles, shortcuts="Alt+3"),
@@ -768,14 +752,6 @@ class MainWindow(QMainWindow):
             rw.conflictView.setFocus()
         else:
             rw.diffView.setFocus()
-
-    @needRepoWidget
-    def selectSidebarTab(self, rw: RepoWidget, mode: SidebarTabMode):
-        tabs = rw.sidebarTabs
-        for i in range(tabs.count()):
-            if tabs.tabData(i) == mode:
-                tabs.setCurrentIndex(i)
-                return
 
     @needRepoWidget
     def nextFile(self, rw: RepoWidget):
@@ -1240,7 +1216,6 @@ class MainWindow(QMainWindow):
         warnIfNeedRestart = [
             "language",
             "forceQtApi",
-            "modalSidebar",
         ]
 
         if "showMenuBar" in prefDiff and not prefDiff["showMenuBar"]:
