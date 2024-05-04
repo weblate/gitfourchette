@@ -1,5 +1,6 @@
+import math
+
 from gitfourchette import settings
-from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.graphview.graphpaint import paintGraphFrame
@@ -13,19 +14,20 @@ import traceback
 
 
 @dataclass
-class RefCallout:
+class RefBox:
+    icon: str
     color: QColor
     keepPrefix: bool = False
 
 
-CALLOUTS = {
-    "refs/remotes/": RefCallout(QColor(Qt.GlobalColor.darkCyan)),
-    "refs/tags/": RefCallout(QColor(Qt.GlobalColor.darkYellow)),
-    "refs/heads/": RefCallout(QColor(Qt.GlobalColor.darkMagenta)),
-    "stash@{": RefCallout(QColor(Qt.GlobalColor.darkGreen), keepPrefix=True),
+REFBOXES = {
+    "refs/remotes/": RefBox("git-remote", QColor(Qt.GlobalColor.darkCyan)),
+    "refs/tags/": RefBox("git-tag", QColor(Qt.GlobalColor.darkYellow)),
+    "refs/heads/": RefBox("git-branch", QColor(Qt.GlobalColor.darkMagenta)),
+    "stash@{": RefBox("git-stash", QColor(Qt.GlobalColor.darkGreen), keepPrefix=True),
 
     # detached HEAD as returned by Repo.map_commits_to_refs
-    "HEAD": RefCallout(QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
+    "HEAD": RefBox("achtung", QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
 }
 
 
@@ -56,10 +58,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.dateMaxWidth = 0
         self.activeCommitFont = QFont()
         self.uncommittedFont = QFont()
-        self.calloutFont = QFont()
-        self.calloutFontMetrics = QFontMetricsF(self.calloutFont)
-        self.activeCalloutFont = QFont()
-        self.activeCalloutFontMetrics = QFontMetricsF(self.activeCalloutFont)
+        self.refboxFont = QFont()
+        self.refboxFontMetrics = QFontMetricsF(self.refboxFont)
+        self.homeRefboxFont = QFont()
+        self.homeRefboxFontMetrics = QFontMetricsF(self.homeRefboxFont)
 
     def invalidateMetrics(self):
         self.mustRefreshMetrics = True
@@ -78,13 +80,13 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.uncommittedFont = QFont(option.font)
         self.uncommittedFont.setItalic(True)
 
-        self.calloutFont = QFont(option.font)
-        self.calloutFont.setWeight(QFont.Weight.Light)
-        self.calloutFontMetrics = QFontMetricsF(self.calloutFont)
+        self.refboxFont = QFont(option.font)
+        self.refboxFont.setWeight(QFont.Weight.Light)
+        self.refboxFontMetrics = QFontMetricsF(self.refboxFont)
 
-        self.activeCalloutFont = QFont(self.calloutFont)
-        self.activeCalloutFont.setWeight(QFont.Weight.Bold)
-        self.activeCalloutFontMetrics = QFontMetricsF(self.activeCalloutFont)
+        self.homeRefboxFont = QFont(self.refboxFont)
+        self.homeRefboxFont.setWeight(QFont.Weight.Bold)
+        self.homeRefboxFontMetrics = QFontMetricsF(self.homeRefboxFont)
 
         wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
         dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
@@ -244,43 +246,23 @@ class CommitLogDelegate(QStyledItemDelegate):
             paintGraphFrame(self.state, oid, painter, rect, outlineColor)
             rect.setLeft(rect.right())
 
-        # ------ Callouts
+        # ------ Refboxes
         if oid in self.state.reverseRefCache:
             homeBranch = RefPrefix.HEADS + self.state.homeBranch
-
             painter.save()
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             for refName in self.state.reverseRefCache[oid]:
-                if refName != 'HEAD':
-                    calloutText = refName
-                    calloutColor = Qt.GlobalColor.darkMagenta
-                elif self.state.headIsDetached:
-                    calloutText = self.tr("detached HEAD")
-                else:
-                    continue
-
-                for prefix in CALLOUTS:
-                    if refName.startswith(prefix):
-                        calloutDef = CALLOUTS[prefix]
-                        if not calloutDef.keepPrefix:
-                            calloutText = refName.removeprefix(prefix)
-                        calloutColor = calloutDef.color
-                        break
-
-                if refName == homeBranch:
-                    calloutFont = self.activeCalloutFont
-                    calloutFontMetrics = self.activeCalloutFontMetrics
-                    calloutText = ACTIVE_BULLET + calloutText
-                else:
-                    calloutFont = self.calloutFont
-                    calloutFontMetrics = self.calloutFontMetrics
-
-                painter.setFont(calloutFont)
-                painter.setPen(calloutColor)
-                label = F"[{calloutText}] "
-                rect.setWidth(int(calloutFontMetrics.horizontalAdvance(label)))  # must be int for pyqt5 compat!
-                painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, label)
-                rect.setLeft(rect.right())
+                self._paintRefbox(painter, rect, refName, refName == homeBranch)
             painter.restore()
+
+        # ------ Icons
+        if oid == UC_FAKEID:
+            r = QRect(rect)
+            r.setWidth(min(16, r.height()))
+            remap = "" if not isSelected else f"gray={painter.pen().color().name()}"
+            icon = stockIcon("git-workdir", remap)
+            icon.paint(painter, r, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            rect.setLeft(r.right() + 4)
 
         # ------ Message
         # use muted color for foreign commit messages if not selected
@@ -328,6 +310,63 @@ class CommitLogDelegate(QStyledItemDelegate):
         model = index.model()
         model.setData(index, summaryIsElided, CommitLogModel.MessageElidedRole)
         model.setData(index, leftBoundName if authorWidth != 0 else -1, CommitLogModel.AuthorColumnXRole)
+
+    def _paintRefbox(self, painter: QPainter, rect: QRect, refName: str, isHome: bool):
+        if refName == 'HEAD' and not self.state.headIsDetached:
+            return
+
+        prefix = next(prefix for prefix in REFBOXES if refName.startswith(prefix))
+        refboxDef = REFBOXES[prefix]
+        if not refboxDef.keepPrefix:
+            text = refName.removeprefix(prefix)
+        else:
+            text = refName
+        color = refboxDef.color
+        icon = refboxDef.icon
+        if refName == 'HEAD' and self.state.headIsDetached:
+            text = self.tr("detached HEAD")
+
+        if isHome:
+            font = self.homeRefboxFont
+            fontMetrics = self.homeRefboxFontMetrics
+            icon = "git-home"
+        else:
+            font = self.refboxFont
+            fontMetrics = self.refboxFontMetrics
+
+        painter.setFont(font)
+        painter.setPen(color)
+
+        hPadding = 2
+        vMargin = max(0, math.ceil((rect.height() - 16) / 4))
+
+        if icon:
+            iconRect = QRect(rect)
+            iconRect.adjust(2, vMargin, 0, -2)
+            iconSize = min(16, iconRect.height())
+            iconRect.setWidth(iconSize)
+        else:
+            iconSize = 0
+
+        boxRect = QRect(rect)
+        text = fontMetrics.elidedText(text, Qt.TextElideMode.ElideRight, 100)
+        textWidth = int(fontMetrics.horizontalAdvance(text))  # must be int for pyqt5 compat!
+        boxRect.setWidth(2 + iconSize + 1 + textWidth + hPadding)
+
+        frameRect = QRectF(boxRect)
+        frameRect.adjust(.5, vMargin + .5, .5, -(vMargin + .5))
+        painter.drawRoundedRect(frameRect, 4, 4)
+
+        if icon:
+            icon = stockIcon(icon, f"gray={color.name()}")
+            icon.paint(painter, iconRect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+        textRect = QRect(boxRect)
+        textRect.adjust(0, 0, -hPadding, 0)
+        painter.drawText(textRect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, text)
+
+        # Advance caller rectangle
+        rect.setLeft(boxRect.right() + 6)
 
     def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):  # pragma: no cover
         """Last-resort row drawing routine used if _paint raises an exception."""
