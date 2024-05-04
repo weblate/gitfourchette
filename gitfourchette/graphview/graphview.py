@@ -260,14 +260,14 @@ class GraphView(QListView):
         for p in commit.parent_ids:
             parentHashes.append(NavLocator.inCommit(p).toHtml("[" + shortHash(p) + "]"))
 
-        parentTitle = self.tr("%n parents", "singular form can just say 'Parent'", len(parentHashes))
+        parentTitle = self.tr("%n Parents:", "singular form can just say 'Parent'", len(parentHashes))
         parentValueMarkup = ', '.join(parentHashes)
 
         if len(parentHashes) == 0:
             parentTitle = self.tr("No Parent")
 
             if self.repo.is_shallow:
-                parentTitle += "?"
+                parentTitle = self.tr("No Parent?")
                 parentValueMarkup += "<p><em>" + self.tr(
                     "You’re working in a shallow clone. This commit may actually have parents in the full history."
                 ) + "</em></p>"
@@ -280,23 +280,14 @@ class GraphView(QListView):
         else:
             committerMarkup = formatSignature(commit.committer)
 
-        '''
-        diffs = self.repo.commit_diffs(oid)
-        statsMarkup = (
-                fplural("<b>#</b> changed file^s", sum(diff.stats.files_changed for diff in diffs)) +
-                fplural("<br/><b>#</b> insertion^s", sum(diff.stats.insertions for diff in diffs)) +
-                fplural("<br/><b>#</b> deletion^s", sum(diff.stats.deletions for diff in diffs))
-        )
-        '''
+        hashTitle = self.tr("Hash:")
+        authorTitle = self.tr("Author:")
+        committerTitle = self.tr("Committer:")
 
-        hashTitle = self.tr("Hash")
-        authorTitle = self.tr("Author")
-        committerTitle = self.tr("Committer")
-
-        stylesheet = """
-        table { margin-top: 16px; }
-        th { text-align: right; padding-right: 8px; }
-        th, td { padding-bottom: 4px; }
+        stylesheet = f"""\
+        table {{ margin-top: 16px; }}
+        th {{ text-align: right; padding-right: 8px; font-weight: normal; color: {mutedTextColorHex(self)}; white-space: pre; }}
+        th, td {{ padding-bottom: 4px; }}
         """
 
         markup = F"""<style>{stylesheet}</style>
@@ -312,14 +303,19 @@ class GraphView(QListView):
             state = self.repoWidget.state
             seqIndex = state.graph.getCommitRow(oid)
             frame = state.graph.getFrame(seqIndex)
-            homeChainTopRow = frame.getHomeChainForCommit().topRow
+            homeChain = frame.getHomeChainForCommit()
+            homeChainTopRow = homeChain.topRow
             homeChainTopOid = state.graph.getFrame(homeChainTopRow).commit
-            homeChainLocator = NavLocator.inCommit(homeChainTopOid)
+            if type(homeChainTopOid) is Oid:
+                homeChainLocator = NavLocator.inCommit(homeChainTopOid)
+                homeChainTopLink = homeChainLocator.toHtml(shortHash(homeChainTopOid))
+            else:
+                homeChainTopLink = str(homeChainTopOid)
             markup += F"""
-                <tr><td>View row</td><td>{self.currentIndex().row()}</td></tr>
-                <tr><td>Graph row</td><td>{repr(state.graph.commitRows[oid])}</td></tr>
-                <tr><td>Home chain</td><td>{repr(homeChainTopRow)} ({homeChainLocator.toHtml(shortHash(homeChainTopOid))})</td></tr>
-                <tr><td>Arcs</td><td>{len(frame.openArcs)} open, {len(frame.solvedArcs)} solved</td></tr>
+                <tr><th>View row:</th><td>{self.currentIndex().row()}</td></tr>
+                <tr><th>Graph row:</th><td>{repr(state.graph.commitRows[oid])}</td></tr>
+                <tr><th>Home chain:</th><td>{repr(homeChainTopRow)} {homeChainTopLink} ({id(homeChain) & 0xFFFFFFFF:X})</td></tr>
+                <tr><th>Arcs:</th><td>{len(frame.openArcs)} open, {len(frame.solvedArcs)} solved</td></tr>
             """
             details = str(frame) + "\n\n" + details
 

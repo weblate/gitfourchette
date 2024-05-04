@@ -48,18 +48,23 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
     if delta.status == DeltaStatus.CONFLICTED:  # libgit2 should arguably return "U" (unmerged) for conflicts, but it doesn't
         sc = "U"
 
-    text = "<p style='white-space: pre'>" + escape(nf.path)
-    text += "\n<table>"
+    text = "<table style='white-space: pre'>"
 
     def newLine(heading, caption):
-        return f"<tr><td><b>{heading} </b></tb><td>{caption}</td>"
+        return f"<tr><td style='color:{mutedToolTipColorHex()}; text-align: right;'>{heading} </td><td>{caption}</td>"
+
+    if sc == 'R':
+        text += newLine(translate("FileList", "old name:"), escape(of.path))
+        text += newLine(translate("FileList", "new name:"), escape(nf.path))
+    else:
+        text += newLine(translate("FileList", "name:"), escape(nf.path))
 
     # Status caption
     statusCaption = TrTables.diffStatusChar(sc)
     if sc not in '?U':  # show status char except for untracked and conflict
         statusCaption += f" ({sc})"
     if sc == 'U':  # conflict sides
-        dc = repo.wrap_conflict(delta.new_file.path)
+        dc = repo.wrap_conflict(nf.path)
         if dc.deleted_by_us:
             postfix = translate("git", "deleted by us")
         elif dc.deleted_by_them:
@@ -75,8 +80,6 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
 
     # Similarity + Old name
     if sc == 'R':
-        text += newLine(translate("FileList", "old name:"), escape(of.path))
-        text += newLine(translate("FileList", "new name:"), escape(nf.path))
         text += newLine(translate("FileList", "similarity:"), f"{delta.similarity}%")
 
     # File Mode
@@ -89,7 +92,7 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
 
     # Size (if available)
     if sc not in 'DU' and nf.size != 0 and (nf.mode & FileMode.BLOB == FileMode.BLOB):
-        text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size))
+        text += newLine(translate("FileList", "size:"), locale.formattedDataSize(nf.size, 1))
 
     # Modified time
     if navContext.isWorkdir() and sc not in 'DU':
@@ -102,7 +105,6 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
 
     # Blob IDs (DEVDEBUG only)
     if settings.DEVDEBUG:
-        of, nf = delta.old_file, delta.new_file
         nChars = settings.prefs.shortHashChars
         oldBlobId = shortHash(of.id) if of.flags & DiffFlag.VALID_ID else "?" * nChars
         newBlobId = shortHash(nf.id) if nf.flags & DiffFlag.VALID_ID else "?" * nChars

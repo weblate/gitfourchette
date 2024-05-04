@@ -141,16 +141,26 @@ def isDarkTheme(palette: QPalette | None = None):
     return themeBG.value() < themeFG.value()
 
 
-def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
+def mutedTextColorHex(w: QWidget) -> str:
+    mutedColor = QApplication.palette().windowText().color()
+    mutedColor.setAlphaF(.5)
+    mutedColor = mutedColor.name(QColor.NameFormat.HexArgb)
+    return mutedColor
+
+
+def mutedToolTipColorHex() -> str:
     mutedColor = QApplication.palette().toolTipText().color()
     mutedColor.setAlphaF(.6)
     mutedColor = mutedColor.name(QColor.NameFormat.HexArgb)
+    return mutedColor
 
+
+def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
     if type(shortcut) in [QKeySequence.StandardKey, Qt.Key]:
         shortcut = QKeySequence(shortcut)
 
     hint = shortcut.toString(QKeySequence.SequenceFormat.NativeText)
-    hint = f"<span style='color: {mutedColor}'> &nbsp;{hint}</span>"
+    hint = f"<span style='color: {mutedToolTipColorHex()}'> &nbsp;{hint}</span>"
     prefix = ""
     if singleLine:
         prefix = "<p style='white-space: pre'>"

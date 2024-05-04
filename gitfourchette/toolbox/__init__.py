@@ -37,6 +37,8 @@ from .qtutils import (
     formatWidgetTooltip,
     itemViewVisibleRowRange,
     isDarkTheme,
+    mutedTextColorHex,
+    mutedToolTipColorHex,
     appendShortcutToToolTipText,
     appendShortcutToToolTip,
     openFolder, showInFolder,

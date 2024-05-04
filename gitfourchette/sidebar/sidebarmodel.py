@@ -6,7 +6,6 @@ import enum
 from typing import Any, Iterable
 
 from gitfourchette import settings
-from gitfourchette.appconsts import ACTIVE_BULLET
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -551,11 +550,12 @@ class SidebarModel(QAbstractItemModel):
                 return refName
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                if branchName == self._checkedOut:
-                    text += ACTIVE_BULLET + self.tr("This is the checked-out branch.") + "\n"
-                text += self.tr("Local branch {0}").format(bquo(branchName))
+                text += self.tr("{0} (local branch)").format(btag(branchName))
                 if self._checkedOutUpstream:
-                    text += "\n" + self.tr("Upstream branch is {0}").format(hquo(self._checkedOutUpstream))
+                    text += "\n" + self.tr("Upstream: {0}").format(escape(self._checkedOutUpstream))
+                if branchName == self._checkedOut:
+                    text += "\n<img src='assets:icons/git-home' style='vertical-align: bottom;'/> "
+                    text += self.tr("This is the checked-out branch")
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
@@ -624,9 +624,9 @@ class SidebarModel(QAbstractItemModel):
                 return refName
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
-                text += self.tr("Remote-tracking branch {0}").format(bquo(shorthand))
+                text += self.tr("{0} (remote-tracking branch)").format(btag(shorthand))
                 if self._checkedOutUpstream == shorthand:
-                    text += ("<br><i>" + self.tr("This is the upstream for the checked-out branch ({0}).")
+                    text += ("<br><i>" + self.tr("Upstream for the checked-out branch ({0})")
                              ).format(hquoe(self._checkedOut))
                 return text
             elif fontRole:
