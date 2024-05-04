@@ -110,7 +110,7 @@ class DiffDocument:
 
         # Don't load large diffs.
         threshold = settings.prefs.largeFileThresholdKB * 1024
-        if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
+        if threshold != 0 and len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
             raise SpecialDiffError.diffTooLarge(len(patch.data), threshold, locator)
 
         if len(patch.hunks) == 0:

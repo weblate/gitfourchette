@@ -166,7 +166,7 @@ class Prefs(PrefsFile):
     font                        : str                   = ""
     contextLines                : int                   = 3
     tabSpaces                   : int                   = 4
-    largeFileThresholdKB        : int                   = 512
+    largeFileThresholdKB        : int                   = 500
     imageFileThresholdKB        : int                   = 5000
     wordWrap                    : bool                  = False
     showStrayCRs                : bool                  = True
@@ -193,7 +193,7 @@ class Prefs(PrefsFile):
 
     _category_trash             : int                   = 0
     maxTrashFiles               : int                   = 250
-    maxTrashFileKB              : int                   = 1024
+    maxTrashFileKB              : int                   = 1000
 
     _category_advanced          : int                   = 0
     maxRecentRepos              : int                   = 20

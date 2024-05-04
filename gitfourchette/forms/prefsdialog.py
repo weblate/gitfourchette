@@ -260,6 +260,10 @@ class PrefsDialog(QDialog):
             return self.strControlWithPresets(key, value, DIFF_TOOL_PRESETS)
         elif key == "externalMerge":
             return self.strControlWithPresets(key, value, MERGE_TOOL_PRESETS)
+        elif key in ["largeFileThresholdKB", "imageFileThresholdKB", "maxTrashFileKB"]:
+            control = self.boundedIntControl(key, value, 0, 999_999)
+            control.setSpecialValueText("\u221E")  # infinity
+            return control
         elif issubclass(valueType, enum.Enum):
             return self.enumControl(key, value, type(value))
         elif valueType is str:

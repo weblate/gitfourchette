@@ -86,7 +86,7 @@ class Trash:
     def backupFile(self, workdir: str, originalPath: str) -> str:
         fullPath = os.path.join(workdir, originalPath)
 
-        if os.lstat(fullPath).st_size > self.maxFileSize:
+        if self.maxFileSize != 0 and os.lstat(fullPath).st_size > self.maxFileSize:
             return ""
 
         # Copy new file

@@ -161,7 +161,7 @@ class SpecialDiffError(Exception):
         if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
             largestSize = max(of.size, nf.size)
             threshold = settings.prefs.imageFileThresholdKB * 1024
-            if largestSize > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
+            if threshold != 0 and largestSize > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
                 return SpecialDiffError.imageTooLarge(largestSize, threshold, locator)
             else:
                 return ShouldDisplayPatchAsImageDiff()
