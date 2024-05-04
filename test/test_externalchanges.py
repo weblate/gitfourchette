@@ -31,7 +31,7 @@ def testHiddenBranchGotDeleted(tempDir, mainWindow):
     subprocess.run(["git", "branch", "master2", "master"], check=True, cwd=wd)
 
     rw = mainWindow.openRepo(wd)
-    rw.toggleHideBranch("refs/heads/master2")
+    rw.toggleHideRefPattern("refs/heads/master2")
     rw.state.uiPrefs.write(force=True)
     mainWindow.closeCurrentTab()
 

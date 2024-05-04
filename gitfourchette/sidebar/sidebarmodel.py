@@ -90,6 +90,7 @@ HIDEABLE_ITEMS = sorted([
     EItem.RemoteBranch,
     EItem.Stash,
     EItem.StashesHeader,
+    EItem.RefFolder,
 ])
 
 
@@ -174,10 +175,6 @@ class SidebarModel(QAbstractItemModel):
     _checkedOut: str; "Shorthand of checked-out local branch"
     _checkedOutUpstream: str; "Shorthand of the checked-out branch's upstream"
     _stashes: list[Stash]
-    _hiddenBranches: list[str]
-    _hiddenStashCommits: list[str]
-    _hideAllStashes: bool
-    _hiddenRemotes: list[str]
 
     _cachedTooltipIndex: QModelIndex | None
     _cachedTooltipText: str
@@ -203,10 +200,6 @@ class SidebarModel(QAbstractItemModel):
         self._checkedOut = ""
         self._checkedOutUpstream = ""
         self._stashes = []
-        self._hiddenBranches = []
-        self._hiddenStashCommits = []
-        self._hideAllStashes = False
-        self._hiddenRemotes = []
 
         self._cachedTooltipIndex = None
         self._cachedTooltipText = ""
@@ -214,15 +207,20 @@ class SidebarModel(QAbstractItemModel):
         if emitSignals:
             self.endResetModel()
 
-    def isHidden(self, node: SidebarNode) -> bool:
+    def isExplicitlyHidden(self, node: SidebarNode) -> bool:
+        repoState = self.repoState
         if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
-            return node.data in self._hiddenBranches
+            return node.data in repoState.uiPrefs.hiddenRefPatterns
         elif node.kind == EItem.Remote:
-            return node.data in self._hiddenRemotes
+            return f"{RefPrefix.REMOTES}{node.data}/" in repoState.uiPrefs.hiddenRefPatterns
+        elif node.kind == EItem.RefFolder:
+            return f"{node.data}/" in repoState.uiPrefs.hiddenRefPatterns
         elif node.kind == EItem.Stash:
-            return node.data in self._hiddenStashCommits
+            return node.data in repoState.uiPrefs.hiddenStashCommits
         elif node.kind == EItem.StashesHeader:
-            return self._hideAllStashes
+            return repoState.uiPrefs.hideAllStashes
+        else:
+            return False
 
     @benchmark
     def rebuild(self, repoState: RepoState):
@@ -371,15 +369,10 @@ class SidebarModel(QAbstractItemModel):
                 elif not repo.submodule_dotgit_present(submodule):
                     node.warning = self.tr("Contents missing.")
 
-        self._hiddenBranches = repoState.uiPrefs.hiddenBranches
-        self._hiddenStashCommits = repoState.uiPrefs.hiddenStashCommits
-        self._hideAllStashes = repoState.uiPrefs.hideAllStashes
-        self._hiddenRemotes = repoState.uiPrefs.hiddenRemotes
-
         with Benchmark("endResetModel" + ("[ModelTester might slow this down]" if settings.DEVDEBUG else "")):
             self.endResetModel()
 
-    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str = ""):
+    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str):
         pendingFolders = {}
 
         for b in shorthands:
@@ -392,7 +385,7 @@ class SidebarModel(QAbstractItemModel):
                 except KeyError:
                     # Create node for folder, but add it to containerNode later
                     # so that all folders are grouped together.
-                    folderNode = SidebarNode(EItem.RefFolder, folderName)
+                    folderNode = SidebarNode(EItem.RefFolder, refNamePrefix + folderName)
                     pendingFolders[folderName] = folderNode
 
             refName = refNamePrefix + b
@@ -513,7 +506,7 @@ class SidebarModel(QAbstractItemModel):
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
-                return refName in self._hiddenBranches
+                return self.isExplicitlyHidden(node)
             elif fontRole:
                 if branchName == self._checkedOut:
                     font = self._parentWidget.font()
@@ -592,13 +585,16 @@ class SidebarModel(QAbstractItemModel):
                 else:
                     return None
             elif hiddenRole:
-                return refName in self._hiddenBranches
+                return self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-branch"
 
         elif item == EItem.RefFolder:
+            refName = node.data
             if displayRole:
-                return node.data
+                return RefPrefix.split(refName)[1]
+            elif hiddenRole:
+                return self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-folder"
 
@@ -637,7 +633,7 @@ class SidebarModel(QAbstractItemModel):
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
-                return stash.commit_id.hex in self._hiddenStashCommits
+                self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-stash"
 

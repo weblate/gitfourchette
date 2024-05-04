@@ -202,7 +202,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                     summaryText = f"({numChanges}) {summaryText}"
 
             elif specialRowKind == SpecialRow.TruncatedHistory:
-                if self.state.uiPrefs.hiddenRemotes or self.state.uiPrefs.hiddenStashCommits or self.state.uiPrefs.hiddenBranches:
+                if self.state.uiPrefs.hiddenRefPatterns or self.state.uiPrefs.hiddenStashCommits:
                     summaryText = self.tr("History truncated to {0} commits (including hidden branches)")
                 else:
                     summaryText = self.tr("History truncated to {0} commits")

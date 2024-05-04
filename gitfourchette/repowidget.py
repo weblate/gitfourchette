@@ -235,10 +235,9 @@ class RepoWidget(QStackedWidget):
 
         self.sidebar.statusMessage.connect(self.statusMessage)
         self.sidebar.pushBranch.connect(self.startPushFlow)
-        self.sidebar.toggleHideBranch.connect(self.toggleHideBranch)
+        self.sidebar.toggleHideRefPattern.connect(self.toggleHideRefPattern)
         self.sidebar.toggleHideStash.connect(self.toggleHideStash)
         self.sidebar.toggleHideAllStashes.connect(self.toggleHideAllStashes)
-        self.sidebar.toggleHideRemote.connect(self.toggleHideRemote)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
@@ -898,9 +897,9 @@ class RepoWidget(QStackedWidget):
 
     # -------------------------------------------------------------------------
 
-    def toggleHideBranch(self, branchName: str):
-        assert branchName.startswith("refs/")
-        self.state.toggleHideBranch(branchName)
+    def toggleHideRefPattern(self, refPattern: str):
+        assert refPattern.startswith("refs/")
+        self.state.toggleHideRefPattern(refPattern)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
     def toggleHideStash(self, stashOid: Oid):
@@ -910,12 +909,6 @@ class RepoWidget(QStackedWidget):
     def toggleHideAllStashes(self):
         self.state.toggleHideAllStashes()
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
-        self.sidebar.refresh(self.state)
-
-    def toggleHideRemote(self, remoteName: str):
-        self.state.toggleHideRemote(remoteName)
-        self.graphView.setHiddenCommits(self.state.hiddenCommits)
-        self.sidebar.refresh(self.state)
 
     # -------------------------------------------------------------------------
 

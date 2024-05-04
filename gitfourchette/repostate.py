@@ -1,6 +1,7 @@
 import logging
 import os
 from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -36,9 +37,8 @@ class RepoPrefs(PrefsFile):
     draftCommitMessage: str = ""
     draftCommitSignature: Signature = None
     draftAmendMessage: str = ""
-    hiddenBranches: list = field(default_factory=list)
+    hiddenRefPatterns: list = field(default_factory=list)
     hiddenStashCommits: list = field(default_factory=list)
-    hiddenRemotes: list = field(default_factory=list)
     collapseCache: list = field(default_factory=list)
     hideAllStashes: bool = False
 
@@ -81,6 +81,7 @@ class RepoState(QObject):
     """Use this to look up which commits are part of local branches,
     and which commits are 'foreign'."""
 
+    hiddenRefs: set[str]
     hiddenCommits: set[Oid]
 
     workdirStale: bool
@@ -324,8 +325,8 @@ class RepoState(QObject):
         return nRemoved, nAdded
 
     @benchmark
-    def toggleHideBranch(self, branchName: str):
-        toggleListElement(self.uiPrefs.hiddenBranches, branchName)
+    def toggleHideRefPattern(self, refPattern: str):
+        toggleListElement(self.uiPrefs.hiddenRefPatterns, refPattern)
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
@@ -341,39 +342,38 @@ class RepoState(QObject):
         self.uiPrefs.write()
         self.resolveHiddenCommits()
 
+    def refreshHiddenRefCache(self):
+        self.hiddenRefs = self.expandHiddenRefsFromPatterns()
+
     @benchmark
-    def toggleHideRemote(self, remoteName: str):
-        toggleListElement(self.uiPrefs.hiddenRemotes, remoteName)
-        self.uiPrefs.write()
-        self.resolveHiddenCommits()
+    def expandHiddenRefsFromPatterns(self) -> set[str]:
+        patterns = self.uiPrefs.hiddenRefPatterns
+        if not patterns:
+            return set()
 
-    def getHiddenBranchOids(self):
+        explicit = {p for p in patterns if not p.endswith("/")}
+        wildcards = sorted(p for p in patterns if p.endswith("/"))
+
+        hiddenRefs = {r for r in self.refCache
+                      if r in explicit
+                      or any(r.startswith(wc) for wc in wildcards)}
+
+        # TODO: Clean up patterns list if some patterns don't match anything in refCache
+        return hiddenRefs
+
+    def getHiddenTips(self) -> set[Oid]:
         seeds = set()
-        hiddenBranches = self.uiPrefs.hiddenBranches[:]
+        hiddenRefs = self.hiddenRefs
 
-        if self.uiPrefs.hiddenRemotes:
-            for refName, oid in self.refCache.items():
-                prefix, name = RefPrefix.split(refName)
-                if prefix == RefPrefix.REMOTES:
-                    remoteName = name.split('/', 1)[0]
-                    if remoteName in self.uiPrefs.hiddenRemotes:
-                        hiddenBranches.append(refName)
-
-        def isSharedByVisibleBranch(oid):
+        def isSharedByVisibleBranch(oid: Oid):
             return any(
-                refName for refName in self.reverseRefCache[oid]
-                if refName not in hiddenBranches
-                and not refName.startswith(RefPrefix.TAGS))
+                ref for ref in self.reverseRefCache[oid]
+                if ref not in hiddenRefs and not ref.startswith(RefPrefix.TAGS))
 
-        for hiddenBranch in hiddenBranches:
-            try:
-                oid = self.refCache[hiddenBranch]
-                if not isSharedByVisibleBranch(oid):
-                    seeds.add(oid)
-            except (KeyError, InvalidSpecError):
-                # Remove it from prefs
-                logger.info(f"Skipping missing hidden branch: {hiddenBranch}")
-                self.uiPrefs.hiddenBranches.remove(hiddenBranch)
+        for ref in hiddenRefs:
+            oid = self.refCache[ref]
+            if not isSharedByVisibleBranch(oid):
+                seeds.add(oid)
 
         if self.uiPrefs.hideAllStashes:
             for refName, oid in self.refCache.items():
@@ -399,7 +399,7 @@ class RepoState(QObject):
         for head in self.refCache.values():
             solver.tagCommit(head, T.SHOW)
 
-        for hiddenBranchTip in self.getHiddenBranchOids():
+        for hiddenBranchTip in self.getHiddenTips():
             solver.tagCommit(hiddenBranchTip, T.SOFTHIDE)
 
         if settings.prefs.hideStashJunkParents:
@@ -413,6 +413,8 @@ class RepoState(QObject):
         return solver
 
     def resolveHiddenCommits(self):
+        self.refreshHiddenRefCache()
+
         self.hiddenCommits = set()
         solver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:

@@ -24,10 +24,9 @@ INVALID_MOUSEPRESS = (-1, SidebarClickZone.Invalid)
 
 
 class Sidebar(QTreeView):
+    toggleHideRefPattern = Signal(str)
     toggleHideStash = Signal(Oid)
-    toggleHideBranch = Signal(str)
     toggleHideAllStashes = Signal()
-    toggleHideRemote = Signal(str)
 
     pushBranch = Signal(str)
 
@@ -114,6 +113,7 @@ class Sidebar(QTreeView):
         repo = model.repo
         item = node.kind
         data = node.data
+        isHidden = model.isExplicitlyHidden(node)
 
         if item == EItem.UncommittedChanges:
             actions += [
@@ -139,10 +139,6 @@ class Sidebar(QTreeView):
             isCurrentBranch = branch and branch.is_checked_out()
             hasUpstream = bool(branch.upstream)
             upstreamBranchName = "" if not hasUpstream else branch.upstream.shorthand
-
-            isBranchHidden = False
-            if index:  # in test mode, we may not have an index
-                isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
 
             thisBranchDisplay = lquoe(branchName)
             activeBranchDisplay = lquoe(activeBranchName)
@@ -211,8 +207,8 @@ class Sidebar(QTreeView):
 
                 ActionDef(
                     self.tr("&Hide in Graph"),
-                    lambda: self.toggleHideBranch.emit(refName),
-                    checkState=1 if isBranchHidden else -1,
+                    lambda: self.toggleHideRefPattern.emit(refName),
+                    checkState=[-1, 1][isHidden],
                     statusTip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
                 ),
             ]
@@ -221,10 +217,6 @@ class Sidebar(QTreeView):
             actions += [TaskBook.action(self, NewBranchFromHead, self.tr("New &Branch from Here...")), ]
 
         elif item == EItem.RemoteBranch:
-            isBranchHidden = False
-            if index:  # in test mode, we may not have an index
-                isBranchHidden = self.model().data(index, ROLE_ISHIDDEN)
-
             activeBranchName = repo.head_branch_shorthand
 
             refName = data
@@ -275,12 +267,12 @@ class Sidebar(QTreeView):
                 *webActions,
 
                 ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.toggleHideBranch.emit(refName),
-                          checkState=1 if isBranchHidden else -1),
+                          lambda: self.toggleHideRefPattern.emit(refName),
+                          checkState=[-1, 1][isHidden]),
             ]
 
         elif item == EItem.Remote:
-            remoteUrl = self.sidebarModel.repo.remotes[data].url
+            remoteUrl = model.repo.remotes[data].url
             webUrl, webHost = WebHost.makeLink(remoteUrl)
 
             webActions = []
@@ -312,14 +304,20 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Hide Remote in Graph"),
-                          lambda: self.toggleHideRemote.emit(data),
-                          checkState=1 if data in model._hiddenRemotes else -1,
-                          ),
+                          lambda: self.toggleHideRefPattern.emit(f"{RefPrefix.REMOTES}{data}/"),
+                          checkState=[-1, 1][isHidden]),
             ]
 
         elif item == EItem.RemotesHeader:
             actions += [
                 TaskBook.action(self, NewRemote, "&A"),
+            ]
+
+        elif item == EItem.RefFolder:
+            actions += [
+                ActionDef(self.tr("&Hide Group in Graph"),
+                          lambda: self.toggleHideRefPattern.emit(f"{data}/"),
+                          checkState=[-1, 1][isHidden]),
             ]
 
         elif item == EItem.StashesHeader:
@@ -328,16 +326,11 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("&Hide All Stashes in Graph"),
                           lambda: self.toggleHideAllStashes.emit(),
-                          checkState=1 if model._hideAllStashes else -1,
-                          ),
+                          checkState=[-1, 1][isHidden]),
             ]
 
         elif item == EItem.Stash:
             oid = Oid(hex=data)
-
-            isStashHidden = False
-            if index:  # in test mode, we may not have an index
-                isStashHidden = model.data(index, ROLE_ISHIDDEN)
 
             actions += [
                 TaskBook.action(self, ApplyStash, self.tr("&Apply"), taskArgs=oid),
@@ -352,7 +345,7 @@ class Sidebar(QTreeView):
 
                 ActionDef(self.tr("&Hide in Graph"),
                           lambda: self.toggleHideStash.emit(oid),
-                          checkState=1 if isStashHidden else -1,
+                          checkState=[-1, 1][isHidden],
                           statusTip=self.tr("Hide this stash from the graph")),
             ]
 
@@ -563,7 +556,6 @@ class Sidebar(QTreeView):
 
     def wantHideNode(self, node: SidebarNode):
         if node is None:
-            # QApplication.beep()
             return
 
         item = node.kind
@@ -573,11 +565,11 @@ class Sidebar(QTreeView):
             pass
 
         elif item in [EItem.LocalBranch, EItem.RemoteBranch]:
-            self.toggleHideBranch.emit(data)
+            self.toggleHideRefPattern.emit(data)
             self.repaint()
 
         elif item == EItem.Remote:
-            self.toggleHideRemote.emit(data)
+            self.toggleHideRefPattern.emit(f"{RefPrefix.REMOTES}{data}/")
             self.repaint()
 
         elif item == EItem.Stash:
@@ -587,6 +579,10 @@ class Sidebar(QTreeView):
 
         elif item == EItem.StashesHeader:
             self.toggleHideAllStashes.emit()
+            self.repaint()
+
+        elif item == EItem.RefFolder:
+            self.toggleHideRefPattern.emit(f"{data}/")
             self.repaint()
 
         else:

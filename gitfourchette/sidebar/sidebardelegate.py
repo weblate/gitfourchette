@@ -61,7 +61,7 @@ class SidebarDelegate(QStyledItemDelegate):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
         colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
-        nodeIsHidden = sidebarModel.isHidden(node)
+        nodeIsHidden = node.canBeHidden() and sidebarModel.isExplicitlyHidden(node)
         mouseOver = option.state & QStyle.StateFlag.State_Enabled and option.state & QStyle.StateFlag.State_MouseOver
         makeRoomForEye = nodeIsHidden or (mouseOver and node.canBeHidden())
 
