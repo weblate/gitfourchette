@@ -89,11 +89,13 @@ class SidebarDelegate(QStyledItemDelegate):
         option.rect.adjust(PADDING, 0, -PADDING, 0)
 
         # Set highlighted text color if this item is selected
-        iconCLUT = ""
+        iconColorRemapTable = ""
         if isSelected:
-            hlColor = option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText)
-            painter.setPen(hlColor)
-            iconCLUT = f"gray={hlColor.name()}"
+            penColor = option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText)
+            iconColorRemapTable = f"gray={penColor.name()}"
+        else:
+            penColor = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
+        painter.setPen(penColor)
 
         # Draw decoration icon
         iconWidth = option.decorationSize.width()
@@ -101,7 +103,7 @@ class SidebarDelegate(QStyledItemDelegate):
         if iconKey:
             r = QRect(option.rect)
             r.setWidth(iconWidth)
-            icon = stockIcon(iconKey, iconCLUT)
+            icon = stockIcon(iconKey, iconColorRemapTable)
             icon.paint(painter, r, option.decorationAlignment)
             option.rect.adjust(r.width() + PADDING*150//100, 0, 0, 0)
 
@@ -121,7 +123,7 @@ class SidebarDelegate(QStyledItemDelegate):
             r.setLeft(textRect.right())
             r.setWidth(EYE_WIDTH)
             eyeIconName = "view-hidden" if nodeIsHidden else "view-visible"
-            eyeIcon = stockIcon(eyeIconName, iconCLUT)
+            eyeIcon = stockIcon(eyeIconName, iconColorRemapTable)
             eyeIcon.paint(painter, r)
 
         painter.restore()
