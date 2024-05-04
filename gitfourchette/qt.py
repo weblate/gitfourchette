@@ -151,18 +151,6 @@ if FREEDESKTOP:
             raise ImportError("QtDBus")
         HAS_QTDBUS = True
 
-HAS_QTSVG = False
-with _suppress(ImportError):
-    if PYSIDE6:
-        from PySide6.QtSvg import *
-    elif PYQT6:
-        from PyQt6.QtSvg import *
-    elif PYQT5:
-        from PyQt5.QtSvg import *
-    else:
-        raise ImportError("QtSvg")
-    HAS_QTSVG = True
-
 # -----------------------------------------------------------------------------
 # Exclude some known bad PySide6 versions
 

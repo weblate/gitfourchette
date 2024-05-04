@@ -1,26 +1,13 @@
 """
 If SVG icons don't show up, you may need to install the 'qt6-svg' package.
 """
+import os
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox.qtutils import isDarkTheme
 
 _stockIconCache = {}
-
-
-class SvgIconEngine(QIconEngine):
-    def __init__(self, data: bytes):
-        super().__init__()
-        self.data = data
-        if HAS_QTSVG:
-            self.renderer = QSvgRenderer(self.data)
-            self.renderer.setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
-        else:
-            self.renderer = None
-
-    def paint(self, painter, rect, mode = QIcon.Mode.Normal, state = QIcon.State.On):
-        if HAS_QTSVG:
-            self.renderer.render(painter, QRectF(rect))
+_tempSvgFiles = []
 
 
 def assetCandidates(name: str):
@@ -57,24 +44,41 @@ def lookUpNamedIcon(name: str) -> QIcon:
     return QIcon.fromTheme(name)
 
 
-def remapSvgColors(name: str, clut: str) -> QIcon:
+def remapSvgColors(name: str, colorRemapTable: str) -> QIcon:
     path = getBestIconFile(name)
     with open(path, "rt", encoding="utf-8") as f:
-        data = f.read()
-    for pair in clut.split(";"):
+        originalData = f.read()
+
+    data = originalData
+    for pair in colorRemapTable.split(";"):
         oldColor, newColor = pair.split("=")
         data = data.replace(oldColor, newColor)
-    icon = QIcon(SvgIconEngine(data.encode("utf-8")))
+
+    if data == originalData:
+        # No changes, return original icon
+        return QIcon(path)
+
+    template = os.path.join(qTempDir(), "icon-XXXXXX.svg")
+    tempFile = QTemporaryFile(template)
+    tempFile.open(QFile.OpenModeFlag.WriteOnly)
+    tempFile.write(data.encode('utf-8'))
+    tempFile.close()
+    tempFile.setAutoRemove(True)
+
+    # Keep the temp file object around so that QIcon can read off it as needed
+    _tempSvgFiles.append(tempFile)
+
+    icon = QIcon(tempFile.fileName())
     return icon
 
 
-def stockIcon(iconId: str, clut="") -> QIcon:
+def stockIcon(iconId: str, colorRemapTable="") -> QIcon:
     # Special cases
     if (MACOS or WINDOWS) and iconId == "achtung":
         iconId = "SP_MessageBoxWarning"
 
-    if clut:
-        key = f"{iconId}?{clut}"
+    if colorRemapTable:
+        key = f"{iconId}?{colorRemapTable}"
     else:
         key = iconId
 
@@ -82,8 +86,11 @@ def stockIcon(iconId: str, clut="") -> QIcon:
     if key in _stockIconCache:
         return _stockIconCache[key]
 
-    if clut:
-        icon = remapSvgColors(iconId, clut)
+    if colorRemapTable:
+        try:
+            icon = remapSvgColors(iconId, colorRemapTable)
+        except KeyError:
+            icon = lookUpNamedIcon(iconId)
     else:
         icon = lookUpNamedIcon(iconId)
 
@@ -94,3 +101,4 @@ def stockIcon(iconId: str, clut="") -> QIcon:
 
 def clearStockIconCache():
     _stockIconCache.clear()
+    _tempSvgFiles.clear()
