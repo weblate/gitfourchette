@@ -19,6 +19,7 @@ class GFApplication(QApplication):
     mainWindow: MainWindow | None
     initialSession: Session | None
     installedTranslators: list
+    tempDir: QTemporaryDir
 
     @staticmethod
     def instance() -> GFApplication:
@@ -37,6 +38,7 @@ class GFApplication(QApplication):
         self.mainWindow = None
         self.initialSession = None
         self.installedTranslators = []
+        self.tempDir = None
 
         # Don't use app.setOrganizationName because it changes QStandardPaths.
         self.setApplicationName(APP_SYSTEM_NAME)  # used by QStandardPaths
@@ -172,6 +174,9 @@ class GFApplication(QApplication):
             settings.prefs.write()
         if settings.history.isDirty():
             settings.history.write()
+        if self.tempDir is not None:
+            self.tempDir.remove()
+            self.tempDir = None
 
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:
@@ -303,3 +308,11 @@ class GFApplication(QApplication):
     def processEventsNoInput(self):
         self.processEvents(QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
+    # -------------------------------------------------------------------------
+
+    def getSessionTemporaryDirectory(self):
+        """ Path to temporary directory for this session. Creates one if needed. """
+        if self.tempDir is None:
+            self.tempDir = QTemporaryDir(os.path.join(QDir.tempPath(), APP_SYSTEM_NAME + ".XXXXXX"))
+            self.tempDir.setAutoRemove(True)
+        return self.tempDir.path()

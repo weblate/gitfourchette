@@ -4,11 +4,9 @@ import os
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor
 from gitfourchette.filelists.filelist import FileList, SelectedFileBatchError
-from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.toolbox import *
 
 
@@ -106,7 +104,7 @@ class CommittedFiles(FileList):
         except FileNotFoundError as fnf:
             raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
-        tempPath = os.path.join(getSessionTemporaryDirectory(), name)
+        tempPath = os.path.join(qTempDir(), name)
 
         with open(tempPath, "wb") as f:
             f.write(blob.data)

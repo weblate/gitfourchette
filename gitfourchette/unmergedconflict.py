@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 
-from gitfourchette import tempdir
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -27,7 +26,7 @@ class UnmergedConflict(QObject):
         self.repo = repo
 
         # Keep mergeDir around so the temp dir doesn't vanish
-        self.mergeDir = tempfile.TemporaryDirectory(dir=tempdir.getSessionTemporaryDirectory(), prefix="merge-", ignore_cleanup_errors=True)
+        self.mergeDir = tempfile.TemporaryDirectory(dir=qTempDir(), prefix="merge-", ignore_cleanup_errors=True)
         mergeDirPath = self.mergeDir.name
 
         self.ancestorPath = dumpTempBlob(repo, mergeDirPath, conflict.ancestor, "ANCESTOR")

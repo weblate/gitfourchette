@@ -12,7 +12,6 @@ from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks import *
-from gitfourchette.tempdir import getSessionTemporaryDirectory
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 
@@ -275,7 +274,7 @@ class FileList(QListView):
         oldDiffFile = patch.delta.old_file
         newDiffFile = patch.delta.new_file
 
-        diffDir = getSessionTemporaryDirectory()
+        diffDir = qTempDir()
 
         if self.navContext == NavContext.UNSTAGED:
             # Unstaged: compare indexed state to workdir file
@@ -531,7 +530,7 @@ class FileList(QListView):
 
     def openHeadRevision(self):
         def run(patch: Patch):
-            tempPath = dumpTempBlob(self.repo, getSessionTemporaryDirectory(), patch.delta.old_file, "HEAD")
+            tempPath = dumpTempBlob(self.repo, qTempDir(), patch.delta.old_file, "HEAD")
             openInTextEditor(self, tempPath)
 
         self.confirmBatch(run, tr("Open HEAD version of file"),

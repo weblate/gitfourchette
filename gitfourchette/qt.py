@@ -222,3 +222,8 @@ def translate(context, s, *args, **kwargs):
 def qAppName():
     """ User-facing application name. Shorthand for QApplication.applicationDisplayName(). """
     return QApplication.applicationDisplayName()
+
+
+def qTempDir():
+    """ Path to temporary directory for this session. """
+    return QApplication.instance().getSessionTemporaryDirectory()

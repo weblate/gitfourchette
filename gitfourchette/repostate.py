@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import Iterable
 
 from gitfourchette import settings
-from gitfourchette import tempdir
 from gitfourchette.graph import Graph, GraphSplicer
 from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
 from gitfourchette.porcelain import *
@@ -107,7 +106,7 @@ class RepoState(QObject):
         # autocrlf=true, GF's staging area would be unusable on Windows without
         # setting autocrlf=true in the config.
         if WINDOWS and "core.autocrlf" not in self.repo.config:  # pragma: no cover
-            tempConfigPath = os.path.join(tempdir.getSessionTemporaryDirectory(), "gitconfig")
+            tempConfigPath = os.path.join(qTempDir(), "gitconfig")
             logger.info(f"Forcing core.autocrlf=true in: {tempConfigPath}")
             tempConfig = GitConfig(tempConfigPath)
             tempConfig["core.autocrlf"] = "true"

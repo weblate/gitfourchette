@@ -4,7 +4,6 @@ import os
 import re
 import shlex
 
-from gitfourchette import tempdir
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs
 from gitfourchette.toolbox import *
