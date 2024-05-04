@@ -154,52 +154,67 @@ class LoggingLevel(enum.IntEnum):
 class Prefs(PrefsFile):
     _filename = "prefs.json"
 
-    language                    : str           = ""
-    qtStyle                     : str           = ""
-    shortHashChars              : int           = 7
-    shortTimeFormat             : str           = list(SHORT_DATE_PRESETS.values())[0]
-    pathDisplayStyle            : PathDisplayStyle = PathDisplayStyle.FULL_PATHS
-    authorDisplayStyle          : AuthorDisplayStyle = AuthorDisplayStyle.FULL_NAME
-    maxRecentRepos              : int           = 20
-    showToolBar                 : bool          = True
-    showStatusBar               : bool          = True
-    showMenuBar                 : bool          = True
-    toolBarButtonStyle          : Qt.ToolButtonStyle = Qt.ToolButtonStyle.ToolButtonTextBesideIcon
-    toolBarIconSize             : int           = 16
-    diff_font                   : str           = ""
-    diff_contextLines           : int           = 3
-    diff_tabSpaces              : int           = 4
-    diff_largeFileThresholdKB   : int           = 512
-    diff_imageFileThresholdKB   : int           = 5000
-    diff_wordWrap               : bool          = False
-    diff_showStrayCRs           : bool          = True
-    diff_colorblind             : bool          = False
-    tabs_closeButton            : bool          = True
-    tabs_expanding              : bool          = True
-    tabs_autoHide               : bool          = False
-    tabs_doubleClickOpensFolder : bool          = True
-    graph_chronologicalOrder    : bool          = True
-    graph_rowHeight             : GraphRowHeight= GraphRowHeight.RELAXED
-    graph_flattenLanes          : bool          = True
-    graph_authorDiffAsterisk    : bool          = True
-    graph_maxCommits            : int           = 10000
-    external_editor             : str           = ""
-    external_diff               : str           = DIFF_TOOL_PRESETS[DEFAULT_DIFF_TOOL_PRESET]
-    external_merge              : str           = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]
-    trash_maxFiles              : int           = 250
-    trash_maxFileSizeKB         : int           = 1024
-    debug_smoothScroll          : bool          = True
-    debug_hideStashJunkParents  : bool          = True
-    debug_autoRefresh           : bool          = True
-    debug_modalSidebar          : bool          = False
-    debug_verbosity             : LoggingLevel  = LoggingLevel.WARNING
-    debug_forceQtApi            : QtApiNames    = QtApiNames.QTAPI_AUTOMATIC
-    dontShowAgain               : list[str]     = dataclasses.field(default_factory=list)
-    resetDontShowAgain          : bool          = False
+    _category_general           : int                   = 0
+    language                    : str                   = ""
+    qtStyle                     : str                   = ""
+    pathDisplayStyle            : PathDisplayStyle      = PathDisplayStyle.FULL_PATHS
+    showToolBar                 : bool                  = True
+    showStatusBar               : bool                  = True
+    showMenuBar                 : bool                  = True
+
+    _category_diff              : int                   = 0
+    font                        : str                   = ""
+    contextLines                : int                   = 3
+    tabSpaces                   : int                   = 4
+    largeFileThresholdKB        : int                   = 512
+    imageFileThresholdKB        : int                   = 5000
+    wordWrap                    : bool                  = False
+    showStrayCRs                : bool                  = True
+    colorblind                  : bool                  = False
+
+    _category_graph             : int                   = 0
+    chronologicalOrder          : bool                  = True
+    graphRowHeight              : GraphRowHeight        = GraphRowHeight.RELAXED
+    authorDisplayStyle          : AuthorDisplayStyle    = AuthorDisplayStyle.FULL_NAME
+    shortTimeFormat             : str                   = list(SHORT_DATE_PRESETS.values())[0]
+    maxCommits                  : int                   = 10000
+    authorDiffAsterisk          : bool                  = True
+
+    _category_external          : int                   = 0
+    externalEditor              : str                   = ""
+    externalDiff                : str                   = DIFF_TOOL_PRESETS[DEFAULT_DIFF_TOOL_PRESET]
+    externalMerge               : str                   = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]
+
+    _category_tabs              : int                   = 0
+    tabCloseButton              : bool                  = True
+    expandingTabs               : bool                  = True
+    autoHideTabs                : bool                  = False
+    doubleClickTabOpensFolder   : bool                  = True
+
+    _category_trash             : int                   = 0
+    maxTrashFiles               : int                   = 250
+    maxTrashFileKB              : int                   = 1024
+
+    _category_advanced          : int                   = 0
+    maxRecentRepos              : int                   = 20
+    shortHashChars              : int                   = 7
+    flattenLanes                : bool                  = True
+    smoothScroll                : bool                  = True
+    hideStashJunkParents        : bool                  = True
+    autoRefresh                 : bool                  = True
+    modalSidebar                : bool                  = False
+    verbosity                   : LoggingLevel          = LoggingLevel.WARNING
+    forceQtApi                  : QtApiNames            = QtApiNames.QTAPI_AUTOMATIC
+
+    _category_hidden            : int                   = 0
+    toolBarButtonStyle          : Qt.ToolButtonStyle    = Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+    toolBarIconSize             : int                   = 16
+    dontShowAgain               : list[str]             = dataclasses.field(default_factory=list)
+    resetDontShowAgain          : bool                  = False
 
     @property
     def listViewScrollMode(self) -> QAbstractItemView.ScrollMode:
-        if self.debug_smoothScroll:
+        if self.smoothScroll:
             return QAbstractItemView.ScrollMode.ScrollPerPixel
         else:
             return QAbstractItemView.ScrollMode.ScrollPerItem
@@ -383,12 +398,12 @@ def _getCmdName(command, fallback, presets):
 
 
 def getExternalEditorName():
-    return _getCmdName(prefs.external_editor, tr("Text Editor"), EDITOR_TOOL_PRESETS)
+    return _getCmdName(prefs.externalEditor, tr("Text Editor"), EDITOR_TOOL_PRESETS)
 
 
 def getDiffToolName():
-    return _getCmdName(prefs.external_diff, tr("Diff Tool"), DIFF_TOOL_PRESETS)
+    return _getCmdName(prefs.externalDiff, tr("Diff Tool"), DIFF_TOOL_PRESETS)
 
 
 def getMergeToolName():
-    return _getCmdName(prefs.external_merge, tr("Merge Tool"), MERGE_TOOL_PRESETS)
+    return _getCmdName(prefs.externalMerge, tr("Merge Tool"), MERGE_TOOL_PRESETS)

@@ -216,7 +216,7 @@ class TrTables:
             "graph": translate("Prefs", "Commit History"),
             "trash": translate("Prefs", "Trash"),
             "external": translate("Prefs", "External Tools"),
-            "debug": translate("Prefs", "Advanced"),
+            "advanced": translate("Prefs", "Advanced"),
 
             "language": translate("Prefs", "Language"),
             "qtStyle": translate("Prefs", "Theme"),
@@ -227,32 +227,33 @@ class TrTables:
             "maxRecentRepos": translate("Prefs", "Remember up to # recent repositories"),
             "showStatusBar": translate("Prefs", "Show status bar"),
             "showToolBar": translate("Prefs", "Show toolbar"),
-            "showMenuBar": translate("Prefs", "Show menu bar (once hidden, press Alt to show it again)"),
+            "showMenuBar": translate("Prefs", "Show menu bar"),
+            "showMenuBar_help": translate("Prefs", "When the menu bar is hidden, press the Alt key to show it again."),
             "resetDontShowAgain": translate("Prefs", "Restore all “don’t show this again” messages"),
 
-            "diff_font": translate("Prefs", "Font"),
-            "diff_tabSpaces": translate("Prefs", "One tab is # spaces"),
-            "diff_contextLines": translate("Prefs", "Show up to # context lines"),
-            "diff_contextLines_help": translate("Prefs", "Amount of unmodified lines to show around red or green lines in a diff."),
-            "diff_largeFileThresholdKB": translate("Prefs", "Load diffs up to # KB"),
-            "diff_imageFileThresholdKB": translate("Prefs", "Load images up to # KB"),
-            "diff_wordWrap": translate("Prefs", "Word wrap"),
-            "diff_showStrayCRs": translate("Prefs", "Display alien line endings (CRLF)"),
-            "diff_colorblind": translate("Prefs", "Colorblind-friendly color scheme"),
-            "diff_colorblind_help": "<html>" + translate(
+            "font": translate("Prefs", "Font"),
+            "tabSpaces": translate("Prefs", "One tab is # spaces"),
+            "contextLines": translate("Prefs", "Show up to # context lines"),
+            "contextLines_help": translate("Prefs", "Amount of unmodified lines to show around red or green lines in a diff."),
+            "largeFileThresholdKB": translate("Prefs", "Load diffs up to # KB"),
+            "imageFileThresholdKB": translate("Prefs", "Load images up to # KB"),
+            "wordWrap": translate("Prefs", "Word wrap"),
+            "showStrayCRs": translate("Prefs", "Display alien line endings (CRLF)"),
+            "colorblind": translate("Prefs", "Colorblind-friendly color scheme"),
+            "colorblind_help": "<html>" + translate(
                 "Prefs",
                 "Tick this if you have trouble distinguishing red and green. "
                 "The diff will use a yellow and blue color scheme instead."),
 
-            "tabs_closeButton": translate("Prefs", "Show tab close button"),
-            "tabs_expanding": translate("Prefs", "Tab bar takes all available width"),
-            "tabs_autoHide": translate("Prefs", "Auto-hide tab bar if there’s just 1 tab"),
-            "tabs_doubleClickOpensFolder": translate("Prefs", "Double-click a tab to open repo folder"),
+            "tabCloseButton": translate("Prefs", "Show tab close button"),
+            "expandingTabs": translate("Prefs", "Tab bar takes all available width"),
+            "autoHideTabs": translate("Prefs", "Auto-hide tab bar if there’s just 1 tab"),
+            "doubleClickTabOpensFolder": translate("Prefs", "Double-click a tab to open repo folder"),
 
-            "graph_chronologicalOrder": translate("Prefs", "Sort commits"),
-            "graph_chronologicalOrder_true": translate("Prefs", "Chronologically"),
-            "graph_chronologicalOrder_false": translate("Prefs", "Topologically"),
-            "graph_chronologicalOrder_help": translate(
+            "chronologicalOrder": translate("Prefs", "Sort commits"),
+            "chronologicalOrder_true": translate("Prefs", "Chronologically"),
+            "chronologicalOrder_false": translate("Prefs", "Topologically"),
+            "chronologicalOrder_help": translate(
                 "Prefs",
                 "<p><b>Chronological mode</b> lets you stay on top of the latest activity in the repository. "
                 "The most recent commits always show up at the top of the graph. "
@@ -261,10 +262,10 @@ class TrTables:
                 "commits within a branch in a linear fashion. Since this is not a strictly chronological "
                 "mode, you may have to do more scrolling to see the latest changes in various branches.</p>"),
 
-            "graph_rowHeight": translate("Prefs", "Row spacing"),
-            "graph_flattenLanes": translate("Prefs", "Squeeze branch lanes in graph"),
-            "graph_authorDiffAsterisk": translate("Prefs", "Mark author/committer signature differences"),
-            "graph_authorDiffAsterisk_help": "<html>" + translate(
+            "graphRowHeight": translate("Prefs", "Row spacing"),
+            "flattenLanes": translate("Prefs", "Squeeze branch lanes in graph"),
+            "authorDiffAsterisk": translate("Prefs", "Mark author/committer signature differences"),
+            "authorDiffAsterisk_help": "<html>" + translate(
                 "Prefs",
                 "<p>The commit history displays information about a commit’s <b>author</b> &ndash; "
                 "their name and the date at which they made the commit. But in some cases, a commit "
@@ -274,36 +275,36 @@ class TrTables:
                 "and/or date if they differ from the committer’s for any given commit.</p>"
                 "<p>Note that you can always hover over the author’s name or date to obtain "
                 "detailed information about the author and the committer.</p>"),
-            "graph_maxCommits": translate("Prefs", "Load up to # commits in the history"),
-            "graph_maxCommits_help": translate("Prefs", "Set to 0 to always load the full commit history."),
+            "maxCommits": translate("Prefs", "Load up to # commits in the history"),
+            "maxCommits_help": translate("Prefs", "Set to 0 to always load the full commit history."),
 
-            "trash_maxFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
-            "trash_maxFileSizeKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),
+            "maxTrashFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
+            "maxTrashFileKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),
             "trash_HEADER": translate(
                 "Prefs",
                 "When you discard changes from the working directory, {app} keeps a temporary copy in a hidden "
                 "“trash” folder. This gives you a last resort to rescue changes that you have discarded by mistake. "
                 "You can look around this trash folder via <i>“Help &rarr; Open Trash”</i>."),
 
-            "debug_verbosity": translate("Prefs", "Logging verbosity"),
-            "debug_hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
-            "debug_autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
-            "debug_modalSidebar": translate("Prefs", "Modal sidebar"),
-            "debug_smoothScroll": translate("Prefs", "Smooth scrolling (where applicable)"),
-            "debug_forceQtApi": translate("Prefs", "Preferred Qt binding"),
-            "debug_forceQtApi_help": translate(
+            "verbosity": translate("Prefs", "Logging verbosity"),
+            "hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
+            "autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
+            "modalSidebar": translate("Prefs", "Modal sidebar"),
+            "smoothScroll": translate("Prefs", "Smooth scrolling (where applicable)"),
+            "forceQtApi": translate("Prefs", "Preferred Qt binding"),
+            "forceQtApi_help": translate(
                 "Prefs", "<p>After restarting, {app} will use this Qt binding if available.</p><p>You can also pass "
                          "the name of a Qt binding via the “QT_API” environment variable.</p>"),
 
-            "external_editor": translate("Prefs", "Text editor"),
-            "external_diff": translate("Prefs", "Diff tool"),
-            "external_diff_help": "<p style='white-space: pre'>" + translate(
+            "externalEditor": translate("Prefs", "Text editor"),
+            "externalDiff": translate("Prefs", "Diff tool"),
+            "externalDiff_help": "<p style='white-space: pre'>" + translate(
                 "Prefs", "Argument placeholders:"
                          "\n<code>$L</code> - Old/Left"
                          "\n<code>$R</code> - New/Right"
             ),
-            "external_merge": translate("Prefs", "Merge tool"),
-            "external_merge_help": "<p style='white-space: pre'>" + translate(
+            "externalMerge": translate("Prefs", "Merge tool"),
+            "externalMerge_help": "<p style='white-space: pre'>" + translate(
                 "Prefs", "Argument placeholders:"
                          "\n<code>$B</code> - Ancestor / Base / Center"
                          "\n<code>$L</code> - Ours / Local / Left"

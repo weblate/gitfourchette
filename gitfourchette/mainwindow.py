@@ -367,7 +367,7 @@ class MainWindow(QMainWindow):
         # -------------------------------------------------------------
 
         sideTabsGoMenu = []
-        if settings.prefs.debug_modalSidebar:
+        if settings.prefs.modalSidebar:
             for i, mode in enumerate(SidebarTabMode):
                 if mode == SidebarTabMode.NonModal:
                     assert i == 0
@@ -556,7 +556,7 @@ class MainWindow(QMainWindow):
         if i < 0:
             return
         rw: RepoWidget = self.tabs.widget(i)
-        if settings.prefs.tabs_doubleClickOpensFolder:
+        if settings.prefs.doubleClickTabOpensFolder:
             self.openRepoFolder(rw)
 
     # -------------------------------------------------------------------------
@@ -636,7 +636,7 @@ class MainWindow(QMainWindow):
     def onRegainForeground(self):
         if QGuiApplication.applicationState() != Qt.ApplicationState.ApplicationActive:
             return
-        if not settings.prefs.debug_autoRefresh:
+        if not settings.prefs.autoRefresh:
             return
         rw = self.currentRepoWidget()
         if not rw:
@@ -1173,7 +1173,7 @@ class MainWindow(QMainWindow):
         if "qtStyle" in prefDiff:
             app.applyQtStylePref(forceApplyDefault=True)
 
-        if "debug_verbosity" in prefDiff:
+        if "verbosity" in prefDiff:
             app.applyLoggingLevelPref()
 
         if "language" in prefDiff:
@@ -1223,24 +1223,24 @@ class MainWindow(QMainWindow):
         # Warn if changed any setting that requires a reload
         autoReload = [
             # Those settings a reload of the current diff
-            "diff_showStrayCRs",
-            "diff_colorblind",
-            "diff_largeFileThresholdKB",
-            "diff_imageFileThresholdKB",
-            "diff_contextLines",
-            "graph_maxCommits",
+            "showStrayCRs",
+            "colorblind",
+            "largeFileThresholdKB",
+            "imageFileThresholdKB",
+            "contextLines",
+            "maxCommits",
         ]
 
         warnIfChanged = [
-            "graph_chronologicalOrder",  # need to reload entire commit sequence
-            "debug_hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
-            "graph_maxCommits",
+            "chronologicalOrder",  # need to reload entire commit sequence
+            "hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
+            "maxCommits",
         ]
 
         warnIfNeedRestart = [
             "language",
-            "debug_forceQtApi",
-            "debug_modalSidebar",
+            "forceQtApi",
+            "modalSidebar",
         ]
 
         if "showMenuBar" in prefDiff and not prefDiff["showMenuBar"]:

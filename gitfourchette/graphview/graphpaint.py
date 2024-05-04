@@ -27,7 +27,7 @@ def flattenLanes(frame: Frame, hiddenCommits: set[Oid]) -> tuple[list[tuple[int,
     Compute columns (horizontal positions) for each lane above and below this row.
     """
 
-    if settings.prefs.graph_flattenLanes:
+    if settings.prefs.flattenLanes:
         laneRemap, flatTotal = frame.flattenLanes(hiddenCommits)
     else:
         # Straightforward lane positions (lane column == lane ID)

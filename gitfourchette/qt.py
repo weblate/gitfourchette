@@ -41,7 +41,7 @@ if not _qtBindingBootPref:
     with _suppress(IOError, ValueError):
         with open(_prefsPath, 'rt', encoding='utf-8') as _f:
             _jsonPrefs = _json.load(_f)
-        _qtBindingBootPref = _jsonPrefs.get("debug_forceQtApi", "").lower()
+        _qtBindingBootPref = _jsonPrefs.get("forceQtApi", "").lower()
 
 if _qtBindingBootPref:
     if _qtBindingBootPref not in _qtBindingOrder:

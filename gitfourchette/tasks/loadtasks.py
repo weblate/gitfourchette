@@ -21,7 +21,7 @@ RENAME_COUNT_THRESHOLD = 100
 """ Don't find_similar beyond this number of files in the main diff """
 
 def contextLines():
-    return settings.prefs.diff_contextLines
+    return settings.prefs.contextLines
 
 
 class PrimeRepo(RepoTask):
@@ -93,7 +93,7 @@ class PrimeRepo(RepoTask):
 
         truncatedHistory = False
         if maxCommits < 0:  # -1 means take maxCommits from prefs. Warning, pref value can be 0, meaning infinity!
-            maxCommits = settings.prefs.graph_maxCommits
+            maxCommits = settings.prefs.maxCommits
         if maxCommits == 0:  # 0 means infinity
             maxCommits = 2**63  # ought to be enough
         progressInterval = 5000 if maxCommits >= 10000 else 1000
@@ -310,8 +310,8 @@ class LoadPatch(RepoTask):
             locator = locator.withExtraFlags(NavFlags.Force)
             longformItems = [locator.toHtml(self.tr("Try to reload the file."))]
 
-            if locator.context.isWorkdir() and not settings.prefs.debug_autoRefresh:
-                prefKey = "debug_autoRefresh"
+            if locator.context.isWorkdir() and not settings.prefs.autoRefresh:
+                prefKey = "autoRefresh"
                 tip = self.tr("Consider re-enabling [{0}] to prevent this issue."
                               ).format(hquo(TrTables.prefKey(prefKey)))
                 tip = linkify(tip, makeInternalLink("prefs", prefKey))
@@ -349,7 +349,7 @@ class LoadPatch(RepoTask):
         header = "<html>" + escape(locator.path)
 
         if isinstance(result, DiffDocument):
-            if settings.prefs.diff_colorblind:
+            if settings.prefs.colorblind:
                 addColor = colors.teal
                 delColor = colors.orange
             else:

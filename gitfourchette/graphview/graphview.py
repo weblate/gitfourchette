@@ -89,7 +89,7 @@ class GraphView(QListView):
         elif kind == SpecialRow.TruncatedHistory:
             expandSome = makeInternalLink("expandlog")
             expandAll = makeInternalLink("expandlog", n=str(0))
-            changePref = makeInternalLink("prefs", "graph_maxCommits")
+            changePref = makeInternalLink("prefs", "maxCommits")
             actions = [
                 ActionDef(self.tr("Load up to {0} commits").format(QLocale().toString(state.nextTruncationThreshold)),
                           lambda: self.linkActivated.emit(expandSome)),
@@ -434,7 +434,7 @@ class GraphView(QListView):
 
     def refreshPrefs(self, invalidateMetrics=True):
         self.setVerticalScrollMode(
-            self.ScrollMode.ScrollPerPixel if settings.prefs.debug_smoothScroll else self.ScrollMode.ScrollPerItem)
+            self.ScrollMode.ScrollPerPixel if settings.prefs.smoothScroll else self.ScrollMode.ScrollPerItem)
 
         # Force redraw to reflect changes in row height, flattening, date format, etc.
         if invalidateMetrics:

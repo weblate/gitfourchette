@@ -41,16 +41,6 @@ def hBoxWidget(*controls):
     return _boxWidget(QHBoxLayout, *controls)
 
 
-def splitSettingKey(n):
-    split = n.split('_', 1)
-    if len(split) == 1:
-        category = "general"
-        item = split[0]
-    else:
-        category, item = split
-    return category, item
-
-
 class PrefsDialog(QDialog):
     lastOpenTab = 0
 
@@ -86,26 +76,30 @@ class PrefsDialog(QDialog):
             tabWidget.setStyle(proxyStyle)
             tabWidget.setTabPosition(QTabWidget.TabPosition.West if self.isLeftToRight() else QTabWidget.TabPosition.East)
 
+        category = "general"
         categoryForms: dict[str, QFormLayout] = {}
         skipKeys = self.getHiddenSettingKeys()
 
         for prefKey in prefs.__dict__:
+            # Switch category
+            if prefKey.startswith("_category_"):
+                category = prefKey.removeprefix("_category_")
+                continue
+
             # Skip irrelevant settings
-            if prefKey in skipKeys or prefKey.startswith("_"):
+            if prefKey in skipKeys or prefKey.startswith("_") or category == "hidden":
                 continue
 
             # Get the value of this setting
             prefValue = prefs.__dict__[prefKey]
 
-            # Get category, caption, suffix
-            category, caption = splitSettingKey(prefKey)
+            # Get caption and suffix
             suffix = ""
-            if caption:
-                caption = TrTables.prefKey(prefKey)
-                if "#" in caption:
-                    caption, suffix = caption.split("#")
-                    caption = caption.rstrip()
-                    suffix = suffix.lstrip()
+            caption = TrTables.prefKey(prefKey)
+            if "#" in caption:
+                caption, suffix = caption.split("#")
+                caption = caption.rstrip()
+                suffix = suffix.lstrip()
 
             # Get a QFormLayout for this setting's category
             try:
@@ -210,11 +204,7 @@ class PrefsDialog(QDialog):
         PrefsDialog.lastOpenTab = i
 
     def getHiddenSettingKeys(self) -> set[str]:
-        skipKeys = {"shortHashChars", "toolBarButtonStyle", "toolBarIconSize", "dontShowAgain"}
-
-        # Hide "reset don't show again" checkbox if we've never dismissed any of those dialogs yet
-        if not prefs.dontShowAgain:
-            skipKeys.add("resetDontShowAgain")
+        skipKeys = set()
 
         # Prevent hiding menubar on macOS
         if MACOS:
@@ -222,7 +212,7 @@ class PrefsDialog(QDialog):
 
         # Only allow setting Qt API in non-frozen Linux environments
         if not APP_FIXED_QT_BINDING and not FREEDESKTOP:
-            skipKeys.add("debug_forceQtApi")
+            skipKeys.add("forceQtApi")
 
         return skipKeys
 
@@ -240,35 +230,35 @@ class PrefsDialog(QDialog):
     def makeControlWidget(self, key: str, value, caption: str) -> QWidget:
         valueType = type(value)
 
-        if key == 'language':
+        if key == "language":
             return self.languageControl(key, value)
-        elif key == 'qtStyle':
+        elif key == "qtStyle":
             return self.qtStyleControl(key, value)
-        elif key == 'diff_font':
+        elif key == "font":
             return self.fontControl(key)
-        elif key == 'shortTimeFormat':
+        elif key == "shortTimeFormat":
             return self.dateFormatControl(key, value, SHORT_DATE_PRESETS)
-        elif key == 'pathDisplayStyle':
+        elif key == "pathDisplayStyle":
             return self.enumControl(key, value, valueType, previewCallback=lambda v: abbreviatePath(SAMPLE_FILE_PATH, v))
-        elif key == 'authorDisplayStyle':
+        elif key == "authorDisplayStyle":
             return self.enumControl(key, value, valueType, previewCallback=lambda v: abbreviatePerson(SAMPLE_SIGNATURE, v))
-        elif key == 'shortHashChars':
+        elif key == "shortHashChars":
             return self.boundedIntControl(key, value, 4, 40)
-        elif key == 'maxRecentRepos':
+        elif key == "maxRecentRepos":
             return self.boundedIntControl(key, value, 0, 50)
-        elif key == 'diff_contextLines':  # staging/discarding individual lines is flaky with 0 context lines
+        elif key == "contextLines":  # staging/discarding individual lines is flaky with 0 context lines
             return self.boundedIntControl(key, value, 1, 32)
-        elif key == 'diff_tabSpaces':
+        elif key == "tabSpaces":
             return self.boundedIntControl(key, value, 1, 16)
-        elif key == 'graph_maxCommits':
+        elif key == "maxCommits":
             control = self.boundedIntControl(key, value, 0, 999_999_999, 1000)
             control.setSpecialValueText("\u221E")  # infinity
             return control
-        elif key == 'external_editor':
+        elif key == "externalEditor":
             return self.strControlWithPresets(key, value, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
-        elif key == 'external_diff':
+        elif key == "externalDiff":
             return self.strControlWithPresets(key, value, DIFF_TOOL_PRESETS)
-        elif key == 'external_merge':
+        elif key == "externalMerge":
             return self.strControlWithPresets(key, value, MERGE_TOOL_PRESETS)
         elif issubclass(valueType, enum.Enum):
             return self.enumControl(key, value, type(value))

@@ -189,9 +189,9 @@ class QTabWidget2(QWidget):
         return self.tabs.count()
 
     def refreshPrefs(self):
-        self.tabs.setExpanding(settings.prefs.tabs_expanding)
-        self.tabs.setAutoHide(settings.prefs.tabs_autoHide)
-        self.tabs.setTabsClosable(settings.prefs.tabs_closeButton)
+        self.tabs.setExpanding(settings.prefs.expandingTabs)
+        self.tabs.setAutoHide(settings.prefs.autoHideTabs)
+        self.tabs.setTabsClosable(settings.prefs.tabCloseButton)
         self.tabs.update()
         self.syncBarSize()
         self.onResize()

@@ -223,7 +223,7 @@ class RepoState(QObject):
     def initializeWalker(self, tipOids: Iterable[Oid]) -> Walker:
         sorting = SortMode.TOPOLOGICAL
 
-        if settings.prefs.graph_chronologicalOrder:
+        if settings.prefs.chronologicalOrder:
             # In strictly chronological ordering, a commit may appear before its
             # children if it was "created" later than its children. The graph
             # generator produces garbage in this case. So, for chronological
@@ -262,7 +262,7 @@ class RepoState(QObject):
     def nextTruncationThreshold(self) -> int:
         n = self.numRealCommits * 2
         n -= n % -1000  # round up to next thousand
-        return max(n, settings.prefs.graph_maxCommits)
+        return max(n, settings.prefs.maxCommits)
 
     @benchmark
     def loadChangedRefs(self, oldRefCache: dict[str, Oid]):
@@ -402,7 +402,7 @@ class RepoState(QObject):
         for hiddenBranchTip in self.getHiddenBranchOids():
             solver.tagCommit(hiddenBranchTip, T.SOFTHIDE)
 
-        if settings.prefs.debug_hideStashJunkParents:
+        if settings.prefs.hideStashJunkParents:
             for stash in self.repo.listall_stashes():
                 stashCommit = self.repo.peel_commit(stash.commit_id)
                 if len(stashCommit.parents) >= 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):

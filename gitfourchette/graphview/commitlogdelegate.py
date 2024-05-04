@@ -90,7 +90,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
         dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
-        if settings.prefs.graph_authorDiffAsterisk:
+        if settings.prefs.authorDiffAsterisk:
             dateText += "*"
         self.dateMaxWidth = QFontMetrics(self.activeCommitFont).horizontalAdvance(dateText + " ")
         self.dateMaxWidth = int(self.dateMaxWidth)  # make sure it's an int for pyqt5 compat
@@ -160,7 +160,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             qdt = QDateTime.fromSecsSinceEpoch(author.time)
             dateText = option.locale.toString(qdt, settings.prefs.shortTimeFormat)
 
-            if settings.prefs.graph_authorDiffAsterisk:
+            if settings.prefs.authorDiffAsterisk:
                 if author.email != committer.email:
                     authorText += "*"
                 if author.time != committer.time:
@@ -393,7 +393,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         painter.restore()
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        mult = settings.prefs.graph_rowHeight
+        mult = settings.prefs.graphRowHeight
         r = super().sizeHint(option, index)
         r.setHeight(option.fontMetrics.height() * mult // 100)
         return r

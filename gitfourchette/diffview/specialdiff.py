@@ -110,7 +110,7 @@ class SpecialDiffError(Exception):
         humanSize = locale.formattedDataSize(size, 1)
         humanThreshold = locale.formattedDataSize(threshold, 0)
         loadAnyway = locator.withExtraFlags(NavFlags.AllowLargeFiles)
-        configure = makeInternalLink("prefs", "diff_largeFileThresholdKB")
+        configure = makeInternalLink("prefs", "largeFileThresholdKB")
         longform = toRoomyUL([
             linkify(translate("Diff", "[Load diff anyway] (this may take a moment)"), loadAnyway.url()),
             linkify(translate("Diff", "[Configure diff preview limit] (currently: {0})"), configure).format(humanThreshold),
@@ -127,7 +127,7 @@ class SpecialDiffError(Exception):
         humanSize = locale.formattedDataSize(size, 1)
         humanThreshold = locale.formattedDataSize(threshold, 0)
         loadAnyway = locator.withExtraFlags(NavFlags.AllowLargeFiles)
-        configure = makeInternalLink("prefs", "diff_imageFileThresholdKB")
+        configure = makeInternalLink("prefs", "imageFileThresholdKB")
         longform = toRoomyUL([
             linkify(translate("Diff", "[Load image anyway] (this may take a moment)"), loadAnyway.url()),
             linkify(translate("Diff", "[Configure image preview limit] (currently: {0})"), configure).format(humanThreshold),
@@ -160,7 +160,7 @@ class SpecialDiffError(Exception):
 
         if isImageFormatSupported(of.path) and isImageFormatSupported(nf.path):
             largestSize = max(of.size, nf.size)
-            threshold = settings.prefs.diff_imageFileThresholdKB * 1024
+            threshold = settings.prefs.imageFileThresholdKB * 1024
             if largestSize > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
                 return SpecialDiffError.imageTooLarge(largestSize, threshold, locator)
             else:

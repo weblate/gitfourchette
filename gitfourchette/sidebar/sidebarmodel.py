@@ -18,7 +18,7 @@ ROLE_REF = Qt.ItemDataRole.UserRole + 0
 ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 1
 ROLE_ICONKEY = Qt.ItemDataRole.UserRole + 2
 
-MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.debug_modalSidebar  # do not change while app is running
+MODAL_SIDEBAR = not settings.TEST_MODE and settings.prefs.modalSidebar  # do not change while app is running
 BRANCH_FOLDERS = True
 
 UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /refs/, so this name is safe

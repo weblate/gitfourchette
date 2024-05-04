@@ -351,28 +351,28 @@ class DiffView(QPlainTextEdit):
 
     def refreshPrefs(self):
         monoFont = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
-        if settings.prefs.diff_font:
-            monoFont.fromString(settings.prefs.diff_font)
+        if settings.prefs.font:
+            monoFont.fromString(settings.prefs.font)
         self.setFont(monoFont)
 
         currentDocument = self.document()
         if currentDocument:
             currentDocument.setDefaultFont(monoFont)
 
-        tabWidth = settings.prefs.diff_tabSpaces
+        tabWidth = settings.prefs.tabSpaces
         self.setTabStopDistance(QFontMetricsF(monoFont).horizontalAdvance(' ' * tabWidth))
         self.refreshWordWrap()
         self.setCursorWidth(2)
 
     def refreshWordWrap(self):
-        if settings.prefs.diff_wordWrap:
+        if settings.prefs.wordWrap:
             wrapMode = QPlainTextEdit.LineWrapMode.WidgetWidth
         else:
             wrapMode = QPlainTextEdit.LineWrapMode.NoWrap
         self.setLineWrapMode(wrapMode)
 
     def toggleWordWrap(self):
-        settings.prefs.diff_wordWrap = not settings.prefs.diff_wordWrap
+        settings.prefs.wordWrap = not settings.prefs.wordWrap
         settings.prefs.write()
         self.refreshWordWrap()
 
@@ -483,8 +483,8 @@ class DiffView(QPlainTextEdit):
 
         actions += [
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("&Word Wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.diff_wordWrap else -1),
-            ActionDef(self.tr("Configure Appearance..."), lambda: openPrefsDialog(self, "diff_font"), icon="configure"),
+            ActionDef(self.tr("&Word Wrap"), self.toggleWordWrap, checkState=1 if settings.prefs.wordWrap else -1),
+            ActionDef(self.tr("Configure Appearance..."), lambda: openPrefsDialog(self, "font"), icon="configure"),
         ]
 
         bottom: QMenu = self.createStandardContextMenu()
@@ -677,7 +677,7 @@ class DiffView(QPlainTextEdit):
         bottom = top + round(self.blockBoundingRect(block).height())
 
         # Draw line numbers and hunk separator lines
-        if settings.prefs.diff_colorblind:
+        if settings.prefs.colorblind:
             noOldPlaceholder = "+"
             noNewPlaceholder = "-"
         else:

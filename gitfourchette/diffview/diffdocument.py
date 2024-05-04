@@ -40,7 +40,7 @@ class LineData:
 
 class DiffStyle:
     def __init__(self):
-        colorblind = settings.prefs.diff_colorblind
+        colorblind = settings.prefs.colorblind
 
         if colorblind:
             delColor1 = QColor(colors.orange)
@@ -109,7 +109,7 @@ class DiffDocument:
             raise SpecialDiffError.typeChange(patch.delta)
 
         # Don't load large diffs.
-        threshold = settings.prefs.diff_largeFileThresholdKB * 1024
+        threshold = settings.prefs.largeFileThresholdKB * 1024
         if len(patch.data) > threshold and not locator.hasFlags(NavFlags.AllowLargeFiles):
             raise SpecialDiffError.diffTooLarge(len(patch.data), threshold, locator)
 
@@ -205,7 +205,7 @@ class DiffDocument:
 
         defaultBF = cursor.blockFormat()
         defaultCF = cursor.charFormat()
-        showStrayCRs = settings.prefs.diff_showStrayCRs
+        showStrayCRs = settings.prefs.showStrayCRs
 
         assert document.isEmpty()
 

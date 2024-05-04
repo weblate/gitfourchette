@@ -12,7 +12,7 @@ def testBackupDiscardedPatches(tempDir, mainWindow):
     os.unlink(F"{wd}/a/a2.txt")
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")
     writeFile(F"{wd}/SomeNewFile.txt", "this file is untracked")
-    writeFile(F"{wd}/MassiveFile.txt", "." * (1024 * settings.prefs.trash_maxFileSizeKB + 1))
+    writeFile(F"{wd}/MassiveFile.txt", "." * (1024 * settings.prefs.maxTrashFileKB + 1))
 
     rw.refreshRepo()  # refresh manually because we added files after repowidget was already created
 
@@ -41,7 +41,7 @@ def testTrashFull(tempDir, mainWindow):
     from gitfourchette import settings
 
     # Create N junk files in trash
-    N = settings.prefs.trash_maxFiles * 2
+    N = settings.prefs.maxTrashFiles * 2
     trash = Trash.instance()
     trash.refreshFiles()
     trash.clear()
@@ -56,5 +56,5 @@ def testTrashFull(tempDir, mainWindow):
     acceptQMessageBox(rw, "really discard changes")
 
     # Trash should have been purged to make room for new patch
-    assert len(trash.trashFiles) == settings.prefs.trash_maxFiles
+    assert len(trash.trashFiles) == settings.prefs.maxTrashFiles
     assert "a1.txt" in trash.trashFiles[0]

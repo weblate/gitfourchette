@@ -11,9 +11,9 @@ from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
-PREFKEY_EDITOR = "external_editor"
-PREFKEY_DIFFTOOL = "external_diff"
-PREFKEY_MERGETOOL = "external_merge"
+PREFKEY_EDITOR = "externalEditor"
+PREFKEY_DIFFTOOL = "externalDiff"
+PREFKEY_MERGETOOL = "externalMerge"
 
 
 def openPrefsDialog(parent: QWidget, prefKey: str):

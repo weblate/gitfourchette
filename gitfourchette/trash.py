@@ -34,11 +34,11 @@ class Trash:
 
     @property
     def maxFileCount(self) -> int:
-        return settings.prefs.trash_maxFiles
+        return settings.prefs.maxTrashFiles
 
     @property
     def maxFileSize(self) -> int:
-        return settings.prefs.trash_maxFileSizeKB * 1024
+        return settings.prefs.maxTrashFileKB * 1024
 
     def exists(self):
         return os.path.isdir(self.trashDir)

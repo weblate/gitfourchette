@@ -6,7 +6,7 @@ from gitfourchette.toolbox import *
 
 
 def contextLines():
-    return settings.prefs.diff_contextLines
+    return settings.prefs.contextLines
 
 
 class ComposePatch(RepoTask):

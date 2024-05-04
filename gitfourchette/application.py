@@ -301,7 +301,7 @@ class GFApplication(QApplication):
     def applyLoggingLevelPref(self):
         from gitfourchette import settings
 
-        logging.root.setLevel(settings.prefs.debug_verbosity.value)
+        logging.root.setLevel(settings.prefs.verbosity.value)
 
     # -------------------------------------------------------------------------
 

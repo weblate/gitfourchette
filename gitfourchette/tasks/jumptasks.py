@@ -182,11 +182,11 @@ class Jump(RepoTask):
 
         elif locator.path == str(SpecialRow.TruncatedHistory):
             from gitfourchette import settings
-            prefThreshold = settings.prefs.graph_maxCommits
+            prefThreshold = settings.prefs.maxCommits
             nextThreshold = rw.state.nextTruncationThreshold
             expandSome = makeInternalLink("expandlog")
             expandAll = makeInternalLink("expandlog", n=str(0))
-            changePref = makeInternalLink("prefs", "graph_maxCommits")
+            changePref = makeInternalLink("prefs", "maxCommits")
             options = [
                 linkify(self.tr("Load up to {0} commits").format(locale.toString(nextThreshold)), expandSome),
                 linkify(self.tr("[Load full commit history] (this may take a moment)"), expandAll),
