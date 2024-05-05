@@ -329,7 +329,8 @@ class History(PrefsFile):
     def addCloneUrl(self, url):
         with suppress(ValueError):
             self.cloneHistory.remove(url)
-        self.cloneHistory.append(url)
+        # Insert most recent cloned URL first
+        self.cloneHistory.insert(0, url)
 
     def clearCloneHistory(self):
         self.cloneHistory.clear()
