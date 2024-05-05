@@ -29,7 +29,7 @@ def testNewStash(tempDir, mainWindow):
     triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
-    assert dlg.ui.cleanupCheckBox.isChecked()
+    assert not dlg.ui.keepCheckBox.isChecked()
     dlg.ui.messageEdit.setText("helloworld")
     dlg.accept()
 
@@ -71,7 +71,7 @@ def testNewPartialStash(tempDir, mainWindow):
     triggerMenuAction(menu, "stash changes")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
-    assert dlg.ui.cleanupCheckBox.isChecked()
+    assert not dlg.ui.keepCheckBox.isChecked()
     dlg.ui.messageEdit.setText("helloworld")
 
     # Uncheck some files to produce a partial stash

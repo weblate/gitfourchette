@@ -44,7 +44,7 @@ class NewStash(RepoTask):
             raise AbortTask(self.tr("There are no uncommitted changes to stash."), "information")
 
         # Prevent stashing any submodules
-        with Benchmark("NewStash/Query submodules"):
+        with Benchmark("Query submodules"):
             for submo in self.repo.listall_submodules():
                 status.pop(submo, None)
 
@@ -54,13 +54,12 @@ class NewStash(RepoTask):
         dlg = StashDialog(status, paths, self.parentWidget())
         setWindowModal(dlg)
         dlg.show()
-        # dlg.setMaximumHeight(dlg.height())
         yield from self.flowDialog(dlg)
 
         tickedFiles = dlg.tickedPaths()
 
         stashMessage = dlg.ui.messageEdit.text()
-        keepIntact = not dlg.ui.cleanupCheckBox.isChecked()
+        keepIntact = dlg.ui.keepCheckBox.isChecked()
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()

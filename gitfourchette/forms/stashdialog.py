@@ -15,19 +15,20 @@ class StashDialog(QDialog):
 
         self.ui = Ui_StashDialog()
         self.ui.setupUi(self)
-
+        self.ui.keepCheckBox.setToolTip("<p>" + self.ui.keepCheckBox.toolTip())
         self.ui.indexAndWtWarning.setVisible(False)
 
-        for l in (self.ui.willBackUpChangesLabel,
-                  self.ui.willRemoveChangesLabel,
-                  self.ui.willKeepChangesLabel,
-                  self.ui.indexAndWtWarning):
-            tweakWidgetFont(l, 95)
+        for label in (self.ui.willStashLabel, self.ui.indexAndWtWarning):
+            tweakWidgetFont(label, 90)
 
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
-        buttonCaptions = [self.tr("Stash && Keep Changes"), self.tr("Stash && Reset Changes")]
-        self.ui.cleanupCheckBox.clicked.connect(lambda clean: okButton.setText(buttonCaptions[clean]))
+        buttonCaptions = [self.tr("Stash && Reset Changes"), self.tr("Stash && Keep Changes")]
+        helpCaptions = [
+            self.tr("&Include these files in the stash, then reset them to their unmodified state:"),
+            self.tr("&Include these files in the stash:")]
+        self.ui.keepCheckBox.clicked.connect(lambda keep: okButton.setText(buttonCaptions[keep]))
+        self.ui.keepCheckBox.clicked.connect(lambda keep: self.ui.willStashLabel.setText(helpCaptions[keep]))
 
         self.ui.fileList.setUniformItemSizes(True)
         scrollTo = None
@@ -49,8 +50,8 @@ class StashDialog(QDialog):
             self.ui.fileList.addItem(listItem)
 
         # Prime checkbox signal connections
-        self.ui.cleanupCheckBox.click()
-        self.ui.cleanupCheckBox.click()
+        self.ui.keepCheckBox.click()
+        self.ui.keepCheckBox.click()
 
         convertToBrandedDialog(self)
 

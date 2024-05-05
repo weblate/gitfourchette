@@ -32,7 +32,7 @@
    <item row="0" column="0">
     <widget class="QLabel" name="nameLabel">
      <property name="text">
-      <string>Name</string>
+      <string>Name:</string>
      </property>
      <property name="buddy">
       <cstring>nameEdit</cstring>
@@ -42,7 +42,7 @@
    <item row="2" column="0">
     <widget class="QLabel" name="optionsLabel">
      <property name="text">
-      <string>Options</string>
+      <string>Options:</string>
      </property>
     </widget>
    </item>

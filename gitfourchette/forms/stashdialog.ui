@@ -3,7 +3,7 @@
  <class>StashDialog</class>
  <widget class="QDialog" name="StashDialog">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="enabled">
    <bool>true</bool>
@@ -31,103 +31,83 @@
   <property name="modal">
    <bool>true</bool>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::ExpandingFieldsGrow</enum>
-   </property>
-   <item row="0" column="0">
-    <widget class="QLabel" name="messageLabel">
-     <property name="text">
-      <string>&amp;Description</string>
-     </property>
-     <property name="buddy">
-      <cstring>messageEdit</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1">
+  <layout class="QVBoxLayout">
+   <item>
     <widget class="QLineEdit" name="messageEdit">
      <property name="placeholderText">
       <string>Optional stash message</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="optionsLabel">
-     <property name="text">
-      <string>Options</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QCheckBox" name="cleanupCheckBox">
+   <item>
+    <widget class="QCheckBox" name="keepCheckBox">
      <property name="toolTip">
-      <string>Normally, stashed changes are removed from the working directory.
-Untick this to leave the stashed changes intact instead.</string>
+      <string>Normally, stashed changes are removed from the working directory. Tick this to leave the stashed changes intact instead.</string>
      </property>
      <property name="text">
-      <string>&amp;Remove stashed changes after stashing</string>
+      <string>&amp;Retain stashed changes in working directory</string>
      </property>
      <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="0" colspan="2">
-    <widget class="QLabel" name="willBackUpChangesLabel">
-     <property name="text">
-      <string>The stash will back up all changes to the files ticked below.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0" colspan="2">
-    <widget class="QLabel" name="willRemoveChangesLabel">
-     <property name="text">
-      <string>These changes will then be removed from the working directory.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="2">
-    <widget class="QLabel" name="willKeepChangesLabel">
-     <property name="text">
-      <string>These changes will remain in the working directory.</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QListWidget" name="fileList">
-     <property name="selectionMode">
-      <enum>QAbstractItemView::ExtendedSelection</enum>
-     </property>
-    </widget>
-   </item>
-   <item row="17" column="1">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-     </property>
-     <property name="centerButtons">
       <bool>false</bool>
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="2">
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Policy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>16</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QLabel" name="willStashLabel">
+     <property name="text">
+      <string notr="true">(&amp;WILL STASH THESE:)</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="buddy">
+      <cstring>fileList</cstring>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QListWidget" name="fileList">
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="indexAndWtWarning">
      <property name="text">
       <string>Warning: Some of the files have both staged and unstaged changes. Those changes will be combined in the stash.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+     <property name="centerButtons">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
@@ -164,38 +144,6 @@ Untick this to leave the stashed changes intact instead.</string>
     <hint type="destinationlabel">
      <x>364</x>
      <y>71</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>cleanupCheckBox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>willRemoveChangesLabel</receiver>
-   <slot>setVisible(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>180</x>
-     <y>53</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>172</x>
-     <y>127</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>cleanupCheckBox</sender>
-   <signal>clicked(bool)</signal>
-   <receiver>willKeepChangesLabel</receiver>
-   <slot>setHidden(bool)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>219</x>
-     <y>52</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>207</x>
-     <y>153</y>
     </hint>
    </hints>
   </connection>
