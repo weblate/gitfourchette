@@ -57,5 +57,6 @@ from .textutils import (
     clipboardStatusMessage,
     hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe,
     btag,
+    withUniqueSuffix,
 )
 from .validatormultiplexer import ValidatorMultiplexer

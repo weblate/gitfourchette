@@ -123,7 +123,8 @@ class _NewBranchBaseTask(RepoTask):
                 upstreams.append(shorthand)
 
         # Start with a unique name so the branch validator doesn't shout at us
-        localName = repo.generate_unique_local_branch_name(localName)
+        forbiddenBranchNames = repo.listall_branches(BranchType.LOCAL)
+        localName = withUniqueSuffix(localName, forbiddenBranchNames)
 
         # Ensure no duplicate upstreams (stable order since Python 3.7+)
         upstreams = list(dict.fromkeys(upstreams))

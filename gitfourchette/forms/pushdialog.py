@@ -64,17 +64,15 @@ class PushDialog(QDialog):
         self.remoteBranchNameValidator.run()
 
     def onPickRemoteBranch(self, index: int):
-        localBranch = self.currentLocalBranch
-
-        remoteItem, remoteData = self.ui.remoteBranchEdit.currentData()
+        remoteItem, remoteName = self.ui.remoteBranchEdit.currentData()
         remoteTooltip = self.ui.remoteBranchEdit.itemData(index, Qt.ItemDataRole.ToolTipRole)
 
         if remoteItem != ERemoteItem.ExistingRef:
-            self.ui.remoteNameLabel.setText("\u21AA " + remoteData + "/")
+            remoteBranchName = withUniqueSuffix(self.currentLocalBranchName, self.reservedRemoteBranchNames[remoteName])
+            self.ui.remoteNameLabel.setText("\u21AA " + remoteName + "/")
             self.ui.remoteNameLabel.setToolTip(remoteTooltip)
-            newRBN = self.repo.generate_unique_branch_name_on_remote(remoteData, localBranch.branch_name)
             self.ui.newRemoteBranchStackedWidget.setCurrentIndex(0)
-            self.ui.newRemoteBranchNameEdit.setText(newRBN)
+            self.ui.newRemoteBranchNameEdit.setText(remoteBranchName)
             self.ui.newRemoteBranchNameEdit.setFocus(Qt.FocusReason.TabFocusReason)
         else:
             self.ui.newRemoteBranchStackedWidget.setCurrentIndex(1)

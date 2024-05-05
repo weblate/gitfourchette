@@ -823,32 +823,6 @@ class Repo(_VanillaRepository):
 
         return names
 
-    def generate_unique_local_branch_name(self, seed: str):
-        """Generate a name that doesn't clash with any existing local branches."""
-
-        i = 1
-        name = seed
-        all_local_branches = list(self.branches.local)
-
-        while name in all_local_branches:
-            i += 1
-            name = F"{seed}-{i}"
-
-        return name
-
-    def generate_unique_branch_name_on_remote(self, remote: str, seed: str):
-        """Generate a name that doesn't clash with any existing branches on the remote."""
-
-        i = 1
-        name = seed
-        all_remote_branches = list(self.branches.remote)
-
-        while f"{remote}/{name}" in all_remote_branches:
-            i += 1
-            name = F"{seed}-{i}"
-
-        return name
-
     def listall_tags(self) -> list[str]:
         return [
             name.removeprefix(RefPrefix.TAGS)

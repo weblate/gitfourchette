@@ -114,14 +114,12 @@ class CloneDialog(QDialog):
             self.ui.pathEdit.setText("")
             return
 
+        # Append differentiating number if this path already exists
+        projectName = withUniqueSuffix(projectName, lambda x: (downloadPath / x).exists())
+
         # Set target path to <downloadPath>/<projectName>
         target = downloadPath / projectName
-
-        # Append differentiating number if this path already exists
-        differentiator = 1
-        while target.exists():
-            differentiator += 1
-            target = target.with_name(f"{projectName}_{differentiator}")
+        assert not target.exists()
 
         self.ui.pathEdit.setText(str(target))
 

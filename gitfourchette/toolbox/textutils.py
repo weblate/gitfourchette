@@ -1,6 +1,6 @@
 import html
 import io
-from typing import Iterable
+from typing import Iterable, Callable, Container
 
 from gitfourchette.qt import *
 from html import escape as escape
@@ -184,3 +184,27 @@ def linkify(text, *hrefs: str | QUrl):
         text = text.replace("[", f"<a href=\"{href}\">", 1).replace("]", "</a>", 1)
 
     return text
+
+
+def withUniqueSuffix(
+        stem: str, reserved: Container[str] | Callable[[str], bool],
+        start=2, stop=-1,
+        ext="", suffixFormat="-{}"):
+    # Test format first to catch any errors even if we don't enter the loop
+    assert suffixFormat.format(1) != suffixFormat.format(2), "illegal suffixFormat"
+
+    name = stem + ext
+    i = start
+
+    if not callable(reserved):
+        isTaken = reserved.__contains__
+    else:
+        isTaken = reserved
+
+    while isTaken(name):
+        name = stem + suffixFormat.format(i) + ext
+        i += 1
+        if stop >= 0 and i > stop:
+            break
+
+    return name

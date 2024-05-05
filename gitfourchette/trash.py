@@ -6,6 +6,7 @@ import shutil
 from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.toolbox import withUniqueSuffix
 
 logger = logging.getLogger(__name__)
 
@@ -71,14 +72,10 @@ class Trash:
         wdID = os.path.basename(os.path.normpath(workdir))
         base = os.path.basename(os.path.normpath(originalPath))
         stem = f"{now}-{wdID}---{base}"
-        path = os.path.join(self.trashDir, stem + ext)
 
         # If a file exists at this path, tack a number to the end of the name.
-        for differentiator in range(2, 100):  # If we reach 99, just overwrite the last one.
-            if os.path.exists(path):
-                path = os.path.join(self.trashDir, f"{stem}({differentiator}){ext}")
-            else:
-                break
+        path = withUniqueSuffix(os.path.join(self.trashDir, stem), ext=ext,
+                                reserved=os.path.exists, stop=99, suffixFormat="({})")
 
         self.trashFiles.insert(0, path)
         return path
