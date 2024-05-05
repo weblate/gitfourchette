@@ -152,3 +152,19 @@ def stripRemoteUrlPath(url: str):
             path = m.group("path")
             return url.removesuffix(path)
     return ""
+
+
+def guessRemoteUrlFromText(text: str):
+    if len(text) > 128:
+        return ""
+
+    text = text.strip()
+
+    if any(c.isspace() for c in text):
+        return ""
+
+    host, path = splitRemoteUrl(text)
+    if host and path:
+        return text
+
+    return ""

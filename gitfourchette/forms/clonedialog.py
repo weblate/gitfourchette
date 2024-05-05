@@ -37,6 +37,9 @@ class CloneDialog(QDialog):
     def __init__(self, initialUrl: str, parent: QWidget):
         super().__init__(parent)
 
+        if not initialUrl:
+            initialUrl = guessRemoteUrlFromText(QApplication.clipboard().text())
+
         self.remoteLink = None
         self.taskRunner = RepoTaskRunner(self)
 

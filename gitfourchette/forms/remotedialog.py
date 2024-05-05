@@ -50,6 +50,11 @@ class RemoteDialog(QDialog):
 
         convertToBrandedDialog(self, title)
 
+        if not url and not edit:
+            url = guessRemoteUrlFromText(QApplication.clipboard().text())
+            self.ui.urlEdit.setText(url)
+            self.ui.urlEdit.setFocus()
+
         validator.run(silenceEmptyWarnings=True)
 
     @property

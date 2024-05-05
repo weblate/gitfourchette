@@ -13,6 +13,7 @@ from .gitutils import (
     simplifyOctalFileMode,
     splitRemoteUrl,
     stripRemoteUrlPath,
+    guessRemoteUrlFromText,
 )
 from .memoryindicator import MemoryIndicator
 from .messageboxes import (
