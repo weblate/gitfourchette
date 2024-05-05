@@ -29,7 +29,7 @@
       <string>&amp;Name:</string>
      </property>
      <property name="buddy">
-      <cstring>urlEdit</cstring>
+      <cstring>nameEdit</cstring>
      </property>
     </widget>
    </item>
@@ -42,7 +42,7 @@
       <string>&amp;URL:</string>
      </property>
      <property name="buddy">
-      <cstring>nameEdit</cstring>
+      <cstring>urlEdit</cstring>
      </property>
     </widget>
    </item>

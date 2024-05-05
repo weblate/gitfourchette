@@ -47,8 +47,8 @@ class Ui_RemoteDialog(object):
         self.buttonBox.setCenterButtons(False)
         self.buttonBox.setObjectName("buttonBox")
         self.formLayout.setWidget(6, QFormLayout.ItemRole.SpanningRole, self.buttonBox)
-        self.nameLabel.setBuddy(self.urlEdit)
-        self.urlLabel.setBuddy(self.nameEdit)
+        self.nameLabel.setBuddy(self.nameEdit)
+        self.urlLabel.setBuddy(self.urlEdit)
 
         self.retranslateUi(RemoteDialog)
         self.buttonBox.accepted.connect(RemoteDialog.accept) # type: ignore
