@@ -77,9 +77,12 @@
       <widget class="QLineEdit" name="pathEdit"/>
      </item>
      <item>
-      <widget class="QPushButton" name="browseButton">
+      <widget class="QToolButton" name="browseButton">
        <property name="text">
         <string>&amp;Browse...</string>
+       </property>
+       <property name="toolButtonStyle">
+        <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
        </property>
       </widget>
      </item>

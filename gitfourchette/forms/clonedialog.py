@@ -49,6 +49,15 @@ class CloneDialog(QDialog):
         self.ui.browseButton.setIcon(stockIcon("SP_DialogOpenButton"))
         self.ui.browseButton.clicked.connect(self.browse)
 
+        self.setDefaultCloneLocationAction = QAction("(SET)")
+        self.setDefaultCloneLocationAction.triggered.connect(lambda: self.setDefaultCloneLocationPref(self.pathParentDir))
+        self.clearDefaultCloneLocationAction = QAction(stockIcon("edit-clear-history"), self.tr("Reset default clone location"))
+        self.clearDefaultCloneLocationAction.triggered.connect(lambda: self.setDefaultCloneLocationPref(""))
+        self.ui.browseButton.setMenu(ActionDef.makeQMenu(
+            self.ui.browseButton, [self.setDefaultCloneLocationAction, self.clearDefaultCloneLocationAction]))
+        self.updateDefaultCloneLocationAction()  # prime default clone path actions
+        self.ui.pathEdit.textChanged.connect(self.updateDefaultCloneLocationAction)
+
         self.cloneButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.cloneButton.setText(self.tr("C&lone"))
         self.cloneButton.setIcon(QIcon.fromTheme("download"))
@@ -98,10 +107,7 @@ class CloneDialog(QDialog):
 
     def autoFillDownloadPath(self, url):
         # Get standard download location
-        downloadPath = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
-        if not downloadPath:
-            return
-        downloadPath = Path(downloadPath)
+        downloadPath = Path(settings.prefs.resolveDefaultCloneLocation())
 
         # Don't overwrite if user has set a custom path
         currentPath = self.ui.pathEdit.text()
@@ -122,6 +128,30 @@ class CloneDialog(QDialog):
         assert not target.exists()
 
         self.ui.pathEdit.setText(str(target))
+
+    def updateDefaultCloneLocationAction(self):
+        self.clearDefaultCloneLocationAction.setEnabled(settings.prefs.defaultCloneLocation != "")
+
+        location = self.pathParentDir
+        action = self.setDefaultCloneLocationAction
+
+        if self.validatePath(self.path):  # truthy if validation error
+            action.setText(self.tr("Set current location as default clone location"))
+            action.setEnabled(False)
+            return
+
+        display = lquoe(compactPath(location))
+        if location == settings.prefs.resolveDefaultCloneLocation():
+            action.setEnabled(False)
+            action.setText(self.tr("{0} is the default clone location").format(display))
+        else:
+            action.setEnabled(True)
+            action.setText(self.tr("Set {0} as default clone location").format(display))
+
+    def setDefaultCloneLocationPref(self, location: str):
+        settings.prefs.defaultCloneLocation = location
+        settings.prefs.setDirty()
+        self.updateDefaultCloneLocationAction()
 
     def initUrlComboBox(self):
         self.ui.urlEdit.clear()
@@ -172,6 +202,10 @@ class CloneDialog(QDialog):
     @property
     def path(self):
         return self.ui.pathEdit.text()
+
+    @property
+    def pathParentDir(self):
+        return str(Path(self.path).parent)
 
     def browse(self):
         existingPath = Path(self.path) if self.path else None

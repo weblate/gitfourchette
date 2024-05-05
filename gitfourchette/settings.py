@@ -208,6 +208,7 @@ class Prefs(PrefsFile):
     _category_hidden            : int                   = 0
     toolBarButtonStyle          : Qt.ToolButtonStyle    = Qt.ToolButtonStyle.ToolButtonTextBesideIcon
     toolBarIconSize             : int                   = 16
+    defaultCloneLocation        : str                   = ""
     dontShowAgain               : list[str]             = dataclasses.field(default_factory=list)
     resetDontShowAgain          : bool                  = False
 
@@ -217,6 +218,15 @@ class Prefs(PrefsFile):
             return QAbstractItemView.ScrollMode.ScrollPerPixel
         else:
             return QAbstractItemView.ScrollMode.ScrollPerItem
+
+    def resolveDefaultCloneLocation(self):
+        if self.defaultCloneLocation:
+            return self.defaultCloneLocation
+
+        path = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
+        if path:
+            return os.path.normpath(path)
+        return os.path.expanduser("~")
 
 
 @dataclasses.dataclass
