@@ -40,6 +40,9 @@ class PrefsFile:
     _allowMakeDirs = True
 
     def getParentDir(self):
+        from gitfourchette.settings import TEST_MODE
+        if TEST_MODE:
+            return os.path.join(qTempDir(), "testmode-config")
         return QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
 
     def _getFullPath(self, forWriting: bool):
@@ -76,11 +79,6 @@ class PrefsFile:
         prefsPath = self._getFullPath(forWriting=True)
         if not prefsPath:
             logger.warning("Couldn't get path for writing")
-            return None
-
-        from gitfourchette.settings import TEST_MODE
-        if not force and TEST_MODE:
-            logger.info("Not writing prefs in test mode")
             return None
 
         # Get default values if we're saving a dataclass

@@ -19,11 +19,9 @@ class Trash:
     def __init__(self):
         if not settings.TEST_MODE:
             cacheDir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
-            self.trashDir = os.path.join(cacheDir, Trash.DIR_NAME)
         else:
-            template = os.path.join(QDir.tempPath(), QApplication.applicationName() + "-trash")
-            tempDir = QTemporaryDir(template)
-            self.trashDir = tempDir.path()
+            cacheDir = qTempDir()
+        self.trashDir = os.path.join(cacheDir, Trash.DIR_NAME)
         self.trashFiles = []
         self.refreshFiles()
 

@@ -41,6 +41,12 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     assert settings.TEST_MODE
     assert settings.SYNC_TASKS
 
+    # Prevent unit tests from reading actual user settings.
+    # (The prefs and the trash should use a temp folder with TEST_MODE,
+    # so this is just an extra safety precaution.)
+    qt.QStandardPaths.setTestModeEnabled(True)
+
+    # Boot the UI
     app = GFApplication.instance()
     assert app.mainWindow is None
     app.bootUi()
@@ -63,3 +69,7 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
     # Clear temp trash after this test
     trash.Trash.instance().clear()
+
+    # Clean up the app without destroying it completely.
+    # This will reset the temp settings folder.
+    app.onAboutToQuit()
