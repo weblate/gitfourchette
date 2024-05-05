@@ -655,8 +655,8 @@ class SidebarModel(QAbstractItemModel):
                 changesText = TrTables.sidebarItem(EItem.UncommittedChanges)
                 numUncommittedChanges = self.repoState.numUncommittedChanges
                 if numUncommittedChanges != 0:
-                    ucPrefix = f"({numUncommittedChanges}) "
-                    changesText = ucPrefix + changesText.replace("", "" + ucPrefix)
+                    ucSuffix = f" ({numUncommittedChanges})"
+                    changesText = changesText.replace("", ucSuffix + "") + ucSuffix
                 return changesText
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere

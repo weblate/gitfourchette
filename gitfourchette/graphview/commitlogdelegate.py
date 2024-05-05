@@ -190,16 +190,16 @@ class CommitLogDelegate(QStyledItemDelegate):
             if specialRowKind == SpecialRow.UncommittedChanges:
                 oid = UC_FAKEID
                 summaryText = self.tr("Uncommitted changes")
+                # Append change count if available
+                numChanges = self.state.numUncommittedChanges
+                if numChanges > 0:
+                    summaryText += f" ({numChanges})"
                 # Append draft message if any
                 draftMessage = self.state.getDraftCommitMessage()
                 if draftMessage:
                     draftMessage = messageSummary(draftMessage)[0].strip()
                     draftIntro = self.tr("Commit draft:")
                     summaryText += f" – {draftIntro} {tquo(draftMessage)}"
-                # Prefix with change count if available
-                numChanges = self.state.numUncommittedChanges
-                if numChanges > 0:
-                    summaryText = f"({numChanges}) {summaryText}"
 
             elif specialRowKind == SpecialRow.TruncatedHistory:
                 if self.state.uiPrefs.hiddenRefPatterns or self.state.uiPrefs.hiddenStashCommits:
