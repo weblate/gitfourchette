@@ -17,6 +17,7 @@ class StatusForm(QStackedWidget):
         blurbPage.setWidget(self.blurbLabel)
         blurbPage.setFrameShape(QFrame.Shape.NoFrame)
         blurbPage.setWidgetResizable(True)
+        blurbPage.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.progressMessage = QLabel("Line1\nLine2")
         self.progressMessage.setAlignment(Qt.AlignmentFlag.AlignTop)

@@ -109,6 +109,9 @@ class Ui_CloneDialog(object):
         QMetaObject.connectSlotsByName(CloneDialog)
         CloneDialog.setTabOrder(self.urlEdit, self.pathEdit)
         CloneDialog.setTabOrder(self.pathEdit, self.browseButton)
+        CloneDialog.setTabOrder(self.browseButton, self.shallowCloneCheckBox)
+        CloneDialog.setTabOrder(self.shallowCloneCheckBox, self.shallowCloneDepthSpinBox)
+        CloneDialog.setTabOrder(self.shallowCloneDepthSpinBox, self.keyFilePicker)
 
     def retranslateUi(self, CloneDialog):
         _translate = QCoreApplication.translate

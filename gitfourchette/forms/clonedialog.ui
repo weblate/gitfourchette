@@ -214,6 +214,9 @@
   <tabstop>urlEdit</tabstop>
   <tabstop>pathEdit</tabstop>
   <tabstop>browseButton</tabstop>
+  <tabstop>shallowCloneCheckBox</tabstop>
+  <tabstop>shallowCloneDepthSpinBox</tabstop>
+  <tabstop>keyFilePicker</tabstop>
  </tabstops>
  <resources/>
  <connections>
