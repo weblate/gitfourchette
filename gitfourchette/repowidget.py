@@ -8,6 +8,7 @@ from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.diffview import DiffView
+from gitfourchette.diffview.specialdiff import SpecialDiffError, ShouldDisplayPatchAsImageDiff
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
 from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles
@@ -824,15 +825,31 @@ class RepoWidget(QStackedWidget):
         buttonBox.button(resetSB).clicked.connect(dlg.close)
 
     def loadPatchInNewWindow(self, patch: Patch, locator: NavLocator):
-        with NonCriticalOperation(self.tr("Load diff in new window")):
-            diffWindow = DiffView(self)
-            diffWindow.replaceDocument(self.repo, patch, locator, DiffDocument.fromPatch(patch, locator))
-            diffWindow.resize(550, 700)
-            diffWindow.setWindowTitle(locator.asTitle())
-            diffWindow.setWindowFlag(Qt.WindowType.Window, True)
-            diffWindow.setFrameStyle(QFrame.Shape.NoFrame)
-            diffWindow.show()
-            diffWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        try:
+            diffDocument = DiffDocument.fromPatch(patch, locator)
+        except Exception as exc:
+            excMessageBox(exc, self.tr("Open diff in new window"),
+                          self.tr("Only text diffs may be opened in a separate window."),
+                          showExcSummary=type(exc) is not ShouldDisplayPatchAsImageDiff,
+                          icon='information')
+            return
+
+        diffWindow = QWidget(self)
+        diffWindow.setObjectName(DiffView.DetachedWindowObjectName)
+        diffWindow.setWindowTitle(locator.asTitle())
+        diffWindow.setWindowFlag(Qt.WindowType.Window, True)
+        diffWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        layout = QVBoxLayout(diffWindow)
+        layout.setContentsMargins(QMargins())
+        layout.setSpacing(0)
+        diff = DiffView(diffWindow)
+        diff.isDetachedWindow = True
+        diff.setFrameStyle(QFrame.Shape.NoFrame)
+        diff.replaceDocument(self.repo, patch, locator, diffDocument)
+        layout.addWidget(diff)
+        layout.addWidget(diff.searchBar)
+        diffWindow.resize(550, 700)
+        diffWindow.show()
 
     def startPushFlow(self, branchName: str = ""):
         pushDialog = PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)

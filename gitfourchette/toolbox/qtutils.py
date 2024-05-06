@@ -356,6 +356,12 @@ def makeMultiShortcut(*args) -> MultiShortcut:
     return shortcuts
 
 
+def keyEventMatchesMultiShortcut(event: QKeyEvent, shortcuts: MultiShortcut) -> bool:
+    modifiers = event.modifiers() if PYQT5 else event.modifiers().value
+    eventKS = QKeySequence(modifiers | event.key())
+    return eventKS in shortcuts
+
+
 def lerp(v1, v2, cmin, cmax, c):
     p = (c-cmin) / (cmax-cmin)
     p = max(p, 0)

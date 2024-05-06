@@ -1255,7 +1255,10 @@ class MainWindow(QMainWindow):
         activeWindow = QApplication.activeWindow()
         if activeWindow is self and self.currentRepoWidget():
             self.currentRepoWidget().dispatchSearchCommand(op)
-        elif isinstance(activeWindow, DiffView):
-            activeWindow.search(op)
+        elif activeWindow.objectName() == DiffView.DetachedWindowObjectName:
+            # Systems without a global main menu (i.e. anything but macOS)
+            # take a different path to search a detached DiffView window.
+            detachedDiffView: DiffView = activeWindow.findChild(DiffView)
+            detachedDiffView.search(op)
         else:
             QApplication.beep()

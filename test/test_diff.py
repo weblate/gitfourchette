@@ -181,11 +181,15 @@ def testDiffInNewWindow(tempDir, mainWindow):
 
     rw.committedFiles.openDiffInNewWindow.emit(rw.diffView.currentPatch, rw.navLocator)
 
-    diffWidget = next(w for w in QApplication.topLevelWidgets() if isinstance(w, DiffView))
-    assert diffWidget.isWindow()
+    diffWindow = next(w for w in QApplication.topLevelWidgets() if w.objectName() == DiffView.DetachedWindowObjectName)
+    diffWidget: DiffView = diffWindow.findChild(DiffView)
     assert diffWidget.window() is not mainWindow
-    assert diffWidget.window() is diffWidget
-    assert "c2.txt" in diffWidget.windowTitle()
+    assert "c2.txt" in diffWindow.windowTitle()
+
+    # Initiate search
+    QTest.qWait(1)
+    QTest.keySequence(diffWidget, "Ctrl+F")
+    assert diffWidget.searchBar.isVisibleTo(diffWidget.window())
 
     # Make sure the diff is closed when the repowidget is gone
     mainWindow.closeAllTabs()

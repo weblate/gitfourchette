@@ -99,6 +99,8 @@ class DiffSearchHighlighter(QSyntaxHighlighter):
 
 
 class DiffView(QPlainTextEdit):
+    DetachedWindowObjectName = "DiffViewDetachedWindow"
+
     contextualHelp = Signal(str)
 
     lineData: list[LineData]
@@ -108,6 +110,7 @@ class DiffView(QPlainTextEdit):
     currentPatch: Patch | None
     currentWorkdirFileStat: os.stat_result | None
     repo: Repo | None
+    isDetachedWindow: bool
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -122,6 +125,7 @@ class DiffView(QPlainTextEdit):
         self.currentLocator = NavLocator()
         self.currentPatch = None
         self.repo = None
+        self.isDetachedWindow = False
 
         # Highlighter for search terms
         self.highlighter = DiffSearchHighlighter(self)
@@ -167,6 +171,11 @@ class DiffView(QPlainTextEdit):
         self.resizeGutter()
 
     def keyPressEvent(self, event: QKeyEvent):
+        # In a detached window, we can't rely on the main window's menu bar to
+        # dispatch shortcuts to us (except on macOS, which has a global main menu).
+        if self.isDetachedWindow and self.processSearchKeys(event):
+            return
+
         k = event.key()
         navContext = self.currentLocator.context
         if k in GlobalShortcuts.stageHotkeys:
@@ -188,6 +197,17 @@ class DiffView(QPlainTextEdit):
                 QApplication.beep()
         else:
             super().keyPressEvent(event)
+
+    def processSearchKeys(self, event: QKeyEvent):
+        if keyEventMatchesMultiShortcut(event, GlobalShortcuts.find):
+            self.search(SearchBar.Op.START)
+        elif event.matches(QKeySequence.StandardKey.FindPrevious):
+            self.search(SearchBar.Op.PREVIOUS)
+        elif event.matches(QKeySequence.StandardKey.FindNext):
+            self.search(SearchBar.Op.NEXT)
+        else:
+            return False
+        return True
 
     # ---------------------------------------------
     # Document replacement
