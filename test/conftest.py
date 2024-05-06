@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 def qapp_args():
     mainPyPath = os.path.join(os.path.dirname(__file__), "..", "gitfourchette", "__main__.py")
     mainPyPath = os.path.normpath(mainPyPath)
-    return [mainPyPath, "--test-mode", "--no-threads"]
+    return [mainPyPath, "--test-mode", "--no-threads", "--debug"]
 
 
 @pytest.fixture(scope="session")

@@ -805,8 +805,9 @@ class MainWindow(QMainWindow):
 
     def newRepo(self, path="", detectParentRepo=True, allowNonEmptyDirectory=False):
         if not path:
-            qfd = PersistentFileDialog.saveDirectory(self, "NewRepo", self.tr("New repository"))
-            qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("&Create repo in this folder"))
+            qfd = PersistentFileDialog.saveFile(self, "NewRepo", self.tr("New repository"))
+            qfd.setFileMode(QFileDialog.FileMode.Directory)
+            qfd.setLabelText(QFileDialog.DialogLabel.Accept, self.tr("&Create repo here"))
             qfd.fileSelected.connect(self.newRepo)
             qfd.show()
             return

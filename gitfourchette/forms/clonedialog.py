@@ -157,13 +157,23 @@ class CloneDialog(QDialog):
         self.updateDefaultCloneLocationAction()
 
     def initUrlComboBox(self):
-        self.ui.urlEdit.clear()
+        urlEdit = self.ui.urlEdit
+        urlEdit.clear()
+
         if settings.history.cloneHistory:
-            self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
             for url in settings.history.cloneHistory:
-                self.ui.urlEdit.addItem(url)
-            self.ui.urlEdit.insertSeparator(self.ui.urlEdit.count())
-            self.ui.urlEdit.addItem(stockIcon("edit-clear-history"), self.tr("Clear history"), CloneDialog.urlEditUserDataClearHistory)
+                urlEdit.addItem(url)
+            urlEdit.insertSeparator(urlEdit.count())
+
+        urlEdit.addItem(stockIcon("edit-clear-history"), self.tr("Clear history"), CloneDialog.urlEditUserDataClearHistory)
+
+        # "Clear history" is added even if the history is empty, so that the
+        # QComboBox's arrow button - which cannot be hidden - still pops up
+        # something when clicked, as the user might expect.
+        if not settings.history.cloneHistory:
+            clearItem: QStandardItem = urlEdit.model().item(urlEdit.count()-1)
+            clearItem.setFlags(clearItem.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+
         self.ui.urlEdit.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
 
     def onUrlActivated(self, index: int):

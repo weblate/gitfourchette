@@ -3,6 +3,17 @@ from .util import *
 from gitfourchette.trash import Trash
 
 
+def _fillTrashWithJunk(n):
+    trash = Trash.instance()
+    trash.refreshFiles()
+    trash.clear()
+    os.makedirs(trash.trashDir, exist_ok=True)
+    for i in range(n):
+        with open(F"{trash.trashDir}/19991231T235900-test{i}.txt", "w") as junk:
+            junk.write(F"test{i}")
+    trash.refreshFiles()
+
+
 def testBackupDiscardedPatches(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -41,20 +52,25 @@ def testTrashFull(tempDir, mainWindow):
     from gitfourchette import settings
 
     # Create N junk files in trash
-    N = settings.prefs.maxTrashFiles * 2
-    trash = Trash.instance()
-    trash.refreshFiles()
-    trash.clear()
-    os.makedirs(trash.trashDir, exist_ok=True)
-    for i in range(N):
-        with open(F"{trash.trashDir}/19991231T235900-test{i}.txt", "w") as junk:
-            junk.write(F"test{i}")
-    trash.refreshFiles()
+    _fillTrashWithJunk(settings.prefs.maxTrashFiles * 2)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Delete)
     acceptQMessageBox(rw, "really discard changes")
 
     # Trash should have been purged to make room for new patch
-    assert len(trash.trashFiles) == settings.prefs.maxTrashFiles
-    assert "a1.txt" in trash.trashFiles[0]
+    assert len(Trash.instance().trashFiles) == settings.prefs.maxTrashFiles
+    assert "a1.txt" in Trash.instance().trashFiles[0]
+
+
+def testClearTrash(mainWindow):
+    assert Trash.instance().size()[1] == 0
+
+    mainWindow.clearRescueFolder()
+    acceptQMessageBox(mainWindow, "no discarded (patches|changes) to delete")
+
+    _fillTrashWithJunk(40)
+    assert Trash.instance().size()[1] == 40
+    mainWindow.clearRescueFolder()
+    acceptQMessageBox(mainWindow, "delete.+40.+discarded (patches|changes)")
+    assert Trash.instance().size()[1] == 0

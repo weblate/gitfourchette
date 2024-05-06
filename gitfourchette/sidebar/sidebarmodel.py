@@ -522,11 +522,10 @@ class SidebarModel(QAbstractItemModel):
             if displayRole:
                 return self.tr("[unborn]") + " " + target
             elif toolTipRole:
-                text = "<p style='white-space: pre'>"
-                text += self.tr("Local branch {0}")
-                text += "<br>" + self.tr("Unborn HEAD: does not point to a commit yet.")
-                text += "<br>" + self.tr("The branch will be created when you create the initial commit.")
-                text = text.format(bquo(target))
+                text = ("<p style='white-space: pre'>"
+                        + self.tr("Unborn HEAD: does not point to a commit yet.") + "\n"
+                        + self.tr("Local branch {0} will be created when you create the initial commit.")
+                        ).format(bquo(target))
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:

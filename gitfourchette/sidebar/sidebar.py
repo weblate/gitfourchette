@@ -207,7 +207,7 @@ class Sidebar(QTreeView):
 
                 ActionDef(
                     self.tr("&Hide in Graph"),
-                    lambda: self.toggleHideRefPattern.emit(refName),
+                    lambda: self.wantHideNode(node),
                     checkState=[-1, 1][isHidden],
                     statusTip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
                 ),
@@ -267,7 +267,7 @@ class Sidebar(QTreeView):
                 *webActions,
 
                 ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.toggleHideRefPattern.emit(refName),
+                          lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]
 
@@ -304,7 +304,7 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Hide Remote in Graph"),
-                          lambda: self.toggleHideRefPattern.emit(f"{RefPrefix.REMOTES}{data}/"),
+                          lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]
 
@@ -316,7 +316,7 @@ class Sidebar(QTreeView):
         elif item == EItem.RefFolder:
             actions += [
                 ActionDef(self.tr("&Hide Group in Graph"),
-                          lambda: self.toggleHideRefPattern.emit(f"{data}/"),
+                          lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]
 
@@ -325,7 +325,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(self, NewStash, "&S"),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("&Hide All Stashes in Graph"),
-                          lambda: self.toggleHideAllStashes.emit(),
+                          lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]
 
@@ -344,7 +344,7 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.toggleHideStash.emit(oid),
+                          lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden],
                           statusTip=self.tr("Hide this stash from the graph")),
             ]
@@ -803,7 +803,7 @@ class Sidebar(QTreeView):
         return True
 
     def copyToClipboard(self, text: str):
-        QApplication.clipboard().setText(text),
+        QApplication.clipboard().setText(text)
         self.statusMessage.emit(clipboardStatusMessage(text))
 
     def makeUpstreamSubmenu(self, repo, lbName, ubName) -> list:

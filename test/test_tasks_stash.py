@@ -37,14 +37,19 @@ def testNewStash(tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == [], "workdir must be clean after stashing"
     assert qlvGetRowData(rw.stagedFiles) == [], "workdir must be clean after stashing"
     assert len(repo.listall_stashes()) == 1, "there must be one stash in the repo"
-    assert "helloworld" == sb.findNodeByRef("stash@{0}").createIndex(sb.sidebarModel).data(Qt.ItemDataRole.DisplayRole)
+
+    stashNode = sb.findNodeByRef("stash@{0}")
+    stashNodeIndex = stashNode.createIndex(sb.sidebarModel)
+    assert "helloworld" == stashNodeIndex.data(Qt.ItemDataRole.DisplayRole)
+    assert "helloworld" in stashNodeIndex.data(Qt.ItemDataRole.ToolTipRole)
 
     rw.selectRef("refs/stash")
     assert rw.committedFiles.isVisibleTo(rw)
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt", "a/untracked.txt", "b/b1.txt"]
 
 
-def testNewPartialStash(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["stashcommand", "filelist"])
+def testNewPartialStash(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE 1\n")  # unstaged change
     writeFile(F"{wd}/a/a2.txt", "a2\nPENDING CHANGE 2\n")  # unstaged change
@@ -66,21 +71,34 @@ def testNewPartialStash(tempDir, mainWindow):
     assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     assert qlvGetRowData(rw.dirtyFiles) == dirtyFiles
 
-    node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "stash changes")
+    if method == "stashcommand":
+        node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "stash changes")
+    elif method == "filelist":
+        rw.dirtyFiles.clearSelection()
+        for file in stashedFiles:
+            row = qlvFindRow(rw.dirtyFiles, file)
+            index = rw.dirtyFiles.flModel.index(row, 0)
+            rw.dirtyFiles.selectionModel().select(index, QItemSelectionModel.SelectionFlag.Select)
+        cm = rw.dirtyFiles.makeContextMenu()
+        triggerMenuAction(cm, "stash")
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
     assert not dlg.ui.keepCheckBox.isChecked()
     dlg.ui.messageEdit.setText("helloworld")
 
-    # Uncheck some files to produce a partial stash
     fl = dlg.ui.fileList
     assert sorted(qlvGetRowData(fl)) == sorted(dirtyFiles + stagedFiles)
-    for uncheckFile in keptFiles:
-        i = qlvFindRow(fl, uncheckFile)
-        qlvClickNthRow(fl, i)
-        fl.selectedItems()[0].setCheckState(Qt.CheckState.Unchecked)
+
+    # Uncheck some files to produce a partial stash
+    if method == "stashcommand":
+        for uncheckFile in keptFiles:
+            row = qlvFindRow(fl, uncheckFile)
+            qlvClickNthRow(fl, row)
+            fl.selectedItems()[0].setCheckState(Qt.CheckState.Unchecked)
 
     dlg.accept()
 
@@ -112,6 +130,30 @@ def testNewStashWithoutIdentity(tempDir, mainWindow):
     assert len(repo.listall_stashes()) == 1
     assert "helloworld" == sb.findNodeByRef("stash@{0}").createIndex(sb.sidebarModel).data(Qt.ItemDataRole.DisplayRole)
     assert qlvGetRowData(rw.dirtyFiles) == []
+
+
+def testNewStashNothingToStash(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "stash changes")
+
+    acceptQMessageBox(rw, "no.+changes to stash")
+
+
+def testNewStashCantStashSubmodule(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    submoAbsPath, submoCommit = reposcenario.submodule(wd)
+    writeFile(f"{submoAbsPath}/dirty.txt", "coucou")
+    rw = mainWindow.openRepo(wd)
+
+    node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "stash changes")
+
+    acceptQMessageBox(rw, "no.+changes to stash.+submodules cannot be stashed")
 
 
 def testPopStash(tempDir, mainWindow):
@@ -209,3 +251,33 @@ def testDropHiddenStash(tempDir, mainWindow):
     DropStash.invoke(rw, stashOid)
     acceptQMessageBox(rw, "really delete.+stash")
     assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
+
+
+def testApplyStashWithConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stashedChange(wd)
+    writeFile(f"{wd}/a/a1.txt", "a1\nCONFLICTING CHANGE\n")
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, r"^apply")
+    acceptQMessageBox(rw, "apply.+stash")
+
+    acceptQMessageBox(rw, "conflict.+working dir")
+
+    repo.index.add_all()
+    repo.create_commit_on_head("conflicting thing", TEST_SIGNATURE, TEST_SIGNATURE)
+    rw.refreshRepo()
+
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, r"^apply")
+    acceptQMessageBox(rw, "apply.+stash")
+
+    acceptQMessageBox(rw, "has caused merge conflicts")
+    assert rw.sidebar.findNodeByRef("stash@{0}")  # stash not deleted
+    rw.dirtyFiles.selectFile("a/a1.txt")
+    assert rw.conflictView.isVisibleTo(rw)
+    assert rw.conflictView.currentConflict.ours.path == "a/a1.txt"

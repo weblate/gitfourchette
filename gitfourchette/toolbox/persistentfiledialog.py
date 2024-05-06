@@ -18,12 +18,21 @@ class PersistentFileDialog:
 
     @staticmethod
     def install(qfd: QFileDialog, key: str):
+        # Don't use native dialog in unit tests
+        # (macOS native file dialog cannot be controlled from unit tests)
+        from gitfourchette.settings import TEST_MODE
+        qfd.setOption(QFileDialog.Option.DontUseNativeDialog, TEST_MODE)
+
+        # Restore saved path
         savedPath = PersistentFileDialog.getPath(key)
         if savedPath:
             savedPath = os.path.dirname(savedPath)
             if os.path.exists(savedPath):
                 qfd.setDirectory(savedPath)
+
+        # Remember selected path
         qfd.fileSelected.connect(lambda path: PersistentFileDialog.savePath(key, path))
+
         return qfd
 
     @staticmethod
@@ -54,17 +63,6 @@ class PersistentFileDialog:
     def openDirectory(parent: QWidget, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly, deleteOnClose=True):
         qfd = QFileDialog(parent, caption)
         qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-        qfd.setFileMode(QFileDialog.FileMode.Directory)
-        qfd.setOptions(options)
-        qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, deleteOnClose)
-        qfd.setWindowModality(Qt.WindowModality.WindowModal)
-        PersistentFileDialog.install(qfd, key)
-        return qfd
-
-    @staticmethod
-    def saveDirectory(parent: QWidget, key: str, caption: str, options=QFileDialog.Option.ShowDirsOnly, deleteOnClose=True):
-        qfd = QFileDialog(parent, caption)
-        qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         qfd.setFileMode(QFileDialog.FileMode.Directory)
         qfd.setOptions(options)
         qfd.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, deleteOnClose)

@@ -15,7 +15,7 @@ class AutoHideMenuBar(QObject):
         self.sticky = False
 
         self.hideScheduler = QTimer(self)
-        self.hideScheduler.setInterval(1)
+        self.hideScheduler.setInterval(0)
         self.hideScheduler.setSingleShot(True)
         self.hideScheduler.timeout.connect(self.doScheduledHide)
 

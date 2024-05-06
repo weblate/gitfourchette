@@ -135,11 +135,14 @@ def findMenuAction(menu: QMenu | QMenuBar, pattern: str) -> QAction:
 
     for submenuPattern in patternParts[:-1]:
         for submenu in menu.children():
-            if isinstance(submenu, QMenu) and re.search(submenuPattern, submenu.title(), re.I):
+            if isinstance(submenu, QAction) and submenu.menu() and re.search(submenuPattern, submenu.text(), re.I):
+                menu = submenu.menu()
+                break
+            elif isinstance(submenu, QMenu) and re.search(submenuPattern, submenu.title(), re.I):
                 menu = submenu
                 break
         else:
-            assert False, f"didn't find menu '{pattern}'"
+            assert False, f"didn't find menu '{pattern}' (failed pattern part: '{submenuPattern}')"
 
     assert isinstance(menu, QMenu)
     for action in menu.actions():
@@ -182,7 +185,7 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     assert False, F"did not find qdialog matching \"{pattern}\""
 
 
-def findQMessageBox(parent: QWidget, textPattern: str):
+def findQMessageBox(parent: QWidget, textPattern: str) -> QMessageBox:
     for qmb in parent.findChildren(QMessageBox):
         if not qmb.isVisibleTo(parent):  # skip zombie QMBs
             continue

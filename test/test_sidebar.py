@@ -28,6 +28,9 @@ def testSidebarWithDetachedHead(tempDir, mainWindow):
     assert headNode.kind == EItem.DetachedHead
     assert [headNode] == list(rw.sidebar.findNodesByKind(EItem.DetachedHead))
 
+    toolTip = headNode.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
+    assert re.search(r"detached head.+7f82283", toolTip, re.I)
+
     assert {'refs/heads/master', 'refs/heads/no-parent'
             } == set(n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
 

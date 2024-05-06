@@ -326,3 +326,46 @@ def testSaveScrollPosition(tempDir, mainWindow):
     rw.navigateBack()
     assert rw.navLocator.isSimilarEnoughTo(locLong)
     assert vsb.value() == 5000
+
+
+def testSelectNextOrPreviousFile(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.fileWithStagedAndUnstagedChanges(wd)
+    rw = mainWindow.openRepo(wd)
+
+    # In workdir
+    # Clear FileList selection
+    fl = rw.fileListByContext(rw.navLocator.context)
+    fl.setFocus()
+    fl.clearSelection()
+
+    for action, locator in [
+        ("next", NavLocator.inUnstaged("a/a1.txt")),
+        ("next", NavLocator.inStaged("a/a1.txt")),
+        ("next", NavLocator.inStaged("a/a1.txt")),
+        ("prev", NavLocator.inUnstaged("a/a1.txt")),
+        ("prev", NavLocator.inUnstaged("a/a1.txt")),
+    ]:
+        triggerMenuAction(mainWindow.menuBar(), f"view/{action}.+file")
+        assert locator.isSimilarEnoughTo(rw.navLocator)
+
+    # In a commit
+    oid = Oid(hex='83834a7afdaa1a1260568567f6ad90020389f664')
+    rw.jump(NavLocator.inCommit(Oid(hex='83834a7afdaa1a1260568567f6ad90020389f664')))
+
+    # Clear selection
+    fl = rw.fileListByContext(rw.navLocator.context)
+    fl.setFocus()
+    fl.clearSelection()
+
+    for action, locator in [
+        ("next", NavLocator.inCommit(oid, "a/a1.txt")),
+        ("next", NavLocator.inCommit(oid, "a/a2.txt")),
+        ("next", NavLocator.inCommit(oid, "master.txt")),
+        ("next", NavLocator.inCommit(oid, "master.txt")),
+        ("prev", NavLocator.inCommit(oid, "a/a2.txt")),
+        ("prev", NavLocator.inCommit(oid, "a/a1.txt")),
+        ("prev", NavLocator.inCommit(oid, "a/a1.txt")),
+    ]:
+        triggerMenuAction(mainWindow.menuBar(), f"view/{action}.+file")
+        assert locator.isSimilarEnoughTo(rw.navLocator)

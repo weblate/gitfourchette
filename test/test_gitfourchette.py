@@ -1,10 +1,13 @@
+import os.path
+
 import pytest
 
-from . import reposcenario
 from .util import *
+from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 
 
 def testEmptyRepo(tempDir, mainWindow):
@@ -80,72 +83,6 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
-def testCommitSearch(tempDir, mainWindow):
-    # Commits that contain "first" in their summary
-    matchingCommits = [
-        Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4"),
-        Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"),
-        Oid(hex="d31f5a60d406e831d056b8ac2538d515100c2df2"),
-        Oid(hex="83d2f0431bcdc9c2fd2c17b828143be6ee4fbe80"),
-        Oid(hex="2c349335b7f797072cf729c4f3bb0914ecb6dec9"),
-        Oid(hex="ac7e7e44c1885efb472ad54a78327d66bfc4ecef"),
-    ]
-
-    wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
-
-    searchBar = rw.graphView.searchBar
-    searchEdit = searchBar.lineEdit
-
-    def getGraphRow():
-        indexes = rw.graphView.selectedIndexes()
-        assert len(indexes) == 1
-        return indexes[0].row()
-
-    assert not searchBar.isVisibleTo(rw)
-
-    QTest.qWait(0)
-    QTest.keySequence(mainWindow, "Ctrl+F")
-    assert searchBar.isVisibleTo(rw)
-
-    QTest.keyClicks(searchEdit, "first")
-
-    previousRow = -1
-    for oid in matchingCommits:
-        QTest.keySequence(searchEdit, "Return")
-        assert oid == rw.graphView.currentCommitOid
-
-        assert getGraphRow() > previousRow  # go down
-        previousRow = getGraphRow()
-
-    # end of log
-    QTest.keySequence(searchEdit, "Return")
-    assert getGraphRow() < previousRow  # wrap around to top of graph
-    previousRow = getGraphRow()
-
-    # select last
-    lastRow = rw.graphView.clFilter.rowCount() - 1
-    rw.graphView.setCurrentIndex(rw.graphView.clFilter.index(lastRow, 0))
-    previousRow = lastRow
-
-    # now search backwards
-    for oid in reversed(matchingCommits):
-        QTest.keySequence(searchEdit, "Shift+Return")
-        assert oid == rw.graphView.currentCommitOid
-
-        assert getGraphRow() < previousRow  # go up
-        previousRow = getGraphRow()
-
-    # top of log
-    QTest.keySequence(searchEdit, "Shift+Return")
-    assert getGraphRow() > previousRow
-    previousRow = getGraphRow()
-
-    # escape closes search bar
-    QTest.keySequence(searchEdit, "Escape")
-    assert not searchBar.isVisibleTo(rw)
-
-
 def testUnloadRepoWhenFolderGoesMissing(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -199,6 +136,9 @@ def testSkipRenameDetection(tempDir, mainWindow):
     print(rw.diffBanner.label.text())
     assert re.search(r"1 rename.* detected", rw.diffBanner.label.text(), re.I)
 
+    rw.diffBanner.dismissButton.click()
+    assert not rw.diffBanner.isVisibleTo(rw)
+
 
 @pytest.mark.parametrize("context", [NavContext.UNSTAGED, NavContext.STAGED])
 def testRefreshKeepsMultiFileSelection(tempDir, mainWindow, context):
@@ -219,6 +159,10 @@ def testRefreshKeepsMultiFileSelection(tempDir, mainWindow, context):
 
 
 def testPrefsDialog(tempDir, mainWindow):
+    # Open a repo so that refreshPrefs functions are exercized in coverage
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
     def openPrefs() -> PrefsDialog:
         triggerMenuAction(mainWindow.menuBar(), "file/preferences")
         return findQDialog(mainWindow, "preferences")
@@ -250,3 +194,197 @@ def testPrefsDialog(tempDir, mainWindow):
     checkBox.setChecked(False)
     dlg.accept()
     assert not mainWindow.statusBar().isVisible()
+
+    # Play with QComboBoxWithPreview (for coverage)
+    dlg = mainWindow.openPrefsDialog("shortTimeFormat")
+    comboBox: QComboBox = dlg.findChild(QWidget, "prefctl_shortTimeFormat").findChild(QComboBox)
+    comboBox.setFocus()
+    QTest.keyClick(comboBox, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
+    QTest.qWait(0)
+    QTest.keyClick(comboBox, Qt.Key.Key_Down)
+    QTest.qWait(0)
+    QTest.keyClick(comboBox, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
+    QTest.qWait(0)  # trigger ItemDelegate.paint
+    comboBox.setFocus()
+    QTest.keyClicks(comboBox, "MMMM")  # trigger activation of out-of-bounds index
+    QTest.keyClick(comboBox, Qt.Key.Key_Enter)
+    dlg.reject()
+
+
+def testNewRepo(tempDir, mainWindow):
+    triggerMenuAction(mainWindow.menuBar(), "file/new repo")
+
+    path = os.path.realpath(tempDir.name + "/valoche3000")
+    os.makedirs(path)
+
+    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
+    assert isinstance(dlg, QFileDialog)
+    dlg.setDirectory(path)
+    dlg.accept()
+
+    rw = mainWindow.currentRepoWidget()
+    assert path == os.path.normpath(rw.repo.workdir)
+
+    assert rw.uiReady
+    assert rw.navLocator.context.isWorkdir()
+
+    assert not list(rw.sidebar.findNodesByKind(EItem.LocalBranch))
+    unbornNode = next(rw.sidebar.findNodesByKind(EItem.UnbornHead))
+    unbornNodeIndex = unbornNode.createIndex(rw.sidebar.sidebarModel)
+    assert re.search(r"branch.+will be created", unbornNodeIndex.data(Qt.ItemDataRole.ToolTipRole), re.I)
+    # TODO: test that we honor "init.defaultBranch"...without touching user's git config
+
+    rw.commitButton.click()
+    acceptQMessageBox(rw, "empty commit")
+    commitDialog: CommitDialog = findQDialog(rw, "commit")
+    commitDialog.ui.summaryEditor.setText("initial commit")
+    commitDialog.accept()
+
+    assert not list(rw.sidebar.findNodesByKind(EItem.UnbornHead))
+    branchNode = next(rw.sidebar.findNodesByKind(EItem.LocalBranch))
+    branchNodeIndex = branchNode.createIndex(rw.sidebar.sidebarModel)
+    assert re.search(r"checked.out", branchNodeIndex.data(Qt.ItemDataRole.ToolTipRole), re.I)
+
+
+def testNewRepoFromExistingSources(tempDir, mainWindow):
+    triggerMenuAction(mainWindow.menuBar(), "file/new repo")
+
+    path = os.path.realpath(tempDir.name + "/valoche3000")
+    os.makedirs(path)
+    writeFile(f"{path}/existing.txt", "file was here before repo inited\n")
+
+    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
+    assert isinstance(dlg, QFileDialog)
+    dlg.setDirectory(path)
+    dlg.accept()
+
+    acceptQMessageBox(mainWindow, r"are you sure.+valoche3000.+isn.t empty")
+
+    rw = mainWindow.currentRepoWidget()
+    rw.jump(NavLocator.inUnstaged("existing.txt"))
+    assert "file was here before repo inited" in rw.diffView.toPlainText()
+
+
+def testNewRepoAtExistingRepo(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    triggerMenuAction(mainWindow.menuBar(), "file/new repo")
+
+    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
+    assert isinstance(dlg, QFileDialog)
+    dlg.setDirectory(wd)
+    dlg.accept()
+
+    qmb = findQMessageBox(mainWindow, "already exists")
+    qmb.accept()
+    assert wd == mainWindow.currentRepoWidget().repo.workdir
+
+
+def testNewNestedRepo(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    path = wd + "/valoche3000"
+    os.makedirs(path)
+
+    triggerMenuAction(mainWindow.menuBar(), "file/new repo")
+
+    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
+    assert isinstance(dlg, QFileDialog)
+    dlg.setDirectory(path)
+    dlg.accept()
+
+    qmb = findQMessageBox(mainWindow, "TestGitRepository.+parent (dir|folder).+sub(dir|folder)")
+    qmb.accept()
+
+
+def testRepoNickname(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    assert "TestGitRepository" in mainWindow.windowTitle()
+    assert "TestGitRepository" in mainWindow.tabs.tabs.tabText(mainWindow.tabs.currentIndex())
+    assert findMenuAction(mainWindow.menuBar(), "file/recent/TestGitRepository")
+
+    # Rename to "coolrepo"
+    triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
+    dlg = findQDialog(rw, "edit.+name")
+    qle: QLineEdit = dlg.findChild(QLineEdit)
+    assert qle.text() == "TestGitRepository"
+    qle.setText("coolrepo")
+    dlg.accept()
+
+    assert "TestGitRepository" not in mainWindow.windowTitle()
+    assert "coolrepo" in mainWindow.windowTitle()
+    assert "coolrepo" in mainWindow.tabs.tabs.tabText(mainWindow.tabs.currentIndex())
+    recentAction = findMenuAction(mainWindow.menuBar(), "file/recent/coolrepo")
+    assert recentAction
+    assert recentAction is findMenuAction(mainWindow.menuBar(), "file/recent/TestGitRepository")
+
+    # Reset to default name
+    triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
+    dlg = findQDialog(rw, "edit.+name")
+    qle: QLineEdit = dlg.findChild(QLineEdit)
+    assert qle.text() == "coolrepo"
+    buttonBox: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
+    restoreButton = buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults)
+    restoreButton.click()
+    assert "TestGitRepository" in mainWindow.windowTitle()
+
+
+def testTabOverflow(tempDir, mainWindow):
+    mainWindow.resize(640, 480)  # make sure it's narrow enough for overflow
+
+    for i in range(10):
+        wd = unpackRepo(tempDir, renameTo=f"RepoCopy{i:04}")
+        rw = mainWindow.openRepo(wd)
+        QTest.qWait(1)
+
+        if i <= 2:  # assume no overflow when there are few repos
+            assert not mainWindow.tabs.overflowGradient.isVisibleTo(mainWindow)
+            assert not mainWindow.tabs.overflowButton.isVisibleTo(mainWindow)
+
+    assert mainWindow.tabs.overflowGradient.isVisibleTo(mainWindow)
+    assert mainWindow.tabs.overflowButton.isVisibleTo(mainWindow)
+
+
+@pytest.mark.skipif(MACOS, reason="this feature is disabled on macOS")
+def testAutoHideMenuBar(mainWindow):
+    menuBar: QMenuBar = mainWindow.menuBar()
+    assert menuBar.isVisible()
+    assert menuBar.height() != 0
+
+    # Hide menu bar
+    mainWindow.onAcceptPrefsDialog({"showMenuBar": False})
+    acceptQMessageBox(mainWindow, "menu bar.+hidden")
+    assert menuBar.height() == 0
+
+    QTest.keyClick(mainWindow, Qt.Key.Key_Alt)
+    QTest.qWait(0)
+    assert menuBar.height() != 0
+
+    QTest.keyClick(mainWindow, Qt.Key.Key_Alt)
+    QTest.qWait(0)
+    assert menuBar.height() == 0
+
+    QTest.keyPress(menuBar, Qt.Key.Key_F, Qt.KeyboardModifier.AltModifier)
+    QTest.qWait(0)
+    fileMenu: QMenu = menuBar.findChild(QMenu, "MWFileMenu")
+    assert menuBar.height() != 0
+    assert fileMenu.isVisibleTo(menuBar)
+    QTest.keyRelease(fileMenu, Qt.Key.Key_F, Qt.KeyboardModifier.AltModifier)
+    QTest.qWait(0)
+    assert menuBar.height() != 0
+
+    QTest.keyClick(fileMenu, Qt.Key.Key_Escape)
+    QTest.qWait(0)
+    assert not fileMenu.isVisible()
+    assert menuBar.height() == 0
+
+    # Restore menu bar
+    mainWindow.onAcceptPrefsDialog({"showMenuBar": True})
+    QTest.qWait(0)
+    assert menuBar.height() != 0
+
+
+def testAboutDialog(mainWindow):
+    triggerMenuAction(mainWindow.menuBar(), "help/about")
+    dlg = findQDialog(mainWindow, "about")
+    dlg.accept()

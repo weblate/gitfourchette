@@ -179,7 +179,6 @@ def testCommitWithoutUserIdentity(tempDir, mainWindow):
     assert headCommit.author.email == "1e15sabords@example.com"
 
 
-@pytest.mark.skipif('FASTTEST' in os.environ, reason="skipping slow tests (FASTTEST env var)")
 def testCommitStableDate(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
@@ -191,7 +190,9 @@ def testCommitStableDate(tempDir, mainWindow):
     dialog: CommitDialog = findQDialog(rw, "commit")
     dialog.ui.summaryEditor.setText("hold on a sec...")
 
-    QTest.qWait(1500)  # wait for next second
+    # Wait for next second before confirming.
+    # Commit time should not depend on when the dialog is accepted.
+    QTest.qWait(1001)
     dialog.accept()
 
     headCommit = rw.repo.head_commit
@@ -199,27 +200,26 @@ def testCommitStableDate(tempDir, mainWindow):
     assert signatures_equalish(headCommit.author, headCommit.committer)
 
 
-@pytest.mark.skipif('FASTTEST' in os.environ, reason="skipping slow tests (FASTTEST env var)")
 def testAmendAltersCommitterDate(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
 
     headCommit = rw.repo.head_commit
-    headInitialAuthor = headCommit.author
-    headInitialCommitter = headCommit.committer
     rw.amendButton.click()
 
     dialog: CommitDialog = findQDialog(rw, "amend")
     dialog.ui.summaryEditor.setText("hold on a sec...")
-
-    QTest.qWait(1500)  # wait for next second
     dialog.accept()
 
     amendedHeadCommit = rw.repo.head_commit
     assert amendedHeadCommit.message == "hold on a sec..."
     assert signatures_equalish(amendedHeadCommit.author, headCommit.author)
+    assert not signatures_equalish(amendedHeadCommit.committer, headCommit.committer)
     assert not signatures_equalish(amendedHeadCommit.author, amendedHeadCommit.committer)
+    assert amendedHeadCommit.author.name != TEST_SIGNATURE.name
+    assert amendedHeadCommit.committer.name == TEST_SIGNATURE.name
+    assert amendedHeadCommit.committer.time > amendedHeadCommit.author.time
 
 
 def testCommitDialogJumpsToWorkdir(tempDir, mainWindow):
@@ -260,7 +260,8 @@ def testResetHeadToCommit(tempDir, mainWindow):
     assert rw.repo.branches.local['master'].target == oid1
 
 
-def testCheckoutCommitDetachedHead(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["graphkey", "graphcm"])
+def testCheckoutCommitDetachedHead(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -269,7 +270,13 @@ def testCheckoutCommitDetachedHead(tempDir, mainWindow):
                 Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4"),
                 ]:
         rw.graphView.selectCommit(oid)
-        triggerMenuAction(rw.graphView.makeContextMenu(), r"check.?out")
+
+        if method == "graphcm":
+            triggerMenuAction(rw.graphView.makeContextMenu(), r"check.?out")
+        elif method == "graphkey":
+            QTest.keySequence(rw.graphView, "Return")
+        else:
+            raise NotImplementedError(f"unknown method {method}")
 
         dlg = findQDialog(rw, "check.?out commit")
         dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)

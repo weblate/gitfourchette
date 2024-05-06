@@ -26,10 +26,7 @@ def _boxWidget(layoutType, *controls):
     layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
     for control in controls:
-        if control == "stretch":
-            layout.addStretch()
-        else:
-            layout.addWidget(control)
+        layout.addWidget(control)
     return w
 
 
@@ -270,8 +267,6 @@ class PrefsDialog(QDialog):
             return self.strControl(key, value)
         elif valueType is int:
             return self.intControl(key, value)
-        elif valueType is float:
-            return self.floatControl(key, value)
         elif valueType is bool:
             trueText = TrTables.prefKeyNoDefault(key + "_true")
             falseText = TrTables.prefKeyNoDefault(key + "_false")
@@ -394,13 +389,6 @@ class PrefsDialog(QDialog):
         control.setAlignment(Qt.AlignmentFlag.AlignRight)
         control.setStepType(QSpinBox.StepType.AdaptiveDecimalStepType)
         control.valueChanged.connect(lambda v, k=prefKey: self.assign(k, v))
-        return control
-
-    def floatControl(self, prefKey, prefValue):
-        control = QLineEdit(str(prefValue), self)
-        control.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        control.setValidator(QDoubleValidator())
-        control.textEdited.connect(lambda v, k=prefKey: self.assign(k, float(v) if v else 0.0))
         return control
 
     def boolRadioControl(self, prefKey, prefValue, falseName, trueName):

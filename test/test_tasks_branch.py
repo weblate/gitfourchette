@@ -44,6 +44,11 @@ def testSetUpstreamBranch(tempDir, mainWindow):
 
     node = rw.sidebar.findNodeByRef("refs/heads/master")
 
+    toolTip = node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
+    assert re.search(r"master.+local branch", toolTip, re.I)
+    assert re.search(r"checked.out", toolTip, re.I)
+    assert re.search(r"upstream.+origin/master", toolTip, re.I)
+
     # Change tracking from origin/master to nothing
     menu = rw.sidebar.makeNodeMenu(node)
     originMasterAction = findMenuAction(menu, r"upstream branch/origin.master")

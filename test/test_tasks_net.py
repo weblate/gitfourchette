@@ -23,20 +23,68 @@ def testCloneRepo(tempDir, mainWindow):
 
     assert not mainWindow.currentRepoWidget()  # no repo opened yet
 
+    # Bring up clone dialog
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
     cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
-    cloneDialog.ui.urlEdit.setEditText(bare)
-    cloneDialog.ui.pathEdit.setText(target)
-    cloneDialog.cloneButton.click()
+    assert not cloneDialog.ui.pathEdit.text()  # path initially empty
+    assert not cloneDialog.cloneButton.isEnabled()  # disallow cloning without an URL
 
+    # Set URL in clone dialog
+    cloneDialog.ui.urlEdit.setEditText(bare)
+    assert "unpacked-repo-bare" in cloneDialog.ui.pathEdit.text()  # autofilled after entering URL
+
+    # Set target path in clone dialog
+    cloneDialog.ui.pathEdit.clear()
+    cloneDialog.ui.browseButton.click()
+    assert not cloneDialog.cloneButton.isEnabled()  # disallow cloning to empty path
+    qfd: QFileDialog = cloneDialog.findChild(QFileDialog)
+    assert "clone" in qfd.windowTitle().lower()
+    qfd.selectFile(target)
+    qfd.accept()
+    assert cloneDialog.ui.pathEdit.text() == target
+    QTest.qWait(0)  # wait for QFileDialog to be collected
+
+    # Play with key file picker
+    assert not cloneDialog.ui.keyFilePicker.checkBox.isChecked()
+    cloneDialog.ui.keyFilePicker.checkBox.click()
+    qfd: QFileDialog = cloneDialog.findChild(QFileDialog)
+    assert "key file" in qfd.windowTitle().lower()
+    qfd.reject()
+    assert not cloneDialog.ui.keyFilePicker.checkBox.isChecked()
+    QTest.qWait(0)  # wait for QFileDialog to be collected
+
+    # Fire ze missiles
+    assert cloneDialog.cloneButton.isEnabled()
+    cloneDialog.cloneButton.click()
+    assert not cloneDialog.isVisible()
+
+    # Get RepoWidget for cloned repo
     rw = mainWindow.currentRepoWidget()
     assert rw is not None
-    assert os.path.samefile(rw.workdir, target)
+
+    # Check that the cloned repo's state looks OK
+    clonedRepo = rw.repo
+    assert os.path.samefile(clonedRepo.workdir, target)
 
     # Look at some commit within the repo
     oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
     rw.jump(NavLocator.inCommit(oid))
     assert ["c/c1.txt"] == qlvGetRowData(rw.committedFiles)
+
+    # Bring up clone dialog again and check that the URL was added to the history
+    triggerMenuAction(mainWindow.menuBar(), "file/clone")
+    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    urlEdit = cloneDialog.ui.urlEdit
+    assert urlEdit.currentText() == ""
+    assert 0 <= urlEdit.findText("clear", Qt.MatchFlag.MatchContains)
+    assert 0 <= urlEdit.findText(bare)
+    # Select past URL
+    urlEdit.setCurrentIndex(urlEdit.findText(bare))
+    assert urlEdit.currentText() == bare
+    # Clear clone history (must emit 'activated' for this one)
+    urlEdit.activated.emit(urlEdit.findText("clear", Qt.MatchFlag.MatchContains))
+    assert urlEdit.count() == 1
+    cloneDialog.reject()
 
 
 def testFetchNewRemoteBranches(tempDir, mainWindow):
@@ -70,6 +118,29 @@ def testDeleteRemoteBranch(tempDir, mainWindow):
     assert "localfs/no-parent" not in rw.repo.branches.remote
     with pytest.raises(KeyError):
         rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
+
+
+def testRenameRemoteBranch(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
+    rw = mainWindow.openRepo(wd)
+
+    assert "localfs/no-parent" in rw.repo.branches.remote
+
+    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "rename")
+
+    dlg = findQDialog(rw, "rename")
+    qle = dlg.findChild(QLineEdit)
+    qle.setText("new-name")
+    dlg.accept()
+
+    assert "localfs/no-parent" not in rw.repo.branches.remote
+    assert "localfs/new-name" in rw.repo.branches.remote
+    with pytest.raises(KeyError):
+        rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
+    rw.sidebar.findNodeByRef("refs/remotes/localfs/new-name")
 
 
 def testFetchRemote(tempDir, mainWindow):
@@ -160,6 +231,33 @@ def testFetchRemoteBranchVanishes(tempDir, mainWindow):
     with pytest.raises(KeyError):
         rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
     assert "localfs/master" not in rw.repo.branches.remote
+
+
+def testFetchRemoteBranchNoChange(tempDir, mainWindow):
+    oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+
+    wd = unpackRepo(tempDir)
+    makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.repo.branches.remote["localfs/master"].target == oldHead
+
+    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fetch")
+    acceptQMessageBox(rw, "no new commits")
+
+    assert rw.repo.branches.remote["localfs/master"].target == oldHead
+
+
+def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.edit_upstream_branch("master", "")
+
+    rw = mainWindow.openRepo(wd)
+    triggerMenuAction(mainWindow.menuBar(), "branch/fetch")
+    acceptQMessageBox(rw, "n.t tracking.+upstream")
 
 
 @pytest.mark.parametrize("asNewBranch", [False, True])

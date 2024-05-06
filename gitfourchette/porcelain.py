@@ -146,7 +146,7 @@ class DivergentBranchesError(Exception):
         self.local_branch = local_branch
         self.remote_branch = remote_branch
 
-    def __str__(self):
+    def __repr__(self):
         return f"DivergentBranchesError(local: {self.local_branch.shorthand}, remote: {self.remote_branch.shorthand})"
 
 
@@ -156,7 +156,7 @@ class ConflictError(Exception):
         self.description = description
         self.conflicts = conflicts
 
-    def __str__(self):
+    def __repr__(self):
         return f"ConflictError({len(self.conflicts)}, {self.description})"
 
 
@@ -1239,7 +1239,7 @@ class Repo(_VanillaRepository):
 
     def stash_drop_oid(self, oid: Oid):
         i = self.find_stash_index(oid)
-        self.stash_drop(self.find_stash_index(oid))
+        self.stash_drop(i)
 
     def applies_breakdown(self, patch_data: bytes | str, location: int = ApplyLocation.WORKDIR) -> Diff:
         diff = Diff.parse_diff(patch_data)

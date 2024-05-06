@@ -26,11 +26,6 @@ def excMessageBox(
         icon: MessageBoxIconName = 'critical',
         abortUnitTest=True,
 ):
-    if abortUnitTest:
-        from gitfourchette.settings import TEST_MODE
-        if TEST_MODE:
-            raise exc
-
     try:
         isCritical = icon == 'critical'
 
@@ -114,6 +109,11 @@ def excMessageBox(
         sys.stderr.write(f"*********************************************\n")
         traceback.print_exception(excMessageBoxError)
 
+    if abortUnitTest:
+        from gitfourchette.settings import TEST_MODE
+        if TEST_MODE:
+            raise exc
+
 
 def _popExcMessageBoxQueue(result = QMessageBox.StandardButton.Ok):
     if result == QMessageBox.StandardButton.Reset:
@@ -165,6 +165,9 @@ def asyncMessageBox(
 
     assert onAppThread()
     assert parent is None or isinstance(parent, QWidget)
+
+    title = title.split("\u009C", 1)[0]
+    text = text.split("\u009C", 1)[0]
 
     loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
     if icon in ['information', 'question']:
