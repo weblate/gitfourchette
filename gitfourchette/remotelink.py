@@ -60,7 +60,11 @@ class RemoteLink(QObject, RemoteCallbacks):
         RemoteCallbacks.__init__(self)
 
         self.setObjectName("RemoteLink")
+        self.userAbort.connect(self._onAbort)
+        self.downloadRateTimer = QElapsedTimer()
+        self.resetLoginState()
 
+    def resetLoginState(self):
         self.attempts = 0
 
         self.keypairFiles = []
@@ -71,11 +75,9 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.lastAttemptUrl = ""
         self.usingKnownKeyFirst = False  # for informative purposes only
 
-        self.downloadRateTimer = QElapsedTimer()
         self.downloadRate = 0
         self.receivedBytesOnTimerStart = 0
-
-        self.userAbort.connect(self._onAbort)
+        self.downloadRateTimer.invalidate()
 
         self._aborting = False
         self._sidebandProgressBuffer = ""

@@ -12,8 +12,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>635</width>
-    <height>225</height>
+    <width>640</width>
+    <height>340</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -99,6 +99,16 @@
     </widget>
    </item>
    <item row="2" column="1">
+    <widget class="QCheckBox" name="recurseSubmodulesCheckBox">
+     <property name="text">
+      <string>Recurse into submodules (if any)</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
     <layout class="QHBoxLayout" name="shallowCloneLayout">
      <item>
       <widget class="QCheckBox" name="shallowCloneCheckBox">
@@ -141,30 +151,39 @@
      </item>
     </layout>
    </item>
-   <item row="3" column="1">
+   <item row="4" column="1">
     <widget class="KeyFilePickerCheckBox" name="keyFilePicker">
      <property name="text">
       <string>Log in with custom &amp;key file</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="statusLabel">
-     <property name="text">
-      <string>Status:</string>
+   <item row="5" column="1">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
-    </widget>
+     <property name="sizeType">
+      <enum>QSizePolicy::Policy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>16</height>
+      </size>
+     </property>
+    </spacer>
    </item>
-   <item row="4" column="1">
+   <item row="6" column="0" colspan="2">
     <widget class="QGroupBox" name="statusGroupBox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
+       <verstretch>1</verstretch>
       </sizepolicy>
      </property>
      <property name="title">
-      <string/>
+      <string>Status</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <property name="leftMargin">
@@ -185,7 +204,7 @@
      </layout>
     </widget>
    </item>
-   <item row="5" column="1">
+   <item row="7" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>

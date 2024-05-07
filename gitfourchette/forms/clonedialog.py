@@ -253,6 +253,7 @@ class CloneDialog(QDialog):
             self.ui.pathEdit,
             self.ui.browseButton,
             self.ui.optionsLabel,
+            self.ui.recurseSubmodulesCheckBox,
             self.ui.shallowCloneCheckBox,
             self.ui.shallowCloneDepthSpinBox,
             self.ui.shallowCloneSuffix,
@@ -265,12 +266,13 @@ class CloneDialog(QDialog):
     def onCloneClicked(self):
         depth = 0
         privKeyPath = self.ui.keyFilePicker.privateKeyPath()
+        recursive = self.ui.recurseSubmodulesCheckBox.isChecked()
 
         if self.ui.shallowCloneCheckBox.isChecked():
             depth = self.ui.shallowCloneDepthSpinBox.value()
 
         self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
-        self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth, privKeyPath=privKeyPath)
+        self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth, privKeyPath=privKeyPath, recursive=recursive)
 
 
 class CloneTask(RepoTask):
@@ -279,40 +281,87 @@ class CloneTask(RepoTask):
     easily run the clone operation in a background thread.
     """
 
+    stickyStatus = Signal(str)
+
     def __init__(self, dialog: CloneDialog):
         super().__init__(dialog)
         self.cloneDialog = dialog
         self.remoteLink = RemoteLink(self)
         self.remoteLink.message.connect(dialog.ui.statusForm.setProgressMessage)
         self.remoteLink.progress.connect(dialog.ui.statusForm.setProgressValue)
+        self.stickyStatus.connect(dialog.ui.statusGroupBox.setTitle)
 
     def abort(self):
         self.remoteLink.raiseAbortFlag()
 
-    def flow(self, url: str, path: str, depth: int, privKeyPath: str):
+    def flow(self, url: str, path: str, depth: int, privKeyPath: str, recursive: bool):
         dialog = self.cloneDialog
         dialog.enableInputs(False)
         dialog.aboutToReject.connect(self.remoteLink.raiseAbortFlag)
+
+        # Enter worker thread
+        yield from self.flowEnterWorkerThread()
 
         # Set private key
         if privKeyPath:
             self.remoteLink.forceCustomKeyFile(privKeyPath)
 
-        yield from self.flowEnterWorkerThread()
+        # Clone the repo
+        self.stickyStatus.emit(self.tr("Cloning..."))
         with self.remoteLink.remoteKeyFileContext(url):
             clonedRepo = pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
-
-        yield from self.flowEnterUiThread()
+        clonedRepo = Repo(clonedRepo.workdir, RepositoryOpenFlag.NO_SEARCH)
+        self.setRepo(clonedRepo)
 
         # Store custom key (if any) in cloned repo config
-        clonedRepo = Repo(clonedRepo.workdir, RepositoryOpenFlag.NO_SEARCH)
         if privKeyPath:
             repoconfig.setRemoteKeyFile(clonedRepo, clonedRepo.remotes[0].name, privKeyPath)
 
+        # Recurse into submodules
+        if recursive:
+            yield from self.recurseIntoSubmodules()
+
+        # Done, back to UI thread
+        yield from self.flowEnterUiThread()
         settings.history.addCloneUrl(url)
-        settings.history.write()
+        settings.history.setDirty()
         dialog.cloneSuccessful.emit(path)
         dialog.accept()
+
+    def recurseIntoSubmodules(self):
+        # TODO: pygit2.Submodule has several shortcomings here:
+        # - Submodule.url crashes if libgit2 returns NULL (see also UpdateSubmodule in nettasks.py)
+        # - Submodule.update should let us do a shallow clone since libgit2 allows it (via git_fetch_options)
+        # - Submodule.open is broken (that's why we recreate a Repo)
+
+        def frontierGenerator(r: Repo):
+            return ((submo, r.in_workdir(submo.path)) for submo in r.submodules)
+
+        frontier = list(frontierGenerator(self.repo))
+
+        i = 0
+        while frontier:
+            i += 1
+            submodule, path = frontier.pop(0)
+
+            displayPath = path.removeprefix(self.repo.workdir)
+            self.stickyStatus.emit(self.tr("Initializing submodule {0}: {1}...").format(i, escamp(displayPath)))
+
+            url = ""
+            with suppress(RuntimeError):
+                url = submodule.url
+
+            # Reset remoteLink state before each submodule
+            # (so that we don't tally failed login attempts across submodules)
+            self.remoteLink.resetLoginState()
+
+            with self.remoteLink.remoteKeyFileContext(url):
+                submodule.update(init=True, callbacks=self.remoteLink)
+
+            subRepo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
+            frontier.extend(frontierGenerator(subRepo))
+
+        return; yield None  # bogus yield to make it a generator
 
     def onError(self, exc: BaseException):
         traceback.print_exception(exc.__class__, exc, exc.__traceback__)
