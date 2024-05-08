@@ -12,7 +12,7 @@ from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
 
-DLRATE_REFRESH_INTERVAL = 1000
+DLRATE_REFRESH_INTERVAL = 500
 
 
 def getAuthNamesFromFlags(allowedTypes):
@@ -163,7 +163,7 @@ class RemoteLink(QObject, RemoteCallbacks):
         # Send the last complete line we have.
         split = string.replace("\r", "\n").rsplit("\n", 2)
         with suppress(IndexError):
-            self.message.emit(self.tr("Remote:", "message from remote") + " " + split[-2])
+            logger.info(f"[sideband] {split[-2]}")
 
         # Buffer partial message for next time.
         self._sidebandProgressBuffer = split[-1]
@@ -231,7 +231,8 @@ class RemoteLink(QObject, RemoteCallbacks):
             self.downloadRateTimer.start()
             self.receivedBytesOnTimerStart = stats.received_bytes
         elif self.downloadRateTimer.elapsed() > DLRATE_REFRESH_INTERVAL:
-            self.downloadRate = (stats.received_bytes - self.receivedBytesOnTimerStart) * 1000 // DLRATE_REFRESH_INTERVAL
+            intervalBytes = stats.received_bytes - self.receivedBytesOnTimerStart
+            self.downloadRate = int(intervalBytes * 1000 / self.downloadRateTimer.elapsed())
             self.downloadRateTimer.restart()
             self.receivedBytesOnTimerStart = stats.received_bytes
         else:
@@ -245,21 +246,18 @@ class RemoteLink(QObject, RemoteCallbacks):
             self.progress.emit(obj, stats.total_objects)
 
         locale = QLocale()
+        sizeText = locale.formattedDataSize(stats.received_bytes, 1)
 
-        objectsReadyText = self.tr("{0} of {1} objects ready.").format(
-            locale.toString(obj),
-            locale.toString(stats.total_objects))
-        dataSizeText = locale.formattedDataSize(stats.received_bytes)
-        downloadRateText = locale.formattedDataSize(self.downloadRate)
-
-        message = objectsReadyText + "\n"
-
-        if stats.received_objects == stats.total_objects:
-            message += self.tr("{0} total. Indexing...", "e.g. '12 MB total'").format(dataSizeText)
-        else:
-            message += self.tr("{0} received.", "e.g. '12 MB received so far'").format(dataSizeText)
+        message = ""
+        if stats.received_objects != stats.total_objects:
+            message += self.tr("Downloading: {0}...").format(sizeText)
             if self.downloadRate != 0:
-                message += " " + self.tr("({0}/s)", "e.g. 1 MB per second").format(downloadRateText)
+                rateText = locale.formattedDataSize(self.downloadRate, 0 if self.downloadRate < 1e6 else 1)
+                message += "\n" + self.tr("({0}/s)", "download speed (per second)").format(rateText)
+        else:
+            message += self.tr("Download complete ({0}).").format(sizeText)
+            message += "\n" + self.tr("Indexing {0} of {1} objects...").format(locale.toString(obj), locale.toString(stats.total_objects))
+
         self.message.emit(message)
 
     def update_tips(self, refname, old, new):
