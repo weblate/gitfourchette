@@ -723,17 +723,18 @@ class RepoWidget(QStackedWidget):
 
     def closeEvent(self, event: QCloseEvent):
         """ Called when closing a repo tab """
-        self.cleanup(doUi=False)
+        # Don't bother with the placeholder since we'll disappear immediately
+        self.cleanup(installPlaceholder=False)
 
-    def cleanup(self, message: str = "", allowAutoReload: bool = True, doUi: bool = True):
+    def cleanup(self, message: str = "", allowAutoReload: bool = True, installPlaceholder: bool = True):
         assert onAppThread()
 
-        # Don't do UI stuff if we've been lazy-initialized
-        doUi &= self.uiReady
+        # Don't bother with the placeholder widget if we've been lazy-initialized
+        installPlaceholder &= self.uiReady
         hasRepo = self.state and self.state.repo
 
-        # Save sidebar collapse cache
-        if hasRepo and doUi:
+        # Save sidebar collapse cache (if our UI has settled)
+        if hasRepo and self.uiReady:
             uiPrefs = self.state.uiPrefs
             if self.sidebar.collapseCacheValid:
                 uiPrefs.collapseCache = list(self.sidebar.collapseCache)
@@ -745,7 +746,7 @@ class RepoWidget(QStackedWidget):
                 logger.warning(f"IOError when writing prefs: {e}")
 
         # Clear UI
-        if doUi:
+        if installPlaceholder:
             with QSignalBlockerContext(
                     self.committedFiles, self.dirtyFiles, self.stagedFiles,
                     self.graphView, self.sidebar):
@@ -756,6 +757,7 @@ class RepoWidget(QStackedWidget):
                 self.clearDiffView()
                 self.sidebar.model().clear()
 
+        # Let repo wrap up
         if hasRepo:
             # Save path if we want to reload the repo later
             self.pendingPath = os.path.normpath(self.state.repo.workdir)
@@ -770,10 +772,11 @@ class RepoWidget(QStackedWidget):
             self.state.repo = None
             logger.info(f"Repository freed: {self.pendingPath}")
 
+        # Forget RepoState
         self.state = None
 
         # Install placeholder widget
-        if doUi:
+        if installPlaceholder:
             placeholder = UnloadedRepoPlaceholder(self)
             placeholder.ui.nameLabel.setText(self.getTitle())
             placeholder.ui.loadButton.clicked.connect(lambda: self.primeRepo())

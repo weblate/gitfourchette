@@ -55,3 +55,26 @@ def testSidebarSelectionSync(tempDir, mainWindow):
     # no refs point to this commit, so the sidebar shouldn't have a selection
     rw.jump(NavLocator.inCommit(Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4")))
     assert not sb.selectedIndexes()
+
+
+def testSidebarCollapsePersistent(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    sb = rw.sidebar
+    assert sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+    indexToCollapse = sb.findNode(lambda n: n.data == "origin").createIndex(sb.model())
+    sb.collapse(indexToCollapse)
+    sb.expand(indexToCollapse)  # go through both expand/collapse code paths
+    sb.collapse(indexToCollapse)
+    assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+
+    # Test that it's still hidden after a soft refresh
+    mainWindow.refreshRepo()
+    assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+
+    # Test that it's still hidden after closing and reopening
+    mainWindow.closeTab(0)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
