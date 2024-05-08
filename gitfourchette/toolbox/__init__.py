@@ -18,7 +18,9 @@ from .gitutils import (
 from .memoryindicator import MemoryIndicator
 from .messageboxes import (
     MessageBoxIconName, excMessageBox, asyncMessageBox,
-    showWarning, showInformation, askConfirmation, NonCriticalOperation)
+    showWarning, showInformation, askConfirmation,
+    addULToMessageBox,
+    NonCriticalOperation)
 from .iconbank import stockIcon, clearStockIconCache
 from .pathutils import PathDisplayStyle, abbreviatePath, compactPath
 from .persistentfiledialog import PersistentFileDialog
@@ -56,7 +58,9 @@ from .qtutils import (
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide,
-    toTightUL, toRoomyUL, linkify,
+    toRoomyUL,
+    toTightUL,
+    linkify,
     clipboardStatusMessage,
     hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe,
     btag,

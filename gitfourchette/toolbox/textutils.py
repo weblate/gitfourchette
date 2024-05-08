@@ -153,9 +153,8 @@ def ulify(items: Iterable[str], limit: int = 10, prefix="", suffix="", moreText=
     if 0 <= limit < n:
         unlisted = n - limit
         if not moreText:
-            moreText = tr("(+ %n more)", "", unlisted)
-        else:
-            moreText = moreText.format(unlisted)
+            moreText = tr("...and {0} more")
+        moreText = moreText.format(unlisted)
         text += f"\n<li>{prefix}<i>{moreText}</i>{suffix}</li>"
 
     text += "\n</ul>"

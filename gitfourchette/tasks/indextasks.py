@@ -448,9 +448,9 @@ class ApplyPatchFile(RepoTask):
         else:
             text = self.tr("Patch file {0} can be applied cleanly to your working directory.")
         text = text.format(bquoe(os.path.basename(path)))
-        details = self.tr("It will modify <b>%n</b> files:", "", numDeltas)
-        details += toTightUL(f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas)
-        yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), detailText=details)
+        informative = self.tr("It will modify <b>%n</b> files:", "", numDeltas)
+        yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), informativeText=informative,
+                                    detailList=[f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas])
 
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
 
@@ -477,26 +477,25 @@ class AbortMerge(RepoTask):
             message = self.tr("Cannot abort right now because you have files that are both staged and unstaged.")
             raise AbortTask(message)
 
-        message = paragraphs(
-            self.tr("Do you want to abort the merge?") if not isCherryPicking
-            else self.tr("Do you want to abort the cherry-pick?"),
-        )
+        lines = []
+
+        if isCherryPicking:
+            lines.append(self.tr("Do you want to abort the cherry-pick?"))
+        else:
+            lines.append(self.tr("Do you want to abort the merge?"))
 
         if not abortList:
-            details = self.tr("No files are affected.")
+            informative = self.tr("No files are affected.")
         else:
+            informative = self.tr("%n files will be reset:", "", len(abortList))
             if self.repo.any_conflicts:
-                message += paragraphs(self.tr("All conflicts will be cleared "
-                                              "and all <b>staged</b> changes will be lost."))
+                lines.append(self.tr("All conflicts will be cleared and all <b>staged</b> changes will be lost."))
             else:
-                message += paragraphs(self.tr("All <b>staged</b> changes will be lost."))
-
-            details = paragraphs(self.tr("%n files will be reset:", "", len(abortList)))
-            details += "<span style='white-space: pre'>" + toTightUL(abortList)
+                lines.append(self.tr("All <b>staged</b> changes will be lost."))
 
         verb = self.tr("Abort merge") if isMerging else self.tr("Abort cherry-pick")
 
-        yield from self.flowConfirm(text=message, verb=verb, detailText=details)
+        yield from self.flowConfirm(text=paragraphs(lines), verb=verb, informativeText=informative, detailList=[escape(f) for f in abortList])
 
         yield from self.flowEnterUiThread()
         self.repo.reset_merge()

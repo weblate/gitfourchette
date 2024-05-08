@@ -8,6 +8,7 @@ from typing import Callable, Literal
 from gitfourchette.qt import *
 from gitfourchette.toolbox.excutils import shortenTracebackPath
 from gitfourchette.toolbox.qtutils import onAppThread, setWindowModal, MakeNonNativeDialog
+from gitfourchette.toolbox.textutils import ulify
 
 logger = logging.getLogger(__name__)
 
@@ -260,6 +261,19 @@ def askConfirmation(
         qmb.show()
 
     return qmb
+
+
+def addULToMessageBox(qmb: QMessageBox, items: list[str], limit=10):
+    ul = ulify(items, limit=limit, moreText=tr("...and {0} more. Click “Show Details” to view all."))
+
+    qmb.setInformativeText(qmb.informativeText() + ul)
+
+    if len(items) > limit:
+        overflow = ulify(items, -1)
+        qmb.setDetailedText(overflow)
+        qte: QTextEdit = qmb.findChild(QTextEdit)
+        if qte is not None:
+            qte.setHtml(overflow)
 
 
 class NonCriticalOperation:

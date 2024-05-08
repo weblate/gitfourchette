@@ -355,7 +355,7 @@ class MergeBranch(RepoTask):
                 self.tr("In this case, {0} will be fast-forwarded to {1}."),
             ).format(bquo(myShorthand), bquo(shortHash(target)))
             yield from self.flowConfirm(text=message, verb=self.tr("Fast-Forward"),
-                                        detailText=details, detailLink=self.tr("What does this mean?"),
+                                        informativeText=details, informativeLink=self.tr("What does this mean?"),
                                         dontShowAgainKey="MergeCanFF")
             yield from self.flowEnterWorkerThread()
             self.repo.fast_forward_branch(myShorthand, theirBranch.name)

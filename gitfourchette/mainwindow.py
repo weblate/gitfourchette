@@ -1055,17 +1055,9 @@ class MainWindow(QMainWindow):
     def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):
         numErrors = len(errors)
         text = self.tr("The session couldn’t be restored fully because %n repositories failed to load:", "", numErrors)
-
-        for path, exc in errors:
-            errorText = str(exc)
-
-            # Translate some common GitError texts
-            if errorText.startswith("Repository not found at "):
-                errorText = self.tr("Repository not found at this path.")
-
-            text += F"<small><br><br></small>{escape(path)}<small><br>{errorText}</small>"
-
-        showWarning(self, self.tr("Restore session"), text)
+        qmb = asyncMessageBox(self, 'warning', self.tr("Restore session"), text)
+        addULToMessageBox(qmb, [f"<b>{compactPath(path)}</b><br>{exc}" for path, exc in errors])
+        qmb.show()
 
     def saveSession(self):
         session = settings.Session()

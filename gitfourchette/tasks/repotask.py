@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operation"):
-    maxConflicts = 10
     numConflicts = len(exc.conflicts)
 
     # lupdate doesn't pick up the plural form with translate("Context", "%n", "", numConflicts)
@@ -35,17 +34,14 @@ def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operat
         message = translate("Conflict", "Operation {0} has caused a conflict with {1} ({2}):"
                             ).format(bquo(opName), nFilesSubmessage, exc.description)
 
-    moreText = translate("Conflict", "...and {0} more. Click “Show Details” to view all conflicts.")
-    message += toTightUL(exc.conflicts, limit=maxConflicts, moreText=moreText)
+    qmb = showWarning(parent, title, message)
+    addULToMessageBox(qmb, exc.conflicts)
 
     if exc.description == "workdir":
-        message += translate("Conflict", "Before you try again, you should either "
-                                         "commit, stash, or discard your changes.")
-
-    qmb = showWarning(parent, title, message)
-
-    if numConflicts > maxConflicts:
-        qmb.setDetailedText("\n".join(exc.conflicts))
+        dt = qmb.detailedText()
+        dt += translate("Conflict", "Before you try again, you should either "
+                                    "commit, stash, or discard your changes.")
+        qmb.setDetailedText(dt)
 
 
 class TaskPrereqs(enum.IntFlag):
@@ -366,8 +362,10 @@ class RepoTask(QObject):
             buttonIcon: str = "",
             verb: str = "",
             cancelText: str = "",
+            informativeText: str = "",
+            informativeLink: str = "",
             detailText: str = "",
-            detailLink: str = "",
+            detailList: list[str] | None = None,
             dontShowAgainKey: str = "",
             canCancel: bool = True,
     ):
@@ -420,17 +418,24 @@ class RepoTask(QObject):
             assert canCancel, "don't set cancelText when canCancel is False!"
             qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
 
-        if detailText:
-            if not detailLink:
-                qmb.setInformativeText(detailText)
-            else:
-                qmb.setInformativeText("<a href='_'>{0}</a>".format(detailLink))
+        if not informativeText:
+            pass
+        elif not informativeLink:
+            qmb.setInformativeText(informativeText)
+        else:
+            qmb.setInformativeText("<a href='_'>{0}</a>".format(informativeLink))
 
-                infoLabel: QLabel = qmb.findChild(QLabel, "qt_msgbox_informativelabel")
-                if infoLabel:
-                    infoLabel.setOpenExternalLinks(False)
-                    infoLabel.setToolTip(detailText)
-                    infoLabel.linkActivated.connect(lambda: QToolTip.showText(QCursor.pos(), detailText, infoLabel))
+            infoLabel: QLabel = qmb.findChild(QLabel, "qt_msgbox_informativelabel")
+            if infoLabel:
+                infoLabel.setOpenExternalLinks(False)
+                infoLabel.setToolTip(informativeText)
+                infoLabel.linkActivated.connect(lambda: QToolTip.showText(QCursor.pos(), informativeText, infoLabel))
+
+        if detailText:
+            qmb.setDetailedText(detailText)
+
+        if detailList:
+            addULToMessageBox(qmb, detailList)
 
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         yield from self.flowDialog(qmb)
