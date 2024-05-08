@@ -176,7 +176,11 @@ class SpecialDiffError(Exception):
     def submoduleDiff(repo: Repo, patch: Patch, locator: NavLocator):
         from gitfourchette.tasks import DiscardFiles
 
-        shortName = os.path.basename(patch.delta.new_file.path)
+        submoduleName = patch.delta.new_file.path
+        with suppress(KeyError):  # name may not be available when viewing a past commit about a deleted submodule
+            submoduleName = repo.get_submodule_name_from_path(submoduleName)
+        shortName = os.path.basename(submoduleName)
+
         localPath = repo.in_workdir(patch.delta.new_file.path)
         openLink = QUrl.fromLocalFile(localPath)
         stillExists = os.path.isdir(localPath)

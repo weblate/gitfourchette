@@ -8,6 +8,7 @@ import pytest
 import pygit2
 import shutil
 
+
 @pytest.mark.parametrize("method", ["sidebar", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
 def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
@@ -19,33 +20,33 @@ def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
 
     if method == "sidebar":
         submoNode = next(rw.sidebar.findNodesByKind(EItem.Submodule))
-        assert "submo" == submoNode.data
+        assert "submoname" == submoNode.data
         menu = rw.sidebar.makeNodeMenu(submoNode)
         triggerMenuAction(menu, r"open submodule.+tab")
 
     elif method == "commitSpecialDiff":
-        rw.jump(NavLocator.inCommit(oid=submoCommit, path="submo"))
+        rw.jump(NavLocator.inCommit(oid=submoCommit, path="submodir"))
         assert rw.specialDiffView.isVisibleTo(rw)
         assert qteFind(rw.specialDiffView, r"submodule.+submo.+was added")
         qteClickLink(rw.specialDiffView, r"open submodule.+submo")
 
     elif method == "commitFileList":
-        rw.jump(NavLocator.inCommit(oid=submoCommit, path="submo"))
+        rw.jump(NavLocator.inCommit(oid=submoCommit, path="submodir"))
         menu = rw.committedFiles.makeContextMenu()
         triggerMenuAction(menu, r"open.+submodule.+in new tab")
 
     elif method == "dirtyFileList":
-        rw.jump(NavLocator.inUnstaged(path="submo"))
+        rw.jump(NavLocator.inUnstaged(path="submodir"))
         menu = rw.dirtyFiles.makeContextMenu()
         triggerMenuAction(menu, r"open.+submodule.+in new tab")
 
     elif method == "stagedFileList":
         with RepoContext(submoAbsPath, write_index=True) as submoRepo:
             submoRepo.reset(Oid(hex="ac7e7e44c1885efb472ad54a78327d66bfc4ecef"), ResetMode.HARD)
-        rw.repo.index.add("submo")
+        rw.repo.index.add("submodir")
         rw.refreshRepo()
 
-        rw.jump(NavLocator.inStaged(path="submo"))
+        rw.jump(NavLocator.inStaged(path="submodir"))
         menu = rw.stagedFiles.makeContextMenu()
         triggerMenuAction(menu, r"open.+submodule.+in new tab")
 
@@ -66,18 +67,18 @@ def testSubmoduleHeadUpdate(tempDir, mainWindow, method):
 
     rw = mainWindow.openRepo(wd)
 
-    assert qlvGetRowData(rw.dirtyFiles) == ["submo"]
+    assert qlvGetRowData(rw.dirtyFiles) == ["submodir"]
     assert qlvClickNthRow(rw.dirtyFiles, 0)
 
     special = rw.specialDiffView
     assert special.isVisibleTo(rw)
-    assert qteFind(special, r"submodule.+submo.+was updated")
+    assert qteFind(special, r"submodule.+submoname.+was updated")
     assert qteFind(special, r"new:\s+49322bb", plainText=True)
 
     doStage(rw, method)
 
     assert qlvGetRowData(rw.dirtyFiles) == []
-    assert qlvGetRowData(rw.stagedFiles) == ["submo"]
+    assert qlvGetRowData(rw.stagedFiles) == ["submodir"]
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button", "link"])
@@ -88,7 +89,7 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
 
     rw = mainWindow.openRepo(wd)
 
-    assert rw.repo.status() == {"submo": FileStatus.WT_MODIFIED}
+    assert rw.repo.status() == {"submodir": FileStatus.WT_MODIFIED}
     assert qlvClickNthRow(rw.dirtyFiles, 0)
 
     special = rw.specialDiffView
@@ -97,7 +98,7 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
     assert qteFind(special, r"uncommitted changes")
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)  # attempt to stage it
-    assert rw.repo.status() == {"submo": FileStatus.WT_MODIFIED}  # shouldn't do anything (the actual app will emit a beep)
+    assert rw.repo.status() == {"submodir": FileStatus.WT_MODIFIED}  # shouldn't do anything (the actual app will emit a beep)
 
     if method == "link":
         qteClickLink(special, r"discard them\.")
@@ -112,22 +113,22 @@ def testSubmoduleDeletedDiff(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     subWd, subAddOid = reposcenario.submodule(wd)
     with RepoContext(wd) as repo:
-        shutil.rmtree(f"{wd}/submo")
+        shutil.rmtree(f"{wd}/submodir")
         os.unlink(f"{wd}/.gitmodules")
         repo.index.remove(".gitmodules")
-        repo.index.remove("submo")
+        repo.index.remove("submodir")
         subDelOid = repo.create_commit_on_head("delete submo")
 
     rw = mainWindow.openRepo(wd)
 
-    assert not rw.repo.listall_submodules()
+    assert not rw.repo.listall_submodules_dict()
     assert [] == list(rw.sidebar.findNodesByKind(EItem.Submodule))
 
-    rw.jump(NavLocator.inCommit(subAddOid, path="submo"))
+    rw.jump(NavLocator.inCommit(subAddOid, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search(r"submodule.+submo.+added", rw.specialDiffView.toPlainText(), re.I)
 
-    rw.jump(NavLocator.inCommit(subDelOid, path="submo"))
+    rw.jump(NavLocator.inCommit(subDelOid, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search(r"submodule.+submo.+(deleted|removed)", rw.specialDiffView.toPlainText(), re.I)
 
@@ -137,14 +138,14 @@ def testDeleteSubmodule(tempDir, mainWindow):
     reposcenario.submodule(wd)
     rw = mainWindow.openRepo(wd)
 
-    node = rw.sidebar.findNode(lambda n: n.data == "submo")
+    node = rw.sidebar.findNode(lambda n: n.data == "submoname")
     assert node.kind == EItem.Submodule
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, r"remove submodule")
 
     acceptQMessageBox(rw, r"remove submodule")
     assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
-    assert set(qlvGetRowData(rw.stagedFiles)) == {"submo", ".gitmodules"}
+    assert set(qlvGetRowData(rw.stagedFiles)) == {"submodir", ".gitmodules"}
 
 
 def testAbsorbSubmodule(tempDir, mainWindow):
@@ -200,15 +201,18 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
 
+    assert rw.repo.config["submodule.submoname.url"]
+
     # Delete the submodule
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
-    assert node.data == "submo"
+    assert node.data == "submoname"
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "remove")
     acceptQMessageBox(rw, "remove submodule")
 
+    with pytest.raises(KeyError): rw.repo.config["submodule.submoname.url"]
     assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
-    assert set(qlvGetRowData(rw.stagedFiles)) == {".gitmodules", "submo"}
+    assert set(qlvGetRowData(rw.stagedFiles)) == {".gitmodules", "submodir"}
 
     # Discard submodule deletion
     qlvClickNthRow(rw.stagedFiles, 0)  # TODO: selectAll won't actually select everything without this first
@@ -220,7 +224,7 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
     acceptQMessageBox(rw, "discard changes")
 
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
-    assert node.data == "submo"
+    assert node.data == "submoname"
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "update")
 
@@ -248,7 +252,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
 
     # At this point the submodule isn't initialized and its worktree is empty
     assert [] == os.listdir(f"{wd}/{sm}")
-    assert [] == rw.repo.listall_initialized_submodules()
+    assert [] == rw.repo.listall_initialized_submodule_names()
 
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
     assert node.data == sm
@@ -256,7 +260,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     triggerMenuAction(menu, "init")
 
     assert ".git" in os.listdir(f"{wd}/{sm}")
-    assert [sm] == rw.repo.listall_initialized_submodules()
+    assert [sm] == rw.repo.listall_initialized_submodule_names()
 
 
 def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):

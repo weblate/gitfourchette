@@ -9,6 +9,7 @@ import os as _os
 import re as _re
 import shutil as _shutil
 import typing as _typing
+import warnings
 from contextlib import suppress as _suppress
 from os.path import (
     abspath as _abspath,
@@ -90,6 +91,8 @@ DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\
 
 SUBPROJECT_COMMIT_MINUS_PATTERN = _re.compile(r"^-Subproject commit (.+)$", _re.M)
 SUBPROJECT_COMMIT_PLUS_PATTERN = _re.compile(r"^\+Subproject commit (.+)$", _re.M)
+
+SUBMODULE_CONFIG_KEY_PATTERN = _re.compile(r"^submodule\.(.+)\.path$")
 
 FileStatus_INDEX_MASK = (
         FileStatus.INDEX_NEW
@@ -1289,28 +1292,57 @@ class Repo(_VanillaRepository):
         submo = self.submodules[submo_key]
         return self.in_workdir(submo.path)
 
+    def listall_submodules(self):  # pragma: no cover
+        """
+        Don't use listall_submodules, it's slow and it omits critical
+        information about submodule names.
+        Note that if a submodule's name is different from its path,
+        SubmoduleCollection[path].name will NOT return the correct name!
+        """
+        warnings.warn("Don't use this", DeprecationWarning)
+        raise DeprecationWarning("Don't use listall_submodules")
+
     def listall_submodules_fast(self) -> list[str]:
         """
         Faster drop-in replacement for pygit2's Repository.listall_submodules (which can be very slow).
-        Returns a list of submodule workdirs within the root repo's workdir.
+        Return a list of submodule workdir paths within the root repo's workdir.
         """
+        return list(self.listall_submodules_dict().values())
 
-        # return self.listall_submodules()
+    def listall_submodules_dict(self, absolute_paths=False) -> dict[str, str]:
+        """
+        Return a dict of submodule names to paths.
+        You should use this instead of pygit2's Repository.listall_submodules,
+        because the latter doesn't give you information about submodule names,
+        which you need to
+        """
 
         config_path = self.in_workdir(DOT_GITMODULES)
         if not _isfile(config_path):
-            return []
+            return {}
 
         config = GitConfig(config_path)
-        submo_paths = []
+        submos = {}
         for entry in config:
             key: str = entry.name
-            if key.startswith("submodule.") and key.endswith(".path"):
-                submo_paths.append(entry.value)
+            match = SUBMODULE_CONFIG_KEY_PATTERN.fullmatch(key)
+            if match:
+                name = match.group(1)
+                path = entry.value
+                if absolute_paths:
+                    path = self.in_workdir(path)
+                submos[name] = path
 
-        return submo_paths
+        return submos
 
-    def listall_initialized_submodules(self) -> list[str]:
+    def get_submodule_name_from_path(self, submodule_path: str) -> str:
+        d = self.listall_submodules_dict()
+        try:
+            return next(name for name, path in d.items() if path == submodule_path)
+        except StopIteration:
+            raise KeyError(f"submodule path not found: {submodule_path}")
+
+    def listall_initialized_submodule_names(self) -> list[str]:
         config = self.config
         submo_names = []
         for entry in config:
@@ -1454,7 +1486,7 @@ class Repo(_VanillaRepository):
         assert refname in self.references
         self.references.delete(refname)
 
-    def add_inner_repo_as_submodule(self, inner_w: str, remote_url: str, absorb_git_dir: bool = False):
+    def add_inner_repo_as_submodule(self, inner_w: str, remote_url: str, absorb_git_dir: bool = True, name: str = ""):
         outer_w = _Path(self.workdir)
         inner_w = _Path(outer_w, inner_w)  # normalize
 
@@ -1464,6 +1496,9 @@ class Repo(_VanillaRepository):
         if not inner_w.is_relative_to(outer_w):
             raise ValueError("Subrepo workdir must be relative to superrepo workdir")
 
+        if not name:
+            name = str(inner_w.relative_to(outer_w))
+
         with RepoContext(str(inner_w)) as inner_repo:
             inner_g = _Path(inner_repo.path)
             inner_head_oid = inner_repo.head_commit.oid
@@ -1472,10 +1507,10 @@ class Repo(_VanillaRepository):
             raise ValueError("Subrepo .git dir must be relative to superrepo workdir")
 
         gitmodules = GitConfig(self.in_workdir(DOT_GITMODULES))
-        config_prefix = f"submodule.{inner_w.relative_to(outer_w)}"
-        gitmodules[f"{config_prefix}.path"] = inner_w.relative_to(outer_w)
+        gitmodules[f"submodule.{name}.path"] = inner_w.relative_to(outer_w)
         if remote_url:
-            gitmodules[f"{config_prefix}.url"] = remote_url
+            gitmodules[f"submodule.{name}.url"] = remote_url
+            self.config[f"submodule.{name}.url"] = remote_url
 
         if absorb_git_dir:
             inner_g2 = _Path(self.path, "modules", inner_w.relative_to(outer_w))
@@ -1499,10 +1534,15 @@ class Repo(_VanillaRepository):
         # While we're here also add .gitmodules
         self.index.add(DOT_GITMODULES)
 
-    def remove_submodule(self, inner_w: str):
+    def remove_submodule(self, submodule_name: str):
+        inner_w = self.listall_submodules_dict()[submodule_name]
         config_abspath = self.in_workdir(DOT_GITMODULES)
 
-        did_delete = GitConfigHelper.delete_section(config_abspath, "submodule", inner_w)
+        # Delete "submodule.{name}.*" from local config (optional)
+        GitConfigHelper.delete_section(_joinpath(self.path, "config"), "submodule", submodule_name)
+
+        # Delete "submodule.{name}.*" from .gitmodules
+        did_delete = GitConfigHelper.delete_section(config_abspath, "submodule", submodule_name)
 
         if GitConfigHelper.is_empty(config_abspath):
             # That was the only submodule, so remove .gitmodules

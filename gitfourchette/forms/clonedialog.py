@@ -335,7 +335,7 @@ class CloneTask(RepoTask):
         # - Submodule.open is broken (that's why we recreate a Repo)
 
         def frontierGenerator(r: Repo):
-            return ((submo, r.in_workdir(submo.path)) for submo in r.submodules)
+            return ((r.submodules[name], path) for name, path in r.listall_submodules_dict(absolute_paths=True).items())
 
         frontier = list(frontierGenerator(self.repo))
 

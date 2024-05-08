@@ -9,6 +9,7 @@ import os.path
 import pytest
 
 from .util import *
+from . import reposcenario
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.nav import NavLocator
@@ -18,6 +19,7 @@ from gitfourchette import porcelain
 
 def testCloneRepo(tempDir, mainWindow):
     wd = unpackRepo(tempDir, renameTo="unpacked-repo")
+    subWd, _ = reposcenario.submodule(wd, True)  # spice it up with a submodule
     bare = makeBareCopy(wd, addAsRemote="", preFetch=False)
     target = f"{tempDir.name}/the-clone"
 
@@ -28,6 +30,7 @@ def testCloneRepo(tempDir, mainWindow):
     cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
     assert not cloneDialog.ui.pathEdit.text()  # path initially empty
     assert not cloneDialog.cloneButton.isEnabled()  # disallow cloning without an URL
+    assert cloneDialog.ui.recurseSubmodulesCheckBox.isChecked()
 
     # Set URL in clone dialog
     cloneDialog.ui.urlEdit.setEditText(bare)
@@ -65,6 +68,7 @@ def testCloneRepo(tempDir, mainWindow):
     # Check that the cloned repo's state looks OK
     clonedRepo = rw.repo
     assert os.path.samefile(clonedRepo.workdir, target)
+    assert "submoname" in clonedRepo.listall_submodules_dict()
 
     # Look at some commit within the repo
     oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")

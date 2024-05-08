@@ -78,7 +78,8 @@ class AbsorbSubmodule(RepoTask):
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
-        subrepo = self.repo.add_inner_repo_as_submodule(str(subWD.relative_to(thisWD)), remoteUrl)
+        innerWD = str(subWD.relative_to(thisWD))
+        self.repo.add_inner_repo_as_submodule(innerWD, remoteUrl)
 
 
 class RemoveSubmodule(RepoTask):
@@ -88,17 +89,16 @@ class RemoveSubmodule(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
 
-    def flow(self, path: str):
-        submoName = os.path.basename(path)
+    def flow(self, submoduleName: str):
         yield from self.flowConfirm(
             text=paragraphs(
                 self.tr("Really remove submodule {0}?"),
                 self.tr("The submodule will be removed from {1} and its working copy will be deleted."),
                 self.tr("Any changes in the submodule that haven’t been pushed will be lost."),
                 tr("This cannot be undone!"),
-            ).format(bquo(submoName), hquo(".gitmodules")),
+            ).format(bquo(submoduleName), hquo(".gitmodules")),
             buttonIcon="SP_DialogDiscardButton",
             verb="Remove")
 
         yield from self.flowEnterWorkerThread()
-        self.repo.remove_submodule(path)
+        self.repo.remove_submodule(submoduleName)

@@ -45,8 +45,8 @@ class NewStash(RepoTask):
 
         # Prevent stashing any submodules
         with Benchmark("Query submodules"):
-            for submo in self.repo.listall_submodules():
-                status.pop(submo, None)
+            for submodulePath in self.repo.listall_submodules_fast():
+                status.pop(submodulePath, None)
 
         if not status:
             raise AbortTask(self.tr("There are no uncommitted changes to stash (submodules cannot be stashed)."), "information")

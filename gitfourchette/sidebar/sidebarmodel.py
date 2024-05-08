@@ -357,16 +357,16 @@ class SidebarModel(QAbstractItemModel):
         with Benchmark("Submodules"):
             initializedSubmodules = None  # defer to first loop iteration
 
-            for submodule in repo.listall_submodules_fast():
-                node = SidebarNode(EItem.Submodule, submodule)
+            for submoduleKey, submodulePath in repo.listall_submodules_dict().items():
+                node = SidebarNode(EItem.Submodule, submoduleKey)
                 submoduleRoot.appendChild(node)
 
                 if initializedSubmodules is None:
-                    initializedSubmodules = repo.listall_initialized_submodules()
+                    initializedSubmodules = repo.listall_initialized_submodule_names()
 
-                if submodule not in initializedSubmodules:
+                if submoduleKey not in initializedSubmodules:
                     node.warning = self.tr("Submodule not initialized.")
-                elif not repo.submodule_dotgit_present(submodule):
+                elif not repo.submodule_dotgit_present(submodulePath):
                     node.warning = self.tr("Contents missing.")
 
         with Benchmark("endResetModel" + ("[ModelTester might slow this down]" if settings.DEVDEBUG else "")):
@@ -640,7 +640,10 @@ class SidebarModel(QAbstractItemModel):
             if displayRole:
                 return node.data.rsplit("/", 1)[-1]
             elif toolTipRole:
-                text = node.data
+                text = "<p style='white-space: pre'>"
+                text += self.tr("{0} (submodule)").format(f"<b>{escape(node.data)}</b>")
+                text += "\n" + self.tr("Workdir: {0}").format(escape(self.repo.listall_submodules_dict()[node.data]))
+                text += "\n" + self.tr("URL: {0}").format(escape(self.repo.submodules[node.data].url))
                 if node.warning:
                     text += "<br>\u26a0 " + node.warning
                 return text

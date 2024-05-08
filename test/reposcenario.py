@@ -31,7 +31,7 @@ def stashedChange(path):
 
 
 def submodule(path, absorb=False):
-    subPath = os.path.join(path, "submo")
+    subPath = os.path.join(path, "submodir")
     shutil.copytree(path, subPath)
 
     # Make bare copy of submodule so that we can use it as a remote and test UpdateSubmodule
@@ -43,7 +43,8 @@ def submodule(path, absorb=False):
         subRemoteUrl = subRepo.remotes["submo-localfs"].url
 
     with RepoContext(path, write_index=True) as repo:
-        repo.add_inner_repo_as_submodule("submo", subRemoteUrl, absorb_git_dir=absorb)
+        # Give submodule a custom name that is different from the path to reveal edge cases
+        repo.add_inner_repo_as_submodule("submodir", subRemoteUrl, absorb_git_dir=absorb, name="submoname")
         subAddCommit = repo.create_commit_on_head("Add Submodule for Test Purposes")
 
     return subPath, subAddCommit
