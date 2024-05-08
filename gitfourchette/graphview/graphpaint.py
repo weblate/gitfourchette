@@ -84,7 +84,6 @@ def paintGraphFrame(
         return
 
     painter.save()
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
     # Lines are drawn with SquareCap to fill in gaps at fractional display scaling factors.
     # This may cause the painter to overflow to neighboring rows, so set a clip rect.

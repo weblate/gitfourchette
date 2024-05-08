@@ -100,10 +100,15 @@ class CommitLogDelegate(QStyledItemDelegate):
         return self.repoWidget.state
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         try:
             self._paint(painter, option, index)
         except Exception as exc:  # pragma: no cover
+            painter.restore()
+            painter.save()
             self._paintError(painter, option, index, exc)
+        painter.restore()
 
     def _paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
@@ -112,8 +117,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         palette: QPalette = option.palette
         outlineColor = palette.color(QPalette.ColorRole.Base)
         colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
-
-        painter.save()
 
         # Draw default background
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, option, painter, option.widget)
@@ -250,7 +253,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         if oid in self.state.reverseRefCache:
             homeBranch = RefPrefix.HEADS + self.state.homeBranch
             painter.save()
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             for refName in self.state.reverseRefCache[oid]:
                 self._paintRefbox(painter, rect, refName, refName == homeBranch)
             painter.restore()
@@ -303,7 +305,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(dateText))
 
         # ----------------
-        painter.restore()
 
         # Tooltip metrics
         summaryIsElided = len(elidedSummaryText) == 0 or elidedSummaryText.endswith(("…", ELISION))
@@ -384,13 +385,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         else:
             bg, fg = option.palette.color(QPalette.ColorRole.Base), Qt.GlobalColor.red
 
-        painter.restore()
-        painter.save()
         painter.fillRect(option.rect, bg)
         painter.setPen(fg)
         painter.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.SmallestReadableFont))
         painter.drawText(option.rect, Qt.AlignmentFlag.AlignVCenter, text)
-        painter.restore()
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
         mult = settings.prefs.graphRowHeight
