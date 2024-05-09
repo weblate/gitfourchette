@@ -126,7 +126,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="signatureButton">
+      <widget class="QHintButton" name="signatureButton">
        <property name="focusPolicy">
         <enum>Qt::FocusPolicy::NoFocus</enum>
        </property>
@@ -155,6 +155,11 @@
    <extends>QWidget</extends>
    <header>gitfourchette.forms.signatureform</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QHintButton</class>
+   <extends>QToolButton</extends>
+   <header>gitfourchette.toolbox.qhintbutton</header>
   </customwidget>
  </customwidgets>
  <tabstops>

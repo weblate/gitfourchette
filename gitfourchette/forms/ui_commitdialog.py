@@ -71,7 +71,7 @@ class Ui_CommitDialog(object):
         self.revealSignature.setChecked(False)
         self.revealSignature.setObjectName("revealSignature")
         self.buttonLayout.addWidget(self.revealSignature)
-        self.signatureButton = QToolButton(parent=CommitDialog)
+        self.signatureButton = QHintButton(parent=CommitDialog)
         self.signatureButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.signatureButton.setAutoRaise(True)
         self.signatureButton.setObjectName("signatureButton")
@@ -99,3 +99,4 @@ class Ui_CommitDialog(object):
         self.revealSignature.setText(_translate("CommitDialog", "Customi&ze Signature"))
         self.signatureButton.setText(_translate("CommitDialog", "Preview"))
 from gitfourchette.forms.signatureform import SignatureForm
+from gitfourchette.toolbox.qhintbutton import QHintButton

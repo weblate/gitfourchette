@@ -133,7 +133,8 @@ class PrefsDialog(QDialog):
             if toolTip:
                 toolTip = toolTip.format(app=qAppName())
                 control.setToolTip(toolTip)
-                hintButton = self.makeHintButton(toolTip)
+                hintButton = QHintButton(self, toolTip)
+                hintButton.setMaximumHeight(2 + hintButton.fontMetrics().height())
                 rowWidgets.append(hintButton)
 
             # Gather what to add to the form as a single item.
@@ -212,17 +213,6 @@ class PrefsDialog(QDialog):
             skipKeys.add("forceQtApi")
 
         return skipKeys
-
-    def makeHintButton(self, toolTip: str) -> QToolButton:
-        hintButton = QToolButton()
-        hintButton.setText("\u24D8")  # circled 'i'
-        hintButton.setIcon(stockIcon("hint"))
-        hintButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        hintButton.setAutoRaise(True)
-        hintButton.setToolTip(toolTip)
-        hintButton.setMaximumHeight(2 + hintButton.fontMetrics().height())
-        hintButton.clicked[bool].connect(lambda _, w=hintButton, t=toolTip: QToolTip.showText(QCursor.pos(), t, w))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
-        return hintButton
 
     def makeControlWidget(self, key: str, value, caption: str) -> QWidget:
         valueType = type(value)

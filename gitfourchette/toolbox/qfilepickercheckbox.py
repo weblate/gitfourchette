@@ -2,6 +2,7 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox.iconbank import stockIcon
 from gitfourchette.toolbox.pathutils import compactPath
 from gitfourchette.toolbox.qelidedlabel import QElidedLabel
+from gitfourchette.toolbox.qhintbutton import QHintButton
 from gitfourchette.toolbox.qtutils import tweakWidgetFont, DisableWidgetUpdatesContext
 from gitfourchette.toolbox.textutils import escamp
 
@@ -18,11 +19,7 @@ class QFilePickerCheckBox(QWidget):
         self.browseButton = QToolButton()
         self.browseButton.setText(tr("Select...", "select a file"))
 
-        self.warningButton = QToolButton()
-        self.warningButton.setIcon(stockIcon("achtung"))
-        self.warningButton.setAutoRaise(True)
-        self.warningButton.setCursor(Qt.CursorShape.WhatsThisCursor)
-        self.warningButton.clicked.connect(lambda: QToolTip.showText(QCursor.pos(), self.warningButton.toolTip(), self.warningButton))
+        self.warningButton = QHintButton(self, iconKey="achtung")
 
         layout = QGridLayout(self)
         layout.setContentsMargins(QMargins())

@@ -28,9 +28,7 @@ class CommitDialog(QDialog):
         self.ui = Ui_CommitDialog()
         self.ui.setupUi(self)
 
-        # Set up signature preview button
         self.ui.signatureButton.setIcon(stockIcon("view-visible"))
-        self.ui.signatureButton.clicked[bool].connect(lambda _, w=self.ui.signatureButton: QToolTip.showText(QCursor.pos(), w.toolTip(), w))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
 
         self.ui.signature.setSignature(authorSignature)
         self.ui.signature.signatureChanged.connect(self.refreshSignaturePreview)
