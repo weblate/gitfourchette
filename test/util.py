@@ -174,6 +174,13 @@ def qteClickLink(qte: QTextEdit, pattern: str):
     QTest.keyPress(qte, Qt.Key.Key_Enter)
 
 
+def qcbSetIndex(qcb: QComboBox, pattern: str):
+    i = qcb.findText(pattern, Qt.MatchFlag.MatchRegularExpression)
+    assert i >= 0
+    qcb.setCurrentIndex(i)
+    return i
+
+
 def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     dlg: QDialog
     for dlg in parent.findChildren(QDialog):

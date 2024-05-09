@@ -25,12 +25,14 @@ def testCommit(tempDir, mainWindow):
     dialog: CommitDialog = findQDialog(rw, "commit")
     QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
 
-    dialog.ui.revealAuthor.click()
-    dialog.ui.overrideCommitterSignature.setChecked(False)
-    dialog.ui.authorSignature.ui.nameEdit.setText("Custom Author")
-    dialog.ui.authorSignature.ui.emailEdit.setText("custom.author@example.com")
+    dialog.ui.revealSignature.click()
+
     enteredDate = QDateTime.fromString("1999-12-31 23:59:00", "yyyy-MM-dd HH:mm:ss")
-    dialog.ui.authorSignature.ui.timeEdit.setDateTime(enteredDate)
+    sigUI = dialog.ui.signature.ui
+    qcbSetIndex(sigUI.replaceComboBox, "author")
+    sigUI.nameEdit.setText("Custom Author")
+    sigUI.emailEdit.setText("custom.author@example.com")
+    sigUI.timeEdit.setDateTime(enteredDate)
 
     dialog.accept()
 
@@ -104,9 +106,9 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     dialog: CommitDialog = findQDialog(rw, "amend")
     assert dialog.ui.summaryEditor.text() == oldMessage
     dialog.ui.summaryEditor.setText(newMessage)
-    dialog.ui.revealAuthor.setChecked(True)
-    dialog.ui.authorSignature.ui.nameEdit.setText(newAuthorName)
-    dialog.ui.authorSignature.ui.emailEdit.setText(newAuthorEmail)
+    dialog.ui.revealSignature.setChecked(True)
+    dialog.ui.signature.ui.nameEdit.setText(newAuthorName)
+    dialog.ui.signature.ui.emailEdit.setText(newAuthorEmail)
     with qtbot.waitSignal(dialog.destroyed):  # upon exiting context, wait for dialog to be gone
         dialog.accept()
 
@@ -115,6 +117,8 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     assert headCommit.message == newMessage
     assert headCommit.author.name == newAuthorName
     assert headCommit.author.email == newAuthorEmail
+    assert headCommit.committer.name == TEST_SIGNATURE.name
+    assert headCommit.committer.email == TEST_SIGNATURE.email
 
     # Ensure no error dialog boxes after operation
     assert not mainWindow.findChildren(QDialog)

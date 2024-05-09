@@ -22,8 +22,18 @@ class CommitDialog(QDialog):
             parent: QWidget):
         super().__init__(parent)
 
+        self.originalAuthorSignature = authorSignature
+        self.originalCommitterSignature = committerSignature
+
         self.ui = Ui_CommitDialog()
         self.ui.setupUi(self)
+
+        # Set up signature preview button
+        self.ui.signatureButton.setIcon(stockIcon("view-visible"))
+        self.ui.signatureButton.clicked[bool].connect(lambda _, w=self.ui.signatureButton: QToolTip.showText(QCursor.pos(), w.toolTip(), w))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
+
+        self.ui.signature.setSignature(authorSignature)
+        self.ui.signature.signatureChanged.connect(self.refreshSignaturePreview)
 
         # Make summary text edit font larger
         tweakWidgetFont(self.ui.summaryEditor, 150)
@@ -36,10 +46,6 @@ class CommitDialog(QDialog):
             prompt = self.tr("Enter commit summary")
             buttonCaption = self.tr("Co&mmit")
             self.setWindowTitle(self.tr("Commit"))
-
-        committerQDT = QDateTime.fromSecsSinceEpoch(committerSignature.time, Qt.TimeSpec.OffsetFromUTC, committerSignature.offset * 60)
-        formatWidgetTooltip(self.ui.overrideCommitterSignature,
-                            escape(f"{committerSignature.name} <{committerSignature.email}>, {committerQDT.toString()}"))
 
         warning = ""
         if repoState == RepositoryState.MERGE:
@@ -57,8 +63,6 @@ class CommitDialog(QDialog):
         self.ui.infoIcon.setPixmap(stockIcon("SP_MessageBoxInformation").pixmap(INFO_ICON_SIZE))
         self.ui.infoIcon.setMaximumWidth(INFO_ICON_SIZE)
 
-        self.ui.authorSignature.setSignature(authorSignature)
-
         self.acceptButton.setText(buttonCaption)
         self.ui.summaryEditor.setPlaceholderText(prompt)
 
@@ -69,10 +73,11 @@ class CommitDialog(QDialog):
         self.validator = ValidatorMultiplexer(self)
         self.validator.setGatedWidgets(self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
         self.validator.connectInput(self.ui.summaryEditor, self.hasNonBlankSummary, showWarning=False)
-        self.ui.authorSignature.installValidator(self.validator)
+        self.ui.signature.installValidator(self.validator)
 
         self.ui.summaryEditor.textChanged.connect(self.updateCounterLabel)
-        self.ui.revealAuthor.stateChanged.connect(self.validator.run)
+        self.ui.revealSignature.stateChanged.connect(self.validator.run)
+        self.ui.revealSignature.stateChanged.connect(lambda: self.refreshSignaturePreview())
 
         split = initialText.split('\n', 1)
         if len(split) >= 1:
@@ -80,11 +85,12 @@ class CommitDialog(QDialog):
         if len(split) >= 2:
             self.ui.descriptionEditor.setPlainText(split[1].strip())
 
-        self.ui.revealAuthor.setChecked(False)
-        self.ui.authorGroupBox.setVisible(False)
+        self.ui.revealSignature.setChecked(False)
+        self.ui.signatureBox.setVisible(False)
 
         self.updateCounterLabel()
         self.validator.run()
+        self.refreshSignaturePreview()
 
         # Focus on summary editor before showing
         self.ui.summaryEditor.setFocus()
@@ -111,13 +117,49 @@ class CommitDialog(QDialog):
         return F"{summary}\n\n{details}"
 
     def getOverriddenAuthorSignature(self):
-        if self.ui.revealAuthor.isChecked():
-            return self.ui.authorSignature.getSignature()
+        if self.ui.revealSignature.isChecked() and self.ui.signature.replaceAuthor():
+            return self.ui.signature.getSignature()
         else:
             return None
 
     def getOverriddenCommitterSignature(self):
-        if self.ui.revealAuthor.isChecked() and self.ui.overrideCommitterSignature.isChecked():
-            return self.getOverriddenAuthorSignature()
+        if self.ui.revealSignature.isChecked() and self.ui.signature.replaceCommitter():
+            return self.ui.signature.getSignature()
         else:
             return None
+
+    def refreshSignaturePreview(self):
+        def formatSignatureForToolTip(sig: Signature):
+            if sig is None:
+                return "???"
+            qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
+            return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
+                + "<small>" + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat)) + "</small>"
+
+        try:
+            author = self.getOverriddenAuthorSignature() or self.originalAuthorSignature
+        except ValueError:
+            author = None
+
+        try:
+            committer = self.getOverriddenCommitterSignature() or self.originalCommitterSignature
+        except ValueError:
+            committer = None
+
+        muted = mutedToolTipColorHex()
+        tt = "<p style='white-space: pre'>"
+        # tt += self.tr("The commit will be saved with the following signatures:") + "\n\n"
+
+        tt += f"<span style='color: {muted}'>" + self.tr("Authored by:") + "</span> "
+        tt += formatSignatureForToolTip(author)
+        if not signatures_equalish(author, self.originalAuthorSignature):
+            tt += f"\n<span style='font-weight: bold;'>" + self.tr("(overridden manually)") + "</span>"
+
+        tt += f"\n\n<span style='color: {muted}'>" + self.tr("Committed by:") + "</span> "
+        tt += formatSignatureForToolTip(committer)
+        if not signatures_equalish(committer, self.originalCommitterSignature):
+            tt += f"\n<span style='font-weight: bold;'>" + self.tr("(overridden manually)") + "</span>"
+
+        self.ui.signatureButton.setToolTip(tt)
+        self.ui.revealSignature.setToolTip(tt)
+

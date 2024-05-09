@@ -51,7 +51,7 @@ class NewCommit(RepoTask):
             repoState=self.repo.state(),
             parent=self.parentWidget())
 
-        cd.ui.revealAuthor.setChecked(initialAuthor != fallbackSignature)
+        cd.ui.revealSignature.setChecked(initialAuthor != fallbackSignature)
 
         setWindowModal(cd)
 

@@ -13,40 +13,64 @@
   <property name="windowTitle">
    <string>Signature</string>
   </property>
-  <property name="layoutDirection">
-   <enum>Qt::LeftToRight</enum>
-  </property>
   <layout class="QFormLayout" name="formLayout">
-   <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::ExpandingFieldsGrow</enum>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
    </property>
    <item row="0" column="0">
+    <widget class="QLabel" name="replaceLabel">
+     <property name="text">
+      <string>&amp;Override:</string>
+     </property>
+     <property name="buddy">
+      <cstring>replaceComboBox</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
     <widget class="QLabel" name="nameLabel">
      <property name="text">
-      <string>&amp;Name:</string>
+      <string>&amp;Identity:</string>
      </property>
      <property name="buddy">
       <cstring>nameEdit</cstring>
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QLineEdit" name="nameEdit"/>
-   </item>
-   <item row="1" column="0">
-    <widget class="QLabel" name="emailLabel">
-     <property name="text">
-      <string>&amp;Email:</string>
-     </property>
-     <property name="buddy">
-      <cstring>emailEdit</cstring>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="1">
-    <widget class="QLineEdit" name="emailEdit"/>
+    <layout class="QHBoxLayout" name="identityLayout">
+     <item>
+      <widget class="QLineEdit" name="nameEdit">
+       <property name="toolTip">
+        <string>Name</string>
+       </property>
+       <property name="placeholderText">
+        <string>Name</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="emailEdit">
+       <property name="toolTip">
+        <string>Email</string>
+       </property>
+       <property name="placeholderText">
+        <string>Email</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <widget class="QLabel" name="timeLabel">
      <property name="text">
       <string>&amp;Time:</string>
@@ -56,26 +80,39 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
+   <item row="2" column="1">
+    <layout class="QHBoxLayout" name="timeLayout">
      <item>
       <widget class="QDateTimeEdit" name="timeEdit">
        <property name="currentSection">
-        <enum>QDateTimeEdit::YearSection</enum>
+        <enum>QDateTimeEdit::Section::YearSection</enum>
        </property>
        <property name="displayFormat">
-        <string notr="true">yyyy-MM-dd HH:mm:ss (t)</string>
+        <string notr="true">yyyy-MM-dd HH:mm:ss</string>
        </property>
        <property name="calendarPopup">
         <bool>true</bool>
        </property>
        <property name="timeSpec">
-        <enum>Qt::LocalTime</enum>
+        <enum>Qt::TimeSpec::LocalTime</enum>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="nowButton">
+      <widget class="QComboBox" name="offsetEdit">
+       <property name="toolTip">
+        <string>Offset from UTC</string>
+       </property>
+       <property name="editable">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="nowButton">
+       <property name="toolTip">
+        <string>Set to current local time</string>
+       </property>
        <property name="text">
         <string>Now</string>
        </property>
@@ -83,12 +120,36 @@
      </item>
     </layout>
    </item>
+   <item row="0" column="1">
+    <widget class="QComboBox" name="replaceComboBox">
+     <property name="toolTip">
+      <string>&lt;p&gt;Two signatures are recorded in every commit – one for the author, and one for the committer. Select which signature you want to customize.</string>
+     </property>
+     <item>
+      <property name="text">
+       <string>Author’s Signature</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Committer’s Signature</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Both Signatures</string>
+      </property>
+     </item>
+    </widget>
+   </item>
   </layout>
  </widget>
  <tabstops>
+  <tabstop>replaceComboBox</tabstop>
   <tabstop>nameEdit</tabstop>
   <tabstop>emailEdit</tabstop>
   <tabstop>timeEdit</tabstop>
+  <tabstop>offsetEdit</tabstop>
   <tabstop>nowButton</tabstop>
  </tabstops>
  <resources/>
