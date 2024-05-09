@@ -47,6 +47,7 @@ def showConflictErrorMessage(parent: QWidget, exc: ConflictError, opName="Operat
 class TaskPrereqs(enum.IntFlag):
     Nothing = 0
     NoUnborn = enum.auto()
+    NoDetached = enum.auto()
     NoConflicts = enum.auto()
     NoCherrypick = enum.auto()
     NoStagedChanges = enum.auto()
@@ -456,6 +457,11 @@ class RepoTask(QObject):
             raise AbortTask(paragraphs(
                 translate("RepoTask", "There are no commits in this repository yet."),
                 translate("RepoTask", "Create the initial commit in this repository before performing this action.")))
+
+        if TaskPrereqs.NoDetached in prereqs and repo.head_is_detached:
+            raise AbortTask(paragraphs(
+                translate("RepoTask", "You are in “detached HEAD” state."),
+                translate("RepoTask", "Switch to a local branch before performing this action.")))
 
         if TaskPrereqs.NoCherrypick in prereqs and repo.state() == RepositoryState.CHERRYPICK:
             raise AbortTask(paragraphs(

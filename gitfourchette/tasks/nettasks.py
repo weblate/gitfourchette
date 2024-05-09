@@ -5,6 +5,7 @@ Remote access tasks.
 from contextlib import suppress
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.tasks import TaskPrereqs
 from gitfourchette.tasks.branchtasks import MergeBranch
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
@@ -40,12 +41,7 @@ class _BaseNetTask(RepoTask):
 
     def _autoDetectUpstream(self, noUpstreamMessage: str = ""):
         branchName = self.repo.head_branch_shorthand
-
-        try:
-            branch = self.repo.branches.local[branchName]
-        except KeyError:
-            message = tr("Please switch to a local branch before performing this action.")
-            raise AbortTask(message)
+        branch = self.repo.branches.local[branchName]
 
         if not branch.upstream:
             message = noUpstreamMessage or tr("Can’t fetch new commits on {0} because this branch isn’t tracking an upstream branch.")
@@ -112,6 +108,9 @@ class RenameRemoteBranch(_BaseNetTask):
 
 
 class FetchRemote(_BaseNetTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
+
     def flow(self, remoteName: str = ""):
         if not remoteName:
             upstream = self._autoDetectUpstream()
@@ -130,6 +129,9 @@ class FetchRemote(_BaseNetTask):
 
 
 class FetchRemoteBranch(_BaseNetTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
+
     def flow(self, remoteBranchName: str = "", debrief: bool = True):
         if not remoteBranchName:
             upstream = self._autoDetectUpstream()
@@ -174,6 +176,9 @@ class FetchRemoteBranch(_BaseNetTask):
 
 
 class PullBranch(_BaseNetTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
+
     def flow(self):
         noUpstreamMessage = self.tr("Can’t pull new commits into {0} because this branch isn’t tracking an upstream branch.")
         upstreamBranch = self._autoDetectUpstream(noUpstreamMessage)

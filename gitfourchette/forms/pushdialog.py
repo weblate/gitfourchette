@@ -29,12 +29,11 @@ class PushDialog(QDialog):
             showWarning(parent, translate("PushDialog", "No remotes tracked by this repository"), text)
             return
 
-        if not branchName:
-            branchName = repo.head_branch_shorthand
-
         try:
+            if not branchName:
+                branchName = repo.head_branch_shorthand
             branch = repo.branches.local[branchName]
-        except KeyError:
+        except (GitError, KeyError):
             showWarning(parent, translate("PushDialog", "No branch to push"),
                         tr("Please switch to a local branch before performing this action."))
             return
