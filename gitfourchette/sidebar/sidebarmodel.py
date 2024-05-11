@@ -498,8 +498,12 @@ class SidebarModel(QAbstractItemModel):
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
                 text += self.tr("{0} (local branch)").format(btag(branchName))
-                if self._checkedOutUpstream:
-                    text += "\n" + self.tr("Upstream: {0}").format(escape(self._checkedOutUpstream))
+                # Try to get the upstream (branch.upstream_name raises KeyError if there isn't one)
+                # Warning: branch.upstream_name can be a bit expensive
+                with suppress(KeyError):
+                    branch = self.repo.branches.local[branchName]
+                    upstream = branch.upstream_name.removeprefix(RefPrefix.REMOTES)
+                    text += "\n" + self.tr("Upstream: {0}").format(escape(upstream))
                 if branchName == self._checkedOut:
                     text += "\n<img src='assets:icons/git-home' style='vertical-align: bottom;'/> "
                     text += self.tr("This is the checked-out branch")

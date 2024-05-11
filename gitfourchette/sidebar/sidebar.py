@@ -191,7 +191,7 @@ class Sidebar(QTreeView):
                     shortcuts=GlobalShortcuts.pushBranch,
                     statusTip=self.tr("Upload your commits to the remote server")),
 
-                ActionDef(self.tr("&Upstream Branch"), submenu=self.makeUpstreamSubmenu(repo, activeBranchName, upstreamBranchName)),
+                ActionDef(self.tr("&Upstream Branch"), submenu=self.makeUpstreamSubmenu(repo, branchName, upstreamBranchName)),
 
                 ActionDef.SEPARATOR,
 

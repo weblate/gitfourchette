@@ -35,36 +35,40 @@ def testNewBranch(tempDir, mainWindow, method):
     assert repo.branches.local['hellobranch'] is not None
 
 
-def testSetUpstreamBranch(tempDir, mainWindow):
+@pytest.mark.parametrize("branchSettings", [("master", "origin/master"), ("no-parent", "origin/no-parent")])
+def testSetUpstreamBranch(tempDir, mainWindow, branchSettings: tuple[str, str]):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    assert repo.branches.local['master'].upstream_name == "refs/remotes/origin/master"
+    branchName, upstreamName = branchSettings
+    upstreamMenuRegex = upstreamName.replace('/', '.')
 
-    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    assert repo.branches.local[branchName].upstream_name == f"refs/remotes/{upstreamName}"
+
+    node = rw.sidebar.findNodeByRef(f"refs/heads/{branchName}")
 
     toolTip = node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
-    assert re.search(r"master.+local branch", toolTip, re.I)
-    assert re.search(r"checked.out", toolTip, re.I)
-    assert re.search(r"upstream.+origin/master", toolTip, re.I)
+    assert re.search(rf"{branchName}.+local branch", toolTip, re.I)
+    assert (branchName == "master") == bool(re.search(r"checked.out", toolTip, re.I))
+    assert re.search(rf"upstream.+{upstreamName}", toolTip, re.I)
 
-    # Change tracking from origin/master to nothing
+    # Clear tracking reference
     menu = rw.sidebar.makeNodeMenu(node)
-    originMasterAction = findMenuAction(menu, r"upstream branch/origin.master")
+    originMasterAction = findMenuAction(menu, rf"upstream branch/{upstreamMenuRegex}")
     stopTrackingAction = findMenuAction(menu, r"upstream branch/stop tracking")
     assert originMasterAction.isChecked()
     stopTrackingAction.trigger()
-    assert repo.branches.local['master'].upstream is None
+    assert repo.branches.local[branchName].upstream is None
 
-    # Change tracking back to origin/master
+    # Change tracking back to original upstream branch
     menu = rw.sidebar.makeNodeMenu(node)
-    originMasterAction = findMenuAction(menu, r"upstream branch/origin.master")
+    originMasterAction = findMenuAction(menu, rf"upstream branch/{upstreamMenuRegex}")
     notTrackingAction = findMenuAction(menu, r"upstream branch/not tracking")
     assert not originMasterAction.isChecked()
     assert notTrackingAction.isChecked()
     originMasterAction.trigger()
-    assert repo.branches.local['master'].upstream == repo.branches.remote['origin/master']
+    assert repo.branches.local[branchName].upstream == repo.branches.remote[upstreamName]
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
