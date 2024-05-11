@@ -1,6 +1,5 @@
 from . import reposcenario
 from .util import *
-import subprocess
 
 
 def testExternalUnstage(tempDir, mainWindow):
@@ -16,10 +15,11 @@ def testExternalUnstage(tempDir, mainWindow):
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == ([], ["master.txt"])
 
-    # Unstage master.txt with git itself, outside of GF
-    externalGitUnstageCmd = ["git", "restore", "--staged", "master.txt"]
-
-    subprocess.run(externalGitUnstageCmd, check=True, cwd=wd)
+    # Unstage master.txt outside of GF
+    with RepoContext(wd, write_index=True) as repo2:
+        patch = repo2.get_staged_changes()[0]
+        assert "master.txt" in patch.text
+        repo2.unstage_files([patch])
 
     rw.refreshRepo()
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
@@ -28,14 +28,16 @@ def testExternalUnstage(tempDir, mainWindow):
 def testHiddenBranchGotDeleted(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
-    subprocess.run(["git", "branch", "master2", "master"], check=True, cwd=wd)
+    with RepoContext(wd) as repo2:
+        repo2.create_branch_on_head("master2")
 
     rw = mainWindow.openRepo(wd)
     rw.toggleHideRefPattern("refs/heads/master2")
     rw.state.uiPrefs.write(force=True)
     mainWindow.closeCurrentTab()
 
-    subprocess.run(["git", "branch", "-D", "master2"], check=True, cwd=wd)
+    with RepoContext(wd) as repo2:
+        repo2.delete_local_branch("master2")
 
     mainWindow.openRepo(wd)  # reopening the repo must not crash
 
