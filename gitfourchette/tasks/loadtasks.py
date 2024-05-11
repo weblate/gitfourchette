@@ -2,6 +2,7 @@ import logging
 
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.application import GFApplication
 from gitfourchette.graph import Graph, BatchRow
 from gitfourchette.graphmarkers import ForeignCommitSolver
 from gitfourchette.diffview.diffdocument import DiffDocument
@@ -61,6 +62,16 @@ class PrimeRepo(RepoTask):
 
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
+
+        # Bind to sessionwide git config file
+        sessionwideConfigPath = GFApplication.instance().sessionwideGitConfigPath
+        # Level -1 was chosen because it's the only level for which changing branch settings
+        # in a repo won't leak into this file (e.g. change branch upstream).
+        # TODO: `level=4, force=True` would make sense here but this leaks branch settings. Is this a bug in pygit2?
+        #       git_config_add_file_ondisk has an optional 'repo' argument "to allow parsing of conditional includes",
+        #       but pygit2 doesn't make it possible to pass anything but NULL.
+        #       See also https://github.com/libgit2/libgit2/blob/main/include/git2/config.h#L42
+        repo.config.add_file(sessionwideConfigPath, level=-1)
 
         # Create repo state
         state = RepoState(rw, repo)

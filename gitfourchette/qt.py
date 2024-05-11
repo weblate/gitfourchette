@@ -214,4 +214,4 @@ def qAppName():
 
 def qTempDir():
     """ Path to temporary directory for this session. """
-    return QApplication.instance().getSessionTemporaryDirectory()
+    return QApplication.instance().tempDir.path()

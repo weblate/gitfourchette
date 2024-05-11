@@ -970,8 +970,15 @@ class Repo(_VanillaRepository):
         # Get oid of index tree
         index_tree_oid = self.index.write_tree()
 
-        # Take default signature now to prevent any timestamp diff between author and committer
-        fallback_signature = self.default_signature
+        # Take default signature now to prevent any timestamp diff between
+        # author and committer. Note that there may not be a fallback signature
+        # if the system's git config isn't set up.
+        try:
+            fallback_signature = self.default_signature
+        except KeyError:
+            fallback_signature = None
+            assert author is not None, "fallback signature missing - author signature must be provided"
+            assert committer is not None, "fallback signature missing - committer signature must be provided"
 
         # Create the commit
         new_commit_oid = self.create_commit(

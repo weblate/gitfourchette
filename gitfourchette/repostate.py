@@ -101,18 +101,6 @@ class RepoState(QObject):
         self.uiPrefs = RepoPrefs()
         self.uiPrefs._parentDir = self.repo.path
 
-        # On Windows, core.autocrlf is usually set to true in the system config.
-        # However, libgit2 cannot find the system config if git wasn't installed
-        # with the official installer, e.g. via scoop. If a repo was cloned with
-        # autocrlf=true, GF's staging area would be unusable on Windows without
-        # setting autocrlf=true in the config.
-        if WINDOWS and "core.autocrlf" not in self.repo.config:  # pragma: no cover
-            tempConfigPath = os.path.join(qTempDir(), "gitconfig")
-            logger.info(f"Forcing core.autocrlf=true in: {tempConfigPath}")
-            tempConfig = GitConfig(tempConfigPath)
-            tempConfig["core.autocrlf"] = "true"
-            self.repo.config.add_file(tempConfigPath, level=1)
-
         self.walker = None
 
         self.commitSequence = []

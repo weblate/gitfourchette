@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from gitfourchette.mainwindow import MainWindow
     from gitfourchette.settings import Session
     from gitfourchette.tasks import RepoTask
+    from gitfourchette.porcelain import GitConfig
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,8 @@ class GFApplication(QApplication):
     initialSession: Session | None
     installedTranslators: list
     tempDir: QTemporaryDir
+    sessionwideGitConfigPath: str
+    sessionwideGitConfig: GitConfig
 
     @staticmethod
     def instance() -> GFApplication:
@@ -38,7 +41,6 @@ class GFApplication(QApplication):
         self.mainWindow = None
         self.initialSession = None
         self.installedTranslators = []
-        self.tempDir = None
 
         # Don't use app.setOrganizationName because it changes QStandardPaths.
         self.setApplicationName(APP_SYSTEM_NAME)  # used by QStandardPaths
@@ -46,13 +48,23 @@ class GFApplication(QApplication):
         self.setApplicationVersion(APP_VERSION)
         self.setDesktopFileName(APP_IDENTIFIER)  # Wayland uses this to resolve window icons
 
+        # Prepare session-wide temporary directory
+        self.tempDir = QTemporaryDir(os.path.join(QDir.tempPath(), APP_SYSTEM_NAME + ".XXXXXX"))
+        self.tempDir.setAutoRemove(True)
+
         commandLine = GFApplication.makeCommandLineParser()
         commandLine.process(argv)
 
         from gitfourchette.toolbox import NonCriticalOperation
         from gitfourchette.globalshortcuts import GlobalShortcuts
+        from gitfourchette.porcelain import GitConfig
         from gitfourchette.tasks import TaskBook, TaskInvoker
         from gitfourchette import settings
+
+        # Prepare session-wide git config file
+        self.sessionwideGitConfigPath = os.path.join(self.tempDir.path(), "session.gitconfig")
+        self.sessionwideGitConfig = GitConfig(self.sessionwideGitConfigPath)
+        self.initializeSessionwideGitConfig()
 
         with NonCriticalOperation("Asset search"):
             # Add asset search path relative to boot script
@@ -174,9 +186,7 @@ class GFApplication(QApplication):
             settings.prefs.write()
         if settings.history.isDirty():
             settings.history.write()
-        if self.tempDir is not None:
-            self.tempDir.remove()
-            self.tempDir = None
+        self.tempDir.remove()
 
     @staticmethod
     def makeCommandLineParser() -> QCommandLineParser:
@@ -310,9 +320,11 @@ class GFApplication(QApplication):
 
     # -------------------------------------------------------------------------
 
-    def getSessionTemporaryDirectory(self):
-        """ Path to temporary directory for this session. Creates one if needed. """
-        if self.tempDir is None:
-            self.tempDir = QTemporaryDir(os.path.join(QDir.tempPath(), APP_SYSTEM_NAME + ".XXXXXX"))
-            self.tempDir.setAutoRemove(True)
-        return self.tempDir.path()
+    def initializeSessionwideGitConfig(self):
+        # On Windows, core.autocrlf is usually set to true in the system config.
+        # However, libgit2 cannot find the system config if git wasn't installed
+        # with the official installer, e.g. via scoop. If a repo was cloned with
+        # autocrlf=true, GF's staging area would be unusable on Windows without
+        # setting autocrlf=true in the config.
+        if WINDOWS:
+            self.sessionwideGitConfig["core.autocrlf"] = "true"

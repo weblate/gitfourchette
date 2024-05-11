@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-import gitfourchette.application
 from pytestqt.qtbot import QtBot
 from typing import TYPE_CHECKING
 import pytest
 import tempfile
 import os
+
+from gitfourchette.application import GFApplication
 
 if TYPE_CHECKING:
     # For '-> MainWindow' type annotation, without pulling in MainWindow in the actual fixture
@@ -21,7 +22,6 @@ def qapp_args():
 
 @pytest.fixture(scope="session")
 def qapp_cls():
-    from gitfourchette.application import GFApplication
     yield GFApplication
 
 
@@ -35,7 +35,8 @@ def tempDir() -> tempfile.TemporaryDirectory:
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
     from gitfourchette import settings, qt, trash
-    from gitfourchette.application import GFApplication
+    # from gitfourchette.porcelain import GitConfig
+    from .util import TEST_SIGNATURE
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
     assert settings.TEST_MODE
@@ -46,8 +47,16 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     # so this is just an extra safety precaution.)
     qt.QStandardPaths.setTestModeEnabled(True)
 
-    # Boot the UI
+    # Get app instance
     app = GFApplication.instance()
+
+    # Prepare session-wide git config with a fallback signature so that unit tests
+    # don't fail if no git identity is set up on the host machine.
+    app.initializeSessionwideGitConfig()
+    app.sessionwideGitConfig["user.name"] = TEST_SIGNATURE.name
+    app.sessionwideGitConfig["user.email"] = TEST_SIGNATURE.email
+
+    # Boot the UI
     assert app.mainWindow is None
     app.bootUi()
     mw = app.mainWindow
