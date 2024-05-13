@@ -17,6 +17,8 @@ class PrefsJSONEncoder(json.JSONEncoder):
             return {"_type": "bytes", "data": obj.hex()}
         elif isinstance(obj, Signature):
             return { "_type": "Signature", "name": obj.name, "email": obj.email, "time": obj.time, "offset": obj.offset }
+        elif isinstance(obj, set):
+            return list(obj)
         return super().default(obj)
 
 
@@ -150,6 +152,8 @@ class PrefsFile:
                     acceptedType = str
                 elif issubclass(originalType, (enum.IntEnum, enum.Enum)):
                     acceptedType = int
+                elif issubclass(originalType, set):
+                    acceptedType = list
                 else:
                     acceptedType = originalType
 

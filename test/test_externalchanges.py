@@ -1,3 +1,5 @@
+import pytest
+
 from . import reposcenario
 from .util import *
 
@@ -25,21 +27,25 @@ def testExternalUnstage(tempDir, mainWindow):
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])
 
 
-def testHiddenBranchGotDeleted(tempDir, mainWindow):
+@pytest.mark.parametrize("branchName,hidePattern", [("master2", "refs/heads/master2"), ("group/master2", "refs/heads/group/")])
+@pytest.mark.parametrize("closeAndReopen", [True, False])
+def testHiddenBranchGotDeleted(tempDir, mainWindow, closeAndReopen, branchName, hidePattern):
     wd = unpackRepo(tempDir)
-
     with RepoContext(wd) as repo2:
-        repo2.create_branch_on_head("master2")
+        repo2.create_branch_on_head(branchName)
 
     rw = mainWindow.openRepo(wd)
-    rw.toggleHideRefPattern("refs/heads/master2")
+    rw.toggleHideRefPattern(hidePattern)
     rw.state.uiPrefs.write(force=True)
-    mainWindow.closeCurrentTab()
 
     with RepoContext(wd) as repo2:
-        repo2.delete_local_branch("master2")
+        repo2.delete_local_branch(branchName)
 
-    mainWindow.openRepo(wd)  # reopening the repo must not crash
+    # Reopening or refreshing the repo must not crash after the branch is deleted
+    if closeAndReopen:
+        mainWindow.openRepo(wd)
+    else:
+        mainWindow.refreshRepo()
 
 
 def testStayOnFileAfterPartialPatchDespiteExternalChange(tempDir, mainWindow):

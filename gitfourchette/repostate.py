@@ -28,6 +28,16 @@ def toggleListElement(l: list, e):
         return True
 
 
+def toggleSetElement(l: set, e):
+    assert isinstance(l, set)
+    try:
+        l.remove(e)
+        return False
+    except KeyError:
+        l.add(e)
+        return True
+
+
 @dataclass
 class RepoPrefs(PrefsFile):
     _filename = f"{APP_SYSTEM_NAME}.json"
@@ -37,7 +47,7 @@ class RepoPrefs(PrefsFile):
     draftCommitMessage: str = ""
     draftCommitSignature: Signature = None
     draftAmendMessage: str = ""
-    hiddenRefPatterns: list = field(default_factory=list)
+    hiddenRefPatterns: set = field(default_factory=set)
     hiddenStashCommits: list = field(default_factory=list)
     collapseCache: list = field(default_factory=list)
     hideAllStashes: bool = False
@@ -105,7 +115,6 @@ class RepoState(QObject):
 
         self.commitSequence = []
         self.truncatedHistory = True
-        self.hiddenCommits = set()
 
         self.graph = None
         self.localCommits = None
@@ -115,6 +124,8 @@ class RepoState(QObject):
         self.refCache = {}
         self.reverseRefCache = {}
         self.mergeheadsCache = []
+        self.hiddenRefs = set()
+        self.hiddenCommits = set()
 
         self.refreshRefCache()
         self.refreshMergeheadsCache()
@@ -189,6 +200,10 @@ class RepoState(QObject):
 
         self.refCache = refCache
         self.reverseRefCache = reverseRefCache
+
+        # Since the refs have changed, we need to refresh hidden refs
+        self.refreshHiddenRefCache()
+
         return True
 
     @benchmark
@@ -314,40 +329,50 @@ class RepoState(QObject):
 
     @benchmark
     def toggleHideRefPattern(self, refPattern: str):
-        toggleListElement(self.uiPrefs.hiddenRefPatterns, refPattern)
-        self.uiPrefs.write()
+        toggleSetElement(self.uiPrefs.hiddenRefPatterns, refPattern)
+        self.uiPrefs.setDirty()
+        self.refreshHiddenRefCache()
         self.resolveHiddenCommits()
 
     @benchmark
     def toggleHideStash(self, stashOid: Oid):
         toggleListElement(self.uiPrefs.hiddenStashCommits, stashOid.hex)
-        self.uiPrefs.write()
+        self.uiPrefs.setDirty()
         self.resolveHiddenCommits()
 
     @benchmark
     def toggleHideAllStashes(self):
         self.uiPrefs.hideAllStashes = not self.uiPrefs.hideAllStashes
-        self.uiPrefs.write()
+        self.uiPrefs.setDirty()
         self.resolveHiddenCommits()
 
-    def refreshHiddenRefCache(self):
-        self.hiddenRefs = self.expandHiddenRefsFromPatterns()
-
     @benchmark
-    def expandHiddenRefsFromPatterns(self) -> set[str]:
+    def refreshHiddenRefCache(self):
+        assert type(self.hiddenRefs) is set
+        hiddenRefs = self.hiddenRefs
+        hiddenRefs.clear()
+
         patterns = self.uiPrefs.hiddenRefPatterns
         if not patterns:
-            return set()
+            return
 
-        explicit = {p for p in patterns if not p.endswith("/")}
-        wildcards = sorted(p for p in patterns if p.endswith("/"))
+        assert type(patterns) is set
+        patternsSeen = set()
 
-        hiddenRefs = {r for r in self.refCache
-                      if r in explicit
-                      or any(r.startswith(wc) for wc in wildcards)}
+        for ref in self.refCache:
+            if ref in patterns:
+                hiddenRefs.add(ref)
+                patternsSeen.add(ref)
+            else:
+                i = ref.rfind('/') + 1
+                prefix = ref[:i]
+                if prefix in patterns:
+                    hiddenRefs.add(ref)
+                    patternsSeen.add(prefix)
 
-        # TODO: Clean up patterns list if some patterns don't match anything in refCache
-        return hiddenRefs
+        if len(patternsSeen) != len(patterns):
+            self.uiPrefs.hiddenRefPatterns = patternsSeen
+            self.uiPrefs.setDirty()
 
     def getHiddenTips(self) -> set[Oid]:
         seeds = set()
@@ -400,9 +425,8 @@ class RepoState(QObject):
 
         return solver
 
+    @benchmark
     def resolveHiddenCommits(self):
-        self.refreshHiddenRefCache()
-
         self.hiddenCommits = set()
         solver = self.newHiddenCommitSolver()
         for commit in self.commitSequence:
