@@ -1,7 +1,7 @@
 import itertools
 import pytest
 from gitfourchette.graph import *
-from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
+from gitfourchette.graphtrickle import GraphTrickle
 from .test_graphsplicer import parseAncestryOneLiner
 from dataclasses import dataclass
 
@@ -115,6 +115,7 @@ allFixtures = [
             "b": "",  # cannot be hidden because VIP commits depend on it
             "sc": "sc si su",
             "a sc": "a sc si su b c",
+            # Non-tips:
             "su!": "su",
             "si!": "si",
             "si! su!": "si su",
@@ -286,24 +287,33 @@ def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     fixtureHeads = fixture.headsDef.split()
     sequence, parentMap, graphHeads = parseAncestryOneLiner(fixture.graphDef)
     graph = Graph()
-    graph.generateFullSequence(sequence, parentMap)
+    graphGenerator = graph.generateFullSequence(sequence, parentMap)
     assert all(h in fixtureHeads for h in graphHeads)
 
     print("\n"+graph.textDiagram())
     print("Seed hidden commits:", seeds)
     print("Expected hidden commits:", expected)
 
-    cm = HiddenCommitSolver()
-
+    # Set up trickle
+    trickle = GraphTrickle()
+    for c in set(fixtureHeads):
+        trickle.setEnd(c)  # Not Hidden
     for c in set(seeds):
-        cm.tagCommit(c.removesuffix("!"), cm.Tag.HARDHIDE if c.endswith("!") else cm.Tag.SOFTHIDE)
+        if c.endswith("!"):
+            trickle.setTap(c.removesuffix("!"))
+        else:
+            trickle.setPipe(c)
 
-    for c in set(fixtureHeads) - set(seeds):
-        cm.tagCommit(c, cm.Tag.SHOW)
+    print("Trickle frontier:", trickle.done, trickle.frontier)
 
     marked = set()
     for c in sequence:
-        cm.newCommit(c, parentMap[c], marked)
+        trickle.newCommit(c, parentMap[c], marked)
+        if trickle.done:
+            print("Trickle complete at:", c)
+            break
+
+    assert graphGenerator.isDangling() or trickle.done
 
     for c in sequence:
         isVisible = c not in marked
@@ -328,15 +338,20 @@ def testLocalCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     print("Seed commits:", seeds)
     print("Expected commits:", expected)
 
-    cm = ForeignCommitSolver({})
+    trickle = GraphTrickle()
 
+    for c in set(fixtureHeads):
+        trickle.setPipe(c)  # Foreign
     for c in seeds:
         print(f"Marking {c} as LOCAL")
-        cm.setLocal(c)
+        trickle.setEnd(c)  # Block foreign flow
 
     marked = set()
     for c in sequence:
-        cm.newCommit(c, parentMap[c], marked)
+        trickle.newCommit(c, parentMap[c], marked)
+        if trickle.done:
+            print("Trickle complete at:", c)
+            break
 
     for c in sequence:
         isLocal = c not in marked

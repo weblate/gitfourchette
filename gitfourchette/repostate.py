@@ -7,7 +7,7 @@ from typing import Iterable
 
 from gitfourchette import settings
 from gitfourchette.graph import Graph, GraphSplicer
-from gitfourchette.graphmarkers import HiddenCommitSolver, ForeignCommitSolver
+from gitfourchette.graphtrickle import GraphTrickle
 from gitfourchette.porcelain import *
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
@@ -280,8 +280,8 @@ class RepoState(QObject):
         newHeads = self.refCache.values()
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
-        newHiddenCommitSolver: HiddenCommitSolver = self.newHiddenCommitSolver()
-        newForeignCommitSolver = ForeignCommitSolver(self.reverseRefCache)
+        newHiddenCommitSolver = self.newHiddenCommitSolver()
+        newForeignCommitSolver = self.newForeignCommitSolver()
 
         # Generate fake "Uncommitted Changes" with HEAD as parent
         newCommitSequence.insert(0, None)
@@ -405,33 +405,49 @@ class RepoState(QObject):
 
         return seeds
 
-    def newHiddenCommitSolver(self) -> HiddenCommitSolver:
-        solver = HiddenCommitSolver()
-        T = HiddenCommitSolver.Tag
+    def newHiddenCommitSolver(self) -> GraphTrickle:
+        trickle = GraphTrickle()
 
+        # Explicitly show all refs by default
         for head in self.refCache.values():
-            solver.tagCommit(head, T.SHOW)
+            trickle.setEnd(head)
 
+        # Explicitly hide tips
         for hiddenBranchTip in self.getHiddenTips():
-            solver.tagCommit(hiddenBranchTip, T.SOFTHIDE)
+            trickle.setPipe(hiddenBranchTip)
 
+        # Explicitly hide stash junk parents
         if settings.prefs.hideStashJunkParents:
             for stash in self.repo.listall_stashes():
                 stashCommit = self.repo.peel_commit(stash.commit_id)
-                if len(stashCommit.parents) >= 2 and stashCommit.parents[1].raw_message.startswith(b"index on "):
-                    solver.tagCommit(stashCommit.parents[1].id, T.HARDHIDE)
-                if len(stashCommit.parents) >= 3 and stashCommit.parents[2].raw_message.startswith(b"untracked files on "):
-                    solver.tagCommit(stashCommit.parents[2].id, T.HARDHIDE)
+                for i, parent in enumerate(stashCommit.parent_ids):
+                    if i > 0:
+                        trickle.setTap(parent)
 
-        return solver
+        return trickle
 
     @benchmark
     def resolveHiddenCommits(self):
         self.hiddenCommits = set()
         solver = self.newHiddenCommitSolver()
-        for commit in self.commitSequence:
+        for i, commit in enumerate(self.commitSequence):
             if not commit:  # May be a fake commit such as Uncommitted Changes
                 continue
             solver.newCommit(commit.oid, commit.parent_ids, self.hiddenCommits)
-            if solver.done:
+            # Don't check if trickle is complete too often (expensive)
+            if (i % 250 == 0) and solver.done:
+                logger.debug(f"resolveHiddenCommits complete in {i} iterations")
                 break
+
+    def newForeignCommitSolver(self) -> GraphTrickle:
+        trickle = GraphTrickle()
+
+        for oid, refList in self.reverseRefCache.items():
+            assert oid not in trickle.frontier
+            isLocal = any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList)
+            if isLocal:
+                trickle.setEnd(oid)
+            else:
+                trickle.setPipe(oid)
+
+        return trickle

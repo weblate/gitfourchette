@@ -4,7 +4,6 @@ from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.application import GFApplication
 from gitfourchette.graph import Graph, BatchRow
-from gitfourchette.graphmarkers import ForeignCommitSolver
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
                                                 DiffConflict)
@@ -153,7 +152,7 @@ class PrimeRepo(RepoTask):
         state.hiddenCommits = set()
         state.foreignCommits = set()
         hiddenCommitSolver = state.newHiddenCommitSolver()
-        foreignCommitSolver = ForeignCommitSolver(state.reverseRefCache)
+        foreignCommitSolver = state.newForeignCommitSolver()
 
         for commit in commitSequence:
             if not commit:

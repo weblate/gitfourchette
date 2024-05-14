@@ -697,6 +697,9 @@ class GeneratorState(Frame):
         # Keep track of peak arc count for statistics
         self.peakArcCount = max(self.peakArcCount, len(self.openArcs))
 
+    def isDangling(self):
+        return len(self.parentLookup) > 0
+
 
 class PlaybackState(Frame):
     def __init__(self, keyframe: Frame):
@@ -842,7 +845,7 @@ class Graph:
         return int(self.commitRows[oid])
 
     def generateFullSequence(self, sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
-                             keyframeInterval=KF_INTERVAL):
+                             keyframeInterval=KF_INTERVAL) -> GeneratorState:
         generator = GeneratorState(self.startArc)
 
         self.ownBatches.append(generator.batchNo)
@@ -855,6 +858,8 @@ class Graph:
             # Save keyframes at regular intervals for faster random access.
             if int(generator.row) % keyframeInterval == 0:
                 self.saveKeyframe(generator)
+
+        return generator
 
     def spliceTop(self, oldHeads: set[Oid], newHeads: set[Oid],
                   sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
