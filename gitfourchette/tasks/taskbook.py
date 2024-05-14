@@ -23,7 +23,7 @@ class TaskBook:
     noEllipsis: set[Type[RepoTask]]
 
     @classmethod
-    def initialize(cls):
+    def retranslate(cls):
         cls.names = {
             tasks.AbortMerge: translate("task", "Abort merge"),
             tasks.AbsorbSubmodule: translate("task", "Absorb existing repo as submodule"),
@@ -124,6 +124,21 @@ class TaskBook:
             tasks.SwitchBranch: translate("task", "Switch to this branch and update the working directory to match it"),
         }
 
+        # Check that all tasks have names
+        if DEVDEBUG:
+            for n, t in vars(tasks).items():
+                try:
+                    if issubclass(t, RepoTask) and t is not RepoTask and t not in cls.names:
+                        logger.warning(f"Missing task name: {t.__name__}")
+                except TypeError:
+                    pass
+
+    @classmethod
+    def initialize(cls):
+        cls.names = {}
+        cls.toolbarNames = {}
+        cls.tips = {}
+
         cls.shortcuts = {
             tasks.AmendCommit: makeMultiShortcut(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S"),
             tasks.ApplyPatchFile: makeMultiShortcut("Ctrl+I"),
@@ -169,14 +184,7 @@ class TaskBook:
             tasks.JumpForward,
         }
 
-        # Check that all tasks have names
-        if DEVDEBUG:
-            for n, t in vars(tasks).items():
-                try:
-                    if issubclass(t, RepoTask) and t is not RepoTask and t not in cls.names:
-                        logger.warning(f"Missing task name: {t.__name__}")
-                except TypeError:
-                    pass
+        cls.retranslate()
 
     @classmethod
     def autoActionName(cls, t: Type[RepoTask]):

@@ -35,7 +35,7 @@ class AboutDialog(QDialog):
         else:
             buildDate = ""
 
-        tagline = self.tr("The comfortable Git UI for Linux.")
+        tagline = tr("The comfortable Git UI for Linux.")
         header = dedent(f"""\
             <span style="font-size: x-large"><b>{appName}</b> {appVersion}</span>{buildDate}
             <br>{tagline}

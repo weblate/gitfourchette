@@ -191,6 +191,11 @@ if PYSIDE6:
             self._func()
     QRunnable.create = lambda func: QRunnableFunctionWrapper(func)
 
+    def QCommandLineParser_addOptions(self, options):
+        for o in options:
+            self.addOption(o)
+    QCommandLineParser.addOptions = QCommandLineParser_addOptions
+
 # Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
 if QT5:
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)

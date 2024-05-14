@@ -37,6 +37,8 @@ def main():
         timer.start(300)
         timer.timeout.connect(lambda: None)
 
+    app.beginSession()
+
     # Keep the app running
     app.exec()
 

@@ -35,7 +35,6 @@ def tempDir() -> tempfile.TemporaryDirectory:
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
     from gitfourchette import settings, qt, trash
-    # from gitfourchette.porcelain import GitConfig
     from .util import TEST_SIGNATURE
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
@@ -47,12 +46,12 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     # so this is just an extra safety precaution.)
     qt.QStandardPaths.setTestModeEnabled(True)
 
-    # Get app instance
+    # Prepare app instance
     app = GFApplication.instance()
+    app.beginSession(bootUi=False)
 
     # Prepare session-wide git config with a fallback signature so that unit tests
     # don't fail if no git identity is set up on the host machine.
-    app.initializeSessionwideGitConfig()
     app.sessionwideGitConfig["user.name"] = TEST_SIGNATURE.name
     app.sessionwideGitConfig["user.email"] = TEST_SIGNATURE.email
 
@@ -81,4 +80,4 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
     # Clean up the app without destroying it completely.
     # This will reset the temp settings folder.
-    app.onAboutToQuit()
+    app.endSession()

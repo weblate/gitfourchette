@@ -1147,7 +1147,6 @@ class MainWindow(QMainWindow):
 
         if "language" in prefDiff:
             app.applyLanguagePref()
-            TaskBook.initialize()
             self.fillGlobalMenuBar()
 
         if "maxRecentRepos" in prefDiff:

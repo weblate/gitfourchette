@@ -22,10 +22,10 @@ class TrTables:
     @classmethod
     def init(cls):
         if not cls._exceptionNames:
-            cls.retranslateAll()
+            cls.retranslate()
 
     @classmethod
-    def retranslateAll(cls):
+    def retranslate(cls):
         cls._exceptionNames = cls._init_exceptionNames()
         cls._nameValidationCodes = cls._init_nameValidationCodes()
         cls._sidebarItems = cls._init_sidebarItems()

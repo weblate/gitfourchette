@@ -1,7 +1,7 @@
 from __future__ import annotations
+from pathlib import Path
 from typing import TYPE_CHECKING, Type
 import logging
-import os
 
 # Import as few internal modules as possible here to avoid premature initialization
 # from cascading imports before the QApplication has booted.
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 class GFApplication(QApplication):
     mainWindow: MainWindow | None
     initialSession: Session | None
+    installedLocale: QLocale | None
     installedTranslators: list
     tempDir: QTemporaryDir
     sessionwideGitConfigPath: str
@@ -32,14 +33,14 @@ class GFApplication(QApplication):
 
     def __init__(self, argv: list[str], bootScriptPath: str = "", ):
         super().__init__(argv)
+        self.setObjectName("GFApplication")
 
         if not bootScriptPath and argv:
             bootScriptPath = argv[0]
 
-        self.setObjectName("GFApplication")
-
         self.mainWindow = None
         self.initialSession = None
+        self.installedLocale = None
         self.installedTranslators = []
 
         # Don't use app.setOrganizationName because it changes QStandardPaths.
@@ -48,95 +49,114 @@ class GFApplication(QApplication):
         self.setApplicationVersion(APP_VERSION)
         self.setDesktopFileName(APP_IDENTIFIER)  # Wayland uses this to resolve window icons
 
-        # Prepare session-wide temporary directory
-        self.tempDir = QTemporaryDir(os.path.join(QDir.tempPath(), APP_SYSTEM_NAME + ".XXXXXX"))
-        self.tempDir.setAutoRemove(True)
+        # Add asset search path relative to boot script
+        assetSearchPath = str(Path(bootScriptPath).parent / "assets")
+        QDir.addSearchPath("assets", assetSearchPath)
 
-        commandLine = GFApplication.makeCommandLineParser()
-        commandLine.process(argv)
+        # Set app icon (except in macOS app bundles, which automatically use the embedded .icns file)
+        if not (MACOS and APP_FROZEN):
+            self.setWindowIcon(QIcon("assets:icons/gitfourchette.png"))
 
-        from gitfourchette.toolbox import NonCriticalOperation
+        # Get system default style name before applying further styling
+        self.platformDefaultStyleName = self.style().objectName()
+
+        # Install translators for system language
+        # (for command line parser to display localized text)
+        self.installTranslators()
+
+        # Process command line
+        parser = QCommandLineParser()
+        parser.setApplicationDescription(qAppName() + " - " + tr("The comfortable Git UI for Linux."))
+        parser.addHelpOption()
+        parser.addVersionOption()
+        parser.addOptions([
+            QCommandLineOption(["no-threads", "n"], self.tr("Turn off multithreading (run all tasks on UI thread).")),
+            QCommandLineOption(["debug", "d"], self.tr("Enable expensive assertions and development features.")),
+            QCommandLineOption(["test-mode"], self.tr("Prevent loading/saving user preferences. (implies --no-threads)")),
+        ])
+        parser.addPositionalArgument("repos", self.tr("Repository paths to open on launch."), "[repos...]")
+        parser.process(argv)
+
+        # Schedule cleanup on quit
+        self.aboutToQuit.connect(self.endSession)
+
         from gitfourchette.globalshortcuts import GlobalShortcuts
-        from gitfourchette.porcelain import GitConfig
         from gitfourchette.tasks import TaskBook, TaskInvoker
         from gitfourchette import settings
 
-        # Prepare session-wide git config file
-        self.sessionwideGitConfigPath = os.path.join(self.tempDir.path(), "session.gitconfig")
-        self.sessionwideGitConfig = GitConfig(self.sessionwideGitConfigPath)
-        self.initializeSessionwideGitConfig()
-
-        with NonCriticalOperation("Asset search"):
-            # Add asset search path relative to boot script
-            assetSearchPath = os.path.join(os.path.dirname(bootScriptPath), "assets")
-            QDir.addSearchPath("assets", assetSearchPath)
-
-            if not (MACOS and APP_FROZEN):  # macOS app bundle automatically uses the .icns - it's designed to blend in well in a Mac environment
-                self.setWindowIcon(QIcon("assets:icons/gitfourchette.png"))
-
-        # Get system default style name before applying further styling
-        with NonCriticalOperation("Get system default style name"):
-            self.PLATFORM_DEFAULT_STYLE_NAME = self.style().objectName()
-
-        # Initialize settings
-        if commandLine.isSet("debug"):
+        # Set up global flags from command line
+        if parser.isSet("debug"):
             settings.DEVDEBUG = True
-
-        if commandLine.isSet("no-threads"):
+        if parser.isSet("no-threads"):
             settings.SYNC_TASKS = True
-
-        if commandLine.isSet("test-mode"):
+        if parser.isSet("test-mode"):
             settings.TEST_MODE = True
             settings.SYNC_TASKS = True
+            self.setApplicationName(APP_SYSTEM_NAME + "_TESTMODE")
 
-            # Force English in unit tests regardless of the host machine's locale
-            # because many unit tests look for pieces of text in dialogs.
-            settings.prefs.language = "en"
-        else:
-            # Load settings
-            with NonCriticalOperation(F"Loading prefs"):
-                settings.prefs.load()
-                self.applyQtStylePref(forceApplyDefault=False)
+        # Prepare session-wide temporary directory
+        tempDirTemplate = Path(QDir.tempPath()) / (self.applicationName() + ".XXXXXX")
+        self.tempDir = QTemporaryDir(str(tempDirTemplate))
+        self.tempDir.setAutoRemove(True)
 
-            # Load history
-            with NonCriticalOperation(F"Loading history"):
-                settings.history.load()
-
-        if settings.TEST_MODE:
-            self.setApplicationName(APP_SYSTEM_NAME + "_unittest")
-
-        # Set logging level
-        self.applyLoggingLevelPref()
-
-        # Set language
-        with NonCriticalOperation("Loading language"):
-            self.applyLanguagePref()
-
-        # Initialize session
-        session = settings.Session()
-        if not settings.TEST_MODE:
-            with NonCriticalOperation(F"Loading session"):
-                session.load()
-
-        # Open paths passed in via the command line
-        pathList = commandLine.positionalArguments()
-        if pathList:
-            session.tabs += [os.path.abspath(p) for p in pathList]
-            session.activeTabIndex = len(session.tabs) - 1
-
-        # Keep track of initial session
-        self.initialSession = session
-
-        # Initialize global shortcuts
+        # Prime singletons
         GlobalShortcuts.initialize()
-
-        # Initialize task book
         TaskBook.initialize()
         TaskInvoker.instance().invokeSignal.connect(self.onInvokeTask)
 
+        # Get initial session tabs
+        self.commandLinePaths = parser.positionalArguments()
+
+    def beginSession(self, bootUi=True):
+        from gitfourchette.toolbox.messageboxes import NonCriticalOperation
+        from gitfourchette.porcelain import GitConfig
+        from gitfourchette import settings
+
+        # Make sure the temp dir exists
+        tempDirPath = Path(self.tempDir.path())
+        tempDirPath.mkdir(parents=True, exist_ok=True)
+
+        # Prepare session-wide git config file
+        self.sessionwideGitConfigPath = str(tempDirPath / "session.gitconfig")
+        self.sessionwideGitConfig = GitConfig(self.sessionwideGitConfigPath)
+        self.initializeSessionwideGitConfig()
+
+        # Load prefs file
+        settings.prefs.reset()
+        with NonCriticalOperation("Loading prefs"):
+            settings.prefs.load()
+
+        # Load history file
+        settings.history.reset()
+        with NonCriticalOperation("Loading history"):
+            settings.history.load()
+
+        # Set logging level from prefs
+        self.applyLoggingLevelPref()
+
+        # Set language from prefs
+        self.applyLanguagePref()
+
+        # Load session file
+        session = settings.Session()
+        self.initialSession = session
+        with NonCriticalOperation("Loading session"):
+            session.load()
+        if self.commandLinePaths:
+            session.tabs += [str(Path(p).resolve()) for p in self.commandLinePaths]
+            session.activeTabIndex = len(session.tabs) - 1
+
         # Boot main window first thing when event loop starts
-        if not settings.TEST_MODE:
+        if bootUi:
             QTimer.singleShot(0, self.bootUi)
+
+    def endSession(self):
+        from gitfourchette import settings
+        if settings.prefs.isDirty():
+            settings.prefs.write()
+        if settings.history.isDirty():
+            settings.history.write()
+        self.tempDir.remove()
 
     def bootUi(self):
         from gitfourchette.mainwindow import MainWindow
@@ -145,8 +165,7 @@ class GFApplication(QApplication):
 
         assert self.mainWindow is None, "already have a MainWindow"
 
-        self.aboutToQuit.connect(self.onAboutToQuit)
-
+        self.applyQtStylePref(forceApplyDefault=False)
         MainWindow.reloadStyleSheet()
         self.mainWindow = MainWindow()
         self.mainWindow.destroyed.connect(self.onMainWindowDestroyed)
@@ -162,15 +181,13 @@ class GFApplication(QApplication):
             self.mainWindow.restoreSession(self.initialSession)
             self.initialSession = None
 
-        if QT_BINDING_BOOTPREF and QT_BINDING_BOOTPREF.lower() != QT_BINDING.lower():
+        if QT_BINDING_BOOTPREF and QT_BINDING_BOOTPREF.lower() != QT_BINDING.lower():  # pragma: no cover
             try:
                 QtApiNames(QT_BINDING_BOOTPREF.lower())  # raises ValueError if not recognized
                 text = translate("Prefs", "Your preferred Qt binding {0} is not available on this machine.")
             except ValueError:
-                text = translate("Prefs", "Your preferred Qt binding {0} is not recognized by {app}. "
-                                          "(Supported values: {known})")
-            text += "<p>"
-            text += translate("Prefs", "Using {1} instead.", "falling back to default Qt binding instead of the user's choice")
+                text = translate("Prefs", "Your preferred Qt binding {0} is not recognized by {app}. (Supported values: {known})")
+            text += "<p>" + translate("Prefs", "Using {1} instead.", "user's choice of Qt binding isn't available, falling back to default")
             text = text.format(bquo(QT_BINDING_BOOTPREF), bquo(QT_BINDING.lower()), app=qAppName(),
                                known=", ".join(e for e in QtApiNames if e))
 
@@ -179,25 +196,6 @@ class GFApplication(QApplication):
     def onMainWindowDestroyed(self):
         logger.debug("Main window destroyed")
         self.mainWindow = None
-
-    def onAboutToQuit(self):
-        from gitfourchette import settings
-        if settings.prefs.isDirty():
-            settings.prefs.write()
-        if settings.history.isDirty():
-            settings.history.write()
-        self.tempDir.remove()
-
-    @staticmethod
-    def makeCommandLineParser() -> QCommandLineParser:
-        parser = QCommandLineParser()
-        parser.addHelpOption()
-        parser.addVersionOption()
-        parser.addOption(QCommandLineOption(["no-threads", "n"], "Turn off multithreading (run all tasks on UI thread)."))
-        parser.addOption(QCommandLineOption(["debug", "d"], "Enable expensive assertions and development features."))
-        parser.addOption(QCommandLineOption(["test-mode"], "Prevent loading/saving user preferences."))
-        parser.addPositionalArgument("repos", "Repository paths to open on launch.", "[repos...]")
-        return parser
 
     # -------------------------------------------------------------------------
 
@@ -242,10 +240,6 @@ class GFApplication(QApplication):
 
     # -------------------------------------------------------------------------
 
-    def flushTranslators(self):
-        while self.installedTranslators:
-            self.removeTranslator(self.installedTranslators.pop())
-
     def loadTranslator(self, locale, fileName: str, prefix: str = "", searchDelimiters: str = "", suffix: str = ""):
         newTranslator = QTranslator(self)
 
@@ -258,15 +252,15 @@ class GFApplication(QApplication):
             newTranslator.deleteLater()
             return False
 
-    def applyLanguagePref(self):
+    def installTranslators(self, preferredLanguage: str = ""):
         from gitfourchette import settings
-
-        self.flushTranslators()
-
-        preferredLanguage = settings.prefs.language
 
         if preferredLanguage:
             locale = QLocale(preferredLanguage)
+        elif settings.TEST_MODE:
+            # Fall back to English in unit tests regardless of the host machine's locale
+            # because many unit tests look for pieces of text in dialogs.
+            locale = QLocale(QLocale.Language.English)
         else:
             locale = QLocale()  # "Automatic" setting: Get system locale
 
@@ -277,8 +271,18 @@ class GFApplication(QApplication):
 
         # Set default locale
         QLocale.setDefault(locale)
+        previousLocale = self.installedLocale
+        self.installedLocale = locale
 
-        # Try to load app translations for the preferred language first.
+        if previousLocale is not None and locale.language() == previousLocale.language() and locale.country() == previousLocale.country():
+            logger.debug("Previous locale is similar enough to new locale, not reloading translators")
+            return
+
+        # Flush all installed translators
+        while self.installedTranslators:
+            self.removeTranslator(self.installedTranslators.pop())
+
+        # Try to load app translators for the preferred language first.
         # If that failed, load the English translations for proper numerus forms.
         appTranslatorAssetParams = ["gitfourchette", "_", "assets:lang/", ".qm"]
         if not self.loadTranslator(locale, *appTranslatorAssetParams):
@@ -292,9 +296,16 @@ class GFApplication(QApplication):
             except Exception:
                 logger.warning(f"Failed to load Qt base translation for language: {preferredLanguage}", exc_info=True)
 
-        # Retranslate TrTables
+    def applyLanguagePref(self):
+        from gitfourchette import settings
         from gitfourchette.trtables import TrTables
-        TrTables.retranslateAll()
+        from gitfourchette.tasks.taskbook import TaskBook
+
+        self.installTranslators(settings.prefs.language)
+
+        # Regenerate rosetta stones
+        TrTables.retranslate()
+        TaskBook.retranslate()
 
     def applyQtStylePref(self, forceApplyDefault: bool):
         from gitfourchette import settings
@@ -302,7 +313,7 @@ class GFApplication(QApplication):
         if settings.prefs.qtStyle:
             self.setStyle(settings.prefs.qtStyle)
         elif forceApplyDefault:
-            self.setStyle(self.PLATFORM_DEFAULT_STYLE_NAME)
+            self.setStyle(self.platformDefaultStyleName)
 
         if MACOS:
             isNativeStyle = settings.qtIsNativeMacosStyle()

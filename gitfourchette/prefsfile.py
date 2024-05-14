@@ -76,6 +76,15 @@ class PrefsFile:
         except AttributeError:
             return False
 
+    def reset(self):
+        assert dataclasses.is_dataclass(self)
+        for f in dataclasses.fields(self):
+            if f.default_factory != dataclasses.MISSING:
+                obj = f.default_factory()
+            else:
+                obj = f.default
+            self.__dict__[f.name] = obj
+
     def write(self, force=False):
         # Prepare the path
         prefsPath = self._getFullPath(forWriting=True)
@@ -83,14 +92,14 @@ class PrefsFile:
             logger.warning("Couldn't get path for writing")
             return None
 
-        # Get default values if we're saving a dataclass
+        # Get default dataclass values
         defaults = {}
-        if dataclasses.is_dataclass(self):
-            for f in dataclasses.fields(self):
-                if f.default_factory != dataclasses.MISSING:
-                    defaults[f.name] = f.default_factory()
-                else:
-                    defaults[f.name] = f.default
+        assert dataclasses.is_dataclass(self)
+        for f in dataclasses.fields(self):
+            if f.default_factory != dataclasses.MISSING:
+                defaults[f.name] = f.default_factory()
+            else:
+                defaults[f.name] = f.default
 
         # Skip private fields starting with an underscore,
         # and skip fields that are set to the default value
