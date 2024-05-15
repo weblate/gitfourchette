@@ -595,7 +595,10 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.RefFolder:
             refName = node.data
             if displayRole:
-                return RefPrefix.split(refName)[1]
+                prefix, name = RefPrefix.split(refName)
+                if prefix == RefPrefix.REMOTES:
+                    name = name.split("/", 1)[-1]
+                return name
             elif hiddenRole:
                 return self.isExplicitlyHidden(node)
             elif iconKeyRole:

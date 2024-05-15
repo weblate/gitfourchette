@@ -275,6 +275,19 @@ class Sidebar(QTreeView):
             remoteUrl = model.repo.remotes[data].url
             webUrl, webHost = WebHost.makeLink(remoteUrl)
 
+            collapseActions = []
+            if any(n.kind == EItem.RefFolder for n in node.children):
+                collapseActions = [
+                    ActionDef(
+                        self.tr("Collapse All Folders"),
+                        lambda: self.collapseChildFolders(node),
+                    ),
+                    ActionDef(
+                        self.tr("Expand All Folders"),
+                        lambda: self.expandChildFolders(node),
+                    ),
+                ]
+
             webActions = []
             if webUrl:
                 webActions = [
@@ -302,6 +315,8 @@ class Sidebar(QTreeView):
                           lambda: self.copyToClipboard(remoteUrl)),
 
                 ActionDef.SEPARATOR,
+
+                *collapseActions,
 
                 ActionDef(self.tr("&Hide Remote in Graph"),
                           lambda: self.wantHideNode(node),
@@ -801,6 +816,18 @@ class Sidebar(QTreeView):
             node = node.parent
 
         return True
+
+    def collapseChildFolders(self, node: SidebarNode):
+        for n in node.children:
+            if n.kind == EItem.RefFolder:
+                index = n.createIndex(self.sidebarModel)
+                self.collapse(index)
+
+    def expandChildFolders(self, node: SidebarNode):
+        for n in node.children:
+            if n.kind == EItem.RefFolder:
+                index = n.createIndex(self.sidebarModel)
+                self.expand(index)
 
     def copyToClipboard(self, text: str):
         QApplication.clipboard().setText(text)
