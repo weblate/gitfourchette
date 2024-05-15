@@ -329,6 +329,12 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.RefFolder:
+            if node.parent.kind == EItem.LocalBranchesHeader:
+                actions += [
+                    ActionDef(self.tr("Re&name Folder..."), lambda: self.wantRenameNode(node)),
+                    ActionDef.SEPARATOR,
+                ]
+
             actions += [
                 ActionDef(self.tr("&Hide Folder Contents in Graph"),
                           lambda: self.wantHideNode(node),
@@ -565,6 +571,13 @@ class Sidebar(QTreeView):
 
         elif item == EItem.RemoteBranch:
             RenameRemoteBranch.invoke(self, data)
+
+        elif item == EItem.RefFolder:
+            prefix, name = RefPrefix.split(data)
+            if prefix == RefPrefix.HEADS:
+                RenameBranchFolder.invoke(self, data)
+            else:
+                QApplication.beep()
 
         else:
             QApplication.beep()

@@ -73,6 +73,7 @@ class TaskBook:
             tasks.RefreshRepo: translate("task", "Refresh repo"),
             tasks.RemoveSubmodule: translate("task", "Remove submodule"),
             tasks.RenameBranch: translate("task", "Rename local branch"),
+            tasks.RenameBranchFolder: translate("task", "Rename local branch folder"),
             tasks.RenameRemoteBranch: translate("task", "Rename branch on remote"),
             tasks.ResetHead: translate("task", "Reset HEAD"),
             tasks.RevertCommit: translate("task", "Revert commit"),

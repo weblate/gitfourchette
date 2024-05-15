@@ -42,12 +42,13 @@ class RenameBranch(RepoTask):
 
         dlg = showTextInputDialog(
             self.parentWidget(),
-            self.tr("Rename local branch {0}").format(tquoe(oldBranchName)),
+            self.tr("Rename local branch"),
             self.tr("Enter new name:"),
             oldBranchName,
             okButtonText=self.tr("Rename"),
             validate=lambda name: nameValidationMessage(name, forbiddenBranchNames, nameTaken),
-            deleteOnClose=False)
+            deleteOnClose=False,
+            subtitleText=self.tr("Current name: {0}").format(oldBranchName))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
@@ -59,6 +60,67 @@ class RenameBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.rename_local_branch(oldBranchName, newBranchName)
+
+    def effects(self):
+        return TaskEffects.Refs
+
+
+class RenameBranchFolder(RepoTask):
+    def flow(self, oldFolderRefName: str):
+        prefix, oldFolderName = RefPrefix.split(oldFolderRefName)
+        assert prefix == RefPrefix.HEADS
+
+        forbiddenBranches = set()
+        folderBranches = []
+        for oldBranchName in self.repo.listall_branches(BranchType.LOCAL):
+            if oldBranchName.startswith(oldFolderName):
+                folderBranches.append(oldBranchName)
+            else:
+                forbiddenBranches.add(oldBranchName)
+
+        def transformBranchName(branchName: str, newFolderName: str) -> str:
+            assert branchName.startswith(oldFolderName)
+            newBranchName = newFolderName + branchName.removeprefix(oldFolderName)
+            newBranchName = newBranchName.removeprefix("/")
+            return newBranchName
+
+        def validate(newFolderName: str) -> str:
+            for oldBranchName in folderBranches:
+                newBranchName = transformBranchName(oldBranchName, newFolderName)
+                if newBranchName in forbiddenBranches:
+                    return ("<p style='white-space: pre'>"
+                            + self.tr("This name clashes with existing branch {0}.")
+                            ).format(hquo(newBranchName))
+            return ""
+
+        subtitle = self.tr("Folder {0} contains %n branches.", "", len(folderBranches)
+                           ).format(lquoe(oldFolderName + "/"))
+
+        dlg = showTextInputDialog(
+            self.parentWidget(),
+            self.tr("Rename branch folder"),
+            self.tr("Enter new name:"),
+            oldFolderName,
+            okButtonText=self.tr("Rename"),
+            validate=validate,
+            deleteOnClose=False,
+            subtitleText=subtitle,
+            placeholderText=self.tr("Leave blank to move the branches to the root folder."))
+
+        yield from self.flowDialog(dlg)
+        dlg.deleteLater()
+
+        newFolderName = dlg.lineEdit.text()
+
+        # Bail if identical to dodge AlreadyExistsError
+        if newFolderName == oldFolderName:
+            raise AbortTask()
+
+        # Perform rename
+        yield from self.flowEnterWorkerThread()
+        for oldBranchName in folderBranches:
+            newBranchName = transformBranchName(oldBranchName, newFolderName)
+            self.repo.rename_local_branch(oldBranchName, newBranchName)
 
     def effects(self):
         return TaskEffects.Refs

@@ -80,6 +80,8 @@ def showTextInputDialog(
         okButtonText: str = None,
         validate: Callable[[str], str] = None,
         deleteOnClose: bool = True,
+        placeholderText: str = "",
+        subtitleText: str = "",
 ) -> QDialog:
 
     dlg = QDialog(parent)
@@ -91,6 +93,7 @@ def showTextInputDialog(
     if text:
         lineEdit.setText(text)
         lineEdit.selectAll()
+    lineEdit.setPlaceholderText(placeholderText)
 
     buttonBox = QDialogButtonBox(dlg)
     buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -122,7 +125,7 @@ def showTextInputDialog(
         validator.connectInput(lineEdit, validate)
         validator.run()
 
-    makeBrandedDialog(dlg, layout)
+    makeBrandedDialog(dlg, layout, subtitleText=subtitleText)
 
     # This size isn't guaranteed. But it'll expand the dialog horizontally if the label is shorter.
     dlg.setMinimumWidth(512)
