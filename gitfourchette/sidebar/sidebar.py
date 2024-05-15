@@ -330,7 +330,7 @@ class Sidebar(QTreeView):
 
         elif item == EItem.RefFolder:
             actions += [
-                ActionDef(self.tr("&Hide Group in Graph"),
+                ActionDef(self.tr("&Hide Folder Contents in Graph"),
                           lambda: self.wantHideNode(node),
                           checkState=[-1, 1][isHidden]),
             ]

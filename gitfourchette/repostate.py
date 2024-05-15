@@ -127,6 +127,9 @@ class RepoState(QObject):
         self.hiddenRefs = set()
         self.hiddenCommits = set()
 
+        self.uiPrefs.load()
+
+        # Refresh ref cache after loading prefs (prefs contain hidden ref patterns)
         self.refreshRefCache()
         self.refreshMergeheadsCache()
 
@@ -136,8 +139,6 @@ class RepoState(QObject):
 
         self.workdirStale = True
         self.numUncommittedChanges = 0
-
-        self.uiPrefs.load()
 
         self.resolveHiddenCommits()
 
@@ -364,13 +365,19 @@ class RepoState(QObject):
                 hiddenRefs.add(ref)
                 patternsSeen.add(ref)
             else:
-                i = ref.rfind('/') + 1
-                prefix = ref[:i]
-                if prefix in patterns:
-                    hiddenRefs.add(ref)
-                    patternsSeen.add(prefix)
+                i = len(ref)
+                while i >= 0:
+                    i = ref.rfind('/', 0, i)
+                    if i < 0:
+                        break
+                    prefix = ref[:i+1]
+                    if prefix in patterns:
+                        hiddenRefs.add(ref)
+                        patternsSeen.add(prefix)
+                        break
 
         if len(patternsSeen) != len(patterns):
+            logger.debug(f"Culling stale hidden ref patterns {patterns - patternsSeen}")
             self.uiPrefs.hiddenRefPatterns = patternsSeen
             self.uiPrefs.setDirty()
 

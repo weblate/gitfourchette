@@ -101,6 +101,7 @@ class SidebarNode:
     kind: EItem
     data: str
     warning: str
+    displayName: str
 
     @staticmethod
     def fromIndex(index: QModelIndex) -> SidebarNode | None:
@@ -117,6 +118,7 @@ class SidebarNode:
         self.kind = kind
         self.data = data
         self.warning = ""
+        self.displayName = ""
 
     def appendChild(self, node: SidebarNode):
         assert self.mayHaveChildren()
@@ -393,8 +395,21 @@ class SidebarModel(QAbstractItemModel):
             folderNode.appendChild(node)
             self.nodesByRef[refName] = node
 
-        for folderNode in pendingFolders.values():
-            containerNode.appendChild(folderNode)
+        for folderName, folderNode in pendingFolders.items():
+            parts = folderName.split("/")
+            parts.pop()
+            while parts:
+                parentFolder = "/".join(parts)
+                try:
+                    parentNode = pendingFolders[parentFolder]
+                    parentNode.appendChild(folderNode)
+                    folderNode.displayName = folderNode.data.removeprefix(parentNode.data)
+                    break
+                except KeyError:
+                    parts.pop()
+            else:
+                folderNode.displayName = RefPrefix.split(folderNode.data)[1]
+                containerNode.appendChild(folderNode)
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
         # Return an index given a parent and a row (i.e. child number within parent)
@@ -595,10 +610,18 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.RefFolder:
             refName = node.data
             if displayRole:
+                return node.displayName
+            elif toolTipRole:
                 prefix, name = RefPrefix.split(refName)
+                text = "<p style='white-space: pre'>"
+                text += "<img src='assets:icons/git-folder' style='vertical-align: bottom;'/> "
                 if prefix == RefPrefix.REMOTES:
-                    name = name.split("/", 1)[-1]
-                return name
+                    text += self.tr("{0} (remote branch folder)").format(btag(name))
+                elif prefix == RefPrefix.TAGS:
+                    text += self.tr("{0} (tag folder)").format(btag(name))
+                else:
+                    text += self.tr("{0} (local branch folder)").format(btag(name))
+                return text
             elif hiddenRole:
                 return self.isExplicitlyHidden(node)
             elif iconKeyRole:
