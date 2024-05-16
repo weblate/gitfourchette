@@ -631,6 +631,7 @@ class MainWindow(QMainWindow):
         self.refreshTabText(rw)
         if rw.isVisible():
             rw.refreshWindowChrome()
+            rw.sidebar.sidebarModel.refreshRepoName()
         self.fillRecentMenu()
 
     # -------------------------------------------------------------------------

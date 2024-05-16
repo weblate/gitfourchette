@@ -66,7 +66,30 @@ class SidebarDelegate(QStyledItemDelegate):
         makeRoomForEye = nodeIsHidden or (mouseOver and node.canBeHidden())
 
         painter.save()
-        option.showDecorationSelected = True  # ?
+
+        if not node.parent.parent and node.kind != EItem.UncommittedChanges:
+            r = QRect(option.rect)
+            r.setLeft(0)
+
+            tc0 = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
+            tc1 = QColor(tc0); tc1.setAlpha(0)
+            tc2 = QColor(tc0); tc2.setAlpha(20)
+            tc3 = QColor(tc0); tc3.setAlpha(33)
+            lineGradient = QLinearGradient(r.left(), 0, r.right(), 0)
+            lineGradient.setColorAt(0, tc1)
+            lineGradient.setColorAt(.33, tc3)
+            lineGradient.setColorAt(.66, tc3)
+            lineGradient.setColorAt(1, tc1)
+            fillGradient = QLinearGradient(0, r.bottom(), 0, r.bottom()-r.height()*.8)
+            fillGradient.setColorAt(1, tc2)
+            fillGradient.setColorAt(0, tc1)
+
+            painter.save()
+            painter.setPen(QPen(lineGradient, 1))
+            painter.drawLine(0, option.rect.top(), option.rect.right(), option.rect.top())
+            painter.fillRect(r, fillGradient)
+            painter.restore()
+            # option.displayAlignment = Qt.AlignmentFlag.AlignCenter
 
         # Unindent rect
         SidebarDelegate.unindentRect(node.kind, option.rect, view.indentation())

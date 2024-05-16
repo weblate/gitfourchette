@@ -27,6 +27,7 @@ UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /ref
 class EItem(enum.IntEnum):
     Root = -1
     Spacer = 0
+    WorkdirHeader = enum.auto()
     UncommittedChanges = enum.auto()
     LocalBranchesHeader = enum.auto()
     StashesHeader = enum.auto()
@@ -45,6 +46,7 @@ class EItem(enum.IntEnum):
 
 
 HEADER_ITEMS = [
+    EItem.WorkdirHeader,
     EItem.UncommittedChanges,
     EItem.Spacer,
     EItem.LocalBranchesHeader,
@@ -57,12 +59,16 @@ HEADER_ITEMS = [
     EItem.Spacer,
     EItem.SubmodulesHeader,
 ]
+# HEADER_ITEMS = [i for i in HEADER_ITEMS if i != EItem.Spacer]
 
-FORCE_EXPAND = []
+FORCE_EXPAND = [
+    EItem.WorkdirHeader
+]
 """ SidebarNode kinds to always expand (in modal sidebars only) """
 
 NONLEAF_ITEMS = sorted([
     EItem.Root,
+    EItem.WorkdirHeader,
     EItem.LocalBranchesHeader,
     EItem.RefFolder,
     EItem.Remote,
@@ -224,6 +230,11 @@ class SidebarModel(QAbstractItemModel):
         else:
             return False
 
+    def refreshRepoName(self):
+        if self.rootNode and self.repo:
+            workdirNode = self.rootNode.findChild(EItem.WorkdirHeader)
+            workdirNode.displayName = settings.history.getRepoNickname(self.repo.workdir)
+
     @benchmark
     def rebuild(self, repoState: RepoState):
         self.beginResetModel()
@@ -255,6 +266,8 @@ class SidebarModel(QAbstractItemModel):
 
             self.rootNode = rootNode
             self.nodesByRef[UC_FAKEREF] = uncommittedNode
+
+        self.refreshRepoName()
 
         # HEAD
         with Benchmark("HEAD"):
@@ -526,13 +539,6 @@ class SidebarModel(QAbstractItemModel):
                 return text
             elif hiddenRole:
                 return self.isExplicitlyHidden(node)
-            elif fontRole:
-                if branchName == self._checkedOut:
-                    font = self._parentWidget.font()
-                    font.setWeight(QFont.Weight.Black)
-                    return font
-                else:
-                    return None
             elif iconKeyRole:
                 return "git-branch" if branchName != self._checkedOut else "git-home"
 
@@ -598,7 +604,6 @@ class SidebarModel(QAbstractItemModel):
                 if self._checkedOutUpstream == shorthand:
                     font = QFont(self._parentWidget.font())
                     font.setItalic(True)
-                    font.setWeight(QFont.Weight.Medium)
                     return font
                 else:
                     return None
@@ -693,10 +698,6 @@ class SidebarModel(QAbstractItemModel):
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere
                 return UC_FAKEREF
-            elif fontRole:
-                font = self._parentWidget.font()
-                font.setWeight(QFont.Weight.DemiBold)
-                return font
             elif hiddenRole:
                 return False
             elif iconKeyRole:
@@ -706,7 +707,10 @@ class SidebarModel(QAbstractItemModel):
 
         else:
             if displayRole:
-                return TrTables.sidebarItem(item)
+                if item == EItem.WorkdirHeader:
+                    return node.displayName
+                else:
+                    return TrTables.sidebarItem(item)
             elif refRole:
                 return ""
             elif fontRole:
@@ -718,7 +722,7 @@ class SidebarModel(QAbstractItemModel):
 
         # fallback
         if sizeHintRole:
-            return QSize(-1, int(1.15 * self._parentWidget.fontMetrics().height()))
+            return QSize(-1, int(1.2 * self._parentWidget.fontMetrics().height()))
         elif hiddenRole:
             return False
 
