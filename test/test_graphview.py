@@ -202,3 +202,20 @@ def testCopyCommitHash(tempDir, mainWindow, method):
     assert QApplication.clipboard().text() == oid1.hex
 
 
+def testRefSortFavorsHeadBranch(mainWindow, tempDir):
+    masterOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        headCommit = repo.head_commit
+        assert headCommit.oid == masterOid
+        repo.create_branch_on_head("master-2")
+        repo.checkout_local_branch("master-2")
+        amendedOid = repo.amend_commit_on_head("should appear above master in graph", headCommit.author, headCommit.committer)
+        assert repo[amendedOid].author.time == headCommit.author.time
+        assert repo[amendedOid].committer.time == headCommit.committer.time
+
+    rw = mainWindow.openRepo(wd)
+    masterIndex = rw.graphView.getFilterIndexForCommit(masterOid)
+    amendedIndex = rw.graphView.getFilterIndexForCommit(amendedOid)
+    assert amendedIndex.row() < masterIndex.row()

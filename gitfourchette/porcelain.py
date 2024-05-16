@@ -1053,14 +1053,6 @@ class Repo(_VanillaRepository):
 
         tips: list[tuple[str, Commit]] = []
 
-        # Always add 'HEAD' if we have one
-        if not self.head_is_unborn:
-            try:
-                tips.append(("HEAD", self.head_commit))
-            except InvalidSpecError as e:
-                _logger.info(f"{e} - Skipping detached HEAD")
-                pass
-
         for ref in self.listall_reference_objects():
             if (ref.type != ReferenceType.OID  # Skip symbolic references
                     or ref.name == "refs/stash"):  # Stashes are dealt with separately
@@ -1072,7 +1064,6 @@ class Repo(_VanillaRepository):
             except InvalidSpecError as e:
                 # Some refs might not be committish, e.g. in linux's source repo
                 _logger.info(f"{e} - Skipping ref '{ref.name}'")
-                pass
 
         for i, stash in enumerate(self.listall_stashes()):
             try:
@@ -1080,7 +1071,18 @@ class Repo(_VanillaRepository):
                 tips.append((f"stash@{{{i}}}", commit))
             except InvalidSpecError as e:
                 _logger.info(f"{e} - Skipping stash '{stash.message}'")
-                pass
+
+        # Always add 'HEAD' if we have one.
+        # Do so *just* before reinserting the tips in chronological order below.
+        # This causes the checked-out branch to be sorted more favorably if
+        # there is another tip that shares the exact same timestamp.
+        # (This guarantees that the local branch appears on top e.g. when
+        # pushing a branch to a remote, then amending the top commit with the
+        # same author/committer signatures.)
+        try:
+            tips.append(("HEAD", self.head_commit))
+        except (GitError, InvalidSpecError):
+            pass  # Skip detached/unborn head
 
         # Reinsert all tips in chronological order
         # (In Python 3.7+, dict key order is stable)
