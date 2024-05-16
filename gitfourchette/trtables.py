@@ -274,6 +274,7 @@ class TrTables:
             "verbosity": translate("Prefs", "Logging verbosity"),
             "hideStashJunkParents": translate("Prefs", "Hide synthetic parents of stash commits"),
             "autoRefresh": translate("Prefs", "Auto-refresh when app regains focus"),
+            "animations": translate("Prefs", "Animation effects"),
             "smoothScroll": translate("Prefs", "Smooth scrolling (where applicable)"),
             "forceQtApi": translate("Prefs", "Preferred Qt binding"),
             "forceQtApi_help": translate(

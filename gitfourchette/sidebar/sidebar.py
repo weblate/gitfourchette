@@ -49,7 +49,6 @@ class Sidebar(QTreeView):
         self.setMinimumWidth(128)
         self.setIndentation(16)
         self.setHeaderHidden(True)
-        self.setAnimated(True)
         self.setUniformRowHeights(True)  # large sidebars update twice as fast with this, but we can't have thinner spacers
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -441,6 +440,7 @@ class Sidebar(QTreeView):
 
     def refreshPrefs(self):
         self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
+        self.setAnimated(settings.prefs.animations)
 
     def wantSelectNode(self, node: SidebarNode):
         if self.signalsBlocked():  # Don't bother with the jump if our signals are blocked

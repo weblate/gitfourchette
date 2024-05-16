@@ -199,6 +199,7 @@ class Prefs(PrefsFile):
     maxRecentRepos              : int                   = 20
     shortHashChars              : int                   = 7
     flattenLanes                : bool                  = True
+    animations                  : bool                  = True
     smoothScroll                : bool                  = True
     hideStashJunkParents        : bool                  = True
     autoRefresh                 : bool                  = True
