@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Iterable
 
 from gitfourchette import settings
+from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
 from gitfourchette.graph import Graph, GraphSplicer
 from gitfourchette.graphtrickle import GraphTrickle
 from gitfourchette.porcelain import *
@@ -46,6 +47,7 @@ class RepoPrefs(PrefsFile):
 
     draftCommitMessage: str = ""
     draftCommitSignature: Signature = None
+    draftCommitSignatureOverride: SignatureOverride = SignatureOverride.Nothing
     draftAmendMessage: str = ""
     hiddenRefPatterns: set = field(default_factory=set)
     hiddenStashCommits: list = field(default_factory=list)
@@ -54,6 +56,16 @@ class RepoPrefs(PrefsFile):
 
     def getParentDir(self):
         return self._parentDir
+
+    def clearDraftCommit(self):
+        self.draftCommitMessage = ""
+        self.draftCommitSignature = None
+        self.draftCommitSignatureOverride = SignatureOverride.Nothing
+        self.setDirty()
+
+    def clearDraftAmend(self):
+        self.draftAmendMessage = ""
+        self.setDirty()
 
 
 class RepoState(QObject):
@@ -146,29 +158,6 @@ class RepoState(QObject):
     def numRealCommits(self):
         # The first item in the commit sequence is the "fake commit" for Uncommitted Changes.
         return max(0, len(self.commitSequence) - 1)
-
-    def getDraftCommitMessage(self, forAmending = False) -> str:
-        if forAmending:
-            return self.uiPrefs.draftAmendMessage
-        else:
-            return self.uiPrefs.draftCommitMessage
-
-    def getDraftCommitAuthor(self) -> Signature:
-        return self.uiPrefs.draftCommitSignature
-
-    def setDraftCommitMessage(
-            self,
-            message: str | None,
-            author: Signature | None = None,
-            forAmending: bool = False):
-        if not message:
-            message = ""
-        if forAmending:
-            self.uiPrefs.draftAmendMessage = message
-        else:
-            self.uiPrefs.draftCommitMessage = message
-            self.uiPrefs.draftCommitSignature = author
-        self.uiPrefs.write()
 
     @benchmark
     def refreshRefCache(self):

@@ -6,7 +6,7 @@ from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskE
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.forms.signatureform import SignatureForm
+from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
 from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.forms.ui_identitydialog2 import Ui_IdentityDialog2
@@ -25,6 +25,8 @@ class NewCommit(RepoTask):
     def flow(self):
         from gitfourchette.tasks import Jump
 
+        uiPrefs = self.rw.state.uiPrefs
+
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
@@ -39,19 +41,23 @@ class NewCommit(RepoTask):
         yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
 
         fallbackSignature = self.repo.default_signature
-        initialMessage = self.rw.state.getDraftCommitMessage()
-        initialAuthor = self.rw.state.getDraftCommitAuthor() or fallbackSignature
+        initialMessage = uiPrefs.draftCommitMessage
 
         cd = CommitDialog(
             initialText=initialMessage,
-            authorSignature=initialAuthor,
+            authorSignature=fallbackSignature,
             committerSignature=fallbackSignature,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
             repoState=self.repo.state(),
             parent=self.parentWidget())
 
-        cd.ui.revealSignature.setChecked(initialAuthor != fallbackSignature)
+        if uiPrefs.draftCommitSignatureOverride == SignatureOverride.Nothing:
+            cd.ui.revealSignature.setChecked(False)
+        else:
+            cd.ui.revealSignature.setChecked(True)
+            cd.ui.signature.setSignature(uiPrefs.draftCommitSignature)
+            cd.ui.signature.ui.replaceComboBox.setCurrentIndex(int(uiPrefs.draftCommitSignatureOverride) - 1)
 
         setWindowModal(cd)
 
@@ -61,11 +67,16 @@ class NewCommit(RepoTask):
         message = cd.getFullMessage()
         author = cd.getOverriddenAuthorSignature() or fallbackSignature
         committer = cd.getOverriddenCommitterSignature() or fallbackSignature
+        overriddenSignatureKind = cd.getOverriddenSignatureKind()
+        signatureIsOverridden = overriddenSignatureKind != SignatureOverride.Nothing
 
-        # Save commit message as draft now, so we don't lose it if the commit operation fails or is rejected.
-        if message != initialMessage or author != initialAuthor:
-            savedAuthor = author if author != fallbackSignature else None
-            self.rw.state.setDraftCommitMessage(message, savedAuthor)
+        # Save commit message/signature as draft now,
+        # so we don't lose it if the commit operation fails or is rejected.
+        if message != initialMessage or signatureIsOverridden:
+            uiPrefs.draftCommitMessage = message
+            uiPrefs.draftCommitSignature = cd.ui.signature.getSignature() if signatureIsOverridden else None
+            uiPrefs.draftCommitSignatureOverride = overriddenSignatureKind
+            uiPrefs.setDirty()
 
         if cd.result() == QDialog.DialogCode.Rejected:
             cd.deleteLater()
@@ -74,11 +85,10 @@ class NewCommit(RepoTask):
         cd.deleteLater()
 
         yield from self.flowEnterWorkerThread()
-
         self.repo.create_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
-        self.rw.state.setDraftCommitMessage(None, None)  # Clear draft message
+        uiPrefs.clearDraftCommit()
 
 
 class AmendCommit(RepoTask):
@@ -89,10 +99,11 @@ class AmendCommit(RepoTask):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def getDraftMessage(self):
-        return self.rw.state.getDraftCommitMessage(forAmending=True)
+        return self.rw.state.uiPrefs.draftAmendMessage
 
     def setDraftMessage(self, newMessage):
-        self.rw.state.setDraftCommitMessage(newMessage, forAmending=True)
+        self.rw.state.uiPrefs.draftAmendMessage = newMessage
+        self.rw.state.uiPrefs.setDirty()
 
     def flow(self):
         from gitfourchette.tasks import Jump
@@ -136,7 +147,7 @@ class AmendCommit(RepoTask):
         self.repo.amend_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
-        self.setDraftMessage(None)  # Clear draft message
+        self.rw.state.uiPrefs.clearDraftAmend()
 
 
 class SetUpIdentityFirstRun(RepoTask):
@@ -449,7 +460,10 @@ class CherrypickCommit(RepoTask):
                            ).format(bquo(shortHash(oid)))
             raise AbortTask(info, "information")
 
-        self.rw.state.setDraftCommitMessage(commit.message, author=commit.author)
+        self.rw.state.uiPrefs.draftCommitMessage = commit.message
+        self.rw.state.uiPrefs.draftCommitSignature = commit.author
+        self.rw.state.uiPrefs.draftCommitSignatureOverride = SignatureOverride.Author
+        self.rw.state.uiPrefs.setDirty()
 
         if not anyConflicts:
             yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))

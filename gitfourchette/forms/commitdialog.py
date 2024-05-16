@@ -1,3 +1,4 @@
+from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -114,14 +115,19 @@ class CommitDialog(QDialog):
 
         return F"{summary}\n\n{details}"
 
+    def getOverriddenSignatureKind(self):
+        if not self.ui.revealSignature.isChecked():
+            return SignatureOverride.Nothing
+        return self.ui.signature.replaceWhat()
+
     def getOverriddenAuthorSignature(self):
-        if self.ui.revealSignature.isChecked() and self.ui.signature.replaceAuthor():
+        if self.getOverriddenSignatureKind() in [SignatureOverride.Author, SignatureOverride.Both]:
             return self.ui.signature.getSignature()
         else:
             return None
 
     def getOverriddenCommitterSignature(self):
-        if self.ui.revealSignature.isChecked() and self.ui.signature.replaceCommitter():
+        if self.getOverriddenSignatureKind() in [SignatureOverride.Committer, SignatureOverride.Both]:
             return self.ui.signature.getSignature()
         else:
             return None

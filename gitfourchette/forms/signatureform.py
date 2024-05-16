@@ -5,6 +5,13 @@ from gitfourchette.trtables import TrTables
 from gitfourchette.forms.ui_signatureform import Ui_SignatureForm
 
 
+class SignatureOverride(enum.IntEnum):
+    Nothing = 0
+    Author = 1
+    Committer = 2
+    Both = 3
+
+
 def formatTimeOffset(minutes: int):
     p = "-" if minutes < 0 else "+"
     h = abs(minutes) // 60
@@ -14,11 +21,6 @@ def formatTimeOffset(minutes: int):
 
 class SignatureForm(QWidget):
     signatureChanged = Signal()
-
-    class ReplaceWhat(enum.IntEnum):
-        Author = 1
-        Committer = 2
-        Both = 3
 
     @staticmethod
     def validateInput(item: str) -> str:
@@ -43,10 +45,12 @@ class SignatureForm(QWidget):
 
     def setSignature(self, signature: Signature):
         qdt: QDateTime = QDateTime.fromSecsSinceEpoch(signature.time, Qt.TimeSpec.OffsetFromUTC, signature.offset * 60)
-        self.ui.nameEdit.setText(signature.name)
-        self.ui.emailEdit.setText(signature.email)
-        self.ui.timeEdit.setDateTime(qdt)
-        self.setTimeOffset(signature.offset)
+        with QSignalBlockerContext(self):
+            self.ui.nameEdit.setText(signature.name)
+            self.ui.emailEdit.setText(signature.email)
+            self.ui.timeEdit.setDateTime(qdt)
+            self.setTimeOffset(signature.offset)
+        self.signatureChanged.emit()
 
     def primeTimeOffsetComboBox(self):
         decimalCodedOffsets = [
@@ -104,12 +108,4 @@ class SignatureForm(QWidget):
 
     def replaceWhat(self):
         index = self.ui.replaceComboBox.currentIndex()
-        return SignatureForm.ReplaceWhat(index + 1)
-
-    def replaceAuthor(self):
-        RW = SignatureForm.ReplaceWhat
-        return self.replaceWhat() in [RW.Author, RW.Both]
-
-    def replaceCommitter(self):
-        RW = SignatureForm.ReplaceWhat
-        return self.replaceWhat() in [RW.Committer, RW.Both]
+        return SignatureOverride(index + 1)

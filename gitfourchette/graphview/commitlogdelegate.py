@@ -198,7 +198,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                 if numChanges > 0:
                     summaryText += f" ({numChanges})"
                 # Append draft message if any
-                draftMessage = self.state.getDraftCommitMessage()
+                draftMessage = self.state.uiPrefs.draftCommitMessage
                 if draftMessage:
                     draftMessage = messageSummary(draftMessage)[0].strip()
                     draftIntro = self.tr("Commit draft:")

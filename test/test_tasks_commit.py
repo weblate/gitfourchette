@@ -6,6 +6,7 @@ from gitfourchette import porcelain
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
+from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.sidebar.sidebarmodel import EItem
@@ -79,12 +80,34 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
+    assert dialog.getOverriddenSignatureKind() == SignatureOverride.Nothing
     QTest.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
     dialog.reject()
+    assert rw.state.uiPrefs.draftCommitMessage == "hoping to save this message"
+    assert rw.state.uiPrefs.draftCommitSignatureOverride == SignatureOverride.Nothing
 
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == "hoping to save this message"
+    dialog.ui.revealSignature.click()
+    dialog.ui.signature.ui.replaceComboBox.setCurrentIndex(2)
+    dialog.reject()
+    assert rw.state.uiPrefs.draftCommitMessage == "hoping to save this message"
+    assert rw.state.uiPrefs.draftCommitSignatureOverride == SignatureOverride.Both
+    assert rw.state.uiPrefs.draftCommitSignature is not None
+
+    rw.commitButton.click()
+    dialog: CommitDialog = findQDialog(rw, "commit")
+    assert dialog.ui.summaryEditor.text() == "hoping to save this message"
+    assert dialog.getOverriddenSignatureKind() == SignatureOverride.Both
+    dialog.accept()  # Go through with the commit this time
+
+    # Ensure nothing remains of the draft after a successful commit
+    rw.commitButton.click()
+    acceptQMessageBox(rw, "empty commit")
+    dialog: CommitDialog = findQDialog(rw, "commit")
+    assert dialog.ui.summaryEditor.text() == ""
+    assert dialog.getOverriddenSignatureKind() == SignatureOverride.Nothing
     dialog.reject()
 
 
@@ -357,6 +380,7 @@ def testCherrypick(tempDir, mainWindow):
 
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == "First a/a1"
+    assert dialog.getOverriddenSignatureKind() == SignatureOverride.Author
 
     dialog.accept()
 
