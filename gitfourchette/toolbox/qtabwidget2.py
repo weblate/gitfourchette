@@ -150,7 +150,6 @@ class QTabWidget2(QWidget):
         self.overflowButton.setToolTip(self.tr("List all tabs"))
         self.overflowButton.clicked.connect(self.onOverflowButtonClicked)
         self.overflowButton.setCheckable(True)
-        self.overflowButton.setFixedWidth(16)
         self.overflowButton.setAutoRaise(True)
         self.overflowButton.hide()  # hiding now prevents jitter on boot because maximum height is adjuster later
 
