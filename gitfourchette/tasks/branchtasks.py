@@ -69,11 +69,13 @@ class RenameBranchFolder(RepoTask):
     def flow(self, oldFolderRefName: str):
         prefix, oldFolderName = RefPrefix.split(oldFolderRefName)
         assert prefix == RefPrefix.HEADS
+        assert not oldFolderName.endswith("/")
+        oldFolderNameSlash = oldFolderName + "/"
 
         forbiddenBranches = set()
         folderBranches = []
         for oldBranchName in self.repo.listall_branches(BranchType.LOCAL):
-            if oldBranchName.startswith(oldFolderName):
+            if oldBranchName.startswith(oldFolderNameSlash):
                 folderBranches.append(oldBranchName)
             else:
                 forbiddenBranches.add(oldBranchName)
@@ -88,13 +90,17 @@ class RenameBranchFolder(RepoTask):
             for oldBranchName in folderBranches:
                 newBranchName = transformBranchName(oldBranchName, newFolderName)
                 if newBranchName in forbiddenBranches:
-                    return ("<p style='white-space: pre'>"
-                            + self.tr("This name clashes with existing branch {0}.")
-                            ).format(hquo(newBranchName))
-            return ""
+                    return self.tr("This name clashes with existing branch {0}."
+                                   ).format(tquo(newBranchName))
+            # Finally validate the folder name itself as if it were a branch,
+            # but don't test against existing refs (which we just did above),
+            # and allow an empty name.
+            if not newFolderName:
+                return ""
+            return nameValidationMessage(newFolderName, [])
 
         subtitle = self.tr("Folder {0} contains %n branches.", "", len(folderBranches)
-                           ).format(lquoe(oldFolderName + "/"))
+                           ).format(lquoe(oldFolderName))
 
         dlg = showTextInputDialog(
             self.parentWidget(),

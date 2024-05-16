@@ -129,6 +129,63 @@ def testRenameBranch(tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+@pytest.mark.parametrize("newName", ["newfolder", "folder4", "", "folder1/folder2"])
+def testRenameBranchFolder(tempDir, mainWindow, method, newName):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.create_branch_on_head("folder1/leaf")
+        repo.create_branch_on_head("folder1/folder2/leaf")
+        repo.create_branch_on_head("folder1/folder2/folder3/leaf")
+        repo.create_branch_on_head("folder1/folder2_donttouchthis/leaf")
+        repo.create_branch_on_head("folder4/wontclash")
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    node = rw.sidebar.findNode(lambda n: n.data == "refs/heads/folder1/folder2")
+    assert node.kind == EItem.RefFolder
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "name")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_F2)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
+    dlg = findQDialog(rw, "rename.+folder")
+    nameEdit: QLineEdit = dlg.findChild(QLineEdit)
+    okButton: QPushButton = dlg.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok)
+
+    assert okButton
+    assert okButton.isEnabled()
+
+    badNames = [
+        # Folders with conflicting branch names
+        "folder1",
+        # Illegal patterns
+        "@",
+        "nope.lock", "nope/", "nope.",
+        "nope/.nope", "nope//nope", "nope@{nope", "no..pe",
+        ".nope", "/nope",
+        "no pe", "no~pe", "no^pe", "no:pe", "no[pe", "no?pe", "no*pe", "no\\pe",
+        "nul", "nope/nul", "nul/nope", "lpt3", "com2",
+    ]
+    for bad in badNames:
+        nameEdit.setText(bad)
+        assert not okButton.isEnabled(), f"name shouldn't pass validation: {bad}"
+        print(bad, "-->", nameEdit.actions()[0].toolTip())
+
+    nameEdit.setText(newName)
+    assert okButton.isEnabled()
+    dlg.accept()
+
+    assert f"{newName}/leaf".removeprefix("/") in repo.branches.local
+    assert f"{newName}/folder3/leaf".removeprefix("/") in repo.branches.local
+    assert "folder1/folder2_donttouchthis/leaf" in repo.branches.local
+
+
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
 def testDeleteBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:

@@ -329,7 +329,7 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.RefFolder:
-            if node.parent.kind == EItem.LocalBranchesHeader:
+            if node.data.startswith(RefPrefix.HEADS):
                 actions += [
                     ActionDef(self.tr("Re&name Folder..."), lambda: self.wantRenameNode(node)),
                     ActionDef.SEPARATOR,
