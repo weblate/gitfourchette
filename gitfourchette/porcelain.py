@@ -136,7 +136,8 @@ class NameValidationError(ValueError):
     CONTAINS_ILLEGAL_CHAR = 4
     CONTAINS_ILLEGAL_SEQ = 5
     NOT_WINDOWS_FRIENDLY = 6
-    NAME_TAKEN = 7
+    NAME_TAKEN_BY_REF = 7
+    NAME_TAKEN_BY_FOLDER = 8
 
     def __init__(self, code: int):
         super().__init__(F"Name validation failed ({code})")
@@ -328,8 +329,18 @@ def validate_refname(name: str, reserved_names: list[str]):
     elif WINDOWS_RESERVED_FILENAMES_PATTERN.match(name):
         raise E(E.NOT_WINDOWS_FRIENDLY)
 
+    # Don't clash with existing refs
     elif name.lower() in (n.lower() for n in reserved_names):
-        raise E(E.NAME_TAKEN)
+        raise E(E.NAME_TAKEN_BY_REF)
+
+    # Don't clash with ref folders. If you attempt to rename a branch to the
+    # name of an existing folder, libgit2 first deletes the branch, then errors
+    # out with "cannot lock ref 'refs/heads/folder', there are refs beneath
+    # that folder". So, let's avoid losing the branch.
+    else:
+        folder = name.lower() + "/"
+        if any(n.lower().startswith(folder) for n in reserved_names):
+            raise E(E.NAME_TAKEN_BY_FOLDER)
 
 
 def validate_signature_item(s: str):

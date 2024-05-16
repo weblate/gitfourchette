@@ -74,6 +74,8 @@ def testSetUpstreamBranch(tempDir, mainWindow, branchSettings: tuple[str, str]):
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
 def testRenameBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.create_branch_on_head("folder1/folder2/leaf")
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
@@ -99,14 +101,23 @@ def testRenameBranch(tempDir, mainWindow, method):
     assert okButton
     assert okButton.isEnabled()
 
-    nameEdit.setText("this-wont-pass-validation.lock")  # illegal suffix
-    assert not okButton.isEnabled()
-
-    nameEdit.setText("no-parent")  # already taken by another local branch
-    assert not okButton.isEnabled()
-
-    nameEdit.setText("")  # cannot be empty
-    assert not okButton.isEnabled()
+    badNames = [
+        # Existing refs or folders
+        "no-parent",
+        "folder1/folder2",
+        "folder1",
+        # Illegal patterns
+        "",
+        "@",
+        "nope.lock", "nope/", "nope.",
+        "nope/.nope", "nope//nope", "nope@{nope", "no..pe",
+        ".nope", "/nope",
+        "no pe", "no~pe", "no^pe", "no:pe", "no[pe", "no?pe", "no*pe", "no\\pe",
+        "nul", "nope/nul", "nul/nope", "lpt3", "com2",
+    ]
+    for bad in badNames:
+        nameEdit.setText(bad)
+        assert not okButton.isEnabled(), f"name shouldn't pass validation: {bad}"
 
     nameEdit.setText("mainbranch")
     assert okButton.isEnabled()

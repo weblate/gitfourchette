@@ -110,7 +110,8 @@ class TrTables:
             E.CONTAINS_ILLEGAL_CHAR: translate("NameValidationError", "Contains illegal character."),
             E.CANNOT_BE_EMPTY: translate("NameValidationError", "Cannot be empty."),
             E.NOT_WINDOWS_FRIENDLY: translate("NameValidationError", "This name is discouraged for compatibility with Windows."),
-            E.NAME_TAKEN: translate("NameValidationError", "This name is already taken."),
+            E.NAME_TAKEN_BY_REF: translate("NameValidationError", "This name is already taken."),
+            E.NAME_TAKEN_BY_FOLDER: translate("NameValidationError", "This name is already taken by a folder."),
         }
 
     @staticmethod
