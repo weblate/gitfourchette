@@ -1,3 +1,5 @@
+import shutil
+
 from . import reposcenario
 from .util import *
 from gitfourchette.nav import NavLocator
@@ -358,3 +360,30 @@ def testDiffVeryLongLines(tempDir, mainWindow):
     qteClickLink(rw.specialDiffView, "load.+anyway")
     assert rw.diffView.isVisibleTo(rw)
     assert rw.diffView.toPlainText().rstrip() == "@@ -0,0 +1 @@\n" + contents.rstrip()
+
+
+def testImageDiff(mainWindow, tempDir):
+    wd = unpackRepo(tempDir)
+    shutil.copyfile(getTestDataPath("image1.png"), f"{wd}/image.png")
+
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inUnstaged("image.png"))
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert re.search("6.6 pixels", rw.specialDiffView.toPlainText())
+    rw.dirtyFiles.stage()
+    rw.commitButton.click()
+    findQDialog(rw, "commit").ui.summaryEditor.setText("commit an image")
+    findQDialog(rw, "commit").accept()
+
+    shutil.copyfile(getTestDataPath("image2.png"), f"{wd}/image.png")
+    rw.refreshRepo()
+    rw.jump(NavLocator.inUnstaged("image.png"))
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert re.search("6.6 pixels", rw.specialDiffView.toPlainText())
+    assert re.search("4.4 pixels", rw.specialDiffView.toPlainText())
+
+    os.unlink(f"{wd}/image.png")
+    rw.refreshRepo()
+    rw.jump(NavLocator.inUnstaged("image.png"))
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert re.search("6.6 pixels", rw.specialDiffView.toPlainText())

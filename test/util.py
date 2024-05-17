@@ -1,4 +1,5 @@
 import tempfile
+from pathlib import Path
 
 from . import *
 import os
@@ -10,6 +11,11 @@ from gitfourchette.porcelain import *
 TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
 
 
+def getTestDataPath(name):
+    path = Path(__file__).resolve().parent / "data"
+    return str(path / name)
+
+
 def unpackRepo(
         tempDir: tempfile.TemporaryDirectory | str,
         testRepoName="TestGitRepository",
@@ -19,21 +25,18 @@ def unpackRepo(
 ) -> str:
     tempDirPath = tempDir if type(tempDir) is str else tempDir.name
 
-    testPath = os.path.realpath(__file__)
-    testPath = os.path.dirname(testPath)
-
     path = f"{tempDirPath}/{testRepoName}"
     path = os.path.realpath(path)
     assert not os.path.exists(path)
 
     for ext in ".tar", ".zip":
-        archivePath = f"{testPath}/data/{testRepoName}{ext}"
+        archivePath = getTestDataPath(f"{testRepoName}{ext}")
         if os.path.isfile(archivePath):
             shutil.unpack_archive(archivePath, os.path.dirname(path))
             assert os.path.isdir(path)
             break
     else:
-        raise FileNotFoundError(f"can't find archive '{testRepoName}' in test data ({testPath}/data)")
+        raise FileNotFoundError(f"can't find archive '{testRepoName}' in test data")
 
     if renameTo:
         path2 = f"{tempDirPath}/{renameTo}"
