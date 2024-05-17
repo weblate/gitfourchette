@@ -6,6 +6,7 @@ from .util import *
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
+from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 
@@ -292,6 +293,74 @@ def testNewNestedRepo(tempDir, mainWindow):
 
     qmb = findQMessageBox(mainWindow, "TestGitRepository.+parent (dir|folder).+sub(dir|folder)")
     qmb.accept()
+
+
+@pytest.mark.parametrize("method", ["specialdiff", "graphcm"])
+def testTruncatedHistory(mainWindow, tempDir, method):
+    bottomCommit = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+
+    mainWindow.onAcceptPrefsDialog({"maxCommits": 5})
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    QTest.qWait(1)
+    assert 7 == rw.graphView.clFilter.rowCount()
+
+    # Search bar shouldn't be able to reach bottom commit
+    triggerMenuAction(mainWindow.menuBar(), "edit/find")
+    QTest.qWait(0)
+    assert rw.graphView.searchBar.lineEdit.hasFocus()
+    QTest.keyClicks(rw.graphView.searchBar.lineEdit, "first c/c1, no parent")
+    QTest.qWait(0)
+    assert rw.graphView.searchBar.isRed()
+    QTest.keyPress(rw.graphView.searchBar.lineEdit, Qt.Key.Key_Return)
+    QTest.qWait(0)
+    acceptQMessageBox(rw, "not found.+truncated")
+    rw.graphView.searchBar.ui.closeButton.click()
+
+    # Bottom commit contents must be able to be displayed
+    rw.jump(NavLocator.inCommit(bottomCommit))
+    assert rw.navLocator.commit == bottomCommit
+    assert rw.diffBanner.isVisibleTo(rw)
+    assert re.search("commit.+n.t shown in the graph", rw.diffBanner.label.text(), re.I)
+    assert not rw.graphView.selectedIndexes()
+
+    # Jump to truncated history row
+    loc = NavLocator(NavContext.SPECIAL, path=str(SpecialRow.TruncatedHistory))
+    rw.jump(loc)
+    assert loc.isSimilarEnoughTo(rw.navLocator)
+    assert rw.graphView.currentRowKind == SpecialRow.TruncatedHistory
+    assert rw.graphView.selectedIndexes()
+
+    assert rw.specialDiffView.isVisibleTo(rw)
+    assert "truncated" in rw.specialDiffView.toPlainText().lower()
+
+    # Click "change threshold"
+    if method == "specialdiff":
+        qteClickLink(rw.specialDiffView, "change.+threshold")
+    elif method == "graphcm":
+        triggerMenuAction(rw.graphView.makeContextMenu(), "change.+threshold")
+    prefsDialog = findQDialog(mainWindow, "preferences")
+    QTest.qWait(0)
+    assert prefsDialog.findChild(QWidget, "prefctl_maxCommits").hasFocus()
+    prefsDialog.reject()
+
+    # Load full commit history
+    if method == "specialdiff":
+        qteClickLink(rw.specialDiffView, "load full")
+    elif method == "graphcm":
+        triggerMenuAction(rw.graphView.makeContextMenu(), "load full")
+    assert 7 < rw.graphView.clFilter.rowCount()
+
+    # Truncated history row must be gone
+    with pytest.raises(ValueError):
+        rw.jump(loc)
+    rejectQMessageBox(mainWindow, "navigate in repo")  # dismiss error message
+
+    # Bottom commit should work now
+    rw.jump(NavLocator.inCommit(bottomCommit))
+    assert rw.navLocator.commit == bottomCommit
+    assert rw.graphView.selectedIndexes()
+    assert not rw.diffBanner.isVisibleTo(rw)
 
 
 def testRepoNickname(tempDir, mainWindow):

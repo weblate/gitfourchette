@@ -1218,7 +1218,7 @@ class MainWindow(QMainWindow):
             showInformation(
                 self, self.tr("Apply Settings"),
                 self.tr("You may need to restart {app} for all new settings to take effect.").format(app=qAppName()))
-        elif any(k in warnIfChanged for k in prefDiff):
+        elif any(k in warnIfChanged for k in prefDiff) and self.tabs.count():
             showInformation(
                 self, self.tr("Apply Settings"),
                 self.tr("You may need to reload the current repository for all new settings to take effect."))

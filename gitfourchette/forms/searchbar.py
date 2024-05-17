@@ -4,6 +4,7 @@ from typing import Literal, Callable
 
 from gitfourchette import colors
 from gitfourchette.qt import *
+from gitfourchette.settings import TEST_MODE
 from gitfourchette.toolbox import *
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
 
@@ -100,7 +101,7 @@ class SearchBar(QWidget):
 
         self.searchPulseTimer = QTimer(self)
         self.searchPulseTimer.setSingleShot(True)
-        self.searchPulseTimer.setInterval(SEARCH_PULSE_DELAY)
+        self.searchPulseTimer.setInterval(SEARCH_PULSE_DELAY if not TEST_MODE else 0)
         self.searchPulseTimer.timeout.connect(self.searchPulse)
 
         tweakWidgetFont(self.lineEdit, 85)
@@ -158,6 +159,9 @@ class SearchBar(QWidget):
             self.searchPulseTimer.start()
         else:
             self.searchPulseTimer.stop()
+
+    def isRed(self) -> bool:
+        return "true" == self.property("red")
 
     def turnRed(self, red=True):
         wasRed = self.property("red") == "true"

@@ -214,7 +214,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             elif specialRowKind == SpecialRow.EndOfShallowHistory:
                 summaryText = self.tr("Shallow clone – End of commit history")
 
-            else:
+            else:  # pragma: no cover
                 summaryText = f"*** Unsupported special row {specialRowKind}"
 
         # Get metrics now so the message gets elided according to the custom font style

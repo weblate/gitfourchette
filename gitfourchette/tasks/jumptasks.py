@@ -7,7 +7,6 @@ import dataclasses
 import logging
 import os
 
-from gitfourchette import tasks, colors, settings
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 from gitfourchette.graphview.commitlogmodel import SpecialRow
@@ -15,8 +14,8 @@ from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import NULL_OID, DeltaStatus, Patch
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
-from gitfourchette.settings import DEVDEBUG
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
+from gitfourchette.tasks.loadtasks import LoadCommit, LoadPatch, LoadWorkdir
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
 
@@ -67,7 +66,7 @@ class Jump(RepoTask):
 
             # Load patch in DiffView
             patch = rw.fileListByContext(locator.context).getPatchForFile(locator.path)
-            patchTask: tasks.LoadPatch = yield from self.flowSubtask(tasks.LoadPatch, patch, locator)
+            patchTask: LoadPatch = yield from self.flowSubtask(LoadPatch, patch, locator)
             result = Jump.Result(locator, patchTask.header, patchTask.result, patch)
         except Jump.Result as r:
             # The block above may be stopped early by raising Jump.Result.
@@ -109,8 +108,8 @@ class Jump(RepoTask):
             rw.state.workdirStale = True
 
             # Load workdir (async)
-            workdirTask: tasks.LoadWorkdir = yield from self.flowSubtask(
-                tasks.LoadWorkdir, allowWriteIndex=locator.hasFlags(NavFlags.AllowWriteIndex))
+            workdirTask: LoadWorkdir = yield from self.flowSubtask(
+                LoadWorkdir, allowWriteIndex=locator.hasFlags(NavFlags.AllowWriteIndex))
 
             # Fill FileListViews
             with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles):  # Don't emit jump signals
@@ -168,11 +167,12 @@ class Jump(RepoTask):
         rw = self.rw
         locale = QLocale()
 
-        with QSignalBlockerContext(rw.sidebar, rw.committedFiles):
+        with QSignalBlockerContext(rw.sidebar, rw.committedFiles, rw.graphView):
             rw.sidebar.clearSelection()
             rw.committedFiles.clear()
             rw.committedHeader.setText(" ")
             rw.diffBanner.hide()
+            rw.graphView.selectRowForLocator(locator)
 
         if locator.path == str(SpecialRow.EndOfShallowHistory):
             sde = SpecialDiffError(
@@ -255,8 +255,8 @@ class Jump(RepoTask):
             rw.diffBanner.lastWarningWasDismissed = False
 
             # Load commit (async)
-            subtask = yield from self.flowSubtask(tasks.LoadCommit, locator)
-            assert isinstance(subtask, tasks.LoadCommit)
+            subtask = yield from self.flowSubtask(LoadCommit, locator)
+            assert isinstance(subtask, LoadCommit)
 
             # Get data from subtask
             diffs = subtask.diffs
@@ -398,7 +398,7 @@ class Jump(RepoTask):
                 icon="SP_MessageBoxCritical"))
 
 
-class JumpBackOrForward(tasks.RepoTask):
+class JumpBackOrForward(RepoTask):
     """
     Navigate back or forward in the RepoWidget's NavHistory.
     """
@@ -445,7 +445,7 @@ class JumpForward(JumpBackOrForward):
         yield from JumpBackOrForward.flow(self, 1)
 
 
-class RefreshRepo(tasks.RepoTask):
+class RefreshRepo(RepoTask):
     @staticmethod
     def canKill_static(task: RepoTask):
         return task is None or isinstance(task, (Jump, RefreshRepo))

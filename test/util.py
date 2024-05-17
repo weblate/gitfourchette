@@ -159,9 +159,15 @@ def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):
 
 
 def qteFind(qte: QTextEdit, pattern: str, plainText=False):
+    assert isinstance(qte, QTextEdit)
     if plainText:
         found = re.search(pattern, qte.toPlainText(), re.I | re.M | re.DOTALL)
     else:
+        # qte.find() starts searching at current cursor position, so reset cursor to top of document
+        textCursor = qte.textCursor()
+        textCursor.setPosition(0)
+        qte.setTextCursor(textCursor)
+
         regex = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption | QRegularExpression.PatternOption.MultilineOption | QRegularExpression.PatternOption.DotMatchesEverythingOption)
         found = qte.find(regex)
 
@@ -194,9 +200,11 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
 
 def findQMessageBox(parent: QWidget, textPattern: str) -> QMessageBox:
     for qmb in parent.findChildren(QMessageBox):
+        qmb: QMessageBox
         if not qmb.isVisibleTo(parent):  # skip zombie QMBs
             continue
-        if re.search(textPattern, qmb.text(), re.IGNORECASE):
+        haystack = "\n".join([qmb.windowTitle(), qmb.text(), qmb.informativeText()])
+        if re.search(textPattern, haystack, re.IGNORECASE | re.DOTALL):
             return qmb
 
     assert False, F"did not find qmessagebox \"{textPattern}\""

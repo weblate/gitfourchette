@@ -10,7 +10,7 @@ EPHEMERAL_ROW_CACHE = 150
 
 
 class SpecialRow(enum.IntEnum):
-    Invalid = enum.auto()
+    Invalid = 0
     UncommittedChanges = enum.auto()
     Commit = enum.auto()
     TruncatedHistory = enum.auto()

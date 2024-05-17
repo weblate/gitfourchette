@@ -410,8 +410,10 @@ class GraphView(QListView):
             index = self.clFilter.index(0, 0)
             assert index.data(CommitLogModel.SpecialRowRole) == SpecialRow.UncommittedChanges
         elif locator.context == NavContext.SPECIAL:
+            if self.clModel._extraRow == SpecialRow.Invalid:
+                raise ValueError("no special row")
             index = self.clFilter.index(self.clFilter.rowCount()-1, 0)
-            assert index.data(CommitLogModel.SpecialRowRole) not in [SpecialRow.UncommittedChanges, SpecialRow.Commit]
+            assert locator.path == str(index.data(CommitLogModel.SpecialRowRole))
         else:
             raise NotImplementedError(f"unsupported locator context {locator.context}")
         return index
