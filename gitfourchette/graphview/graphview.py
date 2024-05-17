@@ -396,10 +396,25 @@ class GraphView(QListView):
                 locator = NavLocator(NavContext.SPECIAL, path=str(special))
         Jump.invoke(self, locator)
 
-    def selectUncommittedChanges(self, force=False):
-        if force or self.currentRowKind != SpecialRow.UncommittedChanges:
-            # TODO: Actual lookup
-            self.setCurrentIndex(self.model().index(0, 0))
+    def selectRowForLocator(self, locator: NavLocator, force=False):
+        filterIndex = self.getFilterIndexForLocator(locator)
+        if force or filterIndex.row() != self.currentIndex().row():
+            self.scrollTo(filterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
+            self.setCurrentIndex(filterIndex)
+
+    def getFilterIndexForLocator(self, locator: NavLocator):
+        if locator.context == NavContext.COMMITTED:
+            index = self.getFilterIndexForCommit(locator.commit)
+            assert index.data(CommitLogModel.SpecialRowRole) == SpecialRow.Commit
+        elif locator.context.isWorkdir():
+            index = self.clFilter.index(0, 0)
+            assert index.data(CommitLogModel.SpecialRowRole) == SpecialRow.UncommittedChanges
+        elif locator.context == NavContext.SPECIAL:
+            index = self.clFilter.index(self.clFilter.rowCount()-1, 0)
+            assert index.data(CommitLogModel.SpecialRowRole) not in [SpecialRow.UncommittedChanges, SpecialRow.Commit]
+        else:
+            raise NotImplementedError(f"unsupported locator context {locator.context}")
+        return index
 
     def getFilterIndexForCommit(self, oid: Oid) -> QModelIndex | None:
         try:
@@ -415,16 +430,9 @@ class GraphView(QListView):
 
         return newFilterIndex
 
-    def selectCommit(self, oid: Oid, silent=True):
-        with suppress(GraphView.SelectCommitError if silent else ()):
-            filterIndex = self.getFilterIndexForCommit(oid)
-            if filterIndex.row() != self.currentIndex().row():
-                self.scrollTo(filterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
-                self.setCurrentIndex(filterIndex)
-
-    def scrollToCommit(self, oid: Oid, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
+    def scrollToRowForLocator(self, locator: NavLocator, scrollHint=QAbstractItemView.ScrollHint.EnsureVisible):
         with suppress(GraphView.SelectCommitError):
-            filterIndex = self.getFilterIndexForCommit(oid)
+            filterIndex = self.getFilterIndexForLocator(locator)
             self.scrollTo(filterIndex, scrollHint)
 
     def repaintCommit(self, oid: Oid):

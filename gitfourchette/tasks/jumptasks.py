@@ -94,7 +94,7 @@ class Jump(RepoTask):
             QSignalBlockerContext(rw.graphView, rw.sidebar),  # Don't emit jump signals
             QScrollBackupContext(rw.sidebar),  # Stabilize scroll bar value
         ):
-            rw.graphView.selectUncommittedChanges()
+            rw.graphView.selectRowForLocator(locator)
             rw.sidebar.selectAnyRef(UC_FAKEREF)
 
         # Reset diff banner
@@ -228,7 +228,7 @@ class Jump(RepoTask):
         from gitfourchette.graphview.graphview import GraphView
         with QSignalBlockerContext(rw.graphView):  # Don't emit jump signals
             try:
-                rw.graphView.selectCommit(locator.commit, silent=False)
+                rw.graphView.selectRowForLocator(locator)
             except GraphView.SelectCommitError as e:
                 # Commit is hidden or not loaded
                 rw.graphView.clearSelection()

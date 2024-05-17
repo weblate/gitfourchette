@@ -158,7 +158,7 @@ def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     # Kick off amend dialog
-    rw.graphView.selectUncommittedChanges()
+    rw.jump(NavLocator.inWorkdir())
     triggerMenuAction(rw.graphView.makeContextMenu(), "amend")
 
     # Amend HEAD commit without any changes, i.e. just change the timestamp.
@@ -276,7 +276,7 @@ def testResetHeadToCommit(tempDir, mainWindow):
     assert rw.repo.head.target != oid1  # make sure we're not starting from this commit
     assert rw.repo.branches.local['master'].target != oid1
 
-    rw.graphView.selectCommit(oid1)
+    rw.jump(NavLocator.inCommit(oid1))
     rw.graphView.resetHeadFlow()
 
     qd: ResetHeadDialog = findQDialog(rw, "reset head to 0966a4")
@@ -296,7 +296,7 @@ def testCheckoutCommitDetachedHead(tempDir, mainWindow, method):
     for oid in [Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6"),
                 Oid(hex="6db9c2ebf75590eef973081736730a9ea169a0c4"),
                 ]:
-        rw.graphView.selectCommit(oid)
+        rw.jump(NavLocator.inCommit(oid))
 
         if method == "graphcm":
             triggerMenuAction(rw.graphView.makeContextMenu(), r"check.?out")
@@ -352,10 +352,10 @@ def testRevertCommit(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
-    rw.graphView.selectCommit(oid)
+    rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
 
-    rw.graphView.selectUncommittedChanges()
+    rw.jump(NavLocator.inWorkdir())
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
     assert rw.repo.status() == {"c/c2-2.txt": FileStatus.INDEX_NEW}
 
@@ -370,7 +370,7 @@ def testCherrypick(tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
 
-    rw.graphView.selectCommit(oid)
+    rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
 
     assert rw.fileStackPage() == "workdir"
@@ -386,7 +386,7 @@ def testCherrypick(tempDir, mainWindow):
 
     headCommit = rw.repo.head_commit
     assert headCommit.message == "First a/a1"
-    rw.graphView.selectCommit(headCommit.oid)
+    rw.jump(NavLocator.inCommit(headCommit.oid))
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
 
 
@@ -399,7 +399,7 @@ def testNewTag(tempDir, mainWindow):
 
     oid = Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
 
-    rw.graphView.selectCommit(oid)
+    rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "tag this commit")
 
     dlg: QDialog = findQDialog(rw, "new tag")

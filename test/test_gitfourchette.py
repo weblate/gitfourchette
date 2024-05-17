@@ -46,8 +46,8 @@ def testParentlessCommitFileList(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    commitOid = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
-    rw.graphView.selectCommit(commitOid)
+    oid = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
+    rw.jump(NavLocator.inCommit(oid))
     assert qlvGetRowData(rw.committedFiles) == ["c/c1.txt"]
 
 
@@ -55,11 +55,10 @@ def testSaveOldRevision(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    commitOid = Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
-
-    rw.graphView.selectCommit(commitOid)
-    assert qlvGetRowData(rw.committedFiles) == ["c/c2.txt"]
-    rw.committedFiles.selectRow(0)
+    oid = Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
+    loc = NavLocator.inCommit(oid, "c/c2.txt")
+    rw.jump(NavLocator.inCommit(oid, "c/c2.txt"))
+    assert loc.isSimilarEnoughTo(rw.navLocator)
     rw.committedFiles.saveRevisionAs(saveInto=tempDir.name)
 
     with open(F"{tempDir.name}/c2@6462e7d.txt", "rb") as f:
@@ -73,7 +72,7 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
 
     commitOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
-    rw.graphView.selectCommit(commitOid)
+    rw.jump(NavLocator.inCommit(commitOid))
     assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
     rw.committedFiles.selectRow(0)
 

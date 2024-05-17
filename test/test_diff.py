@@ -175,7 +175,7 @@ def testDiffInNewWindow(tempDir, mainWindow):
     assert mainWindow in QApplication.topLevelWidgets()
 
     oid = Oid(hex='1203b03dc816ccbb67773f28b3c19318654b0bc8')
-    rw.graphView.selectCommit(oid)
+    rw.jump(NavLocator.inCommit(oid))
     qlvClickNthRow(rw.committedFiles, 0)
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inCommit(oid, "c/c2.txt"))
 

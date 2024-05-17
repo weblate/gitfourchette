@@ -227,7 +227,7 @@ class PrimeRepo(RepoTask):
             rw.graphView.searchBar.notFoundInfo = notFoundInfo
             rw.graphView.setHiddenCommits(state.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
-            rw.graphView.selectUncommittedChanges(force=True)
+            rw.graphView.selectRowForLocator(NavLocator.inWorkdir(), force=True)
 
         # Prime Sidebar
         with QSignalBlockerContext(rw.sidebar):
@@ -262,8 +262,7 @@ class PrimeRepo(RepoTask):
             initialLocator = rw.pendingLocator
             rw.pendingLocator = NavLocator()
         yield from self.flowSubtask(Jump, initialLocator)
-        if initialLocator.context == NavContext.COMMITTED:
-            rw.graphView.scrollToCommit(initialLocator.commit, QAbstractItemView.ScrollHint.PositionAtCenter)
+        rw.graphView.scrollToRowForLocator(initialLocator, QAbstractItemView.ScrollHint.PositionAtCenter)
 
     def onError(self, exc: Exception):
         self.rw.cleanup(str(exc), allowAutoReload=False)

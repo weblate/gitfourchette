@@ -33,14 +33,14 @@ def testNavigation(tempDir, mainWindow):
     oid4 = Oid(hex="58be4659bb571194ed4562d04b359d26216f526e")
 
     # ..........................................# -9 select a1.txt in UNSTAGED
-    rw.graphView.selectCommit(oid1)             # -8 select a1.txt in 83834a7
+    rw.jump(NavLocator.inCommit(oid1))          # -8 select a1.txt in 83834a7
     qlvClickNthRow(rw.committedFiles, 1)        # -7 select a2.txt in 83834a7
-    rw.graphView.selectCommit(oid2)             # -6 select b1.txt in 6e14752
+    rw.jump(NavLocator.inCommit(oid2))          # -6 select b1.txt in 6e14752
     qlvClickNthRow(rw.committedFiles, 1)        # -5 select b2.txt in 6e14752
-    rw.graphView.selectUncommittedChanges()     # -4 select a1.txt in UNSTAGED
+    rw.jump(NavLocator.inWorkdir())             # -4 select a1.txt in UNSTAGED
     qlvClickNthRow(rw.stagedFiles, 0)           # -3 select a1.txt in STAGED
     qlvClickNthRow(rw.dirtyFiles, 0)            # -2 select a1.txt in UNSTAGED again
-    rw.graphView.selectCommit(oid3)             # -1 select c1.txt in bab66b4
+    rw.jump(NavLocator.inCommit(oid3))          # -1 select c1.txt in bab66b4
 
     history = [
         NavLocator.inCommit(oid1, "a/a1.txt"),  # -8
@@ -92,7 +92,7 @@ def testNavigation(tempDir, mainWindow):
     assertHistoryMatches(rw, history[-3])
 
     # now fork from linear history
-    rw.graphView.selectCommit(oid4)
+    rw.jump(NavLocator.inCommit(oid4))
     historyFork = NavLocator.inCommit(oid4, "master.txt")
     assertHistoryMatches(rw, historyFork)
 
@@ -215,12 +215,12 @@ def testRestoreLastSelectedFileInContext(tempDir, mainWindow):
     assertHistoryMatches(rw, NavLocator.inStaged("c/c2.txt"))
 
     # Select a2.txt in COMMITTED context (83834a7)
-    rw.graphView.selectCommit(oid1)
+    rw.jump(NavLocator.inCommit(oid1))
     qlvClickNthRow(rw.committedFiles, 1)
     assertHistoryMatches(rw, NavLocator.inCommit(oid1, "a/a2.txt"))
 
     # Select b2.txt in COMMITTED context (6e14752)
-    rw.graphView.selectCommit(oid2)
+    rw.jump(NavLocator.inCommit(oid2))
     qlvClickNthRow(rw.committedFiles, 1)
     assertHistoryMatches(rw, NavLocator.inCommit(oid2, "b/b2.txt"))
 

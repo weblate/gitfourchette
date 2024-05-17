@@ -155,7 +155,7 @@ def testCommitInfo(tempDir, mainWindow, method):
     oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    rw.graphView.selectCommit(oid1)
+    rw.jump(NavLocator.inCommit(oid1))
 
     if method == "hotkey":
         QTest.qWait(1)
@@ -188,7 +188,7 @@ def testCopyCommitHash(tempDir, mainWindow, method):
     oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    rw.graphView.selectCommit(oid1)
+    rw.jump(NavLocator.inCommit(oid1))
 
     if method == "hotkey":
         QTest.qWait(1)

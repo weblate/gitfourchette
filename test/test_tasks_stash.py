@@ -1,5 +1,6 @@
 from . import reposcenario
 from .util import *
+from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.forms.stashdialog import StashDialog
 from gitfourchette.tasks import DropStash
@@ -227,15 +228,18 @@ def testHideStash(tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
     assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
-    rw.graphView.selectCommit(stashOid, silent=False)  # must not raise
+    rw.jump(NavLocator.inCommit(stashOid))
+    assert rw.navLocator.commit == stashOid#NavLocator.inCommit(stashOid).isSimilarEnoughTo(rw.navLocator)
 
     node = rw.sidebar.findNodeByRef("stash@{0}")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "^hide")
 
     assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
-    with pytest.raises(Exception):
-        rw.graphView.selectCommit(stashOid, silent=False)
+    rw.jump(NavLocator.inCommit(stashOid))
+    assert rw.graphView.selectedIndexes() == []
+    assert rw.diffBanner.isVisibleTo(rw)
+    assert re.search(r"n.t shown in the graph", rw.diffBanner.label.text(), re.I)
 
 
 def testDropHiddenStash(tempDir, mainWindow):
