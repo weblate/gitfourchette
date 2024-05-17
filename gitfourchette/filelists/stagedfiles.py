@@ -25,7 +25,7 @@ class StagedFiles(FileList):
         if not anySubmodules:
             actions += [
                 ActionDef(
-                    self.tr("&Unstage %n File(s)", "", n),
+                    self.tr("&Unstage %n Files", "", n),
                     self.unstage,
                     icon="list-remove",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
@@ -49,7 +49,7 @@ class StagedFiles(FileList):
                 ),
 
                 ActionDef(
-                    self.tr("E&xport Diff(s) As Patch...", "", n),
+                    self.tr("E&xport Diffs As Patch...", "", n),
                     self.savePatchAs,
                 ),
 
@@ -62,7 +62,7 @@ class StagedFiles(FileList):
                 ),
 
                 ActionDef(
-                    self.tr("Edit &HEAD Version(s) in {0}", "", n).format(settings.getExternalEditorName()),
+                    self.tr("Edit &HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),
                     self.openHeadRevision,
                 ),
             ]

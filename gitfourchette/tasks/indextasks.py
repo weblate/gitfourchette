@@ -453,6 +453,7 @@ class ApplyPatchFile(RepoTask):
                                     detailList=[f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas])
 
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
+        self.jumpTo = NavLocator.inUnstaged(deltas[0].new_file.path)
 
 
 class ApplyPatchFileReverse(ApplyPatchFile):

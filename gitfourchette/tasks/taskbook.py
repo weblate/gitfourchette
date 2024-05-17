@@ -45,6 +45,7 @@ class TaskBook:
             tasks.EditRemote: translate("task", "Edit remote"),
             tasks.EditUpstreamBranch: translate("task", "Edit upstream branch"),
             tasks.ExportCommitAsPatch: translate("task", "Export commit as patch file"),
+            tasks.ExportPatchCollection: translate("task", "Export patch file"),
             tasks.ExportStashAsPatch: translate("task", "Export stash as patch file"),
             tasks.ExportWorkdirAsPatch: translate("task", "Export changes as patch file"),
             tasks.FastForwardBranch: translate("task", "Fast-forward branch"),

@@ -36,7 +36,7 @@ class CommittedFiles(FileList):
                 ),
 
                 ActionDef(
-                    self.tr("E&xport Diff(s) As Patch...", "", n),
+                    self.tr("E&xport Diffs As Patch...", "", n),
                     self.savePatchAs
                 ),
 

@@ -219,3 +219,10 @@ def acceptQMessageBox(parent: QWidget, textPattern: str):
 
 def rejectQMessageBox(parent: QWidget, textPattern: str):
     findQMessageBox(parent, textPattern).reject()
+
+
+def acceptQFileDialog(parent: QWidget, textPattern: str, selectFile: str):
+    qfd: QFileDialog = findQDialog(parent, textPattern)
+    qfd.selectFile(selectFile)
+    qfd.accept()
+    return selectFile

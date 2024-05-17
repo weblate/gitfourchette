@@ -19,7 +19,12 @@ from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutComm
 from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIdentity
 from gitfourchette.tasks.committasks import NewTag, DeleteTag
 from gitfourchette.tasks.committasks import CherrypickCommit
-from gitfourchette.tasks.exporttasks import ExportCommitAsPatch, ExportStashAsPatch, ExportWorkdirAsPatch
+from gitfourchette.tasks.exporttasks import (
+    ExportCommitAsPatch,
+    ExportPatchCollection,
+    ExportStashAsPatch,
+    ExportWorkdirAsPatch,
+)
 from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward, JumpBack, JumpForward, RefreshRepo
 from gitfourchette.tasks.loadtasks import PrimeRepo
 from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch

@@ -1,6 +1,5 @@
 import os
 from contextlib import suppress
-from pathlib import Path
 from typing import Callable, Generator
 
 from gitfourchette import settings
@@ -444,53 +443,9 @@ class FileList(QListView):
         except IndexError:
             return -1
 
-    def savePatchAs(self, saveInto=None):
-        def warnBinary(affectedPaths):
-            message = paragraphs(
-                tr("For the time being, {0} is unable to export binary patches from a selection of files."),
-                tr("The following binary files were skipped in the patch:")).format(qAppName())
-            message += toTightUL(escape(f) for f in affectedPaths)
-            showWarning(self, tr("Save patch file"), message)
-
+    def savePatchAs(self):
         patches = list(self.selectedPatches())
-        names = set()
-        skippedBinaryFiles = []
-
-        bigpatch = b""
-        for patch in patches:
-            if patch.delta.status == DeltaStatus.DELETED:
-                diffFile = patch.delta.old_file
-            else:
-                diffFile = patch.delta.new_file
-            if patch.delta.is_binary:
-                skippedBinaryFiles.append(diffFile.path)
-                continue
-            if patch.data:
-                bigpatch += patch.data
-                names.add(Path(diffFile.path).stem)
-
-        if not bigpatch:
-            if skippedBinaryFiles:
-                warnBinary(skippedBinaryFiles)
-            else:
-                showInformation(self, tr("Save patch file"), tr("The patch is empty."))
-            return
-
-        name = ", ".join(sorted(names)) + ".patch"
-
-        def dump(path):
-            with open(path, "wb") as f:
-                f.write(bigpatch)
-            if skippedBinaryFiles:
-                warnBinary(skippedBinaryFiles)
-
-        if saveInto:
-            savePath = os.path.join(saveInto, name)
-            dump(savePath)
-        else:
-            qfd = PersistentFileDialog.saveFile(self, "SaveFile", tr("Save patch file"), name)
-            qfd.fileSelected.connect(dump)
-            qfd.show()
+        ExportPatchCollection.invoke(self, patches)
 
     def firstPath(self) -> str:
         index: QModelIndex = self.flModel.index(0)
