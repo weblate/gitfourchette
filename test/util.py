@@ -95,7 +95,11 @@ def writeFile(path, text):
         f.write(text.encode("utf-8"))
 
 
-def readFile(path):
+def readFile(path, timeout=0):
+    while timeout > 0 and not os.path.exists(path):
+        wait = 10
+        QTest.qWait(wait)
+        timeout -= wait
     with open(path, "rb") as f:
         return f.read()
 
@@ -227,6 +231,7 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
 
 def acceptQFileDialog(parent: QWidget, textPattern: str, selectFile: str):
     qfd: QFileDialog = findQDialog(parent, textPattern)
+    assert isinstance(qfd, QFileDialog)
     qfd.selectFile(selectFile)
     qfd.accept()
     return selectFile

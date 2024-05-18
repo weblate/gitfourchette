@@ -509,3 +509,57 @@ def testSearchFileList(mainWindow, tempDir):
     QTest.keySequence(searchBar, "Escape")
     QTest.qWait(0)
     assert not searchBar.isVisibleTo(rw)
+
+
+def testEditFileInExternalEditor(mainWindow, tempDir):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inCommit(Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0"), "a/a1"))
+
+    editorPath = getTestDataPath("editor-shim.sh")
+    scratchPath = f"{tempDir.name}/external editor scratch file.txt"
+
+    # First, set the editor to an incorrect command to go through the "locate" code path
+    mainWindow.onAcceptPrefsDialog({"externalEditor": f'"{editorPath}-BOGUSCOMMAND" "{scratchPath}"'})
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/current version")
+    QTest.qWait(1)
+    qmb = findQMessageBox(mainWindow, "n.t start text editor")
+    qmb.button(QMessageBox.StandardButton.Open).click()  # click "locate" button
+    # Set correct command; this must retain the arguments from the incorrect command
+    acceptQFileDialog(mainWindow, "locate.+editor-shim", editorPath)
+
+    # Now open the file in our shim
+    # HEAD revision
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/current")
+    assert b"a/a1" in readFile(scratchPath, timeout=1000)
+    Path(scratchPath).unlink()
+
+    # New revision
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/before 49322bb")
+    acceptQMessageBox(mainWindow, "file did.?n.t exist")
+
+    # Old revision
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/at 49322bb")
+    assert b"a1@49322bb" in readFile(scratchPath, timeout=1000)
+    Path(scratchPath).unlink()
+
+
+def testEditFileInExternalDiffTool(mainWindow, tempDir):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inCommit(Oid(hex="7f822839a2fe9760f386cbbbcb3f92c5fe81def7"), "b/b2.txt"))
+
+    editorPath = getTestDataPath("editor-shim.sh")
+    scratchPath = f"{tempDir.name}/external editor scratch file.txt"
+
+    # First, set the diff tool to an empty command to go through the "set up" code path
+    mainWindow.onAcceptPrefsDialog({"externalDiff": ""})
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in.+diff tool")
+    acceptQMessageBox(mainWindow, "diff tool.+n.t set up")
+    findQDialog(mainWindow, "preferences").reject()
+
+    mainWindow.onAcceptPrefsDialog({"externalDiff": f'"{editorPath}" "{scratchPath}" $L $R'})
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in editor-shim")
+    QTest.qWait(1)
+    assert b"[OLD]b2.txt" in readFile(scratchPath)
+    assert b"[NEW]b2.txt" in readFile(scratchPath)

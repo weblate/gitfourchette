@@ -104,15 +104,17 @@ def dumpTempBlob(
     blobId = entry.id
     blob = repo.peel_blob(blobId)
     name, ext = os.path.splitext(os.path.basename(entry.path))
-    name = F"[{inBrackets}]{name}{ext}"
+    name = f"[{inBrackets}]{name}{ext}"
     path = os.path.join(dir, name)
     with open(path, "wb") as f:
         f.write(blob.data)
 
+    """
     # Make it read-only (this will probably not work on Windows)
     mode = os.stat(path).st_mode
     readOnlyMask = ~(stat.S_IWRITE | stat.S_IWGRP | stat.S_IWOTH)
     os.chmod(path, mode & readOnlyMask)
+    """
 
     return path
 

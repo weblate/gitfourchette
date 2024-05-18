@@ -1,6 +1,7 @@
 import enum
 import logging
 
+from gitfourchette.exttools import validateExternalToolCommand
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.settings import (
@@ -244,9 +245,13 @@ class PrefsDialog(QDialog):
         elif key == "externalEditor":
             return self.strControlWithPresets(key, value, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
         elif key == "externalDiff":
-            return self.strControlWithPresets(key, value, DIFF_TOOL_PRESETS)
+            return self.strControlWithPresets(
+                key, value, DIFF_TOOL_PRESETS,
+                validate=lambda cmd: validateExternalToolCommand(cmd, "$L", "$R"))
         elif key == "externalMerge":
-            return self.strControlWithPresets(key, value, MERGE_TOOL_PRESETS)
+            return self.strControlWithPresets(
+                key, value, MERGE_TOOL_PRESETS,
+                validate=lambda cmd: validateExternalToolCommand(cmd, "$L", "$R", "$B", "$M"))
         elif key in ["largeFileThresholdKB", "imageFileThresholdKB", "maxTrashFileKB"]:
             control = self.boundedIntControl(key, value, 0, 999_999)
             control.setSpecialValueText("\u221E")  # infinity
@@ -341,7 +346,7 @@ class PrefsDialog(QDialog):
         control.textEdited.connect(lambda v, k=prefKey: self.assign(k, v))
         return control
 
-    def strControlWithPresets(self, prefKey, prefValue, presets, leaveBlankHint=False):
+    def strControlWithPresets(self, prefKey, prefValue, presets, leaveBlankHint=False, validate=None):
         control = QComboBoxWithPreview(self)
         control.setEditable(True)
 
@@ -360,6 +365,12 @@ class PrefsDialog(QDialog):
         control.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred))
 
         control.editTextChanged.connect(lambda text: self.assign(prefKey, text))
+
+        if validate:
+            validator = ValidatorMultiplexer(self)
+            validator.connectInput(control.lineEdit(), validate, mustBeValid=False)
+            validator.run()
+
         return control
 
     def intControl(self, prefKey, prefValue):

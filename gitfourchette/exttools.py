@@ -5,7 +5,7 @@ import re
 import shlex
 
 from gitfourchette.qt import *
-from gitfourchette.settings import prefs
+from gitfourchette.settings import prefs, TEST_MODE
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 
@@ -69,8 +69,9 @@ def onExternalToolProcessError(parent: QWidget, prefKey: str):
             qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             qfd.setFileMode(QFileDialog.FileMode.AnyFile)
             qfd.setWindowModality(Qt.WindowModality.WindowModal)
+            qfd.setOption(QFileDialog.Option.DontUseNativeDialog, TEST_MODE)
             qfd.show()
-            qfd.fileSelected.connect(lambda newPath: onLocateTool(prefKey, newPath))#lambda x: print("fs", x))
+            qfd.fileSelected.connect(lambda newPath: onLocateTool(prefKey, newPath))
             return qfd
 
     qmb.finished.connect(onQMBFinished)
@@ -92,6 +93,35 @@ def setUpMergeToolPrompt(parent: QWidget, prefKey: str):
 
     qmb.accepted.connect(lambda: openPrefsDialog(parent, prefKey))
     qmb.show()
+
+
+def validateExternalToolCommand(command: str, *placeholders: str):
+    try:
+        buildExternalToolCommand(command, {k: "PLACEHOLDER" for k in placeholders}, [])
+        return ""
+    except ValueError as e:
+        return str(e)
+
+
+def buildExternalToolCommand(command: str, replacements: dict[str, str], positional: list[str]):
+    tokens = shlex.split(command, posix=not WINDOWS)
+
+    for placeholder, replacement in replacements.items():
+        for i, tok in enumerate(tokens):
+            if tok.endswith(placeholder):
+                prefix = tok.removesuffix(placeholder)
+                break
+        else:
+            raise ValueError(translate("exttools", "Placeholder token {0} missing.").format(placeholder))
+        if replacement:
+            tokens[i] = prefix + replacement
+        else:
+            del tokens[i]
+
+    # Just append other paths to end of command line...
+    tokens.extend(positional)
+
+    return tokens
 
 
 def openInExternalTool(
@@ -117,22 +147,7 @@ def openInExternalTool(
         setUpMergeToolPrompt(parent, prefKey)
         return
 
-    tokens = shlex.split(command, posix=not WINDOWS)
-
-    for placeholder, replacement in replacements.items():
-        for i, tok in enumerate(tokens):
-            if tok.endswith(placeholder):
-                prefix = tok.removesuffix(placeholder)
-                break
-        else:
-            raise ValueError(f"Placeholder token {placeholder} not found")
-        if replacement:
-            tokens[i] = prefix + replacement
-        else:
-            del tokens[i]
-
-    # Just append other paths to end of command line...
-    tokens.extend(positional)
+    tokens = buildExternalToolCommand(command, replacements, positional)
 
     # macOS-specific wrapper
     if MACOS:
