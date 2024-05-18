@@ -4,6 +4,7 @@ import os.path
 import pytest
 
 from .util import *
+from . import reposcenario
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
@@ -164,3 +165,27 @@ def testEditFileInExternalDiffTool(mainWindow, tempDir):
     QTest.qWait(1)
     assert b"[OLD]b2.txt" in readFile(scratchPath)
     assert b"[NEW]b2.txt" in readFile(scratchPath)
+
+
+def testFileListToolTip(mainWindow, tempDir):
+    wd = unpackRepo(tempDir)
+    reposcenario.fileWithStagedAndUnstagedChanges(wd)
+    writeFile(f"{wd}/newexe", "okay\n")
+    os.chmod(f"{wd}/newexe", 0o777)
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inUnstaged("a/a1.txt"))
+    tip = rw.dirtyFiles.currentIndex().data(Qt.ItemDataRole.ToolTipRole)
+    assert all(re.search(p, tip, re.I) for p in ("a/a1.txt", "modified"))
+
+    # look at staged counterpart of current index
+    tip = rw.stagedFiles.model().index(0, 0).data(Qt.ItemDataRole.ToolTipRole)
+    assert all(re.search(p, tip, re.I) for p in ("a/a1.txt", "modified", "also.+staged"))
+
+    rw.jump(NavLocator.inUnstaged("newexe"))
+    tip = rw.dirtyFiles.currentIndex().data(Qt.ItemDataRole.ToolTipRole)
+    assert all(re.search(p, tip, re.I) for p in ("untracked", "executable"))
+
+    rw.jump(NavLocator.inCommit(Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17"), "c/c2-2.txt"))
+    tip = rw.committedFiles.currentIndex().data(Qt.ItemDataRole.ToolTipRole)
+    assert all(re.search(p, tip, re.I) for p in ("c/c2.txt", "c/c2-2.txt", "renamed", "similarity"))
