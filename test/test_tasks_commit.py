@@ -390,6 +390,37 @@ def testCherrypick(tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
 
 
+def testAbortCherrypick(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.checkout_local_branch("no-parent")
+
+    oid = Oid(hex='ac7e7e44c1885efb472ad54a78327d66bfc4ecef')  # "First a/a1"
+
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(oid))
+    triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
+    assert rw.fileStackPage() == "workdir"
+    assert rw.repo.status() == {"a/a1.txt": FileStatus.INDEX_NEW}
+    rejectQMessageBox(rw, "cherry.+success.+commit")
+
+    assert rw.repo.state() == RepositoryState.CHERRYPICK
+    assert "First a/a1" in rw.state.uiPrefs.draftCommitMessage
+    assert rw.mergeBanner.isVisibleTo(rw)
+    assert re.search(r"cherry.+conflicts fixed", rw.mergeBanner.label.text(), re.I | re.S)
+    assert "abort" in rw.mergeBanner.button.text().lower()
+
+    # Abort cherrypick
+    rw.mergeBanner.button.click()
+    acceptQMessageBox(rw, "abort.+cherry.+a/a1")
+
+    assert rw.repo.state() == RepositoryState.NONE
+    assert rw.repo.status() == {}
+    assert rw.state.uiPrefs.draftCommitMessage == ""
+
+
 def testNewTag(tempDir, mainWindow):
     newTag = "cool-tag"
 

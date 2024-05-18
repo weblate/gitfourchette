@@ -498,6 +498,9 @@ class AbortMerge(RepoTask):
 
         yield from self.flowConfirm(text=paragraphs(lines), verb=verb, informativeText=informative, detailList=[escape(f) for f in abortList])
 
-        yield from self.flowEnterUiThread()
         self.repo.reset_merge()
         self.repo.state_cleanup()
+
+        # If cherrypicking, clear draft commit message that was set in CherrypickCommit
+        if isCherryPicking:
+            self.rw.state.uiPrefs.clearDraftCommit()
