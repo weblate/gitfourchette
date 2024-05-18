@@ -1,3 +1,4 @@
+from contextlib import suppress
 import os.path
 
 import pytest
@@ -456,3 +457,13 @@ def testAboutDialog(mainWindow):
     triggerMenuAction(mainWindow.menuBar(), "help/about")
     dlg = findQDialog(mainWindow, "about")
     dlg.accept()
+
+
+def testAllTaskNamesTranslated(mainWindow):
+    from gitfourchette import tasks
+    for key, type in vars(tasks).items():
+        with suppress(TypeError):
+            if (issubclass(type, tasks.RepoTask)
+                    and type is not tasks.RepoTask
+                    and type not in tasks.TaskBook.names):
+                assert False, f"Missing task name translation for {key}"

@@ -5,7 +5,6 @@ from typing import Any, Type, Union
 
 from gitfourchette import tasks
 from gitfourchette.qt import *
-from gitfourchette.settings import DEVDEBUG
 from gitfourchette.tasks import RepoTask, TaskInvoker
 from gitfourchette.toolbox import stockIcon, MultiShortcut, makeMultiShortcut, appendShortcutToToolTipText
 
@@ -126,15 +125,6 @@ class TaskBook:
             tasks.SetUpRepoIdentity: translate("task", "Set up the identity under which you create commits"),
             tasks.SwitchBranch: translate("task", "Switch to this branch and update the working directory to match it"),
         }
-
-        # Check that all tasks have names
-        if DEVDEBUG:
-            for n, t in vars(tasks).items():
-                try:
-                    if issubclass(t, RepoTask) and t is not RepoTask and t not in cls.names:
-                        logger.warning(f"Missing task name: {t.__name__}")
-                except TypeError:
-                    pass
 
     @classmethod
     def initialize(cls):
