@@ -401,6 +401,7 @@ class GraphView(QListView):
         if force or filterIndex.row() != self.currentIndex().row():
             self.scrollTo(filterIndex, QAbstractItemView.ScrollHint.EnsureVisible)
             self.setCurrentIndex(filterIndex)
+        return filterIndex
 
     def getFilterIndexForLocator(self, locator: NavLocator):
         if locator.context == NavContext.COMMITTED:

@@ -219,3 +219,33 @@ def testRefSortFavorsHeadBranch(mainWindow, tempDir):
     masterIndex = rw.graphView.getFilterIndexForCommit(masterOid)
     amendedIndex = rw.graphView.getFilterIndexForCommit(amendedOid)
     assert amendedIndex.row() < masterIndex.row()
+
+
+def testCommitToolTip(mainWindow, tempDir):
+    masterOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oldCursorPos = QCursor.pos()
+
+    mainWindow.resize(1500, 600)
+    index = rw.graphView.selectRowForLocator(NavLocator.inCommit(masterOid))
+    cursorPos = rw.graphView.mapToGlobal(QPoint(8, 8))
+    QCursor.setPos(cursorPos)
+    QTest.qWait(0)
+    toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
+    assert not toolTip
+
+    cursorPos = rw.graphView.mapToGlobal(QPoint(rw.graphView.width()-8, 8))
+    QCursor.setPos(cursorPos)
+    QTest.qWait(0)
+    toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
+    assert "Delete c/c2-2.txt" not in toolTip
+    assert "a.u.thor@example.com" in toolTip
+
+    QCursor.setPos(oldCursorPos)
+    mainWindow.resize(300, 600)
+    QTest.qWait(0)
+    toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
+    assert "Delete c/c2-2.txt" in toolTip
+    assert "a.u.thor@example.com" in toolTip
