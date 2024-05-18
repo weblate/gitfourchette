@@ -1,8 +1,10 @@
+import base64
 import dataclasses
 import enum
 import json
 import logging
 import os
+from typing import Any, Type
 
 from gitfourchette import pycompat  # StrEnum for Python 3.10
 from gitfourchette.porcelain import *
@@ -11,59 +13,33 @@ from gitfourchette.qt import *
 logger = logging.getLogger(__name__)
 
 
-class PrefsJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, bytes):
-            return {"_type": "bytes", "data": obj.hex()}
-        elif isinstance(obj, Signature):
-            return { "_type": "Signature", "name": obj.name, "email": obj.email, "time": obj.time, "offset": obj.offset }
-        elif isinstance(obj, set):
-            return list(obj)
-        return super().default(obj)
-
-
-class PrefsJSONDecoder(json.JSONDecoder):
-    def __init__(self, *args, **kwargs):
-        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
-
-    def object_hook(self, j):
-        if '_type' not in j:
-            return j
-        type = j['_type']
-        if type == "bytes":
-            return bytes.fromhex(j["data"])
-        elif type == "Signature":
-            return Signature(j["name"], j["email"], j["time"], j["offset"])
-        return j
-
-
 class PrefsFile:
     _filename = ""
     _allowMakeDirs = True
 
-    def getParentDir(self):
+    def getParentDir(self) -> str:
         from gitfourchette.settings import TEST_MODE
         if TEST_MODE:
             return os.path.join(qTempDir(), "testmode-config")
         return QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
 
-    def _getFullPath(self, forWriting: bool):
+    def _getFullPath(self, forWriting: bool) -> str:
         assert self._filename != "", "you must override _filename"
 
         prefsDir = self.getParentDir()
         if not prefsDir:
-            return None
+            return ""
 
         if forWriting:
             if self._allowMakeDirs or False:
                 os.makedirs(prefsDir, exist_ok=True)
             elif not os.path.isdir(prefsDir):
-                return None
+                return ""
 
         fullPath = os.path.join(prefsDir, self._filename)
 
         if not forWriting and not os.path.isfile(fullPath):
-            return None
+            return ""
 
         return fullPath
 
@@ -85,33 +61,36 @@ class PrefsFile:
                 obj = f.default
             self.__dict__[f.name] = obj
 
-    def write(self, force=False):
+    def write(self, force=False) -> str:
         # Prepare the path
         prefsPath = self._getFullPath(forWriting=True)
         if not prefsPath:
             logger.warning("Couldn't get path for writing")
-            return None
+            return ""
 
-        # Get default dataclass values
-        defaults = {}
+        # Filter the values
         assert dataclasses.is_dataclass(self)
-        for f in dataclasses.fields(self):
-            if f.default_factory != dataclasses.MISSING:
-                defaults[f.name] = f.default_factory()
-            else:
-                defaults[f.name] = f.default
-
-        # Skip private fields starting with an underscore,
-        # and skip fields that are set to the default value
+        fields: dict[str, dataclasses.Field] = self.__dataclass_fields__
         filtered = {}
-        for k in self.__dict__:
-            if k.startswith("_"):
+        for key, field in fields.items():
+            # Skip private fields
+            if key.startswith("_"):
                 continue
-            v = self.__dict__[k]
-            if (k not in defaults) or (defaults[k] != v):
-                if isinstance(v, enum.Enum):  # Convert Qt enums to plain old data type
-                    v = v.value
-                filtered[k] = v
+
+            if field.default_factory != dataclasses.MISSING:
+                default = field.default_factory()
+            else:
+                default = field.default
+
+            value = self.__dict__[key]
+
+            # Skip default values
+            if value == default:
+                continue
+
+            # Make the value JSON-friendly
+            value = self.encode(value)
+            filtered[key] = value
 
         # If the filtered object comes out empty (all defaults)
         # avoid cluttering the directory - don't write out an empty object
@@ -122,55 +101,98 @@ class PrefsFile:
             else:
                 logger.debug("Deleting prefs file because we want defaults")
                 os.unlink(prefsPath)
-            return None
+            return ""
 
         # Dump the object to disk
         with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
-            json.dump(obj=filtered, fp=jsonFile, indent='\t', cls=PrefsJSONEncoder)
-
+            json.dump(obj=filtered, fp=jsonFile, indent='\t')
         self._dirty = False
 
         logger.info(f"Wrote {prefsPath}")
         return prefsPath
 
-    def load(self):
+    def load(self) -> bool:
         prefsPath = self._getFullPath(forWriting=False)
         if not prefsPath:  # couldn't be found
             return False
 
-        with open(prefsPath, 'rt', encoding='utf-8') as f:
+        # Load JSON blob
+        with open(prefsPath, 'rt', encoding='utf-8') as file:
             try:
-                obj = json.load(f, cls=PrefsJSONDecoder)
+                jsonObject = json.load(file)
             except ValueError as loadError:
                 logger.warning(f"{prefsPath}: {loadError}", exc_info=True)
                 return False
 
-            for k in obj:
-                if k.startswith('_'):
-                    logger.warning(f"{prefsPath}: skipping illegal key: {k}")
-                    continue
-                if k not in self.__dict__:
-                    logger.warning(f"{prefsPath}: skipping unknown key: {k}")
-                    continue
+        assert dataclasses.is_dataclass(self)
+        fields: dict[str, dataclasses.Field] = self.__dataclass_fields__
 
-                if obj[k] is None:
-                    continue
+        # Decode values and store them in this object
+        for key, value in jsonObject.items():
+            if key.startswith('_') or key not in fields:
+                logger.warning(f"{prefsPath}: dropping key: {key}")
+                continue
+            if value is None:
+                continue
 
-                originalType = self.__dataclass_fields__[k].type
-                if issubclass(originalType, enum.StrEnum):
-                    acceptedType = str
-                elif issubclass(originalType, (enum.IntEnum, enum.Enum)):
-                    acceptedType = int
-                elif issubclass(originalType, set):
-                    acceptedType = list
-                else:
-                    acceptedType = originalType
+            try:
+                value = self.decode(value, fields[key].type)
+            except ValueError as error:
+                logger.warning(f"{prefsPath}: {key}: {error}")
+                continue
 
-                if acceptedType is not originalType:
-                    assert isinstance(obj[k], acceptedType)
-                    self.__dict__[k] = originalType(obj[k])
-                else:
-                    self.__dict__[k] = obj[k]
+            self.__dict__[key] = value
 
         self._dirty = False
         return True
+
+    @staticmethod
+    def encode(o: Any) -> Any:
+        """ Encode a value to make it JSON-friendly """
+        if isinstance(o, enum.Enum):  # Convert Qt enums to plain old data type
+            return o.value
+        elif type(o) is bytes:
+            return base64.b64encode(o).decode("ascii")
+        elif type(o) is set:
+            return list(o)
+        elif isinstance(o, Signature):
+            return {"name": o.name, "email": o.email, "time": o.time, "offset": o.offset}
+        return o
+
+    @staticmethod
+    def decode(o: Any, dstType: Type) -> Any:
+        """ Convert a value coming from a JSON blob to a target type """
+        construct = None
+
+        if dstType is bytes:
+            srcType = str
+            construct = base64.b64decode
+        elif dstType is set:
+            srcType = list
+        elif issubclass(dstType, enum.StrEnum):
+            srcType = str
+        elif issubclass(dstType, (enum.IntEnum, enum.Enum)):
+            srcType = int
+        elif dstType is Signature:
+            srcType = dict
+            construct = PrefsFile.decodeSignature
+        else:
+            srcType = dstType
+
+        if srcType is not dstType:
+            if not isinstance(o, srcType):
+                raise ValueError("unexpected JSON field type")
+            if construct is not None:
+                o = construct(o)
+            else:
+                o = dstType(o)
+
+        return o
+
+    @staticmethod
+    def decodeSignature(j: dict) -> Signature:
+        name = str(j["name"])
+        email = str(j["email"])
+        time = int(j["time"])
+        offset = int(j["offset"])
+        return Signature(name, email, time, offset)
