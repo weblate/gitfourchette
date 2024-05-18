@@ -11,6 +11,10 @@ from gitfourchette.porcelain import *
 TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
 
 
+def pause(seconds: int = 3):
+    QTest.qWait(seconds * 1000)
+
+
 def getTestDataPath(name):
     path = Path(__file__).resolve().parent / "data"
     return str(path / name)

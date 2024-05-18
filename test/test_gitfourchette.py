@@ -467,3 +467,45 @@ def testAllTaskNamesTranslated(mainWindow):
                     and type is not tasks.RepoTask
                     and type not in tasks.TaskBook.names):
                 assert False, f"Missing task name translation for {key}"
+
+
+def testSearchFileList(mainWindow, tempDir):
+    oid = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(oid))
+    assert rw.committedFiles.isVisibleTo(rw)
+    rw.committedFiles.setFocus()
+    QTest.keySequence(rw, "Ctrl+F")
+    QTest.qWait(0)
+
+    fileList = rw.committedFiles
+    searchBar = fileList.searchBar
+    assert searchBar.isVisibleTo(rw)
+    searchBar.lineEdit.setText(".txt")
+    QTest.qWait(0)
+    assert not searchBar.isRed()
+
+    assert qlvGetSelection(fileList) == ["a/a1.txt"]
+    QTest.keySequence(rw, "F3")
+    assert qlvGetSelection(fileList) == ["a/a2.txt"]
+    QTest.keySequence(rw, "F3")
+    assert qlvGetSelection(fileList) == ["master.txt"]
+    QTest.keySequence(rw, "F3")
+    assert qlvGetSelection(fileList) == ["a/a1.txt"]
+    QTest.keySequence(rw, "Shift+F3")
+    assert qlvGetSelection(fileList) == ["master.txt"]
+
+    searchBar.lineEdit.setText("a2")
+    QTest.qWait(0)
+    assert qlvGetSelection(fileList) == ["a/a2.txt"]
+
+    searchBar.lineEdit.setText("bogus")
+    QTest.qWait(0)
+    assert searchBar.isRed()
+
+    QTest.keySequence(searchBar, "Escape")
+    QTest.qWait(0)
+    assert not searchBar.isVisibleTo(rw)
