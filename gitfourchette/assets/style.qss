@@ -1,9 +1,3 @@
-QTreeView::branch:selected:!active,
-QTreeView::item:selected:!active,
-QListView::item:selected:!active {
-    background-color: palette(mid);
-}
-
 Sidebar {
     background: palette(window);
 }
