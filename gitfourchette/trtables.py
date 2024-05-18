@@ -262,6 +262,7 @@ class TrTables:
                 "detailed information about the author and the committer.</p>"),
             "maxCommits": translate("Prefs", "Load up to # commits in the history"),
             "maxCommits_help": translate("Prefs", "Set to 0 to always load the full commit history."),
+            "alternatingRowColors": translate("Prefs", "Draw rows using alternating background colors"),
 
             "maxTrashFiles": translate("Prefs", "The trash keeps up to # discarded patches"),
             "maxTrashFileKB": translate("Prefs", "Patches bigger than # KB won’t be salvaged"),

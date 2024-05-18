@@ -446,6 +446,8 @@ class GraphView(QListView):
         self.setVerticalScrollMode(
             self.ScrollMode.ScrollPerPixel if settings.prefs.smoothScroll else self.ScrollMode.ScrollPerItem)
 
+        self.setAlternatingRowColors(settings.prefs.alternatingRowColors)
+
         # Force redraw to reflect changes in row height, flattening, date format, etc.
         if invalidateMetrics:
             self.itemDelegate().invalidateMetrics()

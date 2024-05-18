@@ -179,6 +179,7 @@ class Prefs(PrefsFile):
     shortTimeFormat             : str                   = list(SHORT_DATE_PRESETS.values())[0]
     maxCommits                  : int                   = 10000
     authorDiffAsterisk          : bool                  = True
+    alternatingRowColors        : bool                  = False
 
     _category_external          : int                   = 0
     externalEditor              : str                   = ""
