@@ -212,6 +212,38 @@ def testDeleteBranch(tempDir, mainWindow, method):
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDeleteBranchFolder(tempDir, mainWindow, method):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.create_branch_on_head("folder1/leaf")
+        repo.create_branch_on_head("folder1/folder2/leaf")
+        repo.create_branch_on_head("folder1/folder2/folder3/leaf")
+        repo.create_branch_on_head("folder1/folder2_donttouchthis/leaf")
+        repo.create_branch_on_head("folder4/wontclash")
+
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    node = rw.sidebar.findNode(lambda n: n.data == "refs/heads/folder1/folder2")
+
+    if method == "sidebarmenu":
+        triggerMenuAction(rw.sidebar.makeNodeMenu(node), "delete folder")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
+    acceptQMessageBox(rw, "really delete.+branch folder")
+
+    for gone in ["folder1/folder2/leaf", "folder1/folder2/folder3/leaf"]:
+        assert gone not in repo.branches.local
+
+    for keep in ["folder1/leaf", "folder1/folder2_donttouchthis/leaf", "folder4/wontclash", "master", "no-parent"]:
+        assert keep in repo.branches.local
+
+
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
 def testDeleteCurrentBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -232,6 +264,19 @@ def testDeleteCurrentBranch(tempDir, mainWindow, method):
 
     acceptQMessageBox(rw, "can.+t delete.+current branch")
     assert "master" in repo.branches.local  # still there
+
+
+def testDeleteBranchFolderContainingCurrentBranch(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.rename_local_branch("master", "folder1/master")
+
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+    node = rw.sidebar.findNode(lambda n: n.data == "refs/heads/folder1")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "delete folder")
+    acceptQMessageBox(rw, "can.+t delete.+folder.+current branch")
+    assert "folder1/master" in repo.branches.local
 
 
 def testNewBranchTrackingRemoteBranch1(tempDir, mainWindow):

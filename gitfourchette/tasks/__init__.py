@@ -3,17 +3,18 @@ from gitfourchette.tasks.repotask import RepoGoneError
 from gitfourchette.tasks.repotask import TaskInvoker
 
 from gitfourchette.tasks.branchtasks import (
+    DeleteBranch,
+    DeleteBranchFolder,
     EditUpstreamBranch,
+    FastForwardBranch,
+    MergeBranch,
+    NewBranchFromCommit,
     NewBranchFromHead,
-    SwitchBranch,
+    NewBranchFromRef,
+    RecallCommit,
     RenameBranch,
     RenameBranchFolder,
-    DeleteBranch,
-    NewBranchFromRef,
-    NewBranchFromCommit,
-    FastForwardBranch,
-    RecallCommit,
-    MergeBranch,
+    SwitchBranch,
 )
 from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutCommit, RevertCommit, ResetHead
 from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIdentity

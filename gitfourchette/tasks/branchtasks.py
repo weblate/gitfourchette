@@ -157,6 +157,44 @@ class DeleteBranch(RepoTask):
         return TaskEffects.Refs
 
 
+class DeleteBranchFolder(RepoTask):
+    def flow(self, folderRefName: str):
+        prefix, folderName = RefPrefix.split(folderRefName)
+        assert prefix == RefPrefix.HEADS
+        assert not folderName.endswith("/")
+        folderNameSlash = folderName + "/"
+
+        currentBranch = self.repo.head_branch_shorthand
+        if currentBranch.startswith(folderNameSlash):
+            text = paragraphs(
+                self.tr("Cannot delete folder {0} because it contains the current branch {1}."
+                        ).format(bquo(folderName), bquo(currentBranch)),
+                self.tr("Before you try again, switch to another branch."))
+            raise AbortTask(text)
+
+        folderBranches = [b for b in self.repo.listall_branches(BranchType.LOCAL)
+                          if b.startswith(folderNameSlash)]
+
+        text = paragraphs(
+            self.tr("Really delete local branch folder {0}?").format(bquo(folderName)),
+            self.tr("<b>%n</b> branches will be deleted.", "", len(folderBranches)) + " " + tr("This cannot be undone!"))
+
+        yield from self.flowConfirm(
+            self.tr("Delete branch folder"),
+            text,
+            detailList=folderBranches,
+            verb=self.tr("Delete folder", "Button label"),
+            buttonIcon="SP_DialogDiscardButton")
+
+        yield from self.flowEnterWorkerThread()
+
+        for b in folderBranches:
+            self.repo.delete_local_branch(b)
+
+    def effects(self):
+        return TaskEffects.Refs
+
+
 class _NewBranchBaseTask(RepoTask):
     TRACK_ANY_UPSTREAM = ".ANY"
 

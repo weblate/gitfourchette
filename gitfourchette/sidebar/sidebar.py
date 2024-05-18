@@ -331,6 +331,7 @@ class Sidebar(QTreeView):
             if node.data.startswith(RefPrefix.HEADS):
                 actions += [
                     ActionDef(self.tr("Re&name Folder..."), lambda: self.wantRenameNode(node)),
+                    ActionDef(self.tr("&Delete Folder..."), lambda: self.wantDeleteNode(node)),
                     ActionDef.SEPARATOR,
                 ]
 
@@ -546,6 +547,13 @@ class Sidebar(QTreeView):
 
         elif item == EItem.Tag:
             DeleteTag.invoke(self, data.removeprefix(RefPrefix.TAGS))
+
+        elif item == EItem.RefFolder:
+            prefix, name = RefPrefix.split(data)
+            if prefix == RefPrefix.HEADS:
+                DeleteBranchFolder.invoke(self, data)
+            else:
+                QApplication.beep()
 
         else:
             QApplication.beep()

@@ -36,6 +36,7 @@ class TaskBook:
             tasks.CheckoutCommit: translate("task", "Check out commit"),
             tasks.CherrypickCommit: translate("task", "Cherry-pick"),
             tasks.DeleteBranch: translate("task", "Delete local branch"),
+            tasks.DeleteBranchFolder: translate("task", "Delete local branch folder"),
             tasks.DeleteRemote: translate("task", "Remove remote"),
             tasks.DeleteRemoteBranch: translate("task", "Delete branch on remote"),
             tasks.DeleteTag: translate("task", "Delete tag"),
