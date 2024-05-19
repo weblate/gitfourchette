@@ -88,7 +88,7 @@ def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplaySt
 
 def shortHash(oid: Oid) -> str:
     from gitfourchette.settings import prefs
-    return oid.hex[:prefs.shortHashChars]
+    return str(oid)[:prefs.shortHashChars]
 
 
 def dumpTempBlob(

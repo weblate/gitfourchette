@@ -121,7 +121,7 @@ class AmendCommit(RepoTask):
             initialText=headCommit.message,
             authorSignature=headCommit.author,
             committerSignature=fallbackSignature,
-            amendingCommitHash=shortHash(headCommit.oid),
+            amendingCommitHash=shortHash(headCommit.id),
             detachedHead=self.repo.head_is_detached,
             repoState=self.repo.state(),
             parent=self.parentWidget())
@@ -377,7 +377,7 @@ class NewTag(RepoTask):
             yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
 
         if not oid:
-            oid = self.repo.head_commit_oid
+            oid = self.repo.head_commit_id
 
         reservedNames = self.repo.listall_tags()
         nameTaken = self.tr("This name is already taken by another tag.")
@@ -419,7 +419,7 @@ class DeleteTag(RepoTask):
         yield from self.flowEnterWorkerThread()
 
         # Stay on this commit after the operation
-        tagTarget = self.repo.get_commit_oid_from_tag_name(tagName)
+        tagTarget = self.repo.commit_id_from_tag_name(tagName)
         if tagTarget:
             self.jumpTo = NavLocator.inCommit(tagTarget)
 

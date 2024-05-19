@@ -86,7 +86,7 @@ class RepoState(QObject):
     superproject: str
     "Path of the superproject. Empty string if this isn't a submodule."
 
-    activeCommitOid: Oid | None
+    activeCommitId: Oid | None
     "Oid of the currently checked-out commit."
 
     foreignCommits: set[Oid]
@@ -143,7 +143,7 @@ class RepoState(QObject):
 
         self.superproject = repo.get_superproject()
 
-        self.activeCommitOid = None
+        self.activeCommitId = None
 
         self.workdirStale = True
         self.numUncommittedChanges = 0
@@ -170,7 +170,7 @@ class RepoState(QObject):
         else:
             self.homeBranch = self.repo.head_branch_shorthand
 
-        refCache = self.repo.map_refs_to_oids()
+        refCache = self.repo.map_refs_to_ids()
 
         if refCache == self.refCache:
             # Make sure it's sorted in the exact same order...
@@ -210,7 +210,7 @@ class RepoState(QObject):
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
     @benchmark
-    def initializeWalker(self, tipOids: Iterable[Oid]) -> Walker:
+    def initializeWalker(self, tipIds: Iterable[Oid]) -> Walker:
         sorting = SortMode.TOPOLOGICAL
 
         if settings.prefs.chronologicalOrder:
@@ -230,16 +230,16 @@ class RepoState(QObject):
         # significant (last in, first out). The tips should be pre-sorted in
         # ASCENDING chronological order so that the latest modified branches
         # come out at the top of the graph in topological mode.
-        for tip in tipOids:
+        for tip in tipIds:
             self.walker.push(tip)
 
         return self.walker
 
-    def updateActiveCommitOid(self):
+    def updateActiveCommitId(self):
         try:
-            self.activeCommitOid = self.repo.head.target
+            self.activeCommitId = self.repo.head.target
         except GitError:
-            self.activeCommitOid = None
+            self.activeCommitId = None
 
     def _uncommittedChangesFakeCommitParents(self):
         try:
@@ -277,7 +277,7 @@ class RepoState(QObject):
             with Benchmark("Walk graph until equilibrium"):
                 walker = self.initializeWalker(newHeads)
                 for commit in walker:
-                    oid = commit.oid
+                    oid = commit.id
                     parents = commit.parent_ids
 
                     newCommitSequence.append(commit)
@@ -309,7 +309,7 @@ class RepoState(QObject):
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
-        self.updateActiveCommitOid()
+        self.updateActiveCommitId()
 
         return nRemoved, nAdded
 
@@ -321,8 +321,8 @@ class RepoState(QObject):
         self.resolveHiddenCommits()
 
     @benchmark
-    def toggleHideStash(self, stashOid: Oid):
-        toggleSetElement(self.uiPrefs.hiddenStashCommits, stashOid.hex)
+    def toggleHideStash(self, stashId: Oid):
+        toggleSetElement(self.uiPrefs.hiddenStashCommits, str(stashId))
         self.uiPrefs.setDirty()
         self.resolveHiddenCommits()
 
@@ -438,7 +438,7 @@ class RepoState(QObject):
         for i, commit in enumerate(self.commitSequence):
             if not commit:  # May be a fake commit such as Uncommitted Changes
                 continue
-            solver.newCommit(commit.oid, commit.parent_ids, self.hiddenCommits)
+            solver.newCommit(commit.id, commit.parent_ids, self.hiddenCommits)
             # Don't check if trickle is complete too often (expensive)
             if (i % 250 == 0) and solver.done:
                 logger.debug(f"resolveHiddenCommits complete in {i} iterations")

@@ -1017,7 +1017,7 @@ class RepoWidget(QStackedWidget):
         elif repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
             inBrackets = self.tr("repo is empty")
         elif repo.head_is_detached:
-            oid = repo.head_commit_oid
+            oid = repo.head_commit_id
             inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
         else:
             with suppress(GitError):
@@ -1107,7 +1107,7 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
 
     def selectRef(self, refName: str):
-        oid = self.repo.get_commit_oid_from_refname(refName)
+        oid = self.repo.commit_id_from_refname(refName)
         self.jump(NavLocator(NavContext.COMMITTED, commit=oid))
 
     # -------------------------------------------------------------------------
@@ -1193,7 +1193,7 @@ class RepoWidget(QStackedWidget):
             except KeyError:
                 n = self.state.nextTruncationThreshold
             # After loading, jump back to what is currently the last commit
-            self.pendingLocator = NavLocator.inCommit(self.state.commitSequence[-1].oid)
+            self.pendingLocator = NavLocator.inCommit(self.state.commitSequence[-1].id)
             # Reload the repo
             self.primeRepo(force=True, maxCommits=n)
         elif url.authority() == "opensubfolder":

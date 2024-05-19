@@ -151,13 +151,13 @@ class CommitLogDelegate(QStyledItemDelegate):
         # Get the info we need about the commit
         commit: Commit | None = index.data(CommitLogModel.CommitRole)
         if commit:
-            oid = commit.oid
+            oid = commit.id
             author = commit.author
             committer = commit.committer
 
             # TODO: If is stash, getCoreStashMessage
             summaryText, contd = messageSummary(commit.message, ELISION)
-            hashText = commit.oid.hex[:settings.prefs.shortHashChars]
+            hashText = shortHash(commit.id)
             authorText = abbreviatePerson(author, settings.prefs.authorDisplayStyle)
 
             qdt = QDateTime.fromSecsSinceEpoch(author.time)
@@ -169,7 +169,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                 if author.time != committer.time:
                     dateText += "*"
 
-            if self.state.activeCommitOid == commit.oid:
+            if self.state.activeCommitId == commit.id:
                 painter.setFont(self.activeCommitFont)
 
             searchBar: SearchBar = self.parent().searchBar
@@ -238,7 +238,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         painter.restore()
 
         # ------ Highlight searched hash
-        if searchTerm and searchTermLooksLikeHash and commit and commit.hex.startswith(searchTerm):
+        if searchTerm and searchTermLooksLikeHash and commit and str(commit).startswith(searchTerm):
             x1 = 0
             x2 = min(len(hashText), len(searchTerm)) * hcw
             SearchBar.highlightNeedle(painter, rect, hashText, 0, len(searchTerm), x1, x2)
@@ -269,7 +269,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Message
         # use muted color for foreign commit messages if not selected
-        if not isSelected and commit and commit.oid in self.state.foreignCommits:
+        if not isSelected and commit and commit.id in self.state.foreignCommits:
             painter.setPen(Qt.GlobalColor.gray)
         if oid is not None and oid != UC_FAKEID:
             rect.setRight(leftBoundName - XMARGIN)
@@ -376,7 +376,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         text = "?" * 7
         with suppress(BaseException):
             commit: Commit = index.data(CommitLogModel.CommitRole)
-            text = commit.oid.hex[:7]
+            text = str(commit.id)[:7]
         with suppress(BaseException):
             details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
             text += " " + shortenTracebackPath(details[-2].splitlines(False)[0]) + ":: " + repr(exc)

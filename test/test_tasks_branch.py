@@ -316,7 +316,7 @@ def testNewBranchTrackingRemoteBranch2(tempDir, mainWindow):
     localBranch = repo.branches.local['first-merge']
     assert localBranch
     assert localBranch.upstream_name == "refs/remotes/origin/first-merge"
-    assert localBranch.target.hex == "0966a434eb1a025db6b71485ab63a3bfbea520b6"
+    assert str(localBranch.target) == "0966a434eb1a025db6b71485ab63a3bfbea520b6"
 
 
 @pytest.mark.parametrize("method", ["graphstart", "graphcheckout"])

@@ -79,7 +79,7 @@ def getPatchPreamble(delta: DiffDelta, reverse=False):
     # Also, even if the patch is successfully parsed as a Diff, and we need to
     # regenerate it (from the Diff), libgit2 may fail to re-create the
     # "---"/"+++" lines and it'll therefore fail to parse its own output.
-    preamble += f"index {of.id.hex}..{'f'*40}\n"
+    preamble += f"index {of.id}..{'f'*40}\n"
 
     if ofExists:
         preamble += F"--- a/{of.path}\n"

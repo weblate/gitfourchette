@@ -15,7 +15,7 @@ def backupStash(repo: Repo, stashCommitId: Oid):
     text = F"""\
 To recover this stash, paste the hash below into "Repo > Recall Lost Commit" in {qAppName()}:
 
-{stashCommitId.hex}
+{stashCommitId}
 
 ----------------------------------------
 
@@ -103,7 +103,7 @@ class ApplyStash(RepoTask):
         qmb.deleteLater()
 
         yield from self.flowEnterWorkerThread()
-        self.repo.stash_apply_oid(stashCommitId)
+        self.repo.stash_apply_id(stashCommitId)
 
         if self.repo.index.conflicts:
             yield from self.flowEnterUiThread()
@@ -117,7 +117,7 @@ class ApplyStash(RepoTask):
 
         if deleteAfterApply:
             backupStash(self.repo, stashCommitId)
-            self.repo.stash_drop_oid(stashCommitId)
+            self.repo.stash_drop_id(stashCommitId)
 
 
 class DropStash(RepoTask):
@@ -134,4 +134,4 @@ class DropStash(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         backupStash(self.repo, stashCommitId)
-        self.repo.stash_drop_oid(stashCommitId)
+        self.repo.stash_drop_id(stashCommitId)

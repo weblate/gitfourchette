@@ -68,7 +68,7 @@ class GraphView(QListView):
 
     def makeContextMenu(self):
         kind = self.currentRowKind
-        oid = self.currentCommitOid
+        oid = self.currentCommitId
         state = self.repoWidget.state
 
         mergeActions = []
@@ -158,7 +158,7 @@ class GraphView(QListView):
     @benchmark
     def setHiddenCommits(self, hiddenCommits: set[Oid]):
         # Invalidating the filter can be costly, so avoid if possible
-        if self.clFilter.hiddenOids == hiddenCommits:
+        if self.clFilter.hiddenIds == hiddenCommits:
             return
 
         self.clFilter.setHiddenCommits(hiddenCommits)  # update filter BEFORE updating model
@@ -185,7 +185,7 @@ class GraphView(QListView):
         elif rowKind == SpecialRow.TruncatedHistory:
             self.linkActivated.emit(makeInternalLink("expandlog"))
         elif rowKind == SpecialRow.Commit:
-            oid = self.currentCommitOid
+            oid = self.currentCommitId
             CheckoutCommit.invoke(self, oid)
 
     def keyPressEvent(self, event: QKeyEvent):
@@ -194,7 +194,7 @@ class GraphView(QListView):
             return
 
         k = event.key()
-        oid = self.currentCommitOid
+        oid = self.currentCommitId
 
         if k in GlobalShortcuts.getCommitInfoHotkeys:
             if oid:
@@ -229,14 +229,14 @@ class GraphView(QListView):
         return currentIndex.data(CommitLogModel.SpecialRowRole)
 
     @property
-    def currentCommitOid(self) -> Oid | None:
+    def currentCommitId(self) -> Oid | None:
         if not self.currentIndex().isValid():
             return
         oid = self.currentIndex().data(CommitLogModel.OidRole)
         return oid
 
     def getInfoOnCurrentCommit(self):
-        oid = self.currentCommitOid
+        oid = self.currentCommitId
         if not oid:
             return
 
@@ -293,7 +293,7 @@ class GraphView(QListView):
         markup = F"""<style>{stylesheet}</style>
             <big>{summary}</big>{postSummary}
             <table>
-            <tr><th>{hashTitle}</th><td>{commit.oid.hex}</td></tr>
+            <tr><th>{hashTitle}</th><td>{commit.id}</td></tr>
             <tr><th>{parentTitle}</th><td>{parentValueMarkup}</td></tr>
             <tr><th>{authorTitle}</th><td>{authorMarkup}</td></tr>
             <tr><th>{committerTitle}</th><td>{committerMarkup}</td></tr>
@@ -305,12 +305,12 @@ class GraphView(QListView):
             frame = state.graph.getFrame(seqIndex)
             homeChain = frame.getHomeChainForCommit()
             homeChainTopRow = homeChain.topRow
-            homeChainTopOid = state.graph.getFrame(homeChainTopRow).commit
-            if type(homeChainTopOid) is Oid:
-                homeChainLocator = NavLocator.inCommit(homeChainTopOid)
-                homeChainTopLink = homeChainLocator.toHtml(shortHash(homeChainTopOid))
+            homeChainTopId = state.graph.getFrame(homeChainTopRow).commit
+            if type(homeChainTopId) is Oid:
+                homeChainLocator = NavLocator.inCommit(homeChainTopId)
+                homeChainTopLink = homeChainLocator.toHtml(shortHash(homeChainTopId))
             else:
-                homeChainTopLink = str(homeChainTopOid)
+                homeChainTopLink = str(homeChainTopId)
             markup += F"""
                 <tr><th>View row:</th><td>{self.currentIndex().row()}</td></tr>
                 <tr><th>Graph row:</th><td>{repr(state.graph.commitRows[oid])}</td></tr>
@@ -321,7 +321,7 @@ class GraphView(QListView):
 
         markup += "</table>"
 
-        title = self.tr("Commit info: {0}").format(shortHash(commit.oid))
+        title = self.tr("Commit info: {0}").format(shortHash(commit.id))
 
         messageBox = asyncMessageBox(self, 'information', title, markup, macShowTitle=False,
                                      buttons=QMessageBox.StandardButton.Ok)
@@ -346,7 +346,7 @@ class GraphView(QListView):
         messageBox.show()
 
     def resetHeadFlow(self):
-        oid = self.currentCommitOid
+        oid = self.currentCommitId
         if not oid:
             return
 
@@ -362,11 +362,11 @@ class GraphView(QListView):
         dlg.show()
 
     def copyCommitHashToClipboard(self):
-        oid = self.currentCommitOid
+        oid = self.currentCommitId
         if not oid:  # uncommitted changes
             return
 
-        text = oid.hex
+        text = str(oid)
         QApplication.clipboard().setText(text)
         self.statusMessage.emit(clipboardStatusMessage(text))
 
@@ -471,7 +471,7 @@ class GraphView(QListView):
             commit = model.data(index, CommitLogModel.CommitRole)
             if commit is None:
                 continue
-            if likelyHash and commit.hex.startswith(term):
+            if likelyHash and str(commit.id).startswith(term):
                 return index
             if term in commit.message.lower():
                 return index

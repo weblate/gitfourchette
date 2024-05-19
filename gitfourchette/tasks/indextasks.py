@@ -305,9 +305,9 @@ class HardSolveConflicts(RepoTask):
         assert conflicts is not None
 
         assert isinstance(conflictedFiles, dict)
-        for path, keepOid in conflictedFiles.items():
+        for path, keepId in conflictedFiles.items():
             assert type(path) is str
-            assert type(keepOid) is Oid
+            assert type(keepId) is Oid
             assert path in conflicts
 
             with suppress(FileNotFoundError):  # ignore FileNotFoundError for DELETED_BY_US conflicts
@@ -316,18 +316,18 @@ class HardSolveConflicts(RepoTask):
             fullPath = repo.in_workdir(path)
 
             # TODO: we should probably set the modes correctly and stuff as well
-            if keepOid == NULL_OID:
+            if keepId == NULL_OID:
                 if os.path.isfile(fullPath):  # the file may not exist in DELETED_BY_BOTH conflicts
                     os.unlink(fullPath)
             else:
-                blob = repo.peel_blob(keepOid)
+                blob = repo.peel_blob(keepId)
                 with open(fullPath, "wb") as f:
                     f.write(blob.data)
 
             del conflicts[path]
             assert path not in conflicts
 
-            if keepOid != NULL_OID:
+            if keepId != NULL_OID:
                 # Stage the file so it doesn't show up in both file lists
                 index.add(path)
 

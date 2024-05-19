@@ -43,7 +43,7 @@ def testCommitSearch(tempDir, mainWindow):
     for oid in matchingCommits:
         QTest.keySequence(searchEdit, "Return")
         QTest.qWait(0)  # Give event loop a breather (for code coverage in commitlogdelegate)
-        assert oid == rw.graphView.currentCommitOid
+        assert oid == rw.graphView.currentCommitId
 
         assert getGraphRow() > previousRow  # go down
         previousRow = getGraphRow()
@@ -61,7 +61,7 @@ def testCommitSearch(tempDir, mainWindow):
     # now search backwards
     for oid in reversed(matchingCommits):
         QTest.keySequence(searchEdit, "Shift+Return")
-        assert oid == rw.graphView.currentCommitOid
+        assert oid == rw.graphView.currentCommitId
 
         assert getGraphRow() < previousRow  # go up
         previousRow = getGraphRow()
@@ -107,9 +107,9 @@ def testCommitSearchByHash(tempDir, mainWindow):
         for i in range(2):  # do it twice to make it wrap around
             for oid in searchCommits:
                 searchEdit.selectAll()
-                QTest.keyClicks(searchEdit, oid.hex[:5])
+                QTest.keyClicks(searchEdit, str(oid)[:5])
                 QTest.qWait(0)  # Don't press enter and let it auto-search (pulse timer)
-                assert oid == rw.graphView.currentCommitOid
+                assert oid == rw.graphView.currentCommitId
         searchCommits.reverse()
 
     # Search for a bogus commit hash
@@ -147,7 +147,7 @@ def testCommitSearchByAuthor(tempDir, mainWindow):
     for oid in searchCommits:
         QTest.keySequence(searchEdit, "Return")
         QTest.qWait(0)  # Give event loop a breather (for code coverage in commitlogdelegate)
-        assert oid == rw.graphView.currentCommitOid
+        assert oid == rw.graphView.currentCommitId
 
 
 @pytest.mark.parametrize("method", ["hotkey", "contextmenu"])
@@ -170,7 +170,7 @@ def testCommitInfo(tempDir, mainWindow, method):
     triggerMenuAction(menu, "get info")
 
     qmb = findQMessageBox(rw, "Merge branch 'a' into c")
-    assert oid1.hex in qmb.text()
+    assert str(oid1) in qmb.text()
     assert "A U Thor" in qmb.text()
     qmb.accept()
 
@@ -199,37 +199,37 @@ def testCopyCommitHash(tempDir, mainWindow, method):
         raise NotImplementedError(f"unknown method {method}")
 
     QTest.qWait(1)
-    assert QApplication.clipboard().text() == oid1.hex
+    assert QApplication.clipboard().text() == str(oid1)
 
 
 def testRefSortFavorsHeadBranch(mainWindow, tempDir):
-    masterOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    masterId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:
         headCommit = repo.head_commit
-        assert headCommit.oid == masterOid
+        assert headCommit.id == masterId
         repo.create_branch_on_head("master-2")
         repo.checkout_local_branch("master-2")
-        amendedOid = repo.amend_commit_on_head("should appear above master in graph", headCommit.author, headCommit.committer)
-        assert repo[amendedOid].author.time == headCommit.author.time
-        assert repo[amendedOid].committer.time == headCommit.committer.time
+        amendedId = repo.amend_commit_on_head("should appear above master in graph", headCommit.author, headCommit.committer)
+        assert repo[amendedId].author.time == headCommit.author.time
+        assert repo[amendedId].committer.time == headCommit.committer.time
 
     rw = mainWindow.openRepo(wd)
-    masterIndex = rw.graphView.getFilterIndexForCommit(masterOid)
-    amendedIndex = rw.graphView.getFilterIndexForCommit(amendedOid)
+    masterIndex = rw.graphView.getFilterIndexForCommit(masterId)
+    amendedIndex = rw.graphView.getFilterIndexForCommit(amendedId)
     assert amendedIndex.row() < masterIndex.row()
 
 
 def testCommitToolTip(mainWindow, tempDir):
-    masterOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    masterId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
     oldCursorPos = QCursor.pos()
 
     mainWindow.resize(1500, 600)
-    index = rw.graphView.selectRowForLocator(NavLocator.inCommit(masterOid))
+    index = rw.graphView.selectRowForLocator(NavLocator.inCommit(masterId))
     cursorPos = rw.graphView.mapToGlobal(QPoint(8, 8))
     QCursor.setPos(cursorPos)
     QTest.qWait(0)

@@ -452,9 +452,9 @@ def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
 
     old_match = SUBPROJECT_COMMIT_MINUS_PATTERN.search(text)
     new_match = SUBPROJECT_COMMIT_PLUS_PATTERN.search(text)
-    old_oid, _ = parse_subproject_line(old_match)
-    new_oid, new_dirty = parse_subproject_line(new_match)
-    return old_oid, new_oid, new_dirty
+    old_id, _ = parse_subproject_line(old_match)
+    new_id, new_dirty = parse_subproject_line(new_match)
+    return old_id, new_id, new_dirty
 
 
 class GitConfigHelper:
@@ -546,8 +546,8 @@ class Repo(_VanillaRepository):
         return self.head.peel(Commit)
 
     @property
-    def head_commit_oid(self) -> Oid:
-        return self.head_commit.oid
+    def head_commit_id(self) -> Oid:
+        return self.head_commit.id
 
     @property
     def head_commit_message(self) -> str:
@@ -561,14 +561,14 @@ class Repo(_VanillaRepository):
     def head_branch_fullname(self) -> str:
         return self.head.name
 
-    def peel_commit(self, oid: Oid) -> Commit:
-        return self[oid].peel(Commit)
+    def peel_commit(self, commit_id: Oid) -> Commit:
+        return self[commit_id].peel(Commit)
 
-    def peel_blob(self, oid: Oid) -> Blob:
-        return self[oid].peel(Blob)
+    def peel_blob(self, blob_id: Oid) -> Blob:
+        return self[blob_id].peel(Blob)
 
-    def peel_tree(self, oid: Oid) -> Tree:
-        return self[oid].peel(Tree)
+    def peel_tree(self, tree_id: Oid) -> Tree:
+        return self[tree_id].peel(Tree)
 
     def in_workdir(self, path: str) -> str:
         """Return an absolutized version of `path` within this repo's workdir."""
@@ -653,8 +653,8 @@ class Repo(_VanillaRepository):
             flags |= DiffOption.SHOW_BINARY
 
         if self.head_is_unborn:  # can't compare against HEAD (empty repo or branch pointing nowhere)
-            index_tree_oid = self.index.write_tree()
-            tree = self.peel_tree(index_tree_oid)
+            index_tree_id = self.index.write_tree()
+            tree = self.peel_tree(index_tree_id)
             return tree.diff_to_tree(swap=True, flags=flags, context_lines=context_lines)
         else:
             # compare HEAD to index
@@ -676,7 +676,7 @@ class Repo(_VanillaRepository):
         # status = repo.status(untracked_files="no")
         # return any(0 != (flag & FileStatus.INDEX_MASK) for flag in status.values())
 
-    def commit_diffs(self, oid: Oid, show_binary: bool = False, find_similar_threshold: int = -1, context_lines: int = 3
+    def commit_diffs(self, commit_id: Oid, show_binary: bool = False, find_similar_threshold: int = -1, context_lines: int = 3
                      ) -> tuple[list[Diff], bool]:
         """
         Get a list of Diffs of a commit compared to its parents.
@@ -687,7 +687,7 @@ class Repo(_VanillaRepository):
         if show_binary:
             flags |= DiffOption.SHOW_BINARY
 
-        commit: Commit = self.get(oid)
+        commit: Commit = self.get(commit_id)
         skipped_find_similar = False
 
         if commit.parents:
@@ -723,26 +723,26 @@ class Repo(_VanillaRepository):
     def checkout_local_branch(self, name: str):
         """Switch to a local branch."""
         branch = self.branches.local[name]
-        with CheckoutBreakdown() as callbacks:
-            self.checkout(branch.raw_name, callbacks=callbacks)
+        refname = branch.name
+        self.checkout_ref(refname)
 
     def checkout_ref(self, refname: str):
         """Enter detached HEAD on the commit pointed to by a ref."""
         with CheckoutBreakdown() as callbacks:
             self.checkout(refname, callbacks=callbacks)
 
-    def checkout_commit(self, oid: Oid):
+    def checkout_commit(self, commit_id: Oid):
         """Enter detached HEAD on a commit."""
-        commit = self.peel_commit(oid)
+        commit = self.peel_commit(commit_id)
         with CheckoutBreakdown() as callbacks:
             self.checkout_tree(commit.tree, callbacks=callbacks)
-            self.set_head(oid)
+            self.set_head(commit_id)
 
-    def revert_commit_in_workdir(self, oid: Oid):
+    def revert_commit_in_workdir(self, commit_id: Oid):
         """Revert a commit and check out the reverted index if there are no conflicts
         with the workdir."""
 
-        trash_commit = self.peel_commit(oid)
+        trash_commit = self.peel_commit(commit_id)
         head_commit = self.head_commit
         revert_index = self.revert_commit(trash_commit, head_commit)
 
@@ -796,9 +796,9 @@ class Repo(_VanillaRepository):
         branch.upstream = remote_branch
         return branch
 
-    def create_branch_from_commit(self, name: str, oid: Oid) -> Branch:
-        """Create a local branch pointing to the given commit oid."""
-        commit = self.peel_commit(oid)
+    def create_branch_from_commit(self, name: str, commit_id: Oid) -> Branch:
+        """Create a local branch pointing to the given commit id."""
+        commit = self.peel_commit(commit_id)
         branch = self.create_branch(name, commit)
         return branch
 
@@ -942,8 +942,8 @@ class Repo(_VanillaRepository):
         transfer = remote.fetch(refspecs=[refspec], callbacks=remote_callbacks, prune=FetchPrune.PRUNE)
         return transfer
 
-    def get_commit_message(self, oid: Oid) -> str:
-        commit = self.peel_commit(oid)
+    def get_commit_message(self, commit_id: Oid) -> str:
+        commit = self.peel_commit(commit_id)
         return commit.message
 
     def create_commit_on_head(
@@ -972,14 +972,14 @@ class Repo(_VanillaRepository):
             parents = []
         else:
             # Always take HEAD commit as 1st parent
-            parents = [self.head_commit_oid]
+            parents = [self.head_commit_id]
 
         # If a merge was in progress, add merge heads to parent list
         parents += self.listall_mergeheads()
         assert len(set(parents)) == len(parents), "duplicate heads!"
 
-        # Get oid of index tree
-        index_tree_oid = self.index.write_tree()
+        # Get id of index tree
+        index_tree_id = self.index.write_tree()
 
         # Take default signature now to prevent any timestamp diff between
         # author and committer. Note that there may not be a fallback signature
@@ -992,12 +992,12 @@ class Repo(_VanillaRepository):
             assert committer is not None, "fallback signature missing - committer signature must be provided"
 
         # Create the commit
-        new_commit_oid = self.create_commit(
+        new_commit_id = self.create_commit(
             ref_to_update,
             author or fallback_signature,
             committer or fallback_signature,
             message,
-            index_tree_oid,
+            index_tree_id,
             parents
         )
 
@@ -1010,7 +1010,7 @@ class Repo(_VanillaRepository):
 
         assert not self.head_is_unborn, "HEAD is still unborn after we have committed!"
 
-        return new_commit_oid
+        return new_commit_id
 
     def amend_commit_on_head(
             self,
@@ -1023,27 +1023,27 @@ class Repo(_VanillaRepository):
         If `author` is None, don't replace the original commit's author.
         If `committer` is None, use default_signature for the committer's signature.
         """
-        index_tree_oid = self.index.write_tree(self)
-        new_commit_oid = self.amend_commit(
+        index_tree_id = self.index.write_tree(self)
+        new_commit_id = self.amend_commit(
             self.head_commit,
             'HEAD',
             message=message,
             author=author,
             committer=committer or self.default_signature,
-            tree=index_tree_oid
+            tree=index_tree_id
         )
-        return new_commit_oid
+        return new_commit_id
 
-    def get_commit_oid_from_refname(self, refname: str) -> Oid:
+    def commit_id_from_refname(self, refname: str) -> Oid:
         reference = self.references[refname]
         commit: Commit = reference.peel(Commit)
-        return commit.oid
+        return commit.id
 
-    def get_commit_oid_from_tag_name(self, tagname: str) -> Oid:
+    def commit_id_from_tag_name(self, tagname: str) -> Oid:
         assert not tagname.startswith("refs/")
-        return self.get_commit_oid_from_refname(RefPrefix.TAGS + tagname)
+        return self.commit_id_from_refname(RefPrefix.TAGS + tagname)
 
-    def map_refs_to_oids(self) -> dict[str, Oid]:
+    def map_refs_to_ids(self) -> dict[str, Oid]:
         """
         Return commit oids at the tip of all branches, tags, etc. in the repository.
 
@@ -1053,8 +1053,13 @@ class Repo(_VanillaRepository):
 
         tips: list[tuple[str, Commit]] = []
 
+        try:
+            directRefType = ReferenceType.DIRECT
+        except AttributeError:  # pragma: no cover - pygit2 <= 1.14.0 compatibility
+            directRefType = ReferenceType.OID
+
         for ref in self.listall_reference_objects():
-            if (ref.type != ReferenceType.OID  # Skip symbolic references
+            if (ref.type != directRefType  # Skip symbolic references
                     or ref.name == "refs/stash"):  # Stashes are dealt with separately
                 continue
 
@@ -1087,13 +1092,13 @@ class Repo(_VanillaRepository):
         # Reinsert all tips in chronological order
         # (In Python 3.7+, dict key order is stable)
         tips.sort(key=lambda item: item[1].commit_time)
-        return dict((ref, commit.oid) for ref, commit in tips)
+        return dict((ref, commit.id) for ref, commit in tips)
 
-    def listall_refs_pointing_at(self, oid: Oid):
+    def listall_refs_pointing_at(self, commit_id: Oid):
         refs = []
 
         # Detached HEAD isn't in repo.references
-        if self.head_is_detached and type(self.head.target) == Oid and self.head.target == oid:
+        if self.head_is_detached and type(self.head.target) is Oid and self.head.target == commit_id:
             refs.append('HEAD')
 
         for ref in self.references.objects:
@@ -1104,7 +1109,7 @@ class Repo(_VanillaRepository):
                 _logger.debug(f"Skipping symbolic reference {ref_key} --> {ref.target}")
                 continue
 
-            if ref.target != oid:
+            if ref.target != commit_id:
                 continue
 
             assert ref_key.startswith("refs/")
@@ -1116,7 +1121,7 @@ class Repo(_VanillaRepository):
             refs.append(ref_key)
 
         for stash_index, stash in enumerate(self.listall_stashes()):
-            if stash.commit_id == oid:
+            if stash.commit_id == commit_id:
                 refs.append(F"stash@{{{stash_index}}}")
 
         return refs
@@ -1194,7 +1199,7 @@ class Repo(_VanillaRepository):
                 assert head_tree
                 assert old_path in head_tree
                 obj = head_tree[old_path]
-                index.add(IndexEntry(old_path, obj.oid, obj.filemode))
+                index.add(IndexEntry(old_path, obj.id, obj.filemode))
         index.write()
 
     def unstage_mode_changes(self, patches: list[Patch]):
@@ -1224,7 +1229,7 @@ class Repo(_VanillaRepository):
             # Allow creating a stash if the identity isn't set
             signature = Signature(name="UNKNOWN", email="UNKNOWN")
 
-        oid = self.stash(
+        commit_id = self.stash(
             stasher=signature,
             message=message,
             keep_index=False,
@@ -1233,9 +1238,9 @@ class Repo(_VanillaRepository):
             include_ignored=False,
             paths=paths)
 
-        return oid
+        return commit_id
 
-    def find_stash_index(self, commitOid: Oid) -> int:
+    def find_stash_index(self, commit_id: Oid) -> int:
         """
         Libgit2 takes an index number to apply/pop/drop stashes. However, it's
         unsafe to cache such an index for the GUI. Instead, we cache the commit ID
@@ -1244,24 +1249,23 @@ class Repo(_VanillaRepository):
         intended by the user, even if the indices change outside our control.
         """
         try:
-            return next(i
-                        for i, stash in enumerate(self.listall_stashes())
-                        if stash.commit_id == commitOid)
+            return next(i for i, stash in enumerate(self.listall_stashes())
+                        if stash.commit_id == commit_id)
         except StopIteration:
-            raise KeyError(f"Stash not found: {commitOid.hex}")
+            raise KeyError(f"Stash not found: {commit_id}")
 
-    def stash_apply_oid(self, oid: Oid):
-        i = self.find_stash_index(oid)
+    def stash_apply_id(self, commit_id: Oid):
+        i = self.find_stash_index(commit_id)
         with StashApplyBreakdown() as callbacks:
             self.stash_apply(i, callbacks=callbacks)
 
-    def stash_pop_oid(self, oid: Oid):
-        i = self.find_stash_index(oid)
+    def stash_pop_id(self, commit_id: Oid):
+        i = self.find_stash_index(commit_id)
         with StashApplyBreakdown() as callbacks:
             self.stash_pop(i, callbacks=callbacks)
 
-    def stash_drop_oid(self, oid: Oid):
-        i = self.find_stash_index(oid)
+    def stash_drop_id(self, commit_id: Oid):
+        i = self.find_stash_index(commit_id)
         self.stash_drop(i)
 
     def applies_breakdown(self, patch_data: bytes | str, location: int = ApplyLocation.WORKDIR) -> Diff:
@@ -1521,7 +1525,7 @@ class Repo(_VanillaRepository):
 
         with RepoContext(str(inner_w)) as inner_repo:
             inner_g = _Path(inner_repo.path)
-            inner_head_oid = inner_repo.head_commit.oid
+            inner_head_id = inner_repo.head_commit.id
 
         if not inner_g.is_relative_to(outer_w):
             raise ValueError("Subrepo .git dir must be relative to superrepo workdir")
@@ -1548,7 +1552,7 @@ class Repo(_VanillaRepository):
                 submodule_dotgit_file.write(f"gitdir: {_relpath(inner_g2, inner_w)}\n")
 
         # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
-        entry = IndexEntry(inner_w.relative_to(outer_w), inner_head_oid, FileMode.COMMIT)
+        entry = IndexEntry(inner_w.relative_to(outer_w), inner_head_id, FileMode.COMMIT)
         self.index.add(entry)
 
         # While we're here also add .gitmodules

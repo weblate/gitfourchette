@@ -111,24 +111,24 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
 
 def testSubmoduleDeletedDiff(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
-    subWd, subAddOid = reposcenario.submodule(wd)
+    subWd, subAddId = reposcenario.submodule(wd)
     with RepoContext(wd) as repo:
         shutil.rmtree(f"{wd}/submodir")
         os.unlink(f"{wd}/.gitmodules")
         repo.index.remove(".gitmodules")
         repo.index.remove("submodir")
-        subDelOid = repo.create_commit_on_head("delete submo")
+        subDelId = repo.create_commit_on_head("delete submo")
 
     rw = mainWindow.openRepo(wd)
 
     assert not rw.repo.listall_submodules_dict()
     assert [] == list(rw.sidebar.findNodesByKind(EItem.Submodule))
 
-    rw.jump(NavLocator.inCommit(subAddOid, path="submodir"))
+    rw.jump(NavLocator.inCommit(subAddId, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search(r"submodule.+submo.+added", rw.specialDiffView.toPlainText(), re.I)
 
-    rw.jump(NavLocator.inCommit(subDelOid, path="submodir"))
+    rw.jump(NavLocator.inCommit(subDelId, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search(r"submodule.+submo.+(deleted|removed)", rw.specialDiffView.toPlainText(), re.I)
 
@@ -280,7 +280,7 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
 
     # Create new commit in UPSTREAM submo
     with RepoContext(upstreamSub, write_index=True) as sub:
-        oldSubCommit = sub.head_commit_oid
+        oldSubCommit = sub.head_commit_id
         writeFile(f"{upstreamSub}/foo.txt", "bar baz")
         sub.index.add("foo.txt")
         newSubCommit = sub.create_commit_on_head("yet another new commit in submodule", TEST_SIGNATURE, TEST_SIGNATURE)
@@ -294,8 +294,8 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
         newTreeId = treeBuilder.write()
         newTree = repo[newTreeId].peel(Tree)
         repo.index.read_tree(newTree)
-        repo.create_commit("HEAD", TEST_SIGNATURE, TEST_SIGNATURE, f"move submo to {newSubCommit.hex[:7]}",
-                           newTreeId, [repo.head_commit_oid])
+        repo.create_commit("HEAD", TEST_SIGNATURE, TEST_SIGNATURE, f"move submo to {str(newSubCommit)[:7]}",
+                           newTreeId, [repo.head_commit_id])
 
     # Now open the outer repo...
     rw = mainWindow.openRepo(wd)
@@ -307,8 +307,8 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
     assert sm in qlvGetRowData(rw.dirtyFiles)
     assert sm not in qlvGetRowData(rw.stagedFiles)
     rw.jump(NavLocator.inUnstaged(sm))
-    newHash = newSubCommit.hex[:7]
-    oldHash = oldSubCommit.hex[:7]
+    newHash = str(newSubCommit)[:7]
+    oldHash = str(oldSubCommit)[:7]
     assert qteFind(rw.specialDiffView, fr"old.+{newHash}.+new.+{oldHash}", True)  # yes, old/new look inverted, that's on purpose
 
     # Update the submodule

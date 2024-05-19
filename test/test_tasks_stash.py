@@ -224,19 +224,19 @@ def testHideStash(tempDir, mainWindow):
 
     with RepoContext(wd) as repo:
         touchFile(f"{wd}/stashthis.txt")
-        stashOid = repo.create_stash("purr", ["stashthis.txt"])
+        stashId = repo.create_stash("purr", ["stashthis.txt"])
 
     rw = mainWindow.openRepo(wd)
-    assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
-    rw.jump(NavLocator.inCommit(stashOid))
-    assert rw.navLocator.commit == stashOid#NavLocator.inCommit(stashOid).isSimilarEnoughTo(rw.navLocator)
+    assert str(stashId) not in rw.state.uiPrefs.hiddenStashCommits
+    rw.jump(NavLocator.inCommit(stashId))
+    assert rw.navLocator.commit == stashId
 
     node = rw.sidebar.findNodeByRef("stash@{0}")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "^hide")
 
-    assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
-    rw.jump(NavLocator.inCommit(stashOid))
+    assert str(stashId) in rw.state.uiPrefs.hiddenStashCommits
+    rw.jump(NavLocator.inCommit(stashId))
     assert rw.graphView.selectedIndexes() == []
     assert rw.diffBanner.isVisibleTo(rw)
     assert re.search(r"n.t shown in the graph", rw.diffBanner.label.text(), re.I)
@@ -247,14 +247,14 @@ def testDropHiddenStash(tempDir, mainWindow):
 
     with RepoContext(wd) as repo:
         touchFile(f"{wd}/stashthis.txt")
-        stashOid = repo.create_stash("purr", ["stashthis.txt"])
+        stashId = repo.create_stash("purr", ["stashthis.txt"])
 
     rw = mainWindow.openRepo(wd)
-    rw.toggleHideStash(stashOid)
-    assert stashOid.hex in rw.state.uiPrefs.hiddenStashCommits
-    DropStash.invoke(rw, stashOid)
+    rw.toggleHideStash(stashId)
+    assert str(stashId) in rw.state.uiPrefs.hiddenStashCommits
+    DropStash.invoke(rw, stashId)
     acceptQMessageBox(rw, "really delete.+stash")
-    assert stashOid.hex not in rw.state.uiPrefs.hiddenStashCommits
+    assert str(stashId) not in rw.state.uiPrefs.hiddenStashCommits
 
 
 def testApplyStashWithConflicts(tempDir, mainWindow):

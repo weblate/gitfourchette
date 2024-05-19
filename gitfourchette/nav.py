@@ -151,7 +151,7 @@ class NavLocator:
 
     def url(self):
         if self.context == NavContext.COMMITTED:
-            fragment = self.commit.hex
+            fragment = str(self.commit)
         else:
             fragment = self.context.name
 
@@ -217,7 +217,7 @@ class NavLocator:
         elif self.ref:
             return self.ref
         else:
-            return self.commit.hex
+            return str(self.commit)
 
     @property
     def fileKey(self):

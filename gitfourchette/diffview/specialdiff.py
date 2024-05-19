@@ -201,24 +201,24 @@ class SpecialDiffError(Exception):
         specialDiff = SpecialDiffError(titleText)
         longformParts = []
 
-        oldOid, newOid, dirty = parse_submodule_patch(patch.text)
-        headDidMove = oldOid != newOid
+        oldId, newId, dirty = parse_submodule_patch(patch.text)
+        headDidMove = oldId != newId
 
         # Create old/new table if the submodule's HEAD commit was moved
         if headDidMove and not isDeletion:
-            targets = [shortHash(oldOid), shortHash(newOid)]
+            targets = [shortHash(oldId), shortHash(newId)]
             messages = ["", ""]
 
             # Show additional details about the commits if there's still a workdir for this submo
             if stillExists:
                 # Make links to specific commits
-                for i, h in enumerate([oldOid, newOid]):
+                for i, h in enumerate([oldId, newId]):
                     if h != NULL_OID:
-                        targets[i] = linkify(shortHash(h), f"{openLink.toString()}#{h.hex}")
+                        targets[i] = linkify(shortHash(h), f"{openLink.toString()}#{h}")
 
                 # Show commit summaries
                 with RepoContext(localPath, RepositoryOpenFlag.NO_SEARCH) as subRepo:
-                    for i, h in enumerate([oldOid, newOid]):
+                    for i, h in enumerate([oldId, newId]):
                         with suppress(LookupError, GitError):
                             m = subRepo[h].peel(Commit).message
                             m = messageSummary(m)[0]

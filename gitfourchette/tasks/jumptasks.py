@@ -245,7 +245,7 @@ class Jump(RepoTask):
         flv = rw.committedFiles
         rw.diffBanner.setVisible(False)
 
-        if locator.commit == flv.commitOid and not locator.hasFlags(NavFlags.Force):
+        if locator.commit == flv.commitId and not locator.hasFlags(NavFlags.Force):
             # No need to reload the same commit
             # (if this flv was dormant and is sent back to the foreground).
             pass
@@ -534,7 +534,7 @@ class RefreshRepo(RepoTask):
             rw.graphView.verticalScrollBar().setValue(initialGraphScroll)
             if jumpTo == initialLocator and jumpTo.commit not in rw.state.graph.commitRows:
                 # Old commit is gone - jump to HEAD
-                jumpTo = NavLocator.inCommit(rw.state.activeCommitOid)
+                jumpTo = NavLocator.inCommit(rw.state.activeCommitId)
 
         yield from self.flowSubtask(Jump, jumpTo)
 

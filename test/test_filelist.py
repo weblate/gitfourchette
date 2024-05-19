@@ -41,9 +41,9 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    commitOid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    commitId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
-    rw.jump(NavLocator.inCommit(commitOid))
+    rw.jump(NavLocator.inCommit(commitId))
     assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
     rw.committedFiles.selectRow(0)
 

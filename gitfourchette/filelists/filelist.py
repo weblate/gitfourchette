@@ -94,7 +94,7 @@ class FileList(QListView):
     Does not change throughout the lifespan of this FileList.
     """
 
-    commitOid: Oid
+    commitId: Oid
     """
     The commit that is currently being shown.
     Only valid if navContext == COMMITTED.
@@ -113,7 +113,7 @@ class FileList(QListView):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
 
         self.navContext = navContext
-        self.commitOid = NULL_OID
+        self.commitId = NULL_OID
         self.skippedRenameDetection = False
         self._selectionBackup = None
 
@@ -152,7 +152,7 @@ class FileList(QListView):
 
     def clear(self):
         self.flModel.clear()
-        self.commitOid = NULL_OID
+        self.commitId = NULL_OID
         self.skippedRenameDetection = False
 
     def makeContextMenu(self):
@@ -392,7 +392,7 @@ class FileList(QListView):
 
     def getNavLocatorForIndex(self, index: QModelIndex):
         filePath = index.data(FILEPATH_ROLE)
-        return NavLocator(self.navContext, self.commitOid, filePath)
+        return NavLocator(self.navContext, self.commitId, filePath)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """

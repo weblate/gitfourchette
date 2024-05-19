@@ -95,7 +95,7 @@ class CommitLogModel(QAbstractListModel):
             try:
                 commit = self._commitSequence[row]
                 if commit is not None:
-                    return commit.oid
+                    return commit.id
             except IndexError:
                 pass
 

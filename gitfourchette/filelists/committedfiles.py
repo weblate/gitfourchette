@@ -46,8 +46,8 @@ class CommittedFiles(FileList):
                     self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
                     icon="SP_FileIcon", submenu=
                     [
-                        ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitOid)), self.openNewRevision),
-                        ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitOid)), self.openOldRevision),
+                        ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitId)), self.openNewRevision),
+                        ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitId)), self.openOldRevision),
                         ActionDef(self.tr("Open &Current Version"), self.openHeadRevision),
                     ]
                 ),
@@ -56,8 +56,8 @@ class CommittedFiles(FileList):
                     self.tr("Sa&ve a Copy..."),
                     icon="SP_DialogSaveButton", submenu=
                     [
-                        ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitOid)), self.saveNewRevision),
-                        ActionDef(self.tr("Save Version &Before {0}").format(shortHash(self.commitOid)), self.saveOldRevision),
+                        ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitId)), self.saveNewRevision),
+                        ActionDef(self.tr("Save Version &Before {0}").format(shortHash(self.commitId)), self.saveOldRevision),
                     ]
                 ),
             ]
@@ -84,7 +84,7 @@ class CommittedFiles(FileList):
         return actions
 
     def setCommit(self, oid: Oid):
-        self.commitOid = oid
+        self.commitId = oid
 
     def openNewRevision(self):
         self.openRevision(beforeCommit=False)
@@ -164,7 +164,7 @@ class CommittedFiles(FileList):
 
         blob = self.repo.peel_blob(diffFile.id)
 
-        atSuffix = shortHash(self.commitOid)
+        atSuffix = shortHash(self.commitId)
         if beforeCommit:
             atSuffix = F"before-{atSuffix}"
 
@@ -186,6 +186,6 @@ class CommittedFiles(FileList):
 
     def wantOpenDiffInNewWindow(self):
         def run(patch: Patch):
-            self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitOid, patch.delta.new_file.path))
+            self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitId, patch.delta.new_file.path))
 
         self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} files</b>?"))

@@ -9,17 +9,17 @@ def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
     assert rw.navLocator.isSimilarEnoughTo(locator)
     assert rw.diffView.currentPatch.delta.old_file.path == locator.path
     if locator.context.isDirty():
-        assert rw.graphView.currentCommitOid in [None, ""]
+        assert rw.graphView.currentCommitId in [None, ""]
         assert rw.fileStackPage() == "workdir"
         assert qlvGetSelection(rw.dirtyFiles) == [locator.path]
         assert qlvGetSelection(rw.stagedFiles) == []
     elif locator.context == NavContext.STAGED:
-        assert rw.graphView.currentCommitOid in [None, ""]
+        assert rw.graphView.currentCommitId in [None, ""]
         assert rw.fileStackPage() == "workdir"
         assert qlvGetSelection(rw.stagedFiles) == [locator.path]
         assert qlvGetSelection(rw.dirtyFiles) == []
     else:
-        assert rw.graphView.currentCommitOid == locator.commit
+        assert rw.graphView.currentCommitId == locator.commit
         assert rw.fileStackPage() == "commit"
         assert qlvGetSelection(rw.committedFiles) == [locator.path]
 

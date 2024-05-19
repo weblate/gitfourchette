@@ -113,8 +113,8 @@ class ExportWorkdirAsPatch(ComposePatch):
         diff = self.repo.get_uncommitted_changes(show_binary=True, context_lines=contextLines())
         patches = (p for p in diff)
 
-        headOid = self.repo.head_commit_oid
-        initialName = f"{self.repo.repo_name()} - uncommitted changes on {shortHash(headOid)}.patch"
+        headId = self.repo.head_commit_id
+        initialName = f"{self.repo.repo_name()} - uncommitted changes on {shortHash(headId)}.patch"
 
         yield from self.composePatch(patches, initialName)
 

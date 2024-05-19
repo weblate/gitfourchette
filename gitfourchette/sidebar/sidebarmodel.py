@@ -301,7 +301,7 @@ class SidebarModel(QAbstractItemModel):
                 if checkedOut == 'HEAD':
                     # Detached head, leave self._checkedOut blank
                     assert repo.head_is_detached
-                    node = SidebarNode(EItem.DetachedHead, repo.head.target.hex)
+                    node = SidebarNode(EItem.DetachedHead, str(repo.head.target))
                     branchRoot.appendChild(node)
                     self.nodesByRef["HEAD"] = node
 
@@ -373,7 +373,7 @@ class SidebarModel(QAbstractItemModel):
             self._stashes = repo.listall_stashes()
             for i, stash in enumerate(self._stashes):
                 refName = f"stash@{{{i}}}"
-                node = SidebarNode(EItem.Stash, stash.commit_id.hex)
+                node = SidebarNode(EItem.Stash, str(stash.commit_id))
                 stashRoot.appendChild(node)
                 self.nodesByRef[refName] = node
 

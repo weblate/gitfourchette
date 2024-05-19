@@ -292,7 +292,7 @@ class NewBranchFromHead(_NewBranchBaseTask):
         return TaskPrereqs.NoUnborn
 
     def flow(self):
-        tip = self.repo.head_commit.oid
+        tip = self.repo.head_commit.id
 
         # Initialize upstream to the current branch's upstream, if any
         try:
@@ -503,8 +503,8 @@ class RecallCommit(RepoTask):
         obj = self.repo[needle]
         commit: Commit = obj.peel(Commit)
 
-        branchName = f"recall-{commit.hex}"
-        self.repo.create_branch_from_commit(branchName, commit.oid)
+        branchName = f"recall-{commit.id}"
+        self.repo.create_branch_from_commit(branchName, commit.id)
 
         yield from self.flowEnterUiThread()
         debrief = paragraphs(self.tr("Hurray, the commit was found! Find it on this branch:"), bquo(branchName))

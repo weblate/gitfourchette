@@ -136,7 +136,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
         dialog.accept()
 
     headCommit = rw.repo.head_commit
-    assert headCommit.oid != oldHeadCommit.oid
+    assert headCommit.id != oldHeadCommit.id
     assert headCommit.message == newMessage
     assert headCommit.author.name == newAuthorName
     assert headCommit.author.email == newAuthorEmail
@@ -146,7 +146,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     # Ensure no error dialog boxes after operation
     assert not mainWindow.findChildren(QDialog)
 
-    assert not rw.graphView.currentCommitOid  # "uncommitted changes" should still be selected
+    assert not rw.graphView.currentCommitId  # "uncommitted changes" should still be selected
     assert rw.stagedFiles.isVisibleTo(rw)
     assert rw.dirtyFiles.isVisibleTo(rw)
     assert not rw.committedFiles.isVisibleTo(rw)
@@ -310,9 +310,9 @@ def testCheckoutCommitDetachedHead(tempDir, mainWindow, method):
         dlg.accept()
 
         assert repo.head_is_detached
-        assert repo.head_commit_oid == oid
+        assert repo.head_commit_id == oid
 
-        assert rw.graphView.currentCommitOid == oid, "graphview's selected commit has jumped around"
+        assert rw.graphView.currentCommitId == oid, "graphview's selected commit has jumped around"
 
 
 def testCommitOnDetachedHead(tempDir, mainWindow):
@@ -386,7 +386,7 @@ def testCherrypick(tempDir, mainWindow):
 
     headCommit = rw.repo.head_commit
     assert headCommit.message == "First a/a1"
-    rw.jump(NavLocator.inCommit(headCommit.oid))
+    rw.jump(NavLocator.inCommit(headCommit.id))
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
 
 

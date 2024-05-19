@@ -85,7 +85,7 @@ class PrimeRepo(RepoTask):
         # Prime the walker (this might take a while)
         walker = state.initializeWalker(state.refCache.values())
 
-        state.updateActiveCommitOid()
+        state.updateActiveCommitId()
 
         commitSequence: list[Commit | None] = []
 
@@ -159,7 +159,7 @@ class PrimeRepo(RepoTask):
                 oid = UC_FAKEID
                 parents = state._uncommittedChangesFakeCommitParents()
             else:
-                oid = commit.oid
+                oid = commit.id
                 parents = commit.parent_ids
 
             graphGenerator.newCommit(oid, parents)
@@ -239,8 +239,8 @@ class PrimeRepo(RepoTask):
         rw.restoreSplitterStates()
 
         # Scrolling HEAD into view isn't super intuitive if we boot to Uncommitted Changes
-        # if newState.activeCommitOid:
-        #     rw.graphView.scrollToCommit(newState.activeCommitOid, QAbstractItemView.ScrollHint.PositionAtCenter)
+        # if newState.activeCommitId:
+        #     rw.graphView.scrollToCommit(newState.activeCommitId, QAbstractItemView.ScrollHint.PositionAtCenter)
 
         # Focus on some interesting widget within the RepoWidget after loading the repo.
         # (delay to next event loop so Qt has time to show the widget first)
