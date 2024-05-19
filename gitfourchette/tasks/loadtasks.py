@@ -211,20 +211,12 @@ class PrimeRepo(RepoTask):
         with QSignalBlockerContext(rw.graphView):
             if state.truncatedHistory:
                 extraRow = SpecialRow.TruncatedHistory
-                notFoundInfo = lambda: self.tr(  # lambda because commit count may change over time
-                    "Note: The search was limited to the top %n commits "
-                    "because the commit history is truncated.", "", rw.state.numRealCommits)
             elif repo.is_shallow:
                 extraRow = SpecialRow.EndOfShallowHistory
-                notFoundInfo = lambda: self.tr(  # lambda because commit count may change over time
-                    "Note: The search was limited to the %n commits "
-                    "available in this shallow clone.", "", rw.state.numRealCommits)
             else:
                 extraRow = SpecialRow.Invalid
-                notFoundInfo = None
 
             rw.graphView.clModel._extraRow = extraRow
-            rw.graphView.searchBar.notFoundInfo = notFoundInfo
             rw.graphView.setHiddenCommits(state.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
             rw.graphView.selectRowForLocator(NavLocator.inWorkdir(), force=True)

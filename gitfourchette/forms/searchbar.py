@@ -33,10 +33,6 @@ class SearchBar(QWidget):
     Set this flag before initiating a search.
     Will cause `searchTermLooksLikeHash` to be updated. """
 
-    notFoundInfo: Callable[[], str] | None
-    """ When there are no more occurences of a search term, this function is
-    called to generate additional informative text for the message box. """
-
     searchTerm: str
     """ Sanitized search term (lowercase, stripped whitespace).
     Updated when the user edits the QLineEdit. """
@@ -69,7 +65,6 @@ class SearchBar(QWidget):
         self.setObjectName(f"SearchBar({buddy.objectName()})")
         self.buddy = buddy
         self.detectHashes = False
-        self.notFoundInfo = None
 
         self.ui = Ui_SearchBar()
         self.ui.setupUi(self)
@@ -174,6 +169,9 @@ class SearchBar(QWidget):
         assert hasattr(self.buddy, "searchRange"), "missing searchRange callback"
         return self.buddy.searchRange(r)
 
+    def notFoundMessage(self, searchTerm: str):
+        return self.tr("{0} not found.").format(bquo(searchTerm))
+
     # --------------------------------
     # Ready-made QAbstractItemView search flow
 
@@ -239,10 +237,8 @@ class SearchBar(QWidget):
             self.searchItemView(op, wrappedFrom=start)
         else:
             title = self.lineEdit.placeholderText().split("")[0]
-            message = self.tr("{0} not found.").format(bquo(self.rawSearchTerm))
+            message = self.notFoundMessage(self.rawSearchTerm)
             qmb = asyncMessageBox(self, 'information', title, message)
-            if self.notFoundInfo is not None:
-                qmb.setInformativeText(self.notFoundInfo())
             qmb.show()
 
     def pulseItemView(self):

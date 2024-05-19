@@ -436,6 +436,7 @@ class RepoWidget(QStackedWidget):
 
     def _makeGraphContainer(self):
         graphView = GraphView(self)
+        graphView.searchBar.notFoundMessage = self.commitNotFoundMessage
 
         container = QWidget()
         layout = QVBoxLayout(container)
@@ -915,6 +916,24 @@ class RepoWidget(QStackedWidget):
             sink.searchBar.searchItemView(op)
         else:
             sink.search(op)
+
+    def commitNotFoundMessage(self, searchTerm: str) -> str:
+        state = self.state
+
+        if state.hiddenCommits:
+            message = self.tr("{0} not found among the branches that aren’t hidden.")
+        else:
+            message = self.tr("{0} not found.")
+        message = message.format(bquo(searchTerm))
+
+        if state.truncatedHistory:
+            message += "<p>" + self.tr("Note: The search was limited to the top %n commits "
+                                       "because the commit history is truncated.", "", state.numRealCommits)
+        elif state.repo.is_shallow:
+            message += "<p>" + self.tr("Note: The search was limited to the %n commits "
+                                       "available in this shallow clone.", "", state.numRealCommits)
+
+        return message
 
     # -------------------------------------------------------------------------
 
