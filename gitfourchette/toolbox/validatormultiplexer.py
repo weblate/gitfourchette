@@ -2,7 +2,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from gitfourchette.qt import *
 from gitfourchette.toolbox.iconbank import stockIcon
-from typing import Callable, Iterable, Optional
+from typing import Callable
 
 
 def _showValidationToolTip(widget: QLineEdit, text: str):
@@ -39,7 +39,7 @@ class ValidatorMultiplexer(QObject):
         validate: Callable[[str], str]
         showWarning: bool
         mustBeValid: bool
-        inEditIcon: Optional[QAction] = None
+        inEditIcon: QAction | None = None
 
     gatedWidgets: list[QWidget]
     inputs: list[Input]
@@ -104,6 +104,8 @@ class ValidatorMultiplexer(QObject):
             if err:
                 if not input.inEditIcon:
                     input.inEditIcon = input.edit.addAction(stockIcon("achtung"), QLineEdit.ActionPosition.TrailingPosition)
+                    input.inEditIcon.triggered[bool].connect(  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
+                        lambda _: QToolTip.showText(QCursor.pos(), input.inEditIcon.toolTip(), input.edit))
 
                 input.inEditIcon.setToolTip(err)
 

@@ -66,13 +66,14 @@ class Ui_NewBranchDialog(object):
         self.buttonBox.accepted.connect(NewBranchDialog.accept) # type: ignore
         self.upstreamCheckBox.toggled['bool'].connect(self.upstreamComboBox.setEnabled) # type: ignore
         QMetaObject.connectSlotsByName(NewBranchDialog)
+        NewBranchDialog.setTabOrder(self.nameEdit, self.switchToBranchCheckBox)
         NewBranchDialog.setTabOrder(self.switchToBranchCheckBox, self.upstreamCheckBox)
         NewBranchDialog.setTabOrder(self.upstreamCheckBox, self.upstreamComboBox)
 
     def retranslateUi(self, NewBranchDialog):
         _translate = QCoreApplication.translate
         NewBranchDialog.setWindowTitle(_translate("NewBranchDialog", "New branch"))
-        self.nameLabel.setText(_translate("NewBranchDialog", "Name:"))
+        self.nameLabel.setText(_translate("NewBranchDialog", "&Name:"))
         self.optionsLabel.setText(_translate("NewBranchDialog", "Options:"))
-        self.switchToBranchCheckBox.setText(_translate("NewBranchDialog", "Switch to branch after creating"))
+        self.switchToBranchCheckBox.setText(_translate("NewBranchDialog", "&Switch to branch after creating"))
         self.upstreamCheckBox.setText(_translate("NewBranchDialog", "&Track upstream branch:"))

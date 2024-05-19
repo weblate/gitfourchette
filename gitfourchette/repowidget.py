@@ -819,6 +819,7 @@ class RepoWidget(QStackedWidget):
                     ).format(bquoe(currentNickname), app=qAppName()),
             currentNickname,
             onAccept,
+            placeholderText=self.tr("Leave blank to clear the nickname."),
             okButtonText=self.tr("Set nickname", "edit repo nickname"))
 
         buttonBox: QDialogButtonBox = dlg.buttonBox

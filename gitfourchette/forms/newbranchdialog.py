@@ -21,8 +21,7 @@ class NewBranchDialog(QDialog):
         self.ui.setupUi(self)
 
         self.ui.nameEdit.setText(initialName)
-
-        self.acceptButton.setText(self.tr("Create"))
+        self.acceptButton.setText(self.tr("&Create"))
 
         self.ui.upstreamComboBox.addItems(upstreams)
 

@@ -137,6 +137,8 @@ def showTextInputDialog(
 
     dlg.buttonBox = buttonBox
 
+    lineEdit.setFocus()
+
     dlg.show()
     dlg.setMinimumHeight(dlg.height())
     dlg.setMaximumHeight(dlg.height())

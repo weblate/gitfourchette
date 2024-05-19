@@ -54,6 +54,7 @@ class StashDialog(QDialog):
         self.ui.keepCheckBox.click()
 
         convertToBrandedDialog(self)
+        self.ui.messageEdit.setFocus()
 
         # Make sure at least one ticked item is visible
         if scrollTo:

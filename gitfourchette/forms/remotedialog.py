@@ -72,6 +72,7 @@ class RemoteDialog(QDialog):
             host = host.replace(c, "_")
 
         # Clean up common host names (git.(...).org)
+        host = host.removeprefix("www.")
         host = host.removeprefix("git.")
         for tld in (".com", ".org", ".net"):
             if host.endswith(tld):
