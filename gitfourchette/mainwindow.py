@@ -604,6 +604,7 @@ class MainWindow(QMainWindow):
             self.tabs.setTabTooltip(tabIndex, compactPath(workdir))
             if foreground:
                 self.tabs.setCurrentIndex(tabIndex)
+                self.mainToolBar.observeRepoWidget(rw)
 
         # Switch away from WelcomeWidget
         self.welcomeStack.setCurrentWidget(self.tabs)
@@ -611,7 +612,7 @@ class MainWindow(QMainWindow):
         # Load repo now
         if foreground:
             rw.pendingLocator = locator
-            rw.primeRepo()
+            self.onTabCurrentWidgetChanged()
 
         return rw
 
@@ -955,6 +956,8 @@ class MainWindow(QMainWindow):
             for i in range(start, -1, -1):  # Close tabs in reverse order
                 self.closeTab(i, False)
 
+        self.onTabCurrentWidgetChanged()
+
     def refreshTabText(self, rw):
         index = self.tabs.indexOf(rw)
         title = escamp(rw.getTitle())
@@ -1050,7 +1053,6 @@ class MainWindow(QMainWindow):
         # Set current tab and load its repo.
         if activeTab >= 0:
             self.tabs.setCurrentIndex(activeTab)
-            self.tabs.widget(activeTab).setupUi()
             self.onTabCurrentWidgetChanged()  # needed to trigger loading on tab #0
 
     def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):

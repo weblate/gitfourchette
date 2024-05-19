@@ -75,6 +75,8 @@ class MainToolBar(QToolBar):
         self.setToolButtonStyle(settings.prefs.toolBarButtonStyle)
         self.setIconSize(QSize(settings.prefs.toolBarIconSize, settings.prefs.toolBarIconSize))
 
+        self.updateNavButtons()
+
     def setToolButtonStyle(self, style: Qt.ToolButtonStyle):
         # Resolve style
         if style == Qt.ToolButtonStyle.ToolButtonFollowStyle:
@@ -170,6 +172,8 @@ class MainToolBar(QToolBar):
     def updateNavButtons(self):
         rw = self.observed
         if rw is None:
-            return
-        self.backAction.setEnabled(rw.navHistory.canGoBack())
-        self.forwardAction.setEnabled(rw.navHistory.canGoForward())
+            self.backAction.setEnabled(False)
+            self.forwardAction.setEnabled(False)
+        else:
+            self.backAction.setEnabled(rw.navHistory.canGoBack())
+            self.forwardAction.setEnabled(rw.navHistory.canGoForward())

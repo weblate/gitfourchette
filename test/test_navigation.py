@@ -1,3 +1,5 @@
+import pytest
+
 from gitfourchette.nav import NavContext, NavLocator
 from . import reposcenario
 from .util import *
@@ -22,7 +24,8 @@ def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
         assert qlvGetSelection(rw.committedFiles) == [locator.path]
 
 
-def testNavigation(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["menubar", "toolbar"])
+def testNavigation(mainWindow, tempDir, method):
     wd = unpackRepo(tempDir)
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
     rw = mainWindow.openRepo(wd)
@@ -53,42 +56,58 @@ def testNavigation(tempDir, mainWindow):
         NavLocator.inCommit(oid3, "c/c1.txt"),  # -1
     ]
 
+    def back(expectEnabled=True):
+        if method == "menubar":
+            triggerMenuAction(mainWindow.menuBar(), "view/navigate back")
+        elif method == "toolbar":
+            button: QToolButton = mainWindow.mainToolBar.widgetForAction(mainWindow.mainToolBar.backAction)
+            assert expectEnabled == button.isEnabled()
+            button.click()
+
+    def forward(expectEnabled=True):
+        if method == "menubar":
+            triggerMenuAction(mainWindow.menuBar(), "view/navigate forward")
+        elif method == "toolbar":
+            button: QToolButton = mainWindow.mainToolBar.widgetForAction(mainWindow.mainToolBar.forwardAction)
+            assert expectEnabled == button.isEnabled()
+            button.click()
+
     assertHistoryMatches(rw, history[-1])
 
-    rw.navigateForward()  # can't go further
+    forward(False)  # can't go further
     assertHistoryMatches(rw, history[-1])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-2])
-    rw.navigateForward()
+    forward()
     assertHistoryMatches(rw, history[-1])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-2])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-3])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-4])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-5])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-6])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-7])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-8])
 
-    rw.navigateForward()
-    rw.navigateForward()
-    rw.navigateForward()
-    rw.navigateForward()
-    rw.navigateForward()
+    forward()
+    forward()
+    forward()
+    forward()
+    forward()
     assertHistoryMatches(rw, history[-3])
 
     # now fork from linear history
@@ -97,19 +116,53 @@ def testNavigation(tempDir, mainWindow):
     assertHistoryMatches(rw, historyFork)
 
     # can't go further
-    rw.navigateForward()
+    forward(False)
     assertHistoryMatches(rw, historyFork)
 
     # go back to -3
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-3])
 
-    rw.navigateBack()
+    back()
     assertHistoryMatches(rw, history[-4])
 
-    rw.navigateForward()
-    rw.navigateForward()
+    forward()
+    forward()
     assertHistoryMatches(rw, historyFork)
+
+
+def testNavigationButtonsEnabledState(mainWindow, tempDir):
+    tb = mainWindow.mainToolBar
+    backButton = tb.widgetForAction(tb.backAction)
+    forwardButton = tb.widgetForAction(tb.forwardAction)
+    assert not backButton.isEnabled() and not forwardButton.isEnabled()
+
+    wd1 = unpackRepo(tempDir, renameTo="repo1")
+    rw1 = mainWindow.openRepo(wd1)
+
+    oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
+    oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
+    oid3 = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+
+    assert not backButton.isEnabled() and not forwardButton.isEnabled()
+    rw1.jump(NavLocator.inCommit(oid1))
+    rw1.jump(NavLocator.inCommit(oid2))
+    rw1.jump(NavLocator.inWorkdir())
+    rw1.jump(NavLocator.inCommit(oid3))
+    assert backButton.isEnabled() and not forwardButton.isEnabled()
+
+    wd2 = unpackRepo(tempDir, renameTo="repo2")
+    rw2 = mainWindow.openRepo(wd2)
+    assert not backButton.isEnabled() and not forwardButton.isEnabled()
+    rw2.jump(NavLocator.inCommit(oid3))
+    rw2.navigateBack()
+    assert not backButton.isEnabled() and forwardButton.isEnabled()
+
+    mainWindow.tabs.setCurrentIndex(0)
+    assert backButton.isEnabled() and not forwardButton.isEnabled()
+
+    mainWindow.closeAllTabs()
+    assert not backButton.isEnabled() and not forwardButton.isEnabled()
 
 
 def testNavigationAfterDiscardingChangeInMiddleOfHistory(tempDir, mainWindow):
