@@ -124,7 +124,7 @@ def testEditFileInExternalEditor(mainWindow, tempDir):
     # First, set the editor to an incorrect command to go through the "locate" code path
     mainWindow.onAcceptPrefsDialog({"externalEditor": f'"{editorPath}-BOGUSCOMMAND" "{scratchPath}"'})
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/current version")
-    QTest.qWait(1)
+    QTest.qWait(100 if not MACOS else 500)
     qmb = findQMessageBox(mainWindow, "n.t start text editor")
     qmb.button(QMessageBox.StandardButton.Open).click()  # click "locate" button
     # Set correct command; this must retain the arguments from the incorrect command

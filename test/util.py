@@ -232,6 +232,8 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
 def acceptQFileDialog(parent: QWidget, textPattern: str, selectFile: str):
     qfd: QFileDialog = findQDialog(parent, textPattern)
     assert isinstance(qfd, QFileDialog)
+    qfd.hide()  # https://stackoverflow.com/a/26929416 (trick needed on macOS + Qt 6.6.3)
     qfd.selectFile(selectFile)
+    qfd.show()
     qfd.accept()
     return selectFile
