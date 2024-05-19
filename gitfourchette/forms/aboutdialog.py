@@ -65,12 +65,14 @@ class AboutDialog(QDialog):
 
         qtBindingSuffix = ""
 
+        poweredByTitle = self.tr("Powered by:")
+        thirdPartyCreditsTitle = self.tr("Third-party credits:")
+
         components = dedent(f"""<html>\
             {appName} {appVersion}
             {buildDate}
-            
-            <p>Powered by:</p>
-            <ul>
+            <br>{poweredByTitle}
+            <ul style='margin: 0'>
             <li><b>pygit2</b> {pygit2.__version__}
             <li><b>libgit2</b> {pygit2.LIBGIT2_VERSION} <small>({', '.join(getPygit2FeatureStrings())})</small>
             <li><b>{QT_BINDING}</b> {QT_BINDING_VERSION}{qtBindingSuffix}
@@ -79,12 +81,12 @@ class AboutDialog(QDialog):
             </ul>
             
             <hr>
-            <p>Third-party credits:</p>
-            <p><small>
+            {thirdPartyCreditsTitle}<br>
+            <small>
             <a href='https://github.com/z3ntu/QtWaitingSpinner'>QtWaitingSpinner</a>
-            (used under the <a href='https://github.com/z3ntu/QtWaitingSpinner/blob/055517b18fe764c24ca4809d4a5de95c9febfceb/LICENSE.md'>MIT license</a>) 
-            - Copyright © 2012-2014 Alexander Turkin, © 2014 William Hallatt, © 2015 Jacob Dawid, © 2016 Luca Weiss.
-            </small></p>
+            (used under <a href='https://github.com/z3ntu/QtWaitingSpinner/blob/055517b18fe764c24ca4809d4a5de95c9febfceb/LICENSE.md'>MIT license</a>):
+            Copyright © 2012-2014 Alexander Turkin, © 2014 William Hallatt, © 2015 Jacob Dawid, © 2016 Luca Weiss.
+            </small>
             """)
         self.ui.componentsBlurb.setText(components)
 

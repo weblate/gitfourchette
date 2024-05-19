@@ -32,13 +32,6 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>(+ %n more)</source>
-        <translation>
-            <numerusform>(+ %n more)</numerusform>
-            <numerusform>(+ %n more)</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <source>Open &amp;Folder</source>
         <translation>
             <numerusform>Open &amp;Folder</numerusform>
@@ -123,7 +116,7 @@
 <context>
     <name>CommittedFiles</name>
     <message numerus="yes">
-        <source>E&amp;xport Diff(s) As Patch...</source>
+        <source>E&amp;xport Diffs As Patch...</source>
         <translation>
             <numerusform>E&amp;xport Diff As Patch...</numerusform>
             <numerusform>E&amp;xport Diffs As Patch...</numerusform>
@@ -154,6 +147,16 @@
     </message>
 </context>
 <context>
+    <name>DeleteBranchFolder</name>
+    <message numerus="yes">
+        <source>&lt;b&gt;%n&lt;/b&gt; branches will be deleted.</source>
+        <translation>
+            <numerusform>&lt;b&gt;%n&lt;/b&gt; branch will be deleted.</numerusform>
+            <numerusform>&lt;b&gt;%n&lt;/b&gt; branches will be deleted.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>DiffView</name>
     <message numerus="yes">
         <source>Hit {stagekey} to stage the current/selected line(s), or {discardkey} to discard it/them.</source>
@@ -179,6 +182,13 @@
         <translation>
             <numerusform>&amp;Stage File</numerusform>
             <numerusform>&amp;Stage %n Files</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>E&amp;xport Diffs As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xport Diff As Patch...</numerusform>
+            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -235,13 +245,6 @@
             <numerusform>Edit HEAD Versions in {0}</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>E&amp;xport Diff(s) As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xport Diff As Patch...</numerusform>
-            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
-        </translation>
-    </message>
 </context>
 <context>
     <name>DiscardFiles</name>
@@ -282,11 +285,11 @@
 <context>
     <name>GraphView</name>
     <message numerus="yes">
-        <source>%n parents</source>
+        <source>%n Parents:</source>
         <comment>singular form can just say &apos;Parent&apos;</comment>
         <translation>
-            <numerusform>Parent</numerusform>
-            <numerusform>%n Parents</numerusform>
+            <numerusform>Parent:</numerusform>
+            <numerusform>%n Parents:</numerusform>
         </translation>
     </message>
 </context>
@@ -359,7 +362,17 @@
     </message>
 </context>
 <context>
-    <name>PrimeRepo</name>
+    <name>RenameBranchFolder</name>
+    <message numerus="yes">
+        <source>Folder {0} contains %n branches.</source>
+        <translation>
+            <numerusform>Folder {0} contains %n branch.</numerusform>
+            <numerusform>Folder {0} contains %n branches.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>RepoWidget</name>
     <message numerus="yes">
         <source>Note: The search was limited to the top %n commits because the commit history is truncated.</source>
         <translation>
@@ -378,14 +391,21 @@
 <context>
     <name>StagedFiles</name>
     <message numerus="yes">
-        <source>&amp;Unstage %n File(s)</source>
+        <source>&amp;Unstage %n Files</source>
         <translation>
             <numerusform>&amp;Unstage File</numerusform>
             <numerusform>&amp;Unstage %n Files</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>Edit &amp;HEAD Version(s) in {0}</source>
+        <source>E&amp;xport Diffs As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xport Diff As Patch...</numerusform>
+            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Edit &amp;HEAD Versions in {0}</source>
         <translation>
             <numerusform>Edit &amp;HEAD Version in {0}</numerusform>
             <numerusform>Edit &amp;HEAD Versions in {0}</numerusform>
@@ -413,13 +433,6 @@
         <translation>
             <numerusform>Open Submodule in New Tab</numerusform>
             <numerusform>Open %n Submodules in New Tabs</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>E&amp;xport Diff(s) As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xport Diff As Patch...</numerusform>
-            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
         </translation>
     </message>
 </context>
