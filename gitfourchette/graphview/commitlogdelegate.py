@@ -254,7 +254,8 @@ class CommitLogDelegate(QStyledItemDelegate):
             homeBranch = RefPrefix.HEADS + self.state.homeBranch
             painter.save()
             for refName in self.state.reverseRefCache[oid]:
-                self._paintRefbox(painter, rect, refName, refName == homeBranch)
+                if refName not in self.state.hiddenRefs:  # skip refboxes for hidden refs
+                    self._paintRefbox(painter, rect, refName, refName == homeBranch)
             painter.restore()
 
         # ------ Icons

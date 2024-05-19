@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Iterable, Generator
 
 from gitfourchette import settings
 from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
@@ -17,16 +17,6 @@ from gitfourchette.toolbox import *
 logger = logging.getLogger(__name__)
 
 UC_FAKEID = "UC_FAKEID"
-
-
-def toggleListElement(l: list, e):
-    assert isinstance(l, list)
-    try:
-        l.remove(e)
-        return False
-    except ValueError:
-        l.append(e)
-        return True
 
 
 def toggleSetElement(l: set, e):
@@ -46,12 +36,12 @@ class RepoPrefs(PrefsFile):
     _parentDir = ""
 
     draftCommitMessage: str = ""
-    draftCommitSignature: Signature = None
+    draftCommitSignature: Signature | None = None
     draftCommitSignatureOverride: SignatureOverride = SignatureOverride.Nothing
     draftAmendMessage: str = ""
     hiddenRefPatterns: set = field(default_factory=set)
-    hiddenStashCommits: list = field(default_factory=list)
-    collapseCache: list = field(default_factory=list)
+    hiddenStashCommits: set = field(default_factory=set)
+    collapseCache: set = field(default_factory=set)
     hideAllStashes: bool = False
 
     def getParentDir(self):
@@ -73,12 +63,12 @@ class RepoState(QObject):
 
     repo: Repo
 
-    # May be None; call initializeWalker before use.
-    # Keep it around to speed up refreshing.
     walker: Walker | None
+    """Walker used to generate the graph. Call initializeWalker before use.
+    Keep it around to speed up ulterior refreshes."""
 
-    # ordered list of commits
     commitSequence: list[Commit]
+    "Ordered list of commits."
     # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
 
     truncatedHistory: bool
@@ -93,21 +83,27 @@ class RepoState(QObject):
 
     mergeheadsCache: list[Oid]
 
-    # path of superproject if this is a submodule
     superproject: str
+    "Path of the superproject. Empty string if this isn't a submodule."
 
-    # oid of the active commit (to make it bold)
     activeCommitOid: Oid | None
+    "Oid of the currently checked-out commit."
 
     foreignCommits: set[Oid]
     """Use this to look up which commits are part of local branches,
     and which commits are 'foreign'."""
 
     hiddenRefs: set[str]
+    "All cached refs that are hidden, either explicitly or via ref patterns."
+
     hiddenCommits: set[Oid]
+    "All cached commit oids that are hidden."
 
     workdirStale: bool
+    "Flag indicating that the workdir should be refreshed before use."
+
     numUncommittedChanges: int
+    "Number of unstaged+staged files. Zero means unknown count, not zero files."
 
     headIsDetached: bool
     homeBranch: str
@@ -326,7 +322,7 @@ class RepoState(QObject):
 
     @benchmark
     def toggleHideStash(self, stashOid: Oid):
-        toggleListElement(self.uiPrefs.hiddenStashCommits, stashOid.hex)
+        toggleSetElement(self.uiPrefs.hiddenStashCommits, stashOid.hex)
         self.uiPrefs.setDirty()
         self.resolveHiddenCommits()
 
@@ -389,7 +385,7 @@ class RepoState(QObject):
                 if refName.startswith("stash@{"):
                     seeds.add(oid)
         else:
-            hiddenStashCommits = self.uiPrefs.hiddenStashCommits[:]
+            hiddenStashCommits = list(self.uiPrefs.hiddenStashCommits)
             for hiddenStash in hiddenStashCommits:
                 oid = Oid(hex=hiddenStash)
                 if oid in self.reverseRefCache:
@@ -400,6 +396,19 @@ class RepoState(QObject):
                     self.uiPrefs.hiddenStashCommits.remove(hiddenStash)
 
         return seeds
+
+    def commitsMatchingRefPattern(self, refPattern: str) -> Generator[Oid, None, None]:
+        if not refPattern.endswith("/"):
+            # Explicit ref
+            try:
+                yield self.refCache[refPattern]
+            except KeyError:
+                pass
+        else:
+            # Wildcard
+            for ref, oid in self.refCache.items():
+                if ref.startswith(refPattern):
+                    yield oid
 
     def newHiddenCommitSolver(self) -> GraphTrickle:
         trickle = GraphTrickle()

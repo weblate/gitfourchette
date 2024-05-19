@@ -737,9 +737,9 @@ class RepoWidget(QStackedWidget):
         if hasRepo and self.uiReady:
             uiPrefs = self.state.uiPrefs
             if self.sidebar.collapseCacheValid:
-                uiPrefs.collapseCache = list(self.sidebar.collapseCache)
+                uiPrefs.collapseCache = set(self.sidebar.collapseCache)
             else:
-                uiPrefs.collapseCache = []
+                uiPrefs.collapseCache = set()
             try:
                 uiPrefs.write()
             except IOError as e:
@@ -922,8 +922,11 @@ class RepoWidget(QStackedWidget):
         self.state.toggleHideRefPattern(refPattern)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
-    def toggleHideStash(self, stashOid: Oid):
-        self.state.toggleHideStash(stashOid)
+        # Hide/draw refboxes for commits that are shared by non-hidden refs
+        self.graphView.viewport().update()
+
+    def toggleHideStash(self, oid: Oid):
+        self.state.toggleHideStash(oid)
         self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
     def toggleHideAllStashes(self):

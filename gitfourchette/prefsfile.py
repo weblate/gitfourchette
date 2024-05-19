@@ -4,6 +4,8 @@ import enum
 import json
 import logging
 import os
+import typing
+from types import NoneType, UnionType
 from typing import Any, Type
 
 from gitfourchette import pycompat  # StrEnum for Python 3.10
@@ -160,9 +162,15 @@ class PrefsFile:
         return o
 
     @staticmethod
-    def decode(o: Any, dstType: Type) -> Any:
+    def decode(o: Any, dstType: Type | UnionType) -> Any:
         """ Convert a value coming from a JSON blob to a target type """
         construct = None
+
+        # Extract type from "SomeType | None" unions
+        if type(dstType) is UnionType:
+            union = typing.get_args(dstType)
+            assert len(union) == 2
+            dstType = next(t for t in union if t is not NoneType)
 
         if dstType is bytes:
             srcType = str
