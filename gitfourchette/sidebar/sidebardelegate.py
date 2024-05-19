@@ -60,10 +60,15 @@ class SidebarDelegate(QStyledItemDelegate):
         style: QStyle = view.style()
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
-        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
-        nodeIsHidden = node.canBeHidden() and sidebarModel.isExplicitlyHidden(node)
         mouseOver = option.state & QStyle.StateFlag.State_Enabled and option.state & QStyle.StateFlag.State_MouseOver
-        makeRoomForEye = nodeIsHidden or (mouseOver and node.canBeHidden())
+        colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
+
+        isExplicitlyHidden = False
+        isImplicitlyHidden = False
+        if node.canBeHidden():
+            isExplicitlyHidden = sidebarModel.isExplicitlyHidden(node)
+            isImplicitlyHidden = isExplicitlyHidden or sidebarModel.isImplicitlyHidden(node)
+        makeRoomForEye = isExplicitlyHidden or isImplicitlyHidden or (mouseOver and node.canBeHidden())
 
         painter.save()
 
@@ -145,7 +150,12 @@ class SidebarDelegate(QStyledItemDelegate):
             r = QRect(option.rect)
             r.setLeft(textRect.right())
             r.setWidth(EYE_WIDTH)
-            eyeIconName = "view-hidden" if nodeIsHidden else "view-visible"
+            if isExplicitlyHidden:
+                eyeIconName = "view-hidden"
+            elif isImplicitlyHidden:
+                eyeIconName = "view-hidden-indirect"
+            else:
+                eyeIconName = "view-visible"
             eyeIcon = stockIcon(eyeIconName, iconColorRemapTable)
             eyeIcon.paint(painter, r)
 

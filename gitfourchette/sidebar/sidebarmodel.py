@@ -230,6 +230,15 @@ class SidebarModel(QAbstractItemModel):
         else:
             return False
 
+    def isImplicitlyHidden(self, node: SidebarNode) -> bool:
+        repoState = self.repoState
+        if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
+            return node.data in repoState.hiddenRefs and node.data not in repoState.uiPrefs.hiddenRefPatterns
+        elif node.kind == EItem.Stash:
+            return repoState.uiPrefs.hideAllStashes
+        else:
+            return False
+
     def refreshRepoName(self):
         if self.rootNode and self.repo:
             workdirNode = self.rootNode.findChild(EItem.WorkdirHeader)
