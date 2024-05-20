@@ -81,7 +81,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.uncommittedFont.setItalic(True)
 
         self.refboxFont = QFont(option.font)
-        self.refboxFont.setWeight(QFont.Weight.Light)
         self.refboxFontMetrics = QFontMetricsF(self.refboxFont)
 
         self.homeRefboxFont = QFont(self.refboxFont)
@@ -253,9 +252,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         if oid in self.state.reverseRefCache:
             homeBranch = RefPrefix.HEADS + self.state.homeBranch
             painter.save()
+            darkRefbox = painter.pen().color().lightnessF() > .5
             for refName in self.state.reverseRefCache[oid]:
                 if refName not in self.state.hiddenRefs:  # skip refboxes for hidden refs
-                    self._paintRefbox(painter, rect, refName, refName == homeBranch)
+                    self._paintRefbox(painter, rect, refName, refName == homeBranch, darkRefbox)
             painter.restore()
 
         # ------ Icons
@@ -313,7 +313,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         model.setData(index, summaryIsElided, CommitLogModel.MessageElidedRole)
         model.setData(index, leftBoundName if authorWidth != 0 else -1, CommitLogModel.AuthorColumnXRole)
 
-    def _paintRefbox(self, painter: QPainter, rect: QRect, refName: str, isHome: bool):
+    def _paintRefbox(self, painter: QPainter, rect: QRect, refName: str, isHome: bool, dark: bool):
         if refName == 'HEAD' and not self.state.headIsDetached:
             return
 
@@ -324,9 +324,16 @@ class CommitLogDelegate(QStyledItemDelegate):
         else:
             text = refName
         color = refboxDef.color
+        bgColor = QColor(color)
         icon = refboxDef.icon
         if refName == 'HEAD' and self.state.headIsDetached:
             text = self.tr("detached HEAD")
+
+        if dark:
+            color = color.lighter(300)
+            bgColor.setAlphaF(.5)
+        else:
+            bgColor.setAlphaF(.066)
 
         if isHome:
             font = self.homeRefboxFont
@@ -357,11 +364,15 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         frameRect = QRectF(boxRect)
         frameRect.adjust(.5, vMargin + .5, .5, -(vMargin + .5))
-        painter.drawRoundedRect(frameRect, 4, 4)
+
+        framePath = QPainterPath()
+        framePath.addRoundedRect(frameRect, 4, 4)
+        painter.fillPath(framePath, bgColor)
+        painter.drawPath(framePath)
 
         if icon:
             icon = stockIcon(icon, f"gray={color.name()}")
-            icon.paint(painter, iconRect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            icon.paint(painter, iconRect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
 
         textRect = QRect(boxRect)
         textRect.adjust(0, 0, -hPadding, 0)
