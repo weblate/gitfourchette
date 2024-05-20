@@ -55,22 +55,25 @@ def testNewPartialStash(tempDir, mainWindow, method):
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE 1\n")  # unstaged change
     writeFile(F"{wd}/a/a2.txt", "a2\nPENDING CHANGE 2\n")  # unstaged change
     writeFile(F"{wd}/b/b1.txt", "b1\nPENDING CHANGE (staged)\n")  # staged change
+    writeFile(F"{wd}/both.txt", "STAGED\n")  # staged & unstaged change
     writeFile(F"{wd}/a/untracked1.txt", "this file is untracked 1\n")  # untracked file
     writeFile(F"{wd}/a/untracked2.txt", "this file is untracked 2\n")  # untracked file
     with RepoContext(wd, write_index=True) as repo:
         repo.index.add("b/b1.txt")
+        repo.index.add("b/b2.txt")
+    writeFile(F"{wd}/both.txt", "STAGED\nUNSTAGED\n")  # staged & unstaged change
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    dirtyFiles = ["a/a1.txt", "a/a2.txt", "a/untracked1.txt", "a/untracked2.txt"]
-    stagedFiles = ["b/b1.txt"]
-    stashedFiles = ["a/a2.txt", "a/untracked2.txt"]
-    keptFiles = sorted(set(dirtyFiles + stagedFiles) - set(stashedFiles))
+    dirtyFiles = {"a/a1.txt", "a/a2.txt", "a/untracked1.txt", "a/untracked2.txt", "both.txt"}
+    stagedFiles = {"b/b1.txt", "both.txt"}
+    stashedFiles = {"a/a2.txt", "a/untracked2.txt", "both.txt"}
+    keptFiles = dirtyFiles.union(stagedFiles).difference(stashedFiles)
 
     assert len(repo.listall_stashes()) == 0
 
     assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
-    assert qlvGetRowData(rw.dirtyFiles) == dirtyFiles
+    assert set(qlvGetRowData(rw.dirtyFiles)) == dirtyFiles
 
     if method == "stashcommand":
         node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
@@ -92,7 +95,7 @@ def testNewPartialStash(tempDir, mainWindow, method):
     dlg.ui.messageEdit.setText("helloworld")
 
     fl = dlg.ui.fileList
-    assert sorted(qlvGetRowData(fl)) == sorted(dirtyFiles + stagedFiles)
+    assert set(qlvGetRowData(fl)) == dirtyFiles.union(stagedFiles)
 
     # Uncheck some files to produce a partial stash
     if method == "stashcommand":
@@ -105,11 +108,11 @@ def testNewPartialStash(tempDir, mainWindow, method):
 
     assert os.path.isfile(f"{wd}/a/untracked1.txt"), "untracked file 1 should still be here"
     assert not os.path.isfile(f"{wd}/a/untracked2.txt"), "untracked file 2 must be gone"
-    assert keptFiles == sorted(qlvGetRowData(rw.dirtyFiles) + qlvGetRowData(rw.stagedFiles))
+    assert keptFiles == set(qlvGetRowData(rw.dirtyFiles) + qlvGetRowData(rw.stagedFiles))
 
     rw.selectRef("refs/stash")
     assert rw.committedFiles.isVisibleTo(rw)
-    assert qlvGetRowData(rw.committedFiles) == stashedFiles
+    assert set(qlvGetRowData(rw.committedFiles)) == stashedFiles
 
 
 def testNewStashWithoutIdentity(tempDir, mainWindow):
