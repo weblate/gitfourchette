@@ -22,19 +22,32 @@ def testParentlessCommitFileList(tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["c/c1.txt"]
 
 
-def testSaveOldRevision(tempDir, mainWindow):
+def testSaveRevisionAtCommit(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    oid = Oid(hex="6462e7d8024396b14d7651e2ec11e2bbf07a05c4")
+    oid = Oid(hex="1203b03dc816ccbb67773f28b3c19318654b0bc8")
     loc = NavLocator.inCommit(oid, "c/c2.txt")
-    rw.jump(NavLocator.inCommit(oid, "c/c2.txt"))
+    rw.jump(loc)
     assert loc.isSimilarEnoughTo(rw.navLocator)
-    rw.committedFiles.saveRevisionAs(saveInto=tempDir.name)
 
-    with open(F"{tempDir.name}/c2@6462e7d.txt", "rb") as f:
-        contents = f.read()
-        assert contents == b"c2\n"
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save a copy/at 1203b03")
+    acceptQFileDialog(rw, "save.+revision as", f"{tempDir.name}/")
+    assert b"c2\nc2\n" == readFile(f"{tempDir.name}/c2@1203b03.txt")
+
+
+def testSaveRevisionBeforeCommit(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex="1203b03dc816ccbb67773f28b3c19318654b0bc8")
+    loc = NavLocator.inCommit(oid, "c/c2.txt")
+    rw.jump(loc)
+    assert loc.isSimilarEnoughTo(rw.navLocator)
+
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save a copy/before 1203b03")
+    acceptQFileDialog(rw, "save.+revision as", f"{tempDir.name}/")
+    assert b"c2\n" == readFile(f"{tempDir.name}/c2@before-1203b03.txt")
 
 
 def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
@@ -47,9 +60,8 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
     rw.committedFiles.selectRow(0)
 
-    # c2-2.txt was deleted by the commit.
-    # Expect GF to warn us about it.
-    rw.committedFiles.saveRevisionAs(saveInto=tempDir.name, beforeCommit=False)
+    # c2-2.txt was deleted by the commit. Expect a warning about this.
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "save a copy/at c9ed7b")
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 

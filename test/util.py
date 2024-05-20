@@ -142,14 +142,20 @@ def qlvGetSelection(view: QListView, role=Qt.ItemDataRole.DisplayRole):
 
 
 def findMenuAction(menu: QMenu | QMenuBar, pattern: str) -> QAction:
+    def stripAmps(s: str):
+        return s.replace("&", "")
+
     patternParts = pattern.split("/")
 
     for submenuPattern in patternParts[:-1]:
         for submenu in menu.children():
-            if isinstance(submenu, QAction) and submenu.menu() and re.search(submenuPattern, submenu.text(), re.I):
+            if (isinstance(submenu, QAction)
+                    and submenu.menu()
+                    and re.search(submenuPattern, stripAmps(submenu.text()), re.I)):
                 menu = submenu.menu()
                 break
-            elif isinstance(submenu, QMenu) and re.search(submenuPattern, submenu.title(), re.I):
+            elif (isinstance(submenu, QMenu)
+                  and re.search(submenuPattern, stripAmps(submenu.title()), re.I)):
                 menu = submenu
                 break
         else:
@@ -229,11 +235,15 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
     findQMessageBox(parent, textPattern).reject()
 
 
-def acceptQFileDialog(parent: QWidget, textPattern: str, selectFile: str):
+def acceptQFileDialog(parent: QWidget, textPattern: str, path: str):
     qfd: QFileDialog = findQDialog(parent, textPattern)
     assert isinstance(qfd, QFileDialog)
-    qfd.hide()  # https://stackoverflow.com/a/26929416 (trick needed on macOS + Qt 6.6.3)
-    qfd.selectFile(selectFile)
+
+    if path.endswith("/"):
+        suggestedFileName = os.path.basename(qfd.selectedFiles()[0])
+        path = os.path.join(path, suggestedFileName)
+
+    qfd.selectFile(path)
     qfd.show()
     qfd.accept()
-    return selectFile
+    return path

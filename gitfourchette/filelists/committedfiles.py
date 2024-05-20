@@ -124,7 +124,7 @@ class CommittedFiles(FileList):
         self.confirmBatch(run, title,
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
-    def saveRevisionAs(self, beforeCommit: bool = False, saveInto: str = ""):
+    def saveRevisionAs(self, beforeCommit: bool = False):
         def dump(path: str, mode: int, data: bytes):
             with open(path, "wb") as f:
                 f.write(data)
@@ -136,14 +136,9 @@ class CommittedFiles(FileList):
             except FileNotFoundError as fnf:
                 raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
-            if saveInto:
-                path = os.path.join(saveInto, name)
-                dump(path, diffFile.mode, blob.data)
-            else:
-                qfd = PersistentFileDialog.saveFile(
-                    self, "SaveFile", self.tr("Save file revision as"), name)
-                qfd.fileSelected.connect(lambda path: dump(path, diffFile.mode, blob.data))
-                qfd.show()
+            qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Save file revision as"), name)
+            qfd.fileSelected.connect(lambda path: dump(path, diffFile.mode, blob.data))
+            qfd.show()
 
         if beforeCommit:
             title = self.tr("Save revision before commit")

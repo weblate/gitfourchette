@@ -578,7 +578,7 @@ class DiffView(QPlainTextEdit):
             self.lineData[hunkLastLineIndex].hunkPos,
             reverse)
 
-    def exportPatch(self, patchData: bytes, saveInto=""):
+    def exportPatch(self, patchData: bytes):
         if not patchData:
             QApplication.beep()
             return
@@ -588,15 +588,9 @@ class DiffView(QPlainTextEdit):
                 file.write(patchData)
 
         name = os.path.basename(self.currentPatch.delta.new_file.path) + "[partial].patch"
-
-        if saveInto:
-            savePath = os.path.join(saveInto, name)
-            dump(savePath)
-        else:
-            qfd = PersistentFileDialog.saveFile(
-                self, "SaveFile", self.tr("Export selected lines"), name)
-            qfd.fileSelected.connect(dump)
-            qfd.show()
+        qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Export selected lines"), name)
+        qfd.fileSelected.connect(dump)
+        qfd.show()
 
     def fireRevert(self, patchData: bytes):
         RevertPatch.invoke(self, self.currentPatch, patchData)
@@ -622,9 +616,9 @@ class DiffView(QPlainTextEdit):
     def discardSelection(self):
         self.fireApplyLines(PatchPurpose.DISCARD)
 
-    def exportSelection(self, saveInto=""):
+    def exportSelection(self):
         patchData = self.extractSelection()
-        self.exportPatch(patchData, saveInto)
+        self.exportPatch(patchData)
 
     def revertSelection(self):
         patchData = self.extractSelection(reverse=True)
@@ -639,9 +633,9 @@ class DiffView(QPlainTextEdit):
     def discardHunk(self, hunkID: int):
         self.fireApplyHunk(hunkID, PatchPurpose.DISCARD)
 
-    def exportHunk(self, hunkID: int, saveInto=""):
+    def exportHunk(self, hunkID: int):
         patchData = self.extractHunk(hunkID)
-        self.exportPatch(patchData, saveInto)
+        self.exportPatch(patchData)
 
     def revertHunk(self, hunkID: int):
         patchData = self.extractHunk(hunkID, reverse=True)
@@ -847,11 +841,15 @@ class DiffView(QPlainTextEdit):
         numLines = end - start + 1
 
         if self.currentLocator.context == NavContext.UNSTAGED:
-            help = self.tr("Hit {stagekey} to stage the current/selected line(s), or {discardkey} to discard it/them.",
-                           "singular: 'current line', plural: 'selected lines'", numLines)
+            if numLines <= 1:
+                help = self.tr("Hit {stagekey} to stage the current line, or {discardkey} to discard it.")
+            else:
+                help = self.tr("Hit {stagekey} to stage the selected lines, or {discardkey} to discard them.")
         elif self.currentLocator.context == NavContext.STAGED:
-            help = self.tr("Hit {unstagekey} to unstage the current/selected line(s).",
-                           "singular: 'current line', plural: 'selected lines'", numLines)
+            if numLines <= 1:
+                help = self.tr("Hit {unstagekey} to unstage the current line.")
+            else:
+                help = self.tr("Hit {unstagekey} to unstage the selected lines.")
         else:
             return
 
