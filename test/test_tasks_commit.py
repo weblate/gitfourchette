@@ -390,6 +390,16 @@ def testCherrypick(tempDir, mainWindow):
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
 
 
+def testCherrypickDud(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex="f73b95671f326616d66b2afb3bdfcdbbce110b44")
+    rw.jump(NavLocator.inCommit(oid))
+    triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
+    acceptQMessageBox(rw, "nothing to cherry.?pick.+already")
+
+
 def testAbortCherrypick(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 

@@ -76,6 +76,7 @@ class TaskEffects(enum.IntFlag):
 
     ShowWorkdir = enum.auto()
     "Make sure the workdir is visible once the task succeeds."
+    # TODO: Migrate to setting RepoTask.jumpTo to NavLocator.inWorkdir(...)
 
     DefaultRefresh = Workdir | Refs | Remotes
     "Default flags for RepoWidget.refreshRepo()"
@@ -446,8 +447,9 @@ class RepoTask(QObject):
             settings.prefs.dontShowAgain.append(dontShowAgainKey)
             settings.prefs.setDirty()
 
-    def checkPrereqs(self):
-        prereqs = self.prereqs()
+    def checkPrereqs(self, prereqs=TaskPrereqs.Nothing):
+        if prereqs == TaskPrereqs.Nothing:
+            prereqs = self.prereqs()
         repo = self.repo
 
         if TaskPrereqs.NoConflicts in prereqs and repo.any_conflicts:

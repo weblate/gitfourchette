@@ -1,5 +1,6 @@
 import logging
 
+from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
@@ -18,9 +19,8 @@ class SwitchBranch(RepoTask):
         assert not newBranch.startswith(RefPrefix.HEADS)
 
         if self.repo.branches.local[newBranch].is_checked_out():
-            raise AbortTask(
-                self.tr("Branch {0} is already checked out.").format(bquo(newBranch)),
-                'information')
+            message = self.tr("Branch {0} is already checked out.").format(bquo(newBranch))
+            raise AbortTask(message, 'information')
 
         if askForConfirmation:
             text = self.tr("Do you want to switch to branch {0}?").format(bquo(newBranch))
@@ -344,16 +344,15 @@ class EditUpstreamBranch(RepoTask):
 
 
 class FastForwardBranch(RepoTask):
+    def effects(self):
+        return TaskEffects.Refs
+
     def flow(self, localBranchName: str = ""):
         if not localBranchName:
+            self.checkPrereqs(TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached)
             localBranchName = self.repo.head_branch_shorthand
 
-        try:
-            branch = self.repo.branches.local[localBranchName]
-        except KeyError:
-            raise AbortTask(self.tr("To fast-forward a branch, a local branch must be checked out. "
-                                    "Try switching to a local branch before fast-forwarding it."))
-
+        branch = self.repo.branches.local[localBranchName]
         upstream: Branch = branch.upstream
         if not upstream:
             raise AbortTask(self.tr("Can’t fast-forward {0} because it isn’t tracking an upstream branch."
@@ -368,6 +367,8 @@ class FastForwardBranch(RepoTask):
         ahead = False
         if upToDate:
             ahead = upstream.target != branch.target
+
+        self.jumpTo = NavLocator.inRef(RefPrefix.HEADS + localBranchName)
 
         yield from self.flowEnterUiThread()
 
@@ -487,25 +488,19 @@ class RecallCommit(RepoTask):
         dlg = showTextInputDialog(
             self.parentWidget(),
             self.tr("Recall lost commit"),
-            self.tr("If you know the hash of a commit that isn’t part of any branches,<br>"
-                    "{0} will try to recall it for you.").format(qAppName()),
+            self.tr("If you know the hash of a commit that isn’t part of any branches anymore, "
+                    "{app} will try to recall it for you.").format(app=qAppName()),
             okButtonText=self.tr("Recall"),
             deleteOnClose=False)
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
-
-        # Naked name, NOT prefixed with the name of the remote
         needle = dlg.lineEdit.text()
 
         yield from self.flowEnterWorkerThread()
-
         obj = self.repo[needle]
         commit: Commit = obj.peel(Commit)
-
-        branchName = f"recall-{commit.id}"
+        branchName = f"recall-{shortHash(commit.id)}"
+        branchName = withUniqueSuffix(branchName, self.repo.listall_branches())
         self.repo.create_branch_from_commit(branchName, commit.id)
-
-        yield from self.flowEnterUiThread()
-        debrief = paragraphs(self.tr("Hurray, the commit was found! Find it on this branch:"), bquo(branchName))
-        yield from self.flowConfirm(text=debrief, canCancel=False)
+        self.jumpTo = NavLocator.inCommit(commit.id)

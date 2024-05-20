@@ -1,5 +1,6 @@
 import pytest
 
+from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.nav import NavLocator
 from . import reposcenario
 from .util import *
@@ -118,6 +119,7 @@ def testRenameBranch(tempDir, mainWindow, method):
     for bad in badNames:
         nameEdit.setText(bad)
         assert not okButton.isEnabled(), f"name shouldn't pass validation: {bad}"
+        QTest.qWait(1)  # go through ValidatorMultiplexer's tooltip code path for coverage
 
     nameEdit.setText("mainbranch")
     assert okButton.isEnabled()
@@ -126,6 +128,25 @@ def testRenameBranch(tempDir, mainWindow, method):
 
     assert 'master' not in repo.branches.local
     assert 'mainbranch' in repo.branches.local
+
+
+def testRenameBranchIdenticalName(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    repo = rw.repo
+
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "rename")
+
+    dlg = findQDialog(rw, "rename.+branch")
+    nameEdit: QLineEdit = dlg.findChild(QLineEdit)
+    okButton: QPushButton = dlg.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok)
+
+    assert nameEdit.text() == "master"
+    assert okButton.isEnabled()
+    dlg.accept()
+    assert 'master' in repo.branches.local
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
@@ -482,6 +503,14 @@ def testSwitchBranch(tempDir, mainWindow, method):
     assert "no-parent" in getActiveBranchTooltipText()
 
 
+def testSwitchToCurrentBranch(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.sidebar.selectAnyRef("refs/heads/master")
+    QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
+    acceptQMessageBox(rw, "already checked.out")
+
+
 def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
@@ -501,6 +530,68 @@ def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):
 
     assert not localBranches['no-parent'].is_checked_out()  # still not checked out
     assert localBranches['master'].is_checked_out()
+
+
+def testRecallCommit(tempDir, mainWindow):
+    lostId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.delete_remote("origin")
+        repo.checkout_local_branch("no-parent")
+        repo.delete_local_branch("master")
+    rw = mainWindow.openRepo(wd)
+    assert "master" not in rw.state.refCache
+    assert lostId not in rw.state.reverseRefCache
+    triggerMenuAction(mainWindow.menuBar(), "repo/lost commit")
+    dlg = findQDialog(rw, "lost commit")
+    qle: QLineEdit = dlg.findChild(QLineEdit)
+    qle.setText(str(lostId)[:7])  # must work even with partial hash
+    dlg.accept()
+    assert lostId in rw.state.reverseRefCache
+    assert rw.navLocator.commit == lostId
+
+
+@pytest.mark.parametrize("method", ["sidebar", "menubar"])
+def testFastForward(tempDir, mainWindow, method):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.checkout_local_branch("no-parent")
+        repo.edit_upstream_branch("no-parent", "origin/master")
+    rw = mainWindow.openRepo(wd)
+
+    if method == "sidebar":
+        node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "fast.forward")
+    elif method == "menubar":
+        triggerMenuAction(mainWindow.menuBar(), "branch/fast.forward")
+
+    assert rw.navLocator.commit == Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+
+
+@pytest.mark.parametrize("branch", ["master", "no-parent"])
+def testFastForwardNotNecessary(tempDir, mainWindow, branch):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNodeByRef(f"refs/heads/{branch}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fast.forward")
+
+    acceptQMessageBox(rw, "(is ahead of)|(already up.to.date)")
+
+
+def testFastForwardDivergent(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.checkout_local_branch("no-parent")
+        repo.edit_upstream_branch("no-parent", "origin/first-merge")
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fast.forward")
+    acceptQMessageBox(rw, "can.+t fast.forward.+branches are divergent")
 
 
 def testMergeUpToDate(tempDir, mainWindow):
@@ -527,3 +618,51 @@ def testMergeFastForward(tempDir, mainWindow):
     acceptQMessageBox(rw, "can .*fast.forward")
 
     assert rw.repo.head.target == rw.repo.branches.local['master'].target
+
+
+def testMergeAborted(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, "testrepoformerging")
+    rw = mainWindow.openRepo(wd)
+    assert rw.repo.state() == RepositoryState.NONE
+
+    # Initiate merge of pep8-fixes into master
+    node = rw.sidebar.findNodeByRef("refs/heads/pep8-fixes")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
+    acceptQMessageBox(rw, "pep8-fixes.+into.+master.+may cause conflicts")
+    assert rw.mergeBanner.isVisible()
+    assert rw.repo.state() == RepositoryState.MERGE
+    assert rw.repo.status() == {"bye.txt": FileStatus.INDEX_NEW}
+    assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)
+    assert re.search(r"abort", rw.mergeBanner.button.text(), re.I)
+
+    # Abort the merge
+    rw.mergeBanner.button.click()
+    acceptQMessageBox(rw, "abort.+merge")
+    assert not rw.mergeBanner.isVisible()
+    assert rw.repo.state() == RepositoryState.NONE
+    assert rw.repo.status() == {}
+
+
+def testMergeConcludedByCommit(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, "testrepoformerging")
+    rw = mainWindow.openRepo(wd)
+    node = rw.sidebar.findNodeByRef("refs/heads/pep8-fixes")
+
+    # Initiate merge of pep8-fixes into master
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
+    acceptQMessageBox(rw, "pep8-fixes.+into.+master.+may cause conflicts")
+    assert rw.mergeBanner.isVisibleTo(rw)
+    assert rw.repo.state() == RepositoryState.MERGE
+    assert rw.repo.status() == {"bye.txt": FileStatus.INDEX_NEW}
+    assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)
+
+    # Commit to conclude the merge
+    rw.commitButton.click()
+    commitDialog: CommitDialog = rw.findChild(CommitDialog)
+    assert commitDialog.ui.infoText.isVisible()
+    assert re.search(r"conclude the merge", commitDialog.ui.infoText.text(), re.I)
+    commitDialog.ui.summaryEditor.setText("yup")
+    commitDialog.accept()
+    assert not rw.mergeBanner.isVisible()
+    assert rw.repo.state() == RepositoryState.NONE
+    assert rw.repo.status() == {}

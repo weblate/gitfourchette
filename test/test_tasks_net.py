@@ -319,3 +319,24 @@ def testPush(tempDir, mainWindow, asNewBranch):
         assert rw.repo.branches.remote["localfs/master"].target == newHead
     else:
         assert rw.repo.branches.remote["localfs/new"].target == newHead
+
+
+def testPushNoBranch(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.checkout_commit(Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0"))
+    rw = mainWindow.openRepo(wd)
+    triggerMenuAction(mainWindow.menuBar(), "branch/push")
+    acceptQMessageBox(rw, "switch to.+local branch")
+
+
+def testPushNoRemotes(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.delete_remote("origin")
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "push")
+    acceptQMessageBox(rw, "add a remote")

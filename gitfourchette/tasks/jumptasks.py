@@ -518,7 +518,12 @@ class RefreshRepo(RepoTask):
 
         jumpTo = jumpTo or initialLocator
 
-        if rw.isWorkdirShown or effectFlags & TaskEffects.ShowWorkdir:
+        jumpToWorkdir = effectFlags & TaskEffects.Workdir and (
+                effectFlags & TaskEffects.ShowWorkdir
+                or jumpTo.context.isWorkdir()
+                or (jumpTo.context == NavContext.EMPTY and rw.isWorkdirShown))
+
+        if jumpToWorkdir:
             # Refresh workdir view on separate thread AFTER all the processing above
             if not jumpTo.context.isWorkdir():
                 jumpTo = NavLocator(NavContext.WORKDIR)
