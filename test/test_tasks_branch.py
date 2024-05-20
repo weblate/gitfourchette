@@ -666,3 +666,37 @@ def testMergeConcludedByCommit(tempDir, mainWindow):
     assert not rw.mergeBanner.isVisible()
     assert rw.repo.state() == RepositoryState.NONE
     assert rw.repo.status() == {}
+
+
+def testMergeCausesConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, "testrepoformerging")
+    rw = mainWindow.openRepo(wd)
+    node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
+
+    # Initiate merge of branch-conflicts into master
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
+    acceptQMessageBox(rw, "branch-conflicts.+into.+master.+may cause conflicts")
+    assert rw.mergeBanner.isVisible()
+    assert rw.repo.state() == RepositoryState.MERGE
+    assert rw.repo.status() == {".gitignore": FileStatus.CONFLICTED}
+    assert re.search(r"conflicts need fixing", rw.mergeBanner.label.text(), re.I)
+
+    # Shouldn't be able to commit
+    rw.commitButton.click()
+    acceptQMessageBox(rw, "fix.+conflicts before")
+
+    rw.jump(NavLocator.inUnstaged(".gitignore"))
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged(".gitignore"))
+    assert rw.conflictView.isVisible()
+
+    assert rw.conflictView.ui.radioTheirs.isVisible()
+    assert rw.conflictView.ui.radioOurs.isVisible()
+    assert rw.conflictView.ui.radioTool.isVisible()
+    assert rw.conflictView.ui.confirmButton.isVisible()
+    assert not rw.conflictView.ui.confirmButton.isEnabled()
+
+    rw.conflictView.ui.radioOurs.click()
+    assert rw.conflictView.ui.confirmButton.isEnabled()
+    rw.conflictView.ui.confirmButton.click()
+    assert not rw.conflictView.isVisible()
+    assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)

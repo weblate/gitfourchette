@@ -95,13 +95,16 @@ def writeFile(path, text):
         f.write(text.encode("utf-8"))
 
 
-def readFile(path, timeout=0):
+def readFile(path, timeout=0, unlink=False):
     while timeout > 0 and not os.path.exists(path):
         wait = 10
         QTest.qWait(wait)
         timeout -= wait
     with open(path, "rb") as f:
-        return f.read()
+        data = f.read()
+    if unlink:
+        os.unlink(path)
+    return data
 
 
 def qlvGetRowData(view: QListView, role=Qt.ItemDataRole.DisplayRole):

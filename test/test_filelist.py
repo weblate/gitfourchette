@@ -1,16 +1,8 @@
-from contextlib import suppress
-import os.path
-
 import pytest
 
 from .util import *
 from . import reposcenario
-from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.forms.prefsdialog import PrefsDialog
-from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
-from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 
 
 def testParentlessCommitFileList(tempDir, mainWindow):
@@ -145,8 +137,7 @@ def testEditFileInExternalEditor(mainWindow, tempDir):
     # Now open the file in our shim
     # HEAD revision
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/current")
-    assert b"a/a1" in readFile(scratchPath, timeout=1000)
-    Path(scratchPath).unlink()
+    assert b"a/a1" in readFile(scratchPath, timeout=1000, unlink=True)
 
     # New revision
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/before 49322bb")
@@ -154,8 +145,7 @@ def testEditFileInExternalEditor(mainWindow, tempDir):
 
     # Old revision
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/at 49322bb")
-    assert b"a1@49322bb" in readFile(scratchPath, timeout=1000)
-    Path(scratchPath).unlink()
+    assert b"a1@49322bb" in readFile(scratchPath, timeout=1000, unlink=True)
 
 
 def testEditFileInExternalDiffTool(mainWindow, tempDir):

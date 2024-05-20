@@ -10,6 +10,7 @@ from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.diffview.specialdiff import SpecialDiffError, ShouldDisplayPatchAsImageDiff
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
+from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles
 from gitfourchette.filelists.filelist import FileList
@@ -1141,13 +1142,14 @@ class RepoWidget(QStackedWidget):
         # Surround repo name with parentheses in tab widget and title bar
         self.nameChange.emit()
 
-    def refreshPrefs(self):
+    def refreshPrefs(self, *prefDiff: str):
         if not self.uiReady:
             return
 
         self.diffView.refreshPrefs()
         self.graphView.refreshPrefs()
-        self.conflictView.refreshPrefs()
+        if PREFKEY_MERGETOOL in prefDiff:
+            self.conflictView.refreshPrefs()
         self.sidebar.refreshPrefs()
         self.dirtyFiles.refreshPrefs()
         self.stagedFiles.refreshPrefs()

@@ -103,11 +103,11 @@ class ConflictView(QWidget):
     def clear(self):
         self.currentConflict = None
 
-    def displayConflict(self, conflict: DiffConflict):
+    def displayConflict(self, conflict: DiffConflict, forceRefresh=False):
         assert conflict is not None, "don't call displayConflict with None"
 
         # Don't lose captions & focused widget if we're showing the exact same conflict
-        if conflict == self.currentConflict:
+        if not forceRefresh and conflict == self.currentConflict:
             return
 
         self.currentConflict = conflict
@@ -169,7 +169,7 @@ class ConflictView(QWidget):
 
     def refreshPrefs(self):
         if self.currentConflict:
-            self.displayConflict(self.currentConflict)
+            self.displayConflict(self.currentConflict, True)
 
     def _selectMergeToolLink(self):
         text = self.tr("Select another merge tool...")

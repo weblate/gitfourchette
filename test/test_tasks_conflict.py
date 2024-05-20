@@ -1,3 +1,4 @@
+from gitfourchette.nav import NavLocator
 from . import reposcenario
 from .util import *
 from gitfourchette.porcelain import *
@@ -122,3 +123,81 @@ def testConflictDoesntPreventManipulatingIndexOnOtherFile(tempDir, mainWindow):
     acceptQMessageBox(rw, r"really discard changes.+b1\.txt")
 
     assert readFile(f"{wd}/b/b1.txt").decode() == "b1\nb1\nstaged change\n"
+
+
+def testMergeTool(tempDir, mainWindow):
+    noopMergeToolPath = getTestDataPath("editor-shim.sh")
+    mergeToolPath = getTestDataPath("merge-shim.sh")
+    scratchPath = f"{tempDir.name}/external editor scratch file.txt"
+
+    wd = unpackRepo(tempDir, "testrepoformerging")
+    rw = mainWindow.openRepo(wd)
+    node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
+
+    # Initiate merge of branch-conflicts into master
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
+    acceptQMessageBox(rw, "branch-conflicts.+into.+master.+may cause conflicts")
+    rw.jump(NavLocator.inUnstaged(".gitignore"))
+    assert rw.repo.index.conflicts
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged(".gitignore"))
+    assert rw.conflictView.isVisible()
+
+    # ------------------------------
+    # Try merging with a tool that doesn't touch the output file
+    mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{noopMergeToolPath}" "{scratchPath}" $M $L $R $B'})
+
+    assert "editor-shim" in rw.conflictView.ui.radioTool.text()
+    rw.conflictView.ui.radioTool.click()
+    rw.conflictView.ui.confirmButton.click()
+
+    scratchLines = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8").strip().splitlines()
+    QTest.qWait(100)
+    assert "[MERGED]" in scratchLines[0]
+    assert "[OURS]" in scratchLines[1]
+    assert "[THEIRS]" in scratchLines[2]
+    assert "exited without completing" in rw.conflictView.ui.explainer.text().lower()
+
+    # ------------------------------
+    # Try merging with a missing command
+    mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{noopMergeToolPath}-BOGUSCOMMAND" "{scratchPath}" $M $L $R $B'})
+    assert "editor-shim" in rw.conflictView.ui.radioTool.text()
+    rw.conflictView.ui.radioTool.click()
+    rw.conflictView.ui.confirmButton.click()
+
+    QTest.qWait(100)
+    rejectQMessageBox(rw, "not.+installed on your machine")
+
+    # ------------------------------
+    # Try merging with a tool that errors out
+    writeFile(scratchPath, "oops, file locked!")
+    os.chmod(scratchPath, 0o400)
+
+    mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "${scratchPath}" $M $L $R $B'})
+    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
+    rw.conflictView.ui.radioTool.click()
+    rw.conflictView.ui.confirmButton.click()
+
+    QTest.qWait(100)
+    assert "exit code" in rw.conflictView.ui.explainer.text().lower()
+    os.unlink(scratchPath)
+
+    # ------------------------------
+    # Now try merging with a good tool
+    mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "{scratchPath}" $M $L $R $B'})
+    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
+    rw.conflictView.ui.radioTool.click()
+    rw.conflictView.ui.confirmButton.click()
+
+    scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
+    scratchLines = scratchText.strip().splitlines()
+    QTest.qWait(100)
+
+    assert "[MERGED]" in scratchLines[0]
+    assert "[OURS]" in scratchLines[1]
+    assert "[THEIRS]" in scratchLines[2]
+    assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
+    acceptQMessageBox(rw, "looks like.+resolved")
+
+    assert rw.mergeBanner.isVisible()
+    assert "all conflicts fixed" in rw.mergeBanner.label.text().lower()
+    assert not rw.repo.index.conflicts

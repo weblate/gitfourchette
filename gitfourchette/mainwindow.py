@@ -1163,7 +1163,7 @@ class MainWindow(QMainWindow):
         self.tabs.refreshPrefs()
         self.autoHideMenuBar.refreshPrefs()
         for rw in self.tabs.widgets():
-            rw.refreshPrefs()
+            rw.refreshPrefs(*prefDiff)
 
         self.showStatusBarAction.setCheckable(True)
         self.showStatusBarAction.setChecked(settings.prefs.showStatusBar)
