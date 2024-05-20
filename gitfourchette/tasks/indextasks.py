@@ -386,13 +386,17 @@ class AcceptMergeConflictResolution(RepoTask):
         yield from self.flowEnterWorkerThread()
         repo = self.repo
 
+        path = umc.conflict.ours.path
         with open(umc.scratchPath, "rb") as scratchFile, \
-                open(repo.in_workdir(umc.conflict.ours.path), "wb") as ourFile:
+                open(repo.in_workdir(path), "wb") as ourFile:
             data = scratchFile.read()
             ourFile.write(data)
 
-        del repo.index.conflicts[umc.conflict.ours.path]
-        repo.index.add(umc.conflict.ours.path)
+        del repo.index.conflicts[path]
+        repo.index.add(path)
+
+        # Jump to staged file after confirming conflict resolution
+        self.jumpTo = NavLocator.inStaged(path)
 
         umc.deleteLater()
 

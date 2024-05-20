@@ -196,7 +196,9 @@ def testMergeTool(tempDir, mainWindow):
     assert "[OURS]" in scratchLines[1]
     assert "[THEIRS]" in scratchLines[2]
     assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
+
     acceptQMessageBox(rw, "looks like.+resolved")
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inStaged(".gitignore"))
 
     assert rw.mergeBanner.isVisible()
     assert "all conflicts fixed" in rw.mergeBanner.label.text().lower()
