@@ -121,9 +121,11 @@ class SearchBar(QWidget):
             super().keyPressEvent(event)
 
     def showEvent(self, event: QShowEvent):
+        super().showEvent(event)
         self.visibilityChanged.emit(True)
 
     def hideEvent(self, event: QHideEvent):
+        super().hideEvent(event)
         self.visibilityChanged.emit(False)
 
     def popUp(self, forceSelectAll=False):

@@ -590,6 +590,7 @@ class MainWindow(QMainWindow):
 
         # Hook RepoWidget signals
         rw.nameChange.connect(lambda: self.onRepoNameChange(rw))
+        rw.requestAttention.connect(lambda: self.onRepoRequestsAttention(rw))
         rw.openRepo.connect(lambda path, locator: self.openRepoNextTo(rw, path, locator))
         rw.openPrefs.connect(self.openPrefsDialog)
 
@@ -634,6 +635,10 @@ class MainWindow(QMainWindow):
             rw.refreshWindowChrome()
             rw.sidebar.sidebarModel.refreshRepoName()
         self.fillRecentMenu()
+
+    def onRepoRequestsAttention(self, rw: RepoWidget):
+        i = self.tabs.indexOf(rw)
+        self.tabs.requestAttention(i)
 
     # -------------------------------------------------------------------------
     # Repo menu callbacks
@@ -961,7 +966,7 @@ class MainWindow(QMainWindow):
     def refreshTabText(self, rw):
         index = self.tabs.indexOf(rw)
         title = escamp(rw.getTitle())
-        self.tabs.tabs.setTabText(index, title)
+        self.tabs.setTabText(index, title)
 
     def unloadTab(self, index: int):
         rw : RepoWidget = self.tabs.widget(index)

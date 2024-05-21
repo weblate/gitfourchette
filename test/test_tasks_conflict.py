@@ -1,3 +1,5 @@
+import pytest
+
 from gitfourchette.nav import NavLocator
 from . import reposcenario
 from .util import *
@@ -200,6 +202,54 @@ def testMergeTool(tempDir, mainWindow):
     acceptQMessageBox(rw, "looks like.+resolved")
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inStaged(".gitignore"))
 
+    assert rw.mergeBanner.isVisible()
+    assert "all conflicts fixed" in rw.mergeBanner.label.text().lower()
+    assert not rw.repo.index.conflicts
+
+
+def testMergeToolInBackgroundTab(tempDir, mainWindow):
+    mergeToolPath = getTestDataPath("merge-shim.sh")
+    scratchPath = f"{tempDir.name}/external editor scratch file.txt"
+    mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "{scratchPath}" $M $L $R $B'})
+
+    otherWd = unpackRepo(tempDir, "TestEmptyRepository")
+    wd = unpackRepo(tempDir, "testrepoformerging")
+    otherRw = mainWindow.openRepo(otherWd)
+    QTest.qWait(1)  # let it settle
+    rw = mainWindow.openRepo(wd)
+    node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
+
+    # Initiate merge of branch-conflicts into master
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
+    acceptQMessageBox(rw, "branch-conflicts.+into.+master.+may cause conflicts")
+    rw.jump(NavLocator.inUnstaged(".gitignore"))
+    assert rw.repo.index.conflicts
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged(".gitignore"))
+    assert rw.conflictView.isVisible()
+
+    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
+    rw.conflictView.ui.radioTool.click()
+    rw.conflictView.ui.confirmButton.click()
+    mainWindow.tabs.setCurrentIndex(0)  # immediately switch to another tab
+    assert mainWindow.currentRepoWidget() is otherRw
+
+    scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
+    scratchLines = scratchText.strip().splitlines()
+    assert "[MERGED]" in scratchLines[0]
+    assert "[OURS]" in scratchLines[1]
+    assert "[THEIRS]" in scratchLines[2]
+    assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
+    QTest.qWait(100)
+
+    # Our tab is in the background so it must NOT show a messagebox yet
+    with pytest.raises(AssertionError):
+        acceptQMessageBox(rw, "looks like.+resolved")
+
+    mainWindow.tabs.setCurrentIndex(1)  # switch BACK to our tab
+    QTest.qWait(1)
+    acceptQMessageBox(rw, "looks like.+resolved")
+
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inStaged(".gitignore"))
     assert rw.mergeBanner.isVisible()
     assert "all conflicts fixed" in rw.mergeBanner.label.text().lower()
     assert not rw.repo.index.conflicts

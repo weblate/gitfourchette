@@ -88,14 +88,14 @@ class FlowControlToken(QObject):
     """
 
     class Kind(enum.IntEnum):
-        CONTINUE_ON_UI_THREAD = enum.auto()
-        CONTINUE_ON_WORK_THREAD = enum.auto()
-        WAIT_READY = enum.auto()
+        ContinueOnUiThread = enum.auto()
+        ContinueOnWorkThread = enum.auto()
+        WaitReady = enum.auto()
 
     ready = Signal()
     flowControl: Kind
 
-    def __init__(self, flowControl: Kind = Kind.CONTINUE_ON_UI_THREAD):
+    def __init__(self, flowControl: Kind = Kind.ContinueOnUiThread):
         # DON'T set a parent, because this can be instantiated on an arbitrary thread.
         # (QObject: Cannot create children for a parent that is in a different thread.)
         # Python's GC should take care of deleting the tokens when needed.
@@ -274,32 +274,35 @@ class RepoTask(QObject):
 
     def flowEnterWorkerThread(self):
         """
-        Moves the task to a non-UI thread.
+        Move the task to a non-UI thread.
         (Note that the flow always starts on the UI thread.)
 
         This function is intended to be called by flow() with "yield from".
         """
-        yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD)
+        assert self._currentFlow is not None
+        yield FlowControlToken(FlowControlToken.Kind.ContinueOnWorkThread)
 
     def flowEnterUiThread(self):
         """
-        Returns the task to the UI thread.
+        Move the task to the UI thread.
         (Note that the flow always starts on the UI thread.)
 
         This function is intended to be called by flow() with "yield from".
         """
-        yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
+        assert self._currentFlow is not None
+        yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
     def flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
                     ) -> Generator[FlowControlToken, None, RepoTask]:
         """
-        Runs a subtask's flow() method as if it were part of this task.
+        Run a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
         You must be on the UI thread before starting a subtask.
 
         This function is intended to be called by flow() with "yield from".
         """
 
+        assert self._currentFlow is not None
         assert onAppThread(), "Subtask must be started start on UI thread"
 
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
@@ -312,12 +315,16 @@ class RepoTask(QObject):
         subtask._taskStack = self._taskStack  # share reference to task stack
         self._taskStack.append(subtask)
 
+        # Get flow generator from subtask
+        subtask._currentFlow = subtask.flow(*args, **kwargs)
+        assert isinstance(subtask._currentFlow, Generator), "flow() must contain at least one yield statement"
+
         # Actually perform the subtask
-        yield from subtask.flow(*args, **kwargs)
+        yield from subtask._currentFlow
 
         # Make sure we're back on the UI thread before re-entering the root task
         if not onAppThread():
-            yield FlowControlToken(FlowControlToken.Kind.CONTINUE_ON_UI_THREAD)
+            yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
         # Clean up subtask (on UI thread)
         subtask.cleanup()
@@ -328,17 +335,36 @@ class RepoTask(QObject):
 
         return subtask
 
+    def flowRequestForegroundUi(self):
+        """
+        Pause the coroutine until the RepoWidget is the foreground tab.
+
+        This function is intended to be called by flow() with "yield from".
+        """
+        assert self._currentFlow is not None
+        assert onAppThread()
+
+        if not self.parentWidget().isVisible():
+            token = FlowControlToken(FlowControlToken.Kind.WaitReady)
+            self.parentWidget().becameVisible.connect(token.ready)
+            yield token
+
     def flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
         """
-        Re-enters the flow when the QDialog is accepted or rejected.
-        If abortTaskIfRejected is True, the task is aborted if the dialog was rejected.
+        Show a QDialog, then pause the coroutine until it's accepted or rejected.
+
+        If abortTaskIfRejected is True, rejecting the dialog causes the task
+        to be aborted altogether.
 
         This function is intended to be called by flow() with "yield from".
         """
 
+        assert self._currentFlow is not None
         assert onAppThread()  # we'll touch the UI
 
-        waitToken = FlowControlToken(FlowControlToken.Kind.WAIT_READY)
+        yield from self.flowRequestForegroundUi()
+
+        waitToken = FlowControlToken(FlowControlToken.Kind.WaitReady)
         didReject = False
 
         def onReject():
@@ -372,12 +398,13 @@ class RepoTask(QObject):
             canCancel: bool = True,
     ):
         """
-        Asks the user to confirm the operation via a message box.
+        Ask the user to confirm the operation via a message box.
         Interrupts flow() if the user denies.
 
         This function is intended to be called by flow() with "yield from".
         """
 
+        assert self._currentFlow is not None
         assert onAppThread()  # we'll touch the UI
 
         if dontShowAgainKey:
@@ -481,6 +508,7 @@ class RepoTaskRunner(QObject):
     progress = Signal(str, bool)
     repoGone = Signal()
     ready = Signal()
+    requestAttention = Signal()
 
     _continueFlow = Signal(object)
     "Connected to _iterateFlow"
@@ -635,13 +663,14 @@ class RepoTaskRunner(QObject):
             if isinstance(result, FlowControlToken):
                 control = result.flowControl
 
-                if control == FlowControlToken.Kind.WAIT_READY:
+                if control == FlowControlToken.Kind.WaitReady:
                     self.progress.emit("", False)
+                    self.requestAttention.emit()
 
                     # Re-enter when user is ready
                     result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
 
-                elif not self.forceSerial and control == FlowControlToken.Kind.CONTINUE_ON_WORK_THREAD:
+                elif not self.forceSerial and control == FlowControlToken.Kind.ContinueOnWorkThread:
                     busyMessage = self.tr("Busy: {0}...").format(task.name())
                     self.progress.emit(busyMessage, True)
 
@@ -685,9 +714,10 @@ class RepoTaskRunner(QObject):
 
                 task.deleteLater()
 
-            else:
-                assert False, ("In a RepoTask coroutine, you can only yield a FlowControlToken "
-                               f"(you yielded: {type(result).__name__})")
+            else:  # pragma: no-cover
+                message = (f"In a RepoTask coroutine, you can only yield a FlowControlToken "
+                           f"(you yielded: {type(result).__name__})")
+                raise NotImplementedError(message)
 
         if not self.isBusy():  # might've queued up another task...
             if self._criticalTaskQueue:

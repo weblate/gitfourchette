@@ -48,6 +48,8 @@ class RepoWidget(QStackedWidget):
     openPrefs = Signal(str)
     locatorChanged = Signal(NavLocator)
     historyChanged = Signal()
+    requestAttention = Signal()
+    becameVisible = Signal()
 
     busyMessage = Signal(str)
     statusMessage = Signal(str)
@@ -106,6 +108,7 @@ class RepoWidget(QStackedWidget):
         self.repoTaskRunner.postTask.connect(self.refreshPostTask)
         self.repoTaskRunner.progress.connect(self.onRepoTaskProgress)
         self.repoTaskRunner.repoGone.connect(self.onRepoGone)
+        self.repoTaskRunner.requestAttention.connect(self.requestAttention)
 
         self.state = None
         self.pendingPath = os.path.normpath(pendingWorkdir)
@@ -727,6 +730,10 @@ class RepoWidget(QStackedWidget):
         """ Called when closing a repo tab """
         # Don't bother with the placeholder since we'll disappear immediately
         self.cleanup(installPlaceholder=False)
+
+    def showEvent(self, event: QShowEvent):
+        super().showEvent(event)
+        self.becameVisible.emit()
 
     def cleanup(self, message: str = "", allowAutoReload: bool = True, installPlaceholder: bool = True):
         assert onAppThread()

@@ -1,5 +1,6 @@
 from gitfourchette.qt import *
-from gitfourchette import settings
+from gitfourchette import settings, colors
+from gitfourchette.toolbox import stockIcon
 from gitfourchette.toolbox.qtutils import CallbackAccumulator
 
 
@@ -121,6 +122,8 @@ class QTabWidget2(QWidget):
     """Emitted when the displayed widget is actually changed (in contrast to
     currentChanged, which is emitted even when dragging the foreground tab)."""
 
+    UrgentPropertyName = "QTabBar2_UrgentFlag"
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -209,12 +212,17 @@ class QTabWidget2(QWidget):
     def onCurrentChanged(self, i: int):
         # Keep QStackedWidget in sync with QTabBar
         self.stacked.setCurrentIndex(i)
+        currentWidget = self.currentWidget()
 
         # Make sure the tab is visible within the scrollable area
         self.ensureCurrentTabVisible()
 
+        # Remove urgent flag if any
+        if currentWidget is not None and currentWidget.property(QTabWidget2.UrgentPropertyName):
+            currentWidget.setProperty(QTabWidget2.UrgentPropertyName, None)
+            self.tabs.setTabIcon(i, QIcon())  # clear icon
+
         # See if we should emit the currentWidgetChanged signal
-        currentWidget = self.currentWidget()
         if currentWidget is not self.shadowCurrentWidget:
             self.shadowCurrentWidget = currentWidget
             self.currentWidgetChanged.emit()
@@ -333,3 +341,14 @@ class QTabWidget2(QWidget):
     def onResize(self):
         self.overflowGradient.resize(self.tabScrollArea.size())
         self.ensureCurrentTabVisible()
+
+    def requestAttention(self, i: int):
+        if i == self.currentIndex():
+            return
+        widget = self.widget(i)
+        if widget is None:
+            return
+        if widget.property(QTabWidget2.UrgentPropertyName) == "true":
+            return
+        widget.setProperty(QTabWidget2.UrgentPropertyName, "true")
+        self.tabs.setTabIcon(i, stockIcon("urgent-tab"))
