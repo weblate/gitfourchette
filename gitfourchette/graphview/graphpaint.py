@@ -7,6 +7,7 @@ from gitfourchette.graph import Frame, Graph
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState, UC_FAKEID
+from gitfourchette.toolbox import lerp
 
 logger = logging.getLogger(__name__)
 
@@ -143,12 +144,25 @@ def paintGraphFrame(
     arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
 
     # draw arcs PASSING BY commit
+    cy1 = middle
+    cy2 = middle
+    if not arcsOpenedByCommit:
+        # Compress the curvature of arcs passing by a root commit    |  |  |
+        # to the bottom half of the row to prevent these arcs from   O  |  |
+        # looking like they are joined to the root commit in a         /  /
+        # flattened graph.                                            |  |
+        cy1 = bottom + 4
+        cy2 = middle
+    elif not arcsClosedByCommit:
+        # Same, but compress above
+        cy1 = middle - 4
+        cy2 = top
     for arc in arcsPassingByCommit:
         columnA, columnB = laneColumnsAB[arc.lane]  # column above, column below
         ax = x + columnA * LANE_WIDTH
         bx = x + columnB * LANE_WIDTH
         path.moveTo(ax, top)
-        path.cubicTo(ax, middle, bx, middle, bx, bottom)
+        path.cubicTo(ax, cy1, bx, cy2, bx, bottom)
         submitPath(path, arc.lane, arc.openedBy == UC_FAKEID)
 
     # draw arcs CLOSED BY commit (from above)

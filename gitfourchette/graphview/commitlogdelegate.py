@@ -140,7 +140,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             authorWidth = 0
             dateWidth = 0
         elif rect.width() <= NARROW_WIDTH[1]:
-            authorWidth = int(lerp(authorWidth/2, authorWidth, NARROW_WIDTH[0], NARROW_WIDTH[1], rect.width()))
+            authorWidth = int(lerp(authorWidth/2, authorWidth, rect.width(), NARROW_WIDTH[0], NARROW_WIDTH[1]))
         leftBoundHash = rect.left()
         leftBoundSummary = leftBoundHash + hcw * settings.prefs.shortHashChars + XSPACING
         leftBoundDate = rect.width() - dateWidth

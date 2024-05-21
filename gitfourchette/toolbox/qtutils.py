@@ -362,7 +362,7 @@ def keyEventMatchesMultiShortcut(event: QKeyEvent, shortcuts: MultiShortcut) -> 
     return eventKS in shortcuts
 
 
-def lerp(v1, v2, cmin, cmax, c):
+def lerp(v1, v2, c=.5, cmin=0, cmax=1):
     p = (c-cmin) / (cmax-cmin)
     p = max(p, 0)
     p = min(p, 1)
