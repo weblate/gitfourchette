@@ -1,13 +1,14 @@
-import enum
+from __future__ import annotations
+
 import logging
 import os
 import re
 from bisect import bisect_left, bisect_right
-from typing import Literal
 
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.diffview.diffdocument import DiffDocument, LineData
+from gitfourchette.diffview.diffgutter import DiffGutter
 from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
@@ -19,53 +20,6 @@ from gitfourchette.tasks import ApplyPatch, RevertPatch
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
-
-
-class DiffGutter(QWidget):
-    diffView: 'DiffView'
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        assert isinstance(parent, DiffView)
-        self.diffView = parent
-
-        dpr = 4
-        if FREEDESKTOP:  # pragma: no cover
-            dpr = 1  # On Linux, Qt doesn't seem to support cursors at non-1 DPR
-
-        pix = QPixmap(f"assets:icons/right_ptr@{dpr}x")
-        pix.setDevicePixelRatio(dpr)
-        flippedCursor = QCursor(pix, hotX=19, hotY=5)
-        self.setCursor(flippedCursor)
-
-        # Enable customContextMenuRequested signal
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-    def sizeHint(self) -> QSize:
-        return QSize(self.diffView.gutterWidth(), 0)
-
-    def paintEvent(self, event: QPaintEvent):
-        self.diffView.gutterPaintEvent(event)
-
-    def wheelEvent(self, event: QWheelEvent):
-        # Forward mouse wheel to parent widget
-        self.parentWidget().wheelEvent(event)
-
-    def mouseDoubleClickEvent(self, event: QMouseEvent):
-        # Double click to select clump of lines
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.diffView.selectClumpOfLinesAt(clickPoint=event.pos())
-
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-                self.diffView.selectWholeLinesTo(event.pos())
-            else:
-                self.diffView.selectWholeLineAt(event.pos())
-
-    def mouseMoveEvent(self, event: QMouseEvent):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            self.diffView.selectWholeLinesTo(event.pos())
 
 
 class DiffSearchHighlighter(QSyntaxHighlighter):
@@ -130,14 +84,11 @@ class DiffView(QPlainTextEdit):
         # Highlighter for search terms
         self.highlighter = DiffSearchHighlighter(self)
 
-        self.gutterMaxDigits = 0
-
         self.gutter = DiffGutter(self)
-        self.updateRequest.connect(self.updateGutter)
-        self.blockCountChanged.connect(self.updateGutterWidth)
         self.gutter.customContextMenuRequested.connect(lambda p: self.doContextMenu(self.gutter.mapToGlobal(p)))
-        # self.cursorPositionChanged.connect(self.highlightCurrentLine)
-        self.updateGutterWidth(0)
+        self.updateRequest.connect(self.gutter.onParentUpdateRequest)
+        # self.blockCountChanged.connect(self.updateGutterWidth)
+        self.syncViewportMarginsWithGutter()
 
         # Emit contextual help with non-empty selection
         self.cursorPositionChanged.connect(self.emitSelectionHelp)
@@ -261,10 +212,11 @@ class DiffView(QPlainTextEdit):
             lastHunk = self.currentPatch.hunks[-1]
             maxNewLine = lastHunk.new_start + lastHunk.new_lines
             maxOldLine = lastHunk.old_start + lastHunk.old_lines
-            self.gutterMaxDigits = len(str(max(maxNewLine, maxOldLine)))
+            maxLine = max(maxNewLine, maxOldLine)
         else:
-            self.gutterMaxDigits = 0
-        self.updateGutterWidth(0)
+            maxLine = 0
+        self.gutter.setMaxLineNumber(maxLine)
+        self.syncViewportMarginsWithGutter()
 
         # Now restore cursor/scrollbar positions
         self.restorePosition(locator)
@@ -383,6 +335,9 @@ class DiffView(QPlainTextEdit):
         self.setTabStopDistance(QFontMetricsF(monoFont).horizontalAdvance(' ' * tabWidth))
         self.refreshWordWrap()
         self.setCursorWidth(2)
+
+        self.gutter.setFont(monoFont)
+        self.syncViewportMarginsWithGutter()
 
     def refreshWordWrap(self):
         if settings.prefs.wordWrap:
@@ -642,96 +597,21 @@ class DiffView(QPlainTextEdit):
         self.fireRevert(patchData)
 
     # ---------------------------------------------
-    # Gutter (inspired by https://doc.qt.io/qt-5/qtwidgets-widgets-codeeditor-example.html)
-
-    def gutterWidth(self) -> int:
-        paddingString = '0' * (2*self.gutterMaxDigits + 2)
-        return self.fontMetrics().horizontalAdvance(paddingString)
+    # Gutter
 
     def resizeGutter(self):
         cr: QRect = self.contentsRect()
-        self.gutter.setGeometry(QRect(cr.left(), cr.top(), self.gutterWidth(), cr.height()))
+        cr.setWidth(self.gutter.calcWidth())
+        self.gutter.setGeometry(cr)
 
-    def updateGutterWidth(self, newBlockCount: int):
-        self.setViewportMargins(self.gutterWidth(), 0, 0, 0)
+    def syncViewportMarginsWithGutter(self):
+        gutterWidth = self.gutter.calcWidth()
 
-    def gutterPaintEvent(self, event: QPaintEvent):
-        painter = QPainter(self.gutter)
-        painter.setFont(self.font())
+        # Prevent Qt freeze if margin width exceeds widget width, e.g. when window is very narrow
+        # (especially prevalent with word wrap?)
+        self.setMinimumWidth(gutterWidth * 2)
 
-        # Set up colors
-        palette = self.palette()
-        themeBG = palette.color(QPalette.ColorRole.Base)  # standard theme background color
-        themeFG = palette.color(QPalette.ColorRole.Text)  # standard theme foreground color
-        if isDarkTheme(palette):
-            gutterColor = themeBG.darker(105)  # light theme
-        else:
-            gutterColor = themeBG.lighter(140)  # dark theme
-        lineColor = QColor(*themeFG.getRgb()[:3], 80)
-        textColor = QColor(*themeFG.getRgb()[:3], 128)
-
-        # Gather some metrics
-        paintRect = event.rect()
-        gutterRect = self.gutter.rect()
-        fontHeight = self.fontMetrics().height()
-
-        # Clip painting to QScrollArea viewport rect (don't draw beneath horizontal scroll bar)
-        paintRect = paintRect.intersected(self.viewport().rect())
-        painter.setClipRect(paintRect)
-
-        # Draw background
-        painter.fillRect(paintRect, gutterColor)
-
-        # Draw vertical separator line
-        painter.fillRect(gutterRect.x() + gutterRect.width() - 1, paintRect.y(), 1, paintRect.height(), lineColor)
-
-        block: QTextBlock = self.firstVisibleBlock()
-        blockNumber = block.blockNumber()
-        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
-        bottom = top + round(self.blockBoundingRect(block).height())
-
-        # Draw line numbers and hunk separator lines
-        if settings.prefs.colorblind:
-            noOldPlaceholder = "+"
-            noNewPlaceholder = "-"
-        else:
-            noOldPlaceholder = "·"
-            noNewPlaceholder = "·"
-
-        painter.setPen(textColor)
-        while block.isValid() and top <= paintRect.bottom():
-            if blockNumber >= len(self.lineData):
-                break
-
-            ld = self.lineData[blockNumber]
-            if block.isVisible() and bottom >= paintRect.top():
-                if ld.diffLine:
-                    # Draw line numbers
-                    old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else noOldPlaceholder
-                    new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else noNewPlaceholder
-
-                    colW = (gutterRect.width() - 4) // 2
-                    painter.drawText(0, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, old)
-                    painter.drawText(colW, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, new)
-                else:
-                    # Draw hunk separator horizontal line
-                    painter.fillRect(0, round((top+bottom)/2), gutterRect.width()-1, 1, lineColor)
-
-            block = block.next()
-            top = bottom
-            bottom = top + round(self.blockBoundingRect(block).height())
-            blockNumber += 1
-
-        painter.end()
-
-    def updateGutter(self, rect: QRect, dy: int):
-        if dy != 0:
-            self.gutter.scroll(0, dy)
-        else:
-            self.gutter.update(0, rect.y(), self.gutter.width(), rect.height())
-
-        if rect.contains(self.viewport().rect()):
-            self.updateGutterWidth(0)
+        self.setViewportMargins(gutterWidth, 0, 0, 0)
 
     # ---------------------------------------------
     # Cursor/selection
