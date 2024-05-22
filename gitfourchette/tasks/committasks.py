@@ -354,17 +354,6 @@ class RevertCommit(RepoTask):
         self.repo.revert_commit_in_workdir(oid)
 
 
-class ResetHead(RepoTask):
-    def effects(self):
-        return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
-
-    def flow(self, onto: Oid, resetMode: ResetMode, recurseSubmodules: bool):
-        yield from self.flowEnterWorkerThread()
-        if recurseSubmodules:
-            raise NotImplementedError("RecurseSubmodules not implemented in ResetHead")
-        self.repo.reset(onto, resetMode)
-
-
 class NewTag(RepoTask):
     def prereqs(self):
         return TaskPrereqs.NoUnborn

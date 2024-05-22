@@ -130,7 +130,7 @@ class GraphView(QListView):
                 TaskBook.action(self, NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 checkoutAction,
-                ActionDef(self.tr("&Reset HEAD to Here..."), self.resetHeadFlow),
+                TaskBook.action(self, ResetHead, self.tr("&Reset HEAD to Here..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 TaskBook.action(self, CherrypickCommit, self.tr("Cherry &Pick..."), taskArgs=oid),
                 TaskBook.action(self, RevertCommit, self.tr("Re&vert..."), taskArgs=oid),
@@ -344,22 +344,6 @@ class GraphView(QListView):
         label.linkActivated.connect(self.linkActivated)
 
         messageBox.show()
-
-    def resetHeadFlow(self):
-        oid = self.currentCommitId
-        if not oid:
-            return
-
-        dlg = ResetHeadDialog(oid, parent=self)
-
-        def onAccept():
-            resetMode = dlg.activeMode
-            recurse = dlg.recurseSubmodules
-            ResetHead.invoke(self, oid, resetMode, recurse)
-
-        dlg.accepted.connect(onAccept)
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        dlg.show()
 
     def copyCommitHashToClipboard(self):
         oid = self.currentCommitId

@@ -1,147 +1,67 @@
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
+from gitfourchette.forms.ui_resetheaddialog import Ui_ResetHeadDialog
 
 
 DEFAULT_MODE = ResetMode.MIXED
 
 
-MODE_LABELS = {
-    ResetMode.SOFT: "&Soft",
-    ResetMode.MIXED: "&Mixed",
-    ResetMode.HARD: "&Hard",
-}
-
-
-MODE_TEXT = {
-    ResetMode.SOFT:
-        """
-        <ul>
-        <li><p><b>Unstaged files</b>:<br>don’t touch</p>
-        <li><p><b>Staged files</b>:<br>don’t touch</p>
-        <li><p><b>Commits since {commit}</b>:<br>move contents of those commits to Staged</p>
-        </ul>
-        """,
-        # <p>Does not touch the index file (staging area) or the working tree at all
-        # (but resets the <b>HEAD</b> to <b>{commit}</b>, just like all modes do).
-        # This leaves all your changed files
-        # “Changes to be committed”, as <code>git status</code> would put it.</p>
-
-    ResetMode.MIXED:
-        """
-        <ul>
-        <li><p><b>Unstaged files</b>:<br>don’t touch</p>
-        <li><p><b>Staged files</b>:<br>move to Unstaged</p>
-        <li><p><b>Commits since {commit}</b>:<br>move contents of those commits to Unstaged</p>
-        </ul>
-        """,
-        # <p>Resets the index but not the working tree (i.e., the changed files are preserved but
-        # not marked for commit) and reports what has not been updated.</p>
-
-    ResetMode.HARD:
-        """
-        <ul>
-        <li><p><b>Unstaged files</b>:<br>⚠ <em>nuke changes</em> to files that have been touched by any commits since {commit}</p>
-        <li><p><b>Staged files</b>:<br>⚠ <em>nuke all changes</em></p>
-        <li><p><b>Commits since {commit}</b>:<br>⚠ <em>nuke all changes</em>, effectively nuking the branch’s history since {commit}</p>
-        </ul>
-        """,
-        # <p>Resets the index and working tree. Any changes to tracked files in the working tree
-        # since <b>{commit}</b> are discarded.</p>
-
-    "recurse":
-        """
-        <p><b>Recurse Submodules</b> will also recursively reset the working tree of all active
-        submodules according to the commit recorded in the superproject, also
-        setting the submodules’ <b>HEAD</b> to be detached at that commit.</p>
-        """
-}
-
-
 class ResetHeadDialog(QDialog):
-    oid: Oid
     activeMode: ResetMode
-    recurseSubmodules: bool
-    helpLabel: QLabel
-    recurseCheckbox: QCheckBox
 
-    def setHelp(self):
-        title = self.activeMode.name.title()
-        text = MODE_TEXT[self.activeMode].format(commit=self.shortsha)
-
-        if self.recurseCheckbox.isEnabled() and self.recurseCheckbox.isChecked():
-            title += " --recurse-submodules"
-            text += MODE_TEXT['recurse']
-
-        self.helpLabel.setText(F"<p><big>{title}</big></p>{text}")
-
-    def setRecurse(self, checked: bool):
-        self.recurseSubmodules = checked
-        self.setHelp()
-
-    def setActiveMode(self, mode: ResetMode, checked: bool = True):
-        if not checked:
-            return
+    def setActiveMode(self, mode: ResetMode):
         self.activeMode = mode
-        self.recurseCheckbox.setEnabled(mode not in ['soft', 'mixed'])
-        self.setHelp()
+        okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        okButton.setIcon(self.defaultOkIcon)
+        okButton.setToolTip("")
+        if mode == ResetMode.HARD:
+            okButton.setIcon(stockIcon("achtung"))
+            okButton.setToolTip(self.tr("Hard reset: Destructive action!"))
 
-    def __init__(self, oid: Oid, parent: QWidget):
+    def __init__(self, oid: Oid, branchName: str, commitText: str, parent: QWidget):
         super().__init__(parent)
 
+        self.ui = Ui_ResetHeadDialog()
+        self.ui.setupUi(self)
+
+        okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        self.defaultOkIcon = okButton.icon() or QIcon()
+
+        self.modeButtons = {
+            ResetMode.SOFT: self.ui.softButton,
+            ResetMode.MIXED: self.ui.mixedButton,
+            ResetMode.HARD: self.ui.hardButton,
+        }
+        self.modeLabels = {
+            ResetMode.SOFT: self.ui.softHelp,
+            ResetMode.MIXED: self.ui.mixedHelp,
+            ResetMode.HARD: self.ui.hardHelp,
+        }
+
+        fontMetrics = self.modeButtons[ResetMode.SOFT].fontMetrics()
+        spaceWidth = fontMetrics.horizontalAdvance(" " * 100) / 100
+        desiredWidth = fontMetrics.horizontalAdvance("MixedWW")
+
+        for mode, button in self.modeButtons.items():
+            label = self.modeLabels[mode]
+            formatWidgetText(label, commit=lquo(shortHash(oid)))
+            tweakWidgetFont(label, 88)
+
+            button.toggled.connect(lambda checked, m=mode: self.setActiveMode(m))
+
+            # Pad checkbox text with spaces to enlarge clickable zone (hacky)
+            missingWidth = desiredWidth - fontMetrics.horizontalAdvance(button.text())
+            padding = " " * max(0, int(missingWidth / spaceWidth))
+            button.setText(button.text() + padding)
+
         self.activeMode = DEFAULT_MODE
-        self.recurseSubmodules = False
-        self.shortsha = shortHash(oid)
-
-        self.setWindowTitle(F"Reset HEAD to {shortHash(oid)}")
-
-        self.recurseCheckbox = QCheckBox("&Recurse\nSubmodules")
-        self.recurseCheckbox.toggled.connect(self.setRecurse)
-
-        self.helpLabel = QLabel()
-        self.helpLabel.setWordWrap(True)
-        self.helpLabel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.helpLabel.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-
-        buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
-
-        vbar = QFrame()
-        vbar.setFrameShape(QFrame.Shape.VLine)
-        vbar.setFrameShadow(QFrame.Shadow.Sunken)
-
-        mainVBL = QVBoxLayout(self)
-        centerHBL = QHBoxLayout()
-        buttonVBL = QVBoxLayout()
-
-        self.modeButtons = {}
-        for mode in [ResetMode.SOFT, ResetMode.MIXED, ResetMode.HARD]:
-            button = QRadioButton(MODE_LABELS[mode])
-            button.toggled.connect(lambda checked, m=mode: self.setActiveMode(m, checked))
-            buttonVBL.addWidget(button)
-            self.modeButtons[mode] = button
-
-        #buttonVBL.addSpacing(16)
-        #buttonVBL.addWidget(self.recurseCheckbox)
-        buttonVBL.addStretch()
-
-        centerHBL.addLayout(buttonVBL)
-        centerHBL.addSpacing(16)
-        centerHBL.addWidget(vbar)
-        centerHBL.addSpacing(8)
-        centerHBL.addWidget(self.helpLabel)
-
-        mainVBL.addWidget(QLabel(
-            F"Pick the <b>reset mode</b> to use for resetting <b>HEAD</b> to <b>{self.shortsha}</b>:"))
-        mainVBL.addSpacing(16)
-        mainVBL.addLayout(centerHBL)
-        mainVBL.addSpacing(16)
-        mainVBL.addWidget(buttonBox)
-
-        self.resize(500, 400)
-
         self.modeButtons[DEFAULT_MODE].setChecked(True)
-        self.modeButtons[DEFAULT_MODE].setFocus()
 
-        self.setModal(True)
+        title = self.tr("Reset {0} to {1}").format(lquoe(branchName), lquo(shortHash(oid)))
+        self.setWindowTitle(title)
+
+        summary, _ = messageSummary(commitText)
+        commitText = self.tr("Commit {0}:").format(shortHash(oid)) + " " + tquo(summary)
+        convertToBrandedDialog(self, subtitleText=commitText)

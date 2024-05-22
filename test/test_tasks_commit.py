@@ -1,15 +1,12 @@
 import pytest
 
-from . import reposcenario
-from .util import *
-from gitfourchette import porcelain
-from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
-from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.graphview.commitlogmodel import CommitLogModel
+from gitfourchette.nav import NavLocator
+from . import reposcenario
+from .util import *
 
 
 def testCommit(tempDir, mainWindow):
@@ -265,26 +262,6 @@ def testCommitDialogJumpsToWorkdir(tempDir, mainWindow):
     triggerMenuAction(mainWindow.menuBar(), r"file/commit")
     findQDialog(rw, r"commit").reject()
     assert NavLocator.inStaged("a/a1.txt").isSimilarEnoughTo(rw.navLocator)
-
-
-def testResetHeadToCommit(tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
-
-    oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
-
-    assert rw.repo.head.target != oid1  # make sure we're not starting from this commit
-    assert rw.repo.branches.local['master'].target != oid1
-
-    rw.jump(NavLocator.inCommit(oid1))
-    rw.graphView.resetHeadFlow()
-
-    qd: ResetHeadDialog = findQDialog(rw, "reset head to 0966a4")
-    qd.modeButtons[ResetMode.HARD].click()
-    qd.accept()
-
-    assert rw.repo.head.target == oid1
-    assert rw.repo.branches.local['master'].target == oid1
 
 
 @pytest.mark.parametrize("method", ["graphkey", "graphcm"])

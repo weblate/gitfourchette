@@ -1,12 +1,13 @@
+import re
+
 import pytest
 
 from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.nav import NavLocator
-from . import reposcenario
-from .util import *
-from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
-import re
+from gitfourchette.forms.resetheaddialog import ResetHeadDialog
+from gitfourchette.nav import NavLocator
+from gitfourchette.sidebar.sidebarmodel import EItem
+from .util import *
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "shortcut"])
@@ -509,6 +510,26 @@ def testSwitchToCurrentBranch(tempDir, mainWindow):
     rw.sidebar.selectAnyRef("refs/heads/master")
     QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
     acceptQMessageBox(rw, "already checked.out")
+
+
+def testResetHeadToCommit(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+
+    assert rw.repo.head.target != oid1  # make sure we're not starting from this commit
+    assert rw.repo.branches.local['master'].target != oid1
+
+    rw.jump(NavLocator.inCommit(oid1))
+    triggerMenuAction(rw.graphView.makeContextMenu(), "reset.+here")
+
+    dlg: ResetHeadDialog = findQDialog(rw, "reset.+master.+to.+0966a4")
+    dlg.modeButtons[ResetMode.HARD].click()
+    dlg.accept()
+
+    assert rw.repo.head.target == oid1
+    assert rw.repo.branches.local['master'].target == oid1
 
 
 def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):

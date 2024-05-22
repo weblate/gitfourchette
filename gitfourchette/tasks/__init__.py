@@ -14,12 +14,20 @@ from gitfourchette.tasks.branchtasks import (
     RecallCommit,
     RenameBranch,
     RenameBranchFolder,
+    ResetHead,
     SwitchBranch,
 )
-from gitfourchette.tasks.committasks import NewCommit, AmendCommit, CheckoutCommit, RevertCommit, ResetHead
-from gitfourchette.tasks.committasks import SetUpIdentityFirstRun, SetUpRepoIdentity
-from gitfourchette.tasks.committasks import NewTag, DeleteTag
-from gitfourchette.tasks.committasks import CherrypickCommit
+from gitfourchette.tasks.committasks import (
+    AmendCommit,
+    CheckoutCommit,
+    CherrypickCommit,
+    DeleteTag,
+    NewCommit,
+    NewTag,
+    RevertCommit,
+    SetUpIdentityFirstRun,
+    SetUpRepoIdentity,
+)
 from gitfourchette.tasks.exporttasks import (
     ExportCommitAsPatch,
     ExportPatchCollection,

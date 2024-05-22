@@ -1,5 +1,6 @@
 import logging
 
+from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -341,6 +342,29 @@ class EditUpstreamBranch(RepoTask):
         yield from self.flowEnterWorkerThread()
 
         self.repo.edit_upstream_branch(localBranchName, remoteBranchName)
+
+
+class ResetHead(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
+
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Refs | TaskEffects.Workdir
+
+    def flow(self, onto: Oid):
+        branchName = self.repo.head_branch_shorthand
+        commitMessage = self.repo.get_commit_message(onto)
+
+        dlg = ResetHeadDialog(onto, branchName, commitMessage, parent=self.parentWidget())
+
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
+        setWindowModal(dlg)
+        dlg.resize(600, 128)
+        yield from self.flowDialog(dlg)
+        resetMode = dlg.activeMode
+
+        yield from self.flowEnterWorkerThread()
+        self.repo.reset(onto, resetMode)
 
 
 class FastForwardBranch(RepoTask):
