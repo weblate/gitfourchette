@@ -17,7 +17,7 @@ from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette import porcelain
 
 
-def testCloneRepo(tempDir, mainWindow):
+def testCloneRepoWithSubmodules(tempDir, mainWindow):
     wd = unpackRepo(tempDir, renameTo="unpacked-repo")
     subWd, _ = reposcenario.submodule(wd, True)  # spice it up with a submodule
     bare = makeBareCopy(wd, addAsRemote="", preFetch=False)

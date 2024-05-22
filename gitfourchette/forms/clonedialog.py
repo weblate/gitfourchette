@@ -319,7 +319,7 @@ class CloneTask(RepoTask):
 
         # Recurse into submodules
         if recursive:
-            yield from self.recurseIntoSubmodules()
+            self.recurseIntoSubmodules()
 
         # Done, back to UI thread
         yield from self.flowEnterUiThread()
@@ -332,18 +332,8 @@ class CloneTask(RepoTask):
         # TODO: pygit2.Submodule has several shortcomings here:
         # - Submodule.url crashes if libgit2 returns NULL (see also UpdateSubmodule in nettasks.py)
         # - Submodule.update should let us do a shallow clone since libgit2 allows it (via git_fetch_options)
-        # - Submodule.open is broken (that's why we recreate a Repo)
 
-        def frontierGenerator(r: Repo):
-            return ((r.submodules[name], path) for name, path in r.listall_submodules_dict(absolute_paths=True).items())
-
-        frontier = list(frontierGenerator(self.repo))
-
-        i = 0
-        while frontier:
-            i += 1
-            submodule, path = frontier.pop(0)
-
+        for i, (submodule, path) in enumerate(self.repo.recurse_submodules(), 1):
             displayPath = path.removeprefix(self.repo.workdir)
             self.stickyStatus.emit(self.tr("Initializing submodule {0}: {1}...").format(i, escamp(displayPath)))
 
@@ -357,11 +347,6 @@ class CloneTask(RepoTask):
 
             with self.remoteLink.remoteKeyFileContext(url):
                 submodule.update(init=True, callbacks=self.remoteLink)
-
-            subRepo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
-            frontier.extend(frontierGenerator(subRepo))
-
-        return; yield None  # bogus yield to make it a generator
 
     def onError(self, exc: BaseException):
         traceback.print_exception(exc.__class__, exc, exc.__traceback__)

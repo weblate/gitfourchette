@@ -1383,6 +1383,23 @@ class Repo(_VanillaRepository):
         path = _joinpath(path, ".git")
         return _exists(path)
 
+    def recurse_submodules(self) -> _typing.Generator[tuple[Submodule, str], None, None]:
+        def gen_frontier(repo: Repo) -> _typing.Generator[tuple[Submodule, str], None, None]:
+            for name, path in repo.listall_submodules_dict(absolute_paths=True).items():
+                yield repo.submodules[name], path
+
+        frontier: list[tuple[Submodule, str]] = list(gen_frontier(self))
+
+        while frontier:
+            submodule, path = frontier.pop(0)
+            yield submodule, path
+
+            # Extend frontier AFTER the yield statement so user code can
+            # potentially add nested submodules here
+            # TODO: pygit2 bug: Submodule.open is broken (that's why we recreate a Repo)
+            with RepoContext(path, RepositoryOpenFlag.NO_SEARCH) as subrepo:
+                frontier.extend(gen_frontier(subrepo))
+
     def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
         """
         Fast-forward a local branch to another branch (local or remote).
