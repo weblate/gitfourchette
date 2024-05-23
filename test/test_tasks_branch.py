@@ -532,6 +532,36 @@ def testResetHeadToCommit(tempDir, mainWindow):
     assert rw.repo.branches.local['master'].target == oid1
 
 
+def testResetHeadRecurseSubmodules(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, "submoroot")
+    uncommittedPath = f"{wd}/submosub/subhello.txt"
+    uncommittedContents = "uncommitted change in submodule"
+    writeFile(uncommittedPath, uncommittedContents)
+    rw = mainWindow.openRepo(wd)
+
+    rootId1 = Oid(hex="6d2168f6dcd314050ed1f6ad70b867aafa25a186")
+    rootId2 = Oid(hex="ea953d3ba4c5326d530dc09b4ca9781b01c18e00")
+    subId1 = Oid(hex="db85fb4ffb94ad4e2ea1d3a6881dc5ec1cfbce92")
+    subId2 = Oid(hex="6c138ceb12d6fc505ebe9015dcc48a0616e1de23")
+
+    assert rw.repo.head.target == rootId1  # make sure we're not starting from this commit
+    assert rw.repo.submodules["submosub"].head_id == subId1
+    assert uncommittedContents == readFile(uncommittedPath).decode("utf-8")
+
+    rw.jump(NavLocator.inCommit(rootId2))
+    triggerMenuAction(rw.graphView.makeContextMenu(), "reset.+here")
+
+    dlg: ResetHeadDialog = findQDialog(rw, "reset.+master.+to.+ea953d3")
+    dlg.modeButtons[ResetMode.HARD].click()
+    assert dlg.ui.recurseCheckBox.isVisible()
+    dlg.ui.recurseCheckBox.setChecked(True)
+    dlg.accept()
+
+    assert rw.repo.head.target == rootId2
+    assert rw.repo.submodules["submosub"].head_id == subId2
+    assert uncommittedContents != readFile(uncommittedPath).decode("utf-8")
+
+
 def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 

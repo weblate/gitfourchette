@@ -354,17 +354,27 @@ class ResetHead(RepoTask):
     def flow(self, onto: Oid):
         branchName = self.repo.head_branch_shorthand
         commitMessage = self.repo.get_commit_message(onto)
+        submoduleDict = self.repo.listall_submodules_dict(absolute_paths=True)
+        hasSubmodules = bool(submoduleDict)
 
-        dlg = ResetHeadDialog(onto, branchName, commitMessage, parent=self.parentWidget())
+        dlg = ResetHeadDialog(onto, branchName, commitMessage, hasSubmodules, parent=self.parentWidget())
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
         setWindowModal(dlg)
         dlg.resize(600, 128)
         yield from self.flowDialog(dlg)
         resetMode = dlg.activeMode
+        recurseSubmodules = dlg.recurseSubmodules()
 
         yield from self.flowEnterWorkerThread()
         self.repo.reset(onto, resetMode)
+
+        if hasSubmodules and recurseSubmodules:
+            for submodule, path in self.repo.recurse_submodules():
+                subOnto = submodule.head_id
+                logger.info(f"Reset {repr(resetMode)}: Submodule '{submodule.name}' --> {shortHash(subOnto)}")
+                with RepoContext(path) as subRepo:
+                    subRepo.reset(subOnto, resetMode)
 
 
 class FastForwardBranch(RepoTask):

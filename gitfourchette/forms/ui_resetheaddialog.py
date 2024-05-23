@@ -55,6 +55,10 @@ class Ui_ResetHeadDialog(object):
         self.mixedButton.setText("&Mixed")
         self.mixedButton.setObjectName("mixedButton")
         self.gridLayout.addWidget(self.mixedButton, 1, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.recurseCheckBox = QCheckBox(parent=ResetHeadDialog)
+        self.recurseCheckBox.setChecked(True)
+        self.recurseCheckBox.setObjectName("recurseCheckBox")
+        self.gridLayout.addWidget(self.recurseCheckBox, 3, 0, 1, 2)
 
         self.retranslateUi(ResetHeadDialog)
         self.buttonBox.accepted.connect(ResetHeadDialog.accept) # type: ignore
@@ -72,3 +76,4 @@ class Ui_ResetHeadDialog(object):
 "<br><b>Unstage</b> any differences between your files and {commit}."))
         self.hardHelp.setText(_translate("ResetHeadDialog", "<b>Wipe</b> all your changes.\n"
 "<br>End result identical to a fresh checkout of {commit}."))
+        self.recurseCheckBox.setText(_translate("ResetHeadDialog", "&Reset submodules recursively"))

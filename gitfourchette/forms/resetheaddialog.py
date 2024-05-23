@@ -19,12 +19,21 @@ class ResetHeadDialog(QDialog):
         if mode == ResetMode.HARD:
             okButton.setIcon(stockIcon("achtung"))
             okButton.setToolTip(self.tr("Hard reset: Destructive action!"))
+            self.ui.recurseCheckBox.setEnabled(True)
+        else:
+            self.ui.recurseCheckBox.setEnabled(False)
 
-    def __init__(self, oid: Oid, branchName: str, commitText: str, parent: QWidget):
+    def recurseSubmodules(self):
+        checkBox = self.ui.recurseCheckBox
+        return checkBox.isEnabled() and checkBox.isChecked()
+
+    def __init__(self, oid: Oid, branchName: str, commitText: str, hasSubmodules: bool, parent: QWidget):
         super().__init__(parent)
 
         self.ui = Ui_ResetHeadDialog()
         self.ui.setupUi(self)
+
+        self.ui.recurseCheckBox.setVisible(hasSubmodules)
 
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.defaultOkIcon = okButton.icon() or QIcon()

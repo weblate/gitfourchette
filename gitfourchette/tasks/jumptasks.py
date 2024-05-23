@@ -523,6 +523,11 @@ class RefreshRepo(RepoTask):
                 or jumpTo.context.isWorkdir()
                 or (jumpTo.context == NavContext.EMPTY and rw.isWorkdirShown))
 
+        if effectFlags & TaskEffects.Workdir and not jumpToWorkdir:
+            # Clear uncommitted change count if we know the workdir is stale
+            rw.state.numUncommittedChanges = 0
+            rw.state.workdirStale = True
+
         if jumpToWorkdir:
             # Refresh workdir view on separate thread AFTER all the processing above
             if not jumpTo.context.isWorkdir():
