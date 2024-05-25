@@ -492,8 +492,13 @@ class FileList(QListView):
                           tr("Really open <b>{0} files</b> in external editor?"))
 
     def wantPartialStash(self):
-        paths = [patch.delta.old_file.path for patch in self.selectedPatches()]
-        NewStash.invoke(self, paths)
+        paths = set()
+        for patch in self.selectedPatches():
+            # Add both old and new paths so that both are pre-selected
+            # if we're stashing a rename.
+            paths.add(patch.delta.old_file.path)
+            paths.add(patch.delta.new_file.path)
+        NewStash.invoke(self, list(paths))
 
     def openSubmoduleTabs(self):
         patches = list(p for p in self.selectedPatches() if p.delta.new_file.mode in [FileMode.COMMIT])
