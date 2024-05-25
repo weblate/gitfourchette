@@ -33,7 +33,8 @@ from .qsignalblockercontext import QSignalBlockerContext
 from .qstatusbar2 import QStatusBar2
 from .qtabwidget2 import QTabWidget2, QTabBar2
 from .qtutils import (
-    addComboBoxItem, setWindowModal, isImageFormatSupported,
+    addComboBoxItem,
+    isImageFormatSupported,
     onAppThread,
     adjustedWidgetFontSize,
     tweakWidgetFont,

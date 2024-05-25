@@ -902,7 +902,7 @@ class MainWindow(QMainWindow):
         dlg.cloneSuccessful.connect(lambda path: self.openRepo(path))
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.show()
 
     def openDialog(self):

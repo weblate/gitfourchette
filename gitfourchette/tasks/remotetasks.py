@@ -25,7 +25,7 @@ class NewRemote(RepoTask):
             existingRemotes=existingRemotes,
             parent=self.parentWidget())
 
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.show()
         dlg.setMaximumHeight(dlg.height())
         yield from self.flowDialog(dlg)
@@ -63,7 +63,7 @@ class EditRemote(RepoTask):
             existingRemotes=existingRemotes,
             parent=self.parentWidget())
 
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.setFixedHeight(dlg.sizeHint().height())
         dlg.show()
         yield from self.flowDialog(dlg)

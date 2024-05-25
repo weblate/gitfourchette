@@ -18,7 +18,7 @@ class RemoteLinkProgressDialog(QProgressDialog):
         self.setMinimumWidth(self.fontMetrics().horizontalAdvance("W" * 40))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)  # hide close button
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        setWindowModal(self)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
         # By default, the cancel button emits the 'canceled' signal, which is connected to the 'cancel' slot.
         # The 'cancel' slot hides the dialog. However, we don't want to hide it immediately after the user aborts.

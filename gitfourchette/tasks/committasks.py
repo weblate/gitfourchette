@@ -59,7 +59,7 @@ class NewCommit(RepoTask):
             cd.ui.signature.setSignature(uiPrefs.draftCommitSignature)
             cd.ui.signature.ui.replaceComboBox.setCurrentIndex(int(uiPrefs.draftCommitSignatureOverride) - 1)
 
-        setWindowModal(cd)
+        cd.setWindowModality(Qt.WindowModality.WindowModal)
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self.flowDialog(cd, abortTaskIfRejected=False)
@@ -126,7 +126,7 @@ class AmendCommit(RepoTask):
             repoState=self.repo.state(),
             parent=self.parentWidget())
 
-        setWindowModal(cd)
+        cd.setWindowModality(Qt.WindowModality.WindowModal)
 
         # Reenter task even if dialog rejected, because we want to save the commit message as a draft
         yield from self.flowDialog(cd, abortTaskIfRejected=False)
@@ -190,7 +190,7 @@ class SetUpIdentityFirstRun(RepoTask):
 
         convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
 
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         yield from self.flowDialog(dlg)
 
         name = ui.nameEdit.text()
@@ -263,7 +263,7 @@ class SetUpRepoIdentity(RepoTask):
         onLocalIdentityCheckBoxChanged(useLocalIdentity)
 
         convertToBrandedDialog(dlg)
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         yield from self.flowDialog(dlg)
 
         name = ui.nameEdit.text()
@@ -322,7 +322,7 @@ class CheckoutCommit(RepoTask):
 
         dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=tquo(commitMessage))
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         yield from self.flowDialog(dlg)
 
         # Make sure to copy user input from dialog UI *before* starting worker thread

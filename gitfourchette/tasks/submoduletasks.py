@@ -64,7 +64,7 @@ class AbsorbSubmodule(RepoTask):
         ui.comboBox.deleteLater()
 
         convertToBrandedDialog(dlg)
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.setMinimumWidth(512)
         # dlg.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         dlg.show()

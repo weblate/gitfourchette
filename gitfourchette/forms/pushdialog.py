@@ -283,7 +283,7 @@ class PushDialog(QDialog):
 
         convertToBrandedDialog(self)
 
-        setWindowModal(self)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
     def setOkButtonText(self):
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)

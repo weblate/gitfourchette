@@ -7,7 +7,7 @@ from typing import Callable, Literal
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox.excutils import shortenTracebackPath
-from gitfourchette.toolbox.qtutils import onAppThread, setWindowModal, MakeNonNativeDialog
+from gitfourchette.toolbox.qtutils import onAppThread, MakeNonNativeDialog
 from gitfourchette.toolbox.textutils import ulify
 
 logger = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ def asyncMessageBox(
     )
 
     if parent:
-        setWindowModal(qmb)
+        qmb.setWindowModality(Qt.WindowModality.WindowModal)
 
     if deleteOnClose:
         qmb.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)

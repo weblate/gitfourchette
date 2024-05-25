@@ -259,7 +259,7 @@ class _NewBranchBaseTask(RepoTask):
             if found:
                 dlg.ui.upstreamComboBox.setCurrentIndex(i)
 
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.setFixedHeight(dlg.sizeHint().height())
         dlg.show()
         yield from self.flowDialog(dlg)
@@ -360,7 +360,7 @@ class ResetHead(RepoTask):
         dlg = ResetHeadDialog(onto, branchName, commitMessage, hasSubmodules, parent=self.parentWidget())
 
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # don't leak dialog
-        setWindowModal(dlg)
+        dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.resize(600, 128)
         yield from self.flowDialog(dlg)
         resetMode = dlg.activeMode

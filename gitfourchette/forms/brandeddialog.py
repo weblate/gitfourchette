@@ -133,7 +133,7 @@ def showTextInputDialog(
     if deleteOnClose:
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-    setWindowModal(dlg)
+    dlg.setWindowModality(Qt.WindowModality.WindowModal)
 
     dlg.buttonBox = buttonBox
 
