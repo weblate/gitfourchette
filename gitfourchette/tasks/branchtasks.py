@@ -368,10 +368,10 @@ class ResetHead(RepoTask):
         self.repo.reset(onto, resetMode)
 
         if hasSubmodules and recurseSubmodules:
-            for submodule, path in self.repo.recurse_submodules():
+            for submodule in self.repo.recurse_submodules():
                 subOnto = submodule.head_id
                 logger.info(f"Reset {repr(resetMode)}: Submodule '{submodule.name}' --> {shortHash(subOnto)}")
-                with RepoContext(path) as subRepo:
+                with RepoContext(submodule.open()) as subRepo:
                     subRepo.reset(subOnto, resetMode)
 
 

@@ -204,13 +204,7 @@ class UpdateSubmodule(_BaseNetTask):
                 tree = subrepo[submodule.head_id].peel(Tree)
                 subrepo.checkout_tree(tree)
 
-        # TODO: pygit2 ought to check if libgit2 returns NULL url, don't let cffi raise RuntimeError.
-        #       (submodules.py: Submodule.url()). This is triggered by our unit tests.
-        url = ""
-        with suppress(RuntimeError):
-            url = submodule.url
-
         # Wrap update operation with RemoteLinkKeyFileContext: we need the keys
         # if the submodule uses an SSH connection.
-        with self.remoteLink.remoteKeyFileContext(url):
-            self.repo.submodules.update([submoduleName], init=init, callbacks=self.remoteLink)
+        with self.remoteLink.remoteKeyFileContext(submodule.url or ""):
+            submodule.update(init=init, callbacks=self.remoteLink)

@@ -1450,21 +1450,23 @@ class Repo(_VanillaRepository):
         path = _joinpath(path, ".git")
         return _exists(path)
 
-    def recurse_submodules(self) -> _typing.Generator[tuple[Submodule, str], None, None]:
-        def gen_frontier(repo: Repo) -> _typing.Generator[tuple[Submodule, str], None, None]:
-            for name, path in repo.listall_submodules_dict(absolute_paths=True).items():
-                yield repo.submodules[name], path
+    def recurse_submodules(self) -> _typing.Generator[Submodule, None, None]:
+        # TODO: Remove this when we can stop supporting pygit2 <= 1.15.0
+        pygit2_version_at_least("1.15.1", feature_name="recurse_submodules")
 
-        frontier: list[tuple[Submodule, str]] = list(gen_frontier(self))
+        def gen_frontier(repo: Repo) -> _typing.Generator[Submodule, None, None]:
+            for name in repo.listall_submodules_dict():
+                yield repo.submodules[name]
+
+        frontier: list[Submodule] = list(gen_frontier(self))
 
         while frontier:
-            submodule, path = frontier.pop(0)
-            yield submodule, path
+            submodule = frontier.pop(0)
+            yield submodule
 
             # Extend frontier AFTER the yield statement so user code can
             # potentially add nested submodules here
-            # TODO: pygit2 bug: Submodule.open is broken (that's why we recreate a Repo)
-            with RepoContext(path, RepositoryOpenFlag.NO_SEARCH) as subrepo:
+            with RepoContext(submodule.open()) as subrepo:
                 frontier.extend(gen_frontier(subrepo))
 
     def get_submodule_diff(self, patch: Patch) -> SubmoduleDiff:
@@ -1806,8 +1808,14 @@ class Repo(_VanillaRepository):
 
 
 class RepoContext:
-    def __init__(self, path: str | _Path, flags: RepositoryOpenFlag = 0, write_index = False):
-        self.repo = Repo(path, flags)
+    def __init__(self, repo_or_path: Repo | str | _Path, flags: RepositoryOpenFlag = 0, write_index=False):
+        assert isinstance(repo_or_path, (Repo, str, _Path))
+        if isinstance(repo_or_path, Repo):
+            self.repo = repo_or_path
+            assert flags == 0, "flags are ignored if passing in a Repo"
+        else:
+            path = repo_or_path
+            self.repo = Repo(path, flags)
         self.write_index = write_index
 
     def __enter__(self) -> Repo:

@@ -10,7 +10,7 @@ from pygit2.enums import RepositoryOpenFlag
 from gitfourchette import settings
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
-from gitfourchette.porcelain import Repo
+from gitfourchette.porcelain import Repo, pygit2_version_at_least
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.repoprefs import RepoPrefs
@@ -88,6 +88,11 @@ class CloneDialog(QDialog):
         validator.connectInput(self.ui.urlEdit.lineEdit(), self.validateUrl)
         validator.connectInput(self.ui.pathEdit, self.validatePath)
         validator.run(silenceEmptyWarnings=True)
+
+        if not pygit2_version_at_least("1.15.1", False):
+            self.ui.recurseSubmodulesCheckBox.setChecked(False)
+            self.ui.recurseSubmodulesCheckBox.setEnabled(False)
+            self.ui.recurseSubmodulesCheckBox.setText("Recursing into submodules requires pygit2 1.15.1+")
 
     def validateUrl(self, url):
         if not url:
@@ -326,7 +331,7 @@ class CloneTask(RepoTask):
 
         # Recurse into submodules
         if recursive:
-            self.recurseIntoSubmodules(repo)
+            self.recurseIntoSubmodules(repo, depth=depth)
 
         # Done, back to UI thread
         yield from self.flowEnterUiThread()
@@ -335,26 +340,17 @@ class CloneTask(RepoTask):
         dialog.cloneSuccessful.emit(path)
         dialog.accept()
 
-    def recurseIntoSubmodules(self, repo: Repo):
-        # TODO: pygit2.Submodule has several shortcomings here:
-        # - Submodule.url crashes if libgit2 returns NULL (see also UpdateSubmodule in nettasks.py)
-        # - Submodule.update should let us do a shallow clone since libgit2 allows it (via git_fetch_options)
-
-        for i, (submodule, path) in enumerate(repo.recurse_submodules()):
-            displayPath = path.removeprefix(repo.workdir)
-            message = self.tr("Initializing submodule {0}: {1}...").format(i + 1, escamp(displayPath))
-            self.stickyStatus.emit(message)
-
-            url = ""
-            with suppress(RuntimeError):
-                url = submodule.url
+    def recurseIntoSubmodules(self, repo: Repo, depth: int):
+        for i, submodule in enumerate(repo.recurse_submodules(), 1):
+            stickyStatus = self.tr("Initializing submodule {0}: {1}...").format(i, lquoe(submodule.name))
+            self.stickyStatus.emit(stickyStatus)
 
             # Reset remoteLink state before each submodule
             # (so that we don't tally failed login attempts across submodules)
             self.remoteLink.resetLoginState()
 
-            with self.remoteLink.remoteKeyFileContext(url):
-                submodule.update(init=True, callbacks=self.remoteLink)
+            with self.remoteLink.remoteKeyFileContext(submodule.url or ""):
+                submodule.update(init=True, callbacks=self.remoteLink, depth=depth)
 
     def onError(self, exc: BaseException):
         traceback.print_exception(exc.__class__, exc, exc.__traceback__)
