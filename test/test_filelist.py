@@ -164,9 +164,9 @@ def testEditFileInExternalDiffTool(mainWindow, tempDir):
 
     mainWindow.onAcceptPrefsDialog({"externalDiff": f'"{editorPath}" "{scratchPath}" $L $R'})
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in editor-shim")
-    QTest.qWait(1)
-    assert b"[OLD]b2.txt" in readFile(scratchPath)
-    assert b"[NEW]b2.txt" in readFile(scratchPath)
+    scratchText = readFile(scratchPath, 1000, unlink=True).decode("utf-8")
+    assert "[OLD]b2.txt" in scratchText
+    assert "[NEW]b2.txt" in scratchText
 
 
 def testFileListToolTip(mainWindow, tempDir):

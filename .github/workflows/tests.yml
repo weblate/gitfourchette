@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    paths-ignore:
+    - '**.md'
+    - '**.ts'
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - {os: ubuntu-latest, python-version: '3.10', qt-binding: pyqt5}
+        - {os: ubuntu-latest, python-version: '3.11', qt-binding: pyqt6}
+        - {os: ubuntu-latest, python-version: '3.12', qt-binding: pyqt6}
+        - {os: ubuntu-latest, python-version: '3.12', qt-binding: pyside6}
+        - {os: macos-latest, python-version: '3.12', qt-binding: pyqt6}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Qt dependencies
+      if: runner.os == 'Linux'
+      run: sudo apt install libqt6gui6
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - run: pip install -e .[${{ matrix.qt-binding }},test] pytest-xdist
+    - run: PYTEST_QT_API=${{ matrix.qt-binding }} ./test.sh -n auto
