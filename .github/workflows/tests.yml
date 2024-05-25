@@ -34,5 +34,5 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
 
-    - run: pip install -e .[${{ matrix.qt-binding }},test] pytest-xdist
-    - run: PYTEST_QT_API=${{ matrix.qt-binding }} ./test.sh -n auto
+    - run: pip install -e .[${{ matrix.qt-binding }},test]
+    - run: PYTEST_QT_API=${{ matrix.qt-binding }} ./test.sh
