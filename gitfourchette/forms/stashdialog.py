@@ -5,6 +5,28 @@ from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_stashdialog import Ui_StashDialog
 
 
+# In a stash, changes from the index and the worktree are combined.
+# Use the order of the keys in this dictionary to find out which status
+# will "win out" in a stash for any given file.
+# The order of the keys is significant! Last key takes precedence.
+# (NB: Dict key order is stable since Python 3.7)
+statusPrecedence = {
+    FileStatus.INDEX_MODIFIED: 'm',
+    FileStatus.INDEX_RENAMED: 'r',
+    FileStatus.INDEX_DELETED: 'd',
+    FileStatus.INDEX_TYPECHANGE: 't',
+    FileStatus.WT_MODIFIED: 'm',
+    # INDEX_NEW takes precedence over WT_MODIFIED: if you stage a new file
+    # and then modify it, it will appear as a new file in the stash.
+    FileStatus.INDEX_NEW: 'a',
+    # Other WT flags take precedence over INDEX flags.
+    FileStatus.WT_NEW: 'a',
+    FileStatus.WT_RENAMED: 'r',
+    FileStatus.WT_DELETED: 'd',
+    FileStatus.WT_TYPECHANGE: 't',
+}
+
+
 class StashDialog(QDialog):
     def __init__(
             self,
@@ -17,6 +39,8 @@ class StashDialog(QDialog):
         self.ui.setupUi(self)
         self.ui.keepCheckBox.setToolTip("<p>" + self.ui.keepCheckBox.toolTip())
         self.ui.indexAndWtWarning.setVisible(False)
+        self.ui.indexAndWtWarning.setText("\u26a0 " + self.ui.indexAndWtWarning.text())
+        tweakWidgetFont(self.ui.fileList, 95)
 
         for label in (self.ui.willStashLabel, self.ui.indexAndWtWarning):
             tweakWidgetFont(label, 90)
@@ -33,20 +57,30 @@ class StashDialog(QDialog):
         self.ui.fileList.setUniformItemSizes(True)
         scrollTo = None
         for filePath, fileStatus in repoStatus.items():
+            prefix = ""
             if (fileStatus & FileStatus_INDEX_MASK) and (fileStatus & FileStatus_WT_MASK):
                 self.ui.indexAndWtWarning.setVisible(True)
+                prefix = "\u26a0 "
 
-            listItem = QListWidgetItem(filePath, self.ui.fileList)
+            listItem = QListWidgetItem(prefix + filePath, self.ui.fileList)
             listItem.setSizeHint(QSize(100, 16))
             listItem.setData(Qt.ItemDataRole.UserRole, filePath)
-            tweakWidgetFont(listItem, 95)
             if not preTicked or filePath in preTicked:
                 listItem.setCheckState(Qt.CheckState.Checked)
                 if not scrollTo:
                    scrollTo = listItem
             else:
                 listItem.setCheckState(Qt.CheckState.Unchecked)
-            # listItem.setIcon(stockIcon("status_m"))
+
+            # Pick an icon that reflects(ish) the future status of the file in the stash
+            strongestLetter = ''
+            for flag, iconLetter in statusPrecedence.items():
+                if fileStatus & flag:
+                    strongestLetter = iconLetter
+            if strongestLetter:
+                icon = stockIcon(f"status_{strongestLetter}")
+                listItem.setIcon(icon)
+
             self.ui.fileList.addItem(listItem)
 
         # Prime checkbox signal connections

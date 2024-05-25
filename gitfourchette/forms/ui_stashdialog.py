@@ -40,6 +40,7 @@ class Ui_StashDialog(object):
         self.vboxlayout.addWidget(self.willStashLabel)
         self.fileList = QListWidget(parent=StashDialog)
         self.fileList.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.fileList.setIconSize(QSize(16, 16))
         self.fileList.setObjectName("fileList")
         self.vboxlayout.addWidget(self.fileList)
         self.indexAndWtWarning = QLabel(parent=StashDialog)
