@@ -89,7 +89,7 @@ class Trash:
         if not trashPath:
             return ""
 
-        shutil.copyfile(fullPath, trashPath)
+        shutil.copyfile(fullPath, trashPath, follow_symlinks=False)
         return trashPath
 
     def backupPatch(self, workdir: str, data: bytes, originalPath: str = ""):

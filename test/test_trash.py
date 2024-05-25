@@ -16,18 +16,16 @@ def _fillTrashWithJunk(n):
 
 def testBackupDiscardedPatches(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
-
-    from gitfourchette import settings
-
     os.unlink(F"{wd}/a/a2.txt")
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")
     writeFile(F"{wd}/SomeNewFile.txt", "this file is untracked")
-    writeFile(F"{wd}/MassiveFile.txt", "." * (1024 * settings.prefs.maxTrashFileKB + 1))
+    writeFile(F"{wd}/MassiveFile.txt", "." * (1024 + 1))
+    os.symlink(f"{wd}/this/path/does/not/exist", f"{wd}/symlink")
 
-    rw.refreshRepo()  # refresh manually because we added files after repowidget was already created
+    mainWindow.onAcceptPrefsDialog({"maxTrashFileKB": 1})
+    rw = mainWindow.openRepo(wd)
 
-    assert set(qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt"}
+    assert set(qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt", "[link] symlink"}
     assert qlvGetRowData(rw.stagedFiles) == []
 
     trash = Trash.instance()
@@ -37,9 +35,11 @@ def testBackupDiscardedPatches(tempDir, mainWindow):
     QTest.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
     acceptQMessageBox(rw, "really discard changes")
 
-    assert len(trash.trashFiles) == 2
+    assert len(trash.trashFiles) == 3
     assert any("a1.txt" in f for f in trash.trashFiles)
     assert any("SomeNewFile.txt" in f for f in trash.trashFiles)
+    assert any("symlink" in f for f in trash.trashFiles)
+    assert os.path.islink(next(f for f in trash.trashFiles if "symlink" in f))
     assert not any("a2.txt" in f for f in trash.trashFiles)  # file deletions shouldn't be backed up
     assert not any("MassiveFile.txt" in f for f in trash.trashFiles)  # file is too large to be backed up
 
