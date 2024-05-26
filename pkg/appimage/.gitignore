@@ -1,0 +1,3 @@
+# requirements.txt contains non-portable absolute paths,
+# so it's generated on demand by the build script
+requirements.txt
