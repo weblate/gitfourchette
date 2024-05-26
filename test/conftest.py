@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pytestqt.qtbot import QtBot
 from typing import TYPE_CHECKING
+import pygit2
 import pytest
 import tempfile
 import os
@@ -11,6 +12,18 @@ from gitfourchette.application import GFApplication
 if TYPE_CHECKING:
     # For '-> MainWindow' type annotation, without pulling in MainWindow in the actual fixture
     from gitfourchette.mainwindow import MainWindow
+
+
+@pytest.fixture(scope='session', autouse=True)
+def maskHostGitConfig():
+    # Don't let unit tests access host system's git config
+    levels = [
+        pygit2.enums.ConfigLevel.GLOBAL,
+        pygit2.enums.ConfigLevel.XDG,
+        pygit2.enums.ConfigLevel.SYSTEM,
+    ]
+    for level in levels:
+        pygit2.settings.search_path[level] = ''
 
 
 @pytest.fixture(scope="session")
@@ -50,8 +63,7 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     app = GFApplication.instance()
     app.beginSession(bootUi=False)
 
-    # Prepare session-wide git config with a fallback signature so that unit tests
-    # don't fail if no git identity is set up on the host machine.
+    # Prepare session-wide git config with a fallback signature.
     app.sessionwideGitConfig["user.name"] = TEST_SIGNATURE.name
     app.sessionwideGitConfig["user.email"] = TEST_SIGNATURE.email
 
