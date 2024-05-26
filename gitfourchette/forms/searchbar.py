@@ -187,7 +187,7 @@ class SearchBar(QWidget):
         self.searchPrevious.connect(lambda: self.searchItemView(SearchBar.Op.PREVIOUS))
         self.searchPulse.connect(self.pulseItemView)
 
-    def searchItemView(self, op: Op, wrappedFrom=-1) -> QModelIndex | None:
+    def searchItemView(self, op: Op, wrappedFrom=-1, wrapCount=0) -> QModelIndex | None:
         view: QAbstractItemView = self.buddy
         assert isinstance(view, QAbstractItemView)
 
@@ -201,7 +201,7 @@ class SearchBar(QWidget):
         if not self.searchTerm:  # user probably hit F3 without having searched before
             return
 
-        didWrap = wrappedFrom >= 0
+        didWrap = wrapCount > 0
 
         # Find start bound of search range
         if not didWrap and len(view.selectedIndexes()) != 0:
@@ -225,18 +225,20 @@ class SearchBar(QWidget):
         else:
             searchRange = range(start - 1, last - 1, -1)
 
-        # Perform search within range
-        index = self.searchRange(searchRange)
+        # Perform search within valid range
+        if searchRange:
+            index = self.searchRange(searchRange)
 
-        # A valid index was found in the range, select it
-        if index is not None and index.isValid():
-            view.setCurrentIndex(index)
-            return index
+            # A valid index was found in the range, select it
+            if index is not None and index.isValid():
+                view.setCurrentIndex(index)
+                return index
 
         # No valid index from this point on
         if not didWrap:
             # Wrap around once
-            self.searchItemView(op, wrappedFrom=start)
+            wrapCount += 1
+            self.searchItemView(op, wrappedFrom=start, wrapCount=wrapCount)
         else:
             title = self.lineEdit.placeholderText().split("")[0]
             message = self.notFoundMessage(self.rawSearchTerm)
@@ -248,12 +250,18 @@ class SearchBar(QWidget):
         assert isinstance(view, QAbstractItemView)
 
         def generateSearchRanges():
+            rowCount = view.model().rowCount()
+
+            # If the view is empty, don't yield bogus ranges
+            if rowCount == 0:
+                return
+
             # First see if in visible range
             visibleRange = itemViewVisibleRowRange(view)
             yield visibleRange
 
             # It's not visible, so search below visible range first
-            yield range(visibleRange.stop, view.model().rowCount())
+            yield range(visibleRange.stop, rowCount)
 
             # Finally, search above the visible range
             yield range(0, visibleRange.start)

@@ -84,8 +84,7 @@ def testSearchFileList(mainWindow, tempDir):
     rw.jump(NavLocator.inCommit(oid))
     assert rw.committedFiles.isVisibleTo(rw)
     rw.committedFiles.setFocus()
-    QTest.keySequence(rw, "Ctrl+F")
-    QTest.qWait(0)
+    QTest.keySequence(rw, QKeySequence.StandardKey.Find)
 
     fileList = rw.committedFiles
     searchBar = fileList.searchBar
@@ -94,14 +93,18 @@ def testSearchFileList(mainWindow, tempDir):
     QTest.qWait(0)
     assert not searchBar.isRed()
 
+    # Send StandardKey instead of "F3" because the bindings are different on macOS
+    keyNext = QKeySequence.StandardKey.FindNext
+    keyPrev = QKeySequence.StandardKey.FindPrevious
+
     assert qlvGetSelection(fileList) == ["a/a1.txt"]
-    QTest.keySequence(rw, "F3")
+    QTest.keySequence(rw, keyNext)
     assert qlvGetSelection(fileList) == ["a/a2.txt"]
-    QTest.keySequence(rw, "F3")
+    QTest.keySequence(rw, keyNext)
     assert qlvGetSelection(fileList) == ["master.txt"]
-    QTest.keySequence(rw, "F3")
-    assert qlvGetSelection(fileList) == ["a/a1.txt"]
-    QTest.keySequence(rw, "Shift+F3")
+    QTest.keySequence(rw, keyNext)
+    assert qlvGetSelection(fileList) == ["a/a1.txt"]  # wrap around
+    QTest.keySequence(rw, keyPrev)
     assert qlvGetSelection(fileList) == ["master.txt"]
 
     searchBar.lineEdit.setText("a2")
@@ -112,9 +115,41 @@ def testSearchFileList(mainWindow, tempDir):
     QTest.qWait(0)
     assert searchBar.isRed()
 
+    QTest.keySequence(rw, QKeySequence.StandardKey.FindNext)
+    acceptQMessageBox(rw, "not found")
+
+    QTest.keySequence(rw, QKeySequence.StandardKey.FindPrevious)
+    acceptQMessageBox(rw, "not found")
+
     QTest.keySequence(searchBar, "Escape")
     QTest.qWait(0)
     assert not searchBar.isVisibleTo(rw)
+
+
+def testSearchEmptyFileList(mainWindow, tempDir):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        oid = repo.create_commit_on_head("EMPTY COMMIT")
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(oid))
+    assert rw.committedFiles.isVisibleTo(rw)
+    assert not qlvGetRowData(rw.committedFiles)
+    rw.committedFiles.setFocus()
+    QTest.keySequence(rw, QKeySequence.StandardKey.Find)
+
+    fileList = rw.committedFiles
+    searchBar = fileList.searchBar
+    assert searchBar.isVisibleTo(rw)
+    searchBar.lineEdit.setText("blah.txt")
+    QTest.qWait(0)
+    assert searchBar.isRed()
+
+    QTest.keySequence(rw, QKeySequence.StandardKey.FindNext)
+    acceptQMessageBox(rw, "not found")
+
+    QTest.keySequence(rw, QKeySequence.StandardKey.FindPrevious)
+    acceptQMessageBox(rw, "not found")
 
 
 def testEditFileInExternalEditor(mainWindow, tempDir):

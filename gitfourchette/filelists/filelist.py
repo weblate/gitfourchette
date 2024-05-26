@@ -530,7 +530,6 @@ class FileList(QListView):
         return action
 
     def searchRange(self, searchRange: range) -> QModelIndex | None:
-        # print("Search range:", searchRange)
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly
 
         term = self.searchBar.searchTerm
