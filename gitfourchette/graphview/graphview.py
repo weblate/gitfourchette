@@ -428,9 +428,7 @@ class GraphView(QListView):
             self.update(filterIndex)
 
     def refreshPrefs(self, invalidateMetrics=True):
-        self.setVerticalScrollMode(
-            self.ScrollMode.ScrollPerPixel if settings.prefs.smoothScroll else self.ScrollMode.ScrollPerItem)
-
+        self.setVerticalScrollMode(settings.prefs.listViewScrollMode)
         self.setAlternatingRowColors(settings.prefs.alternatingRowColors)
 
         # Force redraw to reflect changes in row height, flattening, date format, etc.

@@ -1,3 +1,4 @@
+from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -37,6 +38,7 @@ class StashDialog(QDialog):
 
         self.ui = Ui_StashDialog()
         self.ui.setupUi(self)
+        self.ui.fileList.setVerticalScrollMode(settings.prefs.listViewScrollMode)
         self.ui.keepCheckBox.setToolTip("<p>" + self.ui.keepCheckBox.toolTip())
         self.ui.indexAndWtWarning.setVisible(False)
         self.ui.indexAndWtWarning.setText("\u26a0 " + self.ui.indexAndWtWarning.text())
