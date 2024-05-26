@@ -1,15 +1,11 @@
 import gc
 import logging
 import os
+import pygit2
 import textwrap
 import time
 
 from gitfourchette.qt import *
-
-try:
-    import psutil
-except ImportError:
-    psutil = None
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +17,6 @@ class MemoryIndicator(QPushButton):
         self.setObjectName("MemoryIndicator")
         self.setText("Memory")
 
-        if not psutil:
-            logger.info("psutil isn't available. Some information will be missing from the memory indicator.")
-
         # No border: don't let it thicken the status bar
         self.setStyleSheet("border: none; text-align: right; padding-right: 8px;")
 
@@ -33,7 +26,7 @@ class MemoryIndicator(QPushButton):
             font.setFamily("Helvetica Neue")  # fixed-width numbers
         self.setFont(font)
 
-        width = self.fontMetrics().horizontalAdvance("9,999m  9,999k  9,999q")
+        width = 220
 
         self.setMinimumWidth(width)
         self.setMaximumWidth(width)
@@ -50,6 +43,7 @@ class MemoryIndicator(QPushButton):
         report = f"\nTop-Level Windows:\n{windows}\nTop-Level Widgets:\n{widgets}\n"
         logging.info(report)
 
+        self.lastUpdate = 0
         self.updateMemoryIndicator()
 
     def paintEvent(self, e):
@@ -65,8 +59,7 @@ class MemoryIndicator(QPushButton):
         numQObjects = sum(1 + len(tlw.findChildren(QObject))  # "+1" to account for tlw itself
                           for tlw in QApplication.topLevelWidgets())
 
-        rssStr = ""
-        if psutil:
-            rss = psutil.Process(os.getpid()).memory_info().rss
-            rssStr = F"{rss>>20:,}m"
-        self.setText(F"{rssStr} {len(gc.get_objects())//1000:,}k {numQObjects:,}q")
+
+        cacheMem, _ = pygit2.settings.cached_memory
+        fds = QLocale().formattedDataSize(cacheMem, 0, QLocale.DataSizeFormat.DataSizeSIFormat)
+        self.setText(f"git: {fds}    qto: {numQObjects}    pyo: {len(gc.get_objects())}")

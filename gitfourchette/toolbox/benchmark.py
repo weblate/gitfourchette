@@ -8,7 +8,6 @@ BENCHMARK_LOGGING_LEVEL = 5
 try:
     import psutil
 except ModuleNotFoundError:
-    logger.info("psutil isn't available. Memory pressure estimates won't work.")
     psutil = None
 
 
