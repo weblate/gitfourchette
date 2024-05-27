@@ -175,11 +175,13 @@ def testEmptyCommitRaisesWarning(tempDir, mainWindow):
 
 
 def testCommitWithoutUserIdentity(tempDir, mainWindow):
-    wd = unpackRepo(tempDir, userName="", userEmail="")
+    clearSessionwideIdentity()
+
+    wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    assert not rw.repo.config['user.name']
-    assert not rw.repo.config['user.email']
+    assert "user.name" not in rw.repo.config
+    assert "user.email" not in rw.repo.config
 
     rw.commitButton.click()
     acceptQMessageBox(rw, "create.+empty commit")
@@ -189,7 +191,7 @@ def testCommitWithoutUserIdentity(tempDir, mainWindow):
     identityOK = identityDialog.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
     identityDialog.ui.nameEdit.setText("Archibald Haddock")
     identityDialog.ui.emailEdit.setText("1e15sabords@example.com")
-    identityDialog.ui.setLocalIdentity.setChecked(True)
+    identityDialog.ui.setLocalIdentity.setChecked(False)
     identityOK.click()
 
     commitDialog = findQDialog(rw, "commit")

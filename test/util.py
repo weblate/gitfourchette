@@ -1,12 +1,13 @@
-import tempfile
-from pathlib import Path
-
-from . import *
 import os
 import re
 import shutil
-from gitfourchette.porcelain import *
+import tempfile
+from pathlib import Path
 
+import pygit2
+
+from gitfourchette.porcelain import *
+from . import *
 
 TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
 
@@ -20,11 +21,21 @@ def getTestDataPath(name):
     return str(path / name)
 
 
+def clearSessionwideIdentity():
+    config = pygit2.Config.get_global_config()
+    toClear = {
+        "user.name": TEST_SIGNATURE.name,
+        "user.email": TEST_SIGNATURE.email,
+    }
+    for key, expectedValue in toClear.items():
+        assert config[key] == expectedValue
+        del config[key]
+        assert key not in config
+
+
 def unpackRepo(
         tempDir: tempfile.TemporaryDirectory | str,
         testRepoName="TestGitRepository",
-        userName=TEST_SIGNATURE.name,
-        userEmail=TEST_SIGNATURE.email,
         renameTo="",
 ) -> str:
     tempDirPath = tempDir if type(tempDir) is str else tempDir.name
@@ -47,12 +58,7 @@ def unpackRepo(
         shutil.move(path, path2)
         path = path2
 
-    with open(F"{path}/.git/config", "at") as configFile:
-        configFile.write(
-            "\n[user]\n"
-            F"name = {userName}\n"
-            F"email = {userEmail}\n")
-
+    assert not path.endswith("/")
     path += "/"  # ease direct comparison with workdir path produced by libgit2 (it appends a slash)
 
     return path

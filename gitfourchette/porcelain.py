@@ -53,6 +53,7 @@ from pygit2 import (
 
     __version__ as PYGIT2_VERSION,
     LIBGIT2_VERSION,
+    settings as GitSettings,
 )
 
 from pygit2.enums import (
@@ -60,6 +61,7 @@ from pygit2.enums import (
     BranchType,
     CheckoutNotify,
     CheckoutStrategy,
+    ConfigLevel as GitConfigLevel,
     CredentialType,
     DeltaStatus,
     DiffFlag,
@@ -415,6 +417,36 @@ def get_git_global_identity() -> tuple[str, str]:
         email = global_config["user.email"]
 
     return name, email
+
+
+def ensure_git_config_file(level=GitConfigLevel.GLOBAL) -> GitConfig:
+    try:
+        if level == GitConfigLevel.GLOBAL:
+            return GitConfig.get_global_config()
+        elif level == GitConfigLevel.SYSTEM:
+            return GitConfig.get_system_config()
+        elif level == GitConfigLevel.XDG:
+            return GitConfig.get_xdg_config()
+        else:
+            raise NotImplementedError("ensure_git_config_file: unsupported level")
+    except OSError:
+        # Last resort, create file
+        pass
+
+    search_paths = GitSettings.search_path[level]
+
+    # Several paths may be concatenated with GIT_PATH_LIST_SEPARATOR,
+    # which git2/common.h defines as ":" (or ";" on Windows).
+    # pygit2 doesn't expose this, but it appears to match os.pathsep.
+    for path in search_paths.split(_os.pathsep):
+        if path and _os.path.isdir(path):
+            break
+    else:
+        raise NotImplementedError("no valid search path found for global git config")
+
+    path = _joinpath(path, ".gitconfig")
+    _logger.info(f"Initializing {level} git config at {path}")
+    return GitConfig(path)
 
 
 def DiffFile_compare(f1: DiffFile, f2: DiffFile):
@@ -1225,7 +1257,7 @@ class Repo(_VanillaRepository):
 
         try:
             signature = self.default_signature
-        except ValueError:
+        except (KeyError, ValueError):
             # Allow creating a stash if the identity isn't set
             signature = Signature(name="UNKNOWN", email="UNKNOWN")
 

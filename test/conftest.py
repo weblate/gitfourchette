@@ -14,16 +14,26 @@ if TYPE_CHECKING:
     from gitfourchette.mainwindow import MainWindow
 
 
-@pytest.fixture(scope='session', autouse=True)
-def maskHostGitConfig():
+def setUpGitConfigSearchPaths(prefix=""):
     # Don't let unit tests access host system's git config
     levels = [
         pygit2.enums.ConfigLevel.GLOBAL,
         pygit2.enums.ConfigLevel.XDG,
         pygit2.enums.ConfigLevel.SYSTEM,
+        pygit2.enums.ConfigLevel.PROGRAMDATA,
     ]
     for level in levels:
-        pygit2.settings.search_path[level] = ''
+        if prefix:
+            path = f"{prefix}_{level.name}"
+            os.makedirs(path, exist_ok=True)
+        else:
+            path = ""
+        pygit2.settings.search_path[level] = path
+
+
+@pytest.fixture(scope='session', autouse=True)
+def maskHostGitConfig():
+    setUpGitConfigSearchPaths("")
 
 
 @pytest.fixture(scope="session")
@@ -47,7 +57,7 @@ def tempDir() -> tempfile.TemporaryDirectory:
 
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
-    from gitfourchette import settings, qt, trash
+    from gitfourchette import settings, qt, trash, porcelain
     from .util import TEST_SIGNATURE
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
@@ -64,8 +74,10 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     app.beginSession(bootUi=False)
 
     # Prepare session-wide git config with a fallback signature.
-    app.sessionwideGitConfig["user.name"] = TEST_SIGNATURE.name
-    app.sessionwideGitConfig["user.email"] = TEST_SIGNATURE.email
+    setUpGitConfigSearchPaths(os.path.join(app.tempDir.path(), "MaskedGitConfig"))
+    globalGitConfig = porcelain.ensure_git_config_file(porcelain.GitConfigLevel.GLOBAL)
+    globalGitConfig["user.name"] = TEST_SIGNATURE.name
+    globalGitConfig["user.email"] = TEST_SIGNATURE.email
 
     # Boot the UI
     assert app.mainWindow is None

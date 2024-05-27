@@ -200,7 +200,7 @@ class SetUpIdentityFirstRun(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         if setGlobally:
-            configObject = GitConfig.get_global_config()
+            configObject = ensure_git_config_file(GitConfigLevel.GLOBAL)
         else:
             configObject = self.repo.config
         configObject['user.name'] = name
@@ -274,12 +274,7 @@ class SetUpRepoIdentity(RepoTask):
         yield from self.flowEnterWorkerThread()
 
         if setGlobally:
-            try:
-                configObject = GitConfig.get_global_config()
-            except OSError:
-                # Last resort, create file
-                # TODO: pygit2 should expose git_config_global or git_config_open_global to python code
-                configObject = GitConfig(os.path.expanduser("~/.gitconfig"))
+            configObject = ensure_git_config_file(GitConfigLevel.GLOBAL)
 
             # Nuke repo-specific identity
             with suppress(KeyError):

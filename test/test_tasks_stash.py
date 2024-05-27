@@ -116,7 +116,8 @@ def testNewPartialStash(tempDir, mainWindow, method):
 
 
 def testNewStashWithoutIdentity(tempDir, mainWindow):
-    wd = unpackRepo(tempDir, userName="", userEmail="")
+    clearSessionwideIdentity()
+    wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/untracked.txt", "this file is untracked\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar
@@ -131,7 +132,13 @@ def testNewStashWithoutIdentity(tempDir, mainWindow):
     dlg.accept()
 
     assert not os.path.isfile(f"{wd}/a/untracked.txt")
+
     assert len(repo.listall_stashes()) == 1
+    stash = repo.listall_stashes()[0]
+    stashCommit: Commit = repo[stash.commit_id].peel(Commit)
+    assert "unknown" == stashCommit.author.name.lower()
+    assert "unknown" == stashCommit.committer.name.lower()
+
     assert "helloworld" == sb.findNodeByRef("stash@{0}").createIndex(sb.sidebarModel).data(Qt.ItemDataRole.DisplayRole)
     assert qlvGetRowData(rw.dirtyFiles) == []
 
