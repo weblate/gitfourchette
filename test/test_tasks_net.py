@@ -36,6 +36,10 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
     cloneDialog.ui.urlEdit.setEditText(bare)
     assert "unpacked-repo-bare" in cloneDialog.ui.pathEdit.text()  # autofilled after entering URL
 
+    # Test expanduser on manual path entry
+    cloneDialog.ui.pathEdit.setText("~/thisshouldwork")
+    assert cloneDialog.path == str(Path("~/thisshouldwork").expanduser())
+
     # Set target path in clone dialog
     cloneDialog.ui.pathEdit.clear()
     cloneDialog.ui.browseButton.click()

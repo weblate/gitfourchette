@@ -93,7 +93,8 @@ class CloneDialog(QDialog):
             return translate("NameValidationError", "Please fill in this field.")
         return ""
 
-    def validatePath(self, path):
+    def validatePath(self, _ignored: str) -> str:
+        path = self.path
         if not path:
             # Avoid wording this as "cannot be empty" to prevent confusion with "directory not empty".
             return translate("NameValidationError", "Please fill in this field.")
@@ -214,7 +215,11 @@ class CloneDialog(QDialog):
 
     @property
     def path(self):
-        return self.ui.pathEdit.text()
+        text = self.ui.pathEdit.text()
+        path = Path(text)
+        with suppress(RuntimeError):
+            path = path.expanduser()
+        return str(path)
 
     @property
     def pathParentDir(self):
