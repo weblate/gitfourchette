@@ -515,10 +515,15 @@ class GitConfigHelper:
 
     @staticmethod
     def scrub_empty_section(config_path: str, *section_key_tokens: str):
-        assert len(section_key_tokens) == 2
-        prefix, name = section_key_tokens
-        name = name.replace('"', r'\"')
-        section_key = f'{prefix} "{name}"'
+        num_tokens = len(section_key_tokens)
+        if num_tokens == 1:
+            section_key = section_key_tokens[0]
+        elif num_tokens == 2:
+            prefix, name = section_key_tokens
+            name = name.replace('"', r'\"')
+            section_key = f'{prefix} "{name}"'
+        else:
+            raise NotImplementedError("scrub_empty_section: section key must be 1 or 2 tokens")
 
         ini = _configparser.ConfigParser()
         ini.read(config_path)
@@ -1532,26 +1537,25 @@ class Repo(_VanillaRepository):
 
     def get_local_identity(self) -> tuple[str, str]:
         """
-        Return the name and email set in the repository's `.git/config` file.
+        Return the name and email set in the repository's local config.
         If an identity isn't set specifically for this repo, this function returns blank strings.
         """
 
-        # Don't use repo.config because it merges global and local configs
-        local_config_path = _joinpath(self.path, "config")
-
-        name = ""
-        email = ""
-
-        if _isfile(local_config_path):
-            local_config = GitConfig(local_config_path)
-
+        config = self.config_snapshot
+        local = {}
+        for key in ["user.name", "user.email"]:
             with _suppress(KeyError):
-                name = local_config["user.name"]
+                entry = config._get_entry(key)
+                if GitConfigLevel.LOCAL <= entry.level: # <= GitConfigLevel.WORKTREE: -----requires pg2 1.15
+                    local[key] = entry.value
 
-            with _suppress(KeyError):
-                email = local_config["user.email"]
-
+        name = local.get("user.name", "")
+        email = local.get("user.email", "")
         return name, email
+
+    def has_local_identity(self):
+        name, email = self.get_local_identity()
+        return bool(name or email)
 
     def delete_tag(self, tagname: str):
         assert not tagname.startswith("refs/")

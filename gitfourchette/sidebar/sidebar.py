@@ -114,7 +114,12 @@ class Sidebar(QTreeView):
         data = node.data
         isHidden = model.isExplicitlyHidden(node)
 
-        if item == EItem.UncommittedChanges:
+        if item == EItem.WorkdirHeader:
+            actions += [
+                TaskBook.action(self, EditRepoSettings),
+            ]
+
+        elif item == EItem.UncommittedChanges:
             actions += [
                 TaskBook.action(self, NewCommit, "&C"),
                 TaskBook.action(self, AmendCommit, "&A"),

@@ -25,14 +25,16 @@ from gitfourchette.tasks.committasks import (
     NewCommit,
     NewTag,
     RevertCommit,
-    SetUpIdentityFirstRun,
-    SetUpRepoIdentity,
+    SetUpGitIdentity,
 )
 from gitfourchette.tasks.exporttasks import (
     ExportCommitAsPatch,
     ExportPatchCollection,
     ExportStashAsPatch,
     ExportWorkdirAsPatch,
+)
+from gitfourchette.tasks.misctasks import (
+    EditRepoSettings,
 )
 from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward, JumpBack, JumpForward, RefreshRepo
 from gitfourchette.tasks.loadtasks import PrimeRepo

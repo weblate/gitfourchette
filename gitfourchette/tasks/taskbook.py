@@ -79,8 +79,8 @@ class TaskBook:
             tasks.ResetHead: translate("task", "Reset HEAD"),
             tasks.RevertCommit: translate("task", "Revert commit"),
             tasks.RevertPatch: translate("task", "Revert selected text", "partial patch from selected text in diff"),
-            tasks.SetUpIdentityFirstRun: translate("task", "Set up Git identity"),
-            tasks.SetUpRepoIdentity: translate("task", "Set up Git identity"),
+            tasks.SetUpGitIdentity: translate("task", "Set up global Git identity"),
+            tasks.EditRepoSettings: translate("task", "Repository settings"),
             tasks.StageFiles: translate("task", "Stage files"),
             tasks.SwitchBranch: translate("task", "Switch to branch"),
             tasks.UpdateSubmodule: translate("task", "Update submodule"),
@@ -121,8 +121,8 @@ class TaskBook:
             tasks.RenameBranch: translate("task", "Rename this branch locally"),
             tasks.ResetHead: translate("task", "Make HEAD point to another commit"),
             tasks.RevertCommit: translate("task", "Revert the changes introduced by this commit"),
-            tasks.SetUpIdentityFirstRun: translate("task", "Set up the identity under which you create commits"),
-            tasks.SetUpRepoIdentity: translate("task", "Set up the identity under which you create commits"),
+            tasks.SetUpGitIdentity: translate("task", "Set up the identity under which you create commits"),
+            tasks.EditRepoSettings: translate("task", "Set up the identity under which you create commits"),
             tasks.SwitchBranch: translate("task", "Switch to this branch and update the working directory to match it"),
         }
 
@@ -165,8 +165,8 @@ class TaskBook:
             tasks.NewStash: "vcs-stash",
             tasks.NewTag: "tag-new",
             tasks.PullBranch: "vcs-pull",
-            tasks.SetUpIdentityFirstRun: "user-identity",
-            tasks.SetUpRepoIdentity: "user-identity",
+            tasks.SetUpGitIdentity: "user-identity",
+            tasks.EditRepoSettings: "configure",
             tasks.SwitchBranch: "document-swap",
         }
 

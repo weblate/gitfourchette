@@ -1,18 +1,19 @@
+import logging
+from contextlib import suppress
+
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
+from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.identitydialog import IdentityDialog
+from gitfourchette.forms.signatureform import SignatureOverride
+from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.jumptasks import RefreshRepo
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
-from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
-from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
-from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
-from gitfourchette.forms.ui_identitydialog2 import Ui_IdentityDialog2
-from contextlib import suppress
-import html
-import os
+
+logger = logging.getLogger(__name__)
 
 
 class NewCommit(RepoTask):
@@ -38,7 +39,7 @@ class NewCommit(RepoTask):
                     self.tr("No files are staged for commit."),
                     self.tr("Do you want to create an empty commit anyway?")))
 
-        yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Commit"))
+        yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to Commit"))
 
         fallbackSignature = self.repo.default_signature
         initialMessage = uiPrefs.draftCommitMessage
@@ -111,7 +112,7 @@ class AmendCommit(RepoTask):
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
-        yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to Amend Commit"))
+        yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to Amend Commit"))
 
         headCommit = self.repo.head_commit
         fallbackSignature = self.repo.default_signature
@@ -150,142 +151,32 @@ class AmendCommit(RepoTask):
         self.rw.state.uiPrefs.clearDraftAmend()
 
 
-class SetUpIdentityFirstRun(RepoTask):
+class SetUpGitIdentity(RepoTask):
     def effects(self):
         return TaskEffects.Nothing
 
-    def flow(self, okButtonText=""):
+    def flow(self, okButtonText="", firstRun=True):
         # Getting the default signature will fail if the user's identity is missing or incorrectly set
         with suppress(KeyError, ValueError):
             sig = self.repo.default_signature
-            return
+            if firstRun:
+                return
 
-        dlg = QDialog(self.parentWidget())
-
-        ui = Ui_IdentityDialog1()
-        ui.setupUi(dlg)
-        dlg.ui = ui  # for easier access in unit testing
-
-        # Initialize with global identity values (if any)
-        initialName, initialEmail = get_git_global_identity()
-        ui.nameEdit.setText(initialName)
-        ui.emailEdit.setText(initialEmail)
-
-        validator = ValidatorMultiplexer(dlg)
-        validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        validator.connectInput(ui.nameEdit, SignatureForm.validateInput)
-        validator.connectInput(ui.emailEdit, SignatureForm.validateInput)
-        validator.run()
+        dlg = IdentityDialog(self.repo, firstRun, self.parentWidget())
 
         if okButtonText:
-            ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
+            dlg.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
 
-        subtitle = translate(
-            "IdentityDialog1",
-            "Before editing this repository, please set up your identity for Git. "
-            "This information will be embedded into the commits and tags that you author.")
-
-        tweakWidgetFont(dlg.ui.help1, 90)
-        tweakWidgetFont(dlg.ui.help2, 90)
-
-        convertToBrandedDialog(dlg, subtitleText=subtitle, multilineSubtitle=True)
-
+        dlg.resize(512, 0)
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
         yield from self.flowDialog(dlg)
 
-        name = ui.nameEdit.text()
-        email = ui.emailEdit.text()
-        setGlobally = ui.setGlobalIdentity.isChecked()
+        name, email = dlg.identity()
         dlg.deleteLater()
 
-        yield from self.flowEnterWorkerThread()
-        if setGlobally:
-            configObject = ensure_git_config_file(GitConfigLevel.GLOBAL)
-        else:
-            configObject = self.repo.config
+        configObject = ensure_git_config_file(GitConfigLevel.GLOBAL)
         configObject['user.name'] = name
         configObject['user.email'] = email
-
-
-class SetUpRepoIdentity(RepoTask):
-    def effects(self):
-        return TaskEffects.Nothing
-
-    def flow(self):
-        repoName = self.repo.repo_name()
-
-        localName, localEmail = self.repo.get_local_identity()
-        useLocalIdentity = bool(localName or localEmail)
-
-        dlg = QDialog(self.parentWidget())
-
-        ui = Ui_IdentityDialog2()
-        ui.setupUi(dlg)
-        dlg.ui = ui  # for easier access in unit testing
-
-        ui.localIdentityCheckBox.setText(ui.localIdentityCheckBox.text().format(lquo(repoName)))
-        ui.localIdentityCheckBox.setChecked(useLocalIdentity)
-
-        def onLocalIdentityCheckBoxChanged(newState):
-            if newState:
-                try:
-                    sig: Signature = self.repo.default_signature
-                    initialName = sig.name
-                    initialEmail = sig.email
-                except (KeyError, ValueError):
-                    initialName = ""
-                    initialEmail = ""
-
-                ui.nameEdit.setPlaceholderText("")
-                ui.emailEdit.setPlaceholderText("")
-
-                groupBoxTitle = translate("IdentityDialog2", "Custom identity for {0}").format(lquo(repoName))
-                okButtonText = translate("IdentityDialog2", "Set custom identity")
-            else:
-                initialName, initialEmail = get_git_global_identity()
-
-                groupBoxTitle = translate("IdentityDialog2", "Global identity (for {0} and other repos)").format(lquo(repoName))
-                okButtonText = translate("IdentityDialog2", "Set global identity")
-
-            ui.nameEdit.setText(initialName)
-            ui.emailEdit.setText(initialEmail)
-            ui.identityGroupBox.setTitle(groupBoxTitle)
-            ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
-            validator.run()
-
-        ui.localIdentityCheckBox.stateChanged.connect(onLocalIdentityCheckBoxChanged)
-
-        validator = ValidatorMultiplexer(dlg)
-        validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        validator.connectInput(ui.nameEdit, SignatureForm.validateInput)
-        validator.connectInput(ui.emailEdit, SignatureForm.validateInput)
-
-        onLocalIdentityCheckBoxChanged(useLocalIdentity)
-
-        convertToBrandedDialog(dlg)
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
-        yield from self.flowDialog(dlg)
-
-        name = ui.nameEdit.text()
-        email = ui.emailEdit.text()
-        setGlobally = not ui.localIdentityCheckBox.isChecked()
-        dlg.deleteLater()
-
-        yield from self.flowEnterWorkerThread()
-
-        if setGlobally:
-            configObject = ensure_git_config_file(GitConfigLevel.GLOBAL)
-
-            # Nuke repo-specific identity
-            with suppress(KeyError):
-                del self.repo.config["user.name"]
-            with suppress(KeyError):
-                del self.repo.config["user.email"]
-        else:
-            configObject = self.repo.config
-
-        configObject["user.name"] = name
-        configObject["user.email"] = email
 
 
 class CheckoutCommit(RepoTask):
@@ -358,7 +249,7 @@ class NewTag(RepoTask):
 
     def flow(self, oid: Oid = None, signIt: bool = False):
         if signIt:
-            yield from self.flowSubtask(SetUpIdentityFirstRun, translate("IdentityDialog", "Proceed to New Tag"))
+            yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to New Tag"))
 
         if not oid:
             oid = self.repo.head_commit_id

@@ -1,8 +1,8 @@
 import pytest
 
 from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.signatureform import SignatureOverride
-from gitfourchette.forms.ui_identitydialog1 import Ui_IdentityDialog1
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.nav import NavLocator
 from . import reposcenario
@@ -187,12 +187,13 @@ def testCommitWithoutUserIdentity(tempDir, mainWindow):
     acceptQMessageBox(rw, "create.+empty commit")
 
     identityDialog = findQDialog(rw, "identity")
-    assert isinstance(identityDialog.ui, Ui_IdentityDialog1)
+    assert isinstance(identityDialog, IdentityDialog)
     identityOK = identityDialog.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+    assert not identityOK.isEnabled()
     identityDialog.ui.nameEdit.setText("Archibald Haddock")
     identityDialog.ui.emailEdit.setText("1e15sabords@example.com")
-    identityDialog.ui.setLocalIdentity.setChecked(False)
-    identityOK.click()
+    assert identityOK.isEnabled()
+    identityDialog.accept()
 
     commitDialog = findQDialog(rw, "commit")
     assert isinstance(commitDialog, CommitDialog)

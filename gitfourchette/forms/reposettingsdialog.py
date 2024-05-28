@@ -1,0 +1,77 @@
+from gitfourchette import settings
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.signatureform import SignatureForm
+from gitfourchette.forms.ui_reposettingsdialog import Ui_RepoSettingsDialog
+from gitfourchette.porcelain import Repo, get_git_global_identity
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
+
+
+def validateSigPart(x: str):
+    if x == "":
+        return ""
+    return SignatureForm.validateInput(x)
+
+
+class RepoSettingsDialog(QDialog):
+    def __init__(self, repo: Repo, parent):
+        super().__init__(parent)
+        ui = Ui_RepoSettingsDialog()
+        ui.setupUi(self)
+        self.ui = ui
+
+        self.setWindowTitle(self.windowTitle().format(repo=tquoe(settings.history.getRepoNickname(repo.workdir))))
+
+        currentNickname = settings.history.getRepoNickname(repo.workdir, strict=True)
+        ui.nicknameEdit.setText(currentNickname)
+        ui.nicknameEdit.setToolTip("<p>" + ui.nicknameEdit.toolTip().format(app=qAppName()))
+        ui.nicknameLabel.setToolTip(ui.nicknameEdit.toolTip())
+
+        localName, localEmail = repo.get_local_identity()
+        useLocalIdentity = bool(localName or localEmail)
+
+        globalName, globalEmail = get_git_global_identity()
+        for text, edit in [(globalName, ui.nameEdit), (globalEmail, ui.emailEdit)]:
+            if text:
+                text += " <" + translate("RepoSettingsDialog", "from global config") + ">"
+            else:
+                text = "<" + translate("RepoSettingsDialog", "global git identity not configured") + ">"
+            edit.setPlaceholderText(text)
+
+        self.localNameBackup = localName
+        self.localEmailBackup = localEmail
+
+        validator = ValidatorMultiplexer(self)
+        validator.setGatedWidgets(ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
+        validator.connectInput(ui.nameEdit, validateSigPart)
+        validator.connectInput(ui.emailEdit, validateSigPart)
+        self.validator = validator
+
+        ui.localIdentityCheckBox.stateChanged.connect(self.onLocalIdentityCheckBoxChanged)
+        ui.localIdentityCheckBox.setChecked(not useLocalIdentity)  # hack to trigger enablement
+        ui.localIdentityCheckBox.setChecked(useLocalIdentity)
+
+        validator.run()
+
+        convertToBrandedDialog(self, subtitleText=compactPath(repo.workdir))
+
+    def onLocalIdentityCheckBoxChanged(self, newState):
+        if newState:
+            self.ui.nameEdit.setText(self.localNameBackup)
+            self.ui.emailEdit.setText(self.localEmailBackup)
+        else:
+            self.localNameBackup = self.ui.nameEdit.text()
+            self.localEmailBackup = self.ui.emailEdit.text()
+            self.ui.nameEdit.clear()
+            self.ui.emailEdit.clear()
+        self.validator.run()
+
+    def localIdentity(self) -> tuple[str, str]:
+        useLocalIdentity = self.ui.localIdentityCheckBox.isChecked()
+        if useLocalIdentity:
+            localName = self.ui.nameEdit.text()
+            localEmail = self.ui.emailEdit.text()
+        else:
+            localName = ""
+            localEmail = ""
+        return localName, localEmail

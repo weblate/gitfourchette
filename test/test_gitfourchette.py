@@ -1,15 +1,23 @@
-from contextlib import suppress
 import os.path
+from contextlib import suppress
 
 import pytest
 
-from .util import *
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
+from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
+from gitfourchette.sidebar.sidebarmodel import EItem
+from .util import *
+
+
+def bringUpRepoSettings(rw):
+    node = next(rw.sidebar.findNodesByKind(EItem.WorkdirHeader))
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "repo.+settings")
+    dlg: RepoSettingsDialog = findQDialog(rw, "repo.+settings")
+    return dlg
 
 
 def testEmptyRepo(tempDir, mainWindow):
@@ -311,7 +319,8 @@ def testTruncatedHistory(mainWindow, tempDir, method):
     assert not rw.diffBanner.isVisibleTo(rw)
 
 
-def testRepoNickname(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["dedicated", "reposettings"])
+def testRepoNickname(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -320,12 +329,18 @@ def testRepoNickname(tempDir, mainWindow):
     assert findMenuAction(mainWindow.menuBar(), "file/recent/TestGitRepository")
 
     # Rename to "coolrepo"
-    triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
-    dlg = findQDialog(rw, "edit.+name")
-    qle: QLineEdit = dlg.findChild(QLineEdit)
-    assert qle.text() == "TestGitRepository"
-    qle.setText("coolrepo")
-    dlg.accept()
+    if method == "dedicated":
+        triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
+        dlg = findQDialog(rw, "edit.+name")
+        qle: QLineEdit = dlg.findChild(QLineEdit)
+        assert qle.text() == "TestGitRepository"
+        qle.setText("coolrepo")
+        dlg.accept()
+    else:
+        dlg = bringUpRepoSettings(rw)
+        assert dlg.ui.nicknameEdit.text() == ""
+        dlg.ui.nicknameEdit.setText("coolrepo")
+        dlg.accept()
 
     assert "TestGitRepository" not in mainWindow.windowTitle()
     assert "coolrepo" in mainWindow.windowTitle()
@@ -335,14 +350,68 @@ def testRepoNickname(tempDir, mainWindow):
     assert recentAction is findMenuAction(mainWindow.menuBar(), "file/recent/TestGitRepository")
 
     # Reset to default name
-    triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
-    dlg = findQDialog(rw, "edit.+name")
-    qle: QLineEdit = dlg.findChild(QLineEdit)
-    assert qle.text() == "coolrepo"
-    buttonBox: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
-    restoreButton = buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults)
-    restoreButton.click()
+    if method == "dedicated":
+        triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
+        dlg = findQDialog(rw, "edit.+name")
+        qle: QLineEdit = dlg.findChild(QLineEdit)
+        assert qle.text() == "coolrepo"
+        buttonBox: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
+        restoreButton = buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults)
+        restoreButton.click()
+    else:
+        dlg = bringUpRepoSettings(rw)
+        assert dlg.ui.nicknameEdit.text() == "coolrepo"
+        assert dlg.ui.nicknameEdit.isClearButtonEnabled()
+        dlg.ui.nicknameEdit.clear()
+        dlg.accept()
     assert "TestGitRepository" in mainWindow.windowTitle()
+
+
+@pytest.mark.parametrize("name", ["Zhack Sheerack", ""])
+@pytest.mark.parametrize("email", ["chichi@example.com", ""])
+def testCustomRepoIdentity(tempDir, mainWindow, name, email):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    dlg = bringUpRepoSettings(rw)
+    nameEdit = dlg.ui.nameEdit
+    emailEdit = dlg.ui.emailEdit
+    okButton = dlg.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+
+    assert not dlg.ui.localIdentityCheckBox.isChecked()
+    for edit, value in {nameEdit: TEST_SIGNATURE.name, emailEdit: TEST_SIGNATURE.email}.items():
+        assert not edit.isEnabled()
+        assert not edit.text()
+        assert value in edit.placeholderText()
+
+    dlg.ui.localIdentityCheckBox.setChecked(True)
+    assert nameEdit.isEnabled()
+    assert emailEdit.isEnabled()
+
+    for edit in [nameEdit, emailEdit]:
+        assert okButton.isEnabled()
+        edit.setText("<")
+        assert not okButton.isEnabled()
+        edit.clear()
+
+    nameEdit.setText(name)
+    emailEdit.setText(email)
+
+    dlg.accept()
+
+    rw.commitButton.click()
+    acceptQMessageBox(rw, "empty commit")
+    commitDialog: CommitDialog = rw.findChild(CommitDialog)
+    commitDialog.ui.summaryEditor.setText("hello")
+    commitDialog.accept()
+
+    headCommit = rw.repo.head_commit
+    assert headCommit.author.name == (name or TEST_SIGNATURE.name)
+    assert headCommit.author.email == (email or TEST_SIGNATURE.email)
+    assert headCommit.committer.name == headCommit.author.name
+    assert headCommit.committer.email == headCommit.author.email
+
+    dlg.accept()
 
 
 def testTabOverflow(tempDir, mainWindow):

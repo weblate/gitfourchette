@@ -249,7 +249,7 @@ class MainWindow(QMainWindow):
                       menuRole=QAction.MenuRole.PreferencesRole,
                       statusTip=self.tr("Edit {app} settings").format(app=qAppName())),
 
-            TaskBook.action(self, tasks.SetUpRepoIdentity, menuRole=QAction.MenuRole.ApplicationSpecificRole),
+            TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('',False), menuRole=QAction.MenuRole.ApplicationSpecificRole),
 
             ActionDef.SEPARATOR,
 
@@ -289,6 +289,8 @@ class MainWindow(QMainWindow):
             TaskBook.action(self, tasks.NewRemote),
 
             ActionDef.SEPARATOR,
+
+            TaskBook.action(self, tasks.EditRepoSettings),
 
             ActionDef(
                 self.tr("&Local Config Files"),
@@ -516,6 +518,7 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw), shortcuts=GlobalShortcuts.openRepoFolder),
             ActionDef(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw)),
             ActionDef(self.tr("Set Nickname...", "RepoTabCM"), lambda: self.renameRepo(rw)),
+            TaskBook.action(rw, tasks.EditRepoSettings),
             ActionDef.SEPARATOR,
             ActionDef(superprojectLabel, lambda: self.openRepoNextTo(rw, superproject), enabled=bool(superproject)),
             ActionDef.SEPARATOR
