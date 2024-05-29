@@ -591,6 +591,7 @@ class RestoreRevisionToWorkdir(RepoTask):
 
         self.jumpTo = NavLocator.inUnstaged(diffFile.path)
 
+
 class AbortMerge(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.DefaultRefresh
@@ -600,37 +601,36 @@ class AbortMerge(RepoTask):
 
         isMerging = self.repo.state() == RepositoryState.MERGE
         isCherryPicking = self.repo.state() == RepositoryState.CHERRYPICK
+        isReverting = self.repo.state() == RepositoryState.REVERT
         anyConflicts = self.repo.index.conflicts
 
-        if not isMerging and not isCherryPicking and not anyConflicts:
-            raise AbortTask(self.tr("No merge or cherry-pick is in progress."), icon='information')
+        if not (isMerging or isCherryPicking or isReverting or anyConflicts):
+            raise AbortTask(self.tr("No abortable state is in progress."), icon='information')
+
+        verb = self.tr("Abort")
+        if isCherryPicking:
+            clause = self.tr("abort the ongoing cherry-pick")
+            title = self.tr("Abort cherry-pick")
+        elif isMerging:
+            clause = self.tr("abort the ongoing merge")
+            title = self.tr("Abort merge")
+        elif isReverting:
+            clause = self.tr("abort the ongoing revert")
+            title = self.tr("Abort revert")
+        else:
+            clause = self.tr("reset the index")
+            title = self.tr("Reset index")
 
         try:
             abortList = self.repo.get_reset_merge_file_list()
         except MultiFileError as exc:
-            if isCherryPicking:
-                cantReset = self.tr("Cannot abort the cherry-pick right now")
-            elif isMerging:
-                cantReset = self.tr("Cannot abort the merge right now")
-            else:
-                cantReset = self.tr("Cannot reset the index right now")
-            exc.message = self.tr("{0}, because %n files are both staged and unstaged.",
-                                  "placeholder: cannot abort the merge / reset the index / etc.",
-                                  len(exc.file_exceptions)).format(cantReset)
+            exc.message = self.tr(
+                "Cannot {0} right now, because %n files contain both staged and unstaged changes.",
+                "placeholder: cannot abort the merge / reset the index / etc.", len(exc.file_exceptions)
+            ).format(clause)
             raise exc
 
-        lines = []
-
-        if isCherryPicking:
-            prompt = self.tr("Do you want to abort the cherry-pick?")
-            verb = self.tr("Abort cherry-pick")
-        elif isMerging:
-            prompt = self.tr("Do you want to abort the merge?")
-            verb = self.tr("Abort merge")
-        else:
-            prompt = self.tr("Do you want to reset the index?")
-            verb = self.tr("Reset index")
-        lines.append(prompt)
+        lines = [self.tr("Do you want to {0}?").format(clause)]
 
         if not abortList:
             informative = self.tr("No files are affected.")
@@ -641,11 +641,12 @@ class AbortMerge(RepoTask):
             else:
                 lines.append(self.tr("All <b>staged</b> changes will be lost."))
 
-        yield from self.flowConfirm(text=paragraphs(lines), verb=verb, informativeText=informative, detailList=[escape(f) for f in abortList])
+        yield from self.flowConfirm(title=title, text=paragraphs(lines), verb=verb, informativeText=informative,
+                                    detailList=[escape(f) for f in abortList])
 
         self.repo.reset_merge()
         self.repo.state_cleanup()
 
         # If cherrypicking, clear draft commit message that was set in CherrypickCommit
-        if isCherryPicking:
+        if isCherryPicking or isReverting:
             self.repoModel.prefs.clearDraftCommit()

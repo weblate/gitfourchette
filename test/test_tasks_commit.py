@@ -1,3 +1,5 @@
+import os.path
+
 import pytest
 
 from gitfourchette.forms.commitdialog import CommitDialog
@@ -334,10 +336,37 @@ def testRevertCommit(tempDir, mainWindow):
     oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
+    acceptQMessageBox(rw, "reverting.+c9ed7bf.+successful")
 
-    rw.jump(NavLocator.inWorkdir())
+    commitDialog: CommitDialog = rw.findChild(CommitDialog)
+    assert commitDialog.isVisible()
+    assert re.search(r"revert.+delete c.c2-2.txt", commitDialog.ui.summaryEditor.text(), re.I)
+    assert re.search(r"revert.+commit.+c9ed7bf", commitDialog.ui.descriptionEditor.toPlainText(), re.I)
+    commitDialog.reject()
+
+    assert rw.navLocator.context.isWorkdir()
     assert qlvGetRowData(rw.stagedFiles) == ["c/c2-2.txt"]
     assert rw.repo.status() == {"c/c2-2.txt": FileStatus.INDEX_NEW}
+
+
+def testAbortRevertCommit(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+    rw.jump(NavLocator.inCommit(oid))
+    triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
+    rejectQMessageBox(rw, "reverting.+c9ed7bf.+successful")
+
+    assert rw.repo.state() == RepositoryState.REVERT
+    assert rw.mergeBanner.isVisible()
+    assert "revert" in rw.mergeBanner.label.text().lower()
+    assert "abort" in rw.mergeBanner.button.text().lower()
+
+    rw.mergeBanner.button.click()
+    acceptQMessageBox(rw, "abort revert")
+    assert rw.repo.state() == RepositoryState.NONE
+    assert not os.path.exists(f"{wd}/c/c2-2.txt")
 
 
 def testCherrypick(tempDir, mainWindow):
@@ -399,7 +428,7 @@ def testAbortCherrypick(tempDir, mainWindow):
     assert rw.repo.state() == RepositoryState.CHERRYPICK
     assert "First a/a1" in rw.repoModel.prefs.draftCommitMessage
     assert rw.mergeBanner.isVisibleTo(rw)
-    assert re.search(r"cherry.+conflicts fixed", rw.mergeBanner.label.text(), re.I | re.S)
+    assert re.search(r"cherry.+commit to conclude", rw.mergeBanner.label.text(), re.I | re.S)
     assert "abort" in rw.mergeBanner.button.text().lower()
 
     # Abort cherrypick

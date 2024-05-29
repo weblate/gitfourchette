@@ -811,27 +811,6 @@ class Repo(_VanillaRepository):
             self.checkout_tree(commit.tree, callbacks=callbacks)
             self.set_head(commit_id)
 
-    def revert_commit_in_workdir(self, commit_id: Oid):
-        """Revert a commit and check out the reverted index if there are no conflicts
-        with the workdir."""
-
-        trash_commit = self.peel_commit(commit_id)
-        head_commit = self.head_commit
-        revert_index = self.revert_commit(trash_commit, head_commit)
-
-        if revert_index.conflicts:
-            early_conflicts = []
-            for common_ancestor, ours, theirs in revert_index.conflicts:
-                # Figure out a path to display (note that elements of the 3-tuple may be None!)
-                for candidate in [common_ancestor, ours, theirs]:
-                    if candidate and candidate.path:
-                        early_conflicts.append(candidate.path)
-                        break
-            raise ConflictError(early_conflicts, "HEAD")
-
-        with CheckoutBreakdown() as callbacks:
-            self.checkout_index(revert_index, callbacks=callbacks)
-
     def rename_local_branch(self, name: str, new_name: str) -> Branch:
         """Rename a local branch."""
         # TODO: if the branch tracks an upstream branch, issue a warning that it won't be renamed on the server

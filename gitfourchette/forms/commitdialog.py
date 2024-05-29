@@ -35,7 +35,7 @@ class CommitDialog(QDialog):
         self.ui.signature.signatureChanged.connect(self.refreshSignaturePreview)
 
         # Make summary text edit font larger
-        tweakWidgetFont(self.ui.summaryEditor, 150)
+        tweakWidgetFont(self.ui.summaryEditor, 130)
 
         if amendingCommitHash:
             prompt = self.tr("Amend commit message")
@@ -51,6 +51,8 @@ class CommitDialog(QDialog):
             warning = self.tr("This commit will conclude the merge.")
         elif repositoryState == RepositoryState.CHERRYPICK:
             warning = self.tr("This commit will conclude the cherry-pick.")
+        elif repositoryState == RepositoryState.REVERT:
+            warning = self.tr("This commit will conclude the revert.")
         elif amendingCommitHash:
             warning = self.tr("You are amending commit {0}.").format(lquo(amendingCommitHash))
         elif detachedHead:

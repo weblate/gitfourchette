@@ -816,13 +816,27 @@ class RepoWidget(QStackedWidget):
 
             message = ""
             if not repo.any_conflicts:
-                message = self.tr("All conflicts fixed. Commit to conclude.")
+                message = self.tr("Commit to conclude the cherry-pick.")
                 bannerHeeded = True
             else:
                 message += self.tr("Conflicts need fixing.")
 
             bannerText = message
             bannerAction = self.tr("Abort Cherry-Pick")
+            bannerCallback = lambda: self.runTask(AbortMerge)
+
+        elif rstate == RepositoryState.REVERT:
+            bannerTitle = self.tr("Reverting")
+
+            message = ""
+            if not repo.any_conflicts:
+                message = self.tr("Commit to conclude the revert.")
+                bannerHeeded = True
+            else:
+                message += self.tr("Conflicts need fixing.")
+
+            bannerText = message
+            bannerAction = self.tr("Abort Revert")
             bannerCallback = lambda: self.runTask(AbortMerge)
 
         elif rstate == RepositoryState.NONE:

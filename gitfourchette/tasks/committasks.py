@@ -251,15 +251,6 @@ class CheckoutCommit(RepoTask):
             raise NotImplementedError("Unsupported CheckoutCommitDialog outcome")
 
 
-class RevertCommit(RepoTask):
-    def effects(self):
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
-
-    def flow(self, oid: Oid):
-        yield from self.flowEnterWorkerThread()
-        self.repo.revert_commit_in_workdir(oid)
-
-
 class NewTag(RepoTask):
     def prereqs(self):
         return TaskPrereqs.NoUnborn
@@ -321,6 +312,57 @@ class DeleteTag(RepoTask):
         self.repo.delete_tag(tagName)
 
 
+class RevertCommit(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
+
+    def effects(self):
+        effects = TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        if self.didCommit:
+            effects |= TaskEffects.Refs | TaskEffects.Head
+        return effects
+
+    def flow(self, oid: Oid):
+        self.didCommit = False
+
+        # TODO: Remove this when we can stop supporting pygit2 <= 1.15.0
+        pygit2_version_at_least("1.15.1")
+
+        yield from self.flowEnterWorkerThread()
+        repoModel = self.repoModel
+        repo = self.repo
+        commit = repo.peel_commit(oid)
+        repo.revert(commit)
+
+        anyConflicts = repo.any_conflicts
+        dud = not anyConflicts and not repo.any_staged_changes
+
+        # If reverting didn't do anything, don't let the REVERT state linger.
+        # (Otherwise, the state will be cleared when we commit)
+        if dud:
+            repo.state_cleanup()
+
+        yield from self.flowEnterUiThread()
+
+        if dud:
+            info = self.tr("There’s nothing to revert from {0} that the current branch hasn’t already undone."
+                           ).format(bquo(shortHash(oid)))
+            raise AbortTask(info, "information")
+
+        yield from self.flowEnterUiThread()
+
+        repoModel.prefs.draftCommitMessage = self.repo.message
+        repoModel.prefs.setDirty()
+
+        if not anyConflicts:
+            yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
+            text = self.tr("Reverting {0} was successful. Do you want to commit the result now?")
+            text = text.format(bquo(shortHash(oid)))
+            yield from self.flowConfirm(text=text, verb=self.tr("Commit"), cancelText=self.tr("Review changes"))
+            yield from self.flowSubtask(NewCommit)
+            self.didCommit = True
+
+
 class CherrypickCommit(RepoTask):
     def prereqs(self):
         # Prevent cherry-picking with staged changes, like vanilla git (despite libgit2 allowing it)
@@ -336,11 +378,13 @@ class CherrypickCommit(RepoTask):
         self.didCommit = False
 
         yield from self.flowEnterWorkerThread()
+        commit = self.repo.peel_commit(oid)
         self.repo.cherrypick(oid)
 
         anyConflicts = self.repo.any_conflicts
-        commit = self.repo.peel_commit(oid)
         dud = not anyConflicts and not self.repo.any_staged_changes
+
+        assert self.repo.state() == RepositoryState.CHERRYPICK
 
         # If cherrypicking didn't do anything, don't let the CHERRYPICK state linger.
         # (Otherwise, the state will be cleared when we commit)
@@ -355,7 +399,7 @@ class CherrypickCommit(RepoTask):
                            ).format(bquo(shortHash(oid)))
             raise AbortTask(info, "information")
 
-        self.repoModel.prefs.draftCommitMessage = commit.message
+        self.repoModel.prefs.draftCommitMessage = self.repo.message
         self.repoModel.prefs.draftCommitSignature = commit.author
         self.repoModel.prefs.draftCommitSignatureOverride = SignatureOverride.Author
         self.repoModel.prefs.setDirty()
