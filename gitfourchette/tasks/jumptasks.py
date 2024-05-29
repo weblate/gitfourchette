@@ -479,6 +479,10 @@ class RefreshRepo(RepoTask):
         except ValueError:
             previousFileList = None
 
+        # Refresh the index
+        if effectFlags & TaskEffects.Index:
+            rw.repo.refresh_index()
+
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
             oldRefCache = rw.state.refCache
@@ -556,6 +560,6 @@ class RefreshRepo(RepoTask):
         else:
             previousFileList.clearSelectionBackup()
 
-        # Refresh window title and status bar warning bubbles.
+        # Refresh window title and state banner.
         # Do this last because it requires the index to be fresh (updated by the Jump subtask)
         rw.refreshWindowChrome()

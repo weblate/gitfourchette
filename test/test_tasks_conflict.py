@@ -127,6 +127,23 @@ def testConflictDoesntPreventManipulatingIndexOnOtherFile(tempDir, mainWindow):
     assert readFile(f"{wd}/b/b1.txt").decode() == "b1\nb1\nstaged change\n"
 
 
+def testShowConflictInBannerEvenIfNotViewingWorkdir(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inCommit(Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")))
+
+    # Cause a conflict outside the app
+    with RepoContext(wd) as repo:
+        oid = Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17")
+        assert not repo.any_conflicts
+        repo.cherrypick(oid)
+        assert "c/c2.txt" in repo.index.conflicts
+
+    rw.refreshRepo()
+    assert rw.mergeBanner.isVisible()
+    assert "conflicts need fixing" in rw.mergeBanner.label.text().lower()
+
+
 @pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
 def testMergeTool(tempDir, mainWindow):
     noopMergeToolPath = getTestDataPath("editor-shim.sh")

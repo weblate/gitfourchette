@@ -78,8 +78,13 @@ class TaskEffects(enum.IntFlag):
     "Make sure the workdir is visible once the task succeeds."
     # TODO: Migrate to setting RepoTask.jumpTo to NavLocator.inWorkdir(...)
 
-    DefaultRefresh = Workdir | Refs | Remotes
+    Index = enum.auto()
+    "Reload the index."
+
+    DefaultRefresh = Workdir | Refs | Remotes | Index
     "Default flags for RepoWidget.refreshRepo()"
+    # Index is included so the banner can warn about conflicts
+    # regardless of what part of the repo is being viewed.
 
 
 class FlowControlToken(QObject):

@@ -1043,7 +1043,7 @@ class RepoWidget(QStackedWidget):
         shortname = self.getTitle()
         inBrackets = ""
         suffix = ""
-        repo = self.repo if self.state else None
+        repo = self.repo
 
         if not repo:
             pass
@@ -1058,19 +1058,42 @@ class RepoWidget(QStackedWidget):
             with suppress(GitError):
                 inBrackets = repo.head_branch_shorthand
 
-        # Merging? Any conflicts?
+        if settings.DEVDEBUG:
+            chain = []
+            if settings.TEST_MODE:
+                chain.append("TEST_MODE")
+            if settings.SYNC_TASKS:
+                chain.append("SYNC_TASKS")
+            chain.append(f"PID {os.getpid()}")
+            chain.append(QT_BINDING)
+            suffix += " - " + ", ".join(chain)
+
+        if inBrackets:
+            suffix = F" [{inBrackets}]{suffix}"
+
+        self.window().setWindowTitle(shortname + suffix)
+
+        # Refresh state banner (merging, cherrypicking, reverting, etc.)
+        self.refreshBanner()
+
+    def refreshBanner(self):
+        if not self.uiReady:
+            return
+        elif not self.repo:
+            self.mergeBanner.setVisible(False)
+            return
+
+        repo = self.repo
+
+        rstate = repo.state() if repo else RepositoryState.NONE
+
         bannerTitle = ""
         bannerText = ""
         bannerHeeded = False
         bannerAction = ""
         bannerCallback = None
 
-        rstate = repo.state() if repo else RepositoryState.NONE
-
-        if not repo:
-            pass
-
-        elif rstate == RepositoryState.MERGE:
+        if rstate == RepositoryState.MERGE:
             bannerTitle = self.tr("Merging")
             try:
                 mh = self.state.mergeheadsCache[0]
@@ -1115,29 +1138,11 @@ class RepoWidget(QStackedWidget):
                 "Use <code>git</code> on the command line to continue."
             ).format(app=qAppName(), state=bquo(rstate.name.replace("_", " ").title()))
 
-        # Set up Banner
-        if not self.uiReady:
-            pass
-        elif bannerText or bannerTitle:
+        if bannerText or bannerTitle:
             self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False,
                                    buttonLabel=bannerAction, buttonCallback=bannerCallback)
         else:
             self.mergeBanner.setVisible(False)
-
-        if settings.DEVDEBUG:
-            chain = []
-            if settings.TEST_MODE:
-                chain.append("TEST_MODE")
-            if settings.SYNC_TASKS:
-                chain.append("SYNC_TASKS")
-            chain.append(f"PID {os.getpid()}")
-            chain.append(QT_BINDING)
-            suffix += " - " + ", ".join(chain)
-
-        if inBrackets:
-            suffix = F" [{inBrackets}]{suffix}"
-
-        self.window().setWindowTitle(shortname + suffix)
 
     # -------------------------------------------------------------------------
 
