@@ -75,7 +75,7 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
     # Prepare session-wide git config with a fallback signature.
     setUpGitConfigSearchPaths(os.path.join(app.tempDir.path(), "MaskedGitConfig"))
-    globalGitConfig = porcelain.ensure_git_config_file(porcelain.GitConfigLevel.GLOBAL)
+    globalGitConfig = porcelain.GitConfigHelper.ensure_file(porcelain.GitConfigLevel.GLOBAL)
     globalGitConfig["user.name"] = TEST_SIGNATURE.name
     globalGitConfig["user.email"] = TEST_SIGNATURE.email
 

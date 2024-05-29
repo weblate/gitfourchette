@@ -388,12 +388,14 @@ def testCustomRepoIdentity(tempDir, mainWindow, name, email):
     assert nameEdit.isEnabled()
     assert emailEdit.isEnabled()
 
+    # Test validation of illegal input
     for edit in [nameEdit, emailEdit]:
         assert okButton.isEnabled()
         edit.setText("<")
         assert not okButton.isEnabled()
         edit.clear()
 
+    # Set name/email to given parameters
     nameEdit.setText(name)
     emailEdit.setText(email)
 

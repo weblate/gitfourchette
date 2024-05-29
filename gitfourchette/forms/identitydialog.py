@@ -1,22 +1,30 @@
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.signatureform import SignatureForm
 from gitfourchette.forms.ui_identitydialog import Ui_IdentityDialog
-from gitfourchette.porcelain import get_git_global_identity
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
 
 class IdentityDialog(QDialog):
-    def __init__(self, repo, firstRun, parent):
+    def __init__(
+            self,
+            firstRun: bool,
+            initialName: str,
+            initialEmail: str,
+            configPath: str,
+            repoHasLocalIdentity: bool,
+            parent: QWidget
+    ):
         super().__init__(parent)
 
         ui = Ui_IdentityDialog()
         ui.setupUi(self)
         self.ui = ui
-        ui.warningLabel.setVisible(repo.has_local_identity())
+
+        formatWidgetText(ui.configPathLabel, lquo(compactPath(configPath)))
+        ui.warningLabel.setVisible(repoHasLocalIdentity)
 
         # Initialize with global identity values (if any)
-        initialName, initialEmail = get_git_global_identity()
         ui.nameEdit.setText(initialName)
         ui.emailEdit.setText(initialEmail)
 

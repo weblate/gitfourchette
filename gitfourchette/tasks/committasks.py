@@ -156,13 +156,28 @@ class SetUpGitIdentity(RepoTask):
         return TaskEffects.Nothing
 
     def flow(self, okButtonText="", firstRun=True):
-        # Getting the default signature will fail if the user's identity is missing or incorrectly set
-        with suppress(KeyError, ValueError):
-            sig = self.repo.default_signature
-            if firstRun:
+        if firstRun:
+            # Getting the default signature will fail if the user's identity is missing or incorrectly set
+            try:
+                _ = self.repo.default_signature
                 return
+            except (KeyError, ValueError):
+                pass
 
-        dlg = IdentityDialog(self.repo, firstRun, self.parentWidget())
+        initialName, initialEmail, editLevel = GitConfigHelper.global_identity()
+
+        # Fall back to a sensible path if the identity comes from /etc/gitconfig or some other systemwide file
+        if editLevel not in [GitConfigLevel.XDG, GitConfigLevel.GLOBAL]:
+            # Favor XDG path if we can, otherwise use ~/.gitconfig
+            if FREEDESKTOP and GitSettings.search_path[GitConfigLevel.XDG]:
+                editLevel = GitConfigLevel.XDG
+            else:
+                editLevel = GitConfigLevel.GLOBAL
+
+        editPath = GitConfigHelper.path_for_level(editLevel)
+
+        dlg = IdentityDialog(firstRun, initialName, initialEmail, editPath,
+                             self.repo.has_local_identity(), self.parentWidget())
 
         if okButtonText:
             dlg.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(okButtonText)
@@ -174,9 +189,14 @@ class SetUpGitIdentity(RepoTask):
         name, email = dlg.identity()
         dlg.deleteLater()
 
-        configObject = ensure_git_config_file(GitConfigLevel.GLOBAL)
+        configObject = GitConfigHelper.ensure_file(editLevel)
         configObject['user.name'] = name
         configObject['user.email'] = email
+
+        # An existing repo will automatically pick up the new GLOBAL config file,
+        # but apparently not the XDG config file... So add it to be sure.
+        with suppress(ValueError):
+            self.repo.config.add_file(editPath, editLevel, force=False)
 
 
 class CheckoutCommit(RepoTask):

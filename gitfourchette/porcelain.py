@@ -395,60 +395,6 @@ def signatures_equalish(a: Signature, b: Signature):
     )
 
 
-def get_git_global_identity() -> tuple[str, str]:
-    """
-    Returns the name and email set in the global `.gitconfig` file.
-    If the global identity isn't set, this function returns blank strings.
-    """
-
-    name = ""
-    email = ""
-
-    try:
-        global_config = GitConfig.get_global_config()
-    except OSError:
-        # "The global file '.gitconfig' doesn't exist: No such file or directory
-        return name, email
-
-    with _suppress(KeyError):
-        name = global_config["user.name"]
-
-    with _suppress(KeyError):
-        email = global_config["user.email"]
-
-    return name, email
-
-
-def ensure_git_config_file(level=GitConfigLevel.GLOBAL) -> GitConfig:
-    try:
-        if level == GitConfigLevel.GLOBAL:
-            return GitConfig.get_global_config()
-        elif level == GitConfigLevel.SYSTEM:
-            return GitConfig.get_system_config()
-        elif level == GitConfigLevel.XDG:
-            return GitConfig.get_xdg_config()
-        else:
-            raise NotImplementedError("ensure_git_config_file: unsupported level")
-    except OSError:
-        # Last resort, create file
-        pass
-
-    search_paths = GitSettings.search_path[level]
-
-    # Several paths may be concatenated with GIT_PATH_LIST_SEPARATOR,
-    # which git2/common.h defines as ":" (or ";" on Windows).
-    # pygit2 doesn't expose this, but it appears to match os.pathsep.
-    for path in search_paths.split(_os.pathsep):
-        if path and _os.path.isdir(path):
-            break
-    else:
-        raise NotImplementedError("no valid search path found for global git config")
-
-    path = _joinpath(path, ".gitconfig")
-    _logger.info(f"Initializing {level} git config at {path}")
-    return GitConfig(path)
-
-
 def DiffFile_compare(f1: DiffFile, f2: DiffFile):
     # TODO: pygit2 ought to implement DiffFile.__eq__
     same = f1.id == f2.id
@@ -490,6 +436,49 @@ def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
 
 
 class GitConfigHelper:
+    @staticmethod
+    def path_for_level(level: GitConfigLevel):
+        if not (GitConfigLevel.PROGRAMDATA <= level <= GitConfigLevel.GLOBAL):
+            raise NotImplementedError(f"unsupported level {level}")
+
+        search_paths = GitSettings.search_path[level]
+
+        # Several paths may be concatenated with GIT_PATH_LIST_SEPARATOR,
+        # which git2/common.h defines as ":" (or ";" on Windows).
+        # pygit2 doesn't expose this, but it appears to match os.pathsep.
+        for path in search_paths.split(_os.pathsep):
+            if path and _os.path.isdir(path):
+                break
+        else:
+            raise NotImplementedError("no valid search path found for global git config")
+
+        # Select appropriate filename (see libgit2/config.h: GIT_CONFIG_FILENAME_SYSTEM, etc.)
+        if level == GitConfigLevel.SYSTEM:
+            filename = "gitconfig"
+        elif level == GitConfigLevel.GLOBAL:
+            filename = ".gitconfig"
+        else:
+            filename = "config"
+
+        path = _joinpath(path, filename)
+        return path
+
+    @staticmethod
+    def ensure_file(level: GitConfigLevel = GitConfigLevel.GLOBAL) -> GitConfig:
+        try:
+            if level == GitConfigLevel.GLOBAL:
+                return GitConfig.get_global_config()
+            elif level == GitConfigLevel.SYSTEM:
+                return GitConfig.get_system_config()
+            elif level == GitConfigLevel.XDG:
+                return GitConfig.get_xdg_config()
+            else:
+                raise NotImplementedError("ensure_git_config_file: unsupported level")
+        except OSError:
+            # Last resort, create file
+            path = GitConfigHelper.path_for_level(level)
+            return GitConfig(path)
+
     @staticmethod
     def is_empty(config_path: str):
         with open(config_path, "rt") as f:
@@ -563,6 +552,42 @@ class GitConfigHelper:
         _os.rename(config_path, backup_path)
         _os.rename(temp_path, config_path)
         _os.unlink(backup_path)
+
+    @staticmethod
+    def global_identity() -> tuple[str, str, GitConfigLevel]:
+        """
+        Returns the name and email set in the global `.gitconfig` file.
+        If the global identity isn't set, this function returns blank strings.
+        """
+
+        name = ""
+        email = ""
+        level = GitConfigLevel.HIGHEST_LEVEL
+
+        getters = [
+            (GitConfigLevel.SYSTEM, GitConfig.get_system_config),
+            (GitConfigLevel.XDG, GitConfig.get_xdg_config),
+            (GitConfigLevel.GLOBAL, GitConfig.get_global_config),
+        ]
+        getters.sort(key=lambda item: item[0], reverse=True)
+
+        for (level, getter) in getters:
+            try:
+                config = getter()
+            except OSError:
+                # "The global file '.gitconfig' doesn't exist: No such file or directory
+                continue
+
+            with _suppress(KeyError):
+                name = config["user.name"]
+
+            with _suppress(KeyError):
+                email = config["user.email"]
+
+            if name and email:
+                break
+
+        return name, email, level
 
 
 class Repo(_VanillaRepository):
