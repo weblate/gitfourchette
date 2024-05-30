@@ -319,8 +319,7 @@ def testTruncatedHistory(mainWindow, tempDir, method):
     assert not rw.diffBanner.isVisibleTo(rw)
 
 
-@pytest.mark.parametrize("method", ["dedicated", "reposettings"])
-def testRepoNickname(tempDir, mainWindow, method):
+def testRepoNickname(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -329,18 +328,10 @@ def testRepoNickname(tempDir, mainWindow, method):
     assert findMenuAction(mainWindow.menuBar(), "file/recent/TestGitRepository")
 
     # Rename to "coolrepo"
-    if method == "dedicated":
-        triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
-        dlg = findQDialog(rw, "edit.+name")
-        qle: QLineEdit = dlg.findChild(QLineEdit)
-        assert qle.text() == "TestGitRepository"
-        qle.setText("coolrepo")
-        dlg.accept()
-    else:
-        dlg = bringUpRepoSettings(rw)
-        assert dlg.ui.nicknameEdit.text() == ""
-        dlg.ui.nicknameEdit.setText("coolrepo")
-        dlg.accept()
+    dlg = bringUpRepoSettings(rw)
+    assert dlg.ui.nicknameEdit.text() == ""
+    dlg.ui.nicknameEdit.setText("coolrepo")
+    dlg.accept()
 
     assert "TestGitRepository" not in mainWindow.windowTitle()
     assert "coolrepo" in mainWindow.windowTitle()
@@ -350,20 +341,11 @@ def testRepoNickname(tempDir, mainWindow, method):
     assert recentAction is findMenuAction(mainWindow.menuBar(), "file/recent/TestGitRepository")
 
     # Reset to default name
-    if method == "dedicated":
-        triggerMenuAction(mainWindow.menuBar(), "repo/rename repo")
-        dlg = findQDialog(rw, "edit.+name")
-        qle: QLineEdit = dlg.findChild(QLineEdit)
-        assert qle.text() == "coolrepo"
-        buttonBox: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
-        restoreButton = buttonBox.button(QDialogButtonBox.StandardButton.RestoreDefaults)
-        restoreButton.click()
-    else:
-        dlg = bringUpRepoSettings(rw)
-        assert dlg.ui.nicknameEdit.text() == "coolrepo"
-        assert dlg.ui.nicknameEdit.isClearButtonEnabled()
-        dlg.ui.nicknameEdit.clear()
-        dlg.accept()
+    dlg = bringUpRepoSettings(rw)
+    assert dlg.ui.nicknameEdit.text() == "coolrepo"
+    assert dlg.ui.nicknameEdit.isClearButtonEnabled()
+    dlg.ui.nicknameEdit.clear()
+    dlg.accept()
     assert "TestGitRepository" in mainWindow.windowTitle()
 
 

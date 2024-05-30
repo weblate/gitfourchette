@@ -313,12 +313,6 @@ class MainWindow(QMainWindow):
                 statusTip=self.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
             ),
 
-            ActionDef(
-                self.tr("Rename Repo..."),
-                self.renameRepo,
-                statusTip=self.tr("Give this repo a nickname (within {app} only)").format(app=qAppName()),
-            ),
-
             ActionDef.SEPARATOR,
 
             TaskBook.action(self, tasks.RecallCommit),
@@ -517,7 +511,6 @@ class MainWindow(QMainWindow):
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw), shortcuts=GlobalShortcuts.openRepoFolder),
             ActionDef(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw)),
-            ActionDef(self.tr("Set Nickname...", "RepoTabCM"), lambda: self.renameRepo(rw)),
             TaskBook.action(rw, tasks.EditRepoSettings),
             ActionDef.SEPARATOR,
             ActionDef(superprojectLabel, lambda: self.openRepoNextTo(rw, superproject), enabled=bool(superproject)),
@@ -675,10 +668,6 @@ class MainWindow(QMainWindow):
         text = rw.workdir
         QApplication.clipboard().setText(text)
         rw.statusMessage.emit(clipboardStatusMessage(text))
-
-    @needRepoWidget
-    def renameRepo(self, rw: RepoWidget):
-        rw.renameRepo()
 
     @needRepoWidget
     def pushBranch(self, rw: RepoWidget):

@@ -814,29 +814,6 @@ class RepoWidget(QStackedWidget):
         self.diffView.clear()  # might as well free up any memory taken by DiffView document
         self.diffHeader.setText(" ")
 
-    def renameRepo(self):
-        def onAccept(newName):
-            settings.history.setRepoNickname(self.workdir, newName)
-            settings.history.write()
-            self.nameChange.emit()
-
-        currentNickname = settings.history.getRepoNickname(self.workdir)
-        dlg = showTextInputDialog(
-            self,
-            self.tr("Edit repo nickname"),
-            self.tr("Enter a new nickname for {0}.<br>This will only be visible within {app} on your machine."
-                    ).format(bquoe(currentNickname), app=qAppName()),
-            currentNickname,
-            onAccept,
-            placeholderText=self.tr("Leave blank to clear the nickname."),
-            okButtonText=self.tr("Set nickname", "edit repo nickname"))
-
-        buttonBox: QDialogButtonBox = dlg.buttonBox
-        resetSB = QDialogButtonBox.StandardButton.RestoreDefaults
-        buttonBox.addButton(resetSB)
-        buttonBox.button(resetSB).clicked.connect(lambda: onAccept(""))
-        buttonBox.button(resetSB).clicked.connect(dlg.close)
-
     def loadPatchInNewWindow(self, patch: Patch, locator: NavLocator):
         try:
             diffDocument = DiffDocument.fromPatch(patch, locator)
@@ -1146,7 +1123,7 @@ class RepoWidget(QStackedWidget):
         # Unload the repo
         self.cleanup(message=message, allowAutoReload=False)
 
-        # Surround repo name with parentheses in tab widget and title bar
+        # Update window chrome
         self.nameChange.emit()
 
     def refreshPrefs(self, *prefDiff: str):
