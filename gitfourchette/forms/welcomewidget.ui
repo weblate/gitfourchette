@@ -178,6 +178,12 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>recentReposButton</tabstop>
+  <tabstop>newRepoButton</tabstop>
+  <tabstop>openRepoButton</tabstop>
+  <tabstop>cloneRepoButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
  <slots>
