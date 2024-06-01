@@ -298,6 +298,23 @@ class CallbackAccumulator(QTimer):
         return wrapper
 
 
+class WidgetProxy(QObject):
+    def __init__(self, onFail, parent: QWidget):
+        super().__init__(parent)
+        self.widget = None
+        self.onFail = onFail
+
+    def __getattr__(self, name: str):
+        def wrapper(*args, **kwargs):
+            widget = self.widget
+            if widget is not None:
+                boundMethod = getattr(widget, name)
+                boundMethod(*args, **kwargs)
+            else:
+                self.onFail()
+        return wrapper
+
+
 def makeInternalLink(urlAuthority: str, urlPath: str = "", urlFragment: str = "", **urlQueryItems) -> str:
     url = QUrl()
     url.setScheme(APP_URL_SCHEME)

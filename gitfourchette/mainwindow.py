@@ -1,10 +1,10 @@
-from contextlib import suppress
 import copy
 import gc
 import logging
-import re
 import os
-from typing import Literal, Type
+import re
+from contextlib import suppress
+from typing import Literal
 
 import pygit2
 
@@ -12,11 +12,10 @@ from gitfourchette import settings
 from gitfourchette import tasks
 from gitfourchette.application import GFApplication
 from gitfourchette.diffview.diffview import DiffView
-from gitfourchette.exttools import openInTextEditor
+from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.aboutdialog import showAboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.maintoolbar import MainToolBar
-from gitfourchette.forms.openrepoprogress import OpenRepoProgress
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.welcomewidget import WelcomeWidget
@@ -25,10 +24,9 @@ from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
-from gitfourchette.tasks import TaskInvoker, TaskBook, RepoTask
+from gitfourchette.tasks import TaskBook
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
-from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +37,7 @@ class MainWindow(QMainWindow):
     welcomeStack: QStackedWidget
     welcomeWidget: WelcomeWidget
     tabs: QTabWidget2
+    repoWidgetProxy: WidgetProxy
 
     recentMenu: QMenu
     repoMenu: QMenu
@@ -49,6 +48,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+
+        self.repoWidgetProxy = WidgetProxy(self.onNoCurrentRepoWidget, self)
 
         self.welcomeStack = QStackedWidget(self)
         self.setCentralWidget(self.welcomeStack)
@@ -88,8 +89,8 @@ class MainWindow(QMainWindow):
         self.mainToolBar = MainToolBar(self)
         self.addToolBar(self.mainToolBar)
         self.mainToolBar.openDialog.connect(self.openDialog)
-        self.mainToolBar.push.connect(self.pushBranch)
-        self.mainToolBar.reveal.connect(self.openRepoFolder)
+        self.mainToolBar.push.connect(self.repoWidgetProxy.startPushFlow)
+        self.mainToolBar.reveal.connect(lambda: self.repoWidgetProxy.openRepoFolder)  #???
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
 
         self.fillGlobalMenuBar()
@@ -187,6 +188,10 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Menu bar
 
+    def onNoCurrentRepoWidget(self):
+        showInformation(self, self.tr("No repository"),
+                        self.tr("Please open a repository before performing this action."))
+
     def fillGlobalMenuBar(self):
         menubar = self.globalMenuBar
         menubar.clear()
@@ -195,14 +200,12 @@ class MainWindow(QMainWindow):
         editMenu = menubar.addMenu(self.tr("&Edit"))
         viewMenu = menubar.addMenu(self.tr("&View"))
         repoMenu = menubar.addMenu(self.tr("&Repo"))
-        branchMenu = menubar.addMenu(self.tr("&Branch"))
         helpMenu = menubar.addMenu(self.tr("&Help"))
 
         fileMenu.setObjectName("MWFileMenu")
         editMenu.setObjectName("MWEditMenu")
         viewMenu.setObjectName("MWViewMenu")
         repoMenu.setObjectName("MWRepoMenu")
-        branchMenu.setObjectName("MWBranchMenu")
         helpMenu.setObjectName("MWHelpMenu")
 
         self.repoMenu = repoMenu
@@ -230,12 +233,6 @@ class MainWindow(QMainWindow):
                       icon="folder-open-recent",
                       statusTip=self.tr("List of recently opened Git repos"),
                       objectName="RecentMenuPlaceholder"),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.NewCommit, "&C"),
-            TaskBook.action(self, tasks.AmendCommit, "&A"),
-            TaskBook.action(self, tasks.NewStash),
 
             ActionDef.SEPARATOR,
 
@@ -285,78 +282,7 @@ class MainWindow(QMainWindow):
 
         ActionDef.addToQMenu(
             repoMenu,
-
-            TaskBook.action(self, tasks.NewRemote),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.EditRepoSettings),
-
-            ActionDef(
-                self.tr("&Local Config Files"),
-                submenu=[
-                    ActionDef(".gitignore", self.openGitignore),
-                    ActionDef("config", self.openLocalConfig),
-                    ActionDef("exclude", self.openLocalExclude),
-                ]),
-
-            ActionDef(
-                self.tr("&Open Repo Folder"),
-                self.openRepoFolder,
-                shortcuts=GlobalShortcuts.openRepoFolder,
-                statusTip=self.tr("Open this repo’s working directory in the system’s file manager"),
-            ),
-
-            ActionDef(
-                self.tr("Cop&y Repo Path"),
-                self.copyRepoPath,
-                statusTip=self.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
-            ),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.RecallCommit),
-
-            ActionDef.SEPARATOR,
-
-            ActionDef(
-                self.tr("&Refresh"),
-                self.refreshRepo,
-                shortcuts=GlobalShortcuts.refresh,
-                icon="SP_BrowserReload",
-                statusTip=self.tr("Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
-            ),
-
-            ActionDef(
-                self.tr("Reloa&d"),
-                self.hardRefresh,
-                shortcuts="Ctrl+F5",
-                statusTip=self.tr("Reopen the repo from scratch"),
-            ),
-        )
-
-        # -------------------------------------------------------------
-
-        ActionDef.addToQMenu(
-            branchMenu,
-
-            TaskBook.action(self, tasks.NewBranchFromHead, "&B"),
-
-            ActionDef.SEPARATOR,
-
-            ActionDef(
-                self.tr("&Push Branch..."),
-                self.pushBranch,
-                "vcs-push",
-                shortcuts=GlobalShortcuts.pushBranch,
-                statusTip=self.tr("Upload your commits on the current branch to the remote server"),
-            ),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.FetchRemoteBranch, "&F"),
-
-            TaskBook.action(self, tasks.FastForwardBranch, "&d"),
+            *RepoWidget.repositoryContextMenu(self.repoWidgetProxy, isProxy=True),
         )
 
         # -------------------------------------------------------------
@@ -388,6 +314,28 @@ class MainWindow(QMainWindow):
         if settings.DEVDEBUG:
             a = viewMenu.addAction(self.tr("Navigation Log"), lambda: logger.info(self.currentRepoWidget().navHistory.getTextLog()))
             a.setShortcut("Alt+Down")
+
+        ActionDef.addToQMenu(
+            viewMenu,
+
+            ActionDef.SEPARATOR,
+
+            ActionDef(
+                self.tr("&Refresh"),
+                self.repoWidgetProxy.refreshRepo,
+                shortcuts=GlobalShortcuts.refresh,
+                icon="SP_BrowserReload",
+                statusTip=self.tr(
+                    "Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
+            ),
+
+            ActionDef(
+                self.tr("Reloa&d"),
+                lambda: self.repoWidgetProxy.primeRepo(force=True),
+                shortcuts="Ctrl+F5",
+                statusTip=self.tr("Reopen the repo from scratch"),
+            ),
+        )
 
         self.showStatusBarAction = viewMenu.findChild(QAction, "ShowStatusBarAction")
         self.showMenuBarAction = viewMenu.findChild(QAction, "ShowMenuBarAction")
@@ -451,12 +399,13 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Tabs
 
-    def currentRepoWidget(self) -> RepoWidget:
-        return self.tabs.currentWidget()
+    def currentRepoWidget(self) -> RepoWidget | None:
+        return self.repoWidgetProxy.widget
 
     def onTabCurrentWidgetChanged(self):
-        w = self.currentRepoWidget()
-        if not w:
+        w: RepoWidget = self.tabs.currentWidget()
+        self.repoWidgetProxy.widget = w
+        if w is None:
             self.mainToolBar.observeRepoWidget(None)
             return
 
@@ -497,30 +446,18 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
 
-        superproject = rw.state.superproject if rw.state else settings.history.getRepoSuperproject(rw.workdir)
-        if superproject:
-            superprojectName = settings.history.getRepoTabName(superproject)
-            superprojectLabel = self.tr("Open Superproject {0}").format(lquo(superprojectName))
-        else:
-            superprojectLabel = self.tr("Open Superproject")
+        anyOtherLoadedTabs = any(t is not rw and t.state for t in self.tabs.widgets())
 
         ActionDef.addToQMenu(
             menu,
             ActionDef(self.tr("Close Tab"), lambda: self.closeTab(i), shortcuts=QKeySequence.StandardKey.Close),
-            ActionDef(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i)),
+            ActionDef(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i), enabled=self.tabs.count() > 1),
+            ActionDef(self.tr("Unload Other Tabs"), lambda: self.unloadOtherTabs(i), enabled=self.tabs.count() > 1 and anyOtherLoadedTabs),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Open Repo Folder"), lambda: self.openRepoFolder(rw), shortcuts=GlobalShortcuts.openRepoFolder),
-            ActionDef(self.tr("Copy Repo Path"), lambda: self.copyRepoPath(rw)),
-            TaskBook.action(rw, tasks.EditRepoSettings),
+            ActionDef(self.tr("Configure Tabs..."), lambda: openPrefsDialog(self, "tabCloseButton")),
             ActionDef.SEPARATOR,
-            ActionDef(superprojectLabel, lambda: self.openRepoNextTo(rw, superproject), enabled=bool(superproject)),
-            ActionDef.SEPARATOR
+            *rw.repositoryPathsMenu(),
         )
-
-        if rw.state:
-            ActionDef.addToQMenu(menu, ActionDef(self.tr("Unload", "RepoTabCM"), lambda: self.unloadTab(i)))
-        else:
-            ActionDef.addToQMenu(menu, ActionDef(self.tr("Load", "RepoTabCM"), lambda: self.loadTab(i)))
 
         return menu
 
@@ -537,7 +474,7 @@ class MainWindow(QMainWindow):
             return
         rw: RepoWidget = self.tabs.widget(i)
         if settings.prefs.doubleClickTabOpensFolder:
-            self.openRepoFolder(rw)
+            rw.openRepoFolder()
 
     # -------------------------------------------------------------------------
     # Repo loading
@@ -637,73 +574,6 @@ class MainWindow(QMainWindow):
         self.tabs.requestAttention(i)
 
     # -------------------------------------------------------------------------
-    # Repo menu callbacks
-
-    @staticmethod
-    def needRepoWidget(callback):
-        def wrapper(self, rw=None, *args, **kwargs):
-            if rw is None:
-                rw = self.currentRepoWidget()
-            if rw:
-                callback(self, rw, *args, **kwargs)
-            else:
-                showInformation(self, self.tr("No repository"),
-                                self.tr("Please open a repository before performing this action."))
-        return wrapper
-
-    @needRepoWidget
-    def refreshRepo(self, rw: RepoWidget):
-        rw.refreshRepo()
-
-    @needRepoWidget
-    def hardRefresh(self, rw: RepoWidget):
-        rw.primeRepo(force=True)
-
-    @needRepoWidget
-    def openRepoFolder(self, rw: RepoWidget):
-        openFolder(rw.workdir)
-
-    @needRepoWidget
-    def copyRepoPath(self, rw: RepoWidget):
-        text = rw.workdir
-        QApplication.clipboard().setText(text)
-        rw.statusMessage.emit(clipboardStatusMessage(text))
-
-    @needRepoWidget
-    def pushBranch(self, rw: RepoWidget):
-        rw.startPushFlow()
-
-    def _openLocalConfigFile(self, fullPath: str):
-        def createAndOpen():
-            open(fullPath, "ab").close()
-            openInTextEditor(self, fullPath)
-
-        if not os.path.exists(fullPath):
-            basename = os.path.basename(fullPath)
-            askConfirmation(
-                self,
-                self.tr("Open {0}").format(tquo(basename)),
-                paragraphs(
-                    self.tr("File {0} does not exist.").format(bquo(fullPath)),
-                    self.tr("Do you want to create it?")),
-                okButtonText=self.tr("Create {0}").format(lquo(basename)),
-                callback=createAndOpen)
-        else:
-            openInTextEditor(self, fullPath)
-
-    @needRepoWidget
-    def openGitignore(self, rw: RepoWidget):
-        self._openLocalConfigFile(os.path.join(rw.repo.workdir, ".gitignore"))
-
-    @needRepoWidget
-    def openLocalConfig(self, rw: RepoWidget):
-        self._openLocalConfigFile(os.path.join(rw.repo.path, "config"))
-
-    @needRepoWidget
-    def openLocalExclude(self, rw: RepoWidget):
-        self._openLocalConfigFile(os.path.join(rw.repo.path, "info", "exclude"))
-
-    # -------------------------------------------------------------------------
     # View menu
     
     def toggleStatusBar(self):
@@ -718,24 +588,20 @@ class MainWindow(QMainWindow):
         if not settings.prefs.showMenuBar:
             self.showMenuBarHiddenWarning()
 
-    @needRepoWidget
-    def selectUncommittedChanges(self, rw: RepoWidget):
-        rw.jump(NavLocator.inWorkdir())
+    def selectUncommittedChanges(self):
+        self.repoWidgetProxy.jump(NavLocator.inWorkdir())
 
-    @needRepoWidget
-    def selectHead(self, rw: RepoWidget):
-        rw.jump(NavLocator.inRef("HEAD"))
+    def selectHead(self):
+        self.repoWidgetProxy.jump(NavLocator.inRef("HEAD"))
 
-    @needRepoWidget
-    def focusSidebar(self, rw: RepoWidget):
-        rw.sidebar.setFocus()
+    def focusSidebar(self):
+        self.repoWidgetProxy.sidebar.setFocus()
 
-    @needRepoWidget
-    def focusGraph(self, rw: RepoWidget):
-        rw.graphView.setFocus()
+    def focusGraph(self):
+        self.repoWidgetProxy.graphView.setFocus()
 
-    @needRepoWidget
-    def focusFiles(self, rw: RepoWidget):
+    def focusFiles(self):
+        rw = self.repoWidgetProxy
         if rw.navLocator.context == NavContext.COMMITTED:
             rw.committedFiles.setFocus()
         elif rw.navLocator.context == NavContext.STAGED:
@@ -743,8 +609,8 @@ class MainWindow(QMainWindow):
         else:
             rw.dirtyFiles.setFocus()
 
-    @needRepoWidget
-    def focusDiff(self, rw: RepoWidget):
+    def focusDiff(self):
+        rw = self.repoWidgetProxy
         if rw.specialDiffView.isVisibleTo(rw):
             rw.specialDiffView.setFocus()
         elif rw.conflictView.isVisibleTo(rw):
@@ -752,13 +618,11 @@ class MainWindow(QMainWindow):
         else:
             rw.diffView.setFocus()
 
-    @needRepoWidget
-    def nextFile(self, rw: RepoWidget):
-        rw.selectNextFile(True)
+    def nextFile(self):
+        self.repoWidgetProxy.selectNextFile(True)
 
-    @needRepoWidget
-    def previousFile(self, rw: RepoWidget):
-        rw.selectNextFile(False)
+    def previousFile(self):
+        self.repoWidgetProxy.selectNextFile(False)
 
     # -------------------------------------------------------------------------
     # Help menu
@@ -947,6 +811,24 @@ class MainWindow(QMainWindow):
         self.saveSession()
         gc.collect()
 
+    def unloadOtherTabs(self, index: int):
+        # First, set this tab as active so an active tab that gets closed doesn't trigger other tabs to load.
+        self.tabs.setCurrentIndex(index)
+
+        # Now close all tabs in reverse order but skip the index we want to keep.
+        numUnloaded = 0
+        for i in range(self.tabs.count()):
+            if i == index:
+                continue
+            rw: RepoWidget = self.tabs.widget(i)
+            if rw.state:
+                numUnloaded += 1
+            rw.cleanup()
+
+        self.statusBar2.showMessage(self.tr("%n background tabs unloaded.", "", numUnloaded))
+        gc.collect()
+        self.statusBar2.update()
+
     def closeAllTabs(self):
         start = self.tabs.count() - 1
         with QSignalBlockerContext(self.tabs):  # Don't let awaken unloaded tabs
@@ -959,16 +841,6 @@ class MainWindow(QMainWindow):
         index = self.tabs.indexOf(rw)
         title = escamp(rw.getTitle())
         self.tabs.setTabText(index, title)
-
-    def unloadTab(self, index: int):
-        rw : RepoWidget = self.tabs.widget(index)
-        rw.cleanup()
-        gc.collect()
-        self.refreshTabText(rw)
-
-    def loadTab(self, index: int):
-        rw : RepoWidget = self.tabs.widget(index)
-        rw.primeRepo()
 
     def openRepoNextTo(self, rw, path: str, locator: NavLocator = NavLocator()):
         index = self.tabs.indexOf(rw)
@@ -1059,19 +931,21 @@ class MainWindow(QMainWindow):
         addULToMessageBox(qmb, [f"<b>{compactPath(path)}</b><br>{exc}" for path, exc in errors])
         qmb.show()
 
-    def saveSession(self):
+    def saveSession(self, writeNow=False):
         session = settings.Session()
         session.windowGeometry = bytes(self.saveGeometry())
         session.splitterSizes = self.sharedSplitterSizes.copy()
         session.tabs = [self.tabs.widget(i).workdir for i in range(self.tabs.count())]
         session.activeTabIndex = self.tabs.currentIndex()
-        session.write()
+        session.setDirty()
+        if writeNow:
+            session.write()
 
     def closeEvent(self, event: QCloseEvent):
         QApplication.instance().removeEventFilter(self)
 
         # Save session before closing all tabs.
-        self.saveSession()
+        self.saveSession(writeNow=True)
 
         # Close all tabs so RepoWidgets release all their resources.
         # Important so unit tests wind down properly!

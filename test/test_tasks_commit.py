@@ -257,12 +257,12 @@ def testCommitDialogJumpsToWorkdir(tempDir, mainWindow):
     oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
     rw.jump(NavLocator.inCommit(oid1))
 
-    triggerMenuAction(mainWindow.menuBar(), r"file/commit")
+    triggerMenuAction(mainWindow.menuBar(), r"repo/commit")
     findQDialog(rw, r"commit").reject()
     assert NavLocator.inUnstaged("a/a1.txt").isSimilarEnoughTo(rw.navLocator)
 
     rw.jump(NavLocator.inStaged("a/a1.txt"))
-    triggerMenuAction(mainWindow.menuBar(), r"file/commit")
+    triggerMenuAction(mainWindow.menuBar(), r"repo/commit")
     findQDialog(rw, r"commit").reject()
     assert NavLocator.inStaged("a/a1.txt").isSimilarEnoughTo(rw.navLocator)
 

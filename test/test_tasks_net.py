@@ -264,7 +264,7 @@ def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
         repo.edit_upstream_branch("master", "")
 
     rw = mainWindow.openRepo(wd)
-    triggerMenuAction(mainWindow.menuBar(), "branch/fetch")
+    triggerMenuAction(mainWindow.menuBar(), "repo/fetch")
     acceptQMessageBox(rw, "n.t tracking.+upstream")
 
 
@@ -330,7 +330,7 @@ def testPushNoBranch(tempDir, mainWindow):
     with RepoContext(wd) as repo:
         repo.checkout_commit(Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0"))
     rw = mainWindow.openRepo(wd)
-    triggerMenuAction(mainWindow.menuBar(), "branch/push")
+    triggerMenuAction(mainWindow.menuBar(), "repo/push")
     acceptQMessageBox(rw, "switch to.+local branch")
 
 

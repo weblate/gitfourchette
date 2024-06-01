@@ -231,8 +231,8 @@ class TrTables:
                 "The diff will use a yellow and blue color scheme instead."),
 
             "tabCloseButton": translate("Prefs", "Show tab close button"),
-            "expandingTabs": translate("Prefs", "Tab bar takes all available width"),
-            "autoHideTabs": translate("Prefs", "Auto-hide tab bar if there’s just 1 tab"),
+            "expandingTabs": translate("Prefs", "Expand tabs to available width"),
+            "autoHideTabs": translate("Prefs", "Auto-hide tabs if only one repo is open"),
             "doubleClickTabOpensFolder": translate("Prefs", "Double-click a tab to open repo folder"),
 
             "chronologicalOrder": translate("Prefs", "Sort commits"),

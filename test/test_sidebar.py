@@ -70,7 +70,7 @@ def testSidebarCollapsePersistent(tempDir, mainWindow):
     assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
 
     # Test that it's still hidden after a soft refresh
-    mainWindow.refreshRepo()
+    mainWindow.repoWidgetProxy.refreshRepo()
     assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
 
     # Test that it's still hidden after closing and reopening

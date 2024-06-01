@@ -602,20 +602,16 @@ def testRecallCommit(tempDir, mainWindow):
     assert rw.navLocator.commit == lostId
 
 
-@pytest.mark.parametrize("method", ["sidebar", "menubar"])
-def testFastForward(tempDir, mainWindow, method):
+def testFastForward(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:
         repo.checkout_local_branch("no-parent")
         repo.edit_upstream_branch("no-parent", "origin/master")
     rw = mainWindow.openRepo(wd)
 
-    if method == "sidebar":
-        node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
-        menu = rw.sidebar.makeNodeMenu(node)
-        triggerMenuAction(menu, "fast.forward")
-    elif method == "menubar":
-        triggerMenuAction(mainWindow.menuBar(), "branch/fast.forward")
+    node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fast.forward")
 
     assert rw.navLocator.commit == Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
 

@@ -30,7 +30,7 @@ class ActionDef:
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
     isSection: bool = False
 
-    def toQAction(self, parent: QMenu | QToolBar) -> QAction:
+    def toQAction(self, parent: QWidget) -> QAction:
         if self.submenu:
             raise NotImplementedError("ActionDef.toQAction cannot be used for submenus")
 

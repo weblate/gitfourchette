@@ -43,6 +43,7 @@ class Sidebar(QTreeView):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.repoWidget = parent
 
         self.setObjectName("Sidebar")
         self.setMouseTracking(True)  # for eye icons
@@ -115,9 +116,7 @@ class Sidebar(QTreeView):
         isHidden = model.isExplicitlyHidden(node)
 
         if item == EItem.WorkdirHeader:
-            actions += [
-                TaskBook.action(self, EditRepoSettings),
-            ]
+            actions += self.repoWidget.repositoryContextMenu()
 
         elif item == EItem.UncommittedChanges:
             actions += [

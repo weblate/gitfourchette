@@ -45,7 +45,7 @@ def testHiddenBranchGotDeleted(tempDir, mainWindow, closeAndReopen, branchName, 
     if closeAndReopen:
         mainWindow.openRepo(wd)
     else:
-        mainWindow.refreshRepo()
+        mainWindow.repoWidgetProxy.refreshRepo()
 
 
 def testStayOnFileAfterPartialPatchDespiteExternalChange(tempDir, mainWindow):

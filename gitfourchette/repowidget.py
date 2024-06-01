@@ -10,7 +10,7 @@ from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.diffview.specialdiff import SpecialDiffError, ShouldDisplayPatchAsImageDiff
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
-from gitfourchette.exttools import PREFKEY_MERGETOOL
+from gitfourchette.exttools import PREFKEY_MERGETOOL, openInTextEditor
 from gitfourchette.filelists.committedfiles import CommittedFiles
 from gitfourchette.filelists.dirtyfiles import DirtyFiles
 from gitfourchette.filelists.filelist import FileList
@@ -98,6 +98,13 @@ class RepoWidget(QStackedWidget):
             return os.path.normpath(self.state.repo.workdir)
         else:
             return self.pendingPath
+
+    @property
+    def superproject(self):
+        if self.state:
+            return self.state.superproject
+        else:
+            return settings.history.getRepoSuperproject(self.workdir)
 
     def __init__(self, parent: QWidget, pendingWorkdir: str, lazy=False):
         super().__init__(parent)
@@ -802,7 +809,8 @@ class RepoWidget(QStackedWidget):
                 placeholder.ui.loadButton.setText(self.tr("Try to reload"))
 
             # Clean up status bar if there were repo-specific warnings in it
-            self.refreshWindowChrome()
+            if self.isVisible():
+                self.refreshWindowChrome()
 
     def clearDiffView(self, sourceFileList: FileList | None = None):
         # Ignore clear request if it comes from a widget that doesn't have focus
@@ -851,6 +859,48 @@ class RepoWidget(QStackedWidget):
     def openSubmoduleFolder(self, submoduleKey: str):
         path = self.repo.get_submodule_workdir(submoduleKey)
         openFolder(path)
+
+    def openRepoFolder(self):
+        openFolder(self.workdir)
+
+    def openSuperproject(self):
+        superproject = self.superproject
+        if superproject:
+            self.openRepo.emit(superproject, NavLocator())
+        else:
+            showInformation(self, self.tr("Open Superproject"), self.tr("This repository does not have a superproject."))
+
+    def copyRepoPath(self):
+        text = self.workdir
+        QApplication.clipboard().setText(text)
+        self.statusMessage.emit(clipboardStatusMessage(text))
+
+    def openGitignore(self):
+        self._openLocalConfigFile(os.path.join(self.repo.workdir, ".gitignore"))
+
+    def openLocalConfig(self):
+        self._openLocalConfigFile(os.path.join(self.repo.path, "config"))
+
+    def openLocalExclude(self):
+        self._openLocalConfigFile(os.path.join(self.repo.path, "info", "exclude"))
+
+    def _openLocalConfigFile(self, fullPath: str):
+        def createAndOpen():
+            open(fullPath, "ab").close()
+            openInTextEditor(self, fullPath)
+
+        if not os.path.exists(fullPath):
+            basename = os.path.basename(fullPath)
+            askConfirmation(
+                self,
+                self.tr("Open {0}").format(tquo(basename)),
+                paragraphs(
+                    self.tr("File {0} does not exist.").format(bquo(fullPath)),
+                    self.tr("Do you want to create it?")),
+                okButtonText=self.tr("Create {0}").format(lquo(basename)),
+                callback=createAndOpen)
+        else:
+            openInTextEditor(self, fullPath)
 
     # -------------------------------------------------------------------------
     # Conflicts
@@ -1219,3 +1269,81 @@ class RepoWidget(QStackedWidget):
 
     def setDiffStackPage(self, p: DiffStackPage):
         self.diffStack.setCurrentIndex(self._diffStackPageValues.index(p))
+
+    # -------------------------------------------------------------------------
+
+    def repositoryPathsMenu(self, isProxy=False):
+        superprojectLabel = self.tr("Open Superproject")
+        superprojectEnabled = True
+
+        if not isProxy:
+            superproject = self.superproject
+            superprojectEnabled = bool(superproject)
+            if superprojectEnabled:
+                superprojectName = settings.history.getRepoTabName(superproject)
+                superprojectLabel = self.tr("Open Superproject {0}").format(lquo(superprojectName))
+
+        return [
+            ActionDef(
+                self.tr("&Open Repo Folder"),
+                self.openRepoFolder,
+                shortcuts=GlobalShortcuts.openRepoFolder,
+                statusTip=self.tr("Open this repo’s working directory in the system’s file manager"),
+            ),
+
+            ActionDef(
+                self.tr("Cop&y Repo Path"),
+                self.copyRepoPath,
+                statusTip=self.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
+            ),
+
+            ActionDef(
+                superprojectLabel,
+                self.openSuperproject,
+                enabled=superprojectEnabled,
+            ),
+        ]
+
+    def repositoryContextMenu(self, isProxy=False):
+        return [
+            TaskBook.action(self, tasks.NewCommit, "&C"),
+            TaskBook.action(self, tasks.AmendCommit, "&A"),
+            TaskBook.action(self, tasks.NewStash),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(self, tasks.NewBranchFromHead, "&B"),
+
+            ActionDef(
+                self.tr("&Push Branch..."),
+                self.startPushFlow,
+                "vcs-push",
+                shortcuts=GlobalShortcuts.pushBranch,
+                statusTip=self.tr("Upload your commits on the current branch to the remote server"),
+            ),
+
+            TaskBook.action(self, tasks.PullBranch, "&L"),
+            TaskBook.action(self, tasks.FetchRemote, "&F"),
+
+            TaskBook.action(self, tasks.NewRemote),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(self, tasks.RecallCommit),
+
+            ActionDef.SEPARATOR,
+
+            *RepoWidget.repositoryPathsMenu(self, isProxy),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(self, tasks.EditRepoSettings),
+
+            ActionDef(
+                self.tr("&Local Config Files"),
+                submenu=[
+                    ActionDef(".gitignore", self.openGitignore),
+                    ActionDef("config", self.openLocalConfig),
+                    ActionDef("exclude", self.openLocalExclude),
+                ]),
+        ]

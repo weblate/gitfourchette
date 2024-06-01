@@ -63,7 +63,7 @@ def testUnloadRepoWhenFolderGoesMissing(tempDir, mainWindow):
 
     os.rename(wd, os.path.normpath(wd) + "-2")
 
-    mainWindow.refreshRepo()
+    mainWindow.repoWidgetProxy.refreshRepo()
     assert not rw.isLoaded
 
     urp: UnloadedRepoPlaceholder = rw.placeholderWidget
