@@ -54,13 +54,13 @@ class AboutDialog(QDialog):
         self.ui.header.setOpenExternalLinks(True)
 
         self.ui.mugshot.setText("")
-        self.ui.mugshot.setPixmap(QPixmap("assets:icons/mug.png"))
+        self.ui.mugshot.setPixmap(QPixmap("assets:icons/mug"))
 
         self.ui.aboutBlurb.setText(blurb)
         self.ui.aboutBlurb.setOpenExternalLinks(True)
 
-        pixmap = QPixmap("assets:icons/gitfourchette.png")
-        pixmap.setDevicePixelRatio(5)
+        pixmap = QPixmap("assets:icons/gitfourchette")
+        pixmap.setDevicePixelRatio(4)
         self.ui.iconLabel.setPixmap(pixmap)
 
         qtBindingSuffix = ""

@@ -1,4 +1,4 @@
-# <img src="gitfourchette/assets/icons/gitfourchette-banner.png" alt="GitFourchette" height=72>
+# <img src="gitfourchette/assets/icons/gitfourchette.png" alt="GitFourchette" height=32> GitFourchette
 
 GitFourchette: The comfortable git GUI.
 

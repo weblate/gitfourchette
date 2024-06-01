@@ -1,5 +1,6 @@
 from gitfourchette.forms.ui_welcomewidget import Ui_WelcomeWidget
 from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 
 
 class WelcomeWidget(QFrame):
@@ -13,13 +14,17 @@ class WelcomeWidget(QFrame):
         self.ui = Ui_WelcomeWidget()
         self.ui.setupUi(self)
 
-        logoText = self.ui.logoLabel.text().format(app=qAppName())
-        logoPixmap = QPixmap("assets:icons/gitfourchette-banner.png")
+        logoPixmap = QPixmap("assets:icons/gitfourchette")
         logoPixmap.setDevicePixelRatio(4)
-        self.ui.logoLabel.setText(logoText)
+        self.ui.logoLabel.setText(qAppName())
         self.ui.logoLabel.setPixmap(logoPixmap)
 
-        welcomeText = self.ui.welcomeLabel.text().format(app=qAppName(), version=QApplication.applicationVersion())
+        defaultFont = self.ui.welcomeLabel.font()
+        fs1 = int(defaultFont.pointSizeF() * 1.3)
+        fs2 = int(defaultFont.pointSizeF() * 1.8)
+        appText = f"<span style='font-weight: bold; color: #407cbf; font-size: {fs2}pt'>{qAppName()}</span>"
+        welcomeText = self.ui.welcomeLabel.text()
+        welcomeText = f"<html style='font-size: {fs1}pt;'>" + welcomeText.format(app=appText)
         self.ui.welcomeLabel.setText(welcomeText)
 
         self.ui.newRepoButton.clicked.connect(self.newRepo)

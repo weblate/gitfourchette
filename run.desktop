@@ -1,0 +1,19 @@
+#!/usr/bin/env xdg-open
+#
+# Convenience desktop file to run the app from source.
+# For packaging, you should use pkg/gitfourchette.desktop
+#
+# To get the icon to show up on Wayland:
+#     mkdir -p ~/.local/share/icons
+#     cp gitfourchette/assets/icons/gitfourchette.png ~/.local/share/icons/io.jor.gitfourchette.png
+
+[Desktop Entry]
+Exec=bash -c 'PYTHONPATH="$(dirname "%k")" python3 -m gitfourchette'
+Icon=io.jor.gitfourchette
+Name=GitFourchette (from source)
+Comment=The comfy Git UI
+Comment[fr]=L’interface Git tout confort
+StartupNotify=true
+Type=Application
+Categories=Development;RevisionControl;
+Keywords=git;

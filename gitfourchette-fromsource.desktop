@@ -1,9 +1,0 @@
-# Convenience desktop file to run the app from source.
-# For packaging, you should use packaging/gitfourchette.desktop
-
-[Desktop Entry]
-Exec=bash -c 'PYTHONPATH="$(dirname "%k")" python3 -m gitfourchette'
-Icon=gitfourchette
-Name=GitFourchette (from source)
-StartupNotify=true
-Type=Application

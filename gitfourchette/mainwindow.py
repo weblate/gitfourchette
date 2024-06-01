@@ -397,7 +397,7 @@ class MainWindow(QMainWindow):
 
         a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
         a.setMenuRole(QAction.MenuRole.AboutRole)
-        a.setIcon(QIcon("assets:icons/gitfourchette-simple.png"))
+        a.setIcon(QIcon("assets:icons/gitfourchette"))
 
         helpMenu.addSeparator()
 

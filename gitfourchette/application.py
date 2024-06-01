@@ -53,7 +53,9 @@ class GFApplication(QApplication):
         assetSearchPath = str(Path(bootScriptPath).parent / "assets")
         QDir.addSearchPath("assets", assetSearchPath)
 
-        # Set app icon (except in macOS app bundles, which automatically use the embedded .icns file)
+        # Set app icon
+        # - Except in macOS app bundles, which automatically use the embedded .icns file
+        # - The file extension must be spelled out in some environments (e.g. Windows)
         if not (MACOS and APP_FROZEN):
             self.setWindowIcon(QIcon("assets:icons/gitfourchette.png"))
 
