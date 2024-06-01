@@ -174,7 +174,7 @@ class SetUpGitIdentity(RepoTask):
             else:
                 editLevel = GitConfigLevel.GLOBAL
 
-        editPath = GitConfigHelper.path_for_level(editLevel)
+        editPath = GitConfigHelper.path_for_level(editLevel, missing_dir_ok=True)
 
         dlg = IdentityDialog(firstRun, initialName, initialEmail, editPath,
                              self.repo.has_local_identity(), self.parentWidget())

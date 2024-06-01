@@ -17,6 +17,7 @@ from os.path import (
     dirname as _dirname,
     exists as _exists,
     isabs as _isabs,
+    isdir as _isdir,
     isfile as _isfile,
     join as _joinpath,
     normpath as _normpath,
@@ -437,7 +438,7 @@ def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
 
 class GitConfigHelper:
     @staticmethod
-    def path_for_level(level: GitConfigLevel):
+    def path_for_level(level: GitConfigLevel, missing_dir_ok=False):
         if not (GitConfigLevel.PROGRAMDATA <= level <= GitConfigLevel.GLOBAL):
             raise NotImplementedError(f"unsupported level {level}")
 
@@ -446,11 +447,18 @@ class GitConfigHelper:
         # Several paths may be concatenated with GIT_PATH_LIST_SEPARATOR,
         # which git2/common.h defines as ":" (or ";" on Windows).
         # pygit2 doesn't expose this, but it appears to match os.pathsep.
-        for path in search_paths.split(_os.pathsep):
-            if path and _os.path.isdir(path):
-                break
-        else:
-            raise NotImplementedError("no valid search path found for global git config")
+        search_paths = search_paths.split(_os.pathsep)
+        search_paths = [path for path in search_paths if path]  # filter out any empty paths
+
+        if not search_paths:
+            raise KeyError(f"no search path is set up for git config level {level}")
+
+        try:
+            path = next(path for path in search_paths if _isdir(path))
+        except StopIteration:
+            if not missing_dir_ok:
+                raise FileNotFoundError(f"no parent dir exists for git config level {level}")
+            path = search_paths[0]
 
         # Select appropriate filename (see libgit2/config.h: GIT_CONFIG_FILENAME_SYSTEM, etc.)
         if level == GitConfigLevel.SYSTEM:
@@ -476,7 +484,8 @@ class GitConfigHelper:
                 raise NotImplementedError("ensure_git_config_file: unsupported level")
         except OSError:
             # Last resort, create file
-            path = GitConfigHelper.path_for_level(level)
+            path = GitConfigHelper.path_for_level(level, missing_dir_ok=True)
+            _os.makedirs(_dirname(path), exist_ok=True)
             return GitConfig(path)
 
     @staticmethod

@@ -25,7 +25,6 @@ def setUpGitConfigSearchPaths(prefix=""):
     for level in levels:
         if prefix:
             path = f"{prefix}_{level.name}"
-            os.makedirs(path, exist_ok=True)
         else:
             path = ""
         pygit2.settings.search_path[level] = path
