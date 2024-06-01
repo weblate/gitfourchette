@@ -351,7 +351,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         if icon:
             iconRect = QRect(rect)
-            iconRect.adjust(2, vMargin, 0, -2)
+            iconRect.adjust(2, vMargin, 0, -vMargin)
             iconSize = min(16, iconRect.height())
             iconRect.setWidth(iconSize)
         else:
@@ -372,7 +372,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         if icon:
             icon = stockIcon(icon, f"gray={color.name()}")
-            icon.paint(painter, iconRect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
+            icon.paint(painter, iconRect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         textRect = QRect(boxRect)
         textRect.adjust(0, 0, -hPadding, 0)
