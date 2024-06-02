@@ -1695,7 +1695,8 @@ class Repo(_VanillaRepository):
             try:
                 wd2 = GitConfig(sub_configpath)["core.worktree"]
             except KeyError:
-                return False
+                # Worktree isn't explicitly configured. Assume we can just go.
+                return True
 
             # Make it an absolute path
             if not _isabs(wd2):
@@ -1706,13 +1707,15 @@ class Repo(_VanillaRepository):
             # has to match the path we're given.
             return sub_wd == wd2
 
-        if can_restore():
-            # Restore gitlink file
-            _os.makedirs(_dirname(sub_dotgit), exist_ok=True)
-            with open(sub_dotgit, "wt") as f:
-                rel_gitdir = _relpath(sub_gitdir, sub_wd)
-                f.write(f"gitdir: {rel_gitdir}\n")
-            return True
+        if not can_restore():
+            return False
+
+        # Restore gitlink file
+        _os.makedirs(_dirname(sub_dotgit), exist_ok=True)
+        with open(sub_dotgit, "wt") as f:
+            rel_gitdir = _relpath(sub_gitdir, sub_wd)
+            f.write(f"gitdir: {rel_gitdir}\n")
+        return True
 
     @staticmethod
     def _sanitize_config_key(key: str | tuple) -> str:

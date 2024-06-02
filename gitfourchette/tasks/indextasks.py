@@ -1,3 +1,4 @@
+import logging
 from contextlib import suppress
 import os
 
@@ -10,6 +11,8 @@ from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.trtables import TrTables
 from gitfourchette.unmergedconflict import UnmergedConflict
+
+logger = logging.getLogger(__name__)
 
 
 class _BaseStagingTask(RepoTask):
@@ -47,7 +50,8 @@ class _BaseStagingTask(RepoTask):
         raise AbortTask(message)
 
     def filterSubmodules(self, patches: list[Patch]) -> list[Patch]:
-        submos = [p for p in patches if p.delta.new_file.mode == FileMode.COMMIT]
+        submos = [p for p in patches
+                  if FileMode.COMMIT in (p.delta.new_file.mode, p.delta.old_file.mode)]
         return submos
 
 
@@ -130,9 +134,6 @@ class DiscardFiles(_BaseStagingTask):
 
         yield from self.flowEnterWorkerThread()
 
-        if submos:
-            pass
-
         paths = [patch.delta.new_file.path for patch in patches
                  if patch not in submos]
         if paths:
@@ -141,14 +142,24 @@ class DiscardFiles(_BaseStagingTask):
 
         if submos:
             for patch in submos:
-                path = patch.delta.new_file.path
-                submo = self.repo.submodules[path]
-                resetTo = submo.head_id
-                with RepoContext(self.repo.in_workdir(path)) as subRepo:
-                    # Reset HEAD to the target commit
-                    subRepo.reset(resetTo, ResetMode.HARD)
-                    # Nuke uncommitted files as well
-                    subRepo.checkout_head(strategy=CheckoutStrategy.REMOVE_UNTRACKED | CheckoutStrategy.FORCE | CheckoutStrategy.RECREATE_MISSING)
+                self.restoreSubmodule(patch)
+
+    def restoreSubmodule(self, patch: Patch):
+        path = patch.delta.new_file.path
+        submodule = self.repo.submodules[path]
+
+        if patch.delta.status == DeltaStatus.DELETED:
+            didRestore = self.repo.restore_submodule_gitlink(path)
+            if not didRestore:
+                # TODO: more user-friendly error if couldn't restore?
+                logger.warning(f"Couldn't restore gitlink for submodule {path}")
+
+        with RepoContext(self.repo.in_workdir(path), RepositoryOpenFlag.NO_SEARCH) as subRepo:
+            # Reset HEAD to the target commit
+            subRepo.reset(submodule.head_id, ResetMode.HARD)
+            # Nuke uncommitted files as well
+            subRepo.checkout_head(strategy=CheckoutStrategy.REMOVE_UNTRACKED | CheckoutStrategy.FORCE | CheckoutStrategy.RECREATE_MISSING)
+            # TODO: Recurse?
 
 
 class UnstageFiles(_BaseStagingTask):
