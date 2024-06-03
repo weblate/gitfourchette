@@ -375,6 +375,18 @@ def lerp(v1, v2, c=.5, cmin=0, cmax=1):
     return v
 
 
+def writeTempFile(namePattern: str, data: bytes | str) -> QTemporaryFile:
+    assert "XXX" in namePattern
+    tempFile = QTemporaryFile(os.path.join(qTempDir(), namePattern))
+    tempFile.open(QFile.OpenModeFlag.WriteOnly)
+    if type(data) is str:
+        data = data.encode('utf-8')
+    tempFile.write(data)
+    tempFile.close()
+    tempFile.setAutoRemove(True)
+    return tempFile
+
+
 class DocumentLinks:
     AUTHORITY = "adhoc"
 

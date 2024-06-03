@@ -4,7 +4,7 @@ If SVG icons don't show up, you may need to install the 'qt6-svg' package.
 import os
 
 from gitfourchette.qt import *
-from gitfourchette.toolbox.qtutils import isDarkTheme
+from gitfourchette.toolbox.qtutils import isDarkTheme, writeTempFile
 
 _stockIconCache = {}
 _tempSvgFiles = []
@@ -58,14 +58,8 @@ def remapSvgColors(name: str, colorRemapTable: str) -> QIcon:
         # No changes, return original icon
         return QIcon(path)
 
-    template = os.path.join(qTempDir(), "icon-XXXXXX.svg")
-    tempFile = QTemporaryFile(template)
-    tempFile.open(QFile.OpenModeFlag.WriteOnly)
-    tempFile.write(data.encode('utf-8'))
-    tempFile.close()
-    tempFile.setAutoRemove(True)
-
     # Keep the temp file object around so that QIcon can read off it as needed
+    tempFile = writeTempFile("icon-XXXXXX.svg", data)
     _tempSvgFiles.append(tempFile)
 
     icon = QIcon(tempFile.fileName())

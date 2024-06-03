@@ -58,6 +58,7 @@ from .qtutils import (
     WidgetProxy,
     lerp,
     DocumentLinks,
+    writeTempFile,
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide,
