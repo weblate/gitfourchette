@@ -25,7 +25,7 @@ def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
 
 
 @pytest.mark.parametrize("method", ["menubar", "toolbar"])
-def testNavigation(mainWindow, tempDir, method):
+def testNavigation(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
     rw = mainWindow.openRepo(wd)
@@ -131,7 +131,7 @@ def testNavigation(mainWindow, tempDir, method):
     assertHistoryMatches(rw, historyFork)
 
 
-def testNavigationButtonsEnabledState(mainWindow, tempDir):
+def testNavigationButtonsEnabledState(tempDir, mainWindow):
     tb = mainWindow.mainToolBar
     backButton = tb.widgetForAction(tb.backAction)
     forwardButton = tb.widgetForAction(tb.forwardAction)

@@ -1,7 +1,9 @@
 from __future__ import annotations
+
+import gc
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Type
-import logging
 
 # Import as few internal modules as possible here to avoid premature initialization
 # from cascading imports before the QApplication has booted.
@@ -154,10 +156,13 @@ class GFApplication(QApplication):
 
     def endSession(self):
         from gitfourchette import settings
+        from gitfourchette.toolbox.iconbank import clearStockIconCache
         if settings.prefs.isDirty():
             settings.prefs.write()
         if settings.history.isDirty():
             settings.history.write()
+        clearStockIconCache()  # release icon temp files
+        gc.collect()  # clean up Repository file handles (for Windows unit tests)
         self.tempDir.remove()
 
     def bootUi(self):

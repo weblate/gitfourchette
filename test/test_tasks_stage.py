@@ -107,6 +107,7 @@ def testDiscardFileModificationWithoutAffectingStagedChange(tempDir, mainWindow,
     assert rw.repo.status() == {"a/a1.txt": FileStatus.INDEX_MODIFIED}
 
 
+@pytest.mark.skipif(WINDOWS, reason="file modes are flaky on Windows")
 def testDiscardModeChange(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     path = f"{wd}/a/a1.txt"

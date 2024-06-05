@@ -88,11 +88,9 @@ class PushDialog(QDialog):
         rbName = self.currentRemoteBranchFullName
         lbUpstream = localBranch.upstream.shorthand if localBranch.upstream else "???"
 
-        metrics = self.ui.trackingLabel.fontMetrics()
-
-        lbName = hquo(metrics.elidedText(lbName, Qt.TextElideMode.ElideMiddle, 150))
-        rbName = hquo(metrics.elidedText(rbName, Qt.TextElideMode.ElideMiddle, 150))
-        lbUpstream = hquo(metrics.elidedText(lbUpstream, Qt.TextElideMode.ElideMiddle, 150))
+        lbName = hquoe(lbName)
+        rbName = hquoe(rbName)
+        lbUpstream = hquoe(lbUpstream)
 
         hasUpstream = bool(localBranch.upstream)
         isTrackingHomeBranch = hasUpstream and localBranch.upstream.shorthand == self.currentRemoteBranchFullName

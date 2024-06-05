@@ -127,6 +127,7 @@ def testConflictDoesntPreventManipulatingIndexOnOtherFile(tempDir, mainWindow):
     assert readFile(f"{wd}/b/b1.txt").decode() == "b1\nb1\nstaged change\n"
 
 
+@pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
 def testMergeTool(tempDir, mainWindow):
     noopMergeToolPath = getTestDataPath("editor-shim.sh")
     mergeToolPath = getTestDataPath("merge-shim.sh")
@@ -207,6 +208,7 @@ def testMergeTool(tempDir, mainWindow):
     assert not rw.repo.index.conflicts
 
 
+@pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
 def testMergeToolInBackgroundTab(tempDir, mainWindow):
     mergeToolPath = getTestDataPath("merge-shim.sh")
     scratchPath = f"{tempDir.name}/external editor scratch file.txt"

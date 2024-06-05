@@ -202,7 +202,7 @@ def testCopyCommitHash(tempDir, mainWindow, method):
     assert QApplication.clipboard().text() == str(oid1)
 
 
-def testRefSortFavorsHeadBranch(mainWindow, tempDir):
+def testRefSortFavorsHeadBranch(tempDir, mainWindow):
     masterId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     wd = unpackRepo(tempDir)
@@ -221,7 +221,7 @@ def testRefSortFavorsHeadBranch(mainWindow, tempDir):
     assert amendedIndex.row() < masterIndex.row()
 
 
-def testCommitToolTip(mainWindow, tempDir):
+def testCommitToolTip(tempDir, mainWindow):
     masterId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)

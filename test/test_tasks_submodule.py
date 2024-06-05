@@ -53,6 +53,9 @@ def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     else:
         raise NotImplementedError("unknown method")
 
+    if WINDOWS:
+        submoAbsPath = submoAbsPath.replace("\\", "/")
+
     assert mainWindow.currentRepoWidget() is not rw
     assert mainWindow.currentRepoWidget().repo.workdir == submoAbsPath + "/"
 

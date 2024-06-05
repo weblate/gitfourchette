@@ -247,7 +247,7 @@ class CloneDialog(QDialog):
         if existingPath:
             qfd.setDirectory(str(existingPath.parent))
 
-        qfd.fileSelected.connect(self.ui.pathEdit.setText)
+        qfd.fileSelected.connect(lambda path: self.ui.pathEdit.setText(str(Path(path))))
         qfd.show()
 
     def enableInputs(self, enable):

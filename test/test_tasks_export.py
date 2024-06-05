@@ -6,7 +6,7 @@ from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
 
 
-def testExportPatchFromWorkdir(mainWindow, tempDir):
+def testExportPatchFromWorkdir(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(f"{wd}/master.txt", "some changes\n")
     writeFile(f"{wd}/untracked-file.txt", "hello\n")
@@ -32,7 +32,7 @@ def testExportPatchFromWorkdir(mainWindow, tempDir):
     assert qlvGetRowData(rw.dirtyFiles) == ["master.txt", "untracked-file.txt"]
 
 
-def testExportPatchFromEmptyWorkdir(mainWindow, tempDir):
+def testExportPatchFromEmptyWorkdir(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
@@ -41,7 +41,7 @@ def testExportPatchFromEmptyWorkdir(mainWindow, tempDir):
     acceptQMessageBox(rw, "patch is empty")
 
 
-def testExportPatchFromCommit(mainWindow, tempDir):
+def testExportPatchFromCommit(tempDir, mainWindow):
     oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -63,7 +63,7 @@ def testExportPatchFromCommit(mainWindow, tempDir):
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
-def testExportPatchFromStash(mainWindow, tempDir):
+def testExportPatchFromStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
@@ -90,7 +90,7 @@ def testExportPatchFromStash(mainWindow, tempDir):
     ("7f822839a2fe9760f386cbbbcb3f92c5fe81def7", "b/b2.txt"),
     ("f73b95671f326616d66b2afb3bdfcdbbce110b44", "a/a1"),
 ])
-def testExportPatchFromFileList(mainWindow, tempDir, commitHex, path):
+def testExportPatchFromFileList(tempDir, mainWindow, commitHex, path):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 

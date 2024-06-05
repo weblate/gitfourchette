@@ -20,12 +20,16 @@ def testBackupDiscardedPatches(tempDir, mainWindow):
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")
     writeFile(F"{wd}/SomeNewFile.txt", "this file is untracked")
     writeFile(F"{wd}/MassiveFile.txt", "." * (1024 + 1))
-    os.symlink(f"{wd}/this/path/does/not/exist", f"{wd}/symlink")
+    if not WINDOWS:
+        os.symlink(f"{wd}/this/path/does/not/exist", f"{wd}/symlink")
 
     mainWindow.onAcceptPrefsDialog({"maxTrashFileKB": 1})
     rw = mainWindow.openRepo(wd)
 
-    assert set(qlvGetRowData(rw.dirtyFiles)) == {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt", "[link] symlink"}
+    setOfDirtyFiles = {"a/a1.txt", "a/a2.txt", "MassiveFile.txt", "SomeNewFile.txt", "[link] symlink"}
+    if WINDOWS:
+        setOfDirtyFiles.remove("[link] symlink")
+    assert set(qlvGetRowData(rw.dirtyFiles)) == setOfDirtyFiles
     assert qlvGetRowData(rw.stagedFiles) == []
 
     trash = Trash.instance()
@@ -35,11 +39,12 @@ def testBackupDiscardedPatches(tempDir, mainWindow):
     QTest.keySequence(rw.dirtyFiles, QKeySequence("Ctrl+A,Del"))
     acceptQMessageBox(rw, "really discard changes")
 
-    assert len(trash.trashFiles) == 3
+    assert len(trash.trashFiles) == 3 if not WINDOWS else 2
     assert any("a1.txt" in f for f in trash.trashFiles)
     assert any("SomeNewFile.txt" in f for f in trash.trashFiles)
-    assert any("symlink" in f for f in trash.trashFiles)
-    assert os.path.islink(next(f for f in trash.trashFiles if "symlink" in f))
+    if not WINDOWS:
+        assert any("symlink" in f for f in trash.trashFiles)
+        assert os.path.islink(next(f for f in trash.trashFiles if "symlink" in f))
     assert not any("a2.txt" in f for f in trash.trashFiles)  # file deletions shouldn't be backed up
     assert not any("MassiveFile.txt" in f for f in trash.trashFiles)  # file is too large to be backed up
 

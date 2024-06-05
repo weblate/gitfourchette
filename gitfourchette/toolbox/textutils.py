@@ -6,7 +6,15 @@ from gitfourchette.qt import *
 from html import escape as escape
 
 
-_generalFontMetrics = QFontMetrics(QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont))
+_elideMetrics: QFontMetrics | None = None
+
+
+def getElideMetrics() -> QFontMetrics:
+    # Cannot initialize _elideMetrics too early for Windows offscreen unit tests
+    global _elideMetrics
+    if _elideMetrics is None:
+        _elideMetrics = QFontMetrics(QFontDatabase.systemFont(QFontDatabase.SystemFont.GeneralFont))
+    return _elideMetrics
 
 
 def messageSummary(body: str, elision=" [\u2026]"):
@@ -126,8 +134,9 @@ def btag(text):
 
 
 def elide(text: str, mode: Qt.TextElideMode = Qt.TextElideMode.ElideMiddle, ems: int = 20):
-    maxWidth = _generalFontMetrics.horizontalAdvance(ems * 'M')
-    return _generalFontMetrics.elidedText(text, mode, maxWidth)
+    metrics = getElideMetrics()
+    maxWidth = metrics.horizontalAdvance(ems * 'M')
+    return metrics.elidedText(text, mode, maxWidth)
 
 
 def clipboardStatusMessage(text: str):

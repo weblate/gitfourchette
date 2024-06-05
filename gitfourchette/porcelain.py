@@ -1785,7 +1785,6 @@ class RepoContext:
             self.repo.index.write()
         # repo.free() is necessary for correct test teardown on Windows
         self.repo.free()
-        del self.repo
         self.repo = None
 
 

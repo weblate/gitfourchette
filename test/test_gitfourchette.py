@@ -52,6 +52,7 @@ def testDisplayAllNestedUntrackedFiles(tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == []
 
 
+@pytest.mark.skipif(WINDOWS, reason="Windows blocks external processes from touching the repo while we have a handle on it")
 def testUnloadRepoWhenFolderGoesMissing(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -252,7 +253,7 @@ def testNewNestedRepo(tempDir, mainWindow):
 
 
 @pytest.mark.parametrize("method", ["specialdiff", "graphcm"])
-def testTruncatedHistory(mainWindow, tempDir, method):
+def testTruncatedHistory(tempDir, mainWindow, method):
     bottomCommit = Oid(hex="42e4e7c5e507e113ebbb7801b16b52cf867b7ce1")
 
     mainWindow.onAcceptPrefsDialog({"maxCommits": 5})

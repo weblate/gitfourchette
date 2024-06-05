@@ -21,7 +21,7 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
     wd = unpackRepo(tempDir, renameTo="unpacked-repo")
     subWd, _ = reposcenario.submodule(wd, True)  # spice it up with a submodule
     bare = makeBareCopy(wd, addAsRemote="", preFetch=False)
-    target = f"{tempDir.name}/the-clone"
+    target = str(Path(f"{tempDir.name}", "the-clone"))
 
     assert not mainWindow.currentRepoWidget()  # no repo opened yet
 

@@ -1,5 +1,7 @@
 import shutil
 
+import pytest
+
 from . import reposcenario
 from .util import *
 from gitfourchette.nav import NavLocator
@@ -18,6 +20,7 @@ def testEmptyDiffEmptyFile(tempDir, mainWindow):
     assert re.search(r"empty file", rw.specialDiffView.toPlainText(), re.I)
 
 
+@pytest.mark.skipif(WINDOWS, reason="file modes are flaky on Windows")
 def testEmptyDiffWithModeChange(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     os.chmod(f"{wd}/a/a1", 0o755)
@@ -85,6 +88,7 @@ def testPartialPatchSpacesInFilename(tempDir, mainWindow):
     assert stagedBlob.data == b"line A\n"
 
 
+@pytest.mark.skipif(WINDOWS, reason="file modes are flaky on Windows")
 def testPartialPatchPreservesExecutableFileMode(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
 
@@ -315,6 +319,10 @@ def testDiffStrayLineEndings(tempDir, mainWindow):
     writeFile(f"{wd}/crlf.txt", "hi\r\nhow you doin\r\nbye")
     writeFile(f"{wd}/cr.txt", "ancient mac file\r")
 
+    if WINDOWS:
+        with RepoContext(wd) as repo:
+            repo.config['core.autocrlf'] = False
+
     rw = mainWindow.openRepo(wd)
 
     rw.jump(NavLocator.inUnstaged(path="crlf.txt"))
@@ -367,7 +375,7 @@ def testDiffVeryLongLines(tempDir, mainWindow):
     assert rw.diffView.toPlainText().rstrip() == "@@ -0,0 +1 @@\n" + contents.rstrip()
 
 
-def testImageDiff(mainWindow, tempDir):
+def testImageDiff(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     shutil.copyfile(getTestDataPath("image1.png"), f"{wd}/image.png")
 
