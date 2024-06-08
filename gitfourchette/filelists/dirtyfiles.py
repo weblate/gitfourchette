@@ -96,7 +96,7 @@ class DirtyFiles(FileList):
                     isSection=True
                 ),
                 ActionDef(
-                    self.tr("Stage Updated HEAD in %n Submodules", "please omit %n in singular form", n),
+                    self.tr("Stage %n Submodules", "please omit %n in singular form", n),
                     self.stage,
                 ),
                 ActionDef(

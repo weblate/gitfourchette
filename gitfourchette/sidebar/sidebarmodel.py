@@ -687,7 +687,8 @@ class SidebarModel(QAbstractItemModel):
                 text = "<p style='white-space: pre'>"
                 text += self.tr("{0} (submodule)").format(f"<b>{escape(node.data)}</b>")
                 text += "\n" + self.tr("Workdir: {0}").format(escape(self.repo.listall_submodules_dict()[node.data]))
-                text += "\n" + self.tr("URL: {0}").format(escape(self.repo.submodules[node.data].url))
+                url = self.repo.submodules[node.data].url or self.tr("[not set]")
+                text += "\n" + self.tr("URL: {0}").format(escape(url))
                 if node.warning:
                     text += "<br>\u26a0 " + node.warning
                 return text

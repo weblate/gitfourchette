@@ -60,8 +60,6 @@ class SpecialDiffError(Exception):
 
     @staticmethod
     def noChange(delta: DiffDelta):
-        from gitfourchette.tasks import AbsorbSubmodule
-
         message = translate("Diff", "File contents didn’t change.")
         details = []
         longform = []
@@ -77,18 +75,7 @@ class SpecialDiffError(Exception):
 
         if not oldFileExists:
             if delta.new_file.mode == FileMode.TREE:
-                treePath = os.path.normpath(delta.new_file.path)
-                treeName = os.path.basename(treePath)
-                message = translate("Diff", "This untracked folder is the root of another Git repository.")
-
-                # TODO: if we had the full path to the root repo, we could just make a standard file link, and we wouldn't need the "opensubfolder" authority
-                prompt1 = translate("Diff", "Open {0} in new tab").format(bquo(treeName))
-                openLink = makeInternalLink("opensubfolder", treePath)
-                longform.append(f"<center><p><a href='{openLink}'>{prompt1}</a></p></center>")
-
-                prompt = translate("Diff", "Absorb {0} as submodule").format(bquo(treeName))
-                taskLink = AbsorbSubmodule.makeInternalLink(path=treePath)
-                longform.append(f"<center><p><a href='{taskLink}'>{prompt}</a></p></center>")
+                return SpecialDiffError.treeDiff(delta)
             elif delta.status in [DeltaStatus.ADDED, DeltaStatus.UNTRACKED]:
                 message = translate("Diff", "New empty file.")
             else:
@@ -173,58 +160,70 @@ class SpecialDiffError(Exception):
                 f"{oldHumanSize} &rarr; {newHumanSize}")
 
     @staticmethod
+    def treeDiff(delta):
+        from gitfourchette.tasks import AbsorbSubmodule
+
+        treePath = os.path.normpath(delta.new_file.path)
+        treeName = os.path.basename(treePath)
+        message = translate("Diff", "This untracked folder is the root of another Git repository.")
+
+        # TODO: if we had the full path to the root repo, we could just make a standard file link, and we wouldn't need the "opensubfolder" authority
+        prompt1 = translate("Diff", "Open {0}").format(bquo(treeName))
+        openLink = makeInternalLink("opensubfolder", treePath)
+
+        prompt2 = translate("Diff", "Absorb {0} as submodule").format(bquo(treeName))
+        taskLink = AbsorbSubmodule.makeInternalLink(path=treePath)
+
+        return SpecialDiffError(
+            message,
+            linkify(prompt1, openLink),
+            longform=toRoomyUL([linkify(prompt2, taskLink)]))
+
+    @staticmethod
     def submoduleDiff(repo: Repo, patch: Patch, locator: NavLocator):
-        from gitfourchette.tasks import DiscardFiles
+        from gitfourchette.tasks.indextasks import DiscardFiles
 
-        submoduleName = patch.delta.new_file.path
-        with suppress(KeyError):  # name may not be available when viewing a past commit about a deleted submodule
-            submoduleName = repo.get_submodule_name_from_path(submoduleName)
-        shortName = os.path.basename(submoduleName)
+        smDiff = repo.get_submodule_diff(patch)
+        openLink = QUrl.fromLocalFile(smDiff.workdir)
 
-        localPath = repo.in_workdir(patch.delta.new_file.path)
-        openLink = QUrl.fromLocalFile(localPath)
-        stillExists = os.path.isdir(localPath)
-        isDeletion = patch.delta.status == DeltaStatus.DELETED
-
-        isHastyAdd = False
-        if patch.delta.status == DeltaStatus.ADDED and locator.context == NavContext.STAGED:
-            isHastyAdd = True
-
-        if isDeletion:
+        if smDiff.is_del:
             titleText = translate("Diff", "Submodule {0} was removed.")
-        elif patch.delta.status == DeltaStatus.ADDED:
+        elif smDiff.is_add:
             titleText = translate("Diff", "Submodule {0} was added.")
         else:
             titleText = translate("Diff", "Submodule {0} was updated.")
-        titleText = titleText.format(bquo(shortName))
+        titleText = titleText.format(bquo(smDiff.short_name))
 
         specialDiff = SpecialDiffError(titleText)
         longformParts = []
 
-        oldId, newId, dirty = parse_submodule_patch(patch.text)
-        headDidMove = oldId != newId
-
         # Create old/new table if the submodule's HEAD commit was moved
-        if headDidMove and not isDeletion:
-            targets = [shortHash(oldId), shortHash(newId)]
+        if smDiff.head_did_move and not smDiff.is_del:
+            targets = [shortHash(smDiff.old_id), shortHash(smDiff.new_id)]
             messages = ["", ""]
 
             # Show additional details about the commits if there's still a workdir for this submo
-            if stillExists:
-                # Make links to specific commits
-                for i, h in enumerate([oldId, newId]):
-                    if h != NULL_OID:
-                        targets[i] = linkify(shortHash(h), f"{openLink.toString()}#{h}")
+            if smDiff.still_exists:
+                try:
+                    with RepoContext(smDiff.workdir, RepositoryOpenFlag.NO_SEARCH) as subRepo:
+                        for i, h in enumerate([smDiff.old_id, smDiff.new_id]):
+                            if h == NULL_OID:
+                                continue
 
-                # Show commit summaries
-                with RepoContext(localPath, RepositoryOpenFlag.NO_SEARCH) as subRepo:
-                    for i, h in enumerate([oldId, newId]):
-                        with suppress(LookupError, GitError):
-                            m = subRepo[h].peel(Commit).message
-                            m = messageSummary(m)[0]
-                            m = elide(m, Qt.TextElideMode.ElideRight, 25)
-                            m = hquo(m)
-                            messages[i] = m
+                            # Link to specific commit
+                            targets[i] = linkify(shortHash(h), f"{openLink.toString()}#{h}")
+
+                            # Get commit summary
+                            with suppress(LookupError, GitError):
+                                m = subRepo[h].peel(Commit).message
+                                m = messageSummary(m)[0]
+                                m = elide(m, Qt.TextElideMode.ElideRight, 25)
+                                m = hquo(m)
+                                messages[i] = m
+                except GitError:
+                    # RepoContext may fail if the submodule couldn't be opened for any reason.
+                    # Don't show an error for this, show the diff document anyway
+                    pass
 
             oldText = translate("Diff", "Old:")
             newText = translate("Diff", "New:")
@@ -239,33 +238,49 @@ class SpecialDiffError(Exception):
                 intro = translate("Diff", "<b>HEAD</b> was moved to another commit:")
             longformParts.append(f"{intro}<p>{table}</p>")
 
-        # Tell about any uncommitted changes
-        if dirty:
-            discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
+        if locator.context.isWorkdir():
+            if smDiff.is_del:
+                m = ""
+                if smDiff.is_registered:
+                    m = translate("Diff", "To delete this submodule completely, you should also "
+                                          "<b>remove it from <tt>.gitmodules</tt></b>.")
+                else:
+                    m = translate("Diff", "To delete this submodule completely, make sure to commit "
+                                          "the modification to <tt>.gitmodules</tt> at the same time "
+                                          "as the submodule folder itself.")
+                longformParts.append(m)
 
-            if headDidMove:
-                lead = translate("Diff", "In addition, there are <b>uncommitted changes</b> in the submodule.")
-            else:
-                lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
-            callToAction = linkify(translate("Diff", "[Open] the submodule to commit the changes, or [discard] them."),
-                                   openLink, discardLink)
-            longformParts.append(f"{lead}<br>{callToAction}")
+            if smDiff.is_add:
+                if smDiff.is_registered:
+                    m = translate("Diff", "To complete the addition of this submodule to your repository, "
+                                          "make sure to <b>commit the modification to <tt>.gitmodules</tt></b> "
+                                          "at the same time as the submodule folder itself.")
+                else:
+                    m = translate("Diff", "<b>IMPORTANT:</b> To complete the addition of this submodule "
+                                          "to your repository, you should register it in <tt>.gitmodules</tt>."
+                                  ).format(hquo(smDiff.short_name), hquo(os.path.basename(repo.repo_name())))
+                    m = "<img src='assets:icons/achtung'> " + m
+                longformParts.insert(0, m)
+
+            # Tell about any uncommitted changes
+            if smDiff.dirty:
+                discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
+
+                if smDiff.head_did_move:
+                    lead = translate("Diff", "In addition, there are <b>uncommitted changes</b> in the submodule.")
+                else:
+                    lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
+                m = translate("Diff", "[Open] the submodule to commit the changes, "
+                                      "or [reset] the submodule to a clean state.")
+                m = linkify(m, openLink, discardLink)
+                m = f"{lead}<br>{m}"
+                longformParts.append(m)
 
         # Add link to open the submodule as a subtitle
-        if stillExists:
-            subtitle = translate("Diff", "Open submodule {0}").format(bquo(shortName))
+        if smDiff.still_exists:
+            subtitle = translate("Diff", "Open submodule {0}").format(bquo(smDiff.short_name))
             subtitle = linkify(subtitle, openLink)
             specialDiff.details = subtitle
-
-        if isHastyAdd:
-            text = translate(
-                "Diff",
-                "<b>WARNING:</b> You’ve added another Git repo inside your current repo, "
-                "but this does not actually embed the contents of the inner repo. "
-                "So, you should register the inner repo as a <i>submodule</i>. "
-                "This way, clones of the outer repo will know how to obtain the inner repo."
-            ).format(hquo(shortName), hquo(os.path.basename(repo.repo_name())))
-            longformParts.insert(0, text)
 
         # Compile longform parts into an unordered list
         specialDiff.longform = toRoomyUL(longformParts)

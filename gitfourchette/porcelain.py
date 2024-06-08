@@ -1407,9 +1407,10 @@ class Repo(_VanillaRepository):
     def listall_submodules_dict(self, absolute_paths=False) -> dict[str, str]:
         """
         Return a dict of submodule names to paths.
+        Information is sourced from .gitmodules.
+
         You should use this instead of pygit2's Repository.listall_submodules,
-        because the latter doesn't give you information about submodule names,
-        which you need to
+        because the latter doesn't give you information about submodule names.
         """
 
         config_path = self.in_workdir(DOT_GITMODULES)
@@ -1429,13 +1430,6 @@ class Repo(_VanillaRepository):
                 submos[name] = path
 
         return submos
-
-    def get_submodule_name_from_path(self, submodule_path: str) -> str:
-        d = self.listall_submodules_dict()
-        try:
-            return next(name for name, path in d.items() if path == submodule_path)
-        except StopIteration:
-            raise KeyError(f"submodule path not found: {submodule_path}")
 
     def listall_initialized_submodule_names(self) -> list[str]:
         config = self.config
@@ -1470,6 +1464,34 @@ class Repo(_VanillaRepository):
             # TODO: pygit2 bug: Submodule.open is broken (that's why we recreate a Repo)
             with RepoContext(path, RepositoryOpenFlag.NO_SEARCH) as subrepo:
                 frontier.extend(gen_frontier(subrepo))
+
+    def get_submodule_diff(self, patch: Patch) -> SubmoduleDiff:
+        assert FileMode.COMMIT in (patch.delta.new_file.mode, patch.delta.old_file.mode)
+
+        path = patch.delta.new_file.path
+
+        try:
+            name = next(n for n, p in self.listall_submodules_dict().items() if p == path)
+            is_registered = True
+        except StopIteration:
+            # Name may not be available when viewing a past commit about a deleted submodule,
+            # or a tree that isn't registered as a submodule yet
+            name = path  # Fallback to inner path as the name
+            is_registered = False
+
+        abs_path = self.in_workdir(path)
+        still_exists = _isdir(abs_path)
+        old_id, new_id, dirty = parse_submodule_patch(patch.text)
+
+        return SubmoduleDiff(
+            name=name,
+            workdir=abs_path,
+            still_exists=still_exists,
+            status=patch.delta.status,
+            old_id=old_id,
+            new_id=new_id,
+            dirty=dirty,
+            is_registered=is_registered)
 
     def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
         """
@@ -1663,7 +1685,8 @@ class Repo(_VanillaRepository):
             self.index.add(DOT_GITMODULES)
 
         if did_delete:
-            _shutil.rmtree(self.in_workdir(inner_w))
+            if _exists(self.in_workdir(inner_w)):  # don't raise FileNotFoundError if workdir is already gone
+                _shutil.rmtree(self.in_workdir(inner_w))
             self.index.remove(inner_w)
 
         self.index.write()
@@ -1840,3 +1863,39 @@ class DiffConflict:
     @property
     def added_by_both(self):
         return self.sides == ConflictSides.ADDED_BY_BOTH
+
+
+@_dataclasses.dataclass(frozen=True)
+class SubmoduleDiff:
+    name: str
+    workdir: str
+    status: DeltaStatus
+    old_id: Oid
+    new_id: Oid
+    dirty: bool
+    still_exists: bool
+    is_registered: bool
+
+    @staticmethod
+    def is_submodule_patch(patch: Patch):
+        return FileMode.COMMIT in (patch.delta.new_file.mode, patch.delta.old_file.mode)
+
+    @property
+    def short_name(self):
+        return self.name
+
+    @property
+    def head_did_move(self):
+        return self.old_id != self.new_id
+
+    @property
+    def is_trivially_indexable(self):
+        return self.head_did_move and self.status == DeltaStatus.MODIFIED
+
+    @property
+    def is_add(self):
+        return self.status == DeltaStatus.ADDED
+
+    @property
+    def is_del(self):
+        return self.status == DeltaStatus.DELETED

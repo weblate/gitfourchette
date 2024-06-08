@@ -75,7 +75,7 @@ class StagedFiles(FileList):
                 ),
 
                 ActionDef(
-                    self.tr("Unstage Updated HEAD in %n Submodules", "please omit %n in singular form", n),
+                    self.tr("Unstage %n Submodules", "please omit %n in singular form", n),
                     self.unstage,
                 ),
 

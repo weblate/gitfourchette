@@ -104,7 +104,7 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
     assert rw.repo.status() == {"submodir": FileStatus.WT_MODIFIED}  # shouldn't do anything (the actual app will emit a beep)
 
     if method == "link":
-        qteClickLink(special, r"discard them\.")
+        qteClickLink(special, r"reset")
     else:
         doDiscard(rw, method)
 

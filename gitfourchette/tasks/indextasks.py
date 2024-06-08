@@ -49,9 +49,9 @@ class _BaseStagingTask(RepoTask):
         message += toTightUL(p.delta.new_file.path for p in conflicts)
         raise AbortTask(message)
 
-    def filterSubmodules(self, patches: list[Patch]) -> list[Patch]:
-        submos = [p for p in patches
-                  if FileMode.COMMIT in (p.delta.new_file.mode, p.delta.old_file.mode)]
+    @staticmethod
+    def filterSubmodules(patches: list[Patch]) -> list[Patch]:
+        submos = [p for p in patches if SubmoduleDiff.is_submodule_patch(p)]
         return submos
 
 
@@ -65,6 +65,44 @@ class StageFiles(_BaseStagingTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.stage_files(patches)
+
+        yield from self.debriefPostStage(patches)
+
+    def debriefPostStage(self, patches: list[Patch]):
+        debrief = {}
+
+        for patch in patches:
+            newFile: DiffFile = patch.delta.new_file
+            m = ""
+
+            if newFile.mode == FileMode.TREE:
+                m = self.tr("You’ve added another Git repo inside your current repo. "
+                            "You probably want to absorb it as a submodule.")
+            elif SubmoduleDiff.is_submodule_patch(patch):
+                info = self.repo.get_submodule_diff(patch)
+                if info.is_del:
+                    m = self.tr("Don’t forget to remove the submodule from .gitmodules "
+                                "to complete its deletion.")
+                elif not info.is_trivially_indexable:
+                    m = self.tr("Uncommitted changes in the submodule "
+                                "cannot be staged from the parent repository.")
+
+            if m:
+                debrief[newFile.path] = m
+
+        if not debrief:
+            return
+
+        # For better perceived responsivity, show message box asynchronously
+        # so that RefreshRepo occurs in the background after the task completes
+        yield from self.flowEnterUiThread()
+        qmb = asyncMessageBox(
+            self.parentWidget(),
+            'information',
+            self.name(),
+            self.tr("%n items require your attention after staging:", "", len(debrief)))
+        addULToMessageBox(qmb, [f"{btag(path)}: {issue}" for path, issue in debrief.items()])
+        qmb.show()
 
 
 class DiscardFiles(_BaseStagingTask):
