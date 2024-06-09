@@ -1483,15 +1483,18 @@ class Repo(_VanillaRepository):
         still_exists = _isdir(abs_path)
         old_id, new_id, dirty = parse_submodule_patch(patch.text)
 
+        is_absorbed = still_exists and _isfile(_joinpath(abs_path, ".git"))
+
         return SubmoduleDiff(
             name=name,
             workdir=abs_path,
-            still_exists=still_exists,
             status=patch.delta.status,
             old_id=old_id,
             new_id=new_id,
             dirty=dirty,
-            is_registered=is_registered)
+            still_exists=still_exists,
+            is_registered=is_registered,
+            is_absorbed=is_absorbed)
 
     def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
         """
@@ -1875,6 +1878,7 @@ class SubmoduleDiff:
     dirty: bool
     still_exists: bool
     is_registered: bool
+    is_absorbed: bool
 
     @staticmethod
     def is_submodule_patch(patch: Patch):

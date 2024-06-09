@@ -51,6 +51,10 @@ from gitfourchette.tasks.indextasks import HardSolveConflicts, MarkConflictSolve
 from gitfourchette.tasks.indextasks import ApplyPatchFile, ApplyPatchFileReverse
 from gitfourchette.tasks.indextasks import AbortMerge
 from gitfourchette.tasks.stashtasks import NewStash, ApplyStash, DropStash
-from gitfourchette.tasks.submoduletasks import AbsorbSubmodule, RemoveSubmodule
+from gitfourchette.tasks.submoduletasks import (
+    AbsorbSubmodule,
+    RegisterSubmodule,
+    RemoveSubmodule,
+)
 
 from gitfourchette.tasks.taskbook import TaskBook

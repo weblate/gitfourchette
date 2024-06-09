@@ -194,6 +194,22 @@ def linkify(text, *hrefs: str | QUrl):
     return text
 
 
+def tagify(text, *tags: str):
+    def closingTag(tag: str):
+        rtags = tag.split("<")[1:]
+        rtags.append("")
+        return "</".join(reversed(rtags))
+
+    if "[" not in text:
+        assert "]" not in text
+        text = f"[{text}]"
+
+    for tag in tags:
+        text = text.replace("[", tag, 1).replace("]", closingTag(tag), 1)
+
+    return text
+
+
 def withUniqueSuffix(
         stem: str, reserved: Container[str] | Callable[[str], bool],
         start=2, stop=-1,

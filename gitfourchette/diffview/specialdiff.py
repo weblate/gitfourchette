@@ -172,6 +172,7 @@ class SpecialDiffError(Exception):
         openLink = makeInternalLink("opensubfolder", treePath)
 
         prompt2 = translate("Diff", "Absorb {0} as submodule").format(bquo(treeName))
+        prompt2 = translate("Diff", "Recommended action:") + " [" + prompt2 + "]"
         taskLink = AbsorbSubmodule.makeInternalLink(path=treePath)
 
         return SpecialDiffError(
@@ -187,9 +188,11 @@ class SpecialDiffError(Exception):
         openLink = QUrl.fromLocalFile(smDiff.workdir)
 
         if smDiff.is_del:
-            titleText = translate("Diff", "Submodule {0} was removed.")
+            titleText = translate("Diff", "Submodule {0} was [removed.]")
+            titleText = tagify(titleText, "<del><b>")
         elif smDiff.is_add:
-            titleText = translate("Diff", "Submodule {0} was added.")
+            titleText = translate("Diff", "Submodule {0} was [added.]")
+            titleText = tagify(titleText, "<add><b>")
         else:
             titleText = translate("Diff", "Submodule {0} was updated.")
         titleText = titleText.format(bquo(smDiff.short_name))
@@ -233,9 +236,9 @@ class SpecialDiffError(Exception):
                      "</table>")
 
             if locator.context == NavContext.UNSTAGED:
-                intro = translate("Diff", "<b>HEAD</b> was moved to another commit &ndash; you can stage this update:")
+                intro = translate("Diff", "The submodule’s <b>HEAD</b> has moved to another commit &ndash; you can stage this update:")
             else:
-                intro = translate("Diff", "<b>HEAD</b> was moved to another commit:")
+                intro = translate("Diff", "The submodule’s <b>HEAD</b> has moved to another commit:")
             longformParts.append(f"{intro}<p>{table}</p>")
 
         if locator.context.isWorkdir():
@@ -256,24 +259,30 @@ class SpecialDiffError(Exception):
                                           "make sure to <b>commit the modification to <tt>.gitmodules</tt></b> "
                                           "at the same time as the submodule folder itself.")
                 else:
-                    m = translate("Diff", "<b>IMPORTANT:</b> To complete the addition of this submodule "
-                                          "to your repository, you should register it in <tt>.gitmodules</tt>."
-                                  ).format(hquo(smDiff.short_name), hquo(os.path.basename(repo.repo_name())))
-                    m = "<img src='assets:icons/achtung'> " + m
+                    from gitfourchette.tasks import AbsorbSubmodule, RegisterSubmodule
+                    if not smDiff.is_absorbed:
+                        m = translate("Diff", "To complete the addition of this submodule to your repository, "
+                                              "you should [absorb the submodule] into the parent repository.")
+                        m = linkify(m, AbsorbSubmodule.makeInternalLink(path=patch.delta.new_file.path))
+                    else:
+                        m = translate("Diff", "To complete the addition of this submodule to your repository, "
+                                              "you should [register it in <tt>.gitmodules</tt>].")
+                        m = linkify(m, RegisterSubmodule.makeInternalLink(path=patch.delta.new_file.path))
+
+                    m = "<img src='assets:icons/achtung'> <b>" + translate("Diff", "IMPORTANT") + "</b> &ndash; " + m
                 longformParts.insert(0, m)
 
             # Tell about any uncommitted changes
             if smDiff.dirty:
                 discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
 
-                if smDiff.head_did_move:
-                    lead = translate("Diff", "In addition, there are <b>uncommitted changes</b> in the submodule.")
-                else:
-                    lead = translate("Diff", "There are <b>uncommitted changes</b> in the submodule.")
-                m = translate("Diff", "[Open] the submodule to commit the changes, "
-                                      "or [reset] the submodule to a clean state.")
+                m = translate("Diff", "The submodule has <b>uncommitted changes</b>, which cannot be committed from the parent repo.")
+                m += " " + translate("Diff", "You can:")
+                m += "<ul>"
+                m += "<li>" + translate("Diff", "[Open] the submodule and commit the changes.")
+                m += "<li>" + translate("Diff", "Or, [Reset] the submodule to a clean state.")
+                m += "</ul>"
                 m = linkify(m, openLink, discardLink)
-                m = f"{lead}<br>{m}"
                 longformParts.append(m)
 
         # Add link to open the submodule as a subtitle

@@ -65,6 +65,7 @@ from .textutils import (
     toRoomyUL,
     toTightUL,
     linkify,
+    tagify,
     clipboardStatusMessage,
     hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe,
     btag,

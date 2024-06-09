@@ -25,6 +25,7 @@ def makeBrandedDialogLayout(
     titleLayout.setContentsMargins(0, 0, 0, 0)
     title = QLabel(titleText, dialog)
     title.setTextFormat(Qt.TextFormat.RichText)
+    title.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
     tweakWidgetFont(title, 150, bold=True)
     titleLayout.addWidget(title)
 

@@ -25,7 +25,7 @@ class TaskBook:
     def retranslate(cls):
         cls.names = {
             tasks.AbortMerge: translate("task", "Abort merge"),
-            tasks.AbsorbSubmodule: translate("task", "Absorb existing repo as submodule"),
+            tasks.AbsorbSubmodule: translate("task", "Absorb submodule"),
             tasks.AcceptMergeConflictResolution: translate("task", "Accept merge conflict resolution"),
             tasks.AmendCommit: translate("task", "Amend last commit"),
             tasks.ApplyPatch: translate("task", "Apply selected text", "partial patch from selected text in diff"),
@@ -72,6 +72,7 @@ class TaskBook:
             tasks.PullBranch: translate("task", "Pull remote branch"),
             tasks.RecallCommit: translate("task", "Recall lost commit"),
             tasks.RefreshRepo: translate("task", "Refresh repo"),
+            tasks.RegisterSubmodule: translate("task", "Register submodule"),
             tasks.RemoveSubmodule: translate("task", "Remove submodule"),
             tasks.RenameBranch: translate("task", "Rename local branch"),
             tasks.RenameBranchFolder: translate("task", "Rename local branch folder"),

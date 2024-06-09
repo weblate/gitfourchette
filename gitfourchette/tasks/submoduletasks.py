@@ -2,18 +2,18 @@
 Submodule management tasks.
 """
 
-import os
+from contextlib import suppress
+from pathlib import Path
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.registersubmoduledialog import RegisterSubmoduleDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.forms.ui_absorbsubmodule import Ui_AbsorbSubmodule
-from pathlib import Path
 
 
-class AbsorbSubmodule(RepoTask):
+class RegisterSubmodule(RepoTask):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts
 
@@ -21,65 +21,64 @@ class AbsorbSubmodule(RepoTask):
         return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
 
     def flow(self, path: str):
+        yield from self._flow(path, absorb=False)
+
+    def _flow(self, path: str, absorb: bool):
         thisWD = Path(self.repo.workdir)
         thisName = thisWD.name
         subWD = Path(thisWD / path)
         subName = subWD.name
         subRemotes = {}
-        subIsBare = False
 
+        preferredRemote = ""
         with RepoContext(thisWD / subWD) as subRepo:
-            subIsBare = subRepo.is_bare
+            assert not subRepo.is_bare
             for remote in subRepo.remotes:
                 subRemotes[remote.name] = remote.url
-
-        if subIsBare:
-            message = paragraphs(
-                self.tr("{0} is a bare repository.").format(bquo(subName)),
-                self.tr("This operation does not support bare repositories."))
-            raise AbortTask(message)
+            with suppress(Exception):
+                localBranch = subRepo.branches.local[subRepo.head_branch_shorthand]
+                upstreamRemoteName = localBranch.upstream.remote_name
+                preferredRemote = subRemotes[upstreamRemoteName]
 
         if not subRemotes:
             message = paragraphs(
-                self.tr("{0} has no remotes.").format(bquo(subName)),
-                self.tr("Please open {0} and add a remote to it before absorbing it as a submodule of {1}."
-                        ).format(bquo(subName), bquo(thisName)))
+                translate("RegisterSubmoduleDialog", "{0} has no remotes."),
+                translate("RegisterSubmoduleDialog", "Please open {0} and add a remote to it "
+                                                     "before absorbing it as a submodule.")
+            ).format(bquo(subName))
             raise AbortTask(message)
 
-        dlg = QDialog(self.parentWidget())
+        dlg = RegisterSubmoduleDialog(
+            currentName="",
+            fallbackName=path,
+            superprojectName=thisName,
+            remotes=subRemotes,
+            absorb=absorb,
+            parent=self.parentWidget())
 
-        qcb = QComboBoxWithPreview(dlg)
-        for k, v in subRemotes.items():
-            qcb.addItemWithPreview(k, v, v)
+        if preferredRemote:
+            i = dlg.ui.remoteComboBox.findData(preferredRemote)
+            if i >= 0:
+                dlg.ui.remoteComboBox.setCurrentIndex(i)
 
-        ui = Ui_AbsorbSubmodule()
-        ui.setupUi(dlg)
-        dlg.ui = ui  # for easier access in unit testing
-        dlg.setWindowTitle(self.name())
-        formatWidgetText(ui.label1, sub=bquoe(subName), super=bquoe(thisName))
-        formatWidgetText(ui.label2, sub=bquoe(subName), super=bquoe(thisName))
-        ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setText(self.tr("Absorb submodule"))
-
-        ui.comboBox.parent().layout().addWidget(qcb)
-        ui.comboBox.deleteLater()
-
-        convertToBrandedDialog(dlg)
+        convertToBrandedDialog(dlg, subtitleText=lquo(path))
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
-        dlg.setMinimumWidth(512)
-        # dlg.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         dlg.show()
-        # dlg.setMinimumHeight(dlg.height())
-        dlg.setMaximumHeight(dlg.height())
 
-        # yield from self._flowConfirm(text=prompt)
         yield from self.flowDialog(dlg)
 
-        remoteUrl = qcb.currentData(Qt.ItemDataRole.UserRole)
+        remoteUrl = dlg.remoteUrl
+        customName = dlg.customName
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
         innerWD = str(subWD.relative_to(thisWD))
-        self.repo.add_inner_repo_as_submodule(innerWD, remoteUrl)
+        self.repo.add_inner_repo_as_submodule(innerWD, remoteUrl, name=customName, absorb_git_dir=absorb)
+
+
+class AbsorbSubmodule(RegisterSubmodule):
+    def flow(self, path: str):
+        yield from self._flow(path, absorb=True)
 
 
 class RemoveSubmodule(RepoTask):
