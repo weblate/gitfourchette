@@ -239,7 +239,7 @@ class RemoteLink(QObject, RemoteCallbacks):
             # Don't update UI too frequently (ease CPU load)
             return
 
-        obj = min(stats.indexed_objects, stats.total_objects)
+        obj = min(stats.received_objects, stats.total_objects)
         if obj == stats.total_objects:
             self.progress.emit(0, 0)
         else:
