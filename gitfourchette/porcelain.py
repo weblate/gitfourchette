@@ -1432,18 +1432,6 @@ class Repo(_VanillaRepository):
 
         return submos
 
-    def listall_initialized_submodule_names(self) -> list[str]:
-        config = self.config
-        submo_names = []
-        for entry in config:
-            key: str = entry.name
-            if key.startswith("submodule."):
-                i = len("submodule.")
-                j = key.rfind(".")
-                name = key[i:j]
-                submo_names.append(name)
-        return submo_names
-
     def submodule_dotgit_present(self, submo_path: str) -> bool:
         path = self.in_workdir(submo_path)
         path = _joinpath(path, ".git")

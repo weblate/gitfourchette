@@ -371,19 +371,12 @@ class SidebarModel(QAbstractItemModel):
 
         # Submodules
         with Benchmark("Submodules"):
-            initializedSubmodules = None  # defer to first loop iteration
-
             for submoduleKey, submodulePath in repo.listall_submodules_dict().items():
                 node = SidebarNode(EItem.Submodule, submoduleKey)
                 submoduleRoot.appendChild(node)
 
-                if initializedSubmodules is None:
-                    initializedSubmodules = repo.listall_initialized_submodule_names()
-
-                if submoduleKey not in initializedSubmodules:
+                if not repo.submodule_dotgit_present(submodulePath):
                     node.warning = self.tr("Submodule not initialized.")
-                elif not repo.submodule_dotgit_present(submodulePath):
-                    node.warning = self.tr("Contents missing.")
 
         with Benchmark("endResetModel" + ("[ModelTester might slow this down]" if settings.DEVDEBUG else "")):
             self.endResetModel()

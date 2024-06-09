@@ -1,12 +1,15 @@
-from gitfourchette.nav import NavLocator
-from .test_tasks_stage import doStage, doDiscard
-from . import reposcenario
-from .util import *
-from gitfourchette.sidebar.sidebarmodel import EItem
 import os
-import pytest
-import pygit2
 import shutil
+
+import pygit2
+import pytest
+from pygit2.enums import SubmoduleStatus
+
+from gitfourchette.nav import NavLocator
+from gitfourchette.sidebar.sidebarmodel import EItem
+from . import reposcenario
+from .test_tasks_stage import doStage, doDiscard
+from .util import *
 
 
 @pytest.mark.parametrize("method", ["sidebar", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
@@ -252,10 +255,11 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
 
     # Open the repo
     rw = mainWindow.openRepo(wd)
+    repo = rw.repo
 
     # At this point the submodule isn't initialized and its worktree is empty
     assert [] == os.listdir(f"{wd}/{sm}")
-    assert [] == rw.repo.listall_initialized_submodule_names()
+    assert repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED
 
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
     assert node.data == sm
@@ -263,7 +267,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     triggerMenuAction(menu, "init")
 
     assert ".git" in os.listdir(f"{wd}/{sm}")
-    assert [sm] == rw.repo.listall_initialized_submodule_names()
+    assert not repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED
 
 
 def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
