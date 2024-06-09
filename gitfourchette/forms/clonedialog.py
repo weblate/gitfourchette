@@ -79,6 +79,7 @@ class CloneDialog(QDialog):
         convertToBrandedDialog(self)
 
         self.ui.urlEdit.editTextChanged.connect(self.autoFillDownloadPath)
+        self.ui.urlEdit.setCurrentIndex(-1)  # prevent "Clear History" from installing its icon
         self.ui.urlEdit.setCurrentText(initialUrl)
         self.ui.urlEdit.setFocus()
 

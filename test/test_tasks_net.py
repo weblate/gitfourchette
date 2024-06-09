@@ -29,6 +29,8 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
     cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
     assert not cloneDialog.ui.pathEdit.text()  # path initially empty
+    assert -1 == cloneDialog.ui.urlEdit.currentIndex()
+    assert not cloneDialog.ui.urlEdit.lineEdit().text()  # URL initially empty
     assert not cloneDialog.cloneButton.isEnabled()  # disallow cloning without an URL
     assert cloneDialog.ui.recurseSubmodulesCheckBox.isChecked()
 
