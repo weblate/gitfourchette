@@ -248,8 +248,6 @@ class RepoWidget(QStackedWidget):
         self.sidebar.statusMessage.connect(self.statusMessage)
         self.sidebar.pushBranch.connect(self.startPushFlow)
         self.sidebar.toggleHideRefPattern.connect(self.toggleHideRefPattern)
-        self.sidebar.toggleHideStash.connect(self.toggleHideStash)
-        self.sidebar.toggleHideAllStashes.connect(self.toggleHideAllStashes)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
@@ -979,14 +977,6 @@ class RepoWidget(QStackedWidget):
 
         # Hide/draw refboxes for commits that are shared by non-hidden refs
         self.graphView.viewport().update()
-
-    def toggleHideStash(self, oid: Oid):
-        self.state.toggleHideStash(oid)
-        self.graphView.setHiddenCommits(self.state.hiddenCommits)
-
-    def toggleHideAllStashes(self):
-        self.state.toggleHideAllStashes()
-        self.graphView.setHiddenCommits(self.state.hiddenCommits)
 
     # -------------------------------------------------------------------------
 

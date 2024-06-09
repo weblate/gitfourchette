@@ -25,8 +25,6 @@ INVALID_MOUSEPRESS = (-1, SidebarClickZone.Invalid)
 
 class Sidebar(QTreeView):
     toggleHideRefPattern = Signal(str)
-    toggleHideStash = Signal(Oid)
-    toggleHideAllStashes = Signal()
 
     pushBranch = Signal(str)
 
@@ -348,10 +346,6 @@ class Sidebar(QTreeView):
         elif item == EItem.StashesHeader:
             actions += [
                 TaskBook.action(self, NewStash, "&S"),
-                ActionDef.SEPARATOR,
-                ActionDef(self.tr("&Hide All Stashes in Graph"),
-                          lambda: self.wantHideNode(node),
-                          checkState=[-1, 1][isHidden]),
             ]
 
         elif item == EItem.Stash:
@@ -365,13 +359,6 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 TaskBook.action(self, DropStash, self.tr("&Delete"), taskArgs=oid),
-
-                ActionDef.SEPARATOR,
-
-                ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.wantHideNode(node),
-                          checkState=[-1, 1][isHidden],
-                          statusTip=self.tr("Hide this stash from the graph")),
             ]
 
         elif item == EItem.TagsHeader:
@@ -610,15 +597,6 @@ class Sidebar(QTreeView):
 
         elif item == EItem.Remote:
             self.toggleHideRefPattern.emit(f"{RefPrefix.REMOTES}{data}/")
-            self.repaint()
-
-        elif item == EItem.Stash:
-            oid = Oid(hex=data)
-            self.toggleHideStash.emit(oid)
-            self.repaint()
-
-        elif item == EItem.StashesHeader:
-            self.toggleHideAllStashes.emit()
             self.repaint()
 
         elif item == EItem.RefFolder:

@@ -202,7 +202,6 @@ class Prefs(PrefsFile):
     flattenLanes                : bool                  = True
     animations                  : bool                  = True
     smoothScroll                : bool                  = True
-    hideStashJunkParents        : bool                  = True
     autoRefresh                 : bool                  = True
     verbosity                   : LoggingLevel          = LoggingLevel.WARNING
     forceQtApi                  : QtApiNames            = QtApiNames.QTAPI_AUTOMATIC

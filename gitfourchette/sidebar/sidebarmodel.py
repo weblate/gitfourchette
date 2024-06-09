@@ -94,8 +94,6 @@ HIDEABLE_ITEMS = sorted([
     EItem.LocalBranch,
     EItem.Remote,
     EItem.RemoteBranch,
-    EItem.Stash,
-    EItem.StashesHeader,
     EItem.RefFolder,
 ])
 
@@ -223,10 +221,6 @@ class SidebarModel(QAbstractItemModel):
             return f"{RefPrefix.REMOTES}{node.data}/" in repoState.uiPrefs.hiddenRefPatterns
         elif node.kind == EItem.RefFolder:
             return f"{node.data}/" in repoState.uiPrefs.hiddenRefPatterns
-        elif node.kind == EItem.Stash:
-            return node.data in repoState.uiPrefs.hiddenStashCommits
-        elif node.kind == EItem.StashesHeader:
-            return repoState.uiPrefs.hideAllStashes
         else:
             return False
 
@@ -234,8 +228,6 @@ class SidebarModel(QAbstractItemModel):
         repoState = self.repoState
         if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
             return node.data in repoState.hiddenRefs and node.data not in repoState.uiPrefs.hiddenRefPatterns
-        elif node.kind == EItem.Stash:
-            return repoState.uiPrefs.hideAllStashes
         else:
             return False
 

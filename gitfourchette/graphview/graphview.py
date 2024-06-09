@@ -72,7 +72,6 @@ class GraphView(QListView):
         state = self.repoWidget.state
 
         mergeActions = []
-        stashActions = []
 
         if kind == SpecialRow.UncommittedChanges:
             actions = [
@@ -110,21 +109,11 @@ class GraphView(QListView):
                         TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),
                     ]
 
-            # Stash actions
-            with suppress(KeyError, StopIteration):
-                rrc = state.reverseRefCache[oid]
-                target = next(ref for ref in rrc if ref.startswith("stash@{"))
-                stashActions = [
-                    TaskBook.action(self, ApplyStash, taskArgs=oid),
-                    TaskBook.action(self, DropStash, taskArgs=oid),
-                ]
-
             checkoutAction = TaskBook.action(self, CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
             checkoutAction.setShortcut(QKeySequence("Return"))
 
             actions = [
                 *mergeActions,
-                *stashActions,
                 ActionDef.SEPARATOR,
                 TaskBook.action(self, NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
                 TaskBook.action(self, NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),

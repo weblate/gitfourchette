@@ -229,44 +229,6 @@ def testDropStash(tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
-def testHideStash(tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-
-    with RepoContext(wd) as repo:
-        touchFile(f"{wd}/stashthis.txt")
-        stashId = repo.create_stash("purr", ["stashthis.txt"])
-
-    rw = mainWindow.openRepo(wd)
-    assert str(stashId) not in rw.state.uiPrefs.hiddenStashCommits
-    rw.jump(NavLocator.inCommit(stashId))
-    assert rw.navLocator.commit == stashId
-
-    node = rw.sidebar.findNodeByRef("stash@{0}")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "^hide")
-
-    assert str(stashId) in rw.state.uiPrefs.hiddenStashCommits
-    rw.jump(NavLocator.inCommit(stashId))
-    assert rw.graphView.selectedIndexes() == []
-    assert rw.diffBanner.isVisibleTo(rw)
-    assert re.search(r"n.t shown in the graph", rw.diffBanner.label.text(), re.I)
-
-
-def testDropHiddenStash(tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-
-    with RepoContext(wd) as repo:
-        touchFile(f"{wd}/stashthis.txt")
-        stashId = repo.create_stash("purr", ["stashthis.txt"])
-
-    rw = mainWindow.openRepo(wd)
-    rw.toggleHideStash(stashId)
-    assert str(stashId) in rw.state.uiPrefs.hiddenStashCommits
-    DropStash.invoke(rw, stashId)
-    acceptQMessageBox(rw, "really delete.+stash")
-    assert str(stashId) not in rw.state.uiPrefs.hiddenStashCommits
-
-
 def testApplyStashWithConflicts(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)

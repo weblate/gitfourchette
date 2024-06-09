@@ -1114,7 +1114,7 @@ class Repo(_VanillaRepository):
         assert not tagname.startswith("refs/")
         return self.commit_id_from_refname(RefPrefix.TAGS + tagname)
 
-    def map_refs_to_ids(self) -> dict[str, Oid]:
+    def map_refs_to_ids(self, include_stashes=False) -> dict[str, Oid]:
         """
         Return commit oids at the tip of all branches, tags, etc. in the repository.
 
@@ -1141,12 +1141,13 @@ class Repo(_VanillaRepository):
                 # Some refs might not be committish, e.g. in linux's source repo
                 _logger.info(f"{e} - Skipping ref '{ref.name}'")
 
-        for i, stash in enumerate(self.listall_stashes()):
-            try:
-                commit = self.peel_commit(stash.commit_id)
-                tips.append((f"stash@{{{i}}}", commit))
-            except InvalidSpecError as e:
-                _logger.info(f"{e} - Skipping stash '{stash.message}'")
+        if include_stashes:
+            for i, stash in enumerate(self.listall_stashes()):
+                try:
+                    commit = self.peel_commit(stash.commit_id)
+                    tips.append((f"stash@{{{i}}}", commit))
+                except InvalidSpecError as e:
+                    _logger.info(f"{e} - Skipping stash '{stash.message}'")
 
         # Always add 'HEAD' if we have one.
         # Do so *just* before reinserting the tips in chronological order below.

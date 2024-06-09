@@ -154,7 +154,6 @@ class CommitLogDelegate(QStyledItemDelegate):
             author = commit.author
             committer = commit.committer
 
-            # TODO: If is stash, getCoreStashMessage
             summaryText, contd = messageSummary(commit.message, ELISION)
             hashText = shortHash(commit.id)
             authorText = abbreviatePerson(author, settings.prefs.authorDisplayStyle)
@@ -204,7 +203,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                     summaryText += f" – {draftIntro} {tquo(draftMessage)}"
 
             elif specialRowKind == SpecialRow.TruncatedHistory:
-                if self.state.uiPrefs.hiddenRefPatterns or self.state.uiPrefs.hiddenStashCommits:
+                if self.state.uiPrefs.hiddenRefPatterns:
                     summaryText = self.tr("History truncated to {0} commits (including hidden branches)")
                 else:
                     summaryText = self.tr("History truncated to {0} commits")

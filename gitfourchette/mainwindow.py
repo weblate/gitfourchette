@@ -1075,7 +1075,6 @@ class MainWindow(QMainWindow):
 
         warnIfChanged = [
             "chronologicalOrder",  # need to reload entire commit sequence
-            "hideStashJunkParents",  # need to change hidden commit cache, TODO: I guess this one is easy to do
             "maxCommits",
         ]
 

@@ -40,9 +40,7 @@ class RepoPrefs(PrefsFile):
     draftCommitSignatureOverride: SignatureOverride = SignatureOverride.Nothing
     draftAmendMessage: str = ""
     hiddenRefPatterns: set = field(default_factory=set)
-    hiddenStashCommits: set = field(default_factory=set)
     collapseCache: set = field(default_factory=set)
-    hideAllStashes: bool = False
 
     def getParentDir(self):
         return self._parentDir
@@ -170,7 +168,7 @@ class RepoState(QObject):
         else:
             self.homeBranch = self.repo.head_branch_shorthand
 
-        refCache = self.repo.map_refs_to_ids()
+        refCache = self.repo.map_refs_to_ids(include_stashes=False)
 
         if refCache == self.refCache:
             # Make sure it's sorted in the exact same order...
@@ -321,18 +319,6 @@ class RepoState(QObject):
         self.resolveHiddenCommits()
 
     @benchmark
-    def toggleHideStash(self, stashId: Oid):
-        toggleSetElement(self.uiPrefs.hiddenStashCommits, str(stashId))
-        self.uiPrefs.setDirty()
-        self.resolveHiddenCommits()
-
-    @benchmark
-    def toggleHideAllStashes(self):
-        self.uiPrefs.hideAllStashes = not self.uiPrefs.hideAllStashes
-        self.uiPrefs.setDirty()
-        self.resolveHiddenCommits()
-
-    @benchmark
     def refreshHiddenRefCache(self):
         assert type(self.hiddenRefs) is set
         hiddenRefs = self.hiddenRefs
@@ -380,21 +366,6 @@ class RepoState(QObject):
             if not isSharedByVisibleBranch(oid):
                 seeds.add(oid)
 
-        if self.uiPrefs.hideAllStashes:
-            for refName, oid in self.refCache.items():
-                if refName.startswith("stash@{"):
-                    seeds.add(oid)
-        else:
-            hiddenStashCommits = list(self.uiPrefs.hiddenStashCommits)
-            for hiddenStash in hiddenStashCommits:
-                oid = Oid(hex=hiddenStash)
-                if oid in self.reverseRefCache:
-                    seeds.add(oid)
-                else:
-                    # Remove it from prefs
-                    logger.info(f"Skipping missing hidden stash: {hiddenStash}")
-                    self.uiPrefs.hiddenStashCommits.remove(hiddenStash)
-
         return seeds
 
     def commitsMatchingRefPattern(self, refPattern: str) -> Generator[Oid, None, None]:
@@ -421,6 +392,7 @@ class RepoState(QObject):
         for hiddenBranchTip in self.getHiddenTips():
             trickle.setPipe(hiddenBranchTip)
 
+        """
         # Explicitly hide stash junk parents
         if settings.prefs.hideStashJunkParents:
             for stash in self.repo.listall_stashes():
@@ -428,6 +400,7 @@ class RepoState(QObject):
                 for i, parent in enumerate(stashCommit.parent_ids):
                     if i > 0:
                         trickle.setTap(parent)
+        """
 
         return trickle
 
