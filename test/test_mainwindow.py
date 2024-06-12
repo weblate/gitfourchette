@@ -1,7 +1,10 @@
-from . import reposcenario
-from .util import *
-from gitfourchette.forms.clonedialog import CloneDialog
 import os
+
+import pytest
+
+from gitfourchette.forms.clonedialog import CloneDialog
+from gitfourchette.mainwindow import NoRepoWidgetError
+from .util import *
 
 
 def testDropDirectoryOntoMainWindowOpensRepository(tempDir, mainWindow):
@@ -11,7 +14,8 @@ def testDropDirectoryOntoMainWindowOpensRepository(tempDir, mainWindow):
     mime.setUrls([wdUrl])
 
     assert mainWindow.tabs.count() == 0
-    assert mainWindow.currentRepoWidget() is None
+    with pytest.raises(NoRepoWidgetError):
+        mainWindow.currentRepoWidget()
 
     pos = QPointF(mainWindow.width()//2, mainWindow.height()//2)
     dropEvent = QDropEvent(pos, Qt.DropAction.MoveAction, mime, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
@@ -24,7 +28,8 @@ def testDropDirectoryOntoMainWindowOpensRepository(tempDir, mainWindow):
 
 def testDropUrlOntoMainWindowBringsUpCloneDialog(mainWindow):
     assert mainWindow.tabs.count() == 0
-    assert mainWindow.currentRepoWidget() is None
+    with pytest.raises(NoRepoWidgetError):
+        mainWindow.currentRepoWidget()
 
     wdUrl = QUrl("https://github.com/jorio/bugdom")
 

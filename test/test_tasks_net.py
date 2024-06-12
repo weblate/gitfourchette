@@ -6,15 +6,16 @@ We use a bare repository on the local filesystem as a "remote server".
 """
 
 import os.path
+
 import pytest
 
-from .util import *
-from . import reposcenario
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.mainwindow import NoRepoWidgetError
 from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
-from gitfourchette import porcelain
+from . import reposcenario
+from .util import *
 
 
 def testCloneRepoWithSubmodules(tempDir, mainWindow):
@@ -23,7 +24,8 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
     bare = makeBareCopy(wd, addAsRemote="", preFetch=False)
     target = str(Path(f"{tempDir.name}", "the-clone"))
 
-    assert not mainWindow.currentRepoWidget()  # no repo opened yet
+    with pytest.raises(NoRepoWidgetError):
+        mainWindow.currentRepoWidget()  # no repo opened yet
 
     # Bring up clone dialog
     triggerMenuAction(mainWindow.menuBar(), "file/clone")

@@ -114,7 +114,7 @@ class Sidebar(QTreeView):
         isHidden = model.isExplicitlyHidden(node)
 
         if item == EItem.WorkdirHeader:
-            actions += self.repoWidget.repositoryContextMenu()
+            actions += self.repoWidget.contextMenuItems()
 
         elif item == EItem.UncommittedChanges:
             actions += [

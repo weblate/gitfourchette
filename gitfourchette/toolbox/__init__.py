@@ -55,7 +55,6 @@ from .qtutils import (
     makeMultiShortcut,
     keyEventMatchesMultiShortcut,
     CallbackAccumulator,
-    WidgetProxy,
     lerp,
     DocumentLinks,
     writeTempFile,

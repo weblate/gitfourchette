@@ -28,6 +28,12 @@ def excMessageBox(
         abortUnitTest=True,
 ):
     try:
+        if exc.__class__.__name__ == 'NoRepoWidgetError':
+            title = tr("No repository")
+            message = tr("Please open a repository before performing this action.")
+            showExcSummary = False
+            icon = 'information'
+
         isCritical = icon == 'critical'
 
         if printExc:
@@ -66,20 +72,21 @@ def excMessageBox(
                 message += "<p><small>" + tr("If you want to file a bug report, please click “Show Details” "
                                              "and copy the <b>entire</b> message.")
 
-        details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
-        details = [shortenTracebackPath(line) for line in details]
-        details = ''.join(details).strip()
+            details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+            details = [shortenTracebackPath(line) for line in details]
+            details = ''.join(details).strip()
 
         qmb = asyncMessageBox(parent, icon, title, message)
-        qmb.setDetailedText(details)
 
-        detailsEdit: QTextEdit = qmb.findChild(QTextEdit)
-        if detailsEdit:
-            font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
-            font.setPointSize(min(font.pointSize(), 8))
-            detailsEdit.setFont(font)
-            detailsEdit.setMinimumWidth(600)
-            detailsEdit.setFixedHeight(300)
+        if showExcSummary:
+            qmb.setDetailedText(details)
+            detailsEdit: QTextEdit = qmb.findChild(QTextEdit)
+            if detailsEdit:
+                font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
+                font.setPointSize(min(font.pointSize(), 8))
+                detailsEdit.setFont(font)
+                detailsEdit.setMinimumWidth(600)
+                detailsEdit.setFixedHeight(300)
 
         # Keep user from triggering more exceptions by clicking on stuff in the background
         qmb.setWindowModality(Qt.WindowModality.ApplicationModal)

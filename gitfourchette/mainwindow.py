@@ -31,13 +31,16 @@ from gitfourchette.trash import Trash
 logger = logging.getLogger(__name__)
 
 
+class NoRepoWidgetError(Exception):
+    pass
+
+
 class MainWindow(QMainWindow):
     styleSheetReloadScheduled = False
 
     welcomeStack: QStackedWidget
     welcomeWidget: WelcomeWidget
     tabs: QTabWidget2
-    repoWidgetProxy: WidgetProxy
 
     recentMenu: QMenu
     repoMenu: QMenu
@@ -48,8 +51,6 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-
-        self.repoWidgetProxy = WidgetProxy(self.onNoCurrentRepoWidget, self)
 
         self.welcomeStack = QStackedWidget(self)
         self.setCentralWidget(self.welcomeStack)
@@ -89,8 +90,8 @@ class MainWindow(QMainWindow):
         self.mainToolBar = MainToolBar(self)
         self.addToolBar(self.mainToolBar)
         self.mainToolBar.openDialog.connect(self.openDialog)
-        self.mainToolBar.push.connect(self.repoWidgetProxy.startPushFlow)
-        self.mainToolBar.reveal.connect(lambda: self.repoWidgetProxy.openRepoFolder)  #???
+        self.mainToolBar.push.connect(lambda: self.currentRepoWidget().startPushFlow())
+        self.mainToolBar.reveal.connect(lambda: self.currentRepoWidget().openRepoFolder())
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
 
         self.fillGlobalMenuBar()
@@ -158,11 +159,11 @@ class MainWindow(QMainWindow):
 
             if isBack or isForward:
                 if isPress:
-                    rw = self.currentRepoWidget()
-                    if rw and isBack:
-                        rw.navigateBack()
-                    elif rw and isForward:
-                        rw.navigateForward()
+                    with suppress(NoRepoWidgetError):
+                        if isForward:
+                            self.currentRepoWidget().navigateForward()
+                        else:
+                            self.currentRepoWidget().navigateBack()
 
                 # Eat clicks or double-clicks of back and forward mouse buttons
                 return True
@@ -187,10 +188,6 @@ class MainWindow(QMainWindow):
 
     # -------------------------------------------------------------------------
     # Menu bar
-
-    def onNoCurrentRepoWidget(self):
-        showInformation(self, self.tr("No repository"),
-                        self.tr("Please open a repository before performing this action."))
 
     def fillGlobalMenuBar(self):
         menubar = self.globalMenuBar
@@ -282,7 +279,7 @@ class MainWindow(QMainWindow):
 
         ActionDef.addToQMenu(
             repoMenu,
-            *RepoWidget.repositoryContextMenu(self.repoWidgetProxy, isProxy=True),
+            *RepoWidget.contextMenuItemsByProxy(self, self.currentRepoWidget),
         )
 
         # -------------------------------------------------------------
@@ -322,7 +319,7 @@ class MainWindow(QMainWindow):
 
             ActionDef(
                 self.tr("&Refresh"),
-                self.repoWidgetProxy.refreshRepo,
+                lambda: self.currentRepoWidget().refreshRepo(),
                 shortcuts=GlobalShortcuts.refresh,
                 icon="SP_BrowserReload",
                 statusTip=self.tr(
@@ -331,7 +328,7 @@ class MainWindow(QMainWindow):
 
             ActionDef(
                 self.tr("Reloa&d"),
-                lambda: self.repoWidgetProxy.primeRepo(force=True),
+                lambda: self.currentRepoWidget().primeRepo(force=True),
                 shortcuts="Ctrl+F5",
                 statusTip=self.tr("Reopen the repo from scratch"),
             ),
@@ -399,13 +396,17 @@ class MainWindow(QMainWindow):
     # -------------------------------------------------------------------------
     # Tabs
 
-    def currentRepoWidget(self) -> RepoWidget | None:
-        return self.repoWidgetProxy.widget
+    def currentRepoWidget(self) -> RepoWidget:
+        rw = self.tabs.currentWidget()
+        if rw is None:
+            raise NoRepoWidgetError()
+        assert isinstance(rw, RepoWidget)
+        return rw
 
     def onTabCurrentWidgetChanged(self):
-        w: RepoWidget = self.tabs.currentWidget()
-        self.repoWidgetProxy.widget = w
-        if w is None:
+        try:
+            w = self.currentRepoWidget()
+        except NoRepoWidgetError:
             self.mainToolBar.observeRepoWidget(None)
             return
 
@@ -456,7 +457,7 @@ class MainWindow(QMainWindow):
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Configure Tabs..."), lambda: openPrefsDialog(self, "tabCloseButton")),
             ActionDef.SEPARATOR,
-            *rw.repositoryPathsMenu(),
+            *self.currentRepoWidget().pathsMenuItems(),
         )
 
         return menu
@@ -557,10 +558,8 @@ class MainWindow(QMainWindow):
             return
         if not settings.prefs.autoRefresh:
             return
-        rw = self.currentRepoWidget()
-        if not rw:
-            return
-        rw.refreshRepo()
+        with suppress(NoRepoWidgetError):
+            self.currentRepoWidget().refreshRepo()
 
     def onRepoNameChange(self, rw: RepoWidget):
         self.refreshTabText(rw)
@@ -589,19 +588,19 @@ class MainWindow(QMainWindow):
             self.showMenuBarHiddenWarning()
 
     def selectUncommittedChanges(self):
-        self.repoWidgetProxy.jump(NavLocator.inWorkdir())
+        self.currentRepoWidget().jump(NavLocator.inWorkdir())
 
     def selectHead(self):
-        self.repoWidgetProxy.jump(NavLocator.inRef("HEAD"))
+        self.currentRepoWidget().jump(NavLocator.inRef("HEAD"))
 
     def focusSidebar(self):
-        self.repoWidgetProxy.sidebar.setFocus()
+        self.currentRepoWidget().sidebar.setFocus()
 
     def focusGraph(self):
-        self.repoWidgetProxy.graphView.setFocus()
+        self.currentRepoWidget().graphView.setFocus()
 
     def focusFiles(self):
-        rw = self.repoWidgetProxy
+        rw = self.currentRepoWidget()
         if rw.navLocator.context == NavContext.COMMITTED:
             rw.committedFiles.setFocus()
         elif rw.navLocator.context == NavContext.STAGED:
@@ -610,7 +609,7 @@ class MainWindow(QMainWindow):
             rw.dirtyFiles.setFocus()
 
     def focusDiff(self):
-        rw = self.repoWidgetProxy
+        rw = self.currentRepoWidget()
         if rw.specialDiffView.isVisibleTo(rw):
             rw.specialDiffView.setFocus()
         elif rw.conflictView.isVisibleTo(rw):
@@ -619,14 +618,10 @@ class MainWindow(QMainWindow):
             rw.diffView.setFocus()
 
     def nextFile(self):
-        rw = self.repoWidgetProxy.widget
-        if rw:
-            rw.diffArea.selectNextFile(True)
+        self.currentRepoWidget().diffArea.selectNextFile(True)
 
     def previousFile(self):
-        rw = self.repoWidgetProxy.widget
-        if rw:
-            rw.diffArea.selectNextFile(False)
+        self.currentRepoWidget().diffArea.selectNextFile(False)
 
     # -------------------------------------------------------------------------
     # Help menu
@@ -1001,12 +996,7 @@ class MainWindow(QMainWindow):
         elif action == "open":
             self.openRepo(data, exactMatch=False)
         elif action == "patch":
-            rw = self.currentRepoWidget()
-            if rw:
-                rw.runTask(tasks.ApplyPatchFile, False, data)
-            else:
-                showInformation(self, self.tr("No repository"),
-                                self.tr("Please open a repository before importing a patch."))
+            tasks.ApplyPatchFile.invoke(self, False, data)
         else:
             logger.warning(f"Unsupported drag-and-drop outcome {action}")
 

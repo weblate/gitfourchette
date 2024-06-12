@@ -265,6 +265,8 @@ class RepoWidget(QStackedWidget):
 
     def updateBoundRepo(self):
         repo = self.repo
+        if not self.uiReady:
+            return
         widgets = [
             self.diffArea.dirtyFiles,
             self.diffArea.stagedFiles,
@@ -933,78 +935,87 @@ class RepoWidget(QStackedWidget):
 
     # -------------------------------------------------------------------------
 
-    def repositoryPathsMenu(self, isProxy=False):
-        superprojectLabel = self.tr("Open Superproject")
+    def contextMenuItems(self):
+        return self.contextMenuItemsByProxy(self, lambda: self)
+
+    def pathsMenuItems(self):
+        return self.pathsMenuItemsByProxy(self, lambda: self)
+
+    @classmethod
+    def contextMenuItemsByProxy(cls, invoker, proxy):
+        return [
+            TaskBook.action(invoker, tasks.NewCommit, "&C"),
+            TaskBook.action(invoker, tasks.AmendCommit, "&A"),
+            TaskBook.action(invoker, tasks.NewStash),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(invoker, tasks.NewBranchFromHead, "&B"),
+
+            ActionDef(
+                invoker.tr("&Push Branch..."),
+                lambda: proxy().startPushFlow(),
+                "vcs-push",
+                shortcuts=GlobalShortcuts.pushBranch,
+                statusTip=invoker.tr("Upload your commits on the current branch to the remote server"),
+            ),
+
+            TaskBook.action(invoker, tasks.PullBranch, "&L"),
+            TaskBook.action(invoker, tasks.FetchRemote, "&F"),
+
+            TaskBook.action(invoker, tasks.NewRemote),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(invoker, tasks.RecallCommit),
+
+            ActionDef.SEPARATOR,
+
+            *cls.pathsMenuItemsByProxy(invoker, proxy),
+
+            ActionDef.SEPARATOR,
+
+            TaskBook.action(invoker, tasks.EditRepoSettings),
+
+            ActionDef(
+                invoker.tr("&Local Config Files"),
+                submenu=[
+                    ActionDef(".gitignore", lambda: proxy().openGitignore()),
+                    ActionDef("config", lambda: proxy().openLocalConfig()),
+                    ActionDef("exclude", lambda: proxy().openLocalExclude()),
+                ]),
+        ]
+
+    @classmethod
+    def pathsMenuItemsByProxy(cls, invoker, proxy):
+        superprojectLabel = invoker.tr("Open Superproject")
         superprojectEnabled = True
 
-        if not isProxy:
-            superproject = self.superproject
+        if isinstance(invoker, cls):
+            superproject = invoker.superproject
             superprojectEnabled = bool(superproject)
             if superprojectEnabled:
                 superprojectName = settings.history.getRepoTabName(superproject)
-                superprojectLabel = self.tr("Open Superproject {0}").format(lquo(superprojectName))
+                superprojectLabel = invoker.tr("Open Superproject {0}").format(lquo(superprojectName))
 
         return [
             ActionDef(
-                self.tr("&Open Repo Folder"),
-                self.openRepoFolder,
+                invoker.tr("&Open Repo Folder"),
+                lambda: proxy().openRepoFolder(),
                 shortcuts=GlobalShortcuts.openRepoFolder,
-                statusTip=self.tr("Open this repo’s working directory in the system’s file manager"),
+                statusTip=invoker.tr("Open this repo’s working directory in the system’s file manager"),
             ),
 
             ActionDef(
-                self.tr("Cop&y Repo Path"),
-                self.copyRepoPath,
-                statusTip=self.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
+                invoker.tr("Cop&y Repo Path"),
+                lambda: proxy().copyRepoPath(),
+                statusTip=invoker.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
             ),
 
             ActionDef(
                 superprojectLabel,
-                self.openSuperproject,
+                lambda: proxy().openSuperproject(),
                 enabled=superprojectEnabled,
             ),
         ]
 
-    def repositoryContextMenu(self, isProxy=False):
-        return [
-            TaskBook.action(self, tasks.NewCommit, "&C"),
-            TaskBook.action(self, tasks.AmendCommit, "&A"),
-            TaskBook.action(self, tasks.NewStash),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.NewBranchFromHead, "&B"),
-
-            ActionDef(
-                self.tr("&Push Branch..."),
-                self.startPushFlow,
-                "vcs-push",
-                shortcuts=GlobalShortcuts.pushBranch,
-                statusTip=self.tr("Upload your commits on the current branch to the remote server"),
-            ),
-
-            TaskBook.action(self, tasks.PullBranch, "&L"),
-            TaskBook.action(self, tasks.FetchRemote, "&F"),
-
-            TaskBook.action(self, tasks.NewRemote),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.RecallCommit),
-
-            ActionDef.SEPARATOR,
-
-            *RepoWidget.repositoryPathsMenu(self, isProxy),
-
-            ActionDef.SEPARATOR,
-
-            TaskBook.action(self, tasks.EditRepoSettings),
-
-            ActionDef(
-                self.tr("&Local Config Files"),
-                submenu=[
-                    ActionDef(".gitignore", self.openGitignore),
-                    ActionDef("config", self.openLocalConfig),
-                    ActionDef("exclude", self.openLocalExclude),
-                ]),
-        ]
