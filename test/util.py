@@ -244,13 +244,14 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
     findQMessageBox(parent, textPattern).reject()
 
 
-def acceptQFileDialog(parent: QWidget, textPattern: str, path: str):
+def acceptQFileDialog(parent: QWidget, textPattern: str, path: str, useSuggestedName=False):
     qfd: QFileDialog = findQDialog(parent, textPattern)
     assert isinstance(qfd, QFileDialog)
 
-    if path.endswith("/"):
-        suggestedFileName = os.path.basename(qfd.selectedFiles()[0])
-        path = os.path.join(path, suggestedFileName)
+    if useSuggestedName:
+        suggestedName = os.path.basename(qfd.selectedFiles()[0])
+        path = os.path.join(path, suggestedName)
+    path = os.path.normpath(path)
 
     qfd.selectFile(path)
     qfd.show()

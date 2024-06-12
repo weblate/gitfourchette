@@ -24,7 +24,7 @@ def testSaveRevisionAtCommit(tempDir, mainWindow):
     assert loc.isSimilarEnoughTo(rw.navLocator)
 
     triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save a copy/at 1203b03")
-    acceptQFileDialog(rw, "save.+revision as", f"{tempDir.name}/")
+    acceptQFileDialog(rw, "save.+revision as", tempDir.name, useSuggestedName=True)
     assert b"c2\nc2\n" == readFile(f"{tempDir.name}/c2@1203b03.txt")
 
 
@@ -38,7 +38,7 @@ def testSaveRevisionBeforeCommit(tempDir, mainWindow):
     assert loc.isSimilarEnoughTo(rw.navLocator)
 
     triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save a copy/before 1203b03")
-    acceptQFileDialog(rw, "save.+revision as", f"{tempDir.name}/")
+    acceptQFileDialog(rw, "save.+revision as", tempDir.name, useSuggestedName=True)
     assert b"c2\n" == readFile(f"{tempDir.name}/c2@before-1203b03.txt")
 
 

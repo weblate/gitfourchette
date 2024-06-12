@@ -174,10 +174,7 @@ def testNewRepo(tempDir, mainWindow):
     path = os.path.realpath(tempDir.name + "/valoche3000")
     os.makedirs(path)
 
-    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
-    assert isinstance(dlg, QFileDialog)
-    dlg.setDirectory(path)
-    dlg.accept()
+    acceptQFileDialog(mainWindow, "new repo", path)
 
     rw = mainWindow.currentRepoWidget()
     assert path == os.path.normpath(rw.repo.workdir)
@@ -210,11 +207,7 @@ def testNewRepoFromExistingSources(tempDir, mainWindow):
     os.makedirs(path)
     writeFile(f"{path}/existing.txt", "file was here before repo inited\n")
 
-    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
-    assert isinstance(dlg, QFileDialog)
-    dlg.setDirectory(path)
-    dlg.accept()
-
+    acceptQFileDialog(mainWindow, "new repo", path)
     acceptQMessageBox(mainWindow, r"are you sure.+valoche3000.+isn.t empty")
 
     rw = mainWindow.currentRepoWidget()
@@ -225,14 +218,8 @@ def testNewRepoFromExistingSources(tempDir, mainWindow):
 def testNewRepoAtExistingRepo(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     triggerMenuAction(mainWindow.menuBar(), "file/new repo")
-
-    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
-    assert isinstance(dlg, QFileDialog)
-    dlg.setDirectory(wd)
-    dlg.accept()
-
-    qmb = findQMessageBox(mainWindow, "already exists")
-    qmb.accept()
+    acceptQFileDialog(mainWindow, "new repo", wd)
+    acceptQMessageBox(mainWindow, "already exists")
     assert wd == mainWindow.currentRepoWidget().repo.workdir
 
 
@@ -242,14 +229,8 @@ def testNewNestedRepo(tempDir, mainWindow):
     os.makedirs(path)
 
     triggerMenuAction(mainWindow.menuBar(), "file/new repo")
-
-    dlg: QFileDialog = findQDialog(mainWindow, "new repo")
-    assert isinstance(dlg, QFileDialog)
-    dlg.setDirectory(path)
-    dlg.accept()
-
-    qmb = findQMessageBox(mainWindow, "TestGitRepository.+parent (dir|folder).+sub(dir|folder)")
-    qmb.accept()
+    acceptQFileDialog(mainWindow, "new repo", path)
+    acceptQMessageBox(mainWindow, "TestGitRepository.+parent (dir|folder).+sub(dir|folder)")
 
 
 @pytest.mark.parametrize("method", ["specialdiff", "graphcm"])
