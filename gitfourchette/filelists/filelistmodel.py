@@ -146,7 +146,7 @@ class FileListModel(QAbstractListModel):
 
     @property
     def repo(self) -> Repo:
-        return self.parent().repoWidget.state.repo
+        return self.parent().repo
 
     def clear(self):
         self.entries = []

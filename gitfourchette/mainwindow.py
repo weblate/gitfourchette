@@ -619,10 +619,14 @@ class MainWindow(QMainWindow):
             rw.diffView.setFocus()
 
     def nextFile(self):
-        self.repoWidgetProxy.selectNextFile(True)
+        rw = self.repoWidgetProxy.widget
+        if rw:
+            rw.diffArea.selectNextFile(True)
 
     def previousFile(self):
-        self.repoWidgetProxy.selectNextFile(False)
+        rw = self.repoWidgetProxy.widget
+        if rw:
+            rw.diffArea.selectNextFile(False)
 
     # -------------------------------------------------------------------------
     # Help menu

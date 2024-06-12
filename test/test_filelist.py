@@ -69,7 +69,7 @@ def testRefreshKeepsMultiFileSelection(tempDir, mainWindow, context):
         repo.index.write()
 
     rw = mainWindow.openRepo(wd)
-    fl = rw.fileListByContext(context)
+    fl = rw.diffArea.fileListByContext(context)
     fl.selectAll()
     rw.refreshRepo()
     assert list(fl.selectedPaths()) == [f"{context.name}{i}" for i in range(N)]

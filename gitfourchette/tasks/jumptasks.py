@@ -65,7 +65,7 @@ class Jump(RepoTask):
             locator = self.selectCorrectFile(locator)
 
             # Load patch in DiffView
-            patch = rw.fileListByContext(locator.context).getPatchForFile(locator.path)
+            patch = rw.diffArea.fileListByContext(locator.context).getPatchForFile(locator.path)
             patchTask: LoadPatch = yield from self.flowSubtask(LoadPatch, patch, locator)
             result = Jump.Result(locator, patchTask.header, patchTask.result, patch)
         except Jump.Result as r:
@@ -77,7 +77,7 @@ class Jump(RepoTask):
 
         # Set correct card in fileStack (may have been done by selectCorrectFile
         # above, but do it again in case a Result was raised early)
-        self.rw.setFileStackPageByContext(locator.context)
+        rw.diffArea.setFileStackPageByContext(locator.context)
 
         self.displayResult(result)
 
@@ -208,6 +208,7 @@ class Jump(RepoTask):
         """
 
         rw = self.rw
+        area = rw.diffArea
         assert locator.context == NavContext.COMMITTED
 
         # If it's a ref, look it up
@@ -242,8 +243,8 @@ class Jump(RepoTask):
             refCandidates = rw.state.reverseRefCache.get(locator.commit, [])
             rw.sidebar.selectAnyRef(*refCandidates)
 
-        flv = rw.committedFiles
-        rw.diffBanner.setVisible(False)
+        flv = area.committedFiles
+        area.diffBanner.setVisible(False)
 
         if locator.commit == flv.commitId and not locator.hasFlags(NavFlags.Force):
             # No need to reload the same commit
@@ -252,7 +253,7 @@ class Jump(RepoTask):
 
         else:
             # Loading a different commit
-            rw.diffBanner.lastWarningWasDismissed = False
+            area.diffBanner.lastWarningWasDismissed = False
 
             # Load commit (async)
             subtask = yield from self.flowSubtask(LoadCommit, locator)
@@ -270,9 +271,9 @@ class Jump(RepoTask):
                 numChanges = flv.model().rowCount()
 
             # Set header text
-            rw.committedHeader.setText(self.tr("%n changes in {0}:", "", numChanges
+            area.committedHeader.setText(self.tr("%n changes in {0}:", "", numChanges
                                                ).format(shortHash(locator.commit)))
-            rw.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
+            area.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
         # Early out if the commit is empty
         if flv.isEmpty():
@@ -284,7 +285,7 @@ class Jump(RepoTask):
             raise Jump.Result(locator, header, sde)
 
         # Warning banner
-        if not rw.diffBanner.lastWarningWasDismissed:
+        if not area.diffBanner.lastWarningWasDismissed:
             buttonLabel = ""
             buttonCallback = None
 
@@ -298,22 +299,23 @@ class Jump(RepoTask):
 
             if warnings:
                 warningText = "<br>".join(warnings)
-                rw.diffBanner.setVisible(True)
-                rw.diffBanner.popUp("", warningText, canDismiss=True, withIcon=True,
-                                    buttonLabel=buttonLabel, buttonCallback=buttonCallback)
+                area.diffBanner.setVisible(True)
+                area.diffBanner.popUp("", warningText, canDismiss=True, withIcon=True,
+                                      buttonLabel=buttonLabel, buttonCallback=buttonCallback)
 
         return locator
 
     def selectCorrectFile(self, locator: NavLocator):
         rw = self.rw
-        flv = rw.fileListByContext(locator.context)
+        area = rw.diffArea
+        flv = area.fileListByContext(locator.context)
 
         # If we still don't have a path in the locator, fall back to first path in file list.
         if not locator.path:
             locator = locator.replace(path=flv.firstPath())
             locator = rw.navHistory.refine(locator)
 
-        with QSignalBlockerContext(rw.dirtyFiles, rw.stagedFiles, rw.committedFiles):
+        with QSignalBlockerContext(area.dirtyFiles, area.stagedFiles, area.committedFiles):
             # Select correct row in file list
             anyFile = False
             if locator.path:
@@ -326,20 +328,20 @@ class Jump(RepoTask):
             # Special treatment for workdir
             if locator.context.isWorkdir():
                 # Clear selection in other workdir FileList
-                otherFlv = rw.stagedFiles if locator.context != NavContext.STAGED else rw.dirtyFiles
+                otherFlv = area.stagedFiles if locator.context != NavContext.STAGED else area.dirtyFiles
                 otherFlv.clearSelection()
 
                 if not anyFile:
-                    rw.stageButton.setEnabled(False)
-                    rw.unstageButton.setEnabled(False)
+                    area.stageButton.setEnabled(False)
+                    area.unstageButton.setEnabled(False)
                 elif locator.context == NavContext.STAGED:
-                    rw.unstageButton.setEnabled(True)
-                    rw.stageButton.setEnabled(False)
-                    rw.dirtyFiles.highlightCounterpart(locator)
+                    area.unstageButton.setEnabled(True)
+                    area.stageButton.setEnabled(False)
+                    area.dirtyFiles.highlightCounterpart(locator)
                 else:
-                    rw.unstageButton.setEnabled(False)
-                    rw.stageButton.setEnabled(True)
-                    rw.stagedFiles.highlightCounterpart(locator)
+                    area.unstageButton.setEnabled(False)
+                    area.stageButton.setEnabled(True)
+                    area.stagedFiles.highlightCounterpart(locator)
 
             # Early out if selection remains blank
             if not anyFile:
@@ -348,7 +350,7 @@ class Jump(RepoTask):
                 raise Jump.Result(locator, "", None)
 
         # Set correct card in fileStack (after selecting the file to avoid flashing)
-        self.rw.setFileStackPageByContext(locator.context)
+        area.setFileStackPageByContext(locator.context)
 
         return locator
 
@@ -364,36 +366,37 @@ class Jump(RepoTask):
             self.rw.historyChanged.emit()
 
     def displayResult(self, result: Result):
-        rw = self.rw
+        repo = self.rw.repo
+        area = self.rw.diffArea
 
         # Set header
-        rw.diffHeader.setText(result.header)
+        area.diffHeader.setText(result.header)
 
         document = result.document
         documentType = type(document)
 
         if document is None:
-            rw.clearDiffView()
+            area.clearDocument()
 
         elif documentType is DiffDocument:
-            rw.setDiffStackPage("text")
-            rw.diffView.replaceDocument(rw.repo, result.patch, result.locator, document)
+            area.setDiffStackPage("text")
+            area.diffView.replaceDocument(repo, result.patch, result.locator, document)
 
         elif documentType is DiffConflict:
-            rw.setDiffStackPage("conflict")
-            rw.conflictView.displayConflict(document)
+            area.setDiffStackPage("conflict")
+            area.conflictView.displayConflict(document)
 
         elif documentType is SpecialDiffError:
-            rw.setDiffStackPage("special")
-            rw.specialDiffView.displaySpecialDiffError(document)
+            area.setDiffStackPage("special")
+            area.specialDiffView.displaySpecialDiffError(document)
 
         elif documentType is DiffImagePair:
-            rw.setDiffStackPage("special")
-            rw.specialDiffView.displayImageDiff(result.patch.delta, document.oldImage, document.newImage)
+            area.setDiffStackPage("special")
+            area.specialDiffView.displayImageDiff(result.patch.delta, document.oldImage, document.newImage)
 
         else:
-            rw.setDiffStackPage("special")
-            rw.specialDiffView.displaySpecialDiffError(SpecialDiffError(
+            area.setDiffStackPage("special")
+            area.specialDiffView.displaySpecialDiffError(SpecialDiffError(
                 escape(f"Can't display {documentType}."),
                 icon="SP_MessageBoxCritical"))
 
@@ -474,7 +477,7 @@ class RefreshRepo(RepoTask):
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
 
         try:
-            previousFileList = rw.fileListByContext(initialLocator.context)
+            previousFileList = rw.diffArea.fileListByContext(initialLocator.context)
             previousFileList.backUpSelection()
         except ValueError:
             previousFileList = None

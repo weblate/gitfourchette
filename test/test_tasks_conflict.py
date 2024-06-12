@@ -152,9 +152,9 @@ def testMergeTool(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir, "testrepoformerging")
     rw = mainWindow.openRepo(wd)
-    node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
 
     # Initiate merge of branch-conflicts into master
+    node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
     acceptQMessageBox(rw, "branch-conflicts.+into.+master.+may cause conflicts")
     rw.jump(NavLocator.inUnstaged(".gitignore"))

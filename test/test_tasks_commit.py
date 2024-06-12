@@ -353,7 +353,7 @@ def testCherrypick(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
 
-    assert rw.fileStackPage() == "workdir"
+    assert rw.diffArea.fileStackPage() == "workdir"
     assert rw.repo.status() == {"a/a1.txt": FileStatus.INDEX_NEW}
 
     acceptQMessageBox(rw, "cherry.+success.+commit")
@@ -392,7 +392,7 @@ def testAbortCherrypick(tempDir, mainWindow):
 
     rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "cherry")
-    assert rw.fileStackPage() == "workdir"
+    assert rw.diffArea.fileStackPage() == "workdir"
     assert rw.repo.status() == {"a/a1.txt": FileStatus.INDEX_NEW}
     rejectQMessageBox(rw, "cherry.+success.+commit")
 

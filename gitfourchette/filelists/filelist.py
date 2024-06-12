@@ -88,6 +88,8 @@ class FileList(QListView):
     openSubRepo = Signal(str)
     statusMessage = Signal(str)
 
+    repo: Repo | None
+
     navContext: NavContext
     """ 
     COMMITTED, STAGED or DIRTY.
@@ -108,6 +110,8 @@ class FileList(QListView):
     def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
 
+        self.repo = None
+
         flModel = FileListModel(self, navContext)
         self.setModel(flModel)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -117,7 +121,6 @@ class FileList(QListView):
         self.skippedRenameDetection = False
         self._selectionBackup = None
 
-        self.repoWidget = parent
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
         self.setIconSize(QSize(iconSize, iconSize))
@@ -251,7 +254,7 @@ class FileList(QListView):
 
     def openWorkdirFile(self):
         def run(patch: Patch):
-            entryPath = os.path.join(self.repo.workdir, patch.delta.new_file.path)
+            entryPath = self.repo.in_workdir(patch.delta.new_file.path)
             openInTextEditor(self, entryPath)
 
         self.confirmBatch(run, tr("Open in external editor"),
@@ -278,7 +281,7 @@ class FileList(QListView):
         if self.navContext == NavContext.UNSTAGED:
             # Unstaged: compare indexed state to workdir file
             oldPath = dumpTempBlob(self.repo, diffDir, oldDiffFile, "INDEXED")
-            newPath = os.path.join(self.repo.workdir, newDiffFile.path)
+            newPath = self.repo.in_workdir(newDiffFile.path)
         elif self.navContext == NavContext.STAGED:
             # Staged: compare HEAD state to indexed state
             oldPath = dumpTempBlob(self.repo, diffDir, oldDiffFile, "HEAD")
@@ -292,7 +295,7 @@ class FileList(QListView):
 
     def showInFolder(self):
         def run(entry: Patch):
-            path = os.path.join(self.repo.workdir, entry.delta.new_file.path)
+            path = self.repo.in_workdir(entry.delta.new_file.path)
             path = os.path.normpath(path)  # get rid of any trailing slashes (submodules)
             if not os.path.exists(path):  # check exists, not isfile, for submodules
                 raise SelectedFileBatchError(tr("{0}: This file doesn’t exist at this path anymore.").format(entry.delta.new_file.path))
@@ -426,10 +429,6 @@ class FileList(QListView):
             if not path:
                 continue
             yield path
-
-    @property
-    def repo(self) -> Repo:
-        return self.repoWidget.state.repo
 
     def earliestSelectedRow(self):
         try:

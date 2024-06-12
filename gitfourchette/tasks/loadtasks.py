@@ -194,6 +194,7 @@ class PrimeRepo(RepoTask):
 
         # Assign state to RepoWidget
         rw.state = state
+        rw.updateBoundRepo()
 
         # Save commit count (if not truncated)
         if not truncatedHistory:

@@ -1,26 +1,27 @@
 import pytest
 
 from gitfourchette.nav import NavContext, NavLocator
+from gitfourchette.repowidget import RepoWidget
 from . import reposcenario
 from .util import *
 
 
-def assertHistoryMatches(rw: 'RepoWidget', locator: NavLocator):
+def assertHistoryMatches(rw: RepoWidget, locator: NavLocator):
     assert rw.navLocator.isSimilarEnoughTo(locator)
     assert rw.diffView.currentPatch.delta.old_file.path == locator.path
     if locator.context.isDirty():
         assert rw.graphView.currentCommitId in [None, ""]
-        assert rw.fileStackPage() == "workdir"
+        assert rw.diffArea.fileStackPage() == "workdir"
         assert qlvGetSelection(rw.dirtyFiles) == [locator.path]
         assert qlvGetSelection(rw.stagedFiles) == []
     elif locator.context == NavContext.STAGED:
         assert rw.graphView.currentCommitId in [None, ""]
-        assert rw.fileStackPage() == "workdir"
+        assert rw.diffArea.fileStackPage() == "workdir"
         assert qlvGetSelection(rw.stagedFiles) == [locator.path]
         assert qlvGetSelection(rw.dirtyFiles) == []
     else:
         assert rw.graphView.currentCommitId == locator.commit
-        assert rw.fileStackPage() == "commit"
+        assert rw.diffArea.fileStackPage() == "commit"
         assert qlvGetSelection(rw.committedFiles) == [locator.path]
 
 
@@ -388,7 +389,7 @@ def testSelectNextOrPreviousFile(tempDir, mainWindow):
 
     # In workdir
     # Clear FileList selection
-    fl = rw.fileListByContext(rw.navLocator.context)
+    fl = rw.diffArea.fileListByContext(rw.navLocator.context)
     fl.setFocus()
     fl.clearSelection()
 
@@ -407,7 +408,7 @@ def testSelectNextOrPreviousFile(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(Oid(hex='83834a7afdaa1a1260568567f6ad90020389f664')))
 
     # Clear selection
-    fl = rw.fileListByContext(rw.navLocator.context)
+    fl = rw.diffArea.fileListByContext(rw.navLocator.context)
     fl.setFocus()
     fl.clearSelection()
 

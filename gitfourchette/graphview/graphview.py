@@ -207,10 +207,6 @@ class GraphView(QListView):
             super().keyPressEvent(event)
 
     @property
-    def repo(self) -> Repo:
-        return self.repoWidget.state.repo
-
-    @property
     def currentRowKind(self) -> SpecialRow:
         currentIndex = self.currentIndex()
         if not currentIndex.isValid():
@@ -255,7 +251,7 @@ class GraphView(QListView):
         if len(parentHashes) == 0:
             parentTitle = self.tr("No Parent")
 
-            if self.repo.is_shallow:
+            if self.repoWidget.state.repo.is_shallow:
                 parentTitle = self.tr("No Parent?")
                 parentValueMarkup += "<p><em>" + self.tr(
                     "You’re working in a shallow clone. This commit may actually have parents in the full history."

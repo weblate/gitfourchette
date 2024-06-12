@@ -171,7 +171,7 @@ class CommittedFiles(FileList):
     def openHeadRevision(self):
         def run(patch: Patch):
             diffFile = patch.delta.new_file
-            path = os.path.join(self.repo.workdir, diffFile.path)
+            path = self.repo.in_workdir(diffFile.path)
             if os.path.isfile(path):
                 openInTextEditor(self, path)
             else:

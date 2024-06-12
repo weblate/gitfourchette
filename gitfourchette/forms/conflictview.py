@@ -5,13 +5,13 @@ from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides
 from gitfourchette.qt import *
-from gitfourchette.tasks import HardSolveConflicts
+from gitfourchette.tasks import HardSolveConflicts, AcceptMergeConflictResolution
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
+from gitfourchette.unmergedconflict import UnmergedConflict
 
 
 class ConflictView(QWidget):
-    openMergeTool = Signal(DiffConflict)
     openPrefs = Signal(str)
     linkActivated = Signal(str)
 
@@ -83,7 +83,7 @@ class ConflictView(QWidget):
             elif b is self.ui.radioTheirs:
                 self.hardSolve(conflict.ours.path, conflict.theirs.id)
             elif b is self.ui.radioTool:
-                self.openMergeTool.emit(conflict)
+                self.openMergeTool(conflict)
 
     def onMergeFailed(self, conflict: DiffConflict, code: int):
         if conflict != self.currentConflict:
@@ -99,6 +99,13 @@ class ConflictView(QWidget):
 
     def hardSolve(self, path: str, oid=NULL_OID):
         HardSolveConflicts.invoke(self, {path: oid})
+
+    def openMergeTool(self, conflict: DiffConflict):
+        self.ui.explainer.setText(self.tr("Waiting for merge tool..."))
+        umc = UnmergedConflict(self, self.repo, conflict)
+        umc.mergeComplete.connect(lambda: AcceptMergeConflictResolution.invoke(self, umc))
+        umc.mergeFailed.connect(lambda code: self.onMergeFailed(conflict, code))
+        umc.startProcess()
 
     def clear(self):
         self.currentConflict = None
