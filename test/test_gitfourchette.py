@@ -230,7 +230,7 @@ def testNewNestedRepo(tempDir, mainWindow):
 
     triggerMenuAction(mainWindow.menuBar(), "file/new repo")
     acceptQFileDialog(mainWindow, "new repo", path)
-    acceptQMessageBox(mainWindow, "TestGitRepository.+parent (dir|folder).+sub(dir|folder)")
+    acceptQMessageBox(mainWindow, "TestGitRepository.+parent folder.+within.+existing repo")
 
 
 @pytest.mark.parametrize("method", ["specialdiff", "graphcm"])

@@ -711,7 +711,7 @@ class MainWindow(QMainWindow):
             if parentRepo == path or parentWorkdir == path:
                 message = paragraphs(
                     self.tr("A repository already exists here:"),
-                    "\t" + escape(compactPath(parentWorkdir)))
+                    escape(compactPath(parentWorkdir)))
                 qmb = asyncMessageBox(
                     self, 'information', self.tr("Repository already exists"), message,
                     QMessageBox.StandardButton.Open | QMessageBox.StandardButton.Cancel)
@@ -719,23 +719,24 @@ class MainWindow(QMainWindow):
                 qmb.accepted.connect(lambda: self.openRepo(parentWorkdir, exactMatch=True))
                 qmb.show()
             else:
-                displayPath = escape(compactPath(path))
-                displayParent = escape(compactPath(parentWorkdir))
-                commonPath = os.path.commonprefix([displayPath, displayParent])
-                commonLength = len(commonPath)
-
-                try:
-                    accentColor = self.palette().color(QPalette.ColorRole.Accent)
-                except AttributeError:  # QPalette.ColorRole.Accent appeared in Qt 6.6+
-                    accentColor = self.palette().color(QPalette.ColorRole.Link)
+                displayPath = compactPath(path)
+                commonLength = len(os.path.commonprefix([displayPath, compactPath(parentWorkdir)]))
+                i1 = commonLength - len(parentBasename)
+                i2 = commonLength
+                dp1 = escape(displayPath[: i1])
+                dp2 = escape(displayPath[i1: i2])
+                dp3 = escape(displayPath[i2:])
+                muted = mutedTextColorHex(self)
+                prettyPath = (f"<div style='white-space: pre;'>"
+                              f"<span style='color: {muted};'>{dp1}</span>"
+                              f"<b>{dp2}</b>"
+                              f"<span style='color: {muted};'>{dp3}</span></div>")
 
                 message = paragraphs(
-                    self.tr("There exists a repository {0} in a parent folder "
-                            "of the repo that you were about to create:"),
-                    "<div style='white-space: pre'>    <span style='color: {highlight}'>{dp1}</span>{dp2}</div>",
-                    self.tr("Do you want to create a new repository {1} in the subfolder anyway?"),
-                ).format(bquoe(parentBasename), bquoe(myBasename), highlight=accentColor.name(),
-                         dp1=displayPath[:commonLength], dp2=displayPath[commonLength:])
+                    self.tr("An existing repository, {0}, was found in a parent folder of this location:"),
+                    prettyPath,
+                    self.tr("Are you sure you want to create {1} within the existing repo?"),
+                ).format(bquoe(parentBasename), hquoe(myBasename))
 
                 qmb = asyncMessageBox(
                     self, 'information', self.tr("Repository found in parent folder"), message,
