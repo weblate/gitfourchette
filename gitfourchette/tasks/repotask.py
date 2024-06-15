@@ -259,11 +259,19 @@ class RepoTask(QObject):
         if isinstance(exc, ConflictError):
             showConflictErrorMessage(self.parentWidget(), exc, self.name())
         elif isinstance(exc, MultiFileError):
-            # Patch doesn't apply
-            message = tr("Operation failed: {0}.").format(escape(self.name()))
+            details = []
+            if exc.message:
+                message = exc.message
+            else:
+                message = tr("Operation failed: {0}.").format(escape(self.name()))
             for filePath, fileException in exc.file_exceptions.items():
-                message += "<br><br><b>" + escape(filePath) + "</b><br>" + escape(str(fileException))
-            showWarning(self.parentWidget(), self.name(), message)
+                if fileException:
+                    details.append(f"<b>{escape(filePath)}</b>: {escape(str(fileException))}")
+                else:
+                    details.append(escape(filePath))
+            qmb = asyncMessageBox(self.parentWidget(), 'warning', self.name(), message)
+            addULToMessageBox(qmb, details)
+            qmb.show()
         else:
             message = tr("Operation failed: {0}.").format(escape(self.name()))
             excMessageBox(exc, title=self.name(), message=message, parent=self.parentWidget())
@@ -719,10 +727,9 @@ class RepoTaskRunner(QObject):
 
                 task.deleteLater()
 
-            else:  # pragma: no-cover
-                message = (f"In a RepoTask coroutine, you can only yield a FlowControlToken "
-                           f"(you yielded: {type(result).__name__})")
-                raise NotImplementedError(message)
+            else:
+                raise NotImplementedError("In a RepoTask coroutine, you can only yield a FlowControlToken. "
+                                          f"You yielded: {type(result).__name__}")
 
         if not self.isBusy():  # might've queued up another task...
             if self._criticalTaskQueue:

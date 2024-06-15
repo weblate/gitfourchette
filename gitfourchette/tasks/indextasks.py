@@ -519,35 +519,50 @@ class AbortMerge(RepoTask):
         return TaskEffects.DefaultRefresh
 
     def flow(self):
+        self.repo.refresh_index()
+
         isMerging = self.repo.state() == RepositoryState.MERGE
         isCherryPicking = self.repo.state() == RepositoryState.CHERRYPICK
+        anyConflicts = self.repo.index.conflicts
 
-        if not isMerging and not isCherryPicking:
+        if not isMerging and not isCherryPicking and not anyConflicts:
             raise AbortTask(self.tr("No merge or cherry-pick is in progress."), icon='information')
 
         try:
             abortList = self.repo.get_reset_merge_file_list()
-        except ValueError:
-            message = self.tr("Cannot abort right now because you have files that are both staged and unstaged.")
-            raise AbortTask(message)
+        except MultiFileError as exc:
+            if isCherryPicking:
+                cantReset = self.tr("Cannot abort the cherry-pick right now")
+            elif isMerging:
+                cantReset = self.tr("Cannot abort the merge right now")
+            else:
+                cantReset = self.tr("Cannot reset the index right now")
+            exc.message = self.tr("{0}, because %n files are both staged and unstaged.",
+                                  "placeholder: cannot abort the merge / reset the index / etc.",
+                                  len(exc.file_exceptions)).format(cantReset)
+            raise exc
 
         lines = []
 
         if isCherryPicking:
-            lines.append(self.tr("Do you want to abort the cherry-pick?"))
+            prompt = self.tr("Do you want to abort the cherry-pick?")
+            verb = self.tr("Abort cherry-pick")
+        elif isMerging:
+            prompt = self.tr("Do you want to abort the merge?")
+            verb = self.tr("Abort merge")
         else:
-            lines.append(self.tr("Do you want to abort the merge?"))
+            prompt = self.tr("Do you want to reset the index?")
+            verb = self.tr("Reset index")
+        lines.append(prompt)
 
         if not abortList:
             informative = self.tr("No files are affected.")
         else:
             informative = self.tr("%n files will be reset:", "", len(abortList))
-            if self.repo.any_conflicts:
+            if anyConflicts:
                 lines.append(self.tr("All conflicts will be cleared and all <b>staged</b> changes will be lost."))
             else:
                 lines.append(self.tr("All <b>staged</b> changes will be lost."))
-
-        verb = self.tr("Abort merge") if isMerging else self.tr("Abort cherry-pick")
 
         yield from self.flowConfirm(text=paragraphs(lines), verb=verb, informativeText=informative, detailList=[escape(f) for f in abortList])
 

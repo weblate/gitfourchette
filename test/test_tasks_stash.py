@@ -234,26 +234,32 @@ def testApplyStashWithConflicts(tempDir, mainWindow):
     reposcenario.stashedChange(wd)
     writeFile(f"{wd}/a/a1.txt", "a1\nCONFLICTING CHANGE\n")
     rw = mainWindow.openRepo(wd)
-    repo = rw.repo
 
+    # First try to apply the stash - which isn't allowed because it would conflict with a1.txt in the workdir
     node = rw.sidebar.findNodeByRef("stash@{0}")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, r"^apply")
     acceptQMessageBox(rw, "apply.+stash")
+    acceptQMessageBox(rw, "conflicts with.+working dir")
 
-    acceptQMessageBox(rw, "conflict.+working dir")
-
-    repo.index.add_all()
-    repo.create_commit_on_head("conflicting thing", TEST_SIGNATURE, TEST_SIGNATURE)
+    # Commit a1.txt
+    rw.repo.index.add_all()
+    rw.repo.create_commit_on_head("conflicting thing", TEST_SIGNATURE, TEST_SIGNATURE)
     rw.refreshRepo()
 
+    # Apply the stash again - this time it works but conflicts appear in the index
     node = rw.sidebar.findNodeByRef("stash@{0}")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, r"^apply")
     acceptQMessageBox(rw, "apply.+stash")
-
     acceptQMessageBox(rw, "has caused merge conflicts")
+
     assert rw.sidebar.findNodeByRef("stash@{0}")  # stash not deleted
+
+    assert rw.repo.any_conflicts
+    assert rw.mergeBanner.isVisible()
+    assert "fix the conflicts" in rw.mergeBanner.label.text().lower()
+
     rw.dirtyFiles.selectFile("a/a1.txt")
-    assert rw.conflictView.isVisibleTo(rw)
+    assert rw.conflictView.isVisible()
     assert rw.conflictView.currentConflict.ours.path == "a/a1.txt"

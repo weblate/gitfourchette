@@ -144,6 +144,31 @@ def testShowConflictInBannerEvenIfNotViewingWorkdir(tempDir, mainWindow):
     assert "conflicts need fixing" in rw.mergeBanner.label.text().lower()
 
 
+def testResetIndexWithConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    # Cause a conflict, via a stash in order to keep RepositoryState.NONE
+    reposcenario.stashedChange(wd)
+    with RepoContext(wd) as repo:
+        writeFile(f"{wd}/a/a1.txt", "a1\nCONFLICTING CHANGE\n")
+        repo.index.add_all()
+        repo.create_commit_on_head("conflicting thing", TEST_SIGNATURE, TEST_SIGNATURE)
+        repo.stash_apply()
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.repo.any_conflicts
+    assert rw.mergeBanner.isVisible()
+    assert rw.mergeBanner.button.isVisible()
+    assert "fix the conflicts" in rw.mergeBanner.label.text().lower()
+    assert "reset index" in rw.mergeBanner.button.text().lower()
+
+    # Now reset the index
+    rw.mergeBanner.button.click()
+    acceptQMessageBox(rw, "reset the index")
+    assert not rw.repo.any_conflicts
+    assert not rw.mergeBanner.isVisible()
+
+
 @pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
 def testMergeTool(tempDir, mainWindow):
     noopMergeToolPath = getTestDataPath("editor-shim.sh")

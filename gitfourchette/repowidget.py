@@ -814,6 +814,8 @@ class RepoWidget(QStackedWidget):
             if repo.any_conflicts:
                 bannerTitle = self.tr("Conflicts")
                 bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
+                bannerAction = self.tr("Reset Index")
+                bannerCallback = lambda: self.runTask(AbortMerge)
 
         else:
             bannerTitle = self.tr("Warning")

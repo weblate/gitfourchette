@@ -168,12 +168,13 @@ class ConflictError(Exception):
 
 
 class MultiFileError(Exception):
-    file_exceptions: dict[str, Exception]
+    file_exceptions: dict[str, Exception | None]
 
-    def __init__(self):
+    def __init__(self, message: str = ""):
         self.file_exceptions = {}
+        self.message = message
 
-    def add_file_error(self, path: str, exc: Exception):
+    def add_file_error(self, path: str, exc: Exception | None):
         self.file_exceptions[path] = exc
 
     def __bool__(self):
@@ -1763,8 +1764,13 @@ class Repo(_VanillaRepository):
         staged_paths = [p.delta.new_file.path for p in staged_diff]
         unstaged_paths = [p.delta.new_file.path for p in unstaged_diff if p.delta.status != DeltaStatus.CONFLICTED]
 
-        if set(staged_paths).intersection(unstaged_paths):
-            raise ValueError("entries not up-to-date")
+        intersection = set(staged_paths).intersection(unstaged_paths)
+
+        if intersection:
+            error = MultiFileError()
+            for path in intersection:
+                error.add_file_error(path, None)
+            raise error
 
         return staged_paths
 
