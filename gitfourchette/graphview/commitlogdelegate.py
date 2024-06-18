@@ -247,14 +247,26 @@ class CommitLogDelegate(QStyledItemDelegate):
             paintGraphFrame(self.state, oid, painter, rect, outlineColor)
             rect.setLeft(rect.right())
 
+        # ------ Set refbox/message area rect
+        if oid is not None and oid != UC_FAKEID:
+            rect.setRight(leftBoundName - XMARGIN)
+        else:
+            rect.setRight(rightBound)
+
         # ------ Refboxes
         if oid in self.state.reverseRefCache:
             homeBranch = RefPrefix.HEADS + self.state.homeBranch
             painter.save()
+            painter.setClipRect(rect)
+            maxRefboxX = painter.clipBoundingRect().right()
             darkRefbox = painter.pen().color().lightnessF() > .5
-            for refName in self.state.reverseRefCache[oid]:
-                if refName not in self.state.hiddenRefs:  # skip refboxes for hidden refs
-                    self._paintRefbox(painter, rect, refName, refName == homeBranch, darkRefbox)
+            refs = self.state.reverseRefCache[oid]
+            for refName in refs:
+                if refName in self.state.hiddenRefs:  # skip refboxes for hidden refs
+                    continue
+                self._paintRefbox(painter, rect, refName, refName == homeBranch, darkRefbox)
+                if rect.left() >= maxRefboxX:
+                    break
             painter.restore()
 
         # ------ Icons
@@ -270,10 +282,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         # use muted color for foreign commit messages if not selected
         if not isSelected and commit and commit.id in self.state.foreignCommits:
             painter.setPen(Qt.GlobalColor.gray)
-        if oid is not None and oid != UC_FAKEID:
-            rect.setRight(leftBoundName - XMARGIN)
-        else:
-            rect.setRight(rightBound)
 
         elidedSummaryText = elide(summaryText)
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elidedSummaryText)
