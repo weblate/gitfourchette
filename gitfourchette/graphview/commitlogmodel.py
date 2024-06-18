@@ -1,12 +1,18 @@
 import enum
+from dataclasses import dataclass
+from typing import Literal
 
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
 
-EPHEMERAL_ROW_CACHE = 150
-""" Number of rows to keep track of for MessageElidedRole """
+@dataclass
+class CommitToolTipZone:
+    left: int
+    right: int
+    kind: Literal['ref', 'author', 'message']
+    data: str = ""
 
 
 class SpecialRow(enum.IntEnum):
@@ -18,9 +24,12 @@ class SpecialRow(enum.IntEnum):
 
 
 class CommitLogModel(QAbstractListModel):
+    ToolTipCacheSize = 150
+    """ Number of rows to keep track of for ToolTipZones """
+
     CommitRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 0
     OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
-    MessageElidedRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 2
+    ToolTipZonesRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 2
     AuthorColumnXRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 3
     SpecialRowRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 4
 
@@ -29,14 +38,14 @@ class CommitLogModel(QAbstractListModel):
     _extraRow: SpecialRow
 
     _authorColumnX: int
-    _elidedRows: dict[int, bool]
+    _toolTipZones: dict[int, list[CommitToolTipZone]]
 
     def __init__(self, parent):
         super().__init__(parent)
         self._commitSequence = None
         self._extraRow = SpecialRow.Invalid
         self._authorColumnX = -1
-        self._elidedRows = {}
+        self._toolTipZones = {}
 
     @property
     def isValid(self):
@@ -44,7 +53,7 @@ class CommitLogModel(QAbstractListModel):
 
     def clear(self):
         self.setCommitSequence(None)
-        self._elidedRows.clear()
+        self._toolTipZones.clear()
         self._extraRow = SpecialRow.Invalid
 
     def setCommitSequence(self, newCommitSequence: list[Commit] | None):
@@ -112,23 +121,26 @@ class CommitLogModel(QAbstractListModel):
 
             try:
                 commit = self._commitSequence[row]
-            except IndexError:
+                zones = self._toolTipZones[row]
+            except (IndexError, KeyError):
                 return tip
             if commit is None:
                 return tip
 
-            isCommitMessageElided = index.row() in self._elidedRows
+            x = self.parent().mapFromGlobal(QCursor.pos()).x()
+            for zone in zones:
+                if not (zone.left <= x <= zone.right):
+                    continue
+                if zone.kind == "ref":
+                    tip = zone.data
+                elif zone.kind == "message":
+                    tip = commitMessageTooltip(commit)
+                elif zone.kind == "author":
+                    tip = commitAuthorTooltip(commit)
+                break
 
             if self._authorColumnX <= 0:  # author hidden in narrow window
-                if isCommitMessageElided:
-                    tip += commitMessageTooltip(commit)
                 tip += commitAuthorTooltip(commit)
-            else:
-                x = self.parent().mapFromGlobal(QCursor.pos()).x()
-                if x >= self._authorColumnX:
-                    tip = commitAuthorTooltip(commit)
-                elif isCommitMessageElided:
-                    tip = commitMessageTooltip(commit)
 
             return tip
 
@@ -137,19 +149,16 @@ class CommitLogModel(QAbstractListModel):
             self._authorColumnX = value
             return True
 
-        elif role == CommitLogModel.MessageElidedRole:
+        elif role == CommitLogModel.ToolTipZonesRole:
             row = index.row()
-            self._elidedRows.pop(row, False)
 
-            if value:
-                # Since we just popped this row, re-setting it will bump it to the end of the keys
-                # (dicts keep key insertion order in Python 3.7+)
-                self._elidedRows[row] = True
+            # Bump row to end of keys
+            # (dicts keep key insertion order in Python 3.7+)
+            self._toolTipZones.pop(row, None)
+            self._toolTipZones[row] = value
 
-                # Nuke old entries if the dict grew beyond the threshold
-                if len(self._elidedRows) > EPHEMERAL_ROW_CACHE * 2:
-                    keep = list(self._elidedRows.keys())[-EPHEMERAL_ROW_CACHE:]
-                    self._elidedRows = {k: True for k in keep}
+            # Nuke old entries if the dict grew beyond the threshold
+            trimCacheDict(self._toolTipZones, CommitLogModel.ToolTipCacheSize)
 
             return True
 
@@ -197,3 +206,14 @@ def commitMessageTooltip(commit: Commit) -> str:
         return "<p style='white-space: pre'>" + message
     else:
         return "<p>" + message.replace('\n', '<br>')
+
+
+def trimCacheDict(d: dict, trimToSize: int):
+    maxCapacity = trimToSize * 2
+    size = len(d)
+    if size <= maxCapacity:
+        return
+    numOldKeys = size - trimToSize
+    oldKeys = list(d.keys())[:numOldKeys]
+    for k in oldKeys:
+        del d[k]

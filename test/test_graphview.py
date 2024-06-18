@@ -225,26 +225,25 @@ def testCommitToolTip(tempDir, mainWindow):
     masterId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-
-    oldCursorPos = QCursor.pos()
+    graphView = rw.graphView
+    y = 30
 
     mainWindow.resize(1500, 600)
-    index = rw.graphView.selectRowForLocator(NavLocator.inCommit(masterId))
-    cursorPos = rw.graphView.mapToGlobal(QPoint(8, 8))
-    QCursor.setPos(cursorPos)
+    index = graphView.selectRowForLocator(NavLocator.inCommit(masterId))
+    QCursor.setPos(graphView.mapToGlobal(QPoint(16, y)))
     QTest.qWait(0)
     toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
     assert not toolTip
 
-    cursorPos = rw.graphView.mapToGlobal(QPoint(rw.graphView.width()-8, 8))
+    cursorPos = graphView.mapToGlobal(QPoint(graphView.width() - graphView.verticalScrollBar().width() - 16, y))
     QCursor.setPos(cursorPos)
     QTest.qWait(0)
     toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
     assert "Delete c/c2-2.txt" not in toolTip
     assert "a.u.thor@example.com" in toolTip
 
-    QCursor.setPos(oldCursorPos)
     mainWindow.resize(300, 600)
+    QCursor.setPos(graphView.mapToGlobal(QPoint(graphView.width() - graphView.verticalScrollBar().width() - 16, y)))
     QTest.qWait(0)
     toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
     assert "Delete c/c2-2.txt" in toolTip

@@ -2,7 +2,7 @@ import math
 
 from gitfourchette import settings
 from gitfourchette.forms.searchbar import SearchBar
-from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
+from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow, CommitToolTipZone
 from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -110,6 +110,8 @@ class CommitLogDelegate(QStyledItemDelegate):
         painter.restore()
 
     def _paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        toolTips: list[CommitToolTipZone] = []
+
         hasFocus = option.state & QStyle.StateFlag.State_HasFocus
         isSelected = option.state & QStyle.StateFlag.State_Selected
         style = option.widget.style()
@@ -264,8 +266,11 @@ class CommitLogDelegate(QStyledItemDelegate):
             for refName in refs:
                 if refName in self.state.hiddenRefs:  # skip refboxes for hidden refs
                     continue
+                x1 = rect.left()
                 self._paintRefbox(painter, rect, refName, refName == homeBranch, darkRefbox)
-                if rect.left() >= maxRefboxX:
+                x2 = rect.left()
+                toolTips.append(CommitToolTipZone(x1, x2, "ref", refName))
+                if x2 >= maxRefboxX:
                     break
             painter.restore()
 
@@ -286,6 +291,9 @@ class CommitLogDelegate(QStyledItemDelegate):
         elidedSummaryText = elide(summaryText)
         painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elidedSummaryText)
 
+        if len(elidedSummaryText) == 0 or elidedSummaryText.endswith(("…", ELISION)):
+            toolTips.append(CommitToolTipZone(rect.left(), rect.right(), "message"))
+
         # ------ Highlight search term
         if searchTerm and commit and searchTerm in commit.message.lower():
             needlePos = summaryText.lower().find(searchTerm)
@@ -297,9 +305,10 @@ class CommitLogDelegate(QStyledItemDelegate):
             highlight(summaryText, needlePos, needleLen)
 
         # ------ Author
-        rect.setLeft(leftBoundName)
-        rect.setRight(leftBoundDate - XMARGIN)
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText) + "  ")
+        if authorWidth != 0:
+            rect.setLeft(leftBoundName)
+            rect.setRight(leftBoundDate - XMARGIN)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText))
 
         # ------ Highlight searched author
         if searchTerm and commit:
@@ -308,17 +317,20 @@ class CommitLogDelegate(QStyledItemDelegate):
                 highlight(authorText, needlePos, len(searchTerm))
 
         # ------ Date
-        rect.setLeft(leftBoundDate)
-        rect.setRight(rightBound)
-        painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(dateText))
+        if dateWidth != 0:
+            rect.setLeft(leftBoundDate)
+            rect.setRight(rightBound)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(dateText))
+
+        if authorWidth != 0 or dateWidth != 0:
+            toolTips.append(CommitToolTipZone(leftBoundName, rightBound, "author"))
 
         # ----------------
 
         # Tooltip metrics
-        summaryIsElided = len(elidedSummaryText) == 0 or elidedSummaryText.endswith(("…", ELISION))
         model = index.model()
-        model.setData(index, summaryIsElided, CommitLogModel.MessageElidedRole)
         model.setData(index, leftBoundName if authorWidth != 0 else -1, CommitLogModel.AuthorColumnXRole)
+        model.setData(index, toolTips, CommitLogModel.ToolTipZonesRole)
 
     def _paintRefbox(self, painter: QPainter, rect: QRect, refName: str, isHome: bool, dark: bool):
         if refName == 'HEAD' and not self.state.headIsDetached:
@@ -365,7 +377,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             iconSize = 0
 
         boxRect = QRect(rect)
-        text = fontMetrics.elidedText(text, Qt.TextElideMode.ElideRight, 100)
+        text = fontMetrics.elidedText(text, Qt.TextElideMode.ElideMiddle, 100)
         textWidth = int(fontMetrics.horizontalAdvance(text))  # must be int for pyqt5 compat!
         boxRect.setWidth(2 + iconSize + 1 + textWidth + hPadding)
 
