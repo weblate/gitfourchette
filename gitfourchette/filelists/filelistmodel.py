@@ -13,9 +13,6 @@ from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
-PATCH_ROLE = Qt.ItemDataRole.UserRole + 0
-FILEPATH_ROLE = Qt.ItemDataRole.UserRole + 1
-
 
 def deltaModeText(delta: DiffDelta):
     om = delta.old_file.mode
@@ -129,6 +126,10 @@ class FileListModel(QAbstractListModel):
         diff: Diff
         patchNo: int
 
+    class Role:
+        PatchObject = Qt.ItemDataRole.UserRole + 0
+        FilePath = Qt.ItemDataRole.UserRole + 1
+
     entries: list[Entry]
     fileRows: dict[str, int]
     highlightedCounterpartRow: int
@@ -191,10 +192,10 @@ class FileListModel(QAbstractListModel):
         return self.entries[index.row()].delta
 
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
-        if role == PATCH_ROLE:
+        if role == FileListModel.Role.PatchObject:
             return self.getPatchAt(index)
 
-        elif role == FILEPATH_ROLE:
+        elif role == FileListModel.Role.FilePath:
             delta = self.getDeltaAt(index)
             if not delta:
                 return ""
@@ -261,7 +262,7 @@ class FileListModel(QAbstractListModel):
         """
         if row < 0 or row >= self.rowCount():
             return ""
-        return self.data(self.index(row), FILEPATH_ROLE)
+        return self.data(self.index(row), FileListModel.Role.FilePath)
 
     def hasFile(self, path: str) -> bool:
         """

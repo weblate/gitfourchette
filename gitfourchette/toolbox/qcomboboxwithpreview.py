@@ -4,6 +4,10 @@ from gitfourchette.qt import *
 class QComboBoxWithPreview(QComboBox):
     dataPicked = Signal(object)
 
+    class Role:
+        Data = Qt.ItemDataRole.UserRole + 0
+        Preview = Qt.ItemDataRole.UserRole + 1
+
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         self.numPresets = 0
@@ -16,8 +20,8 @@ class QComboBoxWithPreview(QComboBox):
     def addItemWithPreview(self, caption: str, data: object, preview: str):
         i = self.count()
         self.addItem(caption)
-        self.setItemData(i, data, Qt.ItemDataRole.UserRole + 0)
-        self.setItemData(i, preview, Qt.ItemDataRole.UserRole + 1)
+        self.setItemData(i, data, QComboBoxWithPreview.Role.Data)
+        self.setItemData(i, preview, QComboBoxWithPreview.Role.Preview)
 
         fontMetrics = self.fontMetrics()
         self.captionWidth = max(self.captionWidth, fontMetrics.horizontalAdvance(caption) + 20)
@@ -36,7 +40,7 @@ class QComboBoxWithPreview(QComboBox):
         if index < 0 or index >= self.numPresets:
             return
 
-        data = self.itemData(index, Qt.ItemDataRole.UserRole + 0)
+        data = self.itemData(index, QComboBoxWithPreview.Role.Data)
         self.dataPicked.emit(data)
 
         if self.isEditable():
@@ -58,7 +62,7 @@ class QComboBoxWithPreviewDelegate(QStyledItemDelegate):
         font: QFont = painter.font()
         font.setItalic(True)
 
-        preview = index.data(Qt.ItemDataRole.UserRole + 1)
+        preview = index.data(QComboBoxWithPreview.Role.Preview)
 
         painter.setFont(font)
         painter.setPen(option.palette.color(QPalette.ColorGroup.Normal, colorRole))

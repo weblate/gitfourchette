@@ -14,10 +14,6 @@ from gitfourchette.repostate import RepoState
 
 logger = logging.getLogger(__name__)
 
-ROLE_REF = Qt.ItemDataRole.UserRole + 0
-ROLE_ISHIDDEN = Qt.ItemDataRole.UserRole + 1
-ROLE_ICONKEY = Qt.ItemDataRole.UserRole + 2
-
 BRANCH_FOLDERS = True
 
 UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /refs/, so this name is safe
@@ -186,6 +182,11 @@ class SidebarModel(QAbstractItemModel):
     _cachedTooltipText: str
 
     modeId: int
+
+    class Role:
+        Ref = Qt.ItemDataRole.UserRole + 0
+        Hidden = Qt.ItemDataRole.UserRole + 1
+        IconKey = Qt.ItemDataRole.UserRole + 2
 
     @property
     def _parentWidget(self) -> QWidget:
@@ -491,9 +492,9 @@ class SidebarModel(QAbstractItemModel):
         toolTipRole = role == Qt.ItemDataRole.ToolTipRole
         sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
         fontRole = role == Qt.ItemDataRole.FontRole
-        hiddenRole = role == ROLE_ISHIDDEN
-        refRole = role == ROLE_REF
-        iconKeyRole = role == ROLE_ICONKEY
+        hiddenRole = role == SidebarModel.Role.Hidden
+        refRole = role == SidebarModel.Role.Ref
+        iconKeyRole = role == SidebarModel.Role.IconKey
 
         row = index.row()
         item = node.kind

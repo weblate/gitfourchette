@@ -11,10 +11,7 @@ from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
 from gitfourchette.repostate import RepoState
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate, SidebarClickZone
-from gitfourchette.sidebar.sidebarmodel import (
-    SidebarModel, SidebarNode, EItem,
-    ROLE_REF, ROLE_ISHIDDEN,
-)
+from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 from gitfourchette.toolbox import *
 from gitfourchette.webhost import WebHost
 
@@ -743,7 +740,7 @@ class Sidebar(QTreeView):
         # Early out if any candidate ref is already selected
         with suppress(IndexError):
             index = self.selectedIndexes()[0]
-            if index and index.data(ROLE_REF) in refCandidates:
+            if index and index.data(SidebarModel.Role.Ref) in refCandidates:
                 return index
 
         # If several refs point to the same commit, attempt to select

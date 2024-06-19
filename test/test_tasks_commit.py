@@ -64,7 +64,7 @@ def testCommitUntrackedFileInEmptyRepo(tempDir, mainWindow):
     QTest.keyClicks(dialog.ui.summaryEditor, "Initial commit")
     dialog.accept()
 
-    rows = qlvGetRowData(rw.graphView, CommitLogModel.CommitRole)
+    rows = qlvGetRowData(rw.graphView, CommitLogModel.Role.Commit)
     commit: Commit = rows[-1].peel(Commit)
     assert commit.message == "Initial commit"
 

@@ -27,11 +27,12 @@ class CommitLogModel(QAbstractListModel):
     ToolTipCacheSize = 150
     """ Number of rows to keep track of for ToolTipZones """
 
-    CommitRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 0
-    OidRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 1
-    ToolTipZonesRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 2
-    AuthorColumnXRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 3
-    SpecialRowRole: Qt.ItemDataRole = Qt.ItemDataRole.UserRole + 4
+    class Role:
+        Commit          = Qt.ItemDataRole.UserRole + 0
+        Oid             = Qt.ItemDataRole.UserRole + 1
+        ToolTipZones    = Qt.ItemDataRole.UserRole + 2
+        AuthorColumnX   = Qt.ItemDataRole.UserRole + 3
+        SpecialRow      = Qt.ItemDataRole.UserRole + 4
 
     # Reference to RepoState.commitSequence
     _commitSequence: list[Commit] | None
@@ -94,13 +95,13 @@ class CommitLogModel(QAbstractListModel):
         if role == Qt.ItemDataRole.DisplayRole:
             return None
 
-        elif role == CommitLogModel.CommitRole:
+        elif role == CommitLogModel.Role.Commit:
             try:
                 return self._commitSequence[row]
             except IndexError:
                 pass
 
-        elif role == CommitLogModel.OidRole:
+        elif role == CommitLogModel.Role.Oid:
             try:
                 commit = self._commitSequence[row]
                 if commit is not None:
@@ -108,7 +109,7 @@ class CommitLogModel(QAbstractListModel):
             except IndexError:
                 pass
 
-        elif role == CommitLogModel.SpecialRowRole:
+        elif role == CommitLogModel.Role.SpecialRow:
             if row == 0:
                 return SpecialRow.UncommittedChanges
             elif row < len(self._commitSequence):
@@ -145,11 +146,11 @@ class CommitLogModel(QAbstractListModel):
             return tip
 
     def setData(self, index, value, role=None):
-        if role == CommitLogModel.AuthorColumnXRole:
+        if role == CommitLogModel.Role.AuthorColumnX:
             self._authorColumnX = value
             return True
 
-        elif role == CommitLogModel.ToolTipZonesRole:
+        elif role == CommitLogModel.Role.ToolTipZones:
             row = index.row()
 
             # Bump row to end of keys

@@ -168,7 +168,7 @@ class GraphView(QListView):
             super().mouseDoubleClickEvent(event)
             return
         event.accept()
-        rowKind = currentIndex.data(CommitLogModel.SpecialRowRole)
+        rowKind = currentIndex.data(CommitLogModel.Role.SpecialRow)
         if rowKind == SpecialRow.UncommittedChanges:
             NewCommit.invoke(self)
         elif rowKind == SpecialRow.TruncatedHistory:
@@ -211,13 +211,13 @@ class GraphView(QListView):
         currentIndex = self.currentIndex()
         if not currentIndex.isValid():
             return SpecialRow.Invalid
-        return currentIndex.data(CommitLogModel.SpecialRowRole)
+        return currentIndex.data(CommitLogModel.Role.SpecialRow)
 
     @property
     def currentCommitId(self) -> Oid | None:
         if not self.currentIndex().isValid():
             return
-        oid = self.currentIndex().data(CommitLogModel.OidRole)
+        oid = self.currentIndex().data(CommitLogModel.Role.Oid)
         return oid
 
     def getInfoOnCurrentCommit(self):
@@ -234,7 +234,7 @@ class GraphView(QListView):
 
         # TODO: we should probably run this as a task
 
-        commit: Commit = self.currentIndex().data(CommitLogModel.CommitRole)
+        commit: Commit = self.currentIndex().data(CommitLogModel.Role.Commit)
 
         summary, contd = messageSummary(commit.message)
         details = commit.message if contd else ""
@@ -355,11 +355,11 @@ class GraphView(QListView):
         if current is None or not current.isValid():
             locator = NavLocator(NavContext.EMPTY)
         else:
-            special = current.data(CommitLogModel.SpecialRowRole)
+            special = current.data(CommitLogModel.Role.SpecialRow)
             if special == SpecialRow.UncommittedChanges:
                 locator = NavLocator(NavContext.WORKDIR)
             elif special == SpecialRow.Commit:
-                oid = current.data(CommitLogModel.OidRole)
+                oid = current.data(CommitLogModel.Role.Oid)
                 locator = NavLocator(NavContext.COMMITTED, commit=oid)
             else:
                 locator = NavLocator(NavContext.SPECIAL, path=str(special))
@@ -375,15 +375,15 @@ class GraphView(QListView):
     def getFilterIndexForLocator(self, locator: NavLocator):
         if locator.context == NavContext.COMMITTED:
             index = self.getFilterIndexForCommit(locator.commit)
-            assert index.data(CommitLogModel.SpecialRowRole) == SpecialRow.Commit
+            assert index.data(CommitLogModel.Role.SpecialRow) == SpecialRow.Commit
         elif locator.context.isWorkdir():
             index = self.clFilter.index(0, 0)
-            assert index.data(CommitLogModel.SpecialRowRole) == SpecialRow.UncommittedChanges
+            assert index.data(CommitLogModel.Role.SpecialRow) == SpecialRow.UncommittedChanges
         elif locator.context == NavContext.SPECIAL:
             if self.clModel._extraRow == SpecialRow.Invalid:
                 raise ValueError("no special row")
             index = self.clFilter.index(self.clFilter.rowCount()-1, 0)
-            assert locator.path == str(index.data(CommitLogModel.SpecialRowRole))
+            assert locator.path == str(index.data(CommitLogModel.Role.SpecialRow))
         else:
             raise NotImplementedError(f"unsupported locator context {locator.context}")
         return index
@@ -435,7 +435,7 @@ class GraphView(QListView):
 
         for i in searchRange:
             index = model.index(i, 0)
-            commit = model.data(index, CommitLogModel.CommitRole)
+            commit = model.data(index, CommitLogModel.Role.Commit)
             if commit is None:
                 continue
             if likelyHash and str(commit.id).startswith(term):

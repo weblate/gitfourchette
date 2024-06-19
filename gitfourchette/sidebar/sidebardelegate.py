@@ -1,7 +1,7 @@
 import enum
 
 from gitfourchette.qt import *
-from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarModel, EItem, UNINDENT_ITEMS, ROLE_ICONKEY
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarModel, EItem, UNINDENT_ITEMS
 from gitfourchette.toolbox import stockIcon
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
@@ -127,7 +127,7 @@ class SidebarDelegate(QStyledItemDelegate):
 
         # Draw decoration icon
         iconWidth = option.decorationSize.width()
-        iconKey = index.data(ROLE_ICONKEY)
+        iconKey = index.data(SidebarModel.Role.IconKey)
         if iconKey:
             r = QRect(option.rect)
             r.setWidth(iconWidth)

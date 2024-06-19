@@ -150,7 +150,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         rightBound = rect.right()
 
         # Get the info we need about the commit
-        commit: Commit | None = index.data(CommitLogModel.CommitRole)
+        commit: Commit | None = index.data(CommitLogModel.Role.Commit)
         if commit:
             oid = commit.id
             author = commit.author
@@ -188,7 +188,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             searchTermLooksLikeHash = False
             painter.setFont(self.uncommittedFont)
 
-            specialRowKind: SpecialRow = index.data(CommitLogModel.SpecialRowRole)
+            specialRowKind: SpecialRow = index.data(CommitLogModel.Role.SpecialRow)
 
             if specialRowKind == SpecialRow.UncommittedChanges:
                 oid = UC_FAKEID
@@ -329,8 +329,8 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # Tooltip metrics
         model = index.model()
-        model.setData(index, leftBoundName if authorWidth != 0 else -1, CommitLogModel.AuthorColumnXRole)
-        model.setData(index, toolTips, CommitLogModel.ToolTipZonesRole)
+        model.setData(index, leftBoundName if authorWidth != 0 else -1, CommitLogModel.Role.AuthorColumnX)
+        model.setData(index, toolTips, CommitLogModel.Role.ToolTipZones)
 
     def _paintRefbox(self, painter: QPainter, rect: QRect, refName: str, isHome: bool, dark: bool):
         if refName == 'HEAD' and not self.state.headIsDetached:
@@ -405,7 +405,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         text = "?" * 7
         with suppress(BaseException):
-            commit: Commit = index.data(CommitLogModel.CommitRole)
+            commit: Commit = index.data(CommitLogModel.Role.Commit)
             text = str(commit.id)[:7]
         with suppress(BaseException):
             details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)

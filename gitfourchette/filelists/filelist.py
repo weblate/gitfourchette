@@ -4,7 +4,7 @@ from typing import Callable, Generator
 
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool
-from gitfourchette.filelists.filelistmodel import FileListModel, FILEPATH_ROLE, PATCH_ROLE
+from gitfourchette.filelists.filelistmodel import FileListModel
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
@@ -394,7 +394,7 @@ class FileList(QListView):
             self.update(newIndex)
 
     def getNavLocatorForIndex(self, index: QModelIndex):
-        filePath = index.data(FILEPATH_ROLE)
+        filePath = index.data(FileListModel.Role.FilePath)
         return NavLocator(self.navContext, self.commitId, filePath)
 
     def mouseMoveEvent(self, event: QMouseEvent):
@@ -416,7 +416,7 @@ class FileList(QListView):
     def selectedPatches(self) -> Generator[Patch, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():
-            patch: Patch = index.data(PATCH_ROLE)
+            patch: Patch = index.data(FileListModel.Role.PatchObject)
             if not patch or not patch.delta:
                 raise ValueError(tr("This file appears to have changed since we last read it. Try refreshing the window."))
             assert isinstance(patch, Patch)
@@ -425,7 +425,7 @@ class FileList(QListView):
     def selectedPaths(self) -> Generator[str, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():
-            path: str = index.data(FILEPATH_ROLE)
+            path: str = index.data(FileListModel.Role.FilePath)
             if not path:
                 continue
             yield path
@@ -449,7 +449,7 @@ class FileList(QListView):
     def firstPath(self) -> str:
         index: QModelIndex = self.flModel.index(0)
         if index.isValid():
-            return index.data(FILEPATH_ROLE)
+            return index.data(FileListModel.Role.FilePath)
         else:
             return ""
 
@@ -457,7 +457,7 @@ class FileList(QListView):
         flModel = self.flModel
         for row in range(flModel.rowCount()):
             index = flModel.index(row)
-            yield index.data(FILEPATH_ROLE)
+            yield index.data(FileListModel.Role.FilePath)
 
     def selectFile(self, file: str) -> bool:
         if not file:
@@ -537,7 +537,7 @@ class FileList(QListView):
 
         for i in searchRange:
             index = model.index(i, 0)
-            path = model.data(index, FILEPATH_ROLE)
+            path = model.data(index, FileListModel.Role.FilePath)
             if path and term in path.lower():
                 return index
 
@@ -556,7 +556,7 @@ class FileList(QListView):
         self._selectionBackup = None
 
         currentIndex: QModelIndex = self.currentIndex()
-        cPath = currentIndex.data(FILEPATH_ROLE)
+        cPath = currentIndex.data(FileListModel.Role.FilePath)
 
         if cPath not in paths:
             # Don't attempt to restore if we've jumped to another file
