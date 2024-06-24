@@ -331,8 +331,9 @@ def testNewBranchTrackingRemoteBranch2(tempDir, mainWindow):
 
     dlg: NewBranchDialog = findQDialog(rw, "new.+branch")
     assert dlg.ui.nameEdit.text() == "first-merge"
-    assert dlg.ui.upstreamCheckBox.isChecked()
     assert dlg.ui.upstreamComboBox.currentText() == "origin/first-merge"
+    assert not dlg.ui.upstreamCheckBox.isChecked()
+    dlg.ui.upstreamCheckBox.setChecked(True)
     dlg.accept()
 
     localBranch = repo.branches.local['first-merge']

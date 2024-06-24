@@ -251,11 +251,9 @@ class _NewBranchBaseTask(RepoTask):
 
         if trackUpstream == self.TRACK_ANY_UPSTREAM:
             trackUpstream = ""
-            dlg.ui.upstreamCheckBox.setChecked(bool(upstreams))
         elif trackUpstream:
             i = dlg.ui.upstreamComboBox.findText(trackUpstream)
             found = i >= 0
-            dlg.ui.upstreamCheckBox.setChecked(found)
             if found:
                 dlg.ui.upstreamComboBox.setCurrentIndex(i)
 
