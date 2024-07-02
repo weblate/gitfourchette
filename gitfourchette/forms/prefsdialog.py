@@ -158,7 +158,7 @@ class PrefsDialog(QDialog):
                 form.addRow(formField)
             else:
                 # There's a leading caption, so add it as the label in the row
-                caption += self.tr(":", "caption suffix in prefs dialog")
+                caption += tr(":", "generic caption suffix")
                 captionLabel = QLabel(caption)
                 captionLabel.setBuddy(control)
                 if toolTip:

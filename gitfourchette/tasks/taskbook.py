@@ -51,6 +51,7 @@ class TaskBook:
             tasks.FastForwardBranch: translate("task", "Fast-forward branch"),
             tasks.FetchRemote: translate("task", "Fetch remote"),
             tasks.FetchRemoteBranch: translate("task", "Fetch remote branch"),
+            tasks.GetCommitInfo: translate("task", "Get commit information"),
             tasks.HardSolveConflicts: translate("task", "Accept/reject incoming changes"),
             tasks.Jump: translate("task", "Navigate in repo"),
             tasks.JumpBack: translate("task", "Navigate back"),

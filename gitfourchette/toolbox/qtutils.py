@@ -371,6 +371,10 @@ def writeTempFile(namePattern: str, data: bytes | str) -> QTemporaryFile:
 
 
 class DocumentLinks:
+    """
+    Bundle of ad-hoc links bound to callback functions.
+    """
+
     AUTHORITY = "adhoc"
 
     def __init__(self):
@@ -381,7 +385,9 @@ class DocumentLinks:
         self.callbacks[key] = func
         return makeInternalLink(self.AUTHORITY, urlPath="", urlFragment=key)
 
-    def processLink(self, url: QUrl, invoker: QObject) -> bool:
+    def processLink(self, url: QUrl | str, invoker: QObject) -> bool:
+        if type(url) is str:
+            url = QUrl(url)
         if url.scheme() == APP_URL_SCHEME and url.authority() == self.AUTHORITY:
             cb = self.callbacks[url.fragment()]
             cb(invoker)

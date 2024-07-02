@@ -693,10 +693,8 @@ class RepoWidget(QStackedWidget):
             return
         assert self.state is not None
 
-        # Break refresh chain?
-        if flags == TaskEffects.Nothing:
-            if jumpTo:
-                logger.warning(f"Refresh chain stopped + dangling jump {jumpTo}")
+        # End refresh chain
+        if flags == TaskEffects.Nothing and not jumpTo:
             return
 
         if not self.isVisible() or self.repoTaskRunner.isBusy():
@@ -721,7 +719,11 @@ class RepoWidget(QStackedWidget):
                 logger.warning(f"Dropping pendingLocator {self.pendingLocator} - overridden by {jumpTo}")
             self.pendingLocator = NavLocator()  # Consume it
 
-        tasks.RefreshRepo.invoke(self, flags, jumpTo)
+        # Invoke refresh task
+        if flags != TaskEffects.Nothing:
+            tasks.RefreshRepo.invoke(self, flags, jumpTo)
+        elif jumpTo:
+            tasks.Jump.invoke(self, jumpTo)
 
     def refreshWindowChrome(self):
         shortname = self.getTitle()

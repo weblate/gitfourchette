@@ -35,6 +35,7 @@ from gitfourchette.tasks.exporttasks import (
 )
 from gitfourchette.tasks.misctasks import (
     EditRepoSettings,
+    GetCommitInfo,
 )
 from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward, JumpBack, JumpForward, RefreshRepo
 from gitfourchette.tasks.loadtasks import PrimeRepo
