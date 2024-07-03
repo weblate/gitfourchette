@@ -11,6 +11,7 @@ from gitfourchette.filelists.filelist import FileList
 from gitfourchette.filelists.stagedfiles import StagedFiles
 from gitfourchette.forms.banner import Banner
 from gitfourchette.forms.conflictview import ConflictView
+from gitfourchette.forms.contextheader import ContextHeader
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
@@ -36,14 +37,25 @@ class DiffArea(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.setObjectName("Split_DiffArea")
 
+        contextHeader = ContextHeader(self)
+        for b in (contextHeader.maximizeButton, contextHeader.infoButton):
+            b.setMaximumHeight(FILEHEADER_HEIGHT)
+
         diffBanner = Banner(self, orientation=Qt.Orientation.Horizontal)
         diffBanner.setProperty("class", "diff")
         diffBanner.setVisible(False)
 
+        separator = QFrame(self)
+        separator.setFrameStyle(QFrame.Shape.HLine)
+        separator.setMaximumHeight(1)
+        separator.setEnabled(False)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(QMargins())
         layout.setSpacing(0)
+        layout.addWidget(contextHeader)
         layout.addWidget(diffBanner)
+        layout.addWidget(separator)
         layout.addWidget(splitter, 1)
 
         splitter.addWidget(fileStack)
@@ -55,6 +67,7 @@ class DiffArea(QWidget):
 
         self.fileStack = fileStack
         self.diffBanner = diffBanner
+        self.contextHeader = contextHeader
 
     # -------------------------------------------------------------------------
     # Constructor helpers

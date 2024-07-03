@@ -32,12 +32,12 @@ class GraphView(QListView):
 
         def __str__(self):
             if self.foundButHidden:
-                m = translate("GraphView", "Commit {0} isn’t shown in the graph because it is part of a hidden branch.")
+                m = translate("GraphView", "This commit isn’t shown in the graph because it’s part of a hidden branch.")
             elif self.likelyTruncated:
-                m = translate("GraphView", "Commit {0} isn’t shown in the graph because it isn’t part of the truncated commit history.")
+                m = translate("GraphView", "This commit isn’t shown in the graph because it isn’t part of the truncated commit history.")
             else:
-                m = translate("GraphView", "Commit {0} isn’t shown in the graph.")
-            return m.format(tquo(shortHash(self.oid)))
+                m = translate("GraphView", "This commit isn’t shown in the graph.")
+            return m
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -286,10 +286,11 @@ class GraphView(QListView):
         return index
 
     def getFilterIndexForCommit(self, oid: Oid) -> QModelIndex | None:
+        state = self.repoWidget.state
         try:
-            rawIndex = self.repoWidget.state.graph.getCommitRow(oid)
+            rawIndex = state.graph.getCommitRow(oid)
         except KeyError:
-            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=self.repoWidget.state.truncatedHistory)
+            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=state.truncatedHistory)
 
         newSourceIndex = self.clModel.index(rawIndex, 0)
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)

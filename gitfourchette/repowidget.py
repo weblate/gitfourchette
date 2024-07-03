@@ -148,13 +148,14 @@ class RepoWidget(QStackedWidget):
         # ----------------------------------
         # Splitters
 
-        splitterA = QSplitter(Qt.Orientation.Horizontal, self)
-        splitterA.setObjectName("Split_Side")
+        sideSplitter = QSplitter(Qt.Orientation.Horizontal, self)
+        sideSplitter.setObjectName("Split_Side")
 
-        splitterB = QSplitter(Qt.Orientation.Vertical, self)
-        splitterB.setObjectName("Split_Central")
+        centralSplitter = QSplitter(Qt.Orientation.Vertical, self)
+        centralSplitter.setObjectName("Split_Central")
+        self.centralSplitter = centralSplitter
 
-        mainLayout.insertWidget(0, splitterA)
+        mainLayout.insertWidget(0, sideSplitter)
 
         # ----------------------------------
         # Build widgets
@@ -183,18 +184,21 @@ class RepoWidget(QStackedWidget):
         # ----------------------------------
         # Add widgets in splitters
 
-        splitterA.addWidget(sidebarContainer)
-        splitterA.addWidget(splitterB)
-        splitterA.setSizes([100, 500])
-        splitterA.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
-        splitterA.setStretchFactor(1, 1)
+        sideSplitter.addWidget(sidebarContainer)
+        sideSplitter.addWidget(centralSplitter)
+        sideSplitter.setSizes([100, 500])
+        sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
+        sideSplitter.setStretchFactor(1, 1)
+        sideSplitter.setChildrenCollapsible(False)
 
-        splitterB.addWidget(graphContainer)
-        splitterB.addWidget(self.diffArea)
-        splitterB.setSizes([100, 150])
-
-        splitterA.setChildrenCollapsible(False)
-        splitterB.setChildrenCollapsible(False)
+        centralSplitter.addWidget(graphContainer)
+        centralSplitter.addWidget(self.diffArea)
+        centralSplitter.setSizes([100, 150])
+        centralSplitter.setCollapsible(0, True)  # Let DiffArea be maximized, thereby hiding the graph
+        centralSplitter.setCollapsible(1, False)  # DiffArea can never be collapsed
+        self.centralSplitSizesBackup = centralSplitter.sizes()
+        self.diffArea.contextHeader.maximizeButton.clicked.connect(self.maximizeDiffArea)
+        centralSplitter.splitterMoved.connect(self.syncDiffAreaMaximizeButton)
 
         splitters: list[QSplitter] = self.findChildren(QSplitter)
         assert all(s.objectName() for s in splitters), "all splitters must be named, or state saving won't work!"
@@ -255,8 +259,13 @@ class RepoWidget(QStackedWidget):
 
         # Smaller font for header text
         for h in (self.diffHeader, self.committedHeader, self.dirtyHeader, self.stagedHeader,
+                  self.diffArea.contextHeader,
+                  self.diffArea.contextHeader.maximizeButton,
+                  self.diffArea.contextHeader.infoButton,
                   self.stageButton, self.unstageButton):
             tweakWidgetFont(h, 90)
+        for h in (self.diffHeader, self.committedHeader, self.dirtyHeader, self.stagedHeader):
+            h.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
 
         # ----------------------------------
         # We're ready
@@ -366,6 +375,25 @@ class RepoWidget(QStackedWidget):
                 name = splitter.objectName()
                 sizes = self.sharedSplitterSizes[name]
                 splitter.setSizes(sizes)
+
+    def isDiffAreaMaximized(self):
+        sizes = self.centralSplitter.sizes()
+        return sizes[0] == 0
+
+    def maximizeDiffArea(self):
+        if self.isDiffAreaMaximized():
+            # Diff area was maximized - restore non-collapsed sizes
+            newSizes = self.centralSplitSizesBackup
+        else:
+            # Maximize diff area - back up current sizes
+            self.centralSplitSizesBackup = self.centralSplitter.sizes()
+            newSizes = [0, 1]
+        self.centralSplitter.setSizes(newSizes)
+        self.syncDiffAreaMaximizeButton()
+
+    def syncDiffAreaMaximizeButton(self):
+        isMaximized = self.isDiffAreaMaximized()
+        self.diffArea.contextHeader.maximizeButton.setChecked(isMaximized)
 
     # -------------------------------------------------------------------------
     # Placeholder widgets

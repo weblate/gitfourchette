@@ -5,17 +5,17 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
 
-HORIZONTAL_CONTENT_HEIGHT = 24
+HORIZONTAL_CONTENT_HEIGHT = 20
 FONT_POINT_PERCENT = 90
 
 
 class Banner(QFrame):
     def __init__(self, parent, orientation: Qt.Orientation):
         super().__init__(parent)
-        self.setObjectName("StateBox")
+        self.setObjectName("Banner")
 
         icon = QLabel(self)
-        icon.setPixmap(stockIcon("SP_MessageBoxInformation").pixmap(HORIZONTAL_CONTENT_HEIGHT))
+        icon.setPixmap(stockIcon("SP_MessageBoxInformation").pixmap(min(16, HORIZONTAL_CONTENT_HEIGHT)))
 
         label = QLabel(__name__, self)
         label.setWordWrap(True)

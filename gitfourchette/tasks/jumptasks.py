@@ -11,7 +11,7 @@ from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
-from gitfourchette.porcelain import NULL_OID, DeltaStatus, Patch
+from gitfourchette.porcelain import DeltaStatus, NULL_OID, Patch
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
@@ -97,7 +97,8 @@ class Jump(RepoTask):
             rw.sidebar.selectAnyRef(UC_FAKEREF)
 
         # Reset diff banner
-        rw.diffBanner.setVisible(False)
+        rw.diffArea.diffBanner.setVisible(False)
+        rw.diffArea.contextHeader.setContext(locator)
 
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY
@@ -223,6 +224,7 @@ class Jump(RepoTask):
         assert locator.commit
         assert not locator.ref
 
+        commit = rw.repo.peel_commit(locator.commit)
         warnings = []
 
         # Select row in commit log
@@ -233,7 +235,8 @@ class Jump(RepoTask):
             except GraphView.SelectCommitError as e:
                 # Commit is hidden or not loaded
                 rw.graphView.clearSelection()
-                warnings.append(str(e))
+                if not locator.hasFlags(NavFlags.IsStash):  # Don't show a warning for stashes - never shown in graph
+                    warnings.append(str(e))
 
         # Attempt to select matching ref in sidebar
         with (
@@ -245,6 +248,7 @@ class Jump(RepoTask):
 
         flv = area.committedFiles
         area.diffBanner.setVisible(False)
+        area.contextHeader.setContext(locator, commit.message)
 
         if locator.commit == flv.commitId and not locator.hasFlags(NavFlags.Force):
             # No need to reload the same commit
@@ -271,8 +275,7 @@ class Jump(RepoTask):
                 numChanges = flv.model().rowCount()
 
             # Set header text
-            area.committedHeader.setText(self.tr("%n changes in {0}:", "", numChanges
-                                               ).format(shortHash(locator.commit)))
+            area.committedHeader.setText(self.tr("%n changes:", "", numChanges))
             area.committedHeader.setToolTip("<p>" + escape(summary).replace("\n", "<br>"))
 
         # Early out if the commit is empty

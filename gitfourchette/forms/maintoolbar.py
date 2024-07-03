@@ -135,7 +135,7 @@ class MainToolBar(QToolBar):
         menu.exec(globalPoint)
 
     def onVisibilityChanged(self, visible: bool):
-        self.window().setUnifiedTitleAndToolBarOnMac(visible)
+        # self.window().setUnifiedTitleAndToolBarOnMac(visible)
         if visible == settings.prefs.showToolBar:
             return
         settings.prefs.showToolBar = visible

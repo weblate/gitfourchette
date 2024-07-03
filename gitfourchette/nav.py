@@ -15,11 +15,26 @@ PUSH_INTERVAL = 0.5
 
 class NavFlags(enum.IntFlag):
     Force = enum.auto()
+    """Force reloading the diff, even if what's currently displayed
+    already matches the current locator."""
+
     AllowWriteIndex = enum.auto()
+    "Allow writing to the index while loading the diff at this location."
+
     AllowLongLines = enum.auto()
+    "Bypass long line limit to display the diff at this location."
+
     AllowLargeFiles = enum.auto()
-    AllowMultiSelect = enum.auto()
+    "Bypass large file limit to display the diff at this location."
+
     AllowLargeCommits = enum.auto()
+    "Bypass rename detection limit to display the commit at this location."
+
+    AllowMultiSelect = enum.auto()
+    "Don't reset the selection when loading this location."
+
+    IsStash = enum.auto()
+    "The locator is within a stash (for informative purposes)."
 
     DefaultFlags = 0
 

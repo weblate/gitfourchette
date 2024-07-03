@@ -2,7 +2,7 @@ Sidebar {
     background: palette(window);
 }
 
-Banner.diff {
+Banner.diff, ContextHeader {
     padding: 2px;
 }
 

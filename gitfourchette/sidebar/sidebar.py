@@ -4,7 +4,7 @@ from typing import Iterable, Callable
 
 from gitfourchette import porcelain
 from gitfourchette import settings
-from gitfourchette.nav import NavLocator
+from gitfourchette.nav import NavLocator, NavFlags
 from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.porcelain import Oid, RefPrefix
@@ -456,6 +456,7 @@ class Sidebar(QTreeView):
             locator = NavLocator.inRef(node.data)
         elif item == EItem.Stash:
             locator = NavLocator.inCommit(Oid(hex=node.data))
+            locator = locator.withExtraFlags(NavFlags.IsStash)
         else:
             return None
 

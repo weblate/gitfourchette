@@ -129,9 +129,9 @@ def isDarkTheme(palette: QPalette | None = None):
     return themeBG.value() < themeFG.value()
 
 
-def mutedTextColorHex(w: QWidget) -> str:
+def mutedTextColorHex(w: QWidget, alpha=.5) -> str:
     mutedColor = QApplication.palette().windowText().color()
-    mutedColor.setAlphaF(.5)
+    mutedColor.setAlphaF(alpha)
     mutedColor = mutedColor.name(QColor.NameFormat.HexArgb)
     return mutedColor
 
