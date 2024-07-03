@@ -91,6 +91,7 @@ class DiffGutter(QWidget):
         # Gather some metrics
         paintRect = event.rect()
         gutterRect = self.rect()
+        rightEdge = gutterRect.width() - 1
         fontHeight = self.fontMetrics().height()
 
         # Clip painting to QScrollArea viewport rect (don't draw beneath horizontal scroll bar)
@@ -103,7 +104,7 @@ class DiffGutter(QWidget):
         painter.fillRect(paintRect, gutterColor)
 
         # Draw vertical separator line
-        painter.fillRect(gutterRect.x() + gutterRect.width() - 1, paintRect.y(), 1, paintRect.height(), lineColor)
+        painter.fillRect(rightEdge, paintRect.y(), 1, paintRect.height(), lineColor)
 
         block: QTextBlock = diffView.firstVisibleBlock()
         blockNumber = block.blockNumber()
@@ -118,7 +119,10 @@ class DiffGutter(QWidget):
             noOldPlaceholder = "·"
             noNewPlaceholder = "·"
 
-        painter.setPen(textColor)
+        linePen = QPen(lineColor, 1, Qt.PenStyle.DashLine)
+        textPen = QPen(textColor)
+        painter.setPen(textPen)
+
         while block.isValid() and top <= paintRect.bottom():
             if blockNumber >= len(diffView.lineData):
                 break
@@ -130,12 +134,15 @@ class DiffGutter(QWidget):
                     old = str(ld.diffLine.old_lineno) if ld.diffLine.old_lineno > 0 else noOldPlaceholder
                     new = str(ld.diffLine.new_lineno) if ld.diffLine.new_lineno > 0 else noNewPlaceholder
 
-                    colW = (gutterRect.width() - 4) // 2
+                    colW = (rightEdge - 3) // 2
                     painter.drawText(0, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, old)
                     painter.drawText(colW, top, colW, fontHeight, Qt.AlignmentFlag.AlignRight, new)
                 else:
                     # Draw hunk separator horizontal line
-                    painter.fillRect(0, round((top+bottom)/2), gutterRect.width()-1, 1, lineColor)
+                    y = round((top + bottom) / 2)
+                    painter.setPen(linePen)
+                    painter.drawLine(QLine(0, y, rightEdge, y))
+                    painter.setPen(textPen)  # restore text pen
 
             block = block.next()
             top = bottom
