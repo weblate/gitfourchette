@@ -456,7 +456,6 @@ class Sidebar(QTreeView):
             locator = NavLocator.inRef(node.data)
         elif item == EItem.Stash:
             locator = NavLocator.inCommit(Oid(hex=node.data))
-            locator = locator.withExtraFlags(NavFlags.IsStash)
         else:
             return None
 

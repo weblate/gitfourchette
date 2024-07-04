@@ -33,9 +33,6 @@ class NavFlags(enum.IntFlag):
     AllowMultiSelect = enum.auto()
     "Don't reset the selection when loading this location."
 
-    IsStash = enum.auto()
-    "The locator is within a stash (for informative purposes)."
-
     DefaultFlags = 0
 
     @staticmethod

@@ -81,6 +81,8 @@ class RepoState(QObject):
 
     mergeheadsCache: list[Oid]
 
+    stashCache: list[Oid]
+
     superproject: str
     "Path of the superproject. Empty string if this isn't a submodule."
 
@@ -130,6 +132,7 @@ class RepoState(QObject):
         self.refCache = {}
         self.reverseRefCache = {}
         self.mergeheadsCache = []
+        self.stashCache = []
         self.hiddenRefs = set()
         self.hiddenCommits = set()
 
@@ -138,6 +141,7 @@ class RepoState(QObject):
         # Refresh ref cache after loading prefs (prefs contain hidden ref patterns)
         self.refreshRefCache()
         self.refreshMergeheadsCache()
+        self.refreshStashCache()
 
         self.superproject = repo.get_superproject()
 
@@ -195,6 +199,16 @@ class RepoState(QObject):
         mh = self.repo.listall_mergeheads()
         if mh != self.mergeheadsCache:
             self.mergeheadsCache = mh
+            return True
+        return False
+
+    @benchmark
+    def refreshStashCache(self):
+        stashes = []
+        for stash in self.repo.listall_stashes():
+            stashes.append(stash.commit_id)
+        if stashes != self.stashCache:
+            self.stashCache = stashes
             return True
         return False
 

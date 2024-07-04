@@ -225,6 +225,7 @@ class Jump(RepoTask):
         assert not locator.ref
 
         commit = rw.repo.peel_commit(locator.commit)
+        isStash = locator.commit in rw.state.stashCache
         warnings = []
 
         # Select row in commit log
@@ -235,7 +236,7 @@ class Jump(RepoTask):
             except GraphView.SelectCommitError as e:
                 # Commit is hidden or not loaded
                 rw.graphView.clearSelection()
-                if not locator.hasFlags(NavFlags.IsStash):  # Don't show a warning for stashes - never shown in graph
+                if not isStash:  # Don't show a warning for stashes - never shown in graph
                     warnings.append(str(e))
 
         # Attempt to select matching ref in sidebar
@@ -248,7 +249,7 @@ class Jump(RepoTask):
 
         flv = area.committedFiles
         area.diffBanner.setVisible(False)
-        area.contextHeader.setContext(locator, commit.message)
+        area.contextHeader.setContext(locator, commit.message, isStash)
 
         if locator.commit == flv.commitId and not locator.hasFlags(NavFlags.Force):
             # No need to reload the same commit
@@ -494,6 +495,7 @@ class RefreshRepo(RepoTask):
             oldRefCache = rw.state.refCache
             needGraphRefresh = rw.state.refreshRefCache()
             needGraphRefresh |= rw.state.refreshMergeheadsCache()
+            rw.state.refreshStashCache()  # stashes don't affect needGraphRefresh because they don't appear in graph
 
             # Load commits from changed refs only
             if needGraphRefresh:

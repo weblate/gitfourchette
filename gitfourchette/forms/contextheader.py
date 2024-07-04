@@ -38,11 +38,11 @@ class ContextHeader(QFrame):
         fg = mutedTextColorHex(self, .8)
         self.setStyleSheet(f"ContextHeader {{ background-color: {bg}; }}  ContextHeader QLabel {{ color: {fg}; }}")
 
-    def setContext(self, locator: NavLocator, commitMessage: str = ""):
+    def setContext(self, locator: NavLocator, commitMessage: str = "", isStash=False):
         self.locator = locator
         if locator.context == NavContext.COMMITTED:
             kind = self.tr("Commit")
-            if locator.hasFlags(NavFlags.IsStash):
+            if isStash:
                 kind = self.tr("Stash")
             summary, _ = messageSummary(commitMessage)
             self.mainLabel.setText(f"{kind} {shortHash(locator.commit)} – {summary}")

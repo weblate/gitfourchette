@@ -176,7 +176,6 @@ class SidebarModel(QAbstractItemModel):
     _unbornHead: str
     _checkedOut: str; "Shorthand of checked-out local branch"
     _checkedOutUpstream: str; "Shorthand of the checked-out branch's upstream"
-    _stashes: list[Stash]
 
     _cachedTooltipIndex: QModelIndex | None
     _cachedTooltipText: str
@@ -206,7 +205,6 @@ class SidebarModel(QAbstractItemModel):
         self.nodesByRef = {}
         self._checkedOut = ""
         self._checkedOutUpstream = ""
-        self._stashes = []
 
         self._cachedTooltipIndex = None
         self._cachedTooltipText = ""
@@ -363,10 +361,12 @@ class SidebarModel(QAbstractItemModel):
 
         # Stashes
         with Benchmark("Stashes"):
-            self._stashes = repo.listall_stashes()
-            for i, stash in enumerate(self._stashes):
+            for i, stashCommitId in enumerate(repoState.stashCache):
+                message = repo[stashCommitId].message
+                message = strip_stash_message(message)
                 refName = f"stash@{{{i}}}"
-                node = SidebarNode(EItem.Stash, str(stash.commit_id))
+                node = SidebarNode(EItem.Stash, str(stashCommitId))
+                node.displayName = message
                 stashRoot.appendChild(node)
                 self.nodesByRef[refName] = node
 
@@ -647,17 +647,17 @@ class SidebarModel(QAbstractItemModel):
                 return "git-tag"
 
         elif item == EItem.Stash:
-            stash = self._stashes[row]
             if displayRole:
-                return strip_stash_message(stash.message)
+                return node.displayName
             elif refRole:
                 return F"stash@{{{row}}}"
             elif toolTipRole:
-                commit = self.repo.peel_commit(stash.commit_id)
+                oid = Oid(hex=node.data)
+                commit = self.repo.peel_commit(oid)
                 commitQdt = QDateTime.fromSecsSinceEpoch(commit.commit_time, Qt.TimeSpec.OffsetFromUTC, commit.commit_time_offset * 60)
                 commitTimeStr = QLocale().toString(commitQdt, settings.prefs.shortTimeFormat)
                 text = "<p style='white-space: pre'>"
-                text += f"<b>stash@{{{row}}}</b>: {escape(stash.message)}<br/>"
+                text += f"<b>stash@{{{row}}}</b>: {escape(commit.message)}<br/>"
                 text += f"<b>{self.tr('date:')}</b> {commitTimeStr}"
                 self.cacheTooltip(index, text)
                 return text
