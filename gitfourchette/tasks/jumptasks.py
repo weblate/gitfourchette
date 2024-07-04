@@ -488,6 +488,7 @@ class RefreshRepo(RepoTask):
 
         initialLocator = rw.navLocator
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
+        wasExploringDetachedCommit = initialLocator.commit and initialLocator.commit not in rw.state.graph.commitRows
 
         try:
             previousFileList = rw.diffArea.fileListByContext(initialLocator.context)
@@ -563,8 +564,11 @@ class RefreshRepo(RepoTask):
             # the selected row may jump around. Try to restore the initial
             # locator to ensure the previously selected commit stays selected.
             rw.graphView.verticalScrollBar().setValue(initialGraphScroll)
-            if jumpTo == initialLocator and jumpTo.commit not in rw.state.graph.commitRows:
-                # Old commit is gone - jump to HEAD
+            if (jumpTo == initialLocator
+                    and jumpTo.commit not in rw.state.graph.commitRows
+                    and not wasExploringDetachedCommit):
+                # We were looking at a commit that is not in the graph anymore.
+                # Probably refreshing after amending. Jump to HEAD commit.
                 jumpTo = NavLocator.inCommit(rw.state.activeCommitId)
 
         yield from self.flowSubtask(Jump, jumpTo)
