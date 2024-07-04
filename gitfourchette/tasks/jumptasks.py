@@ -224,8 +224,14 @@ class Jump(RepoTask):
         assert locator.commit
         assert not locator.ref
 
+        try:
+            stashIndex = rw.state.stashCache.index(locator.commit)
+            isStash = True
+        except ValueError:
+            stashIndex = -1
+            isStash = False
+
         commit = rw.repo.peel_commit(locator.commit)
-        isStash = locator.commit in rw.state.stashCache
         warnings = []
 
         # Select row in commit log
@@ -244,8 +250,11 @@ class Jump(RepoTask):
             QSignalBlockerContext(rw.sidebar),  # Don't emit jump signals
             QScrollBackupContext(rw.sidebar),  # Stabilize scroll bar value
         ):
-            refCandidates = rw.state.reverseRefCache.get(locator.commit, [])
-            rw.sidebar.selectAnyRef(*refCandidates)
+            if isStash:
+                rw.sidebar.selectAnyRef(f"stash@{{{stashIndex}}}")
+            else:
+                refCandidates = rw.state.reverseRefCache.get(locator.commit, [])
+                rw.sidebar.selectAnyRef(*refCandidates)
 
         flv = area.committedFiles
         area.diffBanner.setVisible(False)
