@@ -1,7 +1,7 @@
 from . import reposcenario
 from .util import *
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import EItem, SidebarNode
 
 
 def testCurrentBranchCannotSwitchOrMerge(tempDir, mainWindow):
@@ -78,3 +78,19 @@ def testSidebarCollapsePersistent(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar
     assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+
+
+def testRefreshKeepsSidebarNonRefSelection(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    sb.setFocus()
+
+    node = next(sb.findNodesByKind(EItem.Remote))
+    assert node.data == "origin"
+    sb.selectNode(node)
+
+    rw.refreshRepo()
+    node = SidebarNode.fromIndex(sb.selectedIndexes()[0])
+    assert node.kind == EItem.Remote
+    assert node.data == "origin"

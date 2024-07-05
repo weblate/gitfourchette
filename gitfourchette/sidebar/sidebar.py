@@ -64,6 +64,7 @@ class Sidebar(QTreeView):
         self.collapsed.connect(self.onCollapsed)
         self.collapseCacheValid = False
         self.collapseCache = set()
+        self.selectionBackup = None
 
         # When clicking on a row, information about the clicked row and "zone"
         # is kept until mouseReleaseEvent.
@@ -412,20 +413,26 @@ class Sidebar(QTreeView):
             menu.deleteLater()
 
     def refresh(self, repoState: RepoState):
-        try:
-            oldSelectedNode = SidebarNode.fromIndex(self.selectedIndexes()[0])
-        except IndexError:
-            oldSelectedNode = None
-
         self.sidebarModel.rebuild(repoState)
         self.restoreExpandedItems()
 
-        # Restore selected node, if any
-        if oldSelectedNode is not None:
-            with suppress(StopIteration), QSignalBlockerContext(self, skipAlreadyBlocked=True):
-                newNode = self.findNode(oldSelectedNode.isSimilarEnoughTo)
-                restoreIndex = newNode.createIndex(self.sidebarModel)
-                self.setCurrentIndex(restoreIndex)
+    def backUpSelection(self):
+        try:
+            self.selectionBackup = SidebarNode.fromIndex(self.selectedIndexes()[0])
+        except IndexError:
+            self.clearSelectionBackup()
+
+    def clearSelectionBackup(self):
+        self.selectionBackup = None
+
+    def restoreSelectionBackup(self):
+        if self.selectionBackup is None:
+            return
+        with suppress(StopIteration), QSignalBlockerContext(self, skipAlreadyBlocked=True):
+            newNode = self.findNode(self.selectionBackup.isSimilarEnoughTo)
+            restoreIndex = newNode.createIndex(self.sidebarModel)
+            self.setCurrentIndex(restoreIndex)
+        self.clearSelectionBackup()
 
     def refreshPrefs(self):
         self.setVerticalScrollMode(settings.prefs.listViewScrollMode)

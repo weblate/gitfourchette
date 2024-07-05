@@ -473,7 +473,7 @@ class RefreshRepo(RepoTask):
         # Stop refresh chain here - this task is responsible for other post-task refreshes
         return TaskEffects.Nothing
 
-    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = None):
+    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
         rw = self.rw
         assert onAppThread()
 
@@ -488,6 +488,7 @@ class RefreshRepo(RepoTask):
 
         initialLocator = rw.navLocator
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
+        restoringInitialLocator = jumpTo.context == NavContext.EMPTY
         wasExploringDetachedCommit = initialLocator.commit and initialLocator.commit not in rw.state.graph.commitRows
 
         try:
@@ -533,6 +534,7 @@ class RefreshRepo(RepoTask):
 
         # Refresh sidebar
         with QSignalBlockerContext(rw.sidebar):
+            rw.sidebar.backUpSelection()
             rw.sidebar.refresh(rw.state)
 
         # Now jump to where we should be after the refresh
@@ -571,12 +573,19 @@ class RefreshRepo(RepoTask):
                 # Probably refreshing after amending. Jump to HEAD commit.
                 jumpTo = NavLocator.inCommit(rw.state.activeCommitId)
 
+        # Jump
         yield from self.flowSubtask(Jump, jumpTo)
+
+        # Try to restore sidebar selection
+        if restoringInitialLocator:
+            rw.sidebar.restoreSelectionBackup()
+        else:
+            rw.sidebar.clearSelectionBackup()
 
         # Try to restore path selection
         if previousFileList is None:
             pass
-        elif initialLocator.isSimilarEnoughTo(jumpTo):
+        elif restoringInitialLocator:
             previousFileList.restoreSelectionBackup()
         else:
             previousFileList.clearSelectionBackup()

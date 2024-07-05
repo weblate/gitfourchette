@@ -163,7 +163,7 @@ class RepoTask(QObject):
         self.taskID = RepoTask._globalTaskCounter
         RepoTask._globalTaskCounter += 1
         self.setObjectName(self.__class__.__name__)
-        self.jumpTo = None
+        self.jumpTo = NavLocator()
         self.didSucceed = True
         self._taskStack = [self]
 
