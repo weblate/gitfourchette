@@ -399,10 +399,10 @@ def signatures_equalish(a: Signature, b: Signature):
 
 def DiffFile_compare(f1: DiffFile, f2: DiffFile):
     # TODO: pygit2 ought to implement DiffFile.__eq__
-    same = f1.id == f2.id
-    same &= f1.mode == f2.mode
-    same &= f1.flags == f2.flags
-    same &= f1.raw_path == f2.raw_path
+    same = (f1.id == f2.id
+            and f1.mode == f2.mode
+            and f1.flags == f2.flags
+            and f1.raw_path == f2.raw_path)
     if same:
         assert f1.path == f2.path
         assert f1.size == f2.size
@@ -696,8 +696,9 @@ class Repo(_VanillaRepository):
 
         # Don't attempt to update the index if the repo is locked for writing,
         # or the index is locked by another program
-        update_index &= (_os.access(self.path, _os.W_OK) \
-            and not _exists(_joinpath(self.path, "index.lock")))
+        update_index = (update_index
+                        and _os.access(self.path, _os.W_OK)
+                        and not _exists(_joinpath(self.path, "index.lock")))
 
         # UPDATE_INDEX may improve performance for subsequent diffs if the
         # index was stale, but this requires the repo to be writable.
