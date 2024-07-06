@@ -419,7 +419,8 @@ class MainWindow(QMainWindow):
 
         if w.uiReady:
             # Refreshing the repo may lock up the UI for a split second.
-            # Respond to tab change now for snappiness.
+            # Respond to tab change now to improve perceived snappiness.
+            w.restoreSplitterStates()  # Restore splitters now to prevent flicker
             GFApplication.instance().processEventsNoInput()
         else:
             # setupUi may take a sec, so show placeholder widget now.
@@ -432,7 +433,6 @@ class MainWindow(QMainWindow):
 
         if w.isLoaded:
             # Trigger repo refresh.
-            w.restoreSplitterStates()
             w.refreshRepo()
             w.refreshWindowChrome()
         elif w.allowAutoLoad:
