@@ -9,7 +9,7 @@ from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState
+from gitfourchette.repomodel import RepoModel
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate, SidebarClickZone
 from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 from gitfourchette.toolbox import *
@@ -408,8 +408,8 @@ class Sidebar(QTreeView):
                 menu.exec(globalPoint)
             menu.deleteLater()
 
-    def refresh(self, repoState: RepoState):
-        self.sidebarModel.rebuild(repoState)
+    def refresh(self, repoModel: RepoModel):
+        self.sidebarModel.rebuild(repoModel)
         self.restoreExpandedItems()
 
     def backUpSelection(self):

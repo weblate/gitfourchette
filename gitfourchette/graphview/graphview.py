@@ -66,10 +66,14 @@ class GraphView(QListView):
 
         self.refreshPrefs(invalidateMetrics=False)
 
+    @property
+    def repoModel(self):
+        return self.repoWidget.repoModel
+
     def makeContextMenu(self):
         kind = self.currentRowKind
         oid = self.currentCommitId
-        state = self.repoWidget.state
+        repoModel = self.repoModel
 
         mergeActions = []
 
@@ -90,7 +94,7 @@ class GraphView(QListView):
             expandAll = makeInternalLink("expandlog", n=str(0))
             changePref = makeInternalLink("prefs", "maxCommits")
             actions = [
-                ActionDef(self.tr("Load up to {0} commits").format(QLocale().toString(state.nextTruncationThreshold)),
+                ActionDef(self.tr("Load up to {0} commits").format(QLocale().toString(repoModel.nextTruncationThreshold)),
                           lambda: self.linkActivated.emit(expandSome)),
                 ActionDef(self.tr("Load full commit history"),
                           lambda: self.linkActivated.emit(expandAll)),
@@ -100,11 +104,11 @@ class GraphView(QListView):
 
         elif kind == SpecialRow.Commit:
             # Merge actions
-            if state.homeBranch:
+            if repoModel.homeBranch:
                 with suppress(KeyError, StopIteration):
-                    rrc = state.reverseRefCache[oid]
+                    rrc = repoModel.refsByOid[oid]
                     target = next(ref for ref in rrc if ref.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
-                    mergeCaption = self.tr("&Merge into {0}...").format(lquo(state.homeBranch))
+                    mergeCaption = self.tr("&Merge into {0}...").format(lquo(repoModel.homeBranch))
                     mergeActions = [
                         TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),
                     ]
@@ -286,11 +290,10 @@ class GraphView(QListView):
         return index
 
     def getFilterIndexForCommit(self, oid: Oid) -> QModelIndex | None:
-        state = self.repoWidget.state
         try:
-            rawIndex = state.graph.getCommitRow(oid)
+            rawIndex = self.repoModel.graph.getCommitRow(oid)
         except KeyError:
-            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=state.truncatedHistory)
+            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=self.repoModel.truncatedHistory)
 
         newSourceIndex = self.clModel.index(rawIndex, 0)
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)

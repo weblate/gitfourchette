@@ -7,6 +7,7 @@ from typing import Any, Generator, Type, TYPE_CHECKING
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, RepositoryState
 from gitfourchette.qt import *
+from gitfourchette.repomodel import RepoModel
 from gitfourchette.settings import DEVDEBUG
 from gitfourchette.toolbox import *
 
@@ -134,7 +135,7 @@ class RepoTask(QObject):
 
     _globalTaskCounter = 0
 
-    repo: Repo | None
+    repoModel: RepoModel | None
     taskID: int
     jumpTo: NavLocator | None
     didSucceed: bool
@@ -158,6 +159,7 @@ class RepoTask(QObject):
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.repo = None
+        self.repoModel = None
         self._currentFlow = None
         self._currentIteration = 0
         self.taskID = RepoTask._globalTaskCounter
@@ -192,8 +194,10 @@ class RepoTask(QObject):
             assert isinstance(pw, RepoWidget)
         return pw
 
-    def setRepo(self, repo: Repo):
-        self.repo = repo
+    def setRepoModel(self, repoModel: RepoModel):
+        self.repoModel = repoModel
+        if self.repoModel:
+            self.repo = repoModel.repo
 
     def __str__(self):
         return self.objectName()
@@ -320,7 +324,7 @@ class RepoTask(QObject):
 
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
         subtask = subtaskClass(self)
-        subtask.setRepo(self.repo)
+        subtask.setRepoModel(self.repoModel)
         subtask.setObjectName(f"{self.objectName()}:{subtask.objectName()}")
         # logger.debug(f"Subtask {subtask}")
 

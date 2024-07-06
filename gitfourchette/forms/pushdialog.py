@@ -339,12 +339,12 @@ class PushDialog(QDialog):
             def effects(self) -> tasks.TaskEffects:
                 return tasks.TaskEffects.Remotes
 
-            def flow(self):
+            def flow(self, repo: Repo):
                 yield from self.flowEnterWorkerThread()
                 link.discoverKeyFiles(remote)
                 remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
-                    self.repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
+                    repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
 
                 yield from self.flowEnterUiThread()
                 pushDialog.pushInProgress = False
@@ -362,8 +362,7 @@ class PushDialog(QDialog):
         self.enableInputs(False)
 
         task = PushTask(self)
-        task.setRepo(self.repo)
-        self.repoTaskRunner.put(task)
+        self.repoTaskRunner.put(task, self.repo)
 
     def reject(self):
         if self.pushInProgress:

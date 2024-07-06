@@ -571,4 +571,4 @@ class AbortMerge(RepoTask):
 
         # If cherrypicking, clear draft commit message that was set in CherrypickCommit
         if isCherryPicking:
-            self.rw.state.uiPrefs.clearDraftCommit()
+            self.repoModel.prefs.clearDraftCommit()

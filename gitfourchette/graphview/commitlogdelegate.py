@@ -6,7 +6,7 @@ from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow, C
 from gitfourchette.graphview.graphpaint import paintGraphFrame
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState, UC_FAKEID
+from gitfourchette.repomodel import RepoModel, UC_FAKEID
 from gitfourchette.toolbox import *
 from dataclasses import dataclass
 from contextlib import suppress
@@ -95,8 +95,8 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.dateMaxWidth = int(self.dateMaxWidth)  # make sure it's an int for pyqt5 compat
 
     @property
-    def state(self) -> RepoState:
-        return self.repoWidget.state
+    def repoModel(self) -> RepoModel:
+        return self.repoWidget.repoModel
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         painter.save()
@@ -169,7 +169,7 @@ class CommitLogDelegate(QStyledItemDelegate):
                 if author.time != committer.time:
                     dateText += "*"
 
-            if self.state.activeCommitId == commit.id:
+            if self.repoModel.headCommitId == commit.id:
                 painter.setFont(self.activeCommitFont)
 
             searchBar: SearchBar = self.parent().searchBar
@@ -194,22 +194,22 @@ class CommitLogDelegate(QStyledItemDelegate):
                 oid = UC_FAKEID
                 summaryText = self.tr("Uncommitted changes")
                 # Append change count if available
-                numChanges = self.state.numUncommittedChanges
+                numChanges = self.repoModel.numUncommittedChanges
                 if numChanges > 0:
                     summaryText += f" ({numChanges})"
                 # Append draft message if any
-                draftMessage = self.state.uiPrefs.draftCommitMessage
+                draftMessage = self.repoModel.prefs.draftCommitMessage
                 if draftMessage:
                     draftMessage = messageSummary(draftMessage)[0].strip()
                     draftIntro = self.tr("Commit draft:")
                     summaryText += f" – {draftIntro} {tquo(draftMessage)}"
 
             elif specialRowKind == SpecialRow.TruncatedHistory:
-                if self.state.uiPrefs.hiddenRefPatterns:
+                if self.repoModel.prefs.hiddenRefPatterns:
                     summaryText = self.tr("History truncated to {0} commits (including hidden branches)")
                 else:
                     summaryText = self.tr("History truncated to {0} commits")
-                summaryText = summaryText.format(option.widget.locale().toString(self.state.numRealCommits))
+                summaryText = summaryText.format(option.widget.locale().toString(self.repoModel.numRealCommits))
 
             elif specialRowKind == SpecialRow.EndOfShallowHistory:
                 summaryText = self.tr("Shallow clone – End of commit history")
@@ -246,7 +246,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         # ------ Graph
         rect.setLeft(leftBoundSummary)
         if oid is not None:
-            paintGraphFrame(self.state, oid, painter, rect, outlineColor)
+            paintGraphFrame(self.repoModel, oid, painter, rect, outlineColor)
             rect.setLeft(rect.right())
 
         # ------ Set refbox/message area rect
@@ -256,15 +256,15 @@ class CommitLogDelegate(QStyledItemDelegate):
             rect.setRight(rightBound)
 
         # ------ Refboxes
-        if oid in self.state.reverseRefCache:
-            homeBranch = RefPrefix.HEADS + self.state.homeBranch
+        if oid in self.repoModel.refsByOid:
+            homeBranch = RefPrefix.HEADS + self.repoModel.homeBranch
             painter.save()
             painter.setClipRect(rect)
             maxRefboxX = painter.clipBoundingRect().right()
             darkRefbox = painter.pen().color().lightnessF() > .5
-            refs = self.state.reverseRefCache[oid]
+            refs = self.repoModel.refsByOid[oid]
             for refName in refs:
-                if refName in self.state.hiddenRefs:  # skip refboxes for hidden refs
+                if refName in self.repoModel.hiddenRefs:  # skip refboxes for hidden refs
                     continue
                 x1 = rect.left()
                 self._paintRefbox(painter, rect, refName, refName == homeBranch, darkRefbox)
@@ -285,7 +285,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # ------ Message
         # use muted color for foreign commit messages if not selected
-        if not isSelected and commit and commit.id in self.state.foreignCommits:
+        if not isSelected and commit and commit.id in self.repoModel.foreignCommits:
             painter.setPen(Qt.GlobalColor.gray)
 
         elidedSummaryText = elide(summaryText)
@@ -333,7 +333,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         model.setData(index, toolTips, CommitLogModel.Role.ToolTipZones)
 
     def _paintRefbox(self, painter: QPainter, rect: QRect, refName: str, isHome: bool, dark: bool):
-        if refName == 'HEAD' and not self.state.headIsDetached:
+        if refName == 'HEAD' and not self.repoModel.headIsDetached:
             return
 
         prefix = next(prefix for prefix in REFBOXES if refName.startswith(prefix))
@@ -345,7 +345,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         color = refboxDef.color
         bgColor = QColor(color)
         icon = refboxDef.icon
-        if refName == 'HEAD' and self.state.headIsDetached:
+        if refName == 'HEAD' and self.repoModel.headIsDetached:
             text = self.tr("detached HEAD")
 
         if dark:

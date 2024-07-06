@@ -38,7 +38,7 @@ class PrimeRepo(RepoTask):
     def flow(self, path: str, maxCommits: int = -1):
         from gitfourchette.graph import KF_INTERVAL
         from gitfourchette.repowidget import RepoWidget
-        from gitfourchette.repostate import RepoState, UC_FAKEID
+        from gitfourchette.repomodel import RepoModel, UC_FAKEID
         from gitfourchette.tasks.jumptasks import Jump
 
         assert path
@@ -57,7 +57,6 @@ class PrimeRepo(RepoTask):
 
         # Create the repo
         repo = Repo(path, RepositoryOpenFlag.NO_SEARCH)
-        self.setRepo(repo)  # required to execute subtasks later
 
         if repo.is_bare:
             raise NotImplementedError(self.tr("Sorry, {app} doesn’t support bare repositories.").format(app=qAppName()))
@@ -72,8 +71,9 @@ class PrimeRepo(RepoTask):
         #       See also https://github.com/libgit2/libgit2/blob/main/include/git2/config.h#L42
         repo.config.add_file(sessionwideConfigPath, level=-1)
 
-        # Create repo state
-        state = RepoState(rw, repo)
+        # Create RepoModel
+        repoModel = RepoModel(repo)
+        self.setRepoModel(repoModel)  # required to execute subtasks later
 
         # ---------------------------------------------------------------------
         # EXIT UI THREAD
@@ -83,9 +83,9 @@ class PrimeRepo(RepoTask):
         locale = QLocale()
 
         # Prime the walker (this might take a while)
-        walker = state.initializeWalker(state.refCache.values())
+        walker = repoModel.primeWalker()
 
-        state.updateActiveCommitId()
+        repoModel.syncHeadCommitId()
 
         commitSequence: list[Commit | None] = []
 
@@ -126,7 +126,7 @@ class PrimeRepo(RepoTask):
         self.progressAbortable.emit(False)
 
         numCommits = len(commitSequence)
-        logger.info(f"{state.shortName}: loaded {numCommits} commits")
+        logger.info(f"{repoModel.shortName}: loaded {numCommits} commits")
         if truncatedHistory:
             message = self.tr("{0} commits (truncated log).").format(locale.toString(numCommits))
         else:
@@ -149,23 +149,23 @@ class PrimeRepo(RepoTask):
         # Generate fake "Uncommitted Changes" with HEAD as parent
         commitSequence.insert(0, None)  # Uncommitted Changes
 
-        state.hiddenCommits = set()
-        state.foreignCommits = set()
-        hiddenCommitSolver = state.newHiddenCommitSolver()
-        foreignCommitSolver = state.newForeignCommitSolver()
+        repoModel.hiddenCommits = set()
+        repoModel.foreignCommits = set()
+        hiddenCommitSolver = repoModel.newHiddenCommitSolver()
+        foreignCommitSolver = repoModel.newForeignCommitSolver()
 
         for commit in commitSequence:
             if not commit:
                 oid = UC_FAKEID
-                parents = state._uncommittedChangesFakeCommitParents()
+                parents = repoModel._uncommittedChangesFakeCommitParents()
             else:
                 oid = commit.id
                 parents = commit.parent_ids
 
             graphGenerator.newCommit(oid, parents)
 
-            foreignCommitSolver.newCommit(oid, parents, state.foreignCommits)
-            hiddenCommitSolver.newCommit(oid, parents, state.hiddenCommits)
+            foreignCommitSolver.newCommit(oid, parents, repoModel.foreignCommits)
+            hiddenCommitSolver.newCommit(oid, parents, repoModel.hiddenCommits)
 
             row = graphGenerator.row
             rowInt = int(row)
@@ -183,17 +183,17 @@ class PrimeRepo(RepoTask):
 
         logger.debug(f"Peak arc count: {graphGenerator.peakArcCount}")
 
-        state.commitSequence = commitSequence
-        state.truncatedHistory = truncatedHistory
-        state.graph = graph
+        repoModel.commitSequence = commitSequence
+        repoModel.truncatedHistory = truncatedHistory
+        repoModel.graph = graph
 
         # ---------------------------------------------------------------------
         # RETURN TO UI THREAD
         # ---------------------------------------------------------------------
         yield from self.flowEnterUiThread()
 
-        # Assign state to RepoWidget
-        rw.state = state
+        # Assign RepoModel to RepoWidget
+        rw.repoModel = repoModel
         rw.updateBoundRepo()
 
         # Save commit count (if not truncated)
@@ -202,7 +202,7 @@ class PrimeRepo(RepoTask):
 
         # Bump repo in history
         settings.history.addRepo(repo.workdir)
-        settings.history.setRepoSuperproject(repo.workdir, state.superproject)
+        settings.history.setRepoSuperproject(repo.workdir, repoModel.superproject)
         settings.history.write()
         rw.window().fillRecentMenu()  # TODO: emit signal instead?
 
@@ -210,7 +210,7 @@ class PrimeRepo(RepoTask):
 
         # Prime GraphView
         with QSignalBlockerContext(rw.graphView):
-            if state.truncatedHistory:
+            if repoModel.truncatedHistory:
                 extraRow = SpecialRow.TruncatedHistory
             elif repo.is_shallow:
                 extraRow = SpecialRow.EndOfShallowHistory
@@ -218,17 +218,17 @@ class PrimeRepo(RepoTask):
                 extraRow = SpecialRow.Invalid
 
             rw.graphView.clModel._extraRow = extraRow
-            rw.graphView.setHiddenCommits(state.hiddenCommits)
+            rw.graphView.setHiddenCommits(repoModel.hiddenCommits)
             rw.graphView.setCommitSequence(commitSequence)
             rw.graphView.selectRowForLocator(NavLocator.inWorkdir(), force=True)
 
         # Prime Sidebar
         with QSignalBlockerContext(rw.sidebar):
-            collapseCache = state.uiPrefs.collapseCache
+            collapseCache = repoModel.prefs.collapseCache
             if collapseCache:
                 rw.sidebar.collapseCache = set(collapseCache)
                 rw.sidebar.collapseCacheValid = True
-            rw.sidebar.refresh(state)
+            rw.sidebar.refresh(repoModel)
 
         # Restore main UI
         rw.removePlaceholderWidget()

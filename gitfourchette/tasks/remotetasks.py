@@ -2,12 +2,10 @@
 Remote management tasks.
 """
 
-from gitfourchette import porcelain
-from gitfourchette import repoconfig
+from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.forms.remotedialog import RemoteDialog
 
 
 class NewRemote(RepoTask):
@@ -59,7 +57,7 @@ class EditRemote(RepoTask):
             edit=True,
             name=oldRemoteName,
             url=oldRemoteUrl,
-            customKeyFile=repoconfig.getRemoteKeyFile(self.repo, oldRemoteName),
+            customKeyFile=self.repoModel.prefs.getRemoteKeyFile(oldRemoteName),
             existingRemotes=existingRemotes,
             parent=self.parentWidget())
 
@@ -75,7 +73,7 @@ class EditRemote(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.edit_remote(oldRemoteName, newRemoteName, newRemoteUrl)
-        repoconfig.setRemoteKeyFile(self.repo, newRemoteName, newRemoteKeyfile)
+        self.repoModel.prefs.setRemoteKeyFile(newRemoteName, newRemoteKeyfile)
 
 
 class DeleteRemote(RepoTask):

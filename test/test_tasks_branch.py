@@ -592,14 +592,14 @@ def testRecallCommit(tempDir, mainWindow):
         repo.checkout_local_branch("no-parent")
         repo.delete_local_branch("master")
     rw = mainWindow.openRepo(wd)
-    assert "master" not in rw.state.refCache
-    assert lostId not in rw.state.reverseRefCache
+    assert "master" not in rw.repoModel.refs
+    assert lostId not in rw.repoModel.refsByOid
     triggerMenuAction(mainWindow.menuBar(), "repo/lost commit")
     dlg = findQDialog(rw, "lost commit")
     qle: QLineEdit = dlg.findChild(QLineEdit)
     qle.setText(str(lostId)[:7])  # must work even with partial hash
     dlg.accept()
-    assert lostId in rw.state.reverseRefCache
+    assert lostId in rw.repoModel.refsByOid
     assert rw.navLocator.commit == lostId
 
 

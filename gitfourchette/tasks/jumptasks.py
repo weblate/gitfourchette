@@ -13,7 +13,7 @@ from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.porcelain import DeltaStatus, NULL_OID, Oid, Patch
 from gitfourchette.qt import *
-from gitfourchette.repostate import UC_FAKEID
+from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
 from gitfourchette.tasks.loadtasks import LoadCommit, LoadPatch, LoadWorkdir
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
@@ -103,10 +103,10 @@ class Jump(RepoTask):
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY
                 or locator.hasFlags(NavFlags.Force)
-                or rw.state.workdirStale):
+                or rw.repoModel.workdirStale):
             # Don't clear stale flag until AFTER we're done reloading the workdir
             # so that it stays stale if this task gets interrupted.
-            rw.state.workdirStale = True
+            rw.repoModel.workdirStale = True
 
             # Load workdir (async)
             workdirTask: LoadWorkdir = yield from self.flowSubtask(
@@ -123,10 +123,10 @@ class Jump(RepoTask):
             rw.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
 
             newNumChanges = nDirty + nStaged
-            numChangesDifferent = rw.state.numUncommittedChanges != newNumChanges
-            rw.state.numUncommittedChanges = newNumChanges
+            numChangesDifferent = rw.repoModel.numUncommittedChanges != newNumChanges
+            rw.repoModel.numUncommittedChanges = newNumChanges
 
-            rw.state.workdirStale = False
+            rw.repoModel.workdirStale = False
 
             # Show number of staged changes in sidebar and graph
             if numChangesDifferent:
@@ -177,14 +177,14 @@ class Jump(RepoTask):
 
         if locator.path == str(SpecialRow.EndOfShallowHistory):
             sde = SpecialDiffError(
-                self.tr("Shallow clone – End of available history.").format(locale.toString(self.rw.state.numRealCommits)),
+                self.tr("Shallow clone – End of available history.").format(locale.toString(self.repoModel.numRealCommits)),
                 self.tr("More commits may be available in a full clone."))
             raise Jump.Result(locator, self.tr("Shallow clone – End of commit history"), sde)
 
         elif locator.path == str(SpecialRow.TruncatedHistory):
             from gitfourchette import settings
             prefThreshold = settings.prefs.maxCommits
-            nextThreshold = rw.state.nextTruncationThreshold
+            nextThreshold = rw.repoModel.nextTruncationThreshold
             expandSome = makeInternalLink("expandlog")
             expandAll = makeInternalLink("expandlog", n=str(0))
             changePref = makeInternalLink("prefs", "maxCommits")
@@ -194,7 +194,7 @@ class Jump(RepoTask):
                 linkify(self.tr("[Change threshold setting] (currently {0} commits)"), changePref).format(locale.toString(prefThreshold)),
             ]
             sde = SpecialDiffError(
-                self.tr("History truncated to {0} commits.").format(locale.toString(self.rw.state.numRealCommits)),
+                self.tr("History truncated to {0} commits.").format(locale.toString(self.repoModel.numRealCommits)),
                 self.tr("More commits may be available."),
                 longform=toRoomyUL(options))
             raise Jump.Result(locator, self.tr("History truncated"), sde)
@@ -216,7 +216,7 @@ class Jump(RepoTask):
         if locator.ref:
             assert locator.commit == NULL_OID
             try:
-                oid = rw.state.refCache[locator.ref]
+                oid = rw.repoModel.refs[locator.ref]
                 locator = locator.replace(commit=oid, ref="")
             except KeyError:
                 raise AbortTask(self.tr("Unknown reference {0}.").format(tquo(locator.ref)))
@@ -225,7 +225,7 @@ class Jump(RepoTask):
         assert not locator.ref
 
         try:
-            stashIndex = rw.state.stashCache.index(locator.commit)
+            stashIndex = rw.repoModel.stashes.index(locator.commit)
             isStash = True
         except ValueError:
             stashIndex = -1
@@ -253,7 +253,7 @@ class Jump(RepoTask):
             if isStash:
                 rw.sidebar.selectAnyRef(f"stash@{{{stashIndex}}}")
             else:
-                refCandidates = rw.state.reverseRefCache.get(locator.commit, [])
+                refCandidates = rw.repoModel.refsByOid.get(locator.commit, [])
                 rw.sidebar.selectAnyRef(*refCandidates)
 
         flv = area.committedFiles
@@ -475,7 +475,7 @@ class RefreshRepo(RepoTask):
 
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
         rw = self.rw
-        state = rw.state
+        repoModel = rw.repoModel
         assert onAppThread()
 
         if effectFlags == TaskEffects.Nothing:
@@ -485,12 +485,12 @@ class RefreshRepo(RepoTask):
         if not os.path.isdir(self.repo.path):
             raise RepoGoneError(self.repo.path)
 
-        state.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
+        repoModel.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
 
         initialLocator = rw.navLocator
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
         restoringInitialLocator = jumpTo.context == NavContext.EMPTY
-        wasExploringDetachedCommit = initialLocator.commit and initialLocator.commit not in state.graph.commitRows
+        wasExploringDetachedCommit = initialLocator.commit and initialLocator.commit not in repoModel.graph.commitRows
 
         try:
             previousFileList = rw.diffArea.fileListByContext(initialLocator.context)
@@ -505,24 +505,25 @@ class RefreshRepo(RepoTask):
 
         # Refresh the index
         if effectFlags & TaskEffects.Index:
-            state.repo.refresh_index()
+            repoModel.repo.refresh_index()
 
         if effectFlags & TaskEffects.Workdir:
-            submodulesChanged = state.refreshSubmoduleCache()
+            submodulesChanged = repoModel.syncSubmodules()
 
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes):
-            remotesChanged = state.refreshRemoteCache()
+            remotesChanged = repoModel.syncRemotes()
 
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
-            oldRefs = state.refCache
-            refsChanged = state.refreshRefCache()
-            refsChanged |= state.refreshMergeheadsCache()
-            stashesChanged = state.refreshStashCache()
+            oldRefs = repoModel.refs
+            refsChanged = repoModel.syncRefs()
+            refsChanged |= repoModel.syncMergeheads()
+            stashesChanged = repoModel.syncStashes()
 
             # Load commits from changed refs only
             if refsChanged:
-                self.refreshTopOfGraph(oldRefs)
+                self.syncTopOfGraph(oldRefs)
+                repoModel.syncHeadCommitId()
 
         # Schedule a repaint of the entire GraphView if the refs changed
         if effectFlags & (TaskEffects.Head | TaskEffects.Refs):
@@ -532,7 +533,7 @@ class RefreshRepo(RepoTask):
         rw.sidebar.backUpSelection()
         if refsChanged | stashesChanged | submodulesChanged | remotesChanged:
             with QSignalBlockerContext(rw.sidebar):
-                rw.sidebar.refresh(state)
+                rw.sidebar.refresh(repoModel)
 
         # Now jump to where we should be after the refresh
         assert rw.navLocator == initialLocator, "locator has changed"
@@ -546,8 +547,8 @@ class RefreshRepo(RepoTask):
 
         if effectFlags & TaskEffects.Workdir and not jumpToWorkdir:
             # Clear uncommitted change count if we know the workdir is stale
-            state.numUncommittedChanges = 0
-            state.workdirStale = True
+            repoModel.numUncommittedChanges = 0
+            repoModel.workdirStale = True
 
         if jumpToWorkdir:
             # Refresh workdir view on separate thread AFTER all the processing above
@@ -564,11 +565,11 @@ class RefreshRepo(RepoTask):
             # locator to ensure the previously selected commit stays selected.
             rw.graphView.verticalScrollBar().setValue(initialGraphScroll)
             if (jumpTo == initialLocator
-                    and jumpTo.commit not in state.graph.commitRows
+                    and jumpTo.commit not in repoModel.graph.commitRows
                     and not wasExploringDetachedCommit):
                 # We were looking at a commit that is not in the graph anymore.
                 # Probably refreshing after amending. Jump to HEAD commit.
-                jumpTo = NavLocator.inCommit(state.activeCommitId)
+                jumpTo = NavLocator.inCommit(repoModel.headCommitId)
 
         # Jump
         yield from self.flowSubtask(Jump, jumpTo)
@@ -594,8 +595,8 @@ class RefreshRepo(RepoTask):
         logger.debug(f"Changes detected on refresh: "
                      f"Ref={refsChanged} Stash={stashesChanged} Submo={submodulesChanged} Remote={remotesChanged}")
 
-    def refreshTopOfGraph(self, oldRefs: dict[str, Oid]):
-        state = self.rw.state
+    def syncTopOfGraph(self, oldRefs: dict[str, Oid]):
+        repoModel = self.repoModel
         graphView = self.rw.graphView
 
         # Make sure we're on the UI thread.
@@ -603,16 +604,16 @@ class RefreshRepo(RepoTask):
         assert onAppThread()
 
         # Update our graph model
-        nRemovedRows, nAddedRows = state.refreshTopOfGraph(oldRefs)
+        nRemovedRows, nAddedRows = repoModel.syncTopOfGraph(oldRefs)
 
         with QSignalBlockerContext(graphView):
             # Hidden commits may have changed in RepoState.refreshTopOfGraph!
             # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-            graphView.setHiddenCommits(state.hiddenCommits)
+            graphView.setHiddenCommits(repoModel.hiddenCommits)
 
             if nRemovedRows >= 0:
                 # Refresh top of graphview
-                graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, state.commitSequence)
+                graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, repoModel.commitSequence)
             else:
                 # Replace graph wholesale
-                graphView.setCommitSequence(state.commitSequence)
+                graphView.setCommitSequence(repoModel.commitSequence)

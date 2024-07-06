@@ -447,7 +447,7 @@ class MainWindow(QMainWindow):
         menu = QMenu(self)
         menu.setObjectName("MWRepoTabContextMenu")
 
-        anyOtherLoadedTabs = any(t is not rw and t.state for t in self.tabs.widgets())
+        anyOtherLoadedTabs = any(tab is not rw and tab.repoModel for tab in self.tabs.widgets())
 
         ActionDef.addToQMenu(
             menu,
@@ -821,7 +821,7 @@ class MainWindow(QMainWindow):
             if i == index:
                 continue
             rw: RepoWidget = self.tabs.widget(i)
-            if rw.state:
+            if rw.repoModel:
                 numUnloaded += 1
             rw.cleanup()
 

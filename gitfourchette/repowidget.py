@@ -20,7 +20,7 @@ from gitfourchette.graphview.graphview import GraphView
 from gitfourchette.nav import NavHistory, NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState
+from gitfourchette.repomodel import RepoModel
 from gitfourchette.sidebar.sidebar import Sidebar
 from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
 from gitfourchette.toolbox import *
@@ -41,7 +41,7 @@ class RepoWidget(QStackedWidget):
     statusMessage = Signal(str)
     clearStatus = Signal()
 
-    state: RepoState | None
+    repoModel: RepoModel | None
 
     pendingPath: str
     "Path of the repository if it isn't loaded yet (state=None)"
@@ -65,12 +65,15 @@ class RepoWidget(QStackedWidget):
         return True
 
     @property
-    def repo(self) -> Repo:
-        return self.state.repo if self.state is not None else None
+    def repo(self) -> Repo | None:
+        if self.repoModel:
+            return self.repoModel.repo
+        else:
+            return None
 
     @property
     def isLoaded(self):
-        return self.state is not None
+        return self.repoModel is not None
 
     @property
     def isPriming(self):
@@ -80,15 +83,15 @@ class RepoWidget(QStackedWidget):
 
     @property
     def workdir(self):
-        if self.state:
-            return os.path.normpath(self.state.repo.workdir)
+        if self.repoModel:
+            return os.path.normpath(self.repoModel.repo.workdir)
         else:
             return self.pendingPath
 
     @property
     def superproject(self):
-        if self.state:
-            return self.state.superproject
+        if self.repoModel:
+            return self.repoModel.superproject
         else:
             return settings.history.getRepoSuperproject(self.workdir)
 
@@ -103,7 +106,7 @@ class RepoWidget(QStackedWidget):
         self.repoTaskRunner.repoGone.connect(self.onRepoGone)
         self.repoTaskRunner.requestAttention.connect(self.requestAttention)
 
-        self.state = None
+        self.repoModel = None
         self.pendingPath = os.path.normpath(pendingWorkdir)
         self.pendingLocator = NavLocator()
         self.pendingRefresh = TaskEffects.Nothing
@@ -328,7 +331,7 @@ class RepoWidget(QStackedWidget):
 
         # Initialize the task
         task = taskClass(self.repoTaskRunner)
-        task.setRepo(self.repo)
+        task.setRepoModel(self.repoModel)
 
         # Enqueue the task
         self.repoTaskRunner.put(task, *args, **kwargs)
@@ -470,8 +473,8 @@ class RepoWidget(QStackedWidget):
         return f"RepoWidget({self.getTitle()})"
 
     def getTitle(self) -> str:
-        if self.state:
-            return self.state.shortName
+        if self.repoModel:
+            return self.repoModel.shortName
         elif self.pendingPath:
             return settings.history.getRepoTabName(self.pendingPath)
         else:
@@ -491,11 +494,11 @@ class RepoWidget(QStackedWidget):
 
         # Don't bother with the placeholder widget if we've been lazy-initialized
         installPlaceholder &= self.uiReady
-        hasRepo = self.state and self.state.repo
+        hasRepo = self.repoModel and self.repoModel.repo
 
         # Save sidebar collapse cache (if our UI has settled)
         if hasRepo and self.uiReady:
-            uiPrefs = self.state.uiPrefs
+            uiPrefs = self.repoModel.prefs
             if self.sidebar.collapseCacheValid:
                 uiPrefs.collapseCache = set(self.sidebar.collapseCache)
             else:
@@ -515,7 +518,7 @@ class RepoWidget(QStackedWidget):
         # Let repo wrap up
         if hasRepo:
             # Save path if we want to reload the repo later
-            self.pendingPath = os.path.normpath(self.state.repo.workdir)
+            self.pendingPath = os.path.normpath(self.repoModel.repo.workdir)
             self.allowAutoLoad = allowAutoReload
 
             # Kill any ongoing task then block UI thread until the task dies cleanly
@@ -523,12 +526,12 @@ class RepoWidget(QStackedWidget):
             self.repoTaskRunner.joinZombieTask()
 
             # Free the repository
-            self.state.repo.free()
-            self.state.repo = None
+            self.repoModel.repo.free()
+            self.repoModel.repo = None
             logger.info(f"Repository freed: {self.pendingPath}")
 
-        # Forget RepoState
-        self.state = None
+        # Forget RepoModel
+        self.repoModel = None
         self.updateBoundRepo()
 
         # Install placeholder widget
@@ -673,20 +676,20 @@ class RepoWidget(QStackedWidget):
             sink.search(op)
 
     def commitNotFoundMessage(self, searchTerm: str) -> str:
-        state = self.state
-
-        if state.hiddenCommits:
+        if self.repoModel.hiddenCommits:
             message = self.tr("{0} not found among the branches that aren’t hidden.")
         else:
             message = self.tr("{0} not found.")
         message = message.format(bquo(searchTerm))
 
-        if state.truncatedHistory:
-            message += "<p>" + self.tr("Note: The search was limited to the top %n commits "
-                                       "because the commit history is truncated.", "", state.numRealCommits)
-        elif state.repo.is_shallow:
-            message += "<p>" + self.tr("Note: The search was limited to the %n commits "
-                                       "available in this shallow clone.", "", state.numRealCommits)
+        if self.repoModel.truncatedHistory:
+            note = self.tr("Note: The search was limited to the top %n commits because "
+                           "the commit history is truncated.", "", self.repoModel.numRealCommits)
+            message += f"<p>{note}</p>"
+        elif self.repoModel.repo.is_shallow:
+            note = self.tr("Note: The search was limited to the %n commits available in this shallow clone.",
+                           "", self.repoModel.numRealCommits)
+            message += f"<p>{note}</p>"
 
         return message
 
@@ -694,8 +697,8 @@ class RepoWidget(QStackedWidget):
 
     def toggleHideRefPattern(self, refPattern: str):
         assert refPattern.startswith("refs/")
-        self.state.toggleHideRefPattern(refPattern)
-        self.graphView.setHiddenCommits(self.state.hiddenCommits)
+        self.repoModel.toggleHideRefPattern(refPattern)
+        self.graphView.setHiddenCommits(self.repoModel.hiddenCommits)
 
         # Hide/draw refboxes for commits that are shared by non-hidden refs
         self.graphView.viewport().update()
@@ -719,7 +722,7 @@ class RepoWidget(QStackedWidget):
 
         if (not self.isLoaded) or self.isPriming:
             return
-        assert self.state is not None
+        assert self.repoModel is not None
 
         # End refresh chain
         if flags == TaskEffects.Nothing and not jumpTo:
@@ -810,8 +813,8 @@ class RepoWidget(QStackedWidget):
         if rstate == RepositoryState.MERGE:
             bannerTitle = self.tr("Merging")
             try:
-                mh = self.state.mergeheadsCache[0]
-                name = self.state.reverseRefCache[mh][0]
+                mergehead = self.repoModel.mergeheads[0]
+                name = self.repoModel.refsByOid[mergehead][0]
                 name = RefPrefix.split(name)[1]
                 bannerTitle = self.tr("Merging {0}").format(bquo(name))
             except (IndexError, KeyError):
@@ -948,9 +951,9 @@ class RepoWidget(QStackedWidget):
             try:
                 n = int(kwargs["n"])
             except KeyError:
-                n = self.state.nextTruncationThreshold
+                n = self.repoModel.nextTruncationThreshold
             # After loading, jump back to what is currently the last commit
-            self.pendingLocator = NavLocator.inCommit(self.state.commitSequence[-1].id)
+            self.pendingLocator = NavLocator.inCommit(self.repoModel.commitSequence[-1].id)
             # Reload the repo
             self.primeRepo(force=True, maxCommits=n)
         elif url.authority() == "opensubfolder":

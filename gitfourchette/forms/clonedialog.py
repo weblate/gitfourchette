@@ -7,13 +7,13 @@ from pathlib import Path
 import pygit2
 from pygit2.enums import RepositoryOpenFlag
 
-from gitfourchette import repoconfig
 from gitfourchette import settings
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_clonedialog import Ui_CloneDialog
 from gitfourchette.porcelain import Repo
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
+from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.tasks import RepoTask, RepoTaskRunner
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
@@ -315,17 +315,18 @@ class CloneTask(RepoTask):
         # Clone the repo
         self.stickyStatus.emit(self.tr("Cloning..."))
         with self.remoteLink.remoteKeyFileContext(url):
-            clonedRepo = pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
-        clonedRepo = Repo(clonedRepo.workdir, RepositoryOpenFlag.NO_SEARCH)
-        self.setRepo(clonedRepo)
+            repo = pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
+
+        # Convert to our extended Repo class
+        repo = Repo(repo.workdir, RepositoryOpenFlag.NO_SEARCH)
 
         # Store custom key (if any) in cloned repo config
         if privKeyPath:
-            repoconfig.setRemoteKeyFile(clonedRepo, clonedRepo.remotes[0].name, privKeyPath)
+            RepoPrefs.setRemoteKeyFileForRepo(repo, repo.remotes[0].name, privKeyPath)
 
         # Recurse into submodules
         if recursive:
-            self.recurseIntoSubmodules()
+            self.recurseIntoSubmodules(repo)
 
         # Done, back to UI thread
         yield from self.flowEnterUiThread()
@@ -334,14 +335,15 @@ class CloneTask(RepoTask):
         dialog.cloneSuccessful.emit(path)
         dialog.accept()
 
-    def recurseIntoSubmodules(self):
+    def recurseIntoSubmodules(self, repo: Repo):
         # TODO: pygit2.Submodule has several shortcomings here:
         # - Submodule.url crashes if libgit2 returns NULL (see also UpdateSubmodule in nettasks.py)
         # - Submodule.update should let us do a shallow clone since libgit2 allows it (via git_fetch_options)
 
-        for i, (submodule, path) in enumerate(self.repo.recurse_submodules(), 1):
-            displayPath = path.removeprefix(self.repo.workdir)
-            self.stickyStatus.emit(self.tr("Initializing submodule {0}: {1}...").format(i, escamp(displayPath)))
+        for i, (submodule, path) in enumerate(repo.recurse_submodules()):
+            displayPath = path.removeprefix(repo.workdir)
+            message = self.tr("Initializing submodule {0}: {1}...").format(i + 1, escamp(displayPath))
+            self.stickyStatus.emit(message)
 
             url = ""
             with suppress(RuntimeError):

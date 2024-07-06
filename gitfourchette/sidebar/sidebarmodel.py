@@ -10,7 +10,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-from gitfourchette.repostate import RepoState
+from gitfourchette.repomodel import RepoModel
 
 logger = logging.getLogger(__name__)
 
@@ -169,8 +169,7 @@ class SidebarNode:
 
 
 class SidebarModel(QAbstractItemModel):
-    repoState: RepoState | None
-    repo: Repo | None
+    repoModel: RepoModel | None
     rootNode: SidebarNode
     nodesByRef: dict[str, SidebarNode]
     _unbornHead: str
@@ -189,6 +188,10 @@ class SidebarModel(QAbstractItemModel):
     def _parentWidget(self) -> QWidget:
         return QObject.parent(self)
 
+    @property
+    def repo(self):
+        return self.repoModel.repo
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.clear()
@@ -201,7 +204,7 @@ class SidebarModel(QAbstractItemModel):
         if emitSignals:
             self.beginResetModel()
 
-        self.repo = None
+        self.repoModel = None
         self.rootNode = SidebarNode(EItem.Root)
         self.nodesByRef = {}
         self._checkedOut = ""
@@ -214,37 +217,34 @@ class SidebarModel(QAbstractItemModel):
             self.endResetModel()
 
     def isExplicitlyHidden(self, node: SidebarNode) -> bool:
-        repoState = self.repoState
         if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
-            return node.data in repoState.uiPrefs.hiddenRefPatterns
+            return node.data in self.repoModel.prefs.hiddenRefPatterns
         elif node.kind == EItem.Remote:
-            return f"{RefPrefix.REMOTES}{node.data}/" in repoState.uiPrefs.hiddenRefPatterns
+            return f"{RefPrefix.REMOTES}{node.data}/" in self.repoModel.prefs.hiddenRefPatterns
         elif node.kind == EItem.RefFolder:
-            return f"{node.data}/" in repoState.uiPrefs.hiddenRefPatterns
+            return f"{node.data}/" in self.repoModel.prefs.hiddenRefPatterns
         else:
             return False
 
     def isImplicitlyHidden(self, node: SidebarNode) -> bool:
-        repoState = self.repoState
         if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
-            return node.data in repoState.hiddenRefs and node.data not in repoState.uiPrefs.hiddenRefPatterns
+            return node.data in self.repoModel.hiddenRefs and node.data not in self.repoModel.prefs.hiddenRefPatterns
         else:
             return False
 
     def refreshRepoName(self):
-        if self.rootNode and self.repo:
+        if self.rootNode and self.repoModel:
             workdirNode = self.rootNode.findChild(EItem.WorkdirHeader)
             workdirNode.displayName = settings.history.getRepoNickname(self.repo.workdir)
 
     @benchmark
-    def rebuild(self, repoState: RepoState):
+    def rebuild(self, repoModel: RepoModel):
         self.beginResetModel()
 
-        repo = repoState.repo
+        repo = repoModel.repo
 
         self.clear(emitSignals=False)
-        self.repo = repo
-        self.repoState = repoState
+        self.repoModel = repoModel
         self.nodesByRef = {}
 
         # Pending ref shorthands for _makeRefTreeNodes
@@ -311,7 +311,7 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         # Remotes
         # -----------------------------
-        for name in repoState.remoteCache:
+        for name in repoModel.remotes:
             remoteBranchesDict[name] = []
             node = SidebarNode(EItem.Remote, name)
             remoteRoot.appendChild(node)
@@ -319,7 +319,7 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         # Refs
         # -----------------------------
-        for name in reversed(repoState.refCache):  # reversed because refCache sorts tips by ASCENDING commit time
+        for name in reversed(repoModel.refs):  # reversed because refCache sorts tips by ASCENDING commit time
             prefix, shorthand = RefPrefix.split(name)
 
             if prefix == RefPrefix.HEADS:
@@ -358,7 +358,7 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         # Stashes
         # -----------------------------
-        for i, stashCommitId in enumerate(repoState.stashCache):
+        for i, stashCommitId in enumerate(repoModel.stashes):
             message = repo[stashCommitId].message
             message = strip_stash_message(message)
             refName = f"stash@{{{i}}}"
@@ -370,7 +370,7 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         # Submodules
         # -----------------------------
-        for submoduleKey, submodulePath in repoState.submoduleCache.items():
+        for submoduleKey, submodulePath in repoModel.submodules.items():
             node = SidebarNode(EItem.Submodule, submoduleKey)
             submoduleRoot.appendChild(node)
 
@@ -686,7 +686,7 @@ class SidebarModel(QAbstractItemModel):
         elif item == EItem.UncommittedChanges:
             if displayRole:
                 changesText = TrTables.sidebarItem(EItem.UncommittedChanges)
-                numUncommittedChanges = self.repoState.numUncommittedChanges
+                numUncommittedChanges = self.repoModel.numUncommittedChanges
                 if numUncommittedChanges != 0:
                     ucSuffix = f" ({numUncommittedChanges})"
                     changesText = changesText.replace("", ucSuffix + "") + ucSuffix

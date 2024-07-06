@@ -26,7 +26,7 @@ class NewCommit(RepoTask):
     def flow(self):
         from gitfourchette.tasks import Jump
 
-        uiPrefs = self.rw.state.uiPrefs
+        uiPrefs = self.repoModel.prefs
 
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
@@ -50,7 +50,7 @@ class NewCommit(RepoTask):
             committerSignature=fallbackSignature,
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
-            repoState=self.repo.state(),
+            repositoryState=self.repo.state(),
             parent=self.parentWidget())
 
         if uiPrefs.draftCommitSignatureOverride == SignatureOverride.Nothing:
@@ -100,11 +100,11 @@ class AmendCommit(RepoTask):
         return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def getDraftMessage(self):
-        return self.rw.state.uiPrefs.draftAmendMessage
+        return self.repoModel.prefs.draftAmendMessage
 
     def setDraftMessage(self, newMessage):
-        self.rw.state.uiPrefs.draftAmendMessage = newMessage
-        self.rw.state.uiPrefs.setDirty()
+        self.repoModel.prefs.draftAmendMessage = newMessage
+        self.repoModel.prefs.setDirty()
 
     def flow(self):
         from gitfourchette.tasks import Jump
@@ -124,7 +124,7 @@ class AmendCommit(RepoTask):
             committerSignature=fallbackSignature,
             amendingCommitHash=shortHash(headCommit.id),
             detachedHead=self.repo.head_is_detached,
-            repoState=self.repo.state(),
+            repositoryState=self.repo.state(),
             parent=self.parentWidget())
 
         cd.setWindowModality(Qt.WindowModality.WindowModal)
@@ -148,7 +148,7 @@ class AmendCommit(RepoTask):
         self.repo.amend_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
-        self.rw.state.uiPrefs.clearDraftAmend()
+        self.repoModel.prefs.clearDraftAmend()
 
 
 class SetUpGitIdentity(RepoTask):
@@ -355,10 +355,10 @@ class CherrypickCommit(RepoTask):
                            ).format(bquo(shortHash(oid)))
             raise AbortTask(info, "information")
 
-        self.rw.state.uiPrefs.draftCommitMessage = commit.message
-        self.rw.state.uiPrefs.draftCommitSignature = commit.author
-        self.rw.state.uiPrefs.draftCommitSignatureOverride = SignatureOverride.Author
-        self.rw.state.uiPrefs.setDirty()
+        self.repoModel.prefs.draftCommitMessage = commit.message
+        self.repoModel.prefs.draftCommitSignature = commit.author
+        self.repoModel.prefs.draftCommitSignatureOverride = SignatureOverride.Author
+        self.repoModel.prefs.setDirty()
 
         if not anyConflicts:
             yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))

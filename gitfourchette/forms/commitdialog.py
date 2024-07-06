@@ -19,7 +19,7 @@ class CommitDialog(QDialog):
             committerSignature: Signature,
             amendingCommitHash: str,
             detachedHead: bool,
-            repoState: int,
+            repositoryState: RepositoryState,
             parent: QWidget):
         super().__init__(parent)
 
@@ -47,9 +47,9 @@ class CommitDialog(QDialog):
             self.setWindowTitle(self.tr("Commit"))
 
         warning = ""
-        if repoState == RepositoryState.MERGE:
+        if repositoryState == RepositoryState.MERGE:
             warning = self.tr("This commit will conclude the merge.")
-        elif repoState == RepositoryState.CHERRYPICK:
+        elif repositoryState == RepositoryState.CHERRYPICK:
             warning = self.tr("This commit will conclude the cherry-pick.")
         elif amendingCommitHash:
             warning = self.tr("You are amending commit {0}.").format(lquo(amendingCommitHash))

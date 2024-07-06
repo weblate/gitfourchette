@@ -36,7 +36,7 @@ def testHiddenBranchGotDeleted(tempDir, mainWindow, closeAndReopen, branchName, 
 
     rw = mainWindow.openRepo(wd)
     rw.toggleHideRefPattern(hidePattern)
-    rw.state.uiPrefs.write(force=True)
+    rw.repoModel.prefs.write(force=True)
 
     with RepoContext(wd) as repo2:
         repo2.delete_local_branch(branchName)

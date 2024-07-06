@@ -4,10 +4,10 @@ import os.path
 import re
 from contextlib import suppress
 
-from gitfourchette import repoconfig
 from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ class RemoteLink(QObject, RemoteCallbacks):
     def discoverKeyFiles(self, remote: Remote | str = ""):
         # Find remote-specific key files
         if isinstance(remote, Remote) and not self.usingCustomKeyFile:
-            self.usingCustomKeyFile = repoconfig.getRemoteKeyFile(remote._repo, remote.name)
+            self.usingCustomKeyFile = RepoPrefs.getRemoteKeyFileForRepo(remote._repo, remote.name)
 
         if self.usingCustomKeyFile:
             privkey = self.usingCustomKeyFile

@@ -6,8 +6,7 @@ from gitfourchette import settings
 from gitfourchette.graph import Frame, Graph
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.repostate import RepoState, UC_FAKEID
-from gitfourchette.toolbox import lerp
+from gitfourchette.repomodel import RepoModel, UC_FAKEID
 
 logger = logging.getLogger(__name__)
 
@@ -69,17 +68,19 @@ def getCommitBulletColumn(
 
 
 def paintGraphFrame(
-        state: RepoState,
+        repoModel: RepoModel,
         oid: Oid,
         painter: QPainter,
         rect: QRect,
         outlineColor: QColor
 ):
-    assert state.graph
+    graph = repoModel.graph
+    hiddenCommits = repoModel.hiddenCommits
+    assert graph
 
     try:
         # Get this commit's sequential index in the graph
-        myRow = state.graph.getCommitRow(oid)
+        myRow = graph.getCommitRow(oid)
     except LookupError:  # pragma: no cover
         logger.warning(f"Skipping unregistered commit: {oid}")
         return
@@ -97,7 +98,7 @@ def paintGraphFrame(
     middle = (top + bottom) // 2
 
     # Get graph frame for this row
-    frame = state.graph.getFrame(myRow)
+    frame = graph.getFrame(myRow)
     assert frame.commit == oid
     assert frame.row == myRow
 
@@ -106,7 +107,7 @@ def paintGraphFrame(
 
     # Flatten the lanes so there are no horizontal gaps in-between the lanes (optional).
     # laneColumnsAB is a table of lanes to columns (horizontal positions).
-    laneColumnsAB, numFlattenedColumns = flattenLanes(frame, state.hiddenCommits)#laneContinuity)
+    laneColumnsAB, numFlattenedColumns = flattenLanes(frame, hiddenCommits)
 
     # Get column (horizontal position) of commit bullet point.
     myColumn, numFlattenedColumns = getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
@@ -139,9 +140,9 @@ def paintGraphFrame(
         # clear path for next iteration
         path.clear()
 
-    arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
-    arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
-    arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit() if not arc.connectsHiddenCommit(state.hiddenCommits)]
+    arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit() if not arc.connectsHiddenCommit(hiddenCommits)]
+    arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit() if not arc.connectsHiddenCommit(hiddenCommits)]
+    arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit() if not arc.connectsHiddenCommit(hiddenCommits)]
 
     # draw arcs PASSING BY commit
     cy1 = middle
@@ -188,7 +189,7 @@ def paintGraphFrame(
         for j in arc.junctions:
             if j.joinedAt != frame.row:
                 continue
-            if j.joinedBy in state.hiddenCommits:
+            if j.joinedBy in hiddenCommits:
                 continue
             assert j.joinedBy == frame.commit
             columnA, columnB = laneColumnsAB[arc.lane]

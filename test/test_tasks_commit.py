@@ -80,8 +80,8 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     assert dialog.getOverriddenSignatureKind() == SignatureOverride.Nothing
     QTest.keyClicks(dialog.ui.summaryEditor, "hoping to save this message")
     dialog.reject()
-    assert rw.state.uiPrefs.draftCommitMessage == "hoping to save this message"
-    assert rw.state.uiPrefs.draftCommitSignatureOverride == SignatureOverride.Nothing
+    assert rw.repoModel.prefs.draftCommitMessage == "hoping to save this message"
+    assert rw.repoModel.prefs.draftCommitSignatureOverride == SignatureOverride.Nothing
 
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
@@ -89,9 +89,9 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     dialog.ui.revealSignature.click()
     dialog.ui.signature.ui.replaceComboBox.setCurrentIndex(2)
     dialog.reject()
-    assert rw.state.uiPrefs.draftCommitMessage == "hoping to save this message"
-    assert rw.state.uiPrefs.draftCommitSignatureOverride == SignatureOverride.Both
-    assert rw.state.uiPrefs.draftCommitSignature is not None
+    assert rw.repoModel.prefs.draftCommitMessage == "hoping to save this message"
+    assert rw.repoModel.prefs.draftCommitSignatureOverride == SignatureOverride.Both
+    assert rw.repoModel.prefs.draftCommitSignature is not None
 
     rw.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
@@ -397,7 +397,7 @@ def testAbortCherrypick(tempDir, mainWindow):
     rejectQMessageBox(rw, "cherry.+success.+commit")
 
     assert rw.repo.state() == RepositoryState.CHERRYPICK
-    assert "First a/a1" in rw.state.uiPrefs.draftCommitMessage
+    assert "First a/a1" in rw.repoModel.prefs.draftCommitMessage
     assert rw.mergeBanner.isVisibleTo(rw)
     assert re.search(r"cherry.+conflicts fixed", rw.mergeBanner.label.text(), re.I | re.S)
     assert "abort" in rw.mergeBanner.button.text().lower()
@@ -408,7 +408,7 @@ def testAbortCherrypick(tempDir, mainWindow):
 
     assert rw.repo.state() == RepositoryState.NONE
     assert rw.repo.status() == {}
-    assert rw.state.uiPrefs.draftCommitMessage == ""
+    assert rw.repoModel.prefs.draftCommitMessage == ""
 
 
 def testNewTag(tempDir, mainWindow):

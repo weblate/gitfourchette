@@ -1,17 +1,12 @@
 import logging
-import os
 from collections import defaultdict
-from contextlib import suppress
-from dataclasses import dataclass, field
-from typing import Iterable, Generator
+from typing import Generator
 
 from gitfourchette import settings
-from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
 from gitfourchette.graph import Graph, GraphSplicer
 from gitfourchette.graphtrickle import GraphTrickle
 from gitfourchette.porcelain import *
-from gitfourchette.prefsfile import PrefsFile
-from gitfourchette.qt import *
+from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -19,46 +14,17 @@ logger = logging.getLogger(__name__)
 UC_FAKEID = "UC_FAKEID"
 
 
-def toggleSetElement(l: set, e):
-    assert isinstance(l, set)
+def toggleSetElement(s: set, element):
+    assert isinstance(s, set)
     try:
-        l.remove(e)
+        s.remove(element)
         return False
     except KeyError:
-        l.add(e)
+        s.add(element)
         return True
 
 
-@dataclass
-class RepoPrefs(PrefsFile):
-    _filename = f"{APP_SYSTEM_NAME}.json"
-    _allowMakeDirs = False
-    _parentDir = ""
-
-    draftCommitMessage: str = ""
-    draftCommitSignature: Signature | None = None
-    draftCommitSignatureOverride: SignatureOverride = SignatureOverride.Nothing
-    draftAmendMessage: str = ""
-    hiddenRefPatterns: set = field(default_factory=set)
-    collapseCache: set = field(default_factory=set)
-
-    def getParentDir(self):
-        return self._parentDir
-
-    def clearDraftCommit(self):
-        self.draftCommitMessage = ""
-        self.draftCommitSignature = None
-        self.draftCommitSignatureOverride = SignatureOverride.Nothing
-        self.setDirty()
-
-    def clearDraftAmend(self):
-        self.draftAmendMessage = ""
-        self.setDirty()
-
-
-class RepoState(QObject):
-    loadingProgress: Signal()
-
+class RepoModel:
     repo: Repo
 
     walker: Walker | None
@@ -73,22 +39,22 @@ class RepoState(QObject):
 
     graph: Graph | None
 
-    refCache: dict[str, Oid]
+    refs: dict[str, Oid]
     "Maps reference names to commit oids"
 
-    reverseRefCache: dict[Oid, list[str]]
+    refsByOid: dict[Oid, list[str]]
     "Maps commit oids to reference names pointing to this commit"
 
-    mergeheadsCache: list[Oid]
+    mergeheads: list[Oid]
 
-    stashCache: list[Oid]
+    stashes: list[Oid]
 
-    submoduleCache: dict[str, str]
+    submodules: dict[str, str]
 
     superproject: str
     "Path of the superproject. Empty string if this isn't a submodule."
 
-    activeCommitId: Oid | None
+    headCommitId: Oid
     "Oid of the currently checked-out commit."
 
     foreignCommits: set[Oid]
@@ -110,54 +76,48 @@ class RepoState(QObject):
     headIsDetached: bool
     homeBranch: str
 
-    uiPrefs: RepoPrefs
+    prefs: RepoPrefs
 
-    def __init__(self, parent: QObject, repo: Repo):
-        super().__init__(parent)
-
+    def __init__(self, repo: Repo):
         assert isinstance(repo, Repo)
-        self.repo = repo
-
-        self.uiPrefs = RepoPrefs()
-        self.uiPrefs._parentDir = self.repo.path
-
-        self.walker = None
 
         self.commitSequence = []
         self.truncatedHistory = True
 
+        self.walker = None
         self.graph = None
-        self.localCommits = None
 
         self.headIsDetached = False
+        self.headCommitId = NULL_OID
         self.homeBranch = ""
 
-        self.refCache = {}
-        self.reverseRefCache = {}
-        self.mergeheadsCache = []
-        self.stashCache = []
-        self.submoduleCache = {}
-        self.remoteCache = []
+        self.superproject = ""
+        self.workdirStale = True
+        self.numUncommittedChanges = 0
+
+        self.refs = {}
+        self.refsByOid = {}
+        self.mergeheads = []
+        self.stashes = []
+        self.submodules = {}
+        self.remotes = []
 
         self.hiddenRefs = set()
         self.hiddenCommits = set()
 
-        self.uiPrefs.load()
+        self.repo = repo
+
+        self.prefs = RepoPrefs(repo)
+        self.prefs._parentDir = repo.path
+        self.prefs.load()
 
         # Prime ref cache after loading prefs (prefs contain hidden ref patterns)
-        self.refreshRefCache()
-        self.refreshMergeheadsCache()
-        self.refreshStashCache()
-        self.refreshSubmoduleCache()
-        self.refreshRemoteCache()
-
+        self.syncRefs()
+        self.syncMergeheads()
+        self.syncStashes()
+        self.syncSubmodules()
+        self.syncRemotes()
         self.superproject = repo.get_superproject()
-
-        self.activeCommitId = None
-
-        self.workdirStale = True
-        self.numUncommittedChanges = 0
-
         self.resolveHiddenCommits()
 
     @property
@@ -166,7 +126,7 @@ class RepoState(QObject):
         return max(0, len(self.commitSequence) - 1)
 
     @benchmark
-    def refreshRefCache(self):
+    def syncRefs(self):
         """ Refresh refCache and reverseRefCache.
 
         Return True if there were any changes in the refs since the last
@@ -182,10 +142,10 @@ class RepoState(QObject):
 
         refCache = self.repo.map_refs_to_ids(include_stashes=False)
 
-        if refCache == self.refCache:
+        if refCache == self.refs:
             # Make sure it's sorted in the exact same order...
             if settings.DEVDEBUG:
-                assert list(refCache.keys()) == list(self.refCache.keys()), "refCache key order changed! how did that happen?"
+                assert list(refCache.keys()) == list(self.refs.keys()), "refCache key order changed! how did that happen?"
 
             # Nothing to do!
             return False
@@ -194,8 +154,8 @@ class RepoState(QObject):
         for k, v in refCache.items():
             reverseRefCache[v].append(k)
 
-        self.refCache = refCache
-        self.reverseRefCache = reverseRefCache
+        self.refs = refCache
+        self.refsByOid = reverseRefCache
 
         # Since the refs have changed, we need to refresh hidden refs
         self.refreshHiddenRefCache()
@@ -203,39 +163,39 @@ class RepoState(QObject):
         return True
 
     @benchmark
-    def refreshMergeheadsCache(self):
+    def syncMergeheads(self):
         mh = self.repo.listall_mergeheads()
-        if mh != self.mergeheadsCache:
-            self.mergeheadsCache = mh
+        if mh != self.mergeheads:
+            self.mergeheads = mh
             return True
         return False
 
     @benchmark
-    def refreshStashCache(self):
+    def syncStashes(self):
         stashes = []
         for stash in self.repo.listall_stashes():
             stashes.append(stash.commit_id)
-        if stashes != self.stashCache:
-            self.stashCache = stashes
+        if stashes != self.stashes:
+            self.stashes = stashes
             return True
         return False
 
     @benchmark
-    def refreshSubmoduleCache(self):
+    def syncSubmodules(self):
         submodules = self.repo.listall_submodules_dict()
-        if submodules != self.submoduleCache:
-            self.submoduleCache = submodules
+        if submodules != self.submodules:
+            self.submodules = submodules
             return True
         return False
 
     @benchmark
-    def refreshRemoteCache(self):
+    def syncRemotes(self):
         # We could infer remote names from refCache, but we don't want
         # to miss any "blank" remotes that don't have any branches yet.
         # RemoteCollection.names() is much faster than iterating on RemoteCollection itself
         remotes = list(self.repo.remotes.names())
-        if remotes != self.remoteCache:
-            self.remoteCache = remotes
+        if remotes != self.remotes:
+            self.remotes = remotes
             return True
         return False
 
@@ -249,7 +209,8 @@ class RepoState(QObject):
         return prefix + settings.history.getRepoNickname(self.repo.workdir)
 
     @benchmark
-    def initializeWalker(self, tipIds: Iterable[Oid]) -> Walker:
+    def primeWalker(self) -> Walker:
+        tipIds = self.refs.values()
         sorting = SortMode.TOPOLOGICAL
 
         if settings.prefs.chronologicalOrder:
@@ -274,16 +235,18 @@ class RepoState(QObject):
 
         return self.walker
 
-    def updateActiveCommitId(self):
+    def syncHeadCommitId(self):
+        oldHead = self.headCommitId
         try:
-            self.activeCommitId = self.repo.head.target
+            self.headCommitId = self.repo.head.target
         except GitError:
-            self.activeCommitId = None
+            self.headCommitId = NULL_OID
+        return oldHead != self.headCommitId
 
     def _uncommittedChangesFakeCommitParents(self):
         try:
-            head = self.refCache["HEAD"]
-            return [head] + self.mergeheadsCache
+            head = self.refs["HEAD"]
+            return [head] + self.mergeheads
         except KeyError:  # Unborn HEAD
             return []
 
@@ -294,7 +257,7 @@ class RepoState(QObject):
         return max(n, settings.prefs.maxCommits)
 
     @benchmark
-    def refreshTopOfGraph(self, oldRefs: dict[str, Oid]):
+    def syncTopOfGraph(self, oldRefs: dict[str, Oid]):
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
@@ -302,7 +265,7 @@ class RepoState(QObject):
         newCommitSequence = []
 
         oldHeads = oldRefs.values()
-        newHeads = self.refCache.values()
+        newHeads = self.refs.values()
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
         newHiddenCommitSolver = self.newHiddenCommitSolver()
@@ -314,7 +277,7 @@ class RepoState(QObject):
 
         if graphSplicer.keepGoing:
             with Benchmark("Walk graph until equilibrium"):
-                walker = self.initializeWalker(newHeads)
+                walker = self.primeWalker()
                 for commit in walker:
                     oid = commit.id
                     parents = commit.parent_ids
@@ -348,14 +311,12 @@ class RepoState(QObject):
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
-        self.updateActiveCommitId()
-
         return nRemoved, nAdded
 
     @benchmark
     def toggleHideRefPattern(self, refPattern: str):
-        toggleSetElement(self.uiPrefs.hiddenRefPatterns, refPattern)
-        self.uiPrefs.setDirty()
+        toggleSetElement(self.prefs.hiddenRefPatterns, refPattern)
+        self.prefs.setDirty()
         self.refreshHiddenRefCache()
         self.resolveHiddenCommits()
 
@@ -365,14 +326,14 @@ class RepoState(QObject):
         hiddenRefs = self.hiddenRefs
         hiddenRefs.clear()
 
-        patterns = self.uiPrefs.hiddenRefPatterns
+        patterns = self.prefs.hiddenRefPatterns
         if not patterns:
             return
 
         assert type(patterns) is set
         patternsSeen = set()
 
-        for ref in self.refCache:
+        for ref in self.refs:
             if ref in patterns:
                 hiddenRefs.add(ref)
                 patternsSeen.add(ref)
@@ -390,8 +351,8 @@ class RepoState(QObject):
 
         if len(patternsSeen) != len(patterns):
             logger.debug(f"Culling stale hidden ref patterns {patterns - patternsSeen}")
-            self.uiPrefs.hiddenRefPatterns = patternsSeen
-            self.uiPrefs.setDirty()
+            self.prefs.hiddenRefPatterns = patternsSeen
+            self.prefs.setDirty()
 
     def getHiddenTips(self) -> set[Oid]:
         seeds = set()
@@ -399,11 +360,11 @@ class RepoState(QObject):
 
         def isSharedByVisibleBranch(oid: Oid):
             return any(
-                ref for ref in self.reverseRefCache[oid]
+                ref for ref in self.refsByOid[oid]
                 if ref not in hiddenRefs and not ref.startswith(RefPrefix.TAGS))
 
         for ref in hiddenRefs:
-            oid = self.refCache[ref]
+            oid = self.refs[ref]
             if not isSharedByVisibleBranch(oid):
                 seeds.add(oid)
 
@@ -413,12 +374,12 @@ class RepoState(QObject):
         if not refPattern.endswith("/"):
             # Explicit ref
             try:
-                yield self.refCache[refPattern]
+                yield self.refs[refPattern]
             except KeyError:
                 pass
         else:
             # Wildcard
-            for ref, oid in self.refCache.items():
+            for ref, oid in self.refs.items():
                 if ref.startswith(refPattern):
                     yield oid
 
@@ -426,7 +387,7 @@ class RepoState(QObject):
         trickle = GraphTrickle()
 
         # Explicitly show all refs by default
-        for head in self.refCache.values():
+        for head in self.refs.values():
             trickle.setEnd(head)
 
         # Explicitly hide tips
@@ -461,7 +422,7 @@ class RepoState(QObject):
     def newForeignCommitSolver(self) -> GraphTrickle:
         trickle = GraphTrickle()
 
-        for oid, refList in self.reverseRefCache.items():
+        for oid, refList in self.refsByOid.items():
             assert oid not in trickle.frontier
             isLocal = any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList)
             if isLocal:
