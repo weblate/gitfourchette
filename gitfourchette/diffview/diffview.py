@@ -226,9 +226,6 @@ class DiffView(QPlainTextEdit):
                                 ) -> bool:
         """Detect if we're trying to reload the same patch that's already being displayed"""
 
-        if newLocator.hasFlags(NavFlags.Force):
-            return False
-
         if not self.currentLocator.isSimilarEnoughTo(newLocator):
             return False
 
@@ -243,8 +240,15 @@ class DiffView(QPlainTextEdit):
         if not DiffFile_compare(nf1, nf2):
             return False
 
+        # Changing amount of context lines?
         if len(newDocument.lineData) != len(self.lineData):
             return False
+
+        # All IDs must be valid
+        assert of1.flags & DiffFlag.VALID_ID
+        assert nf1.flags & DiffFlag.VALID_ID
+        assert of2.flags & DiffFlag.VALID_ID
+        assert nf2.flags & DiffFlag.VALID_ID
 
         return True
 

@@ -400,3 +400,29 @@ def testImageDiff(tempDir, mainWindow):
     rw.jump(NavLocator.inUnstaged("image.png"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search("6.6 pixels", rw.specialDiffView.toPlainText())
+
+
+def testDiffViewSelectionStableAfterRefresh(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/master.txt", "please don't nuke my selection\n")
+
+    rw = mainWindow.openRepo(wd)
+    diffView = rw.diffView
+
+    rw.jump(NavLocator.inUnstaged("master.txt"))
+    assert not diffView.textCursor().hasSelection()
+
+    # Select some text
+    diffView.selectAll()
+    assert diffView.textCursor().hasSelection()
+    assert (0, 3) == diffView.getSelectedLineExtents()
+
+    # Selection must be stable if file didn't change
+    rw.refreshRepo()
+    assert diffView.textCursor().hasSelection()
+    assert (0, 3) == diffView.getSelectedLineExtents()
+
+    # Selection cleared if file did change
+    writeFile(f"{wd}/master.txt", "please DO!!! nuke my selection\n")
+    rw.refreshRepo()
+    assert not diffView.textCursor().hasSelection()
