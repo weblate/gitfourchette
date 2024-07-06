@@ -180,8 +180,6 @@ class SidebarModel(QAbstractItemModel):
     _cachedTooltipIndex: QModelIndex | None
     _cachedTooltipText: str
 
-    modeId: int
-
     class Role:
         Ref = Qt.ItemDataRole.UserRole + 0
         Hidden = Qt.ItemDataRole.UserRole + 1
@@ -193,8 +191,11 @@ class SidebarModel(QAbstractItemModel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.modeId = -1
         self.clear()
+
+        if settings.DEVDEBUG and QAbstractItemModelTester is not None:
+            self.modelTester = QAbstractItemModelTester(self)
+            logger.warning("Sidebar model tester enabled. This will SIGNIFICANTLY slow down SidebarModel.rebuild!")
 
     def clear(self, emitSignals=True):
         if emitSignals:
@@ -240,7 +241,6 @@ class SidebarModel(QAbstractItemModel):
         self.beginResetModel()
 
         repo = repoState.repo
-        refCache = repoState.refCache
 
         self.clear(emitSignals=False)
         self.repo = repo
@@ -252,135 +252,135 @@ class SidebarModel(QAbstractItemModel):
         remoteBranchesDict = {}
         tags = []
 
+        # -----------------------------
         # Set up root nodes
-        with Benchmark("Set up root nodes"):
-            rootNode = SidebarNode(EItem.Root)
-            for eitem in HEADER_ITEMS:
-                rootNode.appendChild(SidebarNode(eitem))
-            uncommittedNode = rootNode.findChild(EItem.UncommittedChanges)
-            branchRoot = rootNode.findChild(EItem.LocalBranchesHeader)
-            remoteRoot = rootNode.findChild(EItem.RemotesHeader)
-            tagRoot = rootNode.findChild(EItem.TagsHeader)
-            submoduleRoot = rootNode.findChild(EItem.SubmodulesHeader)
-            stashRoot = rootNode.findChild(EItem.StashesHeader)
+        # -----------------------------
+        rootNode = SidebarNode(EItem.Root)
+        for eitem in HEADER_ITEMS:
+            rootNode.appendChild(SidebarNode(eitem))
+        uncommittedNode = rootNode.findChild(EItem.UncommittedChanges)
+        branchRoot = rootNode.findChild(EItem.LocalBranchesHeader)
+        remoteRoot = rootNode.findChild(EItem.RemotesHeader)
+        tagRoot = rootNode.findChild(EItem.TagsHeader)
+        submoduleRoot = rootNode.findChild(EItem.SubmodulesHeader)
+        stashRoot = rootNode.findChild(EItem.StashesHeader)
 
-            self.rootNode = rootNode
-            self.nodesByRef[UC_FAKEREF] = uncommittedNode
+        self.rootNode = rootNode
+        self.nodesByRef[UC_FAKEREF] = uncommittedNode
 
         self.refreshRepoName()
 
+        # -----------------------------
         # HEAD
-        with Benchmark("HEAD"):
-            self._checkedOut = ""
-            self._checkedOutUpstream = ""
+        # -----------------------------
+        try:
+            # Try to get the name of the checked-out branch
+            checkedOut = repo.head.name
 
-            try:
-                # Try to get the name of the checked-out branch
-                checkedOut = repo.head.name
+        except GitError:
+            # Unborn HEAD - Get name of unborn branch
+            assert repo.head_is_unborn
+            target: str = repo.lookup_reference("HEAD").target
+            target = target.removeprefix(RefPrefix.HEADS)
+            node = SidebarNode(EItem.UnbornHead, target)
+            branchRoot.appendChild(node)
+            self.nodesByRef["HEAD"] = node
 
-            except GitError:
-                # Unborn HEAD - Get name of unborn branch
-                assert repo.head_is_unborn
-                target: str = repo.lookup_reference("HEAD").target
-                target = target.removeprefix(RefPrefix.HEADS)
-                node = SidebarNode(EItem.UnbornHead, target)
+        else:
+            # It's not unborn
+            if checkedOut == 'HEAD':
+                # Detached head, leave self._checkedOut blank
+                assert repo.head_is_detached
+                node = SidebarNode(EItem.DetachedHead, str(repo.head.target))
                 branchRoot.appendChild(node)
                 self.nodesByRef["HEAD"] = node
 
             else:
-                # It's not unborn
-                if checkedOut == 'HEAD':
-                    # Detached head, leave self._checkedOut blank
-                    assert repo.head_is_detached
-                    node = SidebarNode(EItem.DetachedHead, str(repo.head.target))
-                    branchRoot.appendChild(node)
-                    self.nodesByRef["HEAD"] = node
+                # We're on a branch
+                assert checkedOut.startswith(RefPrefix.HEADS)
+                checkedOut = checkedOut.removeprefix(RefPrefix.HEADS)
+                self._checkedOut = checkedOut
 
-                else:
-                    # We're on a branch
-                    assert checkedOut.startswith(RefPrefix.HEADS)
-                    checkedOut = checkedOut.removeprefix(RefPrefix.HEADS)
-                    self._checkedOut = checkedOut
+                # Try to get the upstream (.upstream_name raises KeyError if there isn't one)
+                with suppress(KeyError):
+                    branch = repo.branches.local[checkedOut]
+                    upstream = branch.upstream_name  # This can be a bit expensive
+                    upstream = upstream.removeprefix(RefPrefix.REMOTES)  # Convert to shorthand
+                    self._checkedOutUpstream = upstream
 
-                    # Try to get the upstream (.upstream_name raises KeyError if there isn't one)
-                    with suppress(KeyError):
-                        branch = repo.branches.local[checkedOut]
-                        upstream = branch.upstream_name  # This can be a bit expensive
-                        upstream = upstream.removeprefix(RefPrefix.REMOTES)  # Convert to shorthand
-                        self._checkedOutUpstream = upstream
+        # -----------------------------
+        # Remotes
+        # -----------------------------
+        for name in repoState.remoteCache:
+            remoteBranchesDict[name] = []
+            node = SidebarNode(EItem.Remote, name)
+            remoteRoot.appendChild(node)
 
-        # Remote list - We could infer remotes from refCache, but we don't want
-        # to miss any "blank" remotes that don't have any branches yet.
-        with Benchmark("Remotes"):
-            # RemoteCollection.names() is much faster than iterating on RemoteCollection itself
-            for i, name in enumerate(repo.remotes.names()):
-                remoteBranchesDict[name] = []
-                node = SidebarNode(EItem.Remote, name)
-                remoteRoot.appendChild(node)
-
+        # -----------------------------
         # Refs
-        with Benchmark("Refs-Init"):
-            for name in reversed(refCache):  # reversed because refCache sorts tips by ASCENDING commit time
-                prefix, shorthand = RefPrefix.split(name)
+        # -----------------------------
+        for name in reversed(repoState.refCache):  # reversed because refCache sorts tips by ASCENDING commit time
+            prefix, shorthand = RefPrefix.split(name)
 
-                if prefix == RefPrefix.HEADS:
-                    localBranches.append(shorthand)
-                    # We're not caching upstreams because it's very expensive to do
+            if prefix == RefPrefix.HEADS:
+                localBranches.append(shorthand)
+                # We're not caching upstreams because it's very expensive to do
 
-                elif prefix == RefPrefix.REMOTES:
-                    remote, branchName = split_remote_branch_shorthand(shorthand)
-                    try:
-                        remoteBranchesDict[remote].append(branchName)
-                    except KeyError:
-                        logger.warning(f"Refresh cache: missing remote: {remote}")
+            elif prefix == RefPrefix.REMOTES:
+                remote, branchName = split_remote_branch_shorthand(shorthand)
+                try:
+                    remoteBranchesDict[remote].append(branchName)
+                except KeyError:
+                    logger.warning(f"Refresh cache: missing remote: {remote}")
 
-                elif prefix == RefPrefix.TAGS:
-                    tags.append(shorthand)
+            elif prefix == RefPrefix.TAGS:
+                tags.append(shorthand)
 
-                elif name == "HEAD" or name.startswith("stash@{"):
-                    pass  # handled separately
+            elif name == "HEAD" or name.startswith("stash@{"):
+                pass  # handled separately
 
-                else:
-                    logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
+            else:
+                logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
 
-        with Benchmark("Refs-LB"):
-            self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS)
+        # Populate local branch tree
+        self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS)
 
-        with Benchmark("Refs-RB"):
-            for remote, branches in remoteBranchesDict.items():
-                remoteNode = remoteRoot.findChild(EItem.Remote, remote)
-                assert remoteNode is not None
+        # Populate tag tree
+        self.populateRefNodeTree(tags, tagRoot, EItem.Tag, RefPrefix.TAGS)
 
-                # Sort remote branches
-                branches.sort(key=str.lower)
+        # Populate remote tree
+        for remote, branches in remoteBranchesDict.items():
+            remoteNode = remoteRoot.findChild(EItem.Remote, remote)
+            assert remoteNode is not None
+            branches.sort(key=str.lower)  # Sort remote branches
+            self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, f"{RefPrefix.REMOTES}{remote}/")
 
-                self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, f"{RefPrefix.REMOTES}{remote}/")
-
-        with Benchmark("Refs-T"):
-            self.populateRefNodeTree(tags, tagRoot, EItem.Tag, RefPrefix.TAGS)
-
+        # -----------------------------
         # Stashes
-        with Benchmark("Stashes"):
-            for i, stashCommitId in enumerate(repoState.stashCache):
-                message = repo[stashCommitId].message
-                message = strip_stash_message(message)
-                refName = f"stash@{{{i}}}"
-                node = SidebarNode(EItem.Stash, str(stashCommitId))
-                node.displayName = message
-                stashRoot.appendChild(node)
-                self.nodesByRef[refName] = node
+        # -----------------------------
+        for i, stashCommitId in enumerate(repoState.stashCache):
+            message = repo[stashCommitId].message
+            message = strip_stash_message(message)
+            refName = f"stash@{{{i}}}"
+            node = SidebarNode(EItem.Stash, str(stashCommitId))
+            node.displayName = message
+            stashRoot.appendChild(node)
+            self.nodesByRef[refName] = node
 
+        # -----------------------------
         # Submodules
-        with Benchmark("Submodules"):
-            for submoduleKey, submodulePath in repo.listall_submodules_dict().items():
-                node = SidebarNode(EItem.Submodule, submoduleKey)
-                submoduleRoot.appendChild(node)
+        # -----------------------------
+        for submoduleKey, submodulePath in repoState.submoduleCache.items():
+            node = SidebarNode(EItem.Submodule, submoduleKey)
+            submoduleRoot.appendChild(node)
 
-                if not repo.submodule_dotgit_present(submodulePath):
-                    node.warning = self.tr("Submodule not initialized.")
+            if not repo.submodule_dotgit_present(submodulePath):
+                node.warning = self.tr("Submodule not initialized.")
 
-        with Benchmark("endResetModel" + ("[ModelTester might slow this down]" if settings.DEVDEBUG else "")):
-            self.endResetModel()
+        # -----------------------------
+        # Commit new model
+        # -----------------------------
+        self.endResetModel()
 
     def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str):
         pendingFolders = {}

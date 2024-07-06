@@ -94,3 +94,14 @@ def testRefreshKeepsSidebarNonRefSelection(tempDir, mainWindow):
     node = SidebarNode.fromIndex(sb.selectedIndexes()[0])
     assert node.kind == EItem.Remote
     assert node.data == "origin"
+
+
+def testNewEmptyRemoteShowsUpInSidebar(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    assert 1 == len(list(sb.findNodesByKind(EItem.Remote)))
+
+    rw.repo.remotes.create("toto", "https://github.com/jorio/bugdom")
+    rw.refreshRepo()
+    assert 2 == len(list(sb.findNodesByKind(EItem.Remote)))

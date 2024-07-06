@@ -11,7 +11,7 @@ from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
-from gitfourchette.porcelain import DeltaStatus, NULL_OID, Patch
+from gitfourchette.porcelain import DeltaStatus, NULL_OID, Oid, Patch
 from gitfourchette.qt import *
 from gitfourchette.repostate import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
@@ -475,6 +475,7 @@ class RefreshRepo(RepoTask):
 
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
         rw = self.rw
+        state = rw.state
         assert onAppThread()
 
         if effectFlags == TaskEffects.Nothing:
@@ -484,12 +485,12 @@ class RefreshRepo(RepoTask):
         if not os.path.isdir(self.repo.path):
             raise RepoGoneError(self.repo.path)
 
-        rw.state.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
+        state.workdirStale |= bool(effectFlags & TaskEffects.Workdir)
 
         initialLocator = rw.navLocator
         initialGraphScroll = rw.graphView.verticalScrollBar().value()
         restoringInitialLocator = jumpTo.context == NavContext.EMPTY
-        wasExploringDetachedCommit = initialLocator.commit and initialLocator.commit not in rw.state.graph.commitRows
+        wasExploringDetachedCommit = initialLocator.commit and initialLocator.commit not in state.graph.commitRows
 
         try:
             previousFileList = rw.diffArea.fileListByContext(initialLocator.context)
@@ -497,45 +498,41 @@ class RefreshRepo(RepoTask):
         except ValueError:
             previousFileList = None
 
+        refsChanged = False
+        stashesChanged = False
+        submodulesChanged = False
+        remotesChanged = False
+
         # Refresh the index
         if effectFlags & TaskEffects.Index:
-            rw.repo.refresh_index()
+            state.repo.refresh_index()
+
+        if effectFlags & TaskEffects.Workdir:
+            submodulesChanged = state.refreshSubmoduleCache()
+
+        if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes):
+            remotesChanged = state.refreshRemoteCache()
 
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
-            oldRefCache = rw.state.refCache
-            needGraphRefresh = rw.state.refreshRefCache()
-            needGraphRefresh |= rw.state.refreshMergeheadsCache()
-            rw.state.refreshStashCache()  # stashes don't affect needGraphRefresh because they don't appear in graph
+            oldRefs = state.refCache
+            refsChanged = state.refreshRefCache()
+            refsChanged |= state.refreshMergeheadsCache()
+            stashesChanged = state.refreshStashCache()
 
             # Load commits from changed refs only
-            if needGraphRefresh:
-                # Make sure we're on the UI thread.
-                # We don't want GraphView to try to read an incomplete state while repainting.
-                assert onAppThread()
-
-                nRemovedRows, nAddedRows = rw.state.loadChangedRefs(oldRefCache)
-
-                # Refresh top of graphview
-                with QSignalBlockerContext(rw.graphView):
-                    # Hidden commits may have changed in RepoState.loadTaintedCommitsOnly!
-                    # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-                    rw.graphView.setHiddenCommits(rw.state.hiddenCommits)
-                    if nRemovedRows >= 0:
-                        rw.graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, rw.state.commitSequence)
-                    else:
-                        rw.graphView.setCommitSequence(rw.state.commitSequence)
-            else:
-                logger.debug("Don't need to refresh the graph.")
+            if refsChanged:
+                self.refreshTopOfGraph(oldRefs)
 
         # Schedule a repaint of the entire GraphView if the refs changed
         if effectFlags & (TaskEffects.Head | TaskEffects.Refs):
             rw.graphView.viewport().update()
 
         # Refresh sidebar
-        with QSignalBlockerContext(rw.sidebar):
-            rw.sidebar.backUpSelection()
-            rw.sidebar.refresh(rw.state)
+        rw.sidebar.backUpSelection()
+        if refsChanged | stashesChanged | submodulesChanged | remotesChanged:
+            with QSignalBlockerContext(rw.sidebar):
+                rw.sidebar.refresh(state)
 
         # Now jump to where we should be after the refresh
         assert rw.navLocator == initialLocator, "locator has changed"
@@ -549,8 +546,8 @@ class RefreshRepo(RepoTask):
 
         if effectFlags & TaskEffects.Workdir and not jumpToWorkdir:
             # Clear uncommitted change count if we know the workdir is stale
-            rw.state.numUncommittedChanges = 0
-            rw.state.workdirStale = True
+            state.numUncommittedChanges = 0
+            state.workdirStale = True
 
         if jumpToWorkdir:
             # Refresh workdir view on separate thread AFTER all the processing above
@@ -567,11 +564,11 @@ class RefreshRepo(RepoTask):
             # locator to ensure the previously selected commit stays selected.
             rw.graphView.verticalScrollBar().setValue(initialGraphScroll)
             if (jumpTo == initialLocator
-                    and jumpTo.commit not in rw.state.graph.commitRows
+                    and jumpTo.commit not in state.graph.commitRows
                     and not wasExploringDetachedCommit):
                 # We were looking at a commit that is not in the graph anymore.
                 # Probably refreshing after amending. Jump to HEAD commit.
-                jumpTo = NavLocator.inCommit(rw.state.activeCommitId)
+                jumpTo = NavLocator.inCommit(state.activeCommitId)
 
         # Jump
         yield from self.flowSubtask(Jump, jumpTo)
@@ -593,3 +590,29 @@ class RefreshRepo(RepoTask):
         # Refresh window title and state banner.
         # Do this last because it requires the index to be fresh (updated by the Jump subtask)
         rw.refreshWindowChrome()
+
+        logger.debug(f"Changes detected on refresh: "
+                     f"Ref={refsChanged} Stash={stashesChanged} Submo={submodulesChanged} Remote={remotesChanged}")
+
+    def refreshTopOfGraph(self, oldRefs: dict[str, Oid]):
+        state = self.rw.state
+        graphView = self.rw.graphView
+
+        # Make sure we're on the UI thread.
+        # We don't want GraphView to try to read an incomplete state while repainting.
+        assert onAppThread()
+
+        # Update our graph model
+        nRemovedRows, nAddedRows = state.refreshTopOfGraph(oldRefs)
+
+        with QSignalBlockerContext(graphView):
+            # Hidden commits may have changed in RepoState.refreshTopOfGraph!
+            # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
+            graphView.setHiddenCommits(state.hiddenCommits)
+
+            if nRemovedRows >= 0:
+                # Refresh top of graphview
+                graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, state.commitSequence)
+            else:
+                # Replace graph wholesale
+                graphView.setCommitSequence(state.commitSequence)

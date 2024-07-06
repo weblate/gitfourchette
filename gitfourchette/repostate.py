@@ -83,6 +83,8 @@ class RepoState(QObject):
 
     stashCache: list[Oid]
 
+    submoduleCache: dict[str, str]
+
     superproject: str
     "Path of the superproject. Empty string if this isn't a submodule."
 
@@ -129,19 +131,25 @@ class RepoState(QObject):
 
         self.headIsDetached = False
         self.homeBranch = ""
+
         self.refCache = {}
         self.reverseRefCache = {}
         self.mergeheadsCache = []
         self.stashCache = []
+        self.submoduleCache = {}
+        self.remoteCache = []
+
         self.hiddenRefs = set()
         self.hiddenCommits = set()
 
         self.uiPrefs.load()
 
-        # Refresh ref cache after loading prefs (prefs contain hidden ref patterns)
+        # Prime ref cache after loading prefs (prefs contain hidden ref patterns)
         self.refreshRefCache()
         self.refreshMergeheadsCache()
         self.refreshStashCache()
+        self.refreshSubmoduleCache()
+        self.refreshRemoteCache()
 
         self.superproject = repo.get_superproject()
 
@@ -212,6 +220,25 @@ class RepoState(QObject):
             return True
         return False
 
+    @benchmark
+    def refreshSubmoduleCache(self):
+        submodules = self.repo.listall_submodules_dict()
+        if submodules != self.submoduleCache:
+            self.submoduleCache = submodules
+            return True
+        return False
+
+    @benchmark
+    def refreshRemoteCache(self):
+        # We could infer remote names from refCache, but we don't want
+        # to miss any "blank" remotes that don't have any branches yet.
+        # RemoteCollection.names() is much faster than iterating on RemoteCollection itself
+        remotes = list(self.repo.remotes.names())
+        if remotes != self.remoteCache:
+            self.remoteCache = remotes
+            return True
+        return False
+
     @property
     def shortName(self) -> str:
         prefix = ""
@@ -267,14 +294,14 @@ class RepoState(QObject):
         return max(n, settings.prefs.maxCommits)
 
     @benchmark
-    def loadChangedRefs(self, oldRefCache: dict[str, Oid]):
+    def refreshTopOfGraph(self, oldRefs: dict[str, Oid]):
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
 
         newCommitSequence = []
 
-        oldHeads = oldRefCache.values()
+        oldHeads = oldRefs.values()
         newHeads = self.refCache.values()
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)

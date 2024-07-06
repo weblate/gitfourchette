@@ -56,10 +56,6 @@ class Sidebar(QTreeView):
 
         self.setModel(SidebarModel(self))
 
-        if settings.DEVDEBUG and QAbstractItemModelTester is not None:
-            self.modelTester = QAbstractItemModelTester(self.model())
-            logger.warning("Sidebar model tester enabled. This will significantly slow down refreshes!")
-
         self.expanded.connect(self.onExpanded)
         self.collapsed.connect(self.onCollapsed)
         self.collapseCacheValid = False
