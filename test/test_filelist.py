@@ -199,8 +199,8 @@ def testEditFileInExternalDiffTool(tempDir, mainWindow):
     # First, set the diff tool to an empty command to go through the "set up" code path
     mainWindow.onAcceptPrefsDialog({"externalDiff": ""})
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in.+diff tool")
-    acceptQMessageBox(mainWindow, "diff tool.+n.t set up")
-    findQDialog(mainWindow, "preferences").reject()
+    acceptQMessageBox(mainWindow, "diff tool.+n.t (set up|configured)")
+    findQDialog(mainWindow, "settings").reject()
 
     mainWindow.onAcceptPrefsDialog({"externalDiff": f'"{editorPath}" "{scratchPath}" $L $R'})
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in editor-shim")

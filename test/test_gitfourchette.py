@@ -116,8 +116,8 @@ def testPrefsDialog(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     def openPrefs() -> PrefsDialog:
-        triggerMenuAction(mainWindow.menuBar(), "file/preferences")
-        return findQDialog(mainWindow, "preferences")
+        triggerMenuAction(mainWindow.menuBar(), "file/settings")
+        return findQDialog(mainWindow, "settings")
 
     # Open prefs, reset to first tab to prevent spillage from any previous test
     dlg = openPrefs()
@@ -277,7 +277,7 @@ def testTruncatedHistory(tempDir, mainWindow, method):
         qteClickLink(rw.specialDiffView, "change.+threshold")
     elif method == "graphcm":
         triggerMenuAction(rw.graphView.makeContextMenu(), "change.+threshold")
-    prefsDialog = findQDialog(mainWindow, "preferences")
+    prefsDialog = findQDialog(mainWindow, "settings")
     QTest.qWait(0)
     assert prefsDialog.findChild(QWidget, "prefctl_maxCommits").hasFocus()
     prefsDialog.reject()

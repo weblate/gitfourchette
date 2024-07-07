@@ -83,7 +83,7 @@ def setUpMergeToolPrompt(parent: QWidget, prefKey: str):
 
     title = translatedPrefKey
 
-    message = translate("exttools", "{0} isn’t set up in your preferences yet.").format(bquo(translatedPrefKey))
+    message = translate("exttools", "{0} isn’t configured in your settings yet.").format(bquo(translatedPrefKey))
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
                           QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)

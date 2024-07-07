@@ -70,7 +70,7 @@ class MainToolBar(QToolBar):
                       toolTip=self.tr("Open repo folder in file manager")),
             self.recentAction,
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Preferences"), self.openPrefs,
+            ActionDef(self.tr("Settings"), self.openPrefs,
                       icon="git-settings", #"configure",
                       shortcuts=QKeySequence.StandardKey.Preferences,
                       toolTip=self.tr("Edit {app} settings").format(app=qAppName())),

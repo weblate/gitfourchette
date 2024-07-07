@@ -81,7 +81,7 @@ class TaskBook:
             tasks.ResetHead: translate("task", "Reset HEAD"),
             tasks.RevertCommit: translate("task", "Revert commit"),
             tasks.RevertPatch: translate("task", "Revert selected text", "partial patch from selected text in diff"),
-            tasks.SetUpGitIdentity: translate("task", "Set up global Git identity"),
+            tasks.SetUpGitIdentity: translate("task", "Git identity"),
             tasks.EditRepoSettings: translate("task", "Repository settings"),
             tasks.StageFiles: translate("task", "Stage files"),
             tasks.SwitchBranch: translate("task", "Switch to branch"),

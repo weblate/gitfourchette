@@ -76,7 +76,7 @@ class GFApplication(QApplication):
         parser.addOptions([
             QCommandLineOption(["no-threads", "n"], self.tr("Turn off multithreading (run all tasks on UI thread).")),
             QCommandLineOption(["debug", "d"], self.tr("Enable expensive assertions and development features.")),
-            QCommandLineOption(["test-mode"], self.tr("Prevent loading/saving user preferences. (implies --no-threads)")),
+            QCommandLineOption(["test-mode"], self.tr("Prevent loading/saving user settings. (implies --no-threads)")),
         ])
         parser.addPositionalArgument("repos", self.tr("Repository paths to open on launch."), "[repos...]")
         parser.process(argv)

@@ -239,7 +239,7 @@ class MainWindow(QMainWindow):
 
             ActionDef.SEPARATOR,
 
-            ActionDef(self.tr("&Preferences..."), self.openPrefsDialog,
+            ActionDef(self.tr("&Settings..."), self.openPrefsDialog,
                       shortcuts=QKeySequence.StandardKey.Preferences, icon="configure",
                       menuRole=QAction.MenuRole.PreferencesRole,
                       statusTip=self.tr("Edit {app} settings").format(app=qAppName())),

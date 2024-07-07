@@ -47,7 +47,7 @@ class PrefsDialog(QDialog):
         super().__init__(parent)
 
         self.setObjectName("PrefsDialog")
-        self.setWindowTitle(translate("Prefs", "{app} Preferences", "prefs dialog title").format(app=qAppName()))
+        self.setWindowTitle(translate("Prefs", "{app} Settings").format(app=qAppName()))
 
         # Delta to on-disk preferences.
         self.prefDiff = {}
