@@ -979,13 +979,13 @@ class RepoWidget(QStackedWidget):
     @classmethod
     def contextMenuItemsByProxy(cls, invoker, proxy):
         return [
-            TaskBook.action(invoker, tasks.NewCommit, "&C"),
-            TaskBook.action(invoker, tasks.AmendCommit, "&A"),
+            TaskBook.action(invoker, tasks.NewCommit, accel="C"),
+            TaskBook.action(invoker, tasks.AmendCommit, accel="A"),
             TaskBook.action(invoker, tasks.NewStash),
 
             ActionDef.SEPARATOR,
 
-            TaskBook.action(invoker, tasks.NewBranchFromHead, "&B"),
+            TaskBook.action(invoker, tasks.NewBranchFromHead, accel="B"),
 
             ActionDef(
                 invoker.tr("&Push Branch..."),
@@ -995,8 +995,8 @@ class RepoWidget(QStackedWidget):
                 statusTip=invoker.tr("Upload your commits on the current branch to the remote server"),
             ),
 
-            TaskBook.action(invoker, tasks.PullBranch, "&L"),
-            TaskBook.action(invoker, tasks.FetchRemote, "&F"),
+            TaskBook.action(invoker, tasks.PullBranch, accel="L"),
+            TaskBook.action(invoker, tasks.FetchRemote, accel="F"),
 
             TaskBook.action(invoker, tasks.NewRemote),
 

@@ -244,7 +244,8 @@ class MainWindow(QMainWindow):
                       menuRole=QAction.MenuRole.PreferencesRole,
                       statusTip=self.tr("Edit {app} settings").format(app=qAppName())),
 
-            TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('',False), menuRole=QAction.MenuRole.ApplicationSpecificRole),
+            TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('',False)
+                            ).replace(menuRole=QAction.MenuRole.ApplicationSpecificRole),
 
             ActionDef.SEPARATOR,
 

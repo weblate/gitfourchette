@@ -79,11 +79,11 @@ class GraphView(QListView):
 
         if kind == SpecialRow.UncommittedChanges:
             actions = [
-                TaskBook.action(self, NewCommit, "&C"),
-                TaskBook.action(self, AmendCommit, "&A"),
+                TaskBook.action(self, NewCommit, accel="C"),
+                TaskBook.action(self, AmendCommit, accel="A"),
                 ActionDef.SEPARATOR,
-                TaskBook.action(self, NewStash, "&S"),
-                TaskBook.action(self, ExportWorkdirAsPatch, "&X"),
+                TaskBook.action(self, NewStash, accel="S"),
+                TaskBook.action(self, ExportWorkdirAsPatch, accel="X"),
             ]
 
         elif kind == SpecialRow.EndOfShallowHistory:
@@ -114,7 +114,7 @@ class GraphView(QListView):
                     ]
 
             checkoutAction = TaskBook.action(self, CheckoutCommit, self.tr("&Check Out..."), taskArgs=oid)
-            checkoutAction.setShortcut(QKeySequence("Return"))
+            checkoutAction.shortcuts = makeMultiShortcut(QKeySequence("Return"))
 
             actions = [
                 *mergeActions,

@@ -112,11 +112,11 @@ class Sidebar(QTreeView):
 
         elif item == EItem.UncommittedChanges:
             actions += [
-                TaskBook.action(self, NewCommit, "&C"),
-                TaskBook.action(self, AmendCommit, "&A"),
+                TaskBook.action(self, NewCommit, accel="C"),
+                TaskBook.action(self, AmendCommit, accel="A"),
                 ActionDef.SEPARATOR,
-                TaskBook.action(self, NewStash, "&S"),
-                TaskBook.action(self, ExportWorkdirAsPatch, "&X"),
+                TaskBook.action(self, NewStash, accel="S"),
+                TaskBook.action(self, ExportWorkdirAsPatch, accel="X"),
             ]
 
         elif item == EItem.LocalBranchesHeader:
@@ -144,8 +144,7 @@ class Sidebar(QTreeView):
                     SwitchBranch,
                     self.tr("&Switch to {0}").format(thisBranchDisplay),
                     taskArgs=(branchName, False),  # False: don't ask for confirmation
-                    enabled=not isCurrentBranch,
-                ),
+                ).replace(enabled=not isCurrentBranch),
 
                 ActionDef.SEPARATOR,
 
@@ -153,8 +152,7 @@ class Sidebar(QTreeView):
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
-                    enabled=not isCurrentBranch and activeBranchName,
-                ),
+                ).replace(enabled=not isCurrentBranch and activeBranchName),
 
                 ActionDef.SEPARATOR,
 
@@ -162,22 +160,19 @@ class Sidebar(QTreeView):
                     FetchRemoteBranch,
                     self.tr("&Fetch {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fetch..."),
                     taskArgs=branch.upstream.shorthand if hasUpstream else None,
-                    enabled=hasUpstream,
-                ),
+                ).replace(enabled=hasUpstream),
 
                 TaskBook.action(
                     self,
                     PullBranch,
                     self.tr("Pu&ll from {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Pull..."),
-                    enabled=hasUpstream and isCurrentBranch,
-                ),
+                ).replace(enabled=hasUpstream and isCurrentBranch),
 
                 TaskBook.action(self,
                     FastForwardBranch,
                     self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fast-Forward..."),
                     taskArgs=branchName,
-                    enabled=hasUpstream,
-                ),
+                ).replace(enabled=hasUpstream),
 
                 ActionDef(
                     self.tr("&Push to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Push..."),
@@ -322,7 +317,7 @@ class Sidebar(QTreeView):
 
         elif item == EItem.RemotesHeader:
             actions += [
-                TaskBook.action(self, NewRemote, "&A"),
+                TaskBook.action(self, NewRemote, accel="A"),
             ]
 
         elif item == EItem.RefFolder:
@@ -341,7 +336,7 @@ class Sidebar(QTreeView):
 
         elif item == EItem.StashesHeader:
             actions += [
-                TaskBook.action(self, NewStash, "&S"),
+                TaskBook.action(self, NewStash, accel="S"),
             ]
 
         elif item == EItem.Stash:

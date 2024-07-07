@@ -38,8 +38,8 @@ class MainToolBar(QToolBar):
         self.toolButtonStyleChanged.connect(self.onToolButtonStyleChanged)
         self.iconSizeChanged.connect(self.onIconSizeChanged)
 
-        self.backAction = TaskBook.toolbarAction(self, tasks.JumpBack)
-        self.forwardAction = TaskBook.toolbarAction(self, tasks.JumpForward)
+        self.backAction = TaskBook.toolbarAction(self, tasks.JumpBack).toQAction(self)
+        self.forwardAction = TaskBook.toolbarAction(self, tasks.JumpForward).toQAction(self)
         self.recentAction = ActionDef(
             self.tr("Open..."), self.openDialog,
             icon="git-folder", #"folder-open-recent",

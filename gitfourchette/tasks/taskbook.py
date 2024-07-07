@@ -6,7 +6,7 @@ from typing import Any, Type, Union
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskInvoker
-from gitfourchette.toolbox import stockIcon, MultiShortcut, makeMultiShortcut, appendShortcutToToolTipText
+from gitfourchette.toolbox import MultiShortcut, makeMultiShortcut, ActionDef
 
 logger = logging.getLogger(__name__)
 
@@ -204,62 +204,35 @@ class TaskBook:
             invoker: QObject,
             taskType: Type[RepoTask],
             name="",
-            enabled=True,
-            menuRole=QAction.MenuRole.NoRole,
+            accel="",
             taskArgs: Any = None
-    ) -> QAction:
+    ) -> ActionDef:
         if not name:
             name = cls.autoActionName(taskType)
-        elif len(name) == 2 and name[0] == "&":
-            accel = name[1]
+
+        if accel:
             name = cls.autoActionName(taskType)
             i = name.lower().find(accel.lower())
             if i >= 0:
                 name = name[:i] + "&" + name[i:]
-
-        action = QAction()
-        action.setText(name)
-        action.setEnabled(bool(enabled))
-        action.setMenuRole(menuRole)
-
-        cls._fillAction(action, invoker, taskType, taskArgs)
-        return action
-
-    @classmethod
-    def toolbarAction(cls, invoker: QObject, taskType: Type[RepoTask]):
-        try:
-            name = cls.toolbarNames[taskType]
-        except KeyError:
-            name = ""
-
-        action = cls.action(invoker, taskType, name)
-
-        tip = cls.autoActionName(taskType)
-        if taskType in cls.shortcuts:
-            tip = appendShortcutToToolTipText(tip, cls.shortcuts[taskType][0])
-        action.setToolTip(tip)
-
-        return action
-
-    @classmethod
-    def _fillAction(cls, action: QAction, invoker: QObject, taskType: Type[RepoTask], taskArgs=None):
-        assert cls.names
-
-        if taskType in cls.icons:
-            action.setIcon(stockIcon(cls.icons[taskType]))
-
-        if taskType in cls.shortcuts:
-            action.setShortcuts(cls.shortcuts[taskType])
-
-        if taskType in cls.tips:
-            action.setStatusTip(cls.tips[taskType])
 
         if taskArgs is None:
             taskArgs = ()
         elif type(taskArgs) not in [tuple, list]:
             taskArgs = tuple([taskArgs])
 
-        action.triggered.connect(lambda: TaskInvoker.invoke(invoker, taskType, *taskArgs))
+        icon = cls.icons.get(taskType, "")
+        shortcuts = cls.shortcuts.get(taskType, [])
+        statusTip = cls.tips.get(taskType, "")
 
-        return action
+        def callback():
+            TaskInvoker.invoke(invoker, taskType, *taskArgs)
 
+        return ActionDef(name, callback=callback,
+                         icon=icon, shortcuts=shortcuts, statusTip=statusTip)
+
+    @classmethod
+    def toolbarAction(cls, invoker: QObject, taskType: Type[RepoTask]):
+        name = cls.toolbarNames.get(taskType, "")
+        tip = cls.autoActionName(taskType)
+        return cls.action(invoker, taskType, name).replace(toolTip=tip)

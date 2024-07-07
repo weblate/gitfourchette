@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import dataclasses
 import enum
-from dataclasses import dataclass, field
 from typing import ClassVar, Callable
 
 from gitfourchette.qt import *
@@ -9,7 +9,7 @@ from gitfourchette.toolbox.iconbank import stockIcon
 from gitfourchette.toolbox.qtutils import MultiShortcut, appendShortcutToToolTipText
 
 
-@dataclass
+@dataclasses.dataclass
 class ActionDef:
     """
     Build QMenus quickly with a list of ActionDefs.
@@ -30,13 +30,16 @@ class ActionDef:
     checkState: int = 0
     radioGroup: str = ""
     enabled: bool = True
-    submenu: list[ActionDef] = field(default_factory=list)
-    shortcuts: MultiShortcut | str = field(default_factory=list)
+    submenu: list[ActionDef] = dataclasses.field(default_factory=list)
+    shortcuts: MultiShortcut | str = dataclasses.field(default_factory=list)
     statusTip: str = ""
     toolTip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
     kind: Kind = Kind.Action
+
+    def replace(self, **changes):
+        return dataclasses.replace(self, **changes)
 
     def toQAction(self, parent: QWidget) -> QAction:
         if self.submenu:
