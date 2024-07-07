@@ -186,7 +186,9 @@ class Sidebar(QTreeView):
                     shortcuts=GlobalShortcuts.pushBranch,
                     statusTip=self.tr("Upload your commits to the remote server")),
 
-                ActionDef(self.tr("&Upstream Branch"), submenu=self.makeUpstreamSubmenu(repo, branchName, upstreamBranchName)),
+                ActionDef(
+                    self.tr("&Upstream Branch"),
+                    submenu=self.makeUpstreamSubmenu(repo, branchName, upstreamBranchName)),
 
                 ActionDef.SEPARATOR,
 
@@ -850,7 +852,7 @@ class Sidebar(QTreeView):
         for remoteName, remoteBranches in repo.listall_remote_branches(value_style="shorthand").items():
             if not remoteBranches:
                 continue
-            menu.append(None)  # separator
+            menu.append(ActionDef.SEPARATOR)
             for rbShorthand in remoteBranches:
                 menu.append(ActionDef(
                     escamp(rbShorthand),
@@ -863,7 +865,7 @@ class Sidebar(QTreeView):
                 explainer = self.tr("No remotes.")
             else:
                 explainer = self.tr("No remote branches found. Try fetching the remotes.")
-            menu.append(None)  # separator
+            menu.append(ActionDef.SEPARATOR)
             menu.append(ActionDef(explainer, enabled=False))
 
         return menu

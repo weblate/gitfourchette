@@ -66,7 +66,7 @@ class CommittedFiles(FileList):
             actions += [
                 ActionDef(
                     self.tr("%n Submodules", "please omit %n in singular form", n),
-                    isSection=True
+                    kind=ActionDef.Kind.Section,
                 ),
 
                 ActionDef(

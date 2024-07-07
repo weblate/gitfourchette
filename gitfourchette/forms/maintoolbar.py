@@ -12,6 +12,7 @@ from gitfourchette.repowidget import RepoWidget
 
 class MainToolBar(QToolBar):
     openDialog = Signal()
+    openPrefs = Signal()
     reveal = Signal()
     pull = Signal()
     push = Signal()
@@ -46,25 +47,28 @@ class MainToolBar(QToolBar):
         defs = [
             self.backAction,
             self.forwardAction,
-            None,
+            ActionDef.SEPARATOR,
 
             TaskBook.toolbarAction(self, tasks.FetchRemote),
             TaskBook.toolbarAction(self, tasks.PullBranch),
             ActionDef(self.tr("Push"), self.push, icon="vcs-push",
                       toolTip=self.tr("Push local branch to remote"),
                       shortcuts=GlobalShortcuts.pushBranch),
-            None,
+            ActionDef.SEPARATOR,
 
             TaskBook.toolbarAction(self, tasks.NewBranchFromHead),
             TaskBook.toolbarAction(self, tasks.NewStash),
-            None,
+            ActionDef.SPACER,
 
             ActionDef(self.tr("Reveal"), self.reveal, icon="go-parent-folder",
                       shortcuts=GlobalShortcuts.openRepoFolder,
                       toolTip=self.tr("Open repo folder in file manager")),
             self.recentAction,
+            ActionDef.SEPARATOR,
+            ActionDef(self.tr("Preferences"), self.openPrefs,
+                      shortcuts=QKeySequence.StandardKey.Preferences, icon="configure",
+                      toolTip=self.tr("Edit {app} settings").format(app=qAppName())),
         ]
-
         ActionDef.addToQToolBar(self, *defs)
 
         self.recentAction.setIconVisibleInMenu(True)
@@ -110,7 +114,7 @@ class MainToolBar(QToolBar):
         menu = ActionDef.makeQMenu(self, [
             self.toggleViewAction(),
 
-            None,
+            ActionDef.SEPARATOR,
 
             ActionDef(
                 self.tr("Text Position"),

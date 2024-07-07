@@ -70,7 +70,7 @@ class DirtyFiles(FileList):
             actions += [
                 ActionDef(
                     self.tr("%n Merge Conflicts", "singular form should simply say 'Merge Conflict' without the %n", n),
-                    isSection=True,
+                    kind=ActionDef.Kind.Section,
                 ),
 
                 ActionDef(
@@ -93,7 +93,7 @@ class DirtyFiles(FileList):
             actions += [
                 ActionDef(
                     self.tr("%n Submodules", "please omit %n in singular form", n),
-                    isSection=True
+                    kind=ActionDef.Kind.Section,
                 ),
                 ActionDef(
                     self.tr("Stage %n Submodules", "please omit %n in singular form", n),
@@ -113,7 +113,6 @@ class DirtyFiles(FileList):
             # Conflicted + non-conflicted files selected
             # or Submodules + non-submodules selected
             actions += [
-                # ActionDef(self.tr("Mixed conflicts"), isSection=True),
                 ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False),
             ]
 
