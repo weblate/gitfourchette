@@ -91,6 +91,7 @@ class TaskBook:
         }
 
         cls.toolbarNames = {
+            tasks.AmendCommit: translate("task", "Amend"),
             tasks.FetchRemote: translate("task", "Fetch"),
             tasks.JumpBack: translate("task", "Back"),
             tasks.JumpForward: translate("task", "Forward"),
@@ -146,7 +147,7 @@ class TaskBook:
         }
 
         cls.icons = {
-            tasks.AmendCommit: "document-save-as",
+            tasks.AmendCommit: "git-commit-amend", #"document-save-as",
             tasks.DeleteBranch: "vcs-branch-delete",
             tasks.DeleteRemote: "SP_TrashIcon",
             tasks.DeleteRemoteBranch: "SP_TrashIcon",
@@ -154,19 +155,19 @@ class TaskBook:
             tasks.DropStash: "SP_TrashIcon",
             tasks.EditRemote: "document-edit",
             tasks.FastForwardBranch: "media-skip-forward",
-            tasks.FetchRemote: "SP_BrowserReload",
-            tasks.FetchRemoteBranch: "SP_BrowserReload",
-            tasks.JumpBack: "SP_ArrowBack",
-            tasks.JumpForward: "SP_ArrowForward",
+            tasks.FetchRemote: "git-fetch",
+            tasks.FetchRemoteBranch: "git-fetch",
+            tasks.JumpBack: "back", #"SP_ArrowBack",
+            tasks.JumpForward: "forward", #"SP_ArrowForward",
             tasks.MergeBranch: "vcs-merge",
-            tasks.NewBranchFromCommit: "vcs-branch",
-            tasks.NewBranchFromHead: "vcs-branch",
-            tasks.NewBranchFromRef: "vcs-branch",
-            tasks.NewCommit: "document-save",
-            tasks.NewRemote: "folder-remote",
-            tasks.NewStash: "vcs-stash",
-            tasks.NewTag: "tag-new",
-            tasks.PullBranch: "vcs-pull",
+            tasks.NewBranchFromCommit: "git-branch",
+            tasks.NewBranchFromHead: "git-branch",
+            tasks.NewBranchFromRef: "git-branch",
+            tasks.NewCommit: "git-commit", #"document-save",
+            tasks.NewRemote: "git-remote",
+            tasks.NewStash: "git-stash-black",
+            tasks.NewTag: "git-tag",
+            tasks.PullBranch: "git-pull",
             tasks.SetUpGitIdentity: "user-identity",
             tasks.EditRepoSettings: "configure",
             tasks.SwitchBranch: "document-swap",

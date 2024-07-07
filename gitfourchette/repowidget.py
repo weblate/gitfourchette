@@ -990,7 +990,7 @@ class RepoWidget(QStackedWidget):
             ActionDef(
                 invoker.tr("&Push Branch..."),
                 lambda: proxy().startPushFlow(),
-                "vcs-push",
+                "git-push",
                 shortcuts=GlobalShortcuts.pushBranch,
                 statusTip=invoker.tr("Upload your commits on the current branch to the remote server"),
             ),

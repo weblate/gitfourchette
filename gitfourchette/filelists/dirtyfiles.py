@@ -46,7 +46,7 @@ class DirtyFiles(FileList):
                 ActionDef(
                     self.tr("Stas&h Changes..."),
                     self.wantPartialStash,
-                    icon="vcs-stash",
+                    icon="git-stash-black",
                     shortcuts=TaskBook.shortcuts.get(NewStash, [])
                 ),
 

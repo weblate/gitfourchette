@@ -357,7 +357,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         if isHome:
             font = self.homeRefboxFont
             fontMetrics = self.homeRefboxFontMetrics
-            icon = "git-home"
+            icon = "git-head"
         else:
             font = self.refboxFont
             fontMetrics = self.refboxFontMetrics

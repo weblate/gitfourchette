@@ -528,14 +528,14 @@ class SidebarModel(QAbstractItemModel):
                     upstream = branch.upstream_name.removeprefix(RefPrefix.REMOTES)
                     text += "\n" + self.tr("Upstream: {0}").format(escape(upstream))
                 if branchName == self._checkedOut:
-                    text += "\n<img src='assets:icons/git-home' style='vertical-align: bottom;'/> "
-                    text += self.tr("This is the checked-out branch")
+                    text += "\n<img src='assets:icons/git-head' style='vertical-align: bottom;'/> "
+                    text += "HEAD " + self.tr("(this is the checked-out branch)")
                 self.cacheTooltip(index, text)
                 return text
             elif hiddenRole:
                 return self.isExplicitlyHidden(node)
             elif iconKeyRole:
-                return "git-branch" if branchName != self._checkedOut else "git-home"
+                return "git-branch" if branchName != self._checkedOut else "git-head"
 
         elif item == EItem.UnbornHead:
             target = node.data

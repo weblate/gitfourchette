@@ -251,7 +251,7 @@ class PushDialog(QDialog):
 
         self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.startOperationButton.setText(self.tr("&Push"))
-        self.startOperationButton.setIcon(stockIcon("vcs-push"))
+        self.startOperationButton.setIcon(stockIcon("git-push"))
         self.startOperationButton.clicked.connect(self.onPushClicked)
 
         pickBranchIndex = 0

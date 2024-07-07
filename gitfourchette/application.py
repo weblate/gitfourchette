@@ -323,8 +323,7 @@ class GFApplication(QApplication):
             self.setStyle(self.platformDefaultStyleName)
 
         if MACOS:
-            isNativeStyle = settings.qtIsNativeMacosStyle()
-            self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, isNativeStyle)
+            self.setAttribute(Qt.ApplicationAttribute.AA_DontShowIconsInMenus, True)
 
     def applyLoggingLevelPref(self):
         from gitfourchette import settings

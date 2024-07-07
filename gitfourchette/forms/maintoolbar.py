@@ -40,33 +40,39 @@ class MainToolBar(QToolBar):
 
         self.backAction = TaskBook.toolbarAction(self, tasks.JumpBack)
         self.forwardAction = TaskBook.toolbarAction(self, tasks.JumpForward)
-        self.recentAction = ActionDef(self.tr("Open..."), self.openDialog, icon="folder-open-recent",
-                  shortcuts=QKeySequence.StandardKey.Open,
-                  toolTip=self.tr("Open a Git repo on your machine")).toQAction(self)
+        self.recentAction = ActionDef(
+            self.tr("Open..."), self.openDialog,
+            icon="git-folder", #"folder-open-recent",
+            shortcuts=QKeySequence.StandardKey.Open,
+            toolTip=self.tr("Open a Git repo on your machine")).toQAction(self)
 
         defs = [
             self.backAction,
             self.forwardAction,
             ActionDef.SEPARATOR,
 
+            TaskBook.toolbarAction(self, tasks.NewCommit),
+            TaskBook.toolbarAction(self, tasks.AmendCommit),
+            TaskBook.toolbarAction(self, tasks.NewStash),
+            ActionDef.SEPARATOR,
+            TaskBook.toolbarAction(self, tasks.NewBranchFromHead),
+            ActionDef.SEPARATOR,
             TaskBook.toolbarAction(self, tasks.FetchRemote),
             TaskBook.toolbarAction(self, tasks.PullBranch),
-            ActionDef(self.tr("Push"), self.push, icon="vcs-push",
+            ActionDef(self.tr("Push"), self.push, icon="git-push",
                       toolTip=self.tr("Push local branch to remote"),
                       shortcuts=GlobalShortcuts.pushBranch),
-            ActionDef.SEPARATOR,
-
-            TaskBook.toolbarAction(self, tasks.NewBranchFromHead),
-            TaskBook.toolbarAction(self, tasks.NewStash),
             ActionDef.SPACER,
 
-            ActionDef(self.tr("Reveal"), self.reveal, icon="go-parent-folder",
+            ActionDef(self.tr("Reveal"), self.reveal,
+                      icon="reveal", #"go-parent-folder",
                       shortcuts=GlobalShortcuts.openRepoFolder,
                       toolTip=self.tr("Open repo folder in file manager")),
             self.recentAction,
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Preferences"), self.openPrefs,
-                      shortcuts=QKeySequence.StandardKey.Preferences, icon="configure",
+                      icon="git-settings", #"configure",
+                      shortcuts=QKeySequence.StandardKey.Preferences,
                       toolTip=self.tr("Edit {app} settings").format(app=qAppName())),
         ]
         ActionDef.addToQToolBar(self, *defs)
@@ -88,8 +94,9 @@ class MainToolBar(QToolBar):
 
         # Hide back/forward button text with ToolButtonTextBesideIcon
         if style == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
-            self.backAction.setText("")
-            self.forwardAction.setText("")
+            self.backAction.setIconText(None)
+            self.backAction.setText(None)
+            self.forwardAction.setText(None)
         else:
             self.backAction.setText(TaskBook.toolbarNames[tasks.JumpBack])
             self.forwardAction.setText(TaskBook.toolbarNames[tasks.JumpForward])
@@ -130,8 +137,9 @@ class MainToolBar(QToolBar):
                 self.tr("Icon Size"),
                 submenu=[
                     iconSizeAction(self.tr("Small"), 16),
-                    iconSizeAction(self.tr("Medium"), 24),
-                    iconSizeAction(self.tr("Large"), 32),
+                    iconSizeAction(self.tr("Medium"), 20),
+                    iconSizeAction(self.tr("Large"), 24),
+                    iconSizeAction(self.tr("Huge"), 32),
                 ]
             ),
         ])

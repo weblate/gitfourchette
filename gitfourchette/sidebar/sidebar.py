@@ -182,7 +182,7 @@ class Sidebar(QTreeView):
                 ActionDef(
                     self.tr("&Push to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Push..."),
                     lambda: self.pushBranch.emit(branchName),
-                    "vcs-push",
+                    "git-push",
                     shortcuts=GlobalShortcuts.pushBranch,
                     statusTip=self.tr("Upload your commits to the remote server")),
 
