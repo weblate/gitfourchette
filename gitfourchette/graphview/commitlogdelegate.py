@@ -365,12 +365,12 @@ class CommitLogDelegate(QStyledItemDelegate):
         painter.setFont(font)
         painter.setPen(color)
 
-        hPadding = 2
+        hPadding = 3
         vMargin = max(0, math.ceil((rect.height() - 16) / 4))
 
         if icon:
             iconRect = QRect(rect)
-            iconRect.adjust(2, vMargin, 0, -vMargin)
+            iconRect.adjust(hPadding, vMargin, 0, -vMargin)
             iconSize = min(16, iconRect.height())
             iconRect.setWidth(iconSize)
         else:
@@ -379,7 +379,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         boxRect = QRect(rect)
         text = fontMetrics.elidedText(text, Qt.TextElideMode.ElideMiddle, 100)
         textWidth = int(fontMetrics.horizontalAdvance(text))  # must be int for pyqt5 compat!
-        boxRect.setWidth(2 + iconSize + 1 + textWidth + hPadding)
+        boxRect.setWidth(hPadding + iconSize + 2 + textWidth + hPadding)
 
         frameRect = QRectF(boxRect)
         frameRect.adjust(.5, vMargin + .5, .5, -(vMargin + .5))
