@@ -15,20 +15,23 @@ import traceback
 
 @dataclass
 class RefBox:
+    prefix: str
     icon: str
     color: QColor
     keepPrefix: bool = False
 
 
-REFBOXES = {
-    "refs/remotes/": RefBox("git-remote", QColor(Qt.GlobalColor.darkCyan)),
-    "refs/tags/": RefBox("git-tag", QColor(Qt.GlobalColor.darkYellow)),
-    "refs/heads/": RefBox("git-branch", QColor(Qt.GlobalColor.darkMagenta)),
-    "stash@{": RefBox("git-stash", QColor(Qt.GlobalColor.darkGreen), keepPrefix=True),
+REFBOXES = [
+    RefBox("refs/remotes/", "git-remote", QColor(Qt.GlobalColor.darkCyan)),
+    RefBox("refs/tags/", "git-tag", QColor(Qt.GlobalColor.darkYellow)),
+    RefBox("refs/heads/", "git-branch", QColor(Qt.GlobalColor.darkMagenta)),
 
     # detached HEAD as returned by Repo.map_commits_to_refs
-    "HEAD": RefBox("achtung", QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
-}
+    RefBox("HEAD", "achtung", QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
+
+    # Fallback
+    RefBox("", "hint", QColor(Qt.GlobalColor.gray), keepPrefix=True)
+]
 
 
 ELISION = " […]"
@@ -336,10 +339,10 @@ class CommitLogDelegate(QStyledItemDelegate):
         if refName == 'HEAD' and not self.repoModel.headIsDetached:
             return
 
-        prefix = next(prefix for prefix in REFBOXES if refName.startswith(prefix))
-        refboxDef = REFBOXES[prefix]
+        refboxDef = next(d for d in REFBOXES if refName.startswith(d.prefix))
+
         if not refboxDef.keepPrefix:
-            text = refName.removeprefix(prefix)
+            text = refName.removeprefix(refboxDef.prefix)
         else:
             text = refName
         color = refboxDef.color
@@ -402,6 +405,11 @@ class CommitLogDelegate(QStyledItemDelegate):
 
     def _paintError(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex, exc: BaseException):  # pragma: no cover
         """Last-resort row drawing routine used if _paint raises an exception."""
+
+        # We want this to fail in unit tests.
+        from gitfourchette.settings import TEST_MODE
+        if TEST_MODE:
+            raise exc
 
         text = "?" * 7
         with suppress(BaseException):

@@ -1,12 +1,7 @@
 import pytest
 
-from . import reposcenario
+from gitfourchette.nav import NavLocator
 from .util import *
-from gitfourchette.forms.commitdialog import CommitDialog
-from gitfourchette.forms.prefsdialog import PrefsDialog
-from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
-from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 
 
 def testCommitSearch(tempDir, mainWindow):
@@ -248,3 +243,11 @@ def testCommitToolTip(tempDir, mainWindow):
     toolTip = index.data(Qt.ItemDataRole.ToolTipRole)
     assert "Delete c/c2-2.txt" in toolTip
     assert "a.u.thor@example.com" in toolTip
+
+
+def testPaintUnknownRefPrefix(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/.git/refs/weird", "f73b95671f326616d66b2afb3bdfcdbbce110b44\n")
+    rw = mainWindow.openRepo(wd)
+    QTest.qWait(1)
+    # Must not raise an exception
