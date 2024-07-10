@@ -27,7 +27,7 @@ class StagedFiles(FileList):
                 ActionDef(
                     self.tr("&Unstage %n Files", "", n),
                     self.unstage,
-                    icon="list-remove",
+                    icon="git-unstage",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
                 ),
 

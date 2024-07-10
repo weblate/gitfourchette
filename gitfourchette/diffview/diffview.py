@@ -409,12 +409,13 @@ class DiffView(QPlainTextEdit):
                     ActionDef(
                         self.tr("Stage Lines"),
                         self.stageSelection,
+                        "git-stage-lines",
                         shortcuts=GlobalShortcuts.stageHotkeys,
                     ),
                     ActionDef(
                         self.tr("Discard Lines"),
                         self.discardSelection,
-                        "SP_TrashIcon",
+                        "git-discard-lines",
                         shortcuts=GlobalShortcuts.discardHotkeys,
                     ),
                     ActionDef(
@@ -427,10 +428,12 @@ class DiffView(QPlainTextEdit):
                     ActionDef(
                         self.tr("Stage Hunk {0}").format(shortHunkHeader),
                         lambda: self.stageHunk(clickedHunkID),
+                        "git-stage-lines",
                     ),
                     ActionDef(
                         self.tr("Discard Hunk"),
                         lambda: self.discardHunk(clickedHunkID),
+                        "git-discard-lines",
                     ),
                     ActionDef(self.tr("Export Hunk as Patch..."), lambda: self.exportHunk(clickedHunkID)),
                 ]
@@ -441,6 +444,7 @@ class DiffView(QPlainTextEdit):
                     ActionDef(
                         self.tr("Unstage Lines"),
                         self.unstageSelection,
+                        "git-unstage-lines",
                         shortcuts=GlobalShortcuts.discardHotkeys,
                     ),
                     ActionDef(
@@ -453,6 +457,7 @@ class DiffView(QPlainTextEdit):
                     ActionDef(
                         self.tr("Unstage Hunk {0}").format(shortHunkHeader),
                         lambda: self.unstageHunk(clickedHunkID),
+                        "git-unstage-lines",
                     ),
                     ActionDef(
                         self.tr("Export Hunk as Patch..."),

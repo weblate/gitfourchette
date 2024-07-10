@@ -32,14 +32,14 @@ class DirtyFiles(FileList):
                 ActionDef(
                     self.tr("&Stage %n Files", "", n),
                     self.stage,
-                    icon="list-add",
+                    icon="git-stage",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
                 ),
 
                 ActionDef(
                     self.tr("&Discard Changes"),
                     self.discard,
-                    icon="SP_TrashIcon",
+                    icon="git-discard",
                     shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
                 ),
 
