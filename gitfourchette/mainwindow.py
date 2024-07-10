@@ -111,11 +111,10 @@ class MainWindow(QMainWindow):
         with NonCriticalOperation("Reload application-wide stylesheet"):
             MainWindow.styleSheetReloadScheduled = False
             styleSheetFile = QFile("assets:style.qss")
-            if not styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
-                return
-            styleSheet = styleSheetFile.readAll().data().decode("utf-8")
-            QApplication.instance().setStyleSheet(styleSheet)
-            styleSheetFile.close()
+            if styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
+                styleSheet = styleSheetFile.readAll().data().decode("utf-8")
+                QApplication.instance().setStyleSheet(styleSheet)
+                styleSheetFile.close()
             clearStockIconCache()
 
     # -------------------------------------------------------------------------
