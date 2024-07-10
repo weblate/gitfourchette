@@ -278,7 +278,7 @@ class LoadWorkdir(RepoTask):
         with Benchmark("LoadWorkdir/Staged"):
             self.stageDiff = self.repo.get_staged_changes(context_lines=contextLines())
 
-        yield from self.flowEnterWorkerThread()  # let task thread be interrupted here
+        # yield from self.flowEnterWorkerThread()  # let task thread be interrupted here
         with Benchmark("LoadWorkdir/Unstaged"):
             self.dirtyDiff = self.repo.get_unstaged_changes(allowWriteIndex, context_lines=contextLines())
 

@@ -10,7 +10,7 @@ def doStage(rw, method):
     elif method == "menu":
         triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "stage")
     elif method == "button":
-        rw.stageButton.click()
+        rw.diffArea.stageButton.click()
     else:
         raise NotImplementedError("unknown method")
 
@@ -21,7 +21,7 @@ def doDiscard(rw, method):
     elif method == "menu":
         triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "discard")
     elif method == "button":
-        triggerMenuAction(rw.stageButton.menu(), "discard")
+        rw.diffArea.discardButton.click()
     else:
         raise NotImplementedError("unknown method")
 
@@ -32,7 +32,7 @@ def doUnstage(rw, method):
     elif method == "menu":
         triggerMenuAction(rw.stagedFiles.makeContextMenu(), "unstage")
     elif method == "button":
-        rw.unstageButton.click()
+        rw.diffArea.unstageButton.click()
     else:
         raise NotImplementedError("unknown method")
 

@@ -188,7 +188,7 @@ def testNewRepo(tempDir, mainWindow):
     assert re.search(r"branch.+will be created", unbornNodeIndex.data(Qt.ItemDataRole.ToolTipRole), re.I)
     # TODO: test that we honor "init.defaultBranch"...without touching user's git config
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "empty commit")
     commitDialog: CommitDialog = findQDialog(rw, "commit")
     commitDialog.ui.summaryEditor.setText("initial commit")
@@ -365,7 +365,7 @@ def testCustomRepoIdentity(tempDir, mainWindow, name, email):
 
     dlg.accept()
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "empty commit")
     commitDialog: CommitDialog = rw.findChild(CommitDialog)
     commitDialog.ui.summaryEditor.setText("hello")

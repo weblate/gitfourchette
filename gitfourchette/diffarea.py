@@ -15,7 +15,7 @@ from gitfourchette.forms.contextheader import ContextHeader
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
-from gitfourchette.tasks import TaskBook
+from gitfourchette.tasks import TaskBook, AmendCommit, NewCommit
 from gitfourchette.toolbox import *
 
 FileStackPage = Literal["workdir", "commit"]
@@ -69,6 +69,14 @@ class DiffArea(QWidget):
         self.diffBanner = diffBanner
         self.contextHeader = contextHeader
 
+        for passiveWidget in (
+                self.diffHeader,
+                self.committedHeader,
+                self.dirtyHeader,
+                self.stagedHeader
+        ):
+            passiveWidget.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+
     # -------------------------------------------------------------------------
     # Constructor helpers
 
@@ -99,33 +107,48 @@ class DiffArea(QWidget):
         stageButton = QToolButton()
         stageButton.setObjectName("stageButton")
         stageButton.setText(self.tr("Stage"))
+        stageButton.setIcon(stockIcon("git-stage"))
         stageButton.setToolTip(self.tr("Stage selected files"))
         stageButton.setMaximumHeight(FILEHEADER_HEIGHT)
         stageButton.setEnabled(False)
         stageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        stageButton.setAutoRaise(True)
+        stageButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         appendShortcutToToolTip(stageButton, GlobalShortcuts.stageHotkeys[0])
 
-        stageMenu = ActionDef.makeQMenu(stageButton, [ActionDef(self.tr("Discard..."), dirtyFiles.discard)])
-        stageButton.setMenu(stageMenu)
-        stageButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        discardButton = QToolButton()
+        discardButton.setObjectName("discardButton")
+        discardButton.setText(self.tr("Discard"))
+        discardButton.setIcon(stockIcon("git-discard"))
+        discardButton.setToolTip(self.tr("Discard changes in selected files"))
+        discardButton.setMaximumHeight(FILEHEADER_HEIGHT)
+        discardButton.setEnabled(False)
+        discardButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        discardButton.setAutoRaise(True)
+        discardButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        appendShortcutToToolTip(discardButton, GlobalShortcuts.discardHotkeys[0])
 
         container = QWidget()
         layout = QGridLayout(container)
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
         layout.setContentsMargins(QMargins())
         layout.addWidget(header,                0, 0)
-        layout.addWidget(stageButton,           0, 1)
+        layout.addWidget(discardButton,         0, 1)
+        layout.addWidget(stageButton,           0, 2)
         layout.addItem(QSpacerItem(1, 1),       1, 0)
-        layout.addWidget(dirtyFiles.searchBar,  2, 0, 1, 2)
-        layout.addWidget(dirtyFiles,            3, 0, 1, 2)
+        layout.addWidget(dirtyFiles.searchBar,  2, 0, 1, 3)
+        layout.addWidget(dirtyFiles,            3, 0, 1, 3)
         layout.setRowStretch(3, 100)
 
         stageButton.clicked.connect(dirtyFiles.stage)
+        discardButton.clicked.connect(dirtyFiles.discard)
         dirtyFiles.selectedCountChanged.connect(lambda n: stageButton.setEnabled(n > 0))
+        dirtyFiles.selectedCountChanged.connect(lambda n: discardButton.setEnabled(n > 0))
 
         self.dirtyFiles = dirtyFiles
         self.dirtyHeader = header
         self.stageButton = stageButton
+        self.discardButton = discardButton
 
         return container
 
@@ -140,48 +163,35 @@ class DiffArea(QWidget):
         unstageButton = QToolButton()
         unstageButton.setObjectName("unstageButton")
         unstageButton.setText(self.tr("Unstage"))
+        unstageButton.setIcon(stockIcon("git-unstage"))
         unstageButton.setToolTip(self.tr("Unstage selected files"))
         unstageButton.setMaximumHeight(FILEHEADER_HEIGHT)
         unstageButton.setEnabled(False)
         unstageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        unstageButton.setAutoRaise(True)
+        unstageButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
 
-        commitButtonsContainer = QWidget()
-        commitButtonsLayout = QHBoxLayout(commitButtonsContainer)
-        commitButtonsLayout.setContentsMargins(0, 0, 0, 0)
-        commitButton = QPushButton(self.tr("Commit"))
-        amendButton = QPushButton(self.tr("Amend"))
-        commitButtonsLayout.addWidget(commitButton)
-        commitButtonsLayout.addWidget(amendButton)
-
-        unifiedCommitButton = QToolButton()
-        unifiedCommitButton.setText(self.tr("Commit..."))
-        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [TaskBook.action(self, tasks.AmendCommit)])
-        unifiedCommitButtonMenu = ActionDef.makeQMenu(unifiedCommitButton, [ActionDef(self.tr("Amend Last Commit...Amend Commit...Amend..."), amendButton.click)])
-
-        def unifiedCommitButtonMenuAboutToShow():
-            unifiedCommitButtonMenu.setMinimumWidth(unifiedCommitButton.width())
-            unifiedCommitButtonMenu.setMaximumWidth(unifiedCommitButton.width())
-
-        def unifiedCommitButtonMenuAboutToHide():
-            unifiedCommitButtonMenu.setMinimumWidth(0)
-
-        unifiedCommitButtonMenu.aboutToShow.connect(unifiedCommitButtonMenuAboutToShow)
-        unifiedCommitButtonMenu.aboutToHide.connect(unifiedCommitButtonMenuAboutToHide)
-        unifiedCommitButton.setMenu(unifiedCommitButtonMenu)
-        unifiedCommitButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
-        unifiedCommitButton.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
-        commitButtonsStack = QStackedWidget()
-        commitButtonsStack.addWidget(commitButtonsContainer)
-        commitButtonsStack.addWidget(unifiedCommitButton)
-
-        # QToolButtons are unsightly on macOS
-        commitButtonsStack.setCurrentIndex(0 if settings.qtIsNativeMacosStyle() else 1)
+        commitButton = QToolButton()
+        commitButton.setText(self.tr("Commit"))
+        commitButton.setIcon(stockIcon("git-commit", "gray=#599E5E"))
+        commitButton.setToolTip(appendShortcutToToolTipText(TaskBook.tips[NewCommit], TaskBook.shortcuts[NewCommit][0]))
+        commitButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        commitButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        commitButton.setAutoRaise(True)
+        commitButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        commitButton.setMaximumHeight(FILEHEADER_HEIGHT)
+        commitButton.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
         # Connect signals
         unstageButton.clicked.connect(stagedFiles.unstage)
         stagedFiles.selectedCountChanged.connect(lambda n: unstageButton.setEnabled(n > 0))
+
+        commitButton.clicked.connect(lambda: NewCommit.invoke(self))
+        commitButtonMenu = ActionDef.makeQMenu(
+            commitButton,
+            [ ActionDef(self.tr("Amend Last Commit..."), lambda: AmendCommit.invoke(self), icon="git-commit-amend")])
+        commitButton.setMenu(commitButtonMenu)
 
         # Lay out container
         container = QWidget()
@@ -193,7 +203,7 @@ class DiffArea(QWidget):
         layout.addItem(QSpacerItem(1, 1),       1, 0)
         layout.addWidget(stagedFiles.searchBar, 2, 0, 1, 2)  # row col rowspan colspan
         layout.addWidget(stagedFiles,           3, 0, 1, 2)
-        layout.addWidget(commitButtonsStack,    4, 0, 1, 2)
+        layout.addWidget(commitButton,          4, 0, 1, 2)
         layout.setRowStretch(3, 100)
 
         # Save references
@@ -201,8 +211,6 @@ class DiffArea(QWidget):
         self.stagedFiles = stagedFiles
         self.unstageButton = unstageButton
         self.commitButton = commitButton
-        self.amendButton = amendButton
-        self.unifiedCommitButton = unifiedCommitButton
 
         return container
 
@@ -272,6 +280,22 @@ class DiffArea(QWidget):
         self.diffView = diff
 
         return stackContainer
+
+    def applyCustomStyling(self):
+        # Smaller font for header text
+        for smallWidget in (
+                self.contextHeader,
+                self.contextHeader.maximizeButton,
+                self.contextHeader.infoButton,
+                self.diffHeader,
+                self.committedHeader,
+                self.dirtyHeader,
+                self.stagedHeader,
+                self.stageButton,
+                self.unstageButton,
+                self.discardButton,
+        ):
+            tweakWidgetFont(smallWidget, 90)
 
     # -------------------------------------------------------------------------
     # File navigation

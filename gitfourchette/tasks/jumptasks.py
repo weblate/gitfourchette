@@ -119,8 +119,15 @@ class Jump(RepoTask):
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
-            rw.dirtyHeader.setText(self.tr("%n unstaged:", "", nDirty))
-            rw.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
+            rw.diffArea.dirtyHeader.setText(self.tr("%n unstaged:", "", nDirty))
+            rw.diffArea.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
+            rw.diffArea.commitButton.setText(self.tr("Commit %n files", "", nStaged))
+
+            commitButtonFont = rw.diffArea.commitButton.font()
+            commitButtonBold = nStaged != 0
+            if commitButtonFont.bold() != commitButtonBold:
+                commitButtonFont.setBold(commitButtonBold)
+                rw.diffArea.commitButton.setFont(commitButtonFont)
 
             newNumChanges = nDirty + nStaged
             numChangesDifferent = rw.repoModel.numUncommittedChanges != newNumChanges
@@ -170,9 +177,9 @@ class Jump(RepoTask):
 
         with QSignalBlockerContext(rw.sidebar, rw.committedFiles, rw.graphView):
             rw.sidebar.clearSelection()
-            rw.committedFiles.clear()
-            rw.committedHeader.setText(" ")
-            rw.diffBanner.hide()
+            rw.diffArea.committedFiles.clear()
+            rw.diffArea.committedHeader.setText(" ")
+            rw.diffArea.diffBanner.hide()
             rw.graphView.selectRowForLocator(locator)
 
         if locator.path == str(SpecialRow.EndOfShallowHistory):
@@ -346,14 +353,17 @@ class Jump(RepoTask):
 
                 if not anyFile:
                     area.stageButton.setEnabled(False)
+                    area.discardButton.setEnabled(False)
                     area.unstageButton.setEnabled(False)
                 elif locator.context == NavContext.STAGED:
                     area.unstageButton.setEnabled(True)
                     area.stageButton.setEnabled(False)
+                    area.discardButton.setEnabled(False)
                     area.dirtyFiles.highlightCounterpart(locator)
                 else:
                     area.unstageButton.setEnabled(False)
                     area.stageButton.setEnabled(True)
+                    area.discardButton.setEnabled(True)
                     area.stagedFiles.highlightCounterpart(locator)
 
             # Early out if selection remains blank

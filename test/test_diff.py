@@ -383,8 +383,8 @@ def testImageDiff(tempDir, mainWindow):
     rw.jump(NavLocator.inUnstaged("image.png"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search("6.6 pixels", rw.specialDiffView.toPlainText())
-    rw.dirtyFiles.stage()
-    rw.commitButton.click()
+    rw.diffArea.dirtyFiles.stage()
+    rw.diffArea.commitButton.click()
     findQDialog(rw, "commit").ui.summaryEditor.setText("commit an image")
     findQDialog(rw, "commit").accept()
 

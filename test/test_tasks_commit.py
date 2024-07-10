@@ -18,7 +18,7 @@ def testCommit(tempDir, mainWindow):
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["a/a1.txt"]
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
 
     dialog: CommitDialog = findQDialog(rw, "commit")
     QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
@@ -59,7 +59,7 @@ def testCommitUntrackedFileInEmptyRepo(tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == []
     assert qlvGetRowData(rw.stagedFiles) == ["SomeNewFile.txt"]
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     QTest.keyClicks(dialog.ui.summaryEditor, "Initial commit")
     dialog.accept()
@@ -74,7 +74,7 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     reposcenario.stagedNewEmptyFile(wd)
     rw = mainWindow.openRepo(wd)
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
     assert dialog.getOverriddenSignatureKind() == SignatureOverride.Nothing
@@ -83,7 +83,7 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     assert rw.repoModel.prefs.draftCommitMessage == "hoping to save this message"
     assert rw.repoModel.prefs.draftCommitSignatureOverride == SignatureOverride.Nothing
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == "hoping to save this message"
     dialog.ui.revealSignature.click()
@@ -93,14 +93,14 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     assert rw.repoModel.prefs.draftCommitSignatureOverride == SignatureOverride.Both
     assert rw.repoModel.prefs.draftCommitSignature is not None
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == "hoping to save this message"
     assert dialog.getOverriddenSignatureKind() == SignatureOverride.Both
     dialog.accept()  # Go through with the commit this time
 
     # Ensure nothing remains of the draft after a successful commit
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "empty commit")
     dialog: CommitDialog = findQDialog(rw, "commit")
     assert dialog.ui.summaryEditor.text() == ""
@@ -121,7 +121,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     oldHeadCommit = rw.repo.head_commit
 
     # Kick off amend dialog
-    rw.amendButton.click()
+    triggerMenuAction(rw.diffArea.commitButton.menu(), "amend")
 
     dialog: CommitDialog = findQDialog(rw, "amend")
     assert dialog.ui.summaryEditor.text() == oldMessage
@@ -170,7 +170,7 @@ def testAmendCommitDontBreakRefresh(qtbot, tempDir, mainWindow):
 def testEmptyCommitRaisesWarning(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     rejectQMessageBox(rw, "create.+empty commit")
 
 
@@ -183,7 +183,7 @@ def testCommitWithoutUserIdentity(tempDir, mainWindow):
     assert "user.name" not in rw.repo.config
     assert "user.email" not in rw.repo.config
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "create.+empty commit")
 
     identityDialog = findQDialog(rw, "identity")
@@ -211,7 +211,7 @@ def testCommitStableDate(tempDir, mainWindow):
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     rw = mainWindow.openRepo(wd)
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "empty commit")
 
     dialog: CommitDialog = findQDialog(rw, "commit")
@@ -233,7 +233,7 @@ def testAmendAltersCommitterDate(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     headCommit = rw.repo.head_commit
-    rw.amendButton.click()
+    triggerMenuAction(rw.diffArea.commitButton.menu(), "amend")
 
     dialog: CommitDialog = findQDialog(rw, "amend")
     dialog.ui.summaryEditor.setText("hold on a sec...")
@@ -311,7 +311,7 @@ def testCommitOnDetachedHead(tempDir, mainWindow):
     displayedCommits = qlvGetRowData(rw.graphView, Qt.ItemDataRole.UserRole)
     assert rw.repo.head_commit in displayedCommits
 
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "create.+empty commit")
     commitDialog: CommitDialog = findQDialog(rw, "commit")
     commitDialog.ui.summaryEditor.setText("les chenilles et les chevaux")

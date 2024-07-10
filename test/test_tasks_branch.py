@@ -705,7 +705,7 @@ def testMergeConcludedByCommit(tempDir, mainWindow):
     assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)
 
     # Commit to conclude the merge
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     commitDialog: CommitDialog = rw.findChild(CommitDialog)
     assert commitDialog.ui.infoText.isVisible()
     assert re.search(r"conclude the merge", commitDialog.ui.infoText.text(), re.I)
@@ -730,7 +730,7 @@ def testMergeCausesConflicts(tempDir, mainWindow):
     assert re.search(r"conflicts need fixing", rw.mergeBanner.label.text(), re.I)
 
     # Shouldn't be able to commit
-    rw.commitButton.click()
+    rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "fix.+conflicts before")
 
     rw.jump(NavLocator.inUnstaged(".gitignore"))

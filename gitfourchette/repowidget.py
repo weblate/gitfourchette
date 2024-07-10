@@ -167,21 +167,13 @@ class RepoWidget(QStackedWidget):
         graphContainer = self._makeGraphContainer()
 
         self.diffArea = DiffArea(self)
+        # Bridges for legacy code
         self.dirtyFiles = self.diffArea.dirtyFiles
         self.stagedFiles = self.diffArea.stagedFiles
         self.committedFiles = self.diffArea.committedFiles
         self.diffView = self.diffArea.diffView
         self.specialDiffView = self.diffArea.specialDiffView
         self.conflictView = self.diffArea.conflictView
-        self.amendButton = self.diffArea.amendButton
-        self.commitButton = self.diffArea.commitButton
-        self.unifiedCommitButton = self.diffArea.unifiedCommitButton
-        self.diffHeader = self.diffArea.diffHeader
-        self.committedHeader = self.diffArea.committedHeader
-        self.dirtyHeader = self.diffArea.dirtyHeader
-        self.stagedHeader = self.diffArea.stagedHeader
-        self.stageButton = self.diffArea.stageButton
-        self.unstageButton = self.diffArea.unstageButton
         self.diffBanner = self.diffArea.diffBanner
 
         # ----------------------------------
@@ -236,12 +228,6 @@ class RepoWidget(QStackedWidget):
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
 
         # ----------------------------------
-        # Connect signals to async tasks
-        # (Note: most widgets now use RepoTask.invoke() when they want to launch a task)
-
-        self.amendButton.clicked.connect(lambda: tasks.AmendCommit.invoke(self))
-        self.commitButton.clicked.connect(lambda: tasks.NewCommit.invoke(self))
-        self.unifiedCommitButton.clicked.connect(lambda: tasks.NewCommit.invoke(self))
 
         self.restoreSplitterStates()
 
@@ -260,15 +246,8 @@ class RepoWidget(QStackedWidget):
         # Remove sidebar frame
         self.sidebar.setFrameStyle(QFrame.Shape.NoFrame)
 
-        # Smaller font for header text
-        for h in (self.diffHeader, self.committedHeader, self.dirtyHeader, self.stagedHeader,
-                  self.diffArea.contextHeader,
-                  self.diffArea.contextHeader.maximizeButton,
-                  self.diffArea.contextHeader.infoButton,
-                  self.stageButton, self.unstageButton):
-            tweakWidgetFont(h, 90)
-        for h in (self.diffHeader, self.committedHeader, self.dirtyHeader, self.stagedHeader):
-            h.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        # Smaller fonts in diffArea buttons
+        self.diffArea.applyCustomStyling()
 
         # ----------------------------------
         # We're ready
@@ -640,18 +619,21 @@ class RepoWidget(QStackedWidget):
 
     def dispatchSearchCommand(self, op: SearchBar.Op):
         focusSinks = [
-            [self.dirtyFiles,
-             self.dirtyFiles.searchBar.lineEdit, self.stageButton],
+            [self.diffArea.dirtyFiles,
+             self.diffArea.dirtyFiles.searchBar.lineEdit,
+             self.diffArea.stageButton,
+             self.diffArea.unstageButton],
 
-            [self.stagedFiles,
-             self.stagedFiles.searchBar.lineEdit, self.unstageButton,
-             self.commitButton, self.amendButton, self.unifiedCommitButton],
+            [self.diffArea.stagedFiles,
+             self.diffArea.stagedFiles.searchBar.lineEdit,
+             self.diffArea.commitButton,
+             self.diffArea.unstageButton],
 
-            [self.committedFiles,
-             self.committedFiles.searchBar.lineEdit],
+            [self.diffArea.committedFiles,
+             self.diffArea.committedFiles.searchBar.lineEdit],
 
-            [self.diffView,
-             self.diffView.searchBar.lineEdit],
+            [self.diffArea.diffView,
+             self.diffArea.diffView.searchBar.lineEdit],
 
             # Fallback (will be triggered if none of the sinks above have focus)
             [self.graphView],
