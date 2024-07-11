@@ -62,22 +62,23 @@ def testSidebarCollapsePersistent(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     sb = rw.sidebar
-    assert sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
-    indexToCollapse = sb.findNode(lambda n: n.data == "origin").createIndex(sb.model())
+    sm = sb.sidebarModel
+    assert sm.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master"))
+    indexToCollapse = sb.findNode(lambda n: n.data == "origin").createIndex(sm)
     sb.collapse(indexToCollapse)
     sb.expand(indexToCollapse)  # go through both expand/collapse code paths
     sb.collapse(indexToCollapse)
-    assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+    assert not sm.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master"))
 
     # Test that it's still hidden after a soft refresh
     mainWindow.currentRepoWidget().refreshRepo()
-    assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+    assert not sm.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master"))
 
     # Test that it's still hidden after closing and reopening
     mainWindow.closeTab(0)
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar
-    assert not sb.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master").createIndex(sb.model()))
+    assert not sm.isAncestryChainExpanded(sb.findNodeByRef("refs/remotes/origin/master"))
 
 
 def testRefreshKeepsSidebarNonRefSelection(tempDir, mainWindow):

@@ -54,12 +54,11 @@ class Sidebar(QTreeView):
 
         self.setItemDelegate(SidebarDelegate(self))
 
-        self.setModel(SidebarModel(self))
+        sidebarModel = SidebarModel(self)
+        self.setModel(sidebarModel)
 
-        self.expanded.connect(self.onExpanded)
-        self.collapsed.connect(self.onCollapsed)
-        self.collapseCacheValid = False
-        self.collapseCache = set()
+        self.expanded.connect(sidebarModel.onIndexExpanded)
+        self.collapsed.connect(sidebarModel.onIndexCollapsed)
         self.selectionBackup = None
 
         # When clicking on a row, information about the clicked row and "zone"
@@ -754,7 +753,11 @@ class Sidebar(QTreeView):
         # Find a visible index that matches any of the candidates
         for ref in refCandidates:
             index = self.indexForRef(ref)
-            if index and self.isAncestryChainExpanded(index):  # Don't force-expand any collapsed indexes
+            if not index:
+                continue
+            # Don't force-expand any collapsed indexes
+            node = SidebarNode.fromIndex(index)
+            if model.isAncestryChainExpanded(node):
                 self.setCurrentIndex(index)
                 return index
 
@@ -762,28 +765,19 @@ class Sidebar(QTreeView):
         self.clearSelection()
         return None
 
-    def onExpanded(self, index: QModelIndex):
-        node = SidebarNode.fromIndex(index)
-        h = node.getCollapseHash()
-        self.collapseCache.discard(h)
-
-    def onCollapsed(self, index: QModelIndex):
-        node = SidebarNode.fromIndex(index)
-        h = node.getCollapseHash()
-        self.collapseCache.add(h)
-
     @benchmark
     def restoreExpandedItems(self):
+        model = self.sidebarModel
+
         # If we don't have a valid collapse cache (typically upon opening the repo), expand everything.
         # This can be pretty expensive, so cache collapsed items for next time.
-        if not self.collapseCacheValid:
+        if not model.collapseCacheValid:
             self.expandAll()
-            self.collapseCache.clear()
-            self.collapseCacheValid = True
+            model.collapseCache.clear()
+            model.collapseCacheValid = True
             return
 
-        assert self.collapseCacheValid
-        model = self.sidebarModel
+        assert model.collapseCacheValid
 
         frontier = model.rootNode.children[:]
         while frontier:
@@ -792,30 +786,11 @@ class Sidebar(QTreeView):
             if not node.mayHaveChildren():
                 continue
 
-            if node.wantForceExpand() or node.getCollapseHash() not in self.collapseCache:
+            if node.wantForceExpand() or node.getCollapseHash() not in model.collapseCache:
                 index = node.createIndex(model)
                 self.expand(index)
 
             frontier.extend(node.children)
-
-    def isAncestryChainExpanded(self, index: QModelIndex):
-        # Assume everything is expanded if collapse cache is missing (see restoreExpandedItems).
-        if not self.collapseCacheValid:
-            return True
-
-        # My collapsed state doesn't matter here - it only affects my children.
-        # So start looking at my parent.
-        node = SidebarNode.fromIndex(index)
-        node = node.parent
-
-        # Walk up parent chain until root index (row -1)
-        while node.parent is not None:
-            h = node.getCollapseHash()
-            if h in self.collapseCache:
-                return False
-            node = node.parent
-
-        return True
 
     def collapseChildFolders(self, node: SidebarNode):
         for n in node.children:

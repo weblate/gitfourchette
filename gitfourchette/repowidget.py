@@ -478,8 +478,8 @@ class RepoWidget(QStackedWidget):
         # Save sidebar collapse cache (if our UI has settled)
         if hasRepo and self.uiReady:
             uiPrefs = self.repoModel.prefs
-            if self.sidebar.collapseCacheValid:
-                uiPrefs.collapseCache = set(self.sidebar.collapseCache)
+            if self.sidebar.sidebarModel.collapseCacheValid:
+                uiPrefs.collapseCache = set(self.sidebar.sidebarModel.collapseCache)
             else:
                 uiPrefs.collapseCache = set()
             try:

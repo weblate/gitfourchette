@@ -179,6 +179,9 @@ class SidebarModel(QAbstractItemModel):
     _cachedTooltipIndex: QModelIndex | None
     _cachedTooltipText: str
 
+    collapseCache: set[str]
+    collapseCacheValid: bool
+
     class Role:
         Ref = Qt.ItemDataRole.UserRole + 0
         Hidden = Qt.ItemDataRole.UserRole + 1
@@ -213,6 +216,9 @@ class SidebarModel(QAbstractItemModel):
         self._cachedTooltipIndex = None
         self._cachedTooltipText = ""
 
+        self.collapseCache = set()
+        self.collapseCacheValid = False
+
         if emitSignals:
             self.endResetModel()
 
@@ -231,6 +237,34 @@ class SidebarModel(QAbstractItemModel):
             return node.data in self.repoModel.hiddenRefs and node.data not in self.repoModel.prefs.hiddenRefPatterns
         else:
             return False
+
+    def isAncestryChainExpanded(self, node: SidebarNode):
+        # Assume everything is expanded if collapse cache is missing (see restoreExpandedItems).
+        if not self.collapseCacheValid:
+            return True
+
+        # My collapsed state doesn't matter here - it only affects my children.
+        # So start looking at my parent.
+        node = node.parent
+
+        # Walk up parent chain until root index (row -1)
+        while node.parent is not None:
+            h = node.getCollapseHash()
+            if h in self.collapseCache:
+                return False
+            node = node.parent
+
+        return True
+
+    def onIndexExpanded(self, index: QModelIndex):
+        node = SidebarNode.fromIndex(index)
+        h = node.getCollapseHash()
+        self.collapseCache.discard(h)
+
+    def onIndexCollapsed(self, index: QModelIndex):
+        node = SidebarNode.fromIndex(index)
+        h = node.getCollapseHash()
+        self.collapseCache.add(h)
 
     def refreshRepoName(self):
         if self.rootNode and self.repoModel:
@@ -705,8 +739,13 @@ class SidebarModel(QAbstractItemModel):
             if displayRole:
                 if item == EItem.WorkdirHeader:
                     return node.displayName
-                else:
+                elif item == EItem.LocalBranchesHeader:
                     return TrTables.sidebarItem(item)
+                else:
+                    name = TrTables.sidebarItem(item)
+                    if node.getCollapseHash() in self.collapseCache:
+                        name += f" ({len(node.children)})"
+                    return name
             elif refRole:
                 return ""
             elif fontRole:

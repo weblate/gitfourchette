@@ -226,8 +226,8 @@ class PrimeRepo(RepoTask):
         with QSignalBlockerContext(rw.sidebar):
             collapseCache = repoModel.prefs.collapseCache
             if collapseCache:
-                rw.sidebar.collapseCache = set(collapseCache)
-                rw.sidebar.collapseCacheValid = True
+                rw.sidebar.sidebarModel.collapseCache = set(collapseCache)
+                rw.sidebar.sidebarModel.collapseCacheValid = True
             rw.sidebar.refresh(repoModel)
 
         # Restore main UI
