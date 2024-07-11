@@ -69,5 +69,6 @@ from .textutils import (
     hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe,
     btag,
     withUniqueSuffix,
+    englishTitleCase,
 )
 from .validatormultiplexer import ValidatorMultiplexer

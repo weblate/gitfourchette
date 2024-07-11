@@ -6,7 +6,7 @@ from typing import Any, Type, Union
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskInvoker
-from gitfourchette.toolbox import MultiShortcut, makeMultiShortcut, ActionDef
+from gitfourchette.toolbox import MultiShortcut, makeMultiShortcut, ActionDef, englishTitleCase
 
 logger = logging.getLogger(__name__)
 
@@ -193,10 +193,11 @@ class TaskBook:
             cls.names[t] = name
             logger.warning(f"Missing name for task '{name}'")
 
-        if QLocale().language() in [QLocale.Language.C, QLocale.Language.English]:
-            name = name.title()
+        name = englishTitleCase(name)
+
         if t not in cls.noEllipsis:
             name += "..."
+
         return name
 
     @classmethod

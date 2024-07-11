@@ -196,6 +196,7 @@ class FileList(QListView):
                 settings.prefs.pathDisplayStyle = pds
             isCurrent = settings.prefs.pathDisplayStyle == pds
             name = TrTables.prefKey(pds.name)
+            name = englishTitleCase(name)
             return ActionDef(name, setIt, checkState=isCurrent)
 
         n = len(patches)
@@ -216,7 +217,7 @@ class FileList(QListView):
             ),
 
             ActionDef(
-                TrTables.prefKey("pathDisplayStyle"),
+                englishTitleCase(TrTables.prefKey("pathDisplayStyle")),
                 submenu=[pathDisplayStyleAction(style) for style in PathDisplayStyle],
             ),
         ]

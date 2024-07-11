@@ -232,3 +232,9 @@ def withUniqueSuffix(
             break
 
     return name
+
+
+def englishTitleCase(text: str) -> str:
+    if QLocale().language() in [QLocale.Language.C, QLocale.Language.English]:
+        text = text.title()
+    return text
