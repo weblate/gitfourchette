@@ -456,9 +456,11 @@ class ApplyPatchFile(RepoTask):
 
     def flow(self, reverse: bool = False, path: str = ""):
         if reverse:
-            title = self.tr("Import patch file (to apply in reverse)")
+            title = self.tr("Revert patch file")
+            verb = self.tr("Revert")
         else:
-            title = self.tr("Import patch file")
+            title = self.tr("Apply patch file")
+            verb = self.tr("Apply")
 
         patchFileCaption = self.tr("Patch file")
         allFilesCaption = self.tr("All files")
@@ -496,14 +498,11 @@ class ApplyPatchFile(RepoTask):
         yield from self.flowEnterUiThread()
 
         numDeltas = len(deltas)
-        if reverse:
-            text = self.tr("Patch file {0}, <b>reversed</b>, can be applied cleanly to your working directory.")
-        else:
-            text = self.tr("Patch file {0} can be applied cleanly to your working directory.")
-        text = text.format(bquoe(os.path.basename(path)))
-        informative = self.tr("It will modify <b>%n</b> files:", "", numDeltas)
-        yield from self.flowConfirm(title, text, verb=self.tr("Apply patch"), informativeText=informative,
-                                    detailList=[f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas])
+        text = self.tr("Do you want to {verb} patch file {path}?")
+        text = text.format(path=bquoe(os.path.basename(path)), verb=tagify(verb.lower(), "<b>"))
+        informative = self.tr("<b>%n</b> files will be modified in your working directory:", "", numDeltas)
+        details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
+        yield from self.flowConfirm(title, text, verb=verb, informativeText=informative, detailList=details)
 
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
         self.jumpTo = NavLocator.inUnstaged(deltas[0].new_file.path)
@@ -512,6 +511,38 @@ class ApplyPatchFile(RepoTask):
 class ApplyPatchFileReverse(ApplyPatchFile):
     def flow(self, path: str = ""):
         yield from ApplyPatchFile.flow(self, reverse=True, path=path)
+
+
+class ApplyPatchData(RepoTask):
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir
+
+    def flow(self, patchData: str, reverse: bool):
+        yield from self.flowEnterWorkerThread()
+
+        title = self.tr("Revert patch") if reverse else self.tr("Apply patch")
+        verb = self.tr("Revert") if reverse else self.tr("Apply")
+
+        if reverse:
+            patchData = reverseunidiff.reverseUnidiff(patchData)
+        loadedDiff: Diff = Diff.parse_diff(patchData)
+
+        # Do a dry run first so we don't litter the workdir with a patch that failed halfway through.
+        # If the patch doesn't apply, this raises a MultiFileError.
+        diff = self.repo.applies_breakdown(patchData)
+        deltas = list(diff.deltas)
+
+        yield from self.flowEnterUiThread()
+
+        numDeltas = len(deltas)
+        text = self.tr("Do you want to {verb} this patch?")
+        text = text.format(verb=tagify(verb.lower(), "<b>"))
+        informative = self.tr("<b>%n</b> files will be modified in your working directory:", "", numDeltas)
+        details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
+        yield from self.flowConfirm(title, text, verb=verb, informativeText=informative, detailList=details)
+
+        self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
+        self.jumpTo = NavLocator.inUnstaged(deltas[0].new_file.path)
 
 
 class AbortMerge(RepoTask):

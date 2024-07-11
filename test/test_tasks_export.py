@@ -17,18 +17,18 @@ def testExportPatchFromWorkdir(tempDir, mainWindow):
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), r"export.+patch")
     acceptQFileDialog(rw, "export.+patch", f"{tempDir.name}/workdir.patch")
 
-    triggerMenuAction(mainWindow.menuBar(), "file/reverse patch")
-    acceptQFileDialog(rw, "import patch.+reverse", f"{tempDir.name}/workdir.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
+    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/workdir.patch")
+    acceptQMessageBox(rw, "revert.+patch")
     assert qlvGetRowData(rw.dirtyFiles) == []
 
-    triggerMenuAction(mainWindow.menuBar(), "file/reverse patch")
-    acceptQFileDialog(rw, "import patch.+reverse", f"{tempDir.name}/workdir.patch")
+    triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
+    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/workdir.patch")
     acceptQMessageBox(rw, "failed.+patch")
 
     triggerMenuAction(mainWindow.menuBar(), "file/apply patch")
-    acceptQFileDialog(rw, "import patch", f"{tempDir.name}/workdir.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    acceptQFileDialog(rw, "apply patch", f"{tempDir.name}/workdir.patch")
+    acceptQMessageBox(rw, "apply.+patch")
     assert qlvGetRowData(rw.dirtyFiles) == ["master.txt", "untracked-file.txt"]
 
 
@@ -51,15 +51,15 @@ def testExportPatchFromCommit(tempDir, mainWindow):
     triggerMenuAction(menu, r"export.+patch")
     acceptQFileDialog(rw, "export.+patch", f"{tempDir.name}/foo.patch")
 
-    triggerMenuAction(mainWindow.menuBar(), "file/reverse patch")
-    acceptQFileDialog(rw, "import patch.+reverse", f"{tempDir.name}/foo.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
+    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/foo.patch")
+    acceptQMessageBox(rw, "revert.+patch")
     assert rw.navLocator.context.isWorkdir()
     assert qlvGetRowData(rw.dirtyFiles) == ["c/c2-2.txt"]
 
     triggerMenuAction(mainWindow.menuBar(), "file/apply patch")
-    acceptQFileDialog(rw, "import.+patch", f"{tempDir.name}/foo.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    acceptQFileDialog(rw, "apply patch", f"{tempDir.name}/foo.patch")
+    acceptQMessageBox(rw, "apply.+patch")
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
@@ -75,13 +75,13 @@ def testExportPatchFromStash(tempDir, mainWindow):
     acceptQFileDialog(rw, "export stash.+patch", f"{tempDir.name}/foo.patch")
 
     triggerMenuAction(mainWindow.menuBar(), "file/apply patch")
-    acceptQFileDialog(rw, "import patch", f"{tempDir.name}/foo.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    acceptQFileDialog(rw, "apply patch", f"{tempDir.name}/foo.patch")
+    acceptQMessageBox(rw, "apply.+patch")
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
-    triggerMenuAction(mainWindow.menuBar(), "file/reverse patch")
-    acceptQFileDialog(rw, "import patch.+reverse", f"{tempDir.name}/foo.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
+    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/foo.patch")
+    acceptQMessageBox(rw, "revert.+patch")
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 
@@ -98,6 +98,6 @@ def testExportPatchFromFileList(tempDir, mainWindow, commitHex, path):
     rw.committedFiles.savePatchAs()
     acceptQFileDialog(rw, "export patch", f"{tempDir.name}/foo.patch")
 
-    triggerMenuAction(mainWindow.menuBar(), "file/reverse patch")
-    acceptQFileDialog(rw, "import patch.+reverse", f"{tempDir.name}/foo.patch")
-    acceptQMessageBox(rw, "patch.+can be applied")
+    triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
+    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/foo.patch")
+    acceptQMessageBox(rw, "revert.+patch")

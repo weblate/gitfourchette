@@ -1,3 +1,5 @@
+import os.path
+
 import pytest
 
 from .util import *
@@ -47,14 +49,44 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     commitId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
-
-    rw.jump(NavLocator.inCommit(commitId))
-    assert qlvGetRowData(rw.committedFiles) == ["c/c2-2.txt"]
-    rw.committedFiles.selectRow(0)
+    rw.jump(NavLocator.inCommit(commitId, "c/c2-2.txt"))
 
     # c2-2.txt was deleted by the commit. Expect a warning about this.
     triggerMenuAction(rw.committedFiles.makeContextMenu(), "save a copy/at c9ed7b")
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
+
+
+def testRevertCommittedFile(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex="58be4659bb571194ed4562d04b359d26216f526e")
+    loc = NavLocator.inCommit(oid, "master.txt")
+    rw.jump(loc)
+    assert rw.navLocator.isSimilarEnoughTo(loc)
+
+    assert b"On master\nOn master\n" == readFile(f"{wd}/master.txt")
+
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "revert")
+    acceptQMessageBox(rw, "revert.+patch")
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged("master.txt"))
+
+    # Make sure revert actually worked
+    assert b"On master\n" == readFile(f"{wd}/master.txt")
+
+
+def testCannotRevertCommittedFileIfNowDeleted(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    assert not os.path.exists(f"{wd}/c/c2.txt")
+
+    commitId = Oid(hex="1203b03dc816ccbb67773f28b3c19318654b0bc8")
+    rw.jump(NavLocator.inCommit(commitId, "c/c2.txt"))
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inCommit(commitId, "c/c2.txt"))
+
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "revert")
+    rejectQMessageBox(rw, "operation failed")
+    assert not os.path.exists(f"{wd}/c/c2.txt")
 
 
 @pytest.mark.parametrize("context", [NavContext.UNSTAGED, NavContext.STAGED])

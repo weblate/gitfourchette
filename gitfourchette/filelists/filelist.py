@@ -446,6 +446,11 @@ class FileList(QListView):
         patches = list(self.selectedPatches())
         ExportPatchCollection.invoke(self, patches)
 
+    def revertPaths(self):
+        patches = list(self.selectedPatches())
+        assert len(patches) == 1
+        ApplyPatchData.invoke(self, patches[0].text, reverse=True)
+
     def firstPath(self) -> str:
         index: QModelIndex = self.flModel.index(0)
         if index.isValid():

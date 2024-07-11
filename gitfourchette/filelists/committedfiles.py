@@ -43,6 +43,13 @@ class CommittedFiles(FileList):
                 ActionDef.SEPARATOR,
 
                 ActionDef(
+                    self.tr("&Revert This Change...", "", n),
+                    self.revertPaths,
+                ),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(
                     self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
                     icon="SP_FileIcon", submenu=
                     [
