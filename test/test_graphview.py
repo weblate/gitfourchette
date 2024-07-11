@@ -1,3 +1,4 @@
+import pygit2.enums
 import pytest
 
 from gitfourchette.nav import NavLocator
@@ -245,9 +246,32 @@ def testCommitToolTip(tempDir, mainWindow):
     assert "a.u.thor@example.com" in toolTip
 
 
-def testPaintUnknownRefPrefix(tempDir, mainWindow):
+def testUnknownRefPrefix(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
-    writeFile(f"{wd}/.git/refs/weird", "f73b95671f326616d66b2afb3bdfcdbbce110b44\n")
+
+    # Write unsupported ref to a commit within the graph
+    visibleOid = Oid(hex="f73b95671f326616d66b2afb3bdfcdbbce110b44")
+    writeFile(f"{wd}/.git/refs/weird", str(visibleOid)+"\n")
+
+    # Write unsupported ref to a commit outside the graph
+    # (Create new commit then reset master to previous HEAD)
+    with RepoContext(wd) as repo:
+        oldHead = repo.head_commit_id
+        writeFile(f"{wd}/toto.txt", "hello world\n")
+        repo.index.add("toto.txt")
+        ghostOid = repo.create_commit_on_head("this commit shouldnt appear")
+        writeFile(f"{wd}/.git/refs/ghost", str(ghostOid))
+        repo.reset(oldHead, pygit2.enums.ResetMode.HARD)
+
+    # Painting must not raise an exception
+    # (either skip the unsupported ref or draw a refbox for it, but don't crash)
     rw = mainWindow.openRepo(wd)
-    QTest.qWait(1)
-    # Must not raise an exception
+
+    assert any(c and c.id == visibleOid for c in rw.repoModel.commitSequence)
+    assert not any(c and c.id == ghostOid for c in rw.repoModel.commitSequence)
+
+    # Ghost commit can still be reached
+    rw.jump(NavLocator.inCommit(ghostOid))
+    assert rw.navLocator.commit == ghostOid
+    assert rw.diffArea.diffBanner.isVisible()
+    assert re.search(r"n.t shown in the graph", rw.diffArea.diffBanner.label.text(), re.I)

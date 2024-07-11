@@ -1127,21 +1127,32 @@ class Repo(_VanillaRepository):
         tips: list[tuple[str, Commit]] = []
 
         try:
-            directRefType = ReferenceType.DIRECT
+            direct_ref_type = ReferenceType.DIRECT
         except AttributeError:  # pragma: no cover - pygit2 <= 1.14.0 compatibility
-            directRefType = ReferenceType.OID
+            # TODO: Remove this when we can stop supporting pygit2 <= 1.14.0
+            direct_ref_type = ReferenceType.OID
+
+        supported_prefixes = (RefPrefix.HEADS, RefPrefix.REMOTES, RefPrefix.TAGS)
 
         for ref in self.listall_reference_objects():
-            if (ref.type != directRefType  # Skip symbolic references
-                    or ref.name == "refs/stash"):  # Stashes are dealt with separately
+            name: str = ref.name
+
+            # Any text file containing a hash will be picked up by libgit2 if it is in refs/.
+            # Exclude those if they don't match any of our supported ref prefixes.
+            # Note that this also excludes refs/stash - we deal with stashes separately.
+            if not name.startswith(supported_prefixes):
+                continue
+
+            # Skip symbolic references
+            if ref.type != direct_ref_type:
                 continue
 
             try:
                 commit: Commit = ref.peel(Commit)
-                tips.append((ref.name, commit))
+                tips.append((name, commit))
             except InvalidSpecError as e:
                 # Some refs might not be committish, e.g. in linux's source repo
-                _logger.info(f"{e} - Skipping ref '{ref.name}'")
+                _logger.info(f"{e} - Skipping ref '{name}'")
 
         if include_stashes:
             for i, stash in enumerate(self.listall_stashes()):
