@@ -209,8 +209,8 @@ class PrefsDialog(QDialog):
         if MACOS:
             skipKeys.add("showMenuBar")
 
-        # Only allow setting Qt API in non-frozen Linux environments
-        if not APP_FIXED_QT_BINDING and not FREEDESKTOP:
+        # If app distribution is frozen, don't expose Qt binding setting
+        if APP_FIXED_QT_BINDING:
             skipKeys.add("forceQtApi")
 
         return skipKeys
