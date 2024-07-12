@@ -409,7 +409,7 @@ def _getCmdName(command, fallback, presets):
 
 
 def getExternalEditorName():
-    return _getCmdName(prefs.externalEditor, tr("Text Editor"), EDITOR_TOOL_PRESETS)
+    return _getCmdName(prefs.externalEditor, tr("External Editor"), EDITOR_TOOL_PRESETS)
 
 
 def getDiffToolName():

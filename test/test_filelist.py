@@ -25,7 +25,7 @@ def testSaveRevisionAtCommit(tempDir, mainWindow):
     rw.jump(loc)
     assert loc.isSimilarEnoughTo(rw.navLocator)
 
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save a copy/at 1203b03")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save.+copy/as of.+commit")
     acceptQFileDialog(rw, "save.+revision as", tempDir.name, useSuggestedName=True)
     assert b"c2\nc2\n" == readFile(f"{tempDir.name}/c2@1203b03.txt")
 
@@ -39,7 +39,7 @@ def testSaveRevisionBeforeCommit(tempDir, mainWindow):
     rw.jump(loc)
     assert loc.isSimilarEnoughTo(rw.navLocator)
 
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save a copy/before 1203b03")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save.+copy/before.+commit")
     acceptQFileDialog(rw, "save.+revision as", tempDir.name, useSuggestedName=True)
     assert b"c2\n" == readFile(f"{tempDir.name}/c2@before-1203b03.txt")
 
@@ -52,7 +52,7 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(commitId, "c/c2-2.txt"))
 
     # c2-2.txt was deleted by the commit. Expect a warning about this.
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "save a copy/at c9ed7b")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "save.+copy/as of.+commit")
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
@@ -198,7 +198,7 @@ def testEditFileInExternalEditor(tempDir, mainWindow):
 
     # First, set the editor to an incorrect command to go through the "locate" code path
     mainWindow.onAcceptPrefsDialog({"externalEditor": f'"{editorPath}-BOGUSCOMMAND" "{scratchPath}"'})
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/current version")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/current")
     QTest.qWait(100 if not MACOS else 500)
     qmb = findQMessageBox(mainWindow, "n.t start text editor")
     qmb.button(QMessageBox.StandardButton.Open).click()  # click "locate" button
@@ -207,15 +207,15 @@ def testEditFileInExternalEditor(tempDir, mainWindow):
 
     # Now open the file in our shim
     # HEAD revision
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/current")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/current")
     assert b"a/a1" in readFile(scratchPath, timeout=1000, unlink=True)
 
     # New revision
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/before 49322bb")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/before.+commit")
     acceptQMessageBox(mainWindow, "file did.?n.t exist")
 
     # Old revision
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "edit in editor-shim/at 49322bb")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/as of.+commit")
     assert b"a1@49322bb" in readFile(scratchPath, timeout=1000, unlink=True)
 
 
@@ -230,12 +230,12 @@ def testEditFileInExternalDiffTool(tempDir, mainWindow):
 
     # First, set the diff tool to an empty command to go through the "set up" code path
     mainWindow.onAcceptPrefsDialog({"externalDiff": ""})
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in.+diff tool")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open diff in.+diff tool")
     acceptQMessageBox(mainWindow, "diff tool.+n.t (set up|configured)")
     findQDialog(mainWindow, "settings").reject()
 
     mainWindow.onAcceptPrefsDialog({"externalDiff": f'"{editorPath}" "{scratchPath}" $L $R'})
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "compare in editor-shim")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open diff in editor-shim")
     scratchText = readFile(scratchPath, 1000, unlink=True).decode("utf-8")
     assert "[OLD]b2.txt" in scratchText
     assert "[NEW]b2.txt" in scratchText

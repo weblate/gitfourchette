@@ -30,7 +30,7 @@ class CommittedFiles(FileList):
                 ),
 
                 ActionDef(
-                    self.tr("Compare in {0}").format(settings.getDiffToolName()),
+                    self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
                     self.wantOpenInDiffTool,
                     icon="vcs-diff"
                 ),
@@ -50,21 +50,21 @@ class CommittedFiles(FileList):
                 ActionDef.SEPARATOR,
 
                 ActionDef(
-                    self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
+                    self.tr("&Open File in {0}", "", n).format(settings.getExternalEditorName()),
                     icon="SP_FileIcon", submenu=
                     [
-                        ActionDef(self.tr("Open Version &At {0}").format(shortHash(self.commitId)), self.openNewRevision),
-                        ActionDef(self.tr("Open Version &Before {0}").format(shortHash(self.commitId)), self.openOldRevision),
-                        ActionDef(self.tr("Open &Current Version"), self.openHeadRevision),
+                        ActionDef(self.tr("&As Of This Commit"), self.openNewRevision),
+                        ActionDef(self.tr("&Before This Commit"), self.openOldRevision),
+                        ActionDef(self.tr("&Current Revision (Working Copy)"), self.openWorkingCopyRevision),
                     ]
                 ),
 
                 ActionDef(
-                    self.tr("Sa&ve a Copy..."),
+                    self.tr("&Save a Copy..."),
                     icon="SP_DialogSaveButton", submenu=
                     [
-                        ActionDef(self.tr("Save Version &At {0}").format(shortHash(self.commitId)), self.saveNewRevision),
-                        ActionDef(self.tr("Save Version &Before {0}").format(shortHash(self.commitId)), self.saveOldRevision),
+                        ActionDef(self.tr("&As Of This Commit"), self.saveNewRevision),
+                        ActionDef(self.tr("&Before This Commit"), self.saveOldRevision),
                     ]
                 ),
             ]
@@ -105,9 +105,9 @@ class CommittedFiles(FileList):
     def saveOldRevision(self):
         self.saveRevisionAs(beforeCommit=True)
 
-    def saveRevisionAsTempFile(self, diff, beforeCommit: bool = False):
+    def saveRevisionAsTempFile(self, patch: Patch, beforeCommit: bool = False):
         try:
-            name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
+            name, blob, _ = self.getFileRevisionInfo(patch, beforeCommit)
         except FileNotFoundError as fnf:
             raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
@@ -118,6 +118,7 @@ class CommittedFiles(FileList):
 
         return tempPath
 
+    # TODO: Send all files to text editor in one command?
     def openRevision(self, beforeCommit: bool = False):
         def run(patch: Patch):
             tempPath = self.saveRevisionAsTempFile(patch, beforeCommit)
@@ -131,15 +132,16 @@ class CommittedFiles(FileList):
         self.confirmBatch(run, title,
                           self.tr("Really open <b>{0} files</b> in external editor?"))
 
+    # TODO: Perhaps this could be a RepoTask?
     def saveRevisionAs(self, beforeCommit: bool = False):
         def dump(path: str, mode: int, data: bytes):
             with open(path, "wb") as f:
                 f.write(data)
             os.chmod(path, mode)
 
-        def run(diff):
+        def run(patch: Patch):
             try:
-                name, blob, diffFile = self.getFileRevisionInfo(diff, beforeCommit)
+                name, blob, diffFile = self.getFileRevisionInfo(patch, beforeCommit)
             except FileNotFoundError as fnf:
                 raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
 
@@ -175,19 +177,19 @@ class CommittedFiles(FileList):
 
         return name, blob, diffFile
 
-    def openHeadRevision(self):
+    def openWorkingCopyRevision(self):
         def run(patch: Patch):
             diffFile = patch.delta.new_file
             path = self.repo.in_workdir(diffFile.path)
             if os.path.isfile(path):
                 openInTextEditor(self, path)
             else:
-                raise SelectedFileBatchError(self.tr("{0}: There’s no file at this path on HEAD.").format(diffFile.path))
+                raise SelectedFileBatchError(self.tr("{0}: There’s no file at this path in the working copy.").format(diffFile.path))
 
-        self.confirmBatch(run, self.tr("Open revision at HEAD"), self.tr("Really open <b>{0} files</b>?"))
+        self.confirmBatch(run, self.tr("Open working copy revision"), self.tr("Really open <b>{0} files</b>?"))
 
     def wantOpenDiffInNewWindow(self):
         def run(patch: Patch):
             self.openDiffInNewWindow.emit(patch, NavLocator(self.navContext, self.commitId, patch.delta.new_file.path))
 
-        self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} files</b>?"))
+        self.confirmBatch(run, self.tr("Open diff in new window"), self.tr("Really open <b>{0} windows</b>?"))

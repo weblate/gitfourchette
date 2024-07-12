@@ -43,7 +43,7 @@ class StagedFiles(FileList):
                 ActionDef.SEPARATOR,
 
                 ActionDef(
-                    self.tr("Compare in {0}").format(settings.getDiffToolName()),
+                    self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
                     self.wantOpenInDiffTool,
                     icon="vcs-diff",
                 ),

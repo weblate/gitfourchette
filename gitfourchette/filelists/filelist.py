@@ -249,6 +249,8 @@ class FileList(QListView):
                 runBatch,
                 QMessageBox.StandardButton.YesAll | QMessageBox.StandardButton.Cancel,
                 show=False)
+            
+            addULToMessageBox(qmb, [p.delta.new_file.path for p in patches])
 
             qmb.button(QMessageBox.StandardButton.YesAll).clicked.connect(runBatch)
             qmb.show()
