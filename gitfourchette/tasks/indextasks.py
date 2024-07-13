@@ -545,6 +545,52 @@ class ApplyPatchData(RepoTask):
         self.jumpTo = NavLocator.inUnstaged(deltas[0].new_file.path)
 
 
+class RestoreRevisionToWorkdir(RepoTask):
+    def effects(self) -> TaskEffects:
+        return TaskEffects.Workdir
+
+    def flow(self, patch: Patch, old: bool):
+        if old:
+            preposition = self.tr("before", "preposition slotted into '...BEFORE this commit'")
+            diffFile = patch.delta.old_file
+            delete = patch.delta.status == DeltaStatus.ADDED
+        else:
+            preposition = self.tr("at", "preposition slotted into '...AT this commit'")
+            diffFile = patch.delta.new_file
+            delete = patch.delta.status == DeltaStatus.DELETED
+
+        path = self.repo.in_workdir(diffFile.path)
+        existsNow = os.path.isfile(path)
+
+        if not existsNow and delete:
+            message = self.tr("Your working copy of {path} already matches the revision {preposition} this commit.")
+            message = message.format(path=bquo(diffFile.path), preposition=preposition)
+            raise AbortTask(message, icon="information")
+
+        if not existsNow:
+            actionVerb = self.tr("recreated")
+        elif delete:
+            actionVerb = self.tr("deleted")
+        else:
+            actionVerb = self.tr("overwritten")
+        prompt = paragraphs(
+            self.tr("Do you want to restore {path} as it was {preposition} this commit?"),
+            self.tr("This file will be {processed} in your working directory.")
+        ).format(path=bquo(diffFile.path), preposition=preposition, processed=actionVerb)
+
+        yield from self.flowConfirm(text=prompt, verb=self.tr("Restore"))
+
+        if delete:
+            os.unlink(path)
+        else:
+            blob = self.repo.peel_blob(diffFile.id)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(blob.data)
+            os.chmod(path, diffFile.mode)
+
+        self.jumpTo = NavLocator.inUnstaged(diffFile.path)
+
 class AbortMerge(RepoTask):
     def effects(self) -> TaskEffects:
         return TaskEffects.DefaultRefresh

@@ -56,6 +56,44 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
+@pytest.mark.parametrize(
+    "commit,side,path,result",
+    [
+        ("bab66b4", "as of", "c/c1.txt", "c1\nc1\n"),
+        ("bab66b4", "before", "c/c1.txt", "c1\n"),
+        ("42e4e7c", "before", "c/c1.txt", "[DEL]"),  # delete file
+        ("c9ed7bf", "before", "c/c2-2.txt", "c2\nc2\n"),  # undo deletion
+        ("c9ed7bf", "as of", "c/c2-2.txt", "[NOP]"),  # no-op
+    ])
+def testRestoreRevisionAtCommit(tempDir, mainWindow, commit, side, path, result):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        writeFile(f"{wd}/c/c1.txt", "different\n")
+        repo.index.add("c/c1.txt")
+        repo.create_commit_on_head("dummy", TEST_SIGNATURE, TEST_SIGNATURE)
+
+    rw = mainWindow.openRepo(wd)
+
+    oid = rw.repo[commit].peel(Commit).id
+    loc = NavLocator.inCommit(oid, path)
+    rw.jump(loc)
+    assert loc.isSimilarEnoughTo(rw.navLocator)
+
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"restore/{side}.+commit")
+    if result == "[NOP]":
+        acceptQMessageBox(rw, "working copy.+already matches.+revision")
+    else:
+        acceptQMessageBox(rw, "restore")
+        if result == "[DEL]":
+            assert not os.path.exists(f"{wd}/{path}")
+        else:
+            assert result.encode() == readFile(f"{wd}/{path}")
+
+        # Make sure we've jumped to the file in the workdir
+        assert NavLocator.inUnstaged(path).isSimilarEnoughTo(rw.navLocator)
+
+
 def testRevertCommittedFile(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)

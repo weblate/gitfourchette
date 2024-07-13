@@ -7,6 +7,7 @@ from gitfourchette.filelists.filelist import FileList, SelectedFileBatchError
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.tasks import RestoreRevisionToWorkdir
 from gitfourchette.toolbox import *
 
 
@@ -45,6 +46,15 @@ class CommittedFiles(FileList):
                 ActionDef(
                     self.tr("&Revert This Change...", "", n),
                     self.revertPaths,
+                ),
+
+                ActionDef(
+                    self.tr("Restor&e File Revision..."),
+                    submenu=
+                    [
+                        ActionDef(self.tr("&As Of This Commit"), self.restoreNewRevision),
+                        ActionDef(self.tr("&Before This Commit"), self.restoreOldRevision),
+                    ]
                 ),
 
                 ActionDef.SEPARATOR,
@@ -104,6 +114,16 @@ class CommittedFiles(FileList):
 
     def saveOldRevision(self):
         self.saveRevisionAs(beforeCommit=True)
+
+    def restoreNewRevision(self):
+        patches = list(self.selectedPatches())
+        assert len(patches) == 1
+        RestoreRevisionToWorkdir.invoke(self, patches[0], old=False)
+
+    def restoreOldRevision(self):
+        patches = list(self.selectedPatches())
+        assert len(patches) == 1
+        RestoreRevisionToWorkdir.invoke(self, patches[0], old=True)
 
     def saveRevisionAsTempFile(self, patch: Patch, beforeCommit: bool = False):
         try:

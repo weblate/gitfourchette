@@ -61,6 +61,7 @@ from gitfourchette.tasks.indextasks import (
     StageFiles,
     UnstageFiles,
     UnstageModeChanges,
+    RestoreRevisionToWorkdir,
 )
 
 from gitfourchette.tasks.stashtasks import (

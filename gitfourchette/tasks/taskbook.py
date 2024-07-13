@@ -80,6 +80,7 @@ class TaskBook:
             tasks.RenameBranchFolder: translate("task", "Rename local branch folder"),
             tasks.RenameRemoteBranch: translate("task", "Rename branch on remote"),
             tasks.ResetHead: translate("task", "Reset HEAD"),
+            tasks.RestoreRevisionToWorkdir: translate("task", "Restore file revision"),
             tasks.RevertCommit: translate("task", "Revert commit"),
             tasks.RevertPatch: translate("task", "Revert selected text", "partial patch from selected text in diff"),
             tasks.SetUpGitIdentity: translate("task", "Git identity"),
