@@ -196,7 +196,8 @@ class TrTables:
     def _init_prefKeys():
         return {
             "general": translate("Prefs", "General"),
-            "diff": translate("Prefs", "Diff"),
+            "diff": translate("Prefs", "Code Diff"),
+            "imageDiff": translate("Prefs", "Image Diff"),
             "tabs": translate("Prefs", "Tabs"),
             "graph": translate("Prefs", "Commit History"),
             "trash": translate("Prefs", "Trash"),
@@ -229,6 +230,7 @@ class TrTables:
                 "Prefs",
                 "Tick this if you have trouble distinguishing red and green. "
                 "The diff will use a yellow and blue color scheme instead."),
+            "renderSvg": translate("Prefs", "Treat SVG files as"),
 
             "tabCloseButton": translate("Prefs", "Show tab close button"),
             "expandingTabs": translate("Prefs", "Expand tabs to available width"),

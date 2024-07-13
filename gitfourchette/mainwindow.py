@@ -1067,6 +1067,7 @@ class MainWindow(QMainWindow):
             "imageFileThresholdKB",
             "contextLines",
             "maxCommits",
+            "renderSvg",
         ]
 
         warnIfChanged = [

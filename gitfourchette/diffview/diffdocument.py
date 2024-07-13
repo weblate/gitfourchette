@@ -104,6 +104,12 @@ class DiffDocument:
         if patch.delta.is_binary:
             raise SpecialDiffError.binaryDiff(patch.delta, locator)
 
+        # Render SVG file if user wants to.
+        if (settings.prefs.renderSvg
+                and patch.delta.new_file.path.lower().endswith(".svg")
+                and isImageFormatSupported("file.svg")):
+            raise SpecialDiffError.binaryDiff(patch.delta, locator)
+
         # Special formatting for TYPECHANGE.
         if patch.delta.status == DeltaStatus.TYPECHANGE:
             raise SpecialDiffError.typeChange(patch.delta)

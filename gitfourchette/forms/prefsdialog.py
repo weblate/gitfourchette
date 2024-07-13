@@ -242,6 +242,8 @@ class PrefsDialog(QDialog):
             control = self.boundedIntControl(key, value, 0, 999_999_999, 1000)
             control.setSpecialValueText("\u221E")  # infinity
             return control
+        elif key == "renderSvg":
+            return self.boolComboBoxControl(key, value, falseName=self.tr("Text"), trueName=self.tr("Image"))
         elif key == "externalEditor":
             return self.strControlWithPresets(key, value, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
         elif key == "externalDiff":

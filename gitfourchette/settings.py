@@ -167,10 +167,13 @@ class Prefs(PrefsFile):
     contextLines                : int                   = 3
     tabSpaces                   : int                   = 4
     largeFileThresholdKB        : int                   = 500
-    imageFileThresholdKB        : int                   = 5000
     wordWrap                    : bool                  = False
     showStrayCRs                : bool                  = True
     colorblind                  : bool                  = False
+
+    _category_imageDiff         : int                   = 0
+    imageFileThresholdKB        : int                   = 5000
+    renderSvg                   : bool                  = False
 
     _category_graph             : int                   = 0
     chronologicalOrder          : bool                  = True
