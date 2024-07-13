@@ -5,6 +5,10 @@ Library of widgets and utilities that aren't specifically tied to GitFourchette'
 from .actiondef import ActionDef
 from .autohidemenubar import AutoHideMenuBar
 from .benchmark import Benchmark, benchmark
+from .fittedtext import (
+    fitText,
+    drawFittedText,
+)
 from .excutils import shortenTracebackPath, excStrings
 from .gitutils import (
     shortHash, dumpTempBlob, nameValidationMessage,

@@ -2,7 +2,7 @@ import enum
 
 from gitfourchette.qt import *
 from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarModel, EItem, UNINDENT_ITEMS
-from gitfourchette.toolbox import stockIcon
+from gitfourchette.toolbox import stockIcon, drawFittedText
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
 PE_COLLAPSED = QStyle.PrimitiveElement.PE_IndicatorArrowRight
@@ -142,8 +142,12 @@ class SidebarDelegate(QStyledItemDelegate):
         font: QFont = index.data(Qt.ItemDataRole.FontRole) or option.font
         painter.setFont(font)
         fullText = index.data(Qt.ItemDataRole.DisplayRole)
-        text = painter.fontMetrics().elidedText(fullText, option.textElideMode, textRect.width())
-        painter.drawText(textRect, option.displayAlignment, text)
+        isCannedString = node.kind <= EItem.SubmodulesHeader
+        if not isCannedString:
+            drawFittedText(painter, textRect, option.displayAlignment, fullText, option.textElideMode)
+        else:
+            text = painter.fontMetrics().elidedText(fullText, Qt.TextElideMode.ElideMiddle, textRect.width())
+            painter.drawText(textRect, option.displayAlignment, text)
 
         # Draw eye
         if makeRoomForEye:

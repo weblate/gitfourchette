@@ -41,6 +41,7 @@ ELISION_LENGTH = len(ELISION)
 MAX_AUTHOR_CHARS = {
     AuthorDisplayStyle.INITIALS: 7,
     AuthorDisplayStyle.FULL_NAME: 20,
+    AuthorDisplayStyle.FULL_EMAIL: 24,
 }
 
 
@@ -62,9 +63,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.activeCommitFont = QFont()
         self.uncommittedFont = QFont()
         self.refboxFont = QFont()
-        self.refboxFontMetrics = QFontMetricsF(self.refboxFont)
         self.homeRefboxFont = QFont()
-        self.homeRefboxFontMetrics = QFontMetricsF(self.homeRefboxFont)
 
     def invalidateMetrics(self):
         self.mustRefreshMetrics = True
@@ -84,11 +83,9 @@ class CommitLogDelegate(QStyledItemDelegate):
         self.uncommittedFont.setItalic(True)
 
         self.refboxFont = QFont(option.font)
-        self.refboxFontMetrics = QFontMetricsF(self.refboxFont)
 
         self.homeRefboxFont = QFont(self.refboxFont)
         self.homeRefboxFont.setWeight(QFont.Weight.Bold)
-        self.homeRefboxFontMetrics = QFontMetricsF(self.homeRefboxFont)
 
         wideDate = QDateTime.fromString("2999-12-25T23:59:59.999", Qt.DateFormat.ISODate)
         dateText = option.locale.toString(wideDate, settings.prefs.shortTimeFormat)
@@ -311,7 +308,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         if authorWidth != 0:
             rect.setLeft(leftBoundName)
             rect.setRight(leftBoundDate - XMARGIN)
-            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter, elide(authorText))
+            drawFittedText(painter, rect, Qt.AlignmentFlag.AlignVCenter, authorText, minStretch=QFont.Stretch.ExtraCondensed)
 
         # ------ Highlight searched author
         if searchTerm and commit:
@@ -359,11 +356,9 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         if isHome:
             font = self.homeRefboxFont
-            fontMetrics = self.homeRefboxFontMetrics
             icon = "git-head"
         else:
             font = self.refboxFont
-            fontMetrics = self.refboxFontMetrics
 
         painter.setFont(font)
         painter.setPen(color)
@@ -379,9 +374,9 @@ class CommitLogDelegate(QStyledItemDelegate):
         else:
             iconSize = 0
 
+        text, fittedFont, textWidth = fitText(font, 111, text, Qt.TextElideMode.ElideMiddle, minStretch=QFont.Stretch.ExtraCondensed)
+
         boxRect = QRect(rect)
-        text = fontMetrics.elidedText(text, Qt.TextElideMode.ElideMiddle, 100)
-        textWidth = int(fontMetrics.horizontalAdvance(text))  # must be int for pyqt5 compat!
         boxRect.setWidth(hPadding + iconSize + 2 + textWidth + hPadding)
 
         frameRect = QRectF(boxRect)
@@ -398,7 +393,9 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         textRect = QRect(boxRect)
         textRect.adjust(0, 0, -hPadding, 0)
+        painter.setFont(fittedFont)
         painter.drawText(textRect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, text)
+        painter.setFont(font)
 
         # Advance caller rectangle
         rect.setLeft(boxRect.right() + 6)
