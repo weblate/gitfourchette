@@ -150,6 +150,7 @@ class TaskBook:
 
         cls.icons = {
             tasks.AmendCommit: "git-commit-amend", #"document-save-as",
+            tasks.CherrypickCommit: "git-cherrypick",
             tasks.DeleteBranch: "vcs-branch-delete",
             tasks.DeleteRemote: "SP_TrashIcon",
             tasks.DeleteRemoteBranch: "SP_TrashIcon",

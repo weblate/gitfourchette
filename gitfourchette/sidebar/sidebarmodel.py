@@ -597,7 +597,7 @@ class SidebarModel(QAbstractItemModel):
             elif refRole:
                 return "HEAD"
             elif iconKeyRole:
-                return "achtung"
+                return "git-head-detached"
 
         elif item == EItem.Remote:
             remoteName = node.data

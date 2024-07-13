@@ -27,7 +27,7 @@ REFBOXES = [
     RefBox("refs/heads/", "git-branch", QColor(Qt.GlobalColor.darkMagenta)),
 
     # detached HEAD as returned by Repo.map_commits_to_refs
-    RefBox("HEAD", "achtung", QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
+    RefBox("HEAD", "git-head-detached", QColor(Qt.GlobalColor.darkRed), keepPrefix=True),
 
     # Fallback
     RefBox("", "hint", QColor(Qt.GlobalColor.gray), keepPrefix=True)
