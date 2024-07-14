@@ -51,10 +51,6 @@ class SidebarDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         node = SidebarNode.fromIndex(index)
 
-        # Don't draw spacers at all (Windows theme has mouse hover effect by default)
-        if node.kind == EItem.Spacer:
-            return
-
         view = option.widget
         sidebarModel: SidebarModel = view.sidebarModel
         style: QStyle = view.style()
@@ -72,29 +68,28 @@ class SidebarDelegate(QStyledItemDelegate):
 
         painter.save()
 
-        if not node.parent.parent and node.kind != EItem.UncommittedChanges:
+        if node.kind == EItem.Spacer:
+            mouseOver = False
+            option.state &= ~QStyle.StateFlag.State_MouseOver
+
             r = QRect(option.rect)
             r.setLeft(0)
+            middle = r.top() + int(r.height() / 2)
 
-            tc0 = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
-            tc1 = QColor(tc0); tc1.setAlpha(0)
-            tc2 = QColor(tc0); tc2.setAlpha(20)
-            tc3 = QColor(tc0); tc3.setAlpha(33)
-            lineGradient = QLinearGradient(r.left(), 0, r.right(), 0)
+            tc1 = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
+            tc2 = QColor(tc1)
+            tc1.setAlpha(0)
+            tc2.setAlpha(33)
+            lineGradient = QLinearGradient(r.left() + PADDING, middle, r.right() - PADDING, middle)
             lineGradient.setColorAt(0, tc1)
-            lineGradient.setColorAt(.33, tc3)
-            lineGradient.setColorAt(.66, tc3)
+            lineGradient.setColorAt(.2, tc2)
+            lineGradient.setColorAt(1-.2, tc2)
             lineGradient.setColorAt(1, tc1)
-            fillGradient = QLinearGradient(0, r.bottom(), 0, r.bottom()-r.height()*.8)
-            fillGradient.setColorAt(1, tc2)
-            fillGradient.setColorAt(0, tc1)
 
             painter.save()
             painter.setPen(QPen(lineGradient, 1))
-            painter.drawLine(0, option.rect.top(), option.rect.right(), option.rect.top())
-            painter.fillRect(r, fillGradient)
+            painter.drawLine(r.left() + PADDING, middle, r.right() - PADDING, middle)
             painter.restore()
-            # option.displayAlignment = Qt.AlignmentFlag.AlignCenter
 
         # Unindent rect
         SidebarDelegate.unindentRect(node.kind, option.rect, view.indentation())
@@ -121,6 +116,9 @@ class SidebarDelegate(QStyledItemDelegate):
         if isSelected:
             penColor = option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText)
             iconColorRemapTable = f"gray={penColor.name()}"
+        elif not node.parent.parent and node.kind != EItem.UncommittedChanges:
+            penColor = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
+            penColor.setAlphaF(.66)
         else:
             penColor = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
         painter.setPen(penColor)

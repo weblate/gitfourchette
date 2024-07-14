@@ -118,6 +118,7 @@ class PrefsDialog(QDialog):
                     explainer = QLabel(headerText)
                     explainer.setWordWrap(True)
                     explainer.setTextFormat(Qt.TextFormat.RichText)
+                    tweakWidgetFont(explainer, 88)
                     form.addRow(explainer)
 
             # Make the actual control widget

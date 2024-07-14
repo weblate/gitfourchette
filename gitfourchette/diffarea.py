@@ -15,15 +15,27 @@ from gitfourchette.forms.contextheader import ContextHeader
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavContext
 from gitfourchette.qt import *
-from gitfourchette.tasks import TaskBook, AmendCommit, NewCommit
+from gitfourchette.tasks import TaskBook, AmendCommit, NewCommit, NewStash
 from gitfourchette.toolbox import *
 
 FileStackPage = Literal["workdir", "commit"]
 DiffStackPage = Literal["text", "special", "conflict"]
 
-FILEHEADER_HEIGHT = 20
+FILEHEADER_HEIGHT = 24
 
 logger = logging.getLogger(__name__)
+
+
+class FaintSeparator(QFrame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setFrameStyle(QFrame.Shape.HLine)
+        self.setMaximumHeight(1)
+        self.setEnabled(False)
+
+
+def gridPadding():
+    return QSpacerItem(3, 1, QSizePolicy.Policy.Fixed)
 
 
 class DiffArea(QWidget):
@@ -45,17 +57,12 @@ class DiffArea(QWidget):
         diffBanner.setProperty("class", "diff")
         diffBanner.setVisible(False)
 
-        separator = QFrame(self)
-        separator.setFrameStyle(QFrame.Shape.HLine)
-        separator.setMaximumHeight(1)
-        separator.setEnabled(False)
-
         layout = QVBoxLayout(self)
         layout.setContentsMargins(QMargins())
         layout.setSpacing(0)
         layout.addWidget(contextHeader)
         layout.addWidget(diffBanner)
-        layout.addWidget(separator)
+        layout.addWidget(FaintSeparator(self))
         layout.addWidget(splitter, 1)
 
         splitter.addWidget(fileStack)
@@ -101,6 +108,7 @@ class DiffArea(QWidget):
         header.setObjectName("dirtyHeader")
         header.setToolTip(self.tr("Unstaged files: will not be included in the commit unless you stage them."))
         header.setMinimumHeight(FILEHEADER_HEIGHT)
+        header.setEnabled(False)
 
         dirtyFiles = DirtyFiles(self)
 
@@ -126,18 +134,24 @@ class DiffArea(QWidget):
         discardButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         discardButton.setAutoRaise(True)
         discardButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        discardButton.setContentsMargins(0, 0, 4, 0)
         appendShortcutToToolTip(discardButton, GlobalShortcuts.discardHotkeys[0])
 
         container = QWidget()
         layout = QGridLayout(container)
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
         layout.setContentsMargins(QMargins())
-        layout.addWidget(header,                0, 0)
-        layout.addWidget(discardButton,         0, 1)
-        layout.addWidget(stageButton,           0, 2)
-        layout.addItem(QSpacerItem(1, 1),       1, 0)
-        layout.addWidget(dirtyFiles.searchBar,  2, 0, 1, 3)
-        layout.addWidget(dirtyFiles,            3, 0, 1, 3)
+        # Row 0
+        layout.addItem(gridPadding(),           0, 0)
+        layout.addWidget(header,                0, 1)
+        layout.addWidget(discardButton,         0, 2)
+        layout.addWidget(stageButton,           0, 3)
+        # Row 1
+        layout.addItem(QSpacerItem(1, 1),       1, 0, 1, 4)
+        # Row 2
+        layout.addWidget(dirtyFiles.searchBar,  2, 0, 1, 4)
+        # Row 3
+        layout.addWidget(dirtyFiles,            3, 0, 1, 4)
         layout.setRowStretch(3, 100)
 
         stageButton.clicked.connect(dirtyFiles.stage)
@@ -157,6 +171,7 @@ class DiffArea(QWidget):
         header.setObjectName("stagedHeader")
         header.setToolTip(self.tr("Staged files: will be included in the commit."))
         header.setMinimumHeight(FILEHEADER_HEIGHT)
+        header.setEnabled(False)
 
         stagedFiles = StagedFiles(self)
 
@@ -190,7 +205,14 @@ class DiffArea(QWidget):
         commitButton.clicked.connect(lambda: NewCommit.invoke(self))
         commitButtonMenu = ActionDef.makeQMenu(
             commitButton,
-            [ ActionDef(self.tr("Amend Last Commit..."), lambda: AmendCommit.invoke(self), icon="git-commit-amend")])
+            [
+                TaskBook.action(self, NewCommit),
+                TaskBook.action(self, AmendCommit),
+                TaskBook.action(self, NewStash),
+            ])
+        # Prevent shortcuts from taking over
+        for action in commitButtonMenu.actions():
+            action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
         commitButton.setMenu(commitButtonMenu)
 
         # Lay out container
@@ -198,12 +220,16 @@ class DiffArea(QWidget):
         layout = QGridLayout(container)
         layout.setContentsMargins(QMargins())
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
-        layout.addWidget(header,                0, 0)
-        layout.addWidget(unstageButton,         0, 1)
+        # Row 0
+        layout.addItem(gridPadding(),           0, 0)
+        layout.addWidget(header,                0, 1)
+        layout.addWidget(unstageButton,         0, 2)
+        # Row 1
         layout.addItem(QSpacerItem(1, 1),       1, 0)
-        layout.addWidget(stagedFiles.searchBar, 2, 0, 1, 2)  # row col rowspan colspan
-        layout.addWidget(stagedFiles,           3, 0, 1, 2)
-        layout.addWidget(commitButton,          4, 0, 1, 2)
+        # Row 2
+        layout.addWidget(stagedFiles.searchBar, 2, 0, 1, 3)  # row col rowspan colspan
+        layout.addWidget(stagedFiles,           3, 0, 1, 3)
+        layout.addWidget(commitButton,          4, 0, 1, 3)
         layout.setRowStretch(3, 100)
 
         # Save references
@@ -220,15 +246,18 @@ class DiffArea(QWidget):
         header = QElidedLabel(" ")
         header.setObjectName("committedHeader")
         header.setMinimumHeight(FILEHEADER_HEIGHT)
+        header.setEnabled(False)
 
         container = QWidget()
-        layout = QVBoxLayout(container)
+        layout = QGridLayout(container)
         layout.setContentsMargins(QMargins())
         layout.setSpacing(0)  # automatic frameless list views on KDE Plasma 6 Breeze
-        layout.addWidget(header)
-        layout.addWidget(committedFiles.searchBar)
-        layout.addSpacing(1)
-        layout.addWidget(committedFiles)
+        layout.addItem(gridPadding(),               0, 0)
+        layout.addWidget(header,                    0, 1)
+        layout.addItem(gridPadding(),               0, 2)
+        layout.addWidget(committedFiles.searchBar,  1, 0, 1, 3)
+        layout.addItem(QSpacerItem(1, 1),           2, 0, 1, 3)
+        layout.addWidget(committedFiles,            3, 0, 1, 3)
 
         self.committedFiles = committedFiles
         self.committedHeader = header

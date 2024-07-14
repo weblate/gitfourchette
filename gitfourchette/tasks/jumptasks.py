@@ -119,8 +119,8 @@ class Jump(RepoTask):
 
             nDirty = rw.dirtyFiles.model().rowCount()
             nStaged = rw.stagedFiles.model().rowCount()
-            rw.diffArea.dirtyHeader.setText(self.tr("%n unstaged:", "", nDirty))
-            rw.diffArea.stagedHeader.setText(self.tr("%n staged:", "", nStaged))
+            rw.diffArea.dirtyHeader.setText(self.tr("Unstaged (%n)", "", nDirty))
+            rw.diffArea.stagedHeader.setText(self.tr("Staged (%n)", "", nStaged))
             rw.diffArea.commitButton.setText(self.tr("Commit %n files", "", nStaged))
 
             commitButtonFont = rw.diffArea.commitButton.font()
