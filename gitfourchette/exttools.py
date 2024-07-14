@@ -17,7 +17,13 @@ PREFKEY_MERGETOOL = "externalMerge"
 
 
 def openPrefsDialog(parent: QWidget, prefKey: str):
-    parent.window().openPrefsDialog(prefKey)
+    from gitfourchette.mainwindow import MainWindow
+    while parent:
+        if isinstance(parent, MainWindow):
+            parent.openPrefsDialog(prefKey)
+            break
+        else:
+            parent = parent.parentWidget()
 
 
 def onLocateTool(prefKey: str, newPath: str):
