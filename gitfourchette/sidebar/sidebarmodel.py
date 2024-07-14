@@ -387,7 +387,8 @@ class SidebarModel(QAbstractItemModel):
             remoteNode = remoteRoot.findChild(EItem.Remote, remote)
             assert remoteNode is not None
             branches.sort(key=str.lower)  # Sort remote branches
-            self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, f"{RefPrefix.REMOTES}{remote}/")
+            remotePrefix = f"{RefPrefix.REMOTES}{remote}/"
+            self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, remotePrefix)
 
         # -----------------------------
         # Stashes
@@ -450,7 +451,7 @@ class SidebarModel(QAbstractItemModel):
                 except KeyError:
                     parts.pop()
             else:
-                folderNode.displayName = RefPrefix.split(folderNode.data)[1]
+                folderNode.displayName = folderNode.data.removeprefix(refNamePrefix)
                 containerNode.appendChild(folderNode)
 
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
