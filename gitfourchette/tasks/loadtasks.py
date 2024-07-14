@@ -85,8 +85,6 @@ class PrimeRepo(RepoTask):
         # Prime the walker (this might take a while)
         walker = repoModel.primeWalker()
 
-        repoModel.syncHeadCommitId()
-
         commitSequence: list[Commit | None] = []
 
         # Retrieve the number of commits that we loaded last time we opened this repo

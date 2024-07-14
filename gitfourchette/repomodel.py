@@ -54,9 +54,6 @@ class RepoModel:
     superproject: str
     "Path of the superproject. Empty string if this isn't a submodule."
 
-    headCommitId: Oid
-    "Oid of the currently checked-out commit."
-
     foreignCommits: set[Oid]
     """Use this to look up which commits are part of local branches,
     and which commits are 'foreign'."""
@@ -88,7 +85,6 @@ class RepoModel:
         self.graph = None
 
         self.headIsDetached = False
-        self.headCommitId = NULL_OID
         self.homeBranch = ""
 
         self.superproject = ""
@@ -124,6 +120,14 @@ class RepoModel:
     def numRealCommits(self):
         # The first item in the commit sequence is the "fake commit" for Uncommitted Changes.
         return max(0, len(self.commitSequence) - 1)
+
+    @property
+    def headCommitId(self) -> Oid:
+        """ Oid of the currently checked-out commit. """
+        try:
+            return self.refs["HEAD"]
+        except GitError:
+            return NULL_OID
 
     @benchmark
     def syncRefs(self):
@@ -247,14 +251,6 @@ class RepoModel:
             self.walker.push(tip)
 
         return self.walker
-
-    def syncHeadCommitId(self):
-        oldHead = self.headCommitId
-        try:
-            self.headCommitId = self.repo.head.target
-        except GitError:
-            self.headCommitId = NULL_OID
-        return oldHead != self.headCommitId
 
     def _uncommittedChangesFakeCommitParents(self):
         try:

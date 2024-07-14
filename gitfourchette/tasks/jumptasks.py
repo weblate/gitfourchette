@@ -533,7 +533,6 @@ class RefreshRepo(RepoTask):
             # Load commits from changed refs only
             if refsChanged:
                 self.syncTopOfGraph(oldRefs)
-                repoModel.syncHeadCommitId()
 
         # Schedule a repaint of the entire GraphView if the refs changed
         if effectFlags & (TaskEffects.Head | TaskEffects.Refs):
