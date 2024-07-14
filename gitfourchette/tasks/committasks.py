@@ -335,6 +335,12 @@ class RevertCommit(RepoTask):
         # TODO: Remove this when we can stop supporting pygit2 <= 1.15.0
         pygit2_version_at_least("1.15.1")
 
+        text = paragraphs(
+            self.tr("Do you want to revert commit {0}?"),
+            self.tr("You will have an opportunity to review the affected files in your working directory."),
+        ).format(btag(shortHash(oid)))
+        yield from self.flowConfirm(text=text)
+
         yield from self.flowEnterWorkerThread()
         repoModel = self.repoModel
         repo = self.repo

@@ -336,6 +336,7 @@ def testRevertCommit(tempDir, mainWindow):
     oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
+    acceptQMessageBox(rw, "do you want to revert")
     acceptQMessageBox(rw, "reverting.+c9ed7bf.+successful")
 
     commitDialog: CommitDialog = rw.findChild(CommitDialog)
@@ -356,6 +357,7 @@ def testAbortRevertCommit(tempDir, mainWindow):
     oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     rw.jump(NavLocator.inCommit(oid))
     triggerMenuAction(rw.graphView.makeContextMenu(), "revert")
+    acceptQMessageBox(rw, "do you want to revert")
     rejectQMessageBox(rw, "reverting.+c9ed7bf.+successful")
 
     assert rw.repo.state() == RepositoryState.REVERT
