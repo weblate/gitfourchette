@@ -413,6 +413,7 @@ class RepoTask(QObject):
             detailList: list[str] | None = None,
             dontShowAgainKey: str = "",
             canCancel: bool = True,
+            icon: MessageBoxIconName = "",
     ):
         """
         Ask the user to confirm the operation via a message box.
@@ -438,12 +439,12 @@ class RepoTask(QObject):
 
         buttonMask = QMessageBox.StandardButton.Ok
         if canCancel:
-            iconName = "question"
+            icon = icon or "question"
             buttonMask |= QMessageBox.StandardButton.Cancel
         else:
-            iconName = "information"
+            icon = icon or "information"
 
-        qmb = asyncMessageBox(self.parentWidget(), iconName, title, text, buttonMask)
+        qmb = asyncMessageBox(self.parentWidget(), icon, title, text, buttonMask)
 
         dontShowAgainCheckBox = None
         if dontShowAgainKey:

@@ -60,8 +60,8 @@ def paragraphs(*args) -> str:
 
 
 def _quotePattern(text, htm=True):
-    q = tr("&ldquo;{0}&rdquo;", "Typographic quotes in your language. "
-                                "Will surround user strings throughout the app.")
+    q = tr("“{0}”", "Typographic quotes in your language. "
+                    "Will surround user strings throughout the app.")
     if not htm:
         q = html.unescape(q)
     return q.format(text)

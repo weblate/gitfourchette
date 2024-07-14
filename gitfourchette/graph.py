@@ -550,7 +550,7 @@ class Frame:
         gridLoStr = ''.join(gridLo)
 
         text = ""
-        text += F"{int(self.row):<4} {int(homeChain.topRow):<4} {self.commit[:4]:>4} {gridHiStr}\n"
+        text += F"{int(self.row):<4} {int(homeChain.topRow):<4} {str(self.commit)[:4]:>4} {gridHiStr}\n"
         if any(c in gridLoStr for c in "╭╮╰╯"):
             text += F"{' ' * 14} {gridLoStr} {junctionExplainer}\n"
         return text

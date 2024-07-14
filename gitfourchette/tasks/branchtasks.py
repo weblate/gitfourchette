@@ -19,7 +19,9 @@ class SwitchBranch(RepoTask):
     def flow(self, newBranch: str, askForConfirmation: bool):
         assert not newBranch.startswith(RefPrefix.HEADS)
 
-        if self.repo.branches.local[newBranch].is_checked_out():
+        branchObj: Branch = self.repo.branches.local[newBranch]
+
+        if branchObj.is_checked_out():
             message = self.tr("Branch {0} is already checked out.").format(bquo(newBranch))
             raise AbortTask(message, 'information')
 
@@ -27,6 +29,13 @@ class SwitchBranch(RepoTask):
             text = self.tr("Do you want to switch to branch {0}?").format(bquo(newBranch))
             verb = self.tr("Switch")
             yield from self.flowConfirm(text=text, verb=verb)
+
+        if self.repoModel.dangerouslyDetachedHead() and branchObj.target != self.repoModel.headCommitId:
+            text = paragraphs(
+                self.tr("You are in <b>Detached HEAD</b> mode at commit {0}."),
+                self.tr("You might lose track of this commit if you carry on switching to {1}."),
+            ).format(btag(shortHash(self.repoModel.headCommitId)), hquo(newBranch))
+            yield from self.flowConfirm(text=text, icon='warning')
 
         yield from self.flowEnterWorkerThread()
         self.repo.checkout_local_branch(newBranch)
@@ -280,10 +289,23 @@ class _NewBranchBaseTask(RepoTask):
 
         # Switch to it last (if user wants to)
         if switchTo:
+            if self.repoModel.dangerouslyDetachedHead() and tip != self.repoModel.headCommitId:
+                yield from self.flowEnterUiThread()
+
+                # Refresh GraphView underneath dialog
+                from gitfourchette.tasks import RefreshRepo
+                yield from self.flowSubtask(RefreshRepo)
+
+                text = paragraphs(
+                    self.tr("You are in <b>Detached HEAD</b> mode at commit {0}."),
+                    self.tr("You might lose track of this commit if you switch to the new branch."),
+                ).format(btag(shortHash(self.repoModel.headCommitId)))
+                yield from self.flowConfirm(text=text, icon='warning', verb=self.tr("Switch to {0}").format(lquoe(localName)), cancelText=self.tr("Don’t Switch"))
+
             repo.checkout_local_branch(localName)
 
     def effects(self):
-        return TaskEffects.Refs
+        return TaskEffects.Refs | TaskEffects.Head
 
 
 class NewBranchFromHead(_NewBranchBaseTask):
