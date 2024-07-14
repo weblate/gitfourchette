@@ -260,7 +260,7 @@ class Jump(RepoTask):
             if isStash:
                 rw.sidebar.selectAnyRef(f"stash@{{{stashIndex}}}")
             else:
-                refCandidates = rw.repoModel.refsByOid.get(locator.commit, [])
+                refCandidates = rw.repoModel.refsAt.get(locator.commit, [])
                 rw.sidebar.selectAnyRef(*refCandidates)
 
         flv = area.committedFiles

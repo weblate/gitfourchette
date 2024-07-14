@@ -7,6 +7,7 @@ from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.graphview.commitlogmodel import CommitLogModel
 from gitfourchette.nav import NavLocator
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem
 from . import reposcenario
 from .util import *
 
@@ -295,6 +296,30 @@ def testCheckoutCommitDetachedHead(tempDir, mainWindow, method):
         assert repo.head_commit_id == oid
 
         assert rw.graphView.currentCommitId == oid, "graphview's selected commit has jumped around"
+
+
+def testDetachHeadOnSameCommitAsCheckedOutBranch(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    headId = rw.repo.head_commit_id
+    assert not rw.repo.head_is_detached
+    assert not list(rw.sidebar.findNodesByKind(EItem.DetachedHead))
+
+    triggerMenuAction(mainWindow.menuBar(), "view/go to head commit")
+    rw.graphView.setFocus()
+    QTest.keyPress(rw.graphView, Qt.Key.Key_Return)
+
+    dlg = findQDialog(rw, "check.?out commit")
+    dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)
+    dlg.accept()
+
+    assert rw.repo.head_is_detached
+    assert rw.repo.head_commit_id == headId
+
+    # Sidebar must now reflect detached HEAD
+    currentSidebarNode = SidebarNode.fromIndex(rw.sidebar.currentIndex())
+    assert currentSidebarNode.kind == EItem.DetachedHead
 
 
 def testCommitOnDetachedHead(tempDir, mainWindow):

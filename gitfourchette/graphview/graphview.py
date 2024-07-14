@@ -106,8 +106,8 @@ class GraphView(QListView):
             # Merge actions
             if repoModel.homeBranch:
                 with suppress(KeyError, StopIteration):
-                    rrc = repoModel.refsByOid[oid]
-                    target = next(ref for ref in rrc if ref.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
+                    refsHere = repoModel.refsAt[oid]
+                    target = next(ref for ref in refsHere if ref.startswith((RefPrefix.HEADS, RefPrefix.REMOTES)))
                     mergeCaption = self.tr("&Merge into {0}...").format(lquo(repoModel.homeBranch))
                     mergeActions = [
                         TaskBook.action(self, MergeBranch, name=mergeCaption, taskArgs=(target,)),

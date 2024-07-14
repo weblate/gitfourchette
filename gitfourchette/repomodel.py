@@ -40,10 +40,10 @@ class RepoModel:
     graph: Graph | None
 
     refs: dict[str, Oid]
-    "Maps reference names to commit oids"
+    "Get target commit ID by reference name."
 
-    refsByOid: dict[Oid, list[str]]
-    "Maps commit oids to reference names pointing to this commit"
+    refsAt: dict[Oid, list[str]]
+    "Get all reference names pointing at a given commit ID."
 
     mergeheads: list[Oid]
 
@@ -96,7 +96,7 @@ class RepoModel:
         self.numUncommittedChanges = 0
 
         self.refs = {}
-        self.refsByOid = {}
+        self.refsAt = {}
         self.mergeheads = []
         self.stashes = []
         self.submodules = {}
@@ -127,12 +127,13 @@ class RepoModel:
 
     @benchmark
     def syncRefs(self):
-        """ Refresh refCache and reverseRefCache.
+        """ Refresh cached refs (`refs` and `refsAt`).
 
         Return True if there were any changes in the refs since the last
         refresh, or False if nothing changed.
         """
 
+        headWasDetached = self.headIsDetached
         self.headIsDetached = self.repo.head_is_detached
 
         if self.headIsDetached or self.repo.head_is_unborn:
@@ -140,26 +141,38 @@ class RepoModel:
         else:
             self.homeBranch = self.repo.head_branch_shorthand
 
-        refCache = self.repo.map_refs_to_ids(include_stashes=False)
+        refs = self.repo.map_refs_to_ids(include_stashes=False)
 
-        if refCache == self.refs:
+        if refs == self.refs:
             # Make sure it's sorted in the exact same order...
             if settings.DEVDEBUG:
-                assert list(refCache.keys()) == list(self.refs.keys()), "refCache key order changed! how did that happen?"
+                assert list(refs.keys()) == list(self.refs.keys()), "refs key order changed! how did that happen?"
 
             # Nothing to do!
-            return False
+            # Still, signal a change if HEAD just detached/reattached.
+            return headWasDetached != self.headIsDetached
 
-        reverseRefCache = defaultdict(list)
-        for k, v in refCache.items():
-            reverseRefCache[v].append(k)
+        # Build reverse ref cache
+        refsAt = defaultdict(list)
+        for k, v in refs.items():
+            refsAt[v].append(k)
 
-        self.refs = refCache
-        self.refsByOid = reverseRefCache
+        # Special case for HEAD: Make it appear first in reverse ref cache
+        try:
+            headId = refs["HEAD"]
+            refsAt[headId].remove("HEAD")
+            refsAt[headId].insert(0, "HEAD")
+        except KeyError:
+            pass
+
+        # Store new cache
+        self.refs = refs
+        self.refsAt = refsAt
 
         # Since the refs have changed, we need to refresh hidden refs
         self.refreshHiddenRefCache()
 
+        # Let caller know that the refs changed.
         return True
 
     @benchmark
@@ -261,7 +274,7 @@ class RepoModel:
             return False
 
         try:
-            headTips = self.refsByOid[self.headCommitId]
+            headTips = self.refsAt[self.headCommitId]
         except KeyError:
             return False
 
@@ -388,7 +401,7 @@ class RepoModel:
 
         def isSharedByVisibleBranch(oid: Oid):
             return any(
-                ref for ref in self.refsByOid[oid]
+                ref for ref in self.refsAt[oid]
                 if ref not in hiddenRefs and not ref.startswith(RefPrefix.TAGS))
 
         for ref in hiddenRefs:
@@ -450,7 +463,7 @@ class RepoModel:
     def newForeignCommitSolver(self) -> GraphTrickle:
         trickle = GraphTrickle()
 
-        for oid, refList in self.refsByOid.items():
+        for oid, refList in self.refsAt.items():
             assert oid not in trickle.frontier
             isLocal = any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList)
             if isLocal:

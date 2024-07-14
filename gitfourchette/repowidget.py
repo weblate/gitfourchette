@@ -796,7 +796,7 @@ class RepoWidget(QStackedWidget):
             bannerTitle = self.tr("Merging")
             try:
                 mergehead = self.repoModel.mergeheads[0]
-                name = self.repoModel.refsByOid[mergehead][0]
+                name = self.repoModel.refsAt[mergehead][0]
                 name = RefPrefix.split(name)[1]
                 bannerTitle = self.tr("Merging {0}").format(bquo(name))
             except (IndexError, KeyError):

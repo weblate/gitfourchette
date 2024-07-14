@@ -245,6 +245,9 @@ class CheckoutCommit(RepoTask):
             yield from self.flowEnterWorkerThread()
             self.repo.checkout_commit(oid)
 
+            # Force sidebar to select detached HEAD
+            self.jumpTo = NavLocator.inRef("HEAD")
+
         elif ui.switchToLocalBranchRadioButton.isChecked():
             branchName = ui.switchToLocalBranchComboBox.currentText()
             from gitfourchette.tasks.branchtasks import SwitchBranch

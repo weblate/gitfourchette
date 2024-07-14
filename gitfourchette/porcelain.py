@@ -1143,11 +1143,11 @@ class Repo(_VanillaRepository):
 
         # Always add 'HEAD' if we have one.
         # Do so *just* before reinserting the tips in chronological order below.
-        # This causes the checked-out branch to be sorted more favorably if
-        # there is another tip that shares the exact same timestamp.
-        # (This guarantees that the local branch appears on top e.g. when
-        # pushing a branch to a remote, then amending the top commit with the
-        # same author/committer signatures.)
+        # This will sort the checked-out branch at the *end* of the list
+        # if there is another tip that shares the exact same timestamp.
+        # (Refs pushed into Walker are Last-In First-Out, so the local branch will
+        # come out on top e.g. when pushing a branch to a remote, then amending
+        # the top commit with the same author/committer signatures.)
         try:
             tips.append(("HEAD", self.head_commit))
         except (GitError, InvalidSpecError):

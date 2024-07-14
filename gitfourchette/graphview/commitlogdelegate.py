@@ -256,13 +256,13 @@ class CommitLogDelegate(QStyledItemDelegate):
             rect.setRight(rightBound)
 
         # ------ Refboxes
-        if oid in self.repoModel.refsByOid:
+        if oid in self.repoModel.refsAt:
             homeBranch = RefPrefix.HEADS + self.repoModel.homeBranch
             painter.save()
             painter.setClipRect(rect)
             maxRefboxX = painter.clipBoundingRect().right()
             darkRefbox = painter.pen().color().lightnessF() > .5
-            refs = self.repoModel.refsByOid[oid]
+            refs = self.repoModel.refsAt[oid]
             for refName in refs:
                 if refName in self.repoModel.hiddenRefs:  # skip refboxes for hidden refs
                     continue
