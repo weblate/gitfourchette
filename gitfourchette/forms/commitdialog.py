@@ -56,7 +56,7 @@ class CommitDialog(QDialog):
         elif amendingCommitHash:
             warning = self.tr("You are amending commit {0}.").format(lquo(amendingCommitHash))
         elif detachedHead:
-            warning = self.tr("You are not in any branch (detached HEAD). "
+            warning = self.tr("<b>Detached HEAD</b> – You are not in any branch! "
                               "You should create a branch to keep track of your commit.")
 
         self.ui.infoBox.setVisible(bool(warning))

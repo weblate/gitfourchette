@@ -345,8 +345,6 @@ class CommitLogDelegate(QStyledItemDelegate):
         color = refboxDef.color
         bgColor = QColor(color)
         icon = refboxDef.icon
-        if refName == 'HEAD' and self.repoModel.headIsDetached:
-            text = self.tr("detached HEAD")
 
         if dark:
             color = color.lighter(300)
@@ -357,6 +355,9 @@ class CommitLogDelegate(QStyledItemDelegate):
         if isHome:
             font = self.homeRefboxFont
             icon = "git-head"
+        elif refName == 'HEAD' and self.repoModel.headIsDetached:
+            text = self.tr("Detached HEAD")
+            font = self.homeRefboxFont
         else:
             font = self.refboxFont
 
