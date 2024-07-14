@@ -263,3 +263,17 @@ def testApplyStashWithConflicts(tempDir, mainWindow):
     rw.dirtyFiles.selectFile("a/a1.txt")
     assert rw.conflictView.isVisible()
     assert rw.conflictView.currentConflict.ours.path == "a/a1.txt"
+
+
+def testRevealStashParent(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stashedChange(wd)
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.navLocator.commit != rw.repo.head_commit_id
+
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, r"^reveal.+parent")
+
+    assert rw.navLocator.commit == rw.repo.head_commit_id

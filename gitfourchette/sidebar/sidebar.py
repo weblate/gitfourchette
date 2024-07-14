@@ -349,6 +349,10 @@ class Sidebar(QTreeView):
                 ActionDef.SEPARATOR,
 
                 TaskBook.action(self, DropStash, self.tr("&Delete"), taskArgs=oid),
+
+                ActionDef.SEPARATOR,
+
+                ActionDef(self.tr("Reveal &Parent Commit"), lambda: self.revealStashParent(oid)),
             ]
 
         elif item == EItem.TagsHeader:
@@ -709,6 +713,11 @@ class Sidebar(QTreeView):
 
         if event.button() == Qt.MouseButton.LeftButton and node is not None:
             self.wantEnterNode(node)
+
+    def revealStashParent(self, oid: Oid):
+        commit = self.sidebarModel.repo.peel_commit(oid)
+        parent = commit.parent_ids[0]
+        Jump.invoke(self, NavLocator.inCommit(parent))
 
     def walk(self):
         return self.sidebarModel.rootNode.walk()
