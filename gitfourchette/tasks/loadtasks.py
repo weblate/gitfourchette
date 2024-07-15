@@ -149,8 +149,8 @@ class PrimeRepo(RepoTask):
 
         repoModel.hiddenCommits = set()
         repoModel.foreignCommits = set()
-        hiddenCommitSolver = repoModel.newHiddenCommitSolver()
-        foreignCommitSolver = repoModel.newForeignCommitSolver()
+        hiddenTrickle = repoModel.newHiddenCommitTrickle()
+        foreignTrickle = repoModel.newForeignCommitTrickle()
 
         for commit in commitSequence:
             if not commit:
@@ -162,8 +162,8 @@ class PrimeRepo(RepoTask):
 
             graphGenerator.newCommit(oid, parents)
 
-            foreignCommitSolver.newCommit(oid, parents, repoModel.foreignCommits)
-            hiddenCommitSolver.newCommit(oid, parents, repoModel.hiddenCommits)
+            hiddenTrickle.newCommit(oid, parents, repoModel.hiddenCommits)
+            foreignTrickle.newCommit(oid, parents, repoModel.foreignCommits)
 
             row = graphGenerator.row
             rowInt = int(row)

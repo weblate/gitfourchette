@@ -23,11 +23,17 @@ class GraphTrickle:
         frontier = self.frontier
         return all(not frontier[k] for k in self.frontier.keys())
 
-    def newCommit(self, commit: Oid, parents: list[Oid], flaggedSet: set[Oid], discard: bool = False):
+    def newCommit(
+            self,
+            commit: Oid,
+            parents: list[Oid],
+            flaggedSet: set[Oid],
+            discard: bool = False
+    ) -> bool:
         frontier = self.frontier
-        flag = frontier.pop(commit, END)
+        flagged = frontier.pop(commit, END)
 
-        if flag:
+        if flagged:
             # Trickle through parents that are not explicitly flagged
             for p in parents:
                 frontier.setdefault(p, PIPE)
@@ -42,3 +48,5 @@ class GraphTrickle:
 
             if discard:
                 flaggedSet.discard(commit)
+
+        return bool(flagged)

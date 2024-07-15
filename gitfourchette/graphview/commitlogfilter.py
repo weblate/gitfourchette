@@ -21,7 +21,10 @@ class CommitLogFilter(QSortFilterProxyModel):
         # Invalidating the filter can be costly, so avoid if possible
         if self.hiddenIds == hiddenIds:
             return
-        self.hiddenIds = hiddenIds
+        # Duplicate the set so we don't prematurely bail from above
+        # if hidden commits change in the same set object
+        self.hiddenIds = set(hiddenIds)
+        self.invalidateFilter()
 
     def filterAcceptsRow(self, sourceRow: int, sourceParent: QModelIndex) -> bool:
         try:

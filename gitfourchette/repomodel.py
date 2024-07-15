@@ -294,7 +294,7 @@ class RepoModel:
         return arcs[0].openedBy == UC_FAKEID
 
     @benchmark
-    def syncTopOfGraph(self, oldRefs: dict[str, Oid]):
+    def syncTopOfGraph(self, oldRefs: dict[str, Oid]) -> tuple[int, int]:
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
@@ -305,8 +305,8 @@ class RepoModel:
         newHeads = self.refs.values()
 
         graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
-        newHiddenCommitSolver = self.newHiddenCommitSolver()
-        newForeignCommitSolver = self.newForeignCommitSolver()
+        hiddenTrickle = self.newHiddenCommitTrickle()
+        foreignTrickle = self.newForeignCommitTrickle()
 
         # Generate fake "Uncommitted Changes" with HEAD as parent
         newCommitSequence.insert(0, None)
@@ -322,8 +322,8 @@ class RepoModel:
                     newCommitSequence.append(commit)
                     graphSplicer.spliceNewCommit(oid, parents)
 
-                    newHiddenCommitSolver.newCommit(oid, parents, self.hiddenCommits, discard=True)
-                    newForeignCommitSolver.newCommit(oid, parents, self.foreignCommits, discard=True)
+                    hiddenTrickle.newCommit(oid, parents, self.hiddenCommits, discard=True)
+                    foreignTrickle.newCommit(oid, parents, self.foreignCommits, discard=True)
 
                     if not graphSplicer.keepGoing:
                         break
@@ -348,7 +348,30 @@ class RepoModel:
             else:
                 self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
 
+        # Finish patching hidden/foreign commit sets.
+        # Keep feeding commits to trickle until it stabilizes to its previous state.
+        if graphSplicer.foundEquilibrium:
+            with Benchmark("Finish patching hidden/foreign commits"):
+                row = nAdded + 1
+                r1 = self._stabilizeTrickle(hiddenTrickle, self.hiddenCommits, row)
+                r2 = self._stabilizeTrickle(foreignTrickle, self.foreignCommits, row)
+                logger.debug(f"Trickle stabilization: Hidden={r1}; Foreign={r2}")
+
         return nRemoved, nAdded
+
+    def _stabilizeTrickle(self, trickle: GraphTrickle, flaggedSet: set[Oid], startRow: int):
+        if trickle.done:
+            return startRow
+
+        for row in range(startRow, len(self.commitSequence)):
+            commit = self.commitSequence[row]
+
+            wasFlagged = commit.id in flaggedSet
+            isFlagged = trickle.newCommit(commit.id, commit.parent_ids, flaggedSet, discard=True)
+
+            trickleEquilibrium = (wasFlagged == isFlagged)
+            if trickleEquilibrium or trickle.done:
+                return row
 
     @benchmark
     def toggleHideRefPattern(self, refPattern: str):
@@ -420,7 +443,7 @@ class RepoModel:
                 if ref.startswith(refPattern):
                     yield oid
 
-    def newHiddenCommitSolver(self) -> GraphTrickle:
+    def newHiddenCommitTrickle(self) -> GraphTrickle:
         trickle = GraphTrickle()
 
         # Explicitly show all refs by default
@@ -446,17 +469,17 @@ class RepoModel:
     @benchmark
     def resolveHiddenCommits(self):
         self.hiddenCommits = set()
-        solver = self.newHiddenCommitSolver()
+        trickle = self.newHiddenCommitTrickle()
         for i, commit in enumerate(self.commitSequence):
             if not commit:  # May be a fake commit such as Uncommitted Changes
                 continue
-            solver.newCommit(commit.id, commit.parent_ids, self.hiddenCommits)
+            trickle.newCommit(commit.id, commit.parent_ids, self.hiddenCommits)
             # Don't check if trickle is complete too often (expensive)
-            if (i % 250 == 0) and solver.done:
+            if (i % 250 == 0) and trickle.done:
                 logger.debug(f"resolveHiddenCommits complete in {i} iterations")
                 break
 
-    def newForeignCommitSolver(self) -> GraphTrickle:
+    def newForeignCommitTrickle(self) -> GraphTrickle:
         trickle = GraphTrickle()
 
         for oid, refList in self.refsAt.items():
