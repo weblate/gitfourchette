@@ -169,10 +169,6 @@ if PYSIDE6:
 # -----------------------------------------------------------------------------
 # Patch some holes and incompatibilities in Qt bindings
 
-# QEvent::ThemeChange is still undocumented. It only seems to work in Qt 6.
-if PYQT5 or PYQT6:
-    QEvent.Type.ThemeChange = 0xD2
-
 # Match PyQt signal/slot names with PySide6
 if PYQT5 or PYQT6:
     Signal = pyqtSignal

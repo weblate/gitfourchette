@@ -119,13 +119,6 @@ class MainWindow(QMainWindow):
             if QGuiApplication.applicationState() == Qt.ApplicationState.ApplicationActive:
                 QTimer.singleShot(0, self.onRegainForeground)
 
-        elif event.type() == QEvent.Type.ThemeChange:
-            # Reload QSS when the theme changes (e.g. switching between dark/light modes).
-            # Delay the reload to next event loop (CallbackAccumulator) so that it doesn't occur during the fade animation on macOS.
-            # We may receive several ThemeChange events during a single theme change, so only schedule one reload.
-            self.dispatchRestyleSignal()
-            return True
-
         elif (isPress or isDblClick) and self.isActiveWindow():
             # Intercept back/forward mouse clicks
 
@@ -167,9 +160,12 @@ class MainWindow(QMainWindow):
         event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
         self.handleDrop(action, data)
 
-    @CallbackAccumulator.deferredMethod
-    def dispatchRestyleSignal(self):
-        GFApplication.instance().restyle.emit()
+    def changeEvent(self, event: QEvent):
+        if event.type() == QEvent.Type.PaletteChange:
+            # Recolor some widgets when palette changes (light to dark or vice-versa).
+            # Tested in KDE Plasma 6 and macOS 14.5.
+            logger.debug("Dispatching restyle signal")
+            GFApplication.instance().restyle.emit()
 
     # -------------------------------------------------------------------------
     # Menu bar
