@@ -36,8 +36,6 @@ class NoRepoWidgetError(Exception):
 
 
 class MainWindow(QMainWindow):
-    styleSheetReloadScheduled = False
-
     welcomeStack: QStackedWidget
     welcomeWidget: WelcomeWidget
     tabs: QTabWidget2
@@ -98,24 +96,9 @@ class MainWindow(QMainWindow):
         self.fillGlobalMenuBar()
 
         self.setAcceptDrops(True)
-        self.styleSheetReloadScheduled = False
-        QApplication.instance().installEventFilter(self)
+        GFApplication.instance().installEventFilter(self)
 
         self.refreshPrefs()
-
-    # -------------------------------------------------------------------------
-
-    @staticmethod
-    def reloadStyleSheet():
-        logger.debug("Reloading QSS")
-        with NonCriticalOperation("Reload application-wide stylesheet"):
-            MainWindow.styleSheetReloadScheduled = False
-            styleSheetFile = QFile("assets:style.qss")
-            if styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
-                styleSheet = styleSheetFile.readAll().data().decode("utf-8")
-                QApplication.instance().setStyleSheet(styleSheet)
-                styleSheetFile.close()
-            clearStockIconCache()
 
     # -------------------------------------------------------------------------
     # Event filters & handlers
@@ -138,12 +121,10 @@ class MainWindow(QMainWindow):
 
         elif event.type() == QEvent.Type.ThemeChange:
             # Reload QSS when the theme changes (e.g. switching between dark/light modes).
-            # Delay the reload to next event loop so that it doesn't occur during the fade animation on macOS.
+            # Delay the reload to next event loop (CallbackAccumulator) so that it doesn't occur during the fade animation on macOS.
             # We may receive several ThemeChange events during a single theme change, so only schedule one reload.
-            if not MainWindow.styleSheetReloadScheduled:
-                MainWindow.styleSheetReloadScheduled = True
-                QTimer.singleShot(0, MainWindow.reloadStyleSheet)
-                return True
+            self.dispatchRestyleSignal()
+            return True
 
         elif (isPress or isDblClick) and self.isActiveWindow():
             # Intercept back/forward mouse clicks
@@ -185,6 +166,10 @@ class MainWindow(QMainWindow):
         action, data = self.getDropOutcomeFromMimeData(event.mimeData())
         event.setAccepted(True)  # keep dragged item from coming back to cursor on macOS
         self.handleDrop(action, data)
+
+    @CallbackAccumulator.deferredMethod
+    def dispatchRestyleSignal(self):
+        GFApplication.instance().restyle.emit()
 
     # -------------------------------------------------------------------------
     # Menu bar

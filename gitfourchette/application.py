@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 class GFApplication(QApplication):
+    restyle = Signal()
+
     mainWindow: MainWindow | None
     initialSession: Session | None
     installedLocale: QLocale | None
@@ -83,6 +85,8 @@ class GFApplication(QApplication):
 
         # Schedule cleanup on quit
         self.aboutToQuit.connect(self.endSession)
+
+        self.restyle.connect(self.onRestyle)
 
         from gitfourchette.globalshortcuts import GlobalShortcuts
         from gitfourchette.tasks import TaskBook, TaskInvoker
@@ -173,7 +177,7 @@ class GFApplication(QApplication):
         assert self.mainWindow is None, "already have a MainWindow"
 
         self.applyQtStylePref(forceApplyDefault=False)
-        MainWindow.reloadStyleSheet()
+        self.onRestyle()
         self.mainWindow = MainWindow()
         self.mainWindow.destroyed.connect(self.onMainWindowDestroyed)
 
@@ -345,3 +349,15 @@ class GFApplication(QApplication):
         # setting autocrlf=true in the config.
         if WINDOWS:
             self.sessionwideGitConfig["core.autocrlf"] = "true"
+
+    # -------------------------------------------------------------------------
+
+    def onRestyle(self):
+        from gitfourchette.toolbox.iconbank import clearStockIconCache
+        styleSheetFile = QFile("assets:style.qss")
+        if styleSheetFile.open(QFile.OpenModeFlag.ReadOnly):
+            styleSheet = styleSheetFile.readAll().data().decode("utf-8")
+            self.setStyleSheet(styleSheet)
+            styleSheetFile.close()
+        clearStockIconCache()
+

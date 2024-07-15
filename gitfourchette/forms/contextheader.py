@@ -1,3 +1,4 @@
+from gitfourchette.application import GFApplication
 from gitfourchette.nav import NavLocator, NavContext, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import GetCommitInfo
@@ -8,6 +9,7 @@ class ContextHeader(QFrame):
     def __init__(self, parent):
         super().__init__(parent)
         self.setObjectName("ContextHeader")
+        self.locator = NavLocator()
 
         layout = QHBoxLayout(self)
         self.setMinimumHeight(24)
@@ -34,6 +36,10 @@ class ContextHeader(QFrame):
         self.infoButton = infoButton
         self.maximizeButton = maximizeButton
 
+        self.restyle()
+        GFApplication.instance().restyle.connect(self.restyle)
+
+    def restyle(self):
         bg = mutedTextColorHex(self, .07)
         fg = mutedTextColorHex(self, .8)
         self.setStyleSheet(f"ContextHeader {{ background-color: {bg}; }}  ContextHeader QLabel {{ color: {fg}; }}")
