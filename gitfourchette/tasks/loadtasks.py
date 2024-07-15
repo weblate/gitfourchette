@@ -215,9 +215,9 @@ class PrimeRepo(RepoTask):
             else:
                 extraRow = SpecialRow.Invalid
 
+            rw.graphView.clFilter.setHiddenCommits(repoModel.hiddenCommits)
             rw.graphView.clModel._extraRow = extraRow
-            rw.graphView.setHiddenCommits(repoModel.hiddenCommits)
-            rw.graphView.setCommitSequence(commitSequence)
+            rw.graphView.clModel.setCommitSequence(repoModel.commitSequence)
             rw.graphView.selectRowForLocator(NavLocator.inWorkdir(), force=True)
 
         # Prime Sidebar

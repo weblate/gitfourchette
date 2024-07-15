@@ -607,6 +607,8 @@ class RefreshRepo(RepoTask):
     def syncTopOfGraph(self, oldRefs: dict[str, Oid]):
         repoModel = self.repoModel
         graphView = self.rw.graphView
+        clModel = graphView.clModel
+        clFilter = graphView.clFilter
 
         # Make sure we're on the UI thread.
         # We don't want GraphView to try to read an incomplete state while repainting.
@@ -616,13 +618,13 @@ class RefreshRepo(RepoTask):
         nRemovedRows, nAddedRows = repoModel.syncTopOfGraph(oldRefs)
 
         with QSignalBlockerContext(graphView):
-            # Hidden commits may have changed in RepoState.refreshTopOfGraph!
+            # Hidden commits may have changed in RepoState.syncTopOfGraph!
             # If new commits are part of a hidden branch, we've got to invalidate the CommitFilter.
-            graphView.setHiddenCommits(repoModel.hiddenCommits)
+            clFilter.setHiddenCommits(repoModel.hiddenCommits)
 
             if nRemovedRows >= 0:
-                # Refresh top of graphview
-                graphView.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, repoModel.commitSequence)
+                # Sync top of graphview
+                clModel.mendCommitSequence(nRemovedRows, nAddedRows, repoModel.commitSequence)
             else:
                 # Replace graph wholesale
-                graphView.setCommitSequence(repoModel.commitSequence)
+                clModel.setCommitSequence(repoModel.commitSequence)

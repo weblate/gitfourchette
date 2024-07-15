@@ -146,25 +146,8 @@ class GraphView(QListView):
             menu.deleteLater()
 
     def clear(self):
-        self.setCommitSequence(None)
-
-    @benchmark
-    def setHiddenCommits(self, hiddenCommits: set[Oid]):
-        # Invalidating the filter can be costly, so avoid if possible
-        if self.clFilter.hiddenIds == hiddenCommits:
-            return
-
-        self.clFilter.setHiddenCommits(hiddenCommits)  # update filter BEFORE updating model
-        self.clFilter.invalidateFilter()
-
-    @benchmark
-    def setCommitSequence(self, commitSequence: list[Commit] | None):
-        self.clModel.setCommitSequence(commitSequence)
+        self.clModel.clear()
         self.onSetCurrent()
-
-    @benchmark
-    def refreshTopOfCommitSequence(self, nRemovedRows: int, nAddedRows: int, commitSequence: list[Commit]):
-        self.clModel.refreshTopOfCommitSequence(nRemovedRows, nAddedRows, commitSequence)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         currentIndex = self.currentIndex()

@@ -680,7 +680,7 @@ class RepoWidget(QStackedWidget):
     def toggleHideRefPattern(self, refPattern: str):
         assert refPattern.startswith("refs/")
         self.repoModel.toggleHideRefPattern(refPattern)
-        self.graphView.setHiddenCommits(self.repoModel.hiddenCommits)
+        self.graphView.clFilter.setHiddenCommits(self.repoModel.hiddenCommits)
 
         # Hide/draw refboxes for commits that are shared by non-hidden refs
         self.graphView.viewport().update()

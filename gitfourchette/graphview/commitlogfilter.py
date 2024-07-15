@@ -16,8 +16,12 @@ class CommitLogFilter(QSortFilterProxyModel):
     def clModel(self) -> CommitLogModel:
         return self.sourceModel()
 
-    def setHiddenCommits(self, hiddenCommits: set[Oid]):
-        self.hiddenIds = hiddenCommits
+    @benchmark
+    def setHiddenCommits(self, hiddenIds: set[Oid]):
+        # Invalidating the filter can be costly, so avoid if possible
+        if self.hiddenIds == hiddenIds:
+            return
+        self.hiddenIds = hiddenIds
 
     def filterAcceptsRow(self, sourceRow: int, sourceParent: QModelIndex) -> bool:
         try:

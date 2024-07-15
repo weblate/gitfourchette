@@ -35,7 +35,7 @@ class CommitLogModel(QAbstractListModel):
         SpecialRow      = Qt.ItemDataRole.UserRole + 4
 
     # Reference to RepoState.commitSequence
-    _commitSequence: list[Commit] | None
+    _commitSequence: list[Commit]
     _extraRow: SpecialRow
 
     _authorColumnX: int
@@ -43,7 +43,7 @@ class CommitLogModel(QAbstractListModel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self._commitSequence = None
+        self._commitSequence = []
         self._extraRow = SpecialRow.Invalid
         self._authorColumnX = -1
         self._toolTipZones = {}
@@ -53,16 +53,16 @@ class CommitLogModel(QAbstractListModel):
         return self._commitSequence is not None
 
     def clear(self):
-        self.setCommitSequence(None)
+        self.setCommitSequence([])
         self._toolTipZones.clear()
         self._extraRow = SpecialRow.Invalid
 
-    def setCommitSequence(self, newCommitSequence: list[Commit] | None):
+    def setCommitSequence(self, newCommitSequence: list[Commit]):
         self.beginResetModel()
         self._commitSequence = newCommitSequence
         self.endResetModel()
 
-    def refreshTopOfCommitSequence(self, nRemovedRows, nAddedRows, newCommitSequence: list[Commit]):
+    def mendCommitSequence(self, nRemovedRows: int, nAddedRows: int, newCommitSequence: list[Commit]):
         parent = QModelIndex()  # it's not a tree model so there's no parent
 
         self._commitSequence = newCommitSequence
