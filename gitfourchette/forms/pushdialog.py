@@ -284,13 +284,22 @@ class PushDialog(QDialog):
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
     def setOkButtonText(self):
-        okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        icon = "git-push"
+        tip = ""
+
         if self.willForcePush:
-            okButton.setText(self.tr("Force &push"))
+            text = self.tr("Force &push")
+            icon = "achtung"
+            tip = self.tr("Force push: Destructive action!")
         elif self.willPushToNewBranch:
-            okButton.setText(self.tr("&Push new branch"))
+            text = self.tr("&Push new branch")
         else:
-            okButton.setText(self.tr("&Push"))
+            text = self.tr("&Push")
+
+        okButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
+        okButton.setText(text)
+        okButton.setIcon(stockIcon(icon))
+        okButton.setToolTip(tip)
 
     def validateCustomRemoteBranchName(self, name: str):
         if not self.ui.newRemoteBranchNameEdit.isVisibleTo(self):
