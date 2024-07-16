@@ -270,6 +270,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     assert not repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED
 
 
+@pytest.mark.skipif(pygit2OlderThan("1.15.1"), reason="old pygit2")
 def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
     sm = "submosub"
 

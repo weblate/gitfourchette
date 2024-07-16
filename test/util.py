@@ -16,6 +16,10 @@ def pause(seconds: int = 3):
     QTest.qWait(seconds * 1000)
 
 
+def pygit2OlderThan(version: str):
+    return not pygit2_version_at_least(version, raise_error=False)
+
+
 def getTestDataPath(name):
     path = Path(__file__).resolve().parent / "data"
     return str(path / name)

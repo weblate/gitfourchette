@@ -354,6 +354,7 @@ def testCommitOnDetachedHead(tempDir, mainWindow):
     assert newHeadCommit in displayedCommits
 
 
+@pytest.mark.skipif(pygit2OlderThan("1.15.1"), reason="old pygit2")
 def testRevertCommit(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -375,6 +376,7 @@ def testRevertCommit(tempDir, mainWindow):
     assert rw.repo.status() == {"c/c2-2.txt": FileStatus.INDEX_NEW}
 
 
+@pytest.mark.skipif(pygit2OlderThan("1.15.1"), reason="old pygit2")
 def testAbortRevertCommit(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
