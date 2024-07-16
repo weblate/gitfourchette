@@ -117,11 +117,6 @@ class DiffArea(QWidget):
         stageButton.setText(self.tr("Stage"))
         stageButton.setIcon(stockIcon("git-stage"))
         stageButton.setToolTip(self.tr("Stage selected files"))
-        stageButton.setMaximumHeight(FILEHEADER_HEIGHT)
-        stageButton.setEnabled(False)
-        stageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        stageButton.setAutoRaise(True)
-        stageButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         appendShortcutToToolTip(stageButton, GlobalShortcuts.stageHotkeys[0])
 
         discardButton = QToolButton()
@@ -129,12 +124,6 @@ class DiffArea(QWidget):
         discardButton.setText(self.tr("Discard"))
         discardButton.setIcon(stockIcon("git-discard"))
         discardButton.setToolTip(self.tr("Discard changes in selected files"))
-        discardButton.setMaximumHeight(FILEHEADER_HEIGHT)
-        discardButton.setEnabled(False)
-        discardButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        discardButton.setAutoRaise(True)
-        discardButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        discardButton.setContentsMargins(0, 0, 4, 0)
         appendShortcutToToolTip(discardButton, GlobalShortcuts.discardHotkeys[0])
 
         container = QWidget()
@@ -180,11 +169,6 @@ class DiffArea(QWidget):
         unstageButton.setText(self.tr("Unstage"))
         unstageButton.setIcon(stockIcon("git-unstage"))
         unstageButton.setToolTip(self.tr("Unstage selected files"))
-        unstageButton.setMaximumHeight(FILEHEADER_HEIGHT)
-        unstageButton.setEnabled(False)
-        unstageButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        unstageButton.setAutoRaise(True)
-        unstageButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         appendShortcutToToolTip(unstageButton, GlobalShortcuts.discardHotkeys[0])
 
         commitButton = QToolButton()
@@ -311,6 +295,13 @@ class DiffArea(QWidget):
         return stackContainer
 
     def applyCustomStyling(self):
+        for smallButton in (self.discardButton, self.unstageButton, self.stageButton):
+            smallButton.setMaximumHeight(FILEHEADER_HEIGHT)
+            smallButton.setEnabled(False)
+            smallButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            smallButton.setAutoRaise(True)
+            smallButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
         # Smaller font for header text
         for smallWidget in (
                 self.contextHeader,
