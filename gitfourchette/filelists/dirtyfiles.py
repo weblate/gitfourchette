@@ -181,3 +181,7 @@ class DirtyFiles(FileList):
 
     def mergeTakeTheirs(self):
         self._mergeKeep(keepOurs=False)
+
+    def onSpecialMouseClick(self):
+        if settings.prefs.middleClickToStage:
+            self.stage()

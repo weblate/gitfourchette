@@ -416,6 +416,15 @@ class FileList(QListView):
         else:
             super().mouseMoveEvent(event)
 
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        super().mouseReleaseEvent(event)  # Let standard QListView selection occur first
+        if event.button() == Qt.MouseButton.MiddleButton:
+            self.onSpecialMouseClick()
+
+    def onSpecialMouseClick(self):
+        """ Override this if you want to react to a middle click. """
+        pass
+
     def selectedPatches(self) -> Generator[Patch, None, None]:
         index: QModelIndex
         for index in self.selectedIndexes():

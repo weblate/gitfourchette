@@ -216,6 +216,7 @@ class TrTables:
             "showMenuBar": translate("Prefs", "Show menu bar"),
             "showMenuBar_help": translate("Prefs", "When the menu bar is hidden, press the Alt key to show it again."),
             "resetDontShowAgain": translate("Prefs", "Restore all “don’t show this again” messages"),
+            "middleClickToStage": translate("Prefs", "Middle-click a file name to stage/unstage the file"),
 
             "font": translate("Prefs", "Font"),
             "tabSpaces": translate("Prefs", "One tab is # spaces"),

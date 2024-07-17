@@ -302,3 +302,29 @@ def testFileListToolTip(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17"), "c/c2-2.txt"))
     tip = rw.committedFiles.currentIndex().data(Qt.ItemDataRole.ToolTipRole)
     assert all(re.search(p, tip, re.I) for p in ("c/c2.txt", "c/c2-2.txt", "renamed", "similarity"))
+
+
+def testMiddleClickToStageFile(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.fileWithStagedAndUnstagedChanges(wd)
+    rw = mainWindow.openRepo(wd)
+
+    from gitfourchette import settings
+
+    initialStatus = rw.repo.status()
+    assert initialStatus == {'a/a1.txt': FileStatus.INDEX_MODIFIED|FileStatus.WT_MODIFIED}
+
+    # Middle-clicking has no effect as long as middleClickToStage is off (by default)
+    QTest.mouseClick(rw.stagedFiles.viewport(), Qt.MouseButton.MiddleButton, pos=QPoint(2, 2))
+    assert initialStatus == rw.repo.status()
+
+    # Enable middleClickToStage
+    settings.prefs.middleClickToStage = True
+
+    # Unstage file by middle-clicking
+    QTest.mouseClick(rw.stagedFiles.viewport(), Qt.MouseButton.MiddleButton, pos=QPoint(2, 2))
+    assert rw.repo.status() == {'a/a1.txt': FileStatus.WT_MODIFIED}
+
+    # Stage file by middle-clicking
+    QTest.mouseClick(rw.dirtyFiles.viewport(), Qt.MouseButton.MiddleButton, pos=QPoint(2, 2))
+    assert rw.repo.status() == {'a/a1.txt': FileStatus.INDEX_MODIFIED}

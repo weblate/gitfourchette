@@ -202,6 +202,7 @@ class Prefs(PrefsFile):
     _category_advanced          : int                   = 0
     maxRecentRepos              : int                   = 20
     shortHashChars              : int                   = 7
+    middleClickToStage          : bool                  = False
     flattenLanes                : bool                  = True
     animations                  : bool                  = True
     smoothScroll                : bool                  = True

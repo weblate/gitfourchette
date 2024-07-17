@@ -107,3 +107,7 @@ class StagedFiles(FileList):
     def unstageModeChange(self):
         patches = list(self.selectedPatches())
         UnstageModeChanges.invoke(self, patches)
+
+    def onSpecialMouseClick(self):
+        if settings.prefs.middleClickToStage:
+            self.unstage()
