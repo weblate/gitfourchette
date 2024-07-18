@@ -49,36 +49,49 @@ class Jump(RepoTask):
         if not rw.navHistory.isWriteLocked():
             rw.saveFilePositions()
 
-        # Refine locator: Try to recall where we were last time we looked at this context.
+        # If the locator is "coarse" (i.e. no specific path given, just a generic context),
+        # try to recall where we were last time we looked at this context.
         locator = rw.navHistory.refine(locator)
 
         try:
-            # Show workdir or commit views (and update them if needed)
+            # Load workdir or commit, and show the corresponding view
             if locator.context == NavContext.SPECIAL:
                 self.showSpecial(locator)  # always raises Jump.Result
-            elif locator.context.isWorkdir():
-                locator = yield from self.showWorkdir(locator)
             else:
-                locator = yield from self.showCommit(locator)
-
-            # Select correct file in FileList
-            locator = self.selectCorrectFile(locator)
-
-            # Load patch in DiffView
-            patch = rw.diffArea.fileListByContext(locator.context).getPatchForFile(locator.path)
-            patchTask: LoadPatch = yield from self.flowSubtask(LoadPatch, patch, locator)
-            result = Jump.Result(locator, patchTask.header, patchTask.result, patch)
+                if locator.context.isWorkdir():
+                    locator = yield from self.showWorkdir(locator)
+                else:
+                    locator = yield from self.showCommit(locator)
         except Jump.Result as r:
-            # The block above may be stopped early by raising Jump.Result.
+            # The showXXX functions may bail early by raising Jump.Result.
             result = r
 
-        locator = result.locator
-        self.saveFinalLocator(locator)
+            # Set up DiffArea for this locator.
+            rw.diffArea.setUpForLocator(result.locator)
+        else:
+            fileList = rw.diffArea.fileListByContext(locator.context)
 
-        # Set correct card in fileStack (may have been done by selectCorrectFile
-        # above, but do it again in case a Result was raised early)
-        rw.diffArea.setFileStackPageByContext(locator.context)
+            # If we don't have a path in the locator, fall back to first path in file list.
+            # (Only for non-special locators, though!)
+            if not locator.path and locator.context != NavContext.SPECIAL:
+                locator = locator.replace(path=fileList.firstPath())
+                locator = rw.navHistory.refine(locator)
 
+            # Set up DiffArea for this locator.
+            # Note that this may return a new locator if the desired path is not available.
+            locator = rw.diffArea.setUpForLocator(locator)
+
+            # Prepare Result object.
+            if locator.path:
+                # Load patch in DiffView
+                patch = fileList.getPatchForFile(locator.path)
+                patchTask: LoadPatch = yield from self.flowSubtask(LoadPatch, patch, locator)
+                result = Jump.Result(locator, patchTask.header, patchTask.result, patch)
+            else:
+                # Blank path
+                result = Jump.Result(locator, "", None)
+
+        self.saveFinalLocator(result.locator)
         self.displayResult(result)
 
     def showWorkdir(self, locator: NavLocator):
@@ -322,58 +335,6 @@ class Jump(RepoTask):
                 area.diffBanner.setVisible(True)
                 area.diffBanner.popUp("", warningText, canDismiss=True, withIcon=True,
                                       buttonLabel=buttonLabel, buttonCallback=buttonCallback)
-
-        return locator
-
-    def selectCorrectFile(self, locator: NavLocator):
-        rw = self.rw
-        area = rw.diffArea
-        flv = area.fileListByContext(locator.context)
-
-        # If we still don't have a path in the locator, fall back to first path in file list.
-        if not locator.path:
-            locator = locator.replace(path=flv.firstPath())
-            locator = rw.navHistory.refine(locator)
-
-        with QSignalBlockerContext(area.dirtyFiles, area.stagedFiles, area.committedFiles):
-            # Select correct row in file list
-            anyFile = False
-            if locator.path:
-                # Fix multiple "ghost" selections in DirtyFiles/StagedFiles with JumpBackOrForward.
-                if not locator.hasFlags(NavFlags.AllowMultiSelect):
-                    flv.clearSelection()
-                # Select the file, if possible
-                anyFile = flv.selectFile(locator.path)
-
-            # Special treatment for workdir
-            if locator.context.isWorkdir():
-                # Clear selection in other workdir FileList
-                otherFlv = area.stagedFiles if locator.context != NavContext.STAGED else area.dirtyFiles
-                otherFlv.clearSelection()
-
-                if not anyFile:
-                    area.stageButton.setEnabled(False)
-                    area.discardButton.setEnabled(False)
-                    area.unstageButton.setEnabled(False)
-                elif locator.context == NavContext.STAGED:
-                    area.unstageButton.setEnabled(True)
-                    area.stageButton.setEnabled(False)
-                    area.discardButton.setEnabled(False)
-                    area.dirtyFiles.highlightCounterpart(locator)
-                else:
-                    area.unstageButton.setEnabled(False)
-                    area.stageButton.setEnabled(True)
-                    area.discardButton.setEnabled(True)
-                    area.stagedFiles.highlightCounterpart(locator)
-
-            # Early out if selection remains blank
-            if not anyFile:
-                flv.clearSelection()
-                locator = locator.replace(path="")
-                raise Jump.Result(locator, "", None)
-
-        # Set correct card in fileStack (after selecting the file to avoid flashing)
-        area.setFileStackPageByContext(locator.context)
 
         return locator
 

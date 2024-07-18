@@ -2,7 +2,6 @@ import logging
 import typing
 from typing import Literal
 
-from gitfourchette import settings, tasks
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.diffview.specialdiffview import SpecialDiffView
 from gitfourchette.filelists.committedfiles import CommittedFiles
@@ -13,7 +12,7 @@ from gitfourchette.forms.banner import Banner
 from gitfourchette.forms.conflictview import ConflictView
 from gitfourchette.forms.contextheader import ContextHeader
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.nav import NavContext
+from gitfourchette.nav import NavContext, NavLocator, NavFlags
 from gitfourchette.qt import *
 from gitfourchette.tasks import TaskBook, AmendCommit, NewCommit, NewStash
 from gitfourchette.toolbox import *
@@ -389,6 +388,51 @@ class DiffArea(QWidget):
         else:
             return self.committedFiles
 
+    def setUpForLocator(self, locator: NavLocator) -> NavLocator:
+        """
+        Show relevant FileList widget, select correct file in it,
+        and adjust auxiliary widgets (stage/unstage/discard buttons).
+
+        If the desired path isn't available in the FileList,
+        returns a new locator with a blank path.
+        """
+        fileList = self.fileListByContext(locator.context)
+
+        with QSignalBlockerContext(self.dirtyFiles, self.stagedFiles, self.committedFiles):
+            # Select correct row in FileList
+            hasFile = False
+            if locator.path:
+                # Fix multiple "ghost" selections in DirtyFiles/StagedFiles with JumpBackOrForward.
+                if not locator.hasFlags(NavFlags.AllowMultiSelect):
+                    fileList.clearSelection()
+                # Select the file, if possible
+                hasFile = fileList.selectFile(locator.path)
+
+            # Blank selection?
+            if not hasFile:
+                locator = locator.replace(path="")
+                fileList.clearSelection()
+
+            # Special treatment for workdir
+            if locator.context.isWorkdir():
+                staged = locator.context == NavContext.STAGED
+
+                # Sync workdir buttons
+                self.stageButton.setEnabled(hasFile and not staged)
+                self.discardButton.setEnabled(hasFile and not staged)
+                self.unstageButton.setEnabled(hasFile and staged)
+
+                # Clear selection in opposite FileList
+                oppositeFileList = self.dirtyFiles if staged else self.stagedFiles
+                oppositeFileList.clearSelection()
+                if hasFile:
+                    oppositeFileList.highlightCounterpart(locator)
+
+            # Set correct card in fileStack (after selecting the file to avoid flashing)
+            self.setFileStackPageByContext(locator.context)
+
+        return locator
+
     # -------------------------------------------------------------------------
     # Clear
 
@@ -435,4 +479,3 @@ class DiffArea(QWidget):
 
     def setDiffStackPage(self, p: DiffStackPage):
         self.diffStack.setCurrentIndex(self._diffStackPageValues.index(p))
-

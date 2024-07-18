@@ -328,3 +328,22 @@ def testMiddleClickToStageFile(tempDir, mainWindow):
     # Stage file by middle-clicking
     QTest.mouseClick(rw.dirtyFiles.viewport(), Qt.MouseButton.MiddleButton, pos=QPoint(2, 2))
     assert rw.repo.status() == {'a/a1.txt': FileStatus.INDEX_MODIFIED}
+
+
+def testGrayOutStageButtonsAfterDiscardingOnlyFile(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/SomeNewFile.txt", "hi")
+    rw = mainWindow.openRepo(wd)
+
+    assert NavLocator.inUnstaged("SomeNewFile.txt").isSimilarEnoughTo(rw.navLocator)
+    assert rw.diffArea.stageButton.isEnabled()
+    assert rw.diffArea.discardButton.isEnabled()
+    assert not rw.diffArea.unstageButton.isEnabled()
+
+    rw.diffArea.discardButton.click()
+    acceptQMessageBox(rw, "discard")
+
+    assert not rw.diffArea.stageButton.isEnabled()
+    assert not rw.diffArea.discardButton.isEnabled()
+    assert not rw.diffArea.unstageButton.isEnabled()
+
