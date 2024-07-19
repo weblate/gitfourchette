@@ -198,6 +198,10 @@ class SidebarModel(QAbstractItemModel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.collapseCache = set()
+        self.collapseCacheValid = False
+
         self.clear()
 
         if settings.DEVDEBUG and QAbstractItemModelTester is not None:
@@ -205,6 +209,9 @@ class SidebarModel(QAbstractItemModel):
             logger.warning("Sidebar model tester enabled. This will SIGNIFICANTLY slow down SidebarModel.rebuild!")
 
     def clear(self, emitSignals=True):
+        # IMPORTANT: Do not clear collapseCache in this function!
+        # rebuild() calls clear() but we want collapseCache to persist!
+
         if emitSignals:
             self.beginResetModel()
 
@@ -216,9 +223,6 @@ class SidebarModel(QAbstractItemModel):
 
         self._cachedTooltipIndex = None
         self._cachedTooltipText = ""
-
-        self.collapseCache = set()
-        self.collapseCacheValid = False
 
         if emitSignals:
             self.endResetModel()

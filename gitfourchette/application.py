@@ -158,7 +158,7 @@ class GFApplication(QApplication):
         if bootUi:
             QTimer.singleShot(0, self.bootUi)
 
-    def endSession(self):
+    def endSession(self, clearTempDir=True):
         from gitfourchette import settings
         from gitfourchette.toolbox.iconbank import clearStockIconCache
         if settings.prefs.isDirty():
@@ -167,7 +167,8 @@ class GFApplication(QApplication):
             settings.history.write()
         clearStockIconCache()  # release icon temp files
         gc.collect()  # clean up Repository file handles (for Windows unit tests)
-        self.tempDir.remove()
+        if clearTempDir:
+            self.tempDir.remove()
 
     def bootUi(self):
         from gitfourchette.mainwindow import MainWindow

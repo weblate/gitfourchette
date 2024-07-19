@@ -1,15 +1,19 @@
 import os.path
+import shutil
 from contextlib import suppress
 
 import pytest
 
+from gitfourchette import qt
+from gitfourchette.application import GFApplication
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.graphview.commitlogmodel import SpecialRow
+from gitfourchette.mainwindow import MainWindow
 from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import EItem, SidebarNode
 from .util import *
 
 
@@ -449,3 +453,64 @@ def testAllTaskNamesTranslated(mainWindow):
                     and type is not tasks.RepoTask
                     and type not in tasks.TaskBook.names):
                 assert False, f"Missing task name translation for {key}"
+
+
+def testRestoreSession(tempDir, mainWindow):
+    app = GFApplication.instance()
+
+    for i in range(10):
+        wd = unpackRepo(tempDir, renameTo=f"RepoCopy{i:04}")
+        rw = mainWindow.openRepo(wd)
+        QTest.qWait(1)
+
+    assert mainWindow.tabs.count() == 10
+    mainWindow.tabs.setCurrentIndex(5)
+
+    rw = mainWindow.currentRepoWidget()
+    assert rw.repo.repo_name() == "RepoCopy0005"
+
+    # Collapse something in sidebar
+    originNode = next(rw.sidebar.findNodesByKind(EItem.Remote))
+    originIndex = originNode.createIndex(rw.sidebar.sidebarModel)
+    assert rw.sidebar.isExpanded(originIndex)
+    rw.sidebar.collapse(originNode.createIndex(rw.sidebar.sidebarModel))
+    assert not rw.sidebar.isExpanded(originIndex)
+
+    # Hide something in sidebar
+    rw.toggleHideRefPattern("refs/heads/no-parent")
+
+    # End this session
+    mainWindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+    mainWindow.close()
+    app.endSession(clearTempDir=False)
+
+    # Make one of the repos inaccessible
+    shutil.rmtree(f"{tempDir.name}/RepoCopy0003")
+
+    # ----------------------------------------------
+    # Begin new session
+
+    app.mainWindow = None
+    app.beginSession()
+    QTest.qWait(1)
+    mainWindow2: MainWindow = app.mainWindow
+
+    # We've lost one of the repos
+    acceptQMessageBox(mainWindow2, r"session could.?n.t be restored.+RepoCopy0003")
+    assert mainWindow2.tabs.count() == 9
+
+    # Should restore to same tab
+    rw = mainWindow2.currentRepoWidget()
+    assert rw.repo.repo_name() == "RepoCopy0005"
+
+    # Make sure origin node is still collapsed
+    originNode = next(rw.sidebar.findNodesByKind(EItem.Remote))
+    originIndex = originNode.createIndex(rw.sidebar.sidebarModel)
+    assert not rw.sidebar.isExpanded(originIndex)
+
+    # Make sure hidden branch is still hidden
+    hiddenBranchNode = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+    assert rw.sidebar.sidebarModel.isExplicitlyHidden(hiddenBranchNode)
+
+    mainWindow2.close()
+    mainWindow2.deleteLater()
