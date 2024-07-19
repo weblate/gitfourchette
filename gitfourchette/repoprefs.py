@@ -12,6 +12,14 @@ from gitfourchette.prefsfile import PrefsFile
 KEY_PREFIX = "gitfourchette-"
 
 
+class RefSort(enum.IntEnum):
+    TimeDesc = 0
+    TimeAsc = 1
+    AlphaAsc = 2
+    AlphaDesc = 3
+    Default = TimeDesc
+
+
 @dataclass
 class RepoPrefs(PrefsFile):
     _filename = f"{APP_SYSTEM_NAME}.json"
@@ -25,6 +33,9 @@ class RepoPrefs(PrefsFile):
     draftAmendMessage: str = ""
     hiddenRefPatterns: set = field(default_factory=set)
     collapseCache: set = field(default_factory=set)
+    sortBranches: RefSort = RefSort.Default
+    sortRemoteBranches: RefSort = RefSort.Default
+    sortTags: RefSort = RefSort.Default
 
     def getParentDir(self):
         return self._parentDir

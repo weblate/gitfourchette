@@ -74,5 +74,6 @@ from .textutils import (
     btag,
     withUniqueSuffix,
     englishTitleCase,
+    naturalSort,
 )
 from .validatormultiplexer import ValidatorMultiplexer

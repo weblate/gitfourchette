@@ -1,5 +1,6 @@
 import html
 import io
+import re
 from typing import Iterable, Callable, Container
 
 from gitfourchette.qt import *
@@ -7,6 +8,8 @@ from html import escape as escape
 
 
 _elideMetrics: QFontMetrics | None = None
+
+_naturalSortSplit = re.compile(r"(\d+)")
 
 
 def getElideMetrics() -> QFontMetrics:
@@ -238,3 +241,9 @@ def englishTitleCase(text: str) -> str:
     if QLocale().language() in [QLocale.Language.C, QLocale.Language.English]:
         text = text.title()
     return text
+
+
+def naturalSort(text: str):
+    text = text.casefold()
+    parts = _naturalSortSplit.split(text)
+    return [int(part) if part.isdigit() else part for part in parts]

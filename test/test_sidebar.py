@@ -1,3 +1,6 @@
+import pytest
+
+from gitfourchette.toolbox import naturalSort
 from . import reposcenario
 from .util import *
 from gitfourchette.nav import NavLocator
@@ -106,3 +109,47 @@ def testNewEmptyRemoteShowsUpInSidebar(tempDir, mainWindow):
     rw.repo.remotes.create("toto", "https://github.com/jorio/bugdom")
     rw.refreshRepo()
     assert 2 == len(list(sb.findNodesByKind(EItem.Remote)))
+
+
+@pytest.mark.parametrize("headerKind,leafKind", [
+    (EItem.LocalBranchesHeader, EItem.LocalBranch),
+    (EItem.RemotesHeader, EItem.RemoteBranch),
+    (EItem.TagsHeader, EItem.Tag),
+])
+def testRefSortModes(tempDir, mainWindow, headerKind, leafKind):
+    assert headerKind != leafKind
+
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.create_tag("version2", Oid(hex='83834a7afdaa1a1260568567f6ad90020389f664'), ObjectType.COMMIT, TEST_SIGNATURE, "")
+        repo.create_tag("version10", Oid(hex='6e1475206e57110fcef4b92320436c1e9872a322'), ObjectType.COMMIT, TEST_SIGNATURE, "")
+        repo.create_tag("VERSION3", Oid(hex='49322bb17d3acc9146f98c97d078513228bbf3c0'), ObjectType.COMMIT, TEST_SIGNATURE, "")
+
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+
+    headerNode = next(sb.findNodesByKind(headerKind))
+
+    def getNodeDatas():
+        return [node.data for node in sb.findNodesByKind(leafKind)]
+
+    sortedByTime = getNodeDatas()
+    sortedAlpha = list(sorted(getNodeDatas(), key=naturalSort))
+
+    triggerMenuAction(sb.makeNodeMenu(headerNode), "sort.+by/newest first")
+    assert getNodeDatas() == sortedByTime
+
+    triggerMenuAction(sb.makeNodeMenu(headerNode), "sort.+by/oldest first")
+    assert getNodeDatas() == list(reversed(sortedByTime))
+
+    triggerMenuAction(sb.makeNodeMenu(headerNode), "sort.+by/name.+a-z")
+    assert getNodeDatas() == sortedAlpha
+
+    # Special case for tags - test natural sorting
+    if leafKind == EItem.Tag:
+        assert [data.removeprefix("refs/tags/") for data in getNodeDatas()
+                ] == ["annotated_tag", "version2", "VERSION3", "version10"]
+
+    triggerMenuAction(sb.makeNodeMenu(headerNode), "sort.+by/name.+z-a")
+    assert getNodeDatas() == list(reversed(sortedAlpha))

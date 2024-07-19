@@ -5,6 +5,7 @@ from typing import Iterable, Callable
 from gitfourchette import porcelain
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator, NavFlags
+from gitfourchette.repoprefs import RefSort
 from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.porcelain import Oid, RefPrefix
@@ -93,6 +94,42 @@ class Sidebar(QTreeView):
     def updateHiddenBranches(self, hiddenBranches: list[str]):
         self.model().updateHiddenBranches(hiddenBranches)
 
+    def refSortMenu(self, prefKey: str) -> list[ActionDef]:
+        repoModel = self.sidebarModel.repoModel
+        repoPrefs = repoModel.prefs
+        currentMode = getattr(repoPrefs, prefKey)
+        assert isinstance(currentMode, RefSort)
+
+        names = {
+            RefSort.TimeDesc: self.tr("Branch Tips (Newest First)", "sort branches by date of latest commit, descending"),
+            RefSort.TimeAsc: self.tr("Branch Tips (Oldest First)", "sort branches by date of latest commit, ascending"),
+            RefSort.AlphaAsc: self.tr("Name (A-Z)", "sort branches by name (alphabetically), ascending"),
+            RefSort.AlphaDesc: self.tr("Name (Z-A)", "sort branches by name (alphabetically), descending"),
+        }
+
+        if prefKey == "sortTags":
+            names[RefSort.TimeDesc] = self.tr("Date (Newest First)", "sort tags by date, descending")
+            names[RefSort.TimeAsc] = self.tr("Date (Oldest First)", "sort tags by date, ascending")
+
+        def setSortMode(newMode: RefSort):
+            if currentMode == newMode:
+                return
+            setattr(repoPrefs, prefKey, newMode)
+            repoPrefs.setDirty()
+            self.backUpSelection()
+            self.refresh(repoModel)
+            self.restoreSelectionBackup()
+
+        submenu = []
+        for sortMode, caption in names.items():
+            action = ActionDef(
+                caption,
+                lambda m=sortMode: setSortMode(m),
+                radioGroup=f"sortBy-{prefKey}",
+                checkState=1 if currentMode == sortMode else -1)
+            submenu.append(action)
+        return submenu
+
     def makeNodeMenu(self, node: SidebarNode, menu: QMenu = None, index: QModelIndex = None):
         if menu is None:
             menu = QMenu(self)
@@ -121,6 +158,8 @@ class Sidebar(QTreeView):
         elif item == EItem.LocalBranchesHeader:
             actions += [
                 TaskBook.action(self, NewBranchFromHead, self.tr("&New Branch...")),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortBranches")),
             ]
 
         elif item == EItem.LocalBranch:
@@ -317,6 +356,8 @@ class Sidebar(QTreeView):
         elif item == EItem.RemotesHeader:
             actions += [
                 TaskBook.action(self, NewRemote, accel="A"),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("Sort Remote Branches By"), submenu=self.refSortMenu("sortRemoteBranches")),
             ]
 
         elif item == EItem.RefFolder:
@@ -358,6 +399,8 @@ class Sidebar(QTreeView):
         elif item == EItem.TagsHeader:
             actions += [
                 TaskBook.action(self, NewTag, self.tr("&New Tag on HEAD Commit...")),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortTags")),
             ]
 
         elif item == EItem.Tag:

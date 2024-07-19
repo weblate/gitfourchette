@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from contextlib import suppress
 import logging
-import enum
-from typing import Any, Iterable
+from contextlib import suppress
+from typing import Any
 
 from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.repomodel import RepoModel
+from gitfourchette.repoprefs import RefSort
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-from gitfourchette.repomodel import RepoModel
 
 logger = logging.getLogger(__name__)
 
@@ -154,9 +154,10 @@ class SidebarNode:
         return self.kind in HIDEABLE_ITEMS
 
     def walk(self):
+        # Unit test helper
         frontier = self.children[:]
         while frontier:
-            node = frontier.pop()
+            node = frontier.pop(0)
             yield node
             frontier.extend(node.children)
 
@@ -377,18 +378,17 @@ class SidebarModel(QAbstractItemModel):
                 logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
 
         # Populate local branch tree
-        self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS)
+        self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS, repoModel.prefs.sortBranches)
 
         # Populate tag tree
-        self.populateRefNodeTree(tags, tagRoot, EItem.Tag, RefPrefix.TAGS)
+        self.populateRefNodeTree(tags, tagRoot, EItem.Tag, RefPrefix.TAGS, repoModel.prefs.sortTags)
 
         # Populate remote tree
         for remote, branches in remoteBranchesDict.items():
             remoteNode = remoteRoot.findChild(EItem.Remote, remote)
             assert remoteNode is not None
-            branches.sort(key=str.lower)  # Sort remote branches
             remotePrefix = f"{RefPrefix.REMOTES}{remote}/"
-            self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, remotePrefix)
+            self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, remotePrefix, repoModel.prefs.sortRemoteBranches)
 
         # -----------------------------
         # Stashes
@@ -417,14 +417,23 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         self.endResetModel()
 
-    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str):
+    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str, sortMode: RefSort = RefSort.Default):
         pendingFolders = {}
 
-        for b in shorthands:
-            if not BRANCH_FOLDERS or "/" not in b:
+        if sortMode == RefSort.TimeAsc:
+            shIter = reversed(shorthands)
+        elif sortMode == RefSort.AlphaAsc:
+            shIter = sorted(shorthands, key=naturalSort)
+        elif sortMode == RefSort.AlphaDesc:
+            shIter = sorted(shorthands, key=naturalSort, reverse=True)
+        else:
+            shIter = shorthands
+
+        for sh in shIter:
+            if not BRANCH_FOLDERS or "/" not in sh:
                 folderNode = containerNode
             else:
-                folderName = b.rsplit("/", 1)[0]
+                folderName = sh.rsplit("/", 1)[0]
                 try:
                     folderNode = pendingFolders[folderName]
                 except KeyError:
@@ -433,7 +442,7 @@ class SidebarModel(QAbstractItemModel):
                     folderNode = SidebarNode(EItem.RefFolder, refNamePrefix + folderName)
                     pendingFolders[folderName] = folderNode
 
-            refName = refNamePrefix + b
+            refName = refNamePrefix + sh
             node = SidebarNode(kind, refName)
             folderNode.appendChild(node)
             self.nodesByRef[refName] = node
