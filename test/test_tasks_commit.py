@@ -489,7 +489,8 @@ def testNewTag(tempDir, mainWindow):
     assert newTag in rw.repo.listall_tags()
 
 
-def testDeleteTag(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDeleteTag(tempDir, mainWindow, method):
     tagToDelete = "annotated_tag"
 
     wd = unpackRepo(tempDir)
@@ -497,8 +498,15 @@ def testDeleteTag(tempDir, mainWindow):
     assert tagToDelete in rw.repo.listall_tags()
 
     node = rw.sidebar.findNodeByRef(f"refs/tags/{tagToDelete}")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "delete")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "delete")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     acceptQMessageBox(rw, "delete tag")
     assert tagToDelete not in rw.repo.listall_tags()

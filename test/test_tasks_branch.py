@@ -10,20 +10,24 @@ from gitfourchette.sidebar.sidebarmodel import EItem
 from .util import *
 
 
-@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "shortcut"])
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "sidebardclick", "shortcut"])
 def testNewBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
     repo = rw.repo
 
-    node = rw.sidebar.findNode(lambda n: n.kind == EItem.LocalBranchesHeader)
+    node = sb.findNode(lambda n: n.kind == EItem.LocalBranchesHeader)
 
     if method == "sidebarmenu":
-        menu = rw.sidebar.makeNodeMenu(node)
+        menu = sb.makeNodeMenu(node)
         triggerMenuAction(menu, "new branch")
     elif method == "sidebarkey":
-        rw.sidebar.selectNode(node)
-        QTest.keyPress(rw.sidebar, Qt.Key.Key_Enter)
+        sb.selectNode(node)
+        QTest.keyPress(sb, Qt.Key.Key_Enter)
+    elif method == "sidebardclick":
+        rect = sb.visualRect(node.createIndex(sb.sidebarModel))
+        QTest.mouseDClick(sb.viewport(), Qt.MouseButton.LeftButton, pos=rect.topLeft())
     elif method == "shortcut":
         QTest.qWait(0)
         QTest.keySequence(rw, "Ctrl+B")

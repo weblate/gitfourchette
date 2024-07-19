@@ -116,7 +116,8 @@ def testFetchNewRemoteBranches(tempDir, mainWindow):
     assert any(n.data.startswith("refs/remotes/localfs/") for n in rw.sidebar.walk() if n.kind == EItem.RemoteBranch)
 
 
-def testDeleteRemoteBranch(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDeleteRemoteBranch(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
     rw = mainWindow.openRepo(wd)
@@ -124,8 +125,16 @@ def testDeleteRemoteBranch(tempDir, mainWindow):
     assert "localfs/no-parent" in rw.repo.branches.remote
 
     node = rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "delete")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "delete")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
     acceptQMessageBox(rw, "really delete.+from.+remote repository")
 
     assert "localfs/no-parent" not in rw.repo.branches.remote

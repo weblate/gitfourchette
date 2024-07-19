@@ -567,6 +567,7 @@ class Sidebar(QTreeView):
             pass
 
         elif item == EItem.LocalBranch:
+            assert data.startswith(RefPrefix.HEADS)
             DeleteBranch.invoke(self, data.removeprefix(RefPrefix.HEADS))
 
         elif item == EItem.Remote:
@@ -577,9 +578,11 @@ class Sidebar(QTreeView):
             DropStash.invoke(self, oid)
 
         elif item == EItem.RemoteBranch:
-            DeleteRemoteBranch.invoke(self, data)
+            assert data.startswith(RefPrefix.REMOTES)
+            DeleteRemoteBranch.invoke(self, data.removeprefix(RefPrefix.REMOTES))
 
         elif item == EItem.Tag:
+            assert data.startswith(RefPrefix.TAGS)
             DeleteTag.invoke(self, data.removeprefix(RefPrefix.TAGS))
 
         elif item == EItem.RefFolder:

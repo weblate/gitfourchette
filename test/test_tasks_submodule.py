@@ -12,7 +12,7 @@ from .test_tasks_stage import doStage, doDiscard
 from .util import *
 
 
-@pytest.mark.parametrize("method", ["sidebar", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
+@pytest.mark.parametrize("method", ["sidebarMenu", "sidebarKey", "sidebarDClick", "commitSpecialDiff", "commitFileList", "dirtyFileList", "stagedFileList"])
 def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     submoAbsPath, submoCommit = reposcenario.submodule(wd)
@@ -21,11 +21,20 @@ def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     rw = mainWindow.openRepo(wd)
     assert mainWindow.currentRepoWidget() is rw
 
-    if method == "sidebar":
-        submoNode = next(rw.sidebar.findNodesByKind(EItem.Submodule))
-        assert "submoname" == submoNode.data
+    submoNode = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert "submoname" == submoNode.data
+
+    if method == "sidebarMenu":
         menu = rw.sidebar.makeNodeMenu(submoNode)
         triggerMenuAction(menu, r"open submodule.+tab")
+
+    elif method == "sidebarKey":
+        rw.sidebar.selectNode(submoNode)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
+
+    elif method == "sidebarDClick":
+        rect = rw.sidebar.visualRect(submoNode.createIndex(rw.sidebar.sidebarModel))
+        QTest.mouseDClick(rw.sidebar.viewport(), Qt.MouseButton.LeftButton, pos=rect.topLeft())
 
     elif method == "commitSpecialDiff":
         rw.jump(NavLocator.inCommit(oid=submoCommit, path="submodir"))

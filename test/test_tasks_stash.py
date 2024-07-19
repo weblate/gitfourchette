@@ -1,14 +1,13 @@
 from . import reposcenario
 from .util import *
-from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.forms.stashdialog import StashDialog
-from gitfourchette.tasks import DropStash
 import os
 import pytest
 
 
-def testNewStash(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "sidebardclick", "menubar"])
+def testNewStash(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/a/a1.txt", "a1\nPENDING CHANGE\n")  # unstaged change
     writeFile(F"{wd}/b/b1.txt", "b1\nPENDING CHANGE (staged)\n")  # staged change
@@ -26,8 +25,20 @@ def testNewStash(tempDir, mainWindow):
     assert qlvGetRowData(rw.stagedFiles) == ["b/b1.txt"]
 
     node = next(sb.findNodesByKind(EItem.StashesHeader))
-    menu = sb.makeNodeMenu(node)
-    triggerMenuAction(menu, "stash changes")
+
+    if method == "sidebarmenu":
+        menu = sb.makeNodeMenu(node)
+        triggerMenuAction(menu, "stash changes")
+    elif method == "sidebarkey":
+        sb.selectNode(node)
+        QTest.keyPress(sb, Qt.Key.Key_Return)
+    elif method == "sidebardclick":
+        rect = sb.visualRect(node.createIndex(rw.sidebar.sidebarModel))
+        QTest.mouseDClick(sb.viewport(), Qt.MouseButton.LeftButton, pos=rect.topLeft())
+    elif method == "menubar":
+        triggerMenuAction(mainWindow.menuBar(), "repo/stash")
+    else:
+        raise NotImplementedError("unknown method")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
     assert not dlg.ui.keepCheckBox.isChecked()
@@ -188,7 +199,8 @@ def testPopStash(tempDir, mainWindow):
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
-def testApplyStash(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "sidebardclick"])
+def testApplyStash(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
@@ -201,8 +213,17 @@ def testApplyStash(tempDir, mainWindow):
     assert not rw.navLocator.context.isWorkdir()
     assert rw.navLocator.commit == rw.repoModel.stashes[0]
 
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, r"^apply")
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, r"^apply")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
+    elif method == "sidebardclick":
+        rect = rw.sidebar.visualRect(node.createIndex(rw.sidebar.sidebarModel))
+        QTest.mouseDClick(rw.sidebar.viewport(), Qt.MouseButton.LeftButton, pos=rect.topLeft())
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     qmb = findQMessageBox(rw, "apply.+stash")
     assert "delete" in qmb.checkBox().text().lower()
@@ -241,7 +262,8 @@ def testCancelApplyStash(tempDir, mainWindow):
     assert rw.navLocator.commit == rw.repoModel.stashes[0]
 
 
-def testDropStash(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+def testDropStash(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
@@ -251,8 +273,15 @@ def testDropStash(tempDir, mainWindow):
 
     assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     node = rw.sidebar.findNodeByRef("stash@{0}")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "^delete")
+
+    if method == "sidebarmenu":
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "delete")
+    elif method == "sidebarkey":
+        rw.sidebar.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    else:
+        raise NotImplementedError(f"unknown method {method}")
 
     acceptQMessageBox(rw, "really delete.+stash")
 
