@@ -86,6 +86,14 @@
 <context>
     <name>AbortMerge</name>
     <message numerus="yes">
+        <source>Cannot {0} right now, because %n files contain both staged and unstaged changes.</source>
+        <comment>placeholder: cannot abort the merge / reset the index / etc.</comment>
+        <translation>
+            <numerusform>Cannot {0} right now, because %n file contains both staged and unstaged changes.</numerusform>
+            <numerusform>Cannot {0} right now, because %n files contain both staged and unstaged changes.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
         <source>%n files will be reset:</source>
         <translation>
             <numerusform>%n file will be reset:</numerusform>
@@ -94,12 +102,22 @@
     </message>
 </context>
 <context>
+    <name>ApplyPatchData</name>
+    <message numerus="yes">
+        <source>&lt;b&gt;%n&lt;/b&gt; files will be modified in your working directory:</source>
+        <translation>
+            <numerusform>&lt;b&gt;%n&lt;/b&gt; file will be modified in your working directory:</numerusform>
+            <numerusform>&lt;b&gt;%n&lt;/b&gt; files will be modified in your working directory:</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>ApplyPatchFile</name>
     <message numerus="yes">
-        <source>It will modify &lt;b&gt;%n&lt;/b&gt; files:</source>
+        <source>&lt;b&gt;%n&lt;/b&gt; files will be modified in your working directory:</source>
         <translation>
-            <numerusform>It will modify &lt;b&gt;%n&lt;/b&gt; file:</numerusform>
-            <numerusform>It will modify &lt;b&gt;%n&lt;/b&gt; files:</numerusform>
+            <numerusform>&lt;b&gt;%n&lt;/b&gt; file will be modified in your working directory:</numerusform>
+            <numerusform>&lt;b&gt;%n&lt;/b&gt; files will be modified in your working directory:</numerusform>
         </translation>
     </message>
 </context>
@@ -123,10 +141,17 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>&amp;Edit in {0}</source>
+        <source>&amp;Revert This Change...</source>
         <translation>
-            <numerusform>&amp;Edit in {0}</numerusform>
-            <numerusform>&amp;Edit in {0}</numerusform>
+            <numerusform>&amp;Revert This Change...</numerusform>
+            <numerusform>&amp;Revert These Changes...</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>&amp;Open File in {0}</source>
+        <translation>
+            <numerusform>&amp;Open File in {0}</numerusform>
+            <numerusform>&amp;Open Files in {0}</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -153,25 +178,6 @@
         <translation>
             <numerusform>&lt;b&gt;%n&lt;/b&gt; branch will be deleted.</numerusform>
             <numerusform>&lt;b&gt;%n&lt;/b&gt; branches will be deleted.</numerusform>
-        </translation>
-    </message>
-</context>
-<context>
-    <name>DiffView</name>
-    <message numerus="yes">
-        <source>Hit {stagekey} to stage the current/selected line(s), or {discardkey} to discard it/them.</source>
-        <comment>singular: &apos;current line&apos;, plural: &apos;selected lines&apos;</comment>
-        <translation>
-            <numerusform>Hit {stagekey} to stage the current line, or {discardkey} to discard it.</numerusform>
-            <numerusform>Hit {stagekey} to stage the selected lines, or {discardkey} to discard them.</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Hit {unstagekey} to unstage the current/selected line(s).</source>
-        <comment>singular: &apos;current line&apos;, plural: &apos;selected lines&apos;</comment>
-        <translation>
-            <numerusform>Hit {unstagekey} to unstage the current line.</numerusform>
-            <numerusform>Hit {unstagekey} to unstage the selected lines.</numerusform>
         </translation>
     </message>
 </context>
@@ -208,11 +214,11 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Stage Updated HEAD in %n Submodules</source>
+        <source>Stage %n Submodules</source>
         <comment>please omit %n in singular form</comment>
         <translation>
-            <numerusform>Stage Updated HEAD in Submodule</numerusform>
-            <numerusform>Stage Updated HEAD in %n Submodules</numerusform>
+            <numerusform>Stage Submodule</numerusform>
+            <numerusform>Stage %n Submodules</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -283,44 +289,44 @@
     </message>
 </context>
 <context>
-    <name>GraphView</name>
+    <name>GetCommitInfo</name>
     <message numerus="yes">
-        <source>%n Parents:</source>
+        <source>%n Parents</source>
         <comment>singular form can just say &apos;Parent&apos;</comment>
         <translation>
-            <numerusform>Parent:</numerusform>
-            <numerusform>%n Parents:</numerusform>
+            <numerusform>Parent</numerusform>
+            <numerusform>%n Parents</numerusform>
         </translation>
     </message>
 </context>
 <context>
     <name>Jump</name>
     <message numerus="yes">
-        <source>%n staged:</source>
+        <source>Unstaged (%n)</source>
         <translation>
-            <numerusform variants="yes">
-                <lengthvariant>%n file staged for commit:</lengthvariant>
-                <lengthvariant>%n staged file:</lengthvariant>
-                <lengthvariant>%n staged:</lengthvariant>
-            </numerusform>
-            <numerusform variants="yes">
-                <lengthvariant>%n files staged for commit:</lengthvariant>
-                <lengthvariant>%n staged files:</lengthvariant>
-                <lengthvariant>%n staged:</lengthvariant>
-            </numerusform>
+            <numerusform>Unstaged (%n)</numerusform>
+            <numerusform>Unstaged (%n)</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <source>%n changes in {0}:</source>
+        <source>Staged (%n)</source>
         <translation>
-            <numerusform variants="yes">
-                <lengthvariant>%n change in {0}:</lengthvariant>
-                <lengthvariant>%n chg. in {0}:</lengthvariant>
-            </numerusform>
-            <numerusform variants="yes">
-                <lengthvariant>%n changes in {0}:</lengthvariant>
-                <lengthvariant>%n chgs. in {0}:</lengthvariant>
-            </numerusform>
+            <numerusform>Staged (%n)</numerusform>
+            <numerusform>Staged (%n)</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Commit %n files</source>
+        <translation>
+            <numerusform>Commit %n file</numerusform>
+            <numerusform>Commit %n files</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n changes:</source>
+        <translation>
+            <numerusform>%n change:</numerusform>
+            <numerusform>%n changes:</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -328,19 +334,6 @@
         <translation>
             <numerusform>%n rename detected.</numerusform>
             <numerusform>%n renames detected.</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n unstaged:</source>
-        <translation>
-            <numerusform variants="yes">
-                <lengthvariant>%n unstaged file:</lengthvariant>
-                <lengthvariant>%n unstaged:</lengthvariant>
-            </numerusform>
-            <numerusform variants="yes">
-                <lengthvariant>%n unstaged files:</lengthvariant>
-                <lengthvariant>%n unstaged:</lengthvariant>
-            </numerusform>
         </translation>
     </message>
 </context>
@@ -351,6 +344,13 @@
         <translation>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patch?</numerusform>
             <numerusform>Do you want to permanently delete &lt;b&gt;%n&lt;/b&gt; discarded patches?</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n background tabs unloaded.</source>
+        <translation>
+            <numerusform>%n background tab unloaded.</numerusform>
+            <numerusform>%n background tabs unloaded.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -389,6 +389,16 @@
     </message>
 </context>
 <context>
+    <name>StageFiles</name>
+    <message numerus="yes">
+        <source>%n items require your attention after staging:</source>
+        <translation>
+            <numerusform>An item requires your attention after staging:</numerusform>
+            <numerusform>%n items require your attention after staging:</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>StagedFiles</name>
     <message numerus="yes">
         <source>&amp;Unstage %n Files</source>
@@ -420,11 +430,11 @@
         </translation>
     </message>
     <message numerus="yes">
-        <source>Unstage Updated HEAD in %n Submodules</source>
+        <source>Unstage %n Submodules</source>
         <comment>please omit %n in singular form</comment>
         <translation>
-            <numerusform>Unstage Updated HEAD in Submodule</numerusform>
-            <numerusform>Unstage Updated HEAD in %n Submodules</numerusform>
+            <numerusform>Unstage Submodule</numerusform>
+            <numerusform>Unstage %n Submodules</numerusform>
         </translation>
     </message>
     <message numerus="yes">
