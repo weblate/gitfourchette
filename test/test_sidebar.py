@@ -153,3 +153,43 @@ def testRefSortModes(tempDir, mainWindow, headerKind, leafKind):
 
     triggerMenuAction(sb.makeNodeMenu(headerNode), "sort.+by/name.+z-a")
     assert getNodeDatas() == list(reversed(sortedAlpha))
+
+
+@pytest.mark.parametrize("explicit,implicit", [
+    ("refs/heads/1/2A/3B", []),
+    ("refs/heads/1/2A", ["refs/heads/1/2A/3A", "refs/heads/1/2A/3B"]),
+    ("refs/heads/1", ["refs/heads/1/2A/3A", "refs/heads/1/2A/3B", "refs/heads/1/2B"]),
+    ("refs/remotes/origin/no-parent", []),
+    ("origin", ["refs/remotes/origin/master", "refs/remotes/origin/no-parent", "refs/remotes/origin/first-merge"])
+])
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarclick"])
+def testHideNestedRefFolders(tempDir, mainWindow, explicit, implicit, method):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.create_branch_on_head("1/2A/3A")
+        repo.create_branch_on_head("1/2A/3B")
+        repo.create_branch_on_head("1/2B")
+
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    sm = rw.sidebar.sidebarModel
+
+    node = sb.findNode(lambda n: n.data == explicit)
+
+    # Trigger wantHideNode(node)
+    if method == "sidebarmenu":
+        triggerMenuAction(sb.makeNodeMenu(node), "hide")
+    elif method == "sidebarclick":
+        index = node.createIndex(sm)
+        rect = sb.visualRect(index)
+        QTest.mouseClick(sb.viewport(), Qt.MouseButton.LeftButton, pos=rect.topRight())
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
+    for node in rw.sidebar.walk():
+        if not node.data:
+            continue
+        if node.data == explicit:
+            assert sm.isExplicitlyHidden(node)
+        else:
+            assert sm.isImplicitlyHidden(node) == (node.data in implicit)
