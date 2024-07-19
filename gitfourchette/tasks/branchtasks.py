@@ -463,7 +463,7 @@ class FastForwardBranch(RepoTask):
 class MergeBranch(RepoTask):
     def effects(self) -> TaskEffects:
         # TODO: Force refresh top of graph including the parents of the Uncommited Changes Fake Commit
-        return TaskEffects.Refs | TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        return TaskEffects.Refs | TaskEffects.Workdir
 
     def flow(self, them: str):
         assert them.startswith('refs/')
@@ -530,6 +530,7 @@ class MergeBranch(RepoTask):
             yield from self.flowConfirm(title=title, text=message, verb=self.tr("Merge"),
                                         dontShowAgainKey="MergeMayCauseConflicts")
             yield from self.flowEnterWorkerThread()
+            self.jumpTo = NavLocator.inWorkdir()
             self.repo.merge(target)
 
         else:

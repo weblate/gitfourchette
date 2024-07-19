@@ -75,10 +75,6 @@ class TaskEffects(enum.IntFlag):
     Head = enum.auto()
     "The task moves HEAD to a different commit."
 
-    ShowWorkdir = enum.auto()
-    "Make sure the workdir is visible once the task succeeds."
-    # TODO: Migrate to setting RepoTask.jumpTo to NavLocator.inWorkdir(...)
-
     Index = enum.auto()
     "Reload the index."
 

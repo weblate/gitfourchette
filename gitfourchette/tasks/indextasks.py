@@ -24,7 +24,7 @@ class _BaseStagingTask(RepoTask):
         return isinstance(task, (tasks.Jump, tasks.RefreshRepo))
 
     def effects(self):
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        return TaskEffects.Workdir
 
     def denyConflicts(self, patches: list[Patch], purpose: PatchPurpose):
         conflicts = [p for p in patches if p.delta.status == DeltaStatus.CONFLICTED]
@@ -247,8 +247,7 @@ class UnstageModeChanges(_BaseStagingTask):
 class ApplyPatch(RepoTask):
     def effects(self) -> TaskEffects:
         # Patched file stays dirty
-        # TODO: Show Patched File In Workdir
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        return TaskEffects.Workdir
 
     def flow(self, fullPatch: Patch, subPatch: bytes, purpose: PatchPurpose):
         if not subPatch:
@@ -319,7 +318,7 @@ class ApplyPatch(RepoTask):
 class RevertPatch(RepoTask):
     def effects(self) -> TaskEffects:
         # Patched file stays dirty
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        return TaskEffects.Workdir
 
     def flow(self, fullPatch: Patch, patchData: bytes):
         if not patchData:
@@ -327,8 +326,8 @@ class RevertPatch(RepoTask):
 
         diff = self.repo.applies_breakdown(patchData, location=ApplyLocation.WORKDIR)
         if not diff:
-            raise AbortTask(
-                self.tr("Couldn’t revert this patch.<br>The code may have diverged too much from this revision."))
+            raise AbortTask(self.tr("Couldn’t revert this patch.") + "<br>" +
+                            self.tr("The code may have diverged too much from this revision."))
 
         yield from self.flowEnterWorkerThread()
         diff = self.repo.apply(diff, location=ApplyLocation.WORKDIR)

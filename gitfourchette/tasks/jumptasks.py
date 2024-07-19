@@ -510,10 +510,7 @@ class RefreshRepo(RepoTask):
 
         jumpTo = jumpTo or initialLocator
 
-        jumpToWorkdir = effectFlags & TaskEffects.Workdir and (
-                effectFlags & TaskEffects.ShowWorkdir
-                or jumpTo.context.isWorkdir()
-                or (jumpTo.context == NavContext.EMPTY and rw.isWorkdirShown))
+        jumpToWorkdir = jumpTo.context.isWorkdir() or (jumpTo.context == NavContext.EMPTY and rw.isWorkdirShown)
 
         if effectFlags & TaskEffects.Workdir and not jumpToWorkdir:
             # Clear uncommitted change count if we know the workdir is stale

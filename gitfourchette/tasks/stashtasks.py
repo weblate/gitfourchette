@@ -1,3 +1,4 @@
+from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, TaskPrereqs
@@ -35,7 +36,7 @@ class NewStash(RepoTask):
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn
 
     def effects(self):
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
+        return TaskEffects.Workdir | TaskEffects.Refs
 
     def flow(self, paths: list[str] | None = None):
         status = self.repo.status(untracked_files="all", ignored=False)
@@ -75,7 +76,7 @@ class ApplyStash(RepoTask):
 
     def effects(self):
         # Refs only change if the stash is deleted after a successful application.
-        return TaskEffects.Workdir | TaskEffects.ShowWorkdir | TaskEffects.Refs
+        return TaskEffects.Workdir | TaskEffects.Refs
 
     def flow(self, stashCommitId: Oid, tickDelete=True):
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
@@ -104,6 +105,8 @@ class ApplyStash(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.repo.stash_apply_id(stashCommitId)
+
+        self.jumpTo = NavLocator.inWorkdir()
 
         if self.repo.index.conflicts:
             yield from self.flowEnterUiThread()

@@ -327,7 +327,7 @@ class RevertCommit(RepoTask):
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
 
     def effects(self):
-        effects = TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        effects = TaskEffects.Workdir
         if self.didCommit:
             effects |= TaskEffects.Refs | TaskEffects.Head
         return effects
@@ -370,8 +370,10 @@ class RevertCommit(RepoTask):
         repoModel.prefs.draftCommitMessage = self.repo.message
         repoModel.prefs.setDirty()
 
+        self.jumpTo = NavLocator.inWorkdir()
+
         if not anyConflicts:
-            yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
+            yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir, NavLocator.inStaged(""))
             text = self.tr("Reverting {0} was successful. Do you want to commit the result now?")
             text = text.format(bquo(shortHash(oid)))
             yield from self.flowConfirm(text=text, verb=self.tr("Commit"), cancelText=self.tr("Review changes"))
@@ -385,7 +387,7 @@ class CherrypickCommit(RepoTask):
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
 
     def effects(self):
-        effects = TaskEffects.Workdir | TaskEffects.ShowWorkdir
+        effects = TaskEffects.Workdir
         if self.didCommit:
             effects |= TaskEffects.Refs | TaskEffects.Head
         return effects
@@ -420,8 +422,10 @@ class CherrypickCommit(RepoTask):
         self.repoModel.prefs.draftCommitSignatureOverride = SignatureOverride.Author
         self.repoModel.prefs.setDirty()
 
+        self.jumpTo = NavLocator.inWorkdir()
+
         if not anyConflicts:
-            yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir | TaskEffects.ShowWorkdir, NavLocator.inStaged(""))
+            yield from self.flowSubtask(RefreshRepo, TaskEffects.Workdir, NavLocator.inStaged(""))
             yield from self.flowConfirm(
                 text=self.tr("Cherry-picking {0} was successful. "
                              "Do you want to commit the result now?").format(bquo(shortHash(oid))),
