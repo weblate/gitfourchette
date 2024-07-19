@@ -35,9 +35,6 @@ class NewStash(RepoTask):
         # libgit2 will refuse to create a stash if there are no commits at all (NoUnborn)
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoUnborn
 
-    def effects(self):
-        return TaskEffects.Workdir | TaskEffects.Refs
-
     def flow(self, paths: list[str] | None = None):
         status = self.repo.status(untracked_files="all", ignored=False)
 
@@ -64,8 +61,12 @@ class NewStash(RepoTask):
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
+
         self.repo.create_stash(stashMessage, paths=tickedFiles)
+
         if not keepIntact:
+            self.effects |= TaskEffects.Workdir
             self.repo.restore_files_from_head(tickedFiles)
 
 
@@ -73,10 +74,6 @@ class ApplyStash(RepoTask):
     def prereqs(self):
         # libgit2 will refuse to apply a stash if there are conflicts (NoConflicts)
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
-
-    def effects(self):
-        # Refs only change if the stash is deleted after a successful application.
-        return TaskEffects.Workdir | TaskEffects.Refs
 
     def flow(self, stashCommitId: Oid, tickDelete=True):
         stashCommit: Commit = self.repo.peel_commit(stashCommitId)
@@ -104,9 +101,10 @@ class ApplyStash(RepoTask):
         qmb.deleteLater()
 
         yield from self.flowEnterWorkerThread()
-        self.repo.stash_apply_id(stashCommitId)
-
+        self.effects |= TaskEffects.Workdir
         self.jumpTo = NavLocator.inWorkdir()
+
+        self.repo.stash_apply_id(stashCommitId)
 
         if self.repo.index.conflicts:
             yield from self.flowEnterUiThread()
@@ -119,14 +117,12 @@ class ApplyStash(RepoTask):
             return
 
         if deleteAfterApply:
+            self.effects |= TaskEffects.Refs
             backupStash(self.repo, stashCommitId)
             self.repo.stash_drop_id(stashCommitId)
 
 
 class DropStash(RepoTask):
-    def effects(self):
-        return TaskEffects.Refs
-
     def flow(self, stashCommitId: Oid):
         stashCommit = self.repo.peel_commit(stashCommitId)
         stashMessage = strip_stash_message(stashCommit.message)
@@ -136,5 +132,6 @@ class DropStash(RepoTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
         backupStash(self.repo, stashCommitId)
         self.repo.stash_drop_id(stashCommitId)

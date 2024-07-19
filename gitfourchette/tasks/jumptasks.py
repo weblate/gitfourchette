@@ -440,10 +440,6 @@ class RefreshRepo(RepoTask):
     def canKill(self, task: RepoTask):
         return RefreshRepo.canKill_static(task)
 
-    def effects(self) -> TaskEffects:
-        # Stop refresh chain here - this task is responsible for other post-task refreshes
-        return TaskEffects.Nothing
-
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
         rw = self.rw
         repoModel = rw.repoModel

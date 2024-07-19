@@ -23,9 +23,6 @@ class _BaseStagingTask(RepoTask):
         from gitfourchette import tasks
         return isinstance(task, (tasks.Jump, tasks.RefreshRepo))
 
-    def effects(self):
-        return TaskEffects.Workdir
-
     def denyConflicts(self, patches: list[Patch], purpose: PatchPurpose):
         conflicts = [p for p in patches if p.delta.status == DeltaStatus.CONFLICTED]
 
@@ -64,6 +61,8 @@ class StageFiles(_BaseStagingTask):
         self.denyConflicts(patches, PatchPurpose.STAGE)
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         self.repo.stage_files(patches)
 
         yield from self.debriefPostStage(patches)
@@ -106,19 +105,6 @@ class StageFiles(_BaseStagingTask):
 
 
 class DiscardFiles(_BaseStagingTask):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.anySubmos = False
-
-    def effects(self):
-        effects = TaskEffects.Workdir
-
-        if self.anySubmos:
-            # We don't have TaskEffects.Submodules so .Refs is the next best thing
-            effects |= TaskEffects.Refs
-
-        return effects
-
     def flow(self, patches: list[Patch]):
         textPara = []
 
@@ -134,8 +120,6 @@ class DiscardFiles(_BaseStagingTask):
         anySubmos = bool(submos)
         allSubmos = len(submos) == len(patches)
         really = ""
-
-        self.anySubmos = anySubmos
 
         if len(patches) == 1:
             patch = patches[0]
@@ -171,6 +155,7 @@ class DiscardFiles(_BaseStagingTask):
                                     buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
 
         paths = [patch.delta.new_file.path for patch in patches
                  if patch not in submos]
@@ -179,6 +164,7 @@ class DiscardFiles(_BaseStagingTask):
             self.repo.restore_files_from_index(paths)
 
         if submos:
+            self.effects |= TaskEffects.Refs  # We don't have TaskEffects.Submodules so .Refs is the next best thing
             for patch in submos:
                 self.restoreSubmodule(patch)
 
@@ -207,6 +193,8 @@ class UnstageFiles(_BaseStagingTask):
             raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         self.repo.unstage_files(patches)
 
 
@@ -230,6 +218,8 @@ class DiscardModeChanges(_BaseStagingTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         paths = [patch.delta.new_file.path for patch in patches]
         self.repo.discard_mode_changes(paths)
 
@@ -241,14 +231,12 @@ class UnstageModeChanges(_BaseStagingTask):
             raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         self.repo.unstage_mode_changes(patches)
 
 
 class ApplyPatch(RepoTask):
-    def effects(self) -> TaskEffects:
-        # Patched file stays dirty
-        return TaskEffects.Workdir
-
     def flow(self, fullPatch: Patch, subPatch: bytes, purpose: PatchPurpose):
         if not subPatch:
             yield from self._applyFullPatch(fullPatch, purpose)
@@ -274,6 +262,8 @@ class ApplyPatch(RepoTask):
             applyLocation = ApplyLocation.INDEX
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         self.repo.apply(subPatch, applyLocation)
 
     def _applyFullPatch(self, fullPatch: Patch, purpose: PatchPurpose):
@@ -316,10 +306,6 @@ class ApplyPatch(RepoTask):
 
 
 class RevertPatch(RepoTask):
-    def effects(self) -> TaskEffects:
-        # Patched file stays dirty
-        return TaskEffects.Workdir
-
     def flow(self, fullPatch: Patch, patchData: bytes):
         if not patchData:
             raise AbortTask(self.tr("There’s nothing to revert in the selection."))
@@ -330,6 +316,8 @@ class RevertPatch(RepoTask):
                             self.tr("The code may have diverged too much from this revision."))
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         diff = self.repo.apply(diff, location=ApplyLocation.WORKDIR)
 
         # After the task, jump to a NavLocator that points to any file that was modified by the patch
@@ -340,11 +328,9 @@ class RevertPatch(RepoTask):
 
 
 class HardSolveConflicts(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, conflictedFiles: dict[str, Oid]):
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
 
         repo = self.repo
         repo.refresh_index()
@@ -387,11 +373,10 @@ class HardSolveConflicts(RepoTask):
 
 
 class MarkConflictSolved(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, path: str):
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         repo = self.repo
 
         repo.refresh_index()
@@ -418,9 +403,6 @@ class AcceptMergeConflictResolution(RepoTask):
         """
         return True
 
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, umc: UnmergedConflict):
         message = paragraphs(
             self.tr("It looks like you’ve resolved the merge conflict in {0}."),
@@ -432,6 +414,8 @@ class AcceptMergeConflictResolution(RepoTask):
             verb=self.tr("Confirm resolution"), cancelText=self.tr("Discard resolution"))
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
+
         repo = self.repo
 
         path = umc.conflict.ours.path
@@ -450,9 +434,6 @@ class AcceptMergeConflictResolution(RepoTask):
 
 
 class ApplyPatchFile(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, reverse: bool = False, path: str = ""):
         if reverse:
             title = self.tr("Revert patch file")
@@ -503,6 +484,8 @@ class ApplyPatchFile(RepoTask):
         details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
         yield from self.flowConfirm(title, text, verb=verb, informativeText=informative, detailList=details)
 
+        self.effects |= TaskEffects.Workdir
+
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
         self.jumpTo = NavLocator.inUnstaged(deltas[0].new_file.path)
 
@@ -513,14 +496,8 @@ class ApplyPatchFileReverse(ApplyPatchFile):
 
 
 class ApplyPatchData(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, patchData: str, reverse: bool):
         yield from self.flowEnterWorkerThread()
-
-        title = self.tr("Revert patch") if reverse else self.tr("Apply patch")
-        verb = self.tr("Revert") if reverse else self.tr("Apply")
 
         if reverse:
             patchData = reverseunidiff.reverseUnidiff(patchData)
@@ -533,6 +510,9 @@ class ApplyPatchData(RepoTask):
 
         yield from self.flowEnterUiThread()
 
+        title = self.tr("Revert patch") if reverse else self.tr("Apply patch")
+        verb = self.tr("Revert") if reverse else self.tr("Apply")
+
         numDeltas = len(deltas)
         text = self.tr("Do you want to {verb} this patch?")
         text = text.format(verb=tagify(verb.lower(), "<b>"))
@@ -540,14 +520,12 @@ class ApplyPatchData(RepoTask):
         details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
         yield from self.flowConfirm(title, text, verb=verb, informativeText=informative, detailList=details)
 
+        self.effects |= TaskEffects.Workdir
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
         self.jumpTo = NavLocator.inUnstaged(deltas[0].new_file.path)
 
 
 class RestoreRevisionToWorkdir(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, patch: Patch, old: bool):
         if old:
             preposition = self.tr("before", "preposition slotted into '...BEFORE this commit'")
@@ -579,6 +557,8 @@ class RestoreRevisionToWorkdir(RepoTask):
 
         yield from self.flowConfirm(text=prompt, verb=self.tr("Restore"))
 
+        self.effects |= TaskEffects.Workdir
+
         if delete:
             os.unlink(path)
         else:
@@ -592,9 +572,6 @@ class RestoreRevisionToWorkdir(RepoTask):
 
 
 class AbortMerge(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.DefaultRefresh
-
     def flow(self):
         self.repo.refresh_index()
 
@@ -642,6 +619,8 @@ class AbortMerge(RepoTask):
 
         yield from self.flowConfirm(title=title, text=paragraphs(lines), verb=verb, informativeText=informative,
                                     detailList=[escape(f) for f in abortList])
+
+        self.effects |= TaskEffects.DefaultRefresh
 
         self.repo.reset_merge()
         self.repo.state_cleanup()

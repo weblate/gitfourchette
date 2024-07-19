@@ -192,21 +192,53 @@ def testApplyStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
-    repo = rw.repo
 
     assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     node = rw.sidebar.findNodeByRef("stash@{0}")
+
+    # Jump to stash
+    rw.sidebar.selectNode(node)
+    assert not rw.navLocator.context.isWorkdir()
+    assert rw.navLocator.commit == rw.repoModel.stashes[0]
+
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, r"^apply")
 
-    qmb = findQMessageBox(rw, "apply.*stash")
+    qmb = findQMessageBox(rw, "apply.+stash")
     assert "delete" in qmb.checkBox().text().lower()
     qmb.checkBox().setChecked(False)
     qmb.accept()
 
-    assert 1 == len(repo.listall_stashes())
+    # After applying the stash, should have jumped to workdir
+    assert rw.navLocator.context.isWorkdir()
+
+    # Check that the UI matches the expected post-apply state
+    assert 1 == len(rw.repo.listall_stashes())
     assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
+
+
+def testCancelApplyStash(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stashedChange(wd)
+    rw = mainWindow.openRepo(wd)
+
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    node = rw.sidebar.findNodeByRef("stash@{0}")
+
+    # Jump to stash
+    rw.sidebar.selectNode(node)
+    assert not rw.navLocator.context.isWorkdir()
+    assert rw.navLocator.commit == rw.repoModel.stashes[0]
+
+    # Bring up apply stash confirmation then cancel
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, r"^apply")
+    rejectQMessageBox(rw, "apply.+stash")
+
+    # After canceling, should NOT jump to workdir
+    assert not rw.navLocator.context.isWorkdir()
+    assert rw.navLocator.commit == rw.repoModel.stashes[0]
 
 
 def testDropStash(tempDir, mainWindow):

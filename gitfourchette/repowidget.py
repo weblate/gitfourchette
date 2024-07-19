@@ -47,7 +47,7 @@ class RepoWidget(QStackedWidget):
     "Path of the repository if it isn't loaded yet (state=None)"
 
     pendingLocator: NavLocator
-    pendingRefresh: TaskEffects
+    pendingEffects: TaskEffects
 
     allowAutoLoad: bool
 
@@ -109,7 +109,7 @@ class RepoWidget(QStackedWidget):
         self.repoModel = None
         self.pendingPath = os.path.normpath(pendingWorkdir)
         self.pendingLocator = NavLocator()
-        self.pendingRefresh = TaskEffects.Nothing
+        self.pendingEffects = TaskEffects.Nothing
         self.allowAutoLoad = True
 
         self.busyCursorDelayer = QTimer(self)
@@ -699,30 +699,26 @@ class RepoWidget(QStackedWidget):
         if not self.focusWidget():  # only if nothing has the focus yet
             self.graphView.setFocus()
 
-    def refreshRepo(self, flags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
+    def refreshRepo(self, effects: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
         """Refresh the repo as soon as possible."""
 
         if (not self.isLoaded) or self.isPriming:
             return
         assert self.repoModel is not None
 
-        # End refresh chain
-        if flags == TaskEffects.Nothing and not jumpTo:
-            return
-
         if not self.isVisible() or self.repoTaskRunner.isBusy():
             # Can't refresh right now. Stash the effect bits for later.
-            logger.debug(f"Stashing refresh bits {repr(flags)}")
-            self.pendingRefresh |= flags
+            logger.debug(f"Stashing refresh bits {repr(effects)}")
+            self.pendingEffects |= effects
             if jumpTo:
                 logger.warning(f"Ignoring post-refresh jump {jumpTo} because can't refresh yet")
             return
 
         # Consume pending effect bits, if any
-        if self.pendingRefresh != TaskEffects.Nothing:
-            logger.debug(f"Consuming pending refresh bits {self.pendingRefresh}")
-            flags |= self.pendingRefresh
-            self.pendingRefresh = TaskEffects.Nothing
+        if self.pendingEffects != TaskEffects.Nothing:
+            logger.debug(f"Consuming pending refresh bits {self.pendingEffects}")
+            effects |= self.pendingEffects
+            self.pendingEffects = TaskEffects.Nothing
 
         # Consume pending locator, if any
         if self.pendingLocator:
@@ -733,10 +729,13 @@ class RepoWidget(QStackedWidget):
             self.pendingLocator = NavLocator()  # Consume it
 
         # Invoke refresh task
-        if flags != TaskEffects.Nothing:
-            tasks.RefreshRepo.invoke(self, flags, jumpTo)
+        if effects != TaskEffects.Nothing:
+            tasks.RefreshRepo.invoke(self, effects, jumpTo)
         elif jumpTo:
             tasks.Jump.invoke(self, jumpTo)
+        else:
+            # End of refresh chain.
+            pass
 
     def refreshWindowChrome(self):
         shortname = self.getTitle()
@@ -868,10 +867,7 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, task: tasks.RepoTask):
-        if task.didSucceed:
-            self.refreshRepo(task.effects(), task.jumpTo)
-        else:
-            self.refreshRepo()
+        self.refreshRepo(task.effects, task.jumpTo)
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):
         if withSpinner:

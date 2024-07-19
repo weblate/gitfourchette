@@ -297,9 +297,6 @@ class LoadCommit(RepoTask):
 
 
 class LoadPatch(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Nothing  # let custom callback in RepoWidget do it
-
     def canKill(self, task: RepoTask):
         return type(task) in [LoadPatch]
 

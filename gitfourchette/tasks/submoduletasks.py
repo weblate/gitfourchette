@@ -17,9 +17,6 @@ class RegisterSubmodule(RepoTask):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts
 
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
-
     def flow(self, path: str):
         yield from self._flow(path, absorb=False)
 
@@ -72,6 +69,8 @@ class RegisterSubmodule(RepoTask):
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
+
         innerWD = str(subWD.relative_to(thisWD))
         self.repo.add_inner_repo_as_submodule(innerWD, remoteUrl, name=customName, absorb_git_dir=absorb)
 
@@ -85,9 +84,6 @@ class RemoveSubmodule(RepoTask):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts
 
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
-
     def flow(self, submoduleName: str):
         yield from self.flowConfirm(
             text=paragraphs(
@@ -100,4 +96,6 @@ class RemoveSubmodule(RepoTask):
             verb="Remove")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir | TaskEffects.Refs  # we don't have TaskEffects.Submodules so .Refs is the next best thing
+
         self.repo.remove_submodule(submoduleName)

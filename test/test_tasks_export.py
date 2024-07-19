@@ -15,21 +15,25 @@ def testExportPatchFromWorkdir(tempDir, mainWindow):
 
     node = next(rw.sidebar.findNodesByKind(EItem.UncommittedChanges))
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), r"export.+patch")
-    acceptQFileDialog(rw, "export.+patch", f"{tempDir.name}/workdir.patch")
+    acceptQFileDialog(rw, "export.+patch", f"{wd}/workdir.patch")
+
+    # Since we've exported the patch to the workdir, make sure we can see it after the UI has refreshed.
+    assert os.path.isfile(f"{wd}/workdir.patch")
+    assert "workdir.patch" in qlvGetRowData(rw.dirtyFiles)
 
     triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
-    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/workdir.patch")
+    acceptQFileDialog(rw, "revert patch", f"{wd}/workdir.patch")
     acceptQMessageBox(rw, "revert.+patch")
-    assert qlvGetRowData(rw.dirtyFiles) == []
+    assert qlvGetRowData(rw.dirtyFiles) == ["workdir.patch"]
 
     triggerMenuAction(mainWindow.menuBar(), "file/revert patch")
-    acceptQFileDialog(rw, "revert patch", f"{tempDir.name}/workdir.patch")
+    acceptQFileDialog(rw, "revert patch", f"{wd}/workdir.patch")
     acceptQMessageBox(rw, "failed.+patch")
 
     triggerMenuAction(mainWindow.menuBar(), "file/apply patch")
-    acceptQFileDialog(rw, "apply patch", f"{tempDir.name}/workdir.patch")
+    acceptQFileDialog(rw, "apply patch", f"{wd}/workdir.patch")
     acceptQMessageBox(rw, "apply.+patch")
-    assert qlvGetRowData(rw.dirtyFiles) == ["master.txt", "untracked-file.txt"]
+    assert qlvGetRowData(rw.dirtyFiles) == ["master.txt", "untracked-file.txt", "workdir.patch"]
 
 
 def testExportPatchFromEmptyWorkdir(tempDir, mainWindow):

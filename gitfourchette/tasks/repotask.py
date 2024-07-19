@@ -129,11 +129,14 @@ class RepoTask(QObject):
 
     FlowGeneratorType = Generator[FlowControlToken, None, Any]
 
-    _globalTaskCounter = 0
-
     repoModel: RepoModel | None
-    taskID: int
-    jumpTo: NavLocator | None
+
+    jumpTo: NavLocator
+    """ Jump to this location when this task completes. """
+
+    effects: TaskEffects.Nothing
+    """ Which parts of the UI should be refreshed when this task completes. """
+
     didSucceed: bool
 
     _currentFlow: FlowGeneratorType | None
@@ -158,10 +161,9 @@ class RepoTask(QObject):
         self.repoModel = None
         self._currentFlow = None
         self._currentIteration = 0
-        self.taskID = RepoTask._globalTaskCounter
-        RepoTask._globalTaskCounter += 1
         self.setObjectName(self.__class__.__name__)
         self.jumpTo = NavLocator()
+        self.effects = TaskEffects.Nothing
         self.didSucceed = True
         self._taskStack = [self]
 
@@ -279,12 +281,6 @@ class RepoTask(QObject):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.Nothing
 
-    def effects(self) -> TaskEffects:
-        """
-        Returns which parts of the UI should be refreshed when this task is done.
-        """
-        return TaskEffects.Nothing
-
     def flowEnterWorkerThread(self):
         """
         Move the task to a non-UI thread.
@@ -338,6 +334,9 @@ class RepoTask(QObject):
         # Make sure we're back on the UI thread before re-entering the root task
         if not onAppThread():
             yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
+
+        # Percolate effect bits to caller task
+        self.effects |= subtask.effects
 
         # Clean up subtask (on UI thread)
         subtask.cleanup()

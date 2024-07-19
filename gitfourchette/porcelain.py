@@ -650,6 +650,9 @@ class Repo(_VanillaRepository):
             raise ValueError("Won't create absolute path outside workdir")
         return p
 
+    def is_in_workdir(self, path: str) -> bool:
+        return _Path(path).resolve().is_relative_to(self.workdir)
+
     def refresh_index(self, force: bool = False):
         """
         Reload the index. Call this before manipulating the staging area

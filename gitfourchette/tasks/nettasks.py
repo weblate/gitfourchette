@@ -20,9 +20,6 @@ class _BaseNetTask(RepoTask):
         super().__init__(parent)
         self.remoteLinkDialog = None
 
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Remotes
-
     def _showRemoteLinkDialog(self, title: str = ""):
         assert not self.remoteLinkDialog
         assert onAppThread()
@@ -68,6 +65,7 @@ class DeleteRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Remotes | TaskEffects.Refs
         remote = self.repo.remotes[remoteName]
         with self.remoteLink.remoteKeyFileContext(remote):
             self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
@@ -102,6 +100,7 @@ class RenameRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Remotes | TaskEffects.Refs
         remote = self.repo.remotes[remoteName]
         with self.remoteLink.remoteKeyFileContext(remote):
             self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
@@ -124,6 +123,7 @@ class FetchRemote(_BaseNetTask):
         self.remoteLinkDialog.setLabelText(connectingMessage)
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Remotes | TaskEffects.Refs
         with self.remoteLink.remoteKeyFileContext(remote):
             self.repo.fetch_remote(remoteName, self.remoteLink)
 
@@ -141,6 +141,7 @@ class FetchRemoteBranch(_BaseNetTask):
         self._showRemoteLinkDialog(title)
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Remotes | TaskEffects.Refs
 
         remoteName, _ = split_remote_branch_shorthand(remoteBranchName)
         remote = self.repo.remotes[remoteName]
@@ -188,12 +189,10 @@ class PullBranch(_BaseNetTask):
 
 
 class UpdateSubmodule(_BaseNetTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Workdir
-
     def flow(self, submoduleName: str, init=False):
         self._showRemoteLinkDialog()
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
 
         repo = self.repo
         submodule = repo.submodules[submoduleName]

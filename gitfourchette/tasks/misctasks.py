@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class EditRepoSettings(RepoTask):
-    def effects(self):
-        return TaskEffects.Nothing
-
     def flow(self):
         dlg = RepoSettingsDialog(self.repo, self.parentWidget())
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
@@ -41,9 +38,6 @@ class EditRepoSettings(RepoTask):
 
 
 class GetCommitInfo(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Nothing
-
     @staticmethod
     def formatSignature(sig: Signature):
         qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)

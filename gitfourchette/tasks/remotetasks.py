@@ -9,9 +9,6 @@ from gitfourchette.toolbox import *
 
 
 class NewRemote(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Refs | TaskEffects.Remotes
-
     def flow(self):
         existingRemotes = [r.name for r in self.repo.remotes]
 
@@ -34,6 +31,7 @@ class NewRemote(RepoTask):
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.create_remote(newRemoteName, newRemoteUrl)
 
         if fetchAfterAdd:
@@ -44,9 +42,6 @@ class NewRemote(RepoTask):
 
 
 class EditRemote(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Refs | TaskEffects.Remotes
-
     def flow(self, oldRemoteName: str):
         oldRemoteUrl = self.repo.remotes[oldRemoteName].url
 
@@ -72,14 +67,12 @@ class EditRemote(RepoTask):
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.edit_remote(oldRemoteName, newRemoteName, newRemoteUrl)
         self.repoModel.prefs.setRemoteKeyFile(newRemoteName, newRemoteKeyfile)
 
 
 class DeleteRemote(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Refs | TaskEffects.Remotes
-
     def flow(self, remoteName: str):
         yield from self.flowConfirm(
             text=paragraphs(
@@ -91,4 +84,5 @@ class DeleteRemote(RepoTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.delete_remote(remoteName)

@@ -20,9 +20,6 @@ class NewCommit(RepoTask):
     def prereqs(self):
         return TaskPrereqs.NoConflicts
 
-    def effects(self):
-        return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
-
     def flow(self):
         from gitfourchette.tasks import Jump
 
@@ -86,6 +83,7 @@ class NewCommit(RepoTask):
         cd.deleteLater()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
         self.repo.create_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
@@ -95,9 +93,6 @@ class NewCommit(RepoTask):
 class AmendCommit(RepoTask):
     def prereqs(self):
         return TaskPrereqs.NoUnborn | TaskPrereqs.NoConflicts | TaskPrereqs.NoCherrypick
-
-    def effects(self):
-        return TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
     def getDraftMessage(self):
         return self.repoModel.prefs.draftAmendMessage
@@ -145,6 +140,8 @@ class AmendCommit(RepoTask):
         committer = cd.getOverriddenCommitterSignature() or fallbackSignature
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
+
         self.repo.amend_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
@@ -152,9 +149,6 @@ class AmendCommit(RepoTask):
 
 
 class SetUpGitIdentity(RepoTask):
-    def effects(self):
-        return TaskEffects.Nothing
-
     def flow(self, okButtonText="", firstRun=True):
         if firstRun:
             # Getting the default signature will fail if the user's identity is missing or incorrectly set
@@ -200,9 +194,6 @@ class SetUpGitIdentity(RepoTask):
 
 
 class CheckoutCommit(RepoTask):
-    def effects(self):
-        return TaskEffects.Refs | TaskEffects.Head
-
     def flow(self, oid: Oid):
         refs = self.repo.listall_refs_pointing_at(oid)
         refs = [r.removeprefix(RefPrefix.HEADS) for r in refs if r.startswith(RefPrefix.HEADS)]
@@ -233,6 +224,8 @@ class CheckoutCommit(RepoTask):
 
         # Make sure to copy user input from dialog UI *before* starting worker thread
         dlg.deleteLater()
+
+        self.effects |= TaskEffects.Refs | TaskEffects.Head
 
         if ui.detachedHeadRadioButton.isChecked():
             if self.repoModel.dangerouslyDetachedHead() and oid != self.repoModel.headCommitId:
@@ -265,9 +258,6 @@ class NewTag(RepoTask):
     def prereqs(self):
         return TaskPrereqs.NoUnborn
 
-    def effects(self):
-        return TaskEffects.Refs
-
     def flow(self, oid: Oid = None, signIt: bool = False):
         if signIt:
             yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to New Tag"))
@@ -291,6 +281,7 @@ class NewTag(RepoTask):
         tagName = dlg.lineEdit.text()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
 
         if signIt:
             self.repo.create_tag(tagName, oid, ObjectType.COMMIT, self.repo.default_signature, "")
@@ -299,9 +290,6 @@ class NewTag(RepoTask):
 
 
 class DeleteTag(RepoTask):
-    def effects(self):
-        return TaskEffects.Refs
-
     def flow(self, tagName: str):
         # TODO: This won't delete the tag on remotes
 
@@ -313,6 +301,7 @@ class DeleteTag(RepoTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
 
         # Stay on this commit after the operation
         tagTarget = self.repo.commit_id_from_tag_name(tagName)
@@ -326,15 +315,7 @@ class RevertCommit(RepoTask):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
 
-    def effects(self):
-        effects = TaskEffects.Workdir
-        if self.didCommit:
-            effects |= TaskEffects.Refs | TaskEffects.Head
-        return effects
-
     def flow(self, oid: Oid):
-        self.didCommit = False
-
         # TODO: Remove this when we can stop supporting pygit2 <= 1.15.0
         pygit2_version_at_least("1.15.1")
 
@@ -345,6 +326,7 @@ class RevertCommit(RepoTask):
         yield from self.flowConfirm(text=text)
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
         repoModel = self.repoModel
         repo = self.repo
         commit = repo.peel_commit(oid)
@@ -378,7 +360,6 @@ class RevertCommit(RepoTask):
             text = text.format(bquo(shortHash(oid)))
             yield from self.flowConfirm(text=text, verb=self.tr("Commit"), cancelText=self.tr("Review changes"))
             yield from self.flowSubtask(NewCommit)
-            self.didCommit = True
 
 
 class CherrypickCommit(RepoTask):
@@ -386,16 +367,9 @@ class CherrypickCommit(RepoTask):
         # Prevent cherry-picking with staged changes, like vanilla git (despite libgit2 allowing it)
         return TaskPrereqs.NoConflicts | TaskPrereqs.NoStagedChanges
 
-    def effects(self):
-        effects = TaskEffects.Workdir
-        if self.didCommit:
-            effects |= TaskEffects.Refs | TaskEffects.Head
-        return effects
-
     def flow(self, oid: Oid):
-        self.didCommit = False
-
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Workdir
         commit = self.repo.peel_commit(oid)
         self.repo.cherrypick(oid)
 
@@ -432,4 +406,3 @@ class CherrypickCommit(RepoTask):
                 verb=self.tr("Commit"),
                 cancelText=self.tr("Review changes"))
             yield from self.flowSubtask(NewCommit)
-            self.didCommit = True

@@ -15,9 +15,6 @@ def contextLines():
 
 
 class ComposePatch(RepoTask):
-    def effects(self):
-        return TaskEffects.Nothing
-
     def composePatch(self, patches: Iterable[Patch], fileName=""):
         yield from self.flowEnterWorkerThread()
 
@@ -75,6 +72,9 @@ class ComposePatch(RepoTask):
         yield from self.flowEnterWorkerThread()
         with open(savePath, "wb") as f:
             f.write(composed)
+
+        if self.repo.is_in_workdir(savePath):
+            self.effects |= TaskEffects.Workdir  # invalidate workdir if saved file to it
 
 
 class ExportCommitAsPatch(ComposePatch):

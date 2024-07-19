@@ -13,9 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class SwitchBranch(RepoTask):
-    def effects(self):
-        return TaskEffects.Refs | TaskEffects.Head
-
     def flow(self, newBranch: str, askForConfirmation: bool):
         assert not newBranch.startswith(RefPrefix.HEADS)
 
@@ -38,6 +35,7 @@ class SwitchBranch(RepoTask):
             yield from self.flowConfirm(text=text, icon='warning')
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs | TaskEffects.Head
         self.repo.checkout_local_branch(newBranch)
 
 
@@ -69,10 +67,8 @@ class RenameBranch(RepoTask):
             raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
         self.repo.rename_local_branch(oldBranchName, newBranchName)
-
-    def effects(self):
-        return TaskEffects.Refs
 
 
 class RenameBranchFolder(RepoTask):
@@ -134,12 +130,10 @@ class RenameBranchFolder(RepoTask):
 
         # Perform rename
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
         for oldBranchName in folderBranches:
             newBranchName = transformBranchName(oldBranchName, newFolderName)
             self.repo.rename_local_branch(oldBranchName, newBranchName)
-
-    def effects(self):
-        return TaskEffects.Refs
 
 
 class DeleteBranch(RepoTask):
@@ -161,10 +155,8 @@ class DeleteBranch(RepoTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
         self.repo.delete_local_branch(localBranchName)
-
-    def effects(self):
-        return TaskEffects.Refs
 
 
 class DeleteBranchFolder(RepoTask):
@@ -197,12 +189,10 @@ class DeleteBranchFolder(RepoTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
 
         for b in folderBranches:
             self.repo.delete_local_branch(b)
-
-    def effects(self):
-        return TaskEffects.Refs
 
 
 class _NewBranchBaseTask(RepoTask):
@@ -282,6 +272,7 @@ class _NewBranchBaseTask(RepoTask):
 
         # Create local branch
         repo.create_branch_from_commit(localName, tip)
+        self.effects |= TaskEffects.Refs | TaskEffects.Head
 
         # Optionally make it track a remote branch
         if trackUpstream:
@@ -303,9 +294,6 @@ class _NewBranchBaseTask(RepoTask):
                 yield from self.flowConfirm(text=text, icon='warning', verb=self.tr("Switch to {0}").format(lquoe(localName)), cancelText=self.tr("Don’t Switch"))
 
             repo.checkout_local_branch(localName)
-
-    def effects(self):
-        return TaskEffects.Refs | TaskEffects.Head
 
 
 class NewBranchFromHead(_NewBranchBaseTask):
@@ -351,15 +339,13 @@ class NewBranchFromRef(_NewBranchBaseTask):
 
 
 class EditUpstreamBranch(RepoTask):
-    def effects(self):
-        return TaskEffects.Refs
-
     def flow(self, localBranchName: str, remoteBranchName: str):
         # Bail if no-op
         if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
             raise AbortTask()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
 
         self.repo.edit_upstream_branch(localBranchName, remoteBranchName)
 
@@ -367,9 +353,6 @@ class EditUpstreamBranch(RepoTask):
 class ResetHead(RepoTask):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
-
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Refs | TaskEffects.Workdir
 
     def flow(self, onto: Oid):
         branchName = self.repo.head_branch_shorthand
@@ -387,6 +370,8 @@ class ResetHead(RepoTask):
         recurseSubmodules = dlg.recurseSubmodules()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs | TaskEffects.Workdir
+
         self.repo.reset(onto, resetMode)
 
         if hasSubmodules and recurseSubmodules:
@@ -398,9 +383,6 @@ class ResetHead(RepoTask):
 
 
 class FastForwardBranch(RepoTask):
-    def effects(self):
-        return TaskEffects.Refs
-
     def flow(self, localBranchName: str = ""):
         if not localBranchName:
             self.checkPrereqs(TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached)
@@ -415,6 +397,7 @@ class FastForwardBranch(RepoTask):
         remoteBranchName = upstream.shorthand
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs | TaskEffects.Head
 
         upToDate = self.repo.fast_forward_branch(localBranchName, remoteBranchName)
 
@@ -456,15 +439,8 @@ class FastForwardBranch(RepoTask):
         else:
             super().onError(exc)
 
-    def effects(self):
-        return TaskEffects.Refs | TaskEffects.Head | TaskEffects.Workdir
-
 
 class MergeBranch(RepoTask):
-    def effects(self) -> TaskEffects:
-        # TODO: Force refresh top of graph including the parents of the Uncommited Changes Fake Commit
-        return TaskEffects.Refs | TaskEffects.Workdir
-
     def flow(self, them: str):
         assert them.startswith('refs/')
 
@@ -520,6 +496,7 @@ class MergeBranch(RepoTask):
                                         informativeText=details, informativeLink=self.tr("What does this mean?"),
                                         dontShowAgainKey="MergeCanFF")
             yield from self.flowEnterWorkerThread()
+            self.effects |= TaskEffects.Refs
             self.repo.fast_forward_branch(myShorthand, theirBranch.name)
 
         elif analysis == MergeAnalysis.NORMAL:
@@ -529,8 +506,11 @@ class MergeBranch(RepoTask):
                 self.tr("You will need to fix the conflicts, if any. Then, commit the result to conclude the merge."))
             yield from self.flowConfirm(title=title, text=message, verb=self.tr("Merge"),
                                         dontShowAgainKey="MergeMayCauseConflicts")
+
             yield from self.flowEnterWorkerThread()
+            self.effects |= TaskEffects.Refs | TaskEffects.Workdir
             self.jumpTo = NavLocator.inWorkdir()
+
             self.repo.merge(target)
 
         else:
@@ -538,9 +518,6 @@ class MergeBranch(RepoTask):
 
 
 class RecallCommit(RepoTask):
-    def effects(self) -> TaskEffects:
-        return TaskEffects.Refs
-
     def flow(self):
         dlg = showTextInputDialog(
             self.parentWidget(),
@@ -555,6 +532,7 @@ class RecallCommit(RepoTask):
         needle = dlg.lineEdit.text()
 
         yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
         obj = self.repo[needle]
         commit: Commit = obj.peel(Commit)
         branchName = f"recall-{shortHash(commit.id)}"
