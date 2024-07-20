@@ -1,9 +1,9 @@
 import itertools
-import pytest
-from gitfourchette.graph import *
-from gitfourchette.graphtrickle import GraphTrickle
-from .test_graphsplicer import parseAncestryOneLiner
 from dataclasses import dataclass
+
+import pytest
+
+from gitfourchette.graph import *
 
 
 @dataclass
@@ -285,24 +285,20 @@ allFixtures = [
 )
 def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     fixtureHeads = fixture.headsDef.split()
-    sequence, parentMap, graphHeads = parseAncestryOneLiner(fixture.graphDef)
+    sequence, parentMap, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
     graph = Graph()
     graphGenerator = graph.generateFullSequence(sequence, parentMap)
     assert all(h in fixtureHeads for h in graphHeads)
 
-    print("\n"+graph.textDiagram())
+    print("\n" + GraphDiagram.diagram(graph))
     print("Seed hidden commits:", seeds)
     print("Expected hidden commits:", expected)
 
     # Set up trickle
-    trickle = GraphTrickle()
-    for c in set(fixtureHeads):
-        trickle.setEnd(c)  # Not Hidden
-    for c in set(seeds):
-        if c.endswith("!"):
-            trickle.setTap(c.removesuffix("!"))
-        else:
-            trickle.setPipe(c)
+    trickle = GraphTrickle.initForHiddenCommits(
+        allHeads=fixtureHeads,
+        hiddenTips=set(c for c in seeds if not c.endswith("!")),
+        hiddenTaps=set(c.removesuffix("!") for c in seeds if c.endswith("!")))
 
     print("Trickle frontier:", trickle.done, trickle.frontier)
 
@@ -329,12 +325,12 @@ def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
 )
 def testLocalCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     fixtureHeads = fixture.headsDef.split()
-    sequence, parentMap, graphHeads = parseAncestryOneLiner(fixture.graphDef)
+    sequence, parentMap, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
     graph = Graph()
     graph.generateFullSequence(sequence, parentMap)
     assert all(h in fixtureHeads for h in graphHeads)
 
-    print("\n"+graph.textDiagram())
+    print("\n" + GraphDiagram.diagram(graph))
     print("Seed commits:", seeds)
     print("Expected commits:", expected)
 

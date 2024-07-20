@@ -3,7 +3,7 @@ from itertools import zip_longest
 
 from gitfourchette import colors
 from gitfourchette import settings
-from gitfourchette.graph import Frame, Graph
+from gitfourchette.graph import Frame
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel, UC_FAKEID
@@ -15,7 +15,6 @@ LANE_THICKNESS = 2
 DOT_RADIUS = 3
 UC_COLOR = colors.gray
 UC_STIPPLE = 12
-ABRIDGMENT_THRESHOLD = 50
 
 
 def getColor(laneID):
@@ -185,7 +184,7 @@ def paintGraphFrame(
         submitPath(path, arc.lane, arc.openedBy == UC_FAKEID, dashOffset=1)
 
     # draw arc junctions
-    for arc in frame.junctionsAtCommit(hiddenCommits):
+    for arc, junction in frame.junctionsAtCommit(hiddenCommits):
         columnA, columnB = laneColumnsAB[arc.lane]
         ax = x + columnA * LANE_WIDTH
         bx = x + columnB * LANE_WIDTH

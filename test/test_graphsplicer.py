@@ -1,6 +1,5 @@
 from gitfourchette.graph import *
 import pytest
-import re
 
 KF_INTERVAL_TEST = 1
 """
@@ -303,53 +302,11 @@ SCENARIOS = {
 }
 
 
-def parseAncestryDefinition(text):
-    sequence = []
-    parentsOf = {}
-    seen = set()
-    heads = set()
-
-    for line in text:
-        line = line.strip()
-        if not line:
-            continue
-
-        split = line.strip().split(":")
-        assert 1 <= len(split) <= 2
-
-        chainStr = split[0]
-        assert chainStr
-        assert "," not in chainStr
-
-        try:
-            assert "-" not in split[1]
-            rootParents = split[1].split(",")
-        except IndexError:
-            rootParents = []
-
-        chain = chainStr.split("-")
-        parents = [[c] for c in chain[1:]] + [rootParents]
-
-        for commit, commitParents in zip(chain, parents):
-            assert commit not in parentsOf, f"Commit hash appears twice in sequence! {commit}"
-            sequence.append(commit)
-            parentsOf[commit] = commitParents
-            if commit not in seen:
-                heads.add(commit)
-            seen.update(parentsOf[commit])
-
-    return sequence, parentsOf, heads
-
-
-def parseAncestryOneLiner(text):
-    return parseAncestryDefinition(re.split(r"\s+", text))
-
-
 @pytest.mark.parametrize('scenarioKey', SCENARIOS.keys())
 def testGraphSplicing(scenarioKey):
     textGraph1, textGraph2, expectEquilibrium = SCENARIOS[scenarioKey]
-    sequence1, parentsOf1, heads1 = parseAncestryOneLiner(textGraph1)
-    sequence2, parentsOf2, heads2 = parseAncestryOneLiner(textGraph2)
+    sequence1, parentsOf1, heads1 = GraphDiagram.parseDefinition(textGraph1)
+    sequence2, parentsOf2, heads2 = GraphDiagram.parseDefinition(textGraph2)
 
     g = Graph()
     g.generateFullSequence(sequence1, parentsOf1, keyframeInterval=KF_INTERVAL_TEST)
@@ -359,7 +316,7 @@ def testGraphSplicing(scenarioKey):
 
     print("---------------------------------------------------")
     print(F"Graph before --------- (heads: {heads1})")
-    print(g.textDiagram())
+    print(GraphDiagram.diagram(g))
     print("Keyframes BEFORE REFRESH:", g.keyframeRows)
     print("Num arcs total BEFORE REFRESH:", g.startArc.getNumberOfArcsFromHere())
 
@@ -373,7 +330,7 @@ def testGraphSplicing(scenarioKey):
     print("Splice...")
 
     # modify top of history
-    splicer = g.spliceTop(heads1, heads2, sequence2, parentsOf2, KF_INTERVAL_TEST)
+    splicer = GraphSplicer.spliceTop(g, heads1, heads2, sequence2, parentsOf2, KF_INTERVAL_TEST)
     g.testConsistency()
 
     assert expectEquilibrium == splicer.foundEquilibrium
@@ -391,10 +348,10 @@ def testGraphSplicing(scenarioKey):
     # Nuke KFs to force going thru everything again
     g.keyframes = []
     g.keyframeRows = []
-    print(g.textDiagram())
+    print(GraphDiagram.diagram(g))
 
     # verify that the splicing was correct
-    assert g.textDiagram() == verification.textDiagram()
+    assert GraphDiagram.diagram(g) == GraphDiagram.diagram(verification)
 
     # verify that row cache is consistent
     assert list(range(len(sequence2))) == [g.getCommitRow(c) for c in sequence2]
@@ -405,5 +362,5 @@ def testGraphSplicing(scenarioKey):
     # Stress test: go back to first graph
     print("---------------------------------------------------")
     print("Revert to first graph...")
-    splicer = g.spliceTop(heads2, heads1, sequence1, parentsOf1, KF_INTERVAL_TEST)
+    GraphSplicer.spliceTop(g, heads2, heads1, sequence1, parentsOf1, KF_INTERVAL_TEST)
     g.testConsistency()

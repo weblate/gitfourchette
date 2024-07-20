@@ -10,7 +10,6 @@ from typing import ClassVar, Iterable, Iterator
 
 from gitfourchette.porcelain import Oid as _RealOidType
 from gitfourchette.settings import DEVDEBUG
-from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,6 @@ The bigger the interval...:
 - faster initial loading of the repo & less memory usage;
 - but slower random access to any point of the graph.
 """
-
-ABRIDGMENT_THRESHOLD = 25
 
 DEAD_VALUE = "!DEAD"
 
@@ -382,7 +379,7 @@ class Frame:
 
         return gen
 
-    def junctionsAtCommit(self, hiddenCommits: set[Oid] | None = None):
+    def junctionsAtCommit(self, hiddenCommits: set[Oid]):
         row = int(self.row)
         for arc in self.arcsPassingByCommit(hiddenCommits, BatchRow.__eq__):
             # TODO: We're looking at all the junctions here, but isVisible (via getArcsPassingByCommit)
@@ -390,7 +387,7 @@ class Frame:
             for j in arc.junctions:
                 if j.joinedAt == row and j.joinedBy not in hiddenCommits:
                     assert j.joinedBy == self.commit
-                    yield arc
+                    yield arc, j
                     break  # stop iterating on junctions, look at next arc
 
     def homeArc(self) -> Arc:
@@ -517,108 +514,6 @@ class Frame:
                 mapBelow[a.lane] = column
 
         return list(zip(mapAbove, mapBelow)), column
-
-    def textDiagram(self):
-        COLUMN_WIDTH = 2
-
-        def getx(lane):
-            assert lane >= 0
-            assert lane < maxLanes
-            return lane * COLUMN_WIDTH
-
-        homeArc = self.homeArc()
-        homeLane = homeArc.lane
-        homeChain = homeArc.chain
-
-        maxLanes = max(len(self.openArcs), len(self.solvedArcs)) + 1
-
-        gridHi = [" "] * (maxLanes * COLUMN_WIDTH + 4)
-        gridLo = [" "] * (maxLanes * COLUMN_WIDTH + 4)
-        for pl in self.arcsPassingByCommit():
-            if pl.length() > ABRIDGMENT_THRESHOLD:
-                gridHi[getx(pl.lane)] = "┊"  # TODO: Depending on junctions, we may or may not want to abridge
-                gridLo[getx(pl.lane)] = "┊"
-            else:
-                gridHi[getx(pl.lane)] = "│"
-                gridLo[getx(pl.lane)] = "│"
-
-        closed = list(self.arcsClosedByCommit())
-        opened = list(self.arcsOpenedByCommit())
-        passing = list(self.arcsPassingByCommit())
-
-        def hline(scanline, fromCol, toCol):
-            lcol = min(fromCol, toCol)
-            rcol = max(fromCol, toCol)
-            for i in range(getx(lcol), getx(rcol) + 1):
-                scanline[i] = "─"
-
-        if closed:
-            leftmostClosedLane = min([cl.lane for cl in closed])
-            rightmostClosedLane = max([cl.lane for cl in closed])
-            hline(gridHi, leftmostClosedLane, rightmostClosedLane)
-            for cl in closed:
-                if cl.lane == homeLane:
-                    gridHi[getx(cl.lane)] = "│"
-
-        if opened:
-            leftmostOpenedLane = min([l.lane for l in opened])
-            rightmostOpenedLane = max([l.lane for l in opened])
-            hline(gridLo, leftmostOpenedLane, rightmostOpenedLane)
-            for ol in opened:
-                if ol.lane == homeLane:
-                    gridLo[getx(ol.lane)] = "│"
-
-        for cl in closed:
-            if cl.lane > homeLane:
-                gridHi[getx(cl.lane)] = "╯"
-            elif cl.lane < homeLane:
-                gridHi[getx(cl.lane)] = "╰"
-
-        for ol in opened:
-            if ol.lane > homeLane:
-                gridLo[getx(ol.lane)] = "╮"
-            elif ol.lane < homeLane:
-                gridLo[getx(ol.lane)] = "╭"
-
-        junctionExplainer = ""
-        for pl in passing:
-            assert pl.junctions == sorted(pl.junctions), "Junction list is supposed to be sorted!"
-            for junction in pl.junctions:
-                if junction.joinedAt == self.row:
-                    assert junction.joinedBy == self.commit, F"junction commit {junction.joinedBy} != frame commit {self.commit}  at junction row {junction.joinedAt}"
-                    hline(gridLo, homeLane, pl.lane)
-                    if homeLane > pl.lane:
-                        gridLo[getx(pl.lane)] = "╭"
-                        gridLo[getx(homeLane)] = "╯"
-                    elif homeLane < pl.lane:
-                        gridLo[getx(pl.lane)] = "╮"
-                        gridLo[getx(homeLane)] = "╰"
-                    else:
-                        assert False, "junction plugged into passing arc that's on my homeLane?"
-                    junctionExplainer += F"JunctionOn\"{pl}\":{homeLane}[{junction.joinedBy[:4]}]->{pl.lane};"
-
-        if not opened and not closed:
-            gridHi[getx(homeLane)] = "╳"  # "━"
-        elif not opened:
-            ## TODO: this is drawn for some orphan commits!
-            # if len(closed) == 1 and closed[0].closedAt == closed[0].openedAt:
-            #    gridHi[getx(homeLane)] = "?╳"
-            # else:
-            #    gridHi[getx(homeLane)] = "┷"
-            gridHi[getx(homeLane)] = "┷"
-        elif not closed:
-            gridHi[getx(homeLane)] = "┯"
-        else:
-            gridHi[getx(homeLane)] = "┿"
-
-        gridHiStr = ''.join(gridHi)
-        gridLoStr = ''.join(gridLo)
-
-        text = ""
-        text += F"{int(self.row):<4} {int(homeChain.topRow):<4} {str(self.commit)[:4]:>4} {gridHiStr}\n"
-        if any(c in gridLoStr for c in "╭╮╰╯"):
-            text += F"{' ' * 14} {gridLoStr} {junctionExplainer}\n"
-        return text
 
 
 class GeneratorState(Frame):
@@ -926,18 +821,6 @@ class Graph:
 
         return generator
 
-    def spliceTop(self, oldHeads: set[Oid], newHeads: set[Oid],
-                  sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
-                  keyframeInterval: int = KF_INTERVAL
-                  ) -> GraphSplicer:
-        splicer = GraphSplicer(self, oldHeads, newHeads)
-        for commit in sequence:
-            splicer.spliceNewCommit(commit, parentsOf[commit], keyframeInterval)
-            if not splicer.keepGoing:
-                break
-        splicer.finish()
-        return splicer
-
     def saveKeyframe(self, frame: Frame) -> int:
         assert len(self.keyframes) == len(self.keyframeRows)
 
@@ -1133,23 +1016,6 @@ class Graph:
             self.keyframes = frontGraph.keyframes[:lastFrontKeyframeID + 1] + self.keyframes
             self.keyframeRows = frontGraph.keyframeRows[:lastFrontKeyframeID + 1] + self.keyframeRows
 
-    def textDiagram(self, row0=0, maxRows=20):
-        text = ""
-
-        try:
-            context = self.startPlayback(row0)
-        except StopIteration:
-            return F"Won't draw graph because it's empty below row {row0}!"
-
-        for _ in context:
-            frame = context.sealCopy()
-            text += frame.textDiagram()
-            maxRows -= 1
-            if maxRows < 0:
-                break
-
-        return text
-
     def testConsistency(self):
         """ Very expensive consistency check for unit testing """
 
@@ -1166,197 +1032,3 @@ class Graph:
             frame1 = playback.sealCopy()
             frame2 = keyframe.sealCopy()
             assert frame1 == frame2, f"Keyframe at row {row} doesn't match actual graph state"
-
-
-class GraphSplicer:
-    def __init__(self, oldGraph: Graph, oldHeads: Iterable[Oid], newHeads: Iterable[Oid]):
-        self.keepGoing = True
-        self.foundEquilibrium = False
-        self.equilibriumNewRow = -1
-        self.equilibriumOldRow = -1
-        self.oldGraphRowOffset = 0
-
-        self.newGraph = Graph()
-        self.newGenerator = self.newGraph.startGenerator()
-
-        self.oldGraph = oldGraph
-        self.oldPlayer = oldGraph.startPlayback()
-
-        # Commits that we must see before finding the equilibrium.
-        newHeads = set(newHeads)
-        oldHeads = set(oldHeads)
-        self.requiredNewCommits = (newHeads - oldHeads)  # heads that appeared
-        self.requiredOldCommits = (oldHeads - newHeads)  # heads that disappeared
-
-        self.newCommitsSeen = set()
-        self.oldCommitsSeen = set()
-
-    def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], keyframeInterval=KF_INTERVAL):
-        assert self.keepGoing
-
-        self.newCommitsSeen.add(newCommit)
-
-        # Generate arcs for new frame.
-        self.newGenerator.newCommit(newCommit, parentsOfNewCommit)
-
-        # Save keyframe in new context every now and then.
-        if int(self.newGenerator.row) % keyframeInterval == 0:
-            self.newGraph.saveKeyframe(self.newGenerator)
-
-        # Register this commit in the new graph's row sequence.
-        self.newGraph.commitRows[newCommit] = self.newGenerator.row
-
-        # Is it one of the commits that we must see before we can stop consuming new commits?
-        if newCommit in self.requiredNewCommits:
-            self.requiredNewCommits.remove(newCommit)
-
-        # If the commit wasn't known in the old graph, don't advance the old graph.
-        newCommitWasKnown = newCommit in self.oldGraph.commitRows
-        if not newCommitWasKnown:
-            return
-
-        # The old graph's playback may be positioned past this commit already,
-        # e.g. if branches were reordered. In that case, don't advance the old graph.
-        if newCommit in self.oldPlayer.seenCommits:
-            return
-
-        # Alright, we know the commit is ahead in the old graph. Advance playback to it.
-        try:
-            oldCommitsPassed = self.oldPlayer.advanceToCommit(newCommit)
-        except StopIteration:
-            # Old graph depleted.
-            self.keepGoing = False
-            return
-
-        # We just passed by some old commits; remove them from the set of old commits we need to see.
-        if self.requiredOldCommits:
-            self.requiredOldCommits.difference_update(oldCommitsPassed)
-
-        # Keep track of any commits we may have skipped in the old graph,
-        # because they are now unreachable and we want to purge them from the cache afterwards.
-        self.oldCommitsSeen.update(oldCommitsPassed)
-
-        # See if we're done: no more commits we want to see,
-        # and the graph frames start being "equal" in both graphs.
-        if len(self.requiredNewCommits) == 0 and \
-                len(self.requiredOldCommits) == 0 and \
-                self.isEquilibriumReached(self.newGenerator, self.oldPlayer):
-            self.foundEquilibrium = True
-            self.keepGoing = False
-            return
-
-    def finish(self):
-        if self.foundEquilibrium:
-            self.onEquilibriumFound()
-        else:
-            self.onOldGraphDepleted()
-        self.keepGoing = False
-
-    def onEquilibriumFound(self):
-        """Completion with equilibrium"""
-
-        # We'll basically concatenate newContext[eqNewRow:] and oldContext[:eqOldRow].
-        equilibriumNewRow = int(self.newGenerator.row)
-        equilibriumOldRow = int(self.oldPlayer.row)
-        rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
-
-        logger.debug(f"Equilibrium: commit={str(self.oldPlayer.commit):.7} new={equilibriumNewRow} old={equilibriumOldRow}")
-
-        # After reaching equilibrium there might still be open arcs that aren't closed yet.
-        # Let's find out where they end before we can concatenate the graphs.
-        equilibriumNewOpenArcs = list(filter(None, self.newGenerator.openArcs))
-        equilibriumOldOpenArcs = list(filter(None, self.oldPlayer.sealCopy().openArcs))
-        assert len(equilibriumOldOpenArcs) == len(equilibriumNewOpenArcs)
-
-        # Fix up dangling open arcs in new graph
-        for oldOpenArc, newOpenArc in zip(equilibriumOldOpenArcs, equilibriumNewOpenArcs):
-            # Find out where the arc is resolved
-            assert newOpenArc.openedBy == oldOpenArc.openedBy
-            assert newOpenArc.closedBy == oldOpenArc.closedBy
-            assert newOpenArc.closedAt == BATCHROW_UNDEF  # new graph's been interrupted before resolving this arc
-            newOpenArc.closedAt = oldOpenArc.closedAt
-
-            # Remap chain - the ChainHandle object is shared with all arcs on this chain
-            newCH = newOpenArc.chain
-            oldCH = oldOpenArc.chain
-            assert newCH.topRow.isValid()
-            assert oldCH.topRow.isValid()
-            newCH.bottomRow = oldCH.bottomRow   # rewire bottom row BEFORE setting alias
-            oldCH.setAliasOf(newCH)
-
-            # Splice old junctions into new junctions
-            if oldOpenArc.junctions:
-                junctions = []
-                junctions.extend(j for j in newOpenArc.junctions if j.joinedAt <= equilibriumNewRow)  # before eq
-                junctions.extend(j for j in oldOpenArc.junctions if j.joinedAt > equilibriumOldRow)  # after eq
-                assert all(junctions.count(x) == 1 for x in junctions), "duplicate junctions after splicing"
-                newOpenArc.junctions = junctions
-
-        # Do the actual splicing.
-
-        # If we're adding a commit at the top of the graph, the closed arcs of the first keyframe will be incorrect,
-        # so we must make sure to nuke the keyframe for equilibriumOldRow if it exists.
-        with Benchmark("Delete lost keyframes"):
-            self.oldGraph.deleteKeyframesDependingOnRowsAbove(equilibriumOldRow + 1)
-
-        with Benchmark("Delete lost arcs"):
-            self.oldGraph.deleteArcsDependingOnRowsAbove(equilibriumOldRow)
-
-        with Benchmark("Delete lost rows"):
-            for lostCommit in (self.oldCommitsSeen - self.newCommitsSeen):
-                del self.oldGraph.commitRows[lostCommit]
-
-        with Benchmark(F"Shift {len(self.oldGraph.ownBatches)} old batches by {rowShiftInOldGraph} rows"):
-            BatchRow.BatchManager.shiftBatches(rowShiftInOldGraph, self.oldGraph.ownBatches)
-
-        with Benchmark("Insert Front"):
-            self.oldGraph.insertFront(self.newGraph, equilibriumNewRow)
-
-        with Benchmark("Update row cache"):
-            self.oldGraph.commitRows.update(self.newGraph.commitRows)
-            self.oldGraph.ownBatches.extend(self.newGraph.ownBatches)  # Steal newGraph's batches
-            self.newGraph.ownBatches = []  # Don't let newGraph nuke the batches in its __del__
-
-        # Invalidate volatile player, which may be referring to dead keyframes
-        self.oldGraph.volatilePlayer = None
-
-        # Save rows for use by external code
-        self.equilibriumNewRow = equilibriumNewRow
-        self.equilibriumOldRow = equilibriumOldRow
-        self.oldGraphRowOffset = rowShiftInOldGraph
-
-    def onOldGraphDepleted(self):
-        """Completion without equilibrium: no more commits in oldGraph"""
-
-        # If we exited the loop without reaching equilibrium, the whole graph has changed.
-        # In that case, steal the contents of newGraph, and bail.
-
-        self.equilibriumOldRow = self.oldPlayer.row
-        self.equilibriumNewRow = self.newGenerator.row
-        self.oldGraphRowOffset = 0
-
-        self.oldGraph.shallowCopyFrom(self.newGraph)
-
-    @staticmethod
-    def isEquilibriumReached(frameA: Frame, frameB: Frame):
-        rowA = frameA.row
-        rowB = frameB.row
-
-        for arcA, arcB in itertools.zip_longest(frameA.openArcs, frameB.openArcs):
-            isStaleA = (not arcA) or arcA.isStale(rowA)
-            isStaleB = (not arcB) or arcB.isStale(rowB)
-
-            if isStaleA != isStaleB:
-                return False
-
-            if isStaleA:
-                assert isStaleB
-                continue
-
-            assert arcA.lane == arcB.lane
-
-            if not (arcA.openedBy == arcB.openedBy and arcA.closedBy == arcB.closedBy):
-                return False
-
-        # Do NOT test solved arcs!
-        return True

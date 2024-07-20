@@ -1,7 +1,4 @@
-import pytest
-
-from gitfourchette.graph import Graph, Frame, PlaybackState
-from .test_graphsplicer import parseAncestryOneLiner
+from gitfourchette.graph import *
 
 
 def findSolvedArc(frame: Frame, openedBy, closedBy):
@@ -62,11 +59,8 @@ def testGraph1():
     a4
 
     """
-    sequence, parentMap, heads = parseAncestryOneLiner("a1-a2:a3 b1-b2-a3-a4")
-
-    g = Graph()
-    g.generateFullSequence(sequence, parentMap)
-    print("\n" + g.textDiagram())
+    g = GraphDiagram.parse("a1-a2:a3 b1-b2-a3-a4")
+    print("\n" + GraphDiagram.diagram(g))
     pb = g.startPlayback(0)
 
     checkFrame(pb, 0, "a1", open="a1-a2")
@@ -94,11 +88,8 @@ def testGapBetweenBranches():
 
     """
 
-    sequence, parentMap, heads = parseAncestryOneLiner("a1:a2 b1:a2 c1:c2 a2:f c2-f")
-
-    g = Graph()
-    g.generateFullSequence(sequence, parentMap)
-    print("\n" + g.textDiagram())
+    g = GraphDiagram.parse("a1:a2 b1:a2 c1:c2 a2:f c2-f")
+    print("\n" + GraphDiagram.diagram(g))
     pb = g.startPlayback(0)
 
     checkFrame(pb, 0, "a1", open="a1-a2")
@@ -135,11 +126,8 @@ def testNewBranchInGap():
 
     """
 
-    sequence, parentMap, heads = parseAncestryOneLiner("a1:a2 b1:a2 c1:c2 a2:a3 c2:f d1:f a3-f")
-
-    g = Graph()
-    g.generateFullSequence(sequence, parentMap)
-    print("\n" + g.textDiagram())
+    g = GraphDiagram.parse("a1:a2 b1:a2 c1:c2 a2:a3 c2:f d1:f a3-f")
+    print("\n" + GraphDiagram.diagram(g))
     pb = g.startPlayback(0)
 
     frameA1 = checkFrame(pb, 0, "a1", open="a1-a2")

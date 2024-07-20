@@ -3,15 +3,14 @@ import logging
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.application import GFApplication
-from gitfourchette.graph import Graph, BatchRow
+from gitfourchette.graph import Graph, BatchRow, KF_INTERVAL
 from gitfourchette.diffview.diffdocument import DiffDocument
-from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair,
-                                                DiffConflict)
+from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair)
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavFlags, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import RepoTask
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
 
@@ -36,7 +35,6 @@ class PrimeRepo(RepoTask):
         self.abortFlag = True
 
     def flow(self, path: str, maxCommits: int = -1):
-        from gitfourchette.graph import KF_INTERVAL
         from gitfourchette.repowidget import RepoWidget
         from gitfourchette.repomodel import RepoModel, UC_FAKEID
         from gitfourchette.tasks.jumptasks import Jump

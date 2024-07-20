@@ -3,8 +3,7 @@ from collections import defaultdict
 from typing import Generator
 
 from gitfourchette import settings
-from gitfourchette.graph import Graph, GraphSplicer
-from gitfourchette.graphtrickle import GraphTrickle
+from gitfourchette.graph import Graph, GraphSplicer, GraphTrickle
 from gitfourchette.porcelain import *
 from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
@@ -443,29 +442,6 @@ class RepoModel:
                 if ref.startswith(refPattern):
                     yield oid
 
-    def newHiddenCommitTrickle(self) -> GraphTrickle:
-        trickle = GraphTrickle()
-
-        # Explicitly show all refs by default
-        for head in self.refs.values():
-            trickle.setEnd(head)
-
-        # Explicitly hide tips
-        for hiddenBranchTip in self.getHiddenTips():
-            trickle.setPipe(hiddenBranchTip)
-
-        """
-        # Explicitly hide stash junk parents
-        if settings.prefs.hideStashJunkParents:
-            for stash in self.repo.listall_stashes():
-                stashCommit = self.repo.peel_commit(stash.commit_id)
-                for i, parent in enumerate(stashCommit.parent_ids):
-                    if i > 0:
-                        trickle.setTap(parent)
-        """
-
-        return trickle
-
     @benchmark
     def resolveHiddenCommits(self):
         self.hiddenCommits = set()
@@ -479,15 +455,8 @@ class RepoModel:
                 logger.debug(f"resolveHiddenCommits complete in {i} iterations")
                 break
 
+    def newHiddenCommitTrickle(self) -> GraphTrickle:
+        return GraphTrickle.initForHiddenCommits(self.refs.values(), self.getHiddenTips())
+
     def newForeignCommitTrickle(self) -> GraphTrickle:
-        trickle = GraphTrickle()
-
-        for oid, refList in self.refsAt.items():
-            assert oid not in trickle.frontier
-            isLocal = any(name == 'HEAD' or name.startswith("refs/heads/") for name in refList)
-            if isLocal:
-                trickle.setEnd(oid)
-            else:
-                trickle.setPipe(oid)
-
-        return trickle
+        return GraphTrickle.initForForeignCommits(self.refsAt)

@@ -1,0 +1,213 @@
+import re
+from itertools import zip_longest
+
+from gitfourchette.graph import *
+
+PADDING = 2
+ABRIDGMENT_THRESHOLD = 25
+
+
+def padx(x):
+    assert x >= 0
+    return x * PADDING
+
+
+class GraphDiagram:
+    @staticmethod
+    def parse(text: str):
+        sequence, parentMap, heads = GraphDiagram.parseDefinition(text)
+        graph = Graph()
+        graph.generateFullSequence(sequence, parentMap)
+        return graph
+
+    @staticmethod
+    def parseDefinition(text: str):
+        sequence = []
+        parentMap = {}
+        seen = set()
+        heads = set()
+
+        lines = re.split(r"\s+", text)
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            split = line.strip().split(":")
+            assert 1 <= len(split) <= 2
+
+            chainStr = split[0]
+            assert chainStr
+            assert "," not in chainStr
+
+            try:
+                assert "-" not in split[1]
+                rootParents = split[1].split(",")
+            except IndexError:
+                rootParents = []
+
+            chain = chainStr.split("-")
+            parents = [[c] for c in chain[1:]] + [rootParents]
+
+            for commit, commitParents in zip(chain, parents):
+                assert commit not in parentMap, f"Commit hash appears twice in sequence! {commit}"
+                sequence.append(commit)
+                parentMap[commit] = commitParents
+                if commit not in seen:
+                    heads.add(commit)
+                seen.update(parentMap[commit])
+
+        return sequence, parentMap, heads
+
+    @staticmethod
+    def diagram(graph: Graph, row0=0, maxRows=20, hiddenCommits=None, verbose=True):
+        if not hiddenCommits:
+            hiddenCommits = set()
+
+        try:
+            player = graph.startPlayback(row0)
+        except StopIteration:
+            return f"Won't draw graph because it's empty below row {row0}!"
+
+        diagram = GraphDiagram()
+
+        for _ in player:
+            frame = player.sealCopy()
+            if frame.commit in hiddenCommits:
+                continue
+            diagram.newFrame(frame, hiddenCommits, verbose)
+            maxRows -= 1
+            if maxRows < 0:
+                break
+
+        return diagram.bake()
+
+    # -----------------------------------------------------------------
+
+    def __init__(self):
+        self.scanlines = []
+        self.margins = []
+        self.notes = []
+
+    def reserve(self, x, y, fill=" "):
+        assert len(fill) == 1
+        for j in range(len(self.scanlines), y + 1):
+            self.scanlines.append([])
+            self.margins.append([])
+            self.notes.append("")
+        scanline = self.scanlines[y]
+        for i in range(len(scanline), padx(x) + 1):
+            scanline.append(fill)
+        return scanline
+
+    def plot(self, x, y, c):
+        assert len(c) == 1
+        scanline = self.reserve(x, y)
+        scanline[padx(x)] = c
+
+    def hline(self, x1, y, x2, fill="─"):
+        assert len(fill) == 1
+        left, right = min(x1, x2), max(x1, x2)
+        scanline = self.reserve(right, y)
+        for i in range(padx(left), padx(right) + 1):
+            scanline[i] = fill
+
+    def addMarginText(self, y, text):
+        self.reserve(0, y)
+        self.margins[y].append(text)
+
+    def setNotesText(self, y, text):
+        self.reserve(0, y)
+        self.notes[y] = text
+
+    def removeLastRow(self):
+        self.scanlines.pop()
+        self.margins.pop()
+        self.notes.pop()
+
+    def bake(self):
+        if self.margins:
+            numMargins = max(len(rowMargins) for rowMargins in self.margins)
+        else:
+            numMargins = 0
+        marginWidths = [0] * numMargins
+        for margins in self.margins:
+            for i, mText in enumerate(margins):
+                marginWidths[i] = max(marginWidths[i], len(mText))
+
+        text = ""
+        for margins, scanline, notes in zip(self.margins, self.scanlines, self.notes):
+            for mWidth, mText in zip_longest(reversed(marginWidths), reversed(margins), fillvalue=""):
+                text += mText.rjust(mWidth) + " "
+            text += ''.join(scanline).rstrip()
+            if notes:
+                text += " " + notes
+            text += "\n"
+        text = text.removesuffix("\n")
+        return text
+
+    def newFrame(self, frame: Frame, hiddenCommits, verbose):
+        upper = len(self.scanlines)
+        lower = upper + 1
+        homeLane = frame.homeLane()
+        homeChain = frame.homeChain()
+
+        for arc in frame.arcsPassingByCommit(hiddenCommits):
+            # TODO: Depending on junctions, we may or may not want to abridge
+            glyph = "│" if arc.length() <= ABRIDGMENT_THRESHOLD else "┊"
+            self.plot(arc.lane, upper, glyph)
+            self.plot(arc.lane, lower, glyph)
+
+        closed = list(frame.arcsClosedByCommit(hiddenCommits))
+        opened = list(frame.arcsOpenedByCommit(hiddenCommits))
+
+        if closed:
+            leftmostClosedLane = min([cl.lane for cl in closed])
+            rightmostClosedLane = max([cl.lane for cl in closed])
+            self.hline(leftmostClosedLane, upper, rightmostClosedLane)
+            for cl in closed:
+                if cl.lane == homeLane:
+                    self.plot(cl.lane, upper, "│")
+                else:
+                    self.plot(cl.lane, upper, "╰╯"[cl.lane > homeLane])
+
+        keepLowScanline = False
+        if opened:
+            leftmostOpenedLane = min([ol.lane for ol in opened])
+            rightmostOpenedLane = max([ol.lane for ol in opened])
+            self.hline(leftmostOpenedLane, lower, rightmostOpenedLane)
+            for ol in opened:
+                if ol.lane == homeLane:
+                    self.plot(ol.lane, lower, "│")
+                else:
+                    self.plot(ol.lane, lower, "╭╮"[ol.lane > homeLane])
+                    keepLowScanline = True
+
+        junctionExplainer = ""
+        for arc, junction in frame.junctionsAtCommit(hiddenCommits):
+            assert arc.junctions == sorted(arc.junctions), "junction list is supposed to be sorted!"
+            assert junction.joinedBy == frame.commit, "junction commit != frame commit"
+            assert homeLane != arc.lane, "junction plugged into passing arc that's on my homeLane?"
+            self.hline(homeLane, lower, arc.lane)
+            self.plot(arc.lane, lower, "╭╮"[homeLane < arc.lane])
+            self.plot(homeLane, lower, "╯╰"[homeLane < arc.lane])
+            keepLowScanline = True
+            if not junctionExplainer:
+                junctionExplainer += "Joining "
+            else:
+                junctionExplainer += ", "
+            junctionExplainer += f"({arc.openedBy}⋯{arc.closedBy})"
+
+        commitGlyph = "╳┷┯┿"[bool(opened) << 1 | bool(closed)]
+        self.plot(homeLane, upper, commitGlyph)
+
+        self.addMarginText(upper, str(frame.commit))
+        if verbose:
+            self.addMarginText(upper, str(int(frame.row)))
+            self.addMarginText(upper, str(int(homeChain.topRow)))
+            self.setNotesText(lower, junctionExplainer)
+
+        if not keepLowScanline:
+            self.reserve(0, lower)  # make sure we're not removing upper row if we didn't plot anything in last row
+            self.removeLastRow()
