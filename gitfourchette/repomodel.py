@@ -283,7 +283,7 @@ class RepoModel:
             # Head commit not in graph, cannot determine if dangerous, err on side of caution
             return True
 
-        arcs = list(frame.getArcsClosedByCommit())
+        arcs = list(frame.arcsClosedByCommit())
 
         if len(arcs) == 0:
             return True

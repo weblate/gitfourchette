@@ -94,7 +94,7 @@ class GetCommitInfo(RepoTask):
             graph = repoModel.graph
             seqIndex = graph.getCommitRow(oid)
             frame = graph.getFrame(seqIndex)
-            homeChain = frame.getHomeChainForCommit()
+            homeChain = frame.homeChain()
             homeChainTopId = graph.getFrame(homeChain.topRow).commit
             homeChainTopStr = commitLink(homeChainTopId) if type(homeChainTopId) is Oid else str(homeChainTopId)
             table += tableRow("Graph row", repr(graph.commitRows[oid]))

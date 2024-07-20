@@ -103,7 +103,7 @@ def paintGraphFrame(
     assert frame.row == myRow
 
     # Get the commit's lane ID
-    commitLane = frame.getHomeLaneForCommit()
+    commitLane = frame.homeLane()
 
     # Flatten the lanes so there are no horizontal gaps in-between the lanes (optional).
     # laneColumnsAB is a table of lanes to columns (horizontal positions).
@@ -140,9 +140,9 @@ def paintGraphFrame(
         # clear path for next iteration
         path.clear()
 
-    arcsPassingByCommit = [arc for arc in frame.getArcsPassingByCommit() if not arc.connectsHiddenCommit(hiddenCommits)]
-    arcsOpenedByCommit = [arc for arc in frame.getArcsOpenedByCommit() if not arc.connectsHiddenCommit(hiddenCommits)]
-    arcsClosedByCommit = [arc for arc in frame.getArcsClosedByCommit() if not arc.connectsHiddenCommit(hiddenCommits)]
+    arcsPassingByCommit = list(frame.arcsPassingByCommit(hiddenCommits))
+    arcsOpenedByCommit = list(frame.arcsOpenedByCommit(hiddenCommits))
+    arcsClosedByCommit = list(frame.arcsClosedByCommit(hiddenCommits))
 
     # draw arcs PASSING BY commit
     cy1 = middle
@@ -185,19 +185,13 @@ def paintGraphFrame(
         submitPath(path, arc.lane, arc.openedBy == UC_FAKEID, dashOffset=1)
 
     # draw arc junctions
-    for arc in arcsPassingByCommit:
-        for j in arc.junctions:
-            if j.joinedAt != frame.row:
-                continue
-            if j.joinedBy in hiddenCommits:
-                continue
-            assert j.joinedBy == frame.commit
-            columnA, columnB = laneColumnsAB[arc.lane]
-            ax = x + columnA * LANE_WIDTH
-            bx = x + columnB * LANE_WIDTH
-            path.moveTo(mx, middle)
-            path.quadTo(bx, middle, bx, bottom)
-            submitPath(path, arc.lane)
+    for arc in frame.junctionsAtCommit(hiddenCommits):
+        columnA, columnB = laneColumnsAB[arc.lane]
+        ax = x + columnA * LANE_WIDTH
+        bx = x + columnB * LANE_WIDTH
+        path.moveTo(mx, middle)
+        path.quadTo(bx, middle, bx, bottom)
+        submitPath(path, arc.lane)
 
     # draw bullet point for this commit
     painter.setPen(Qt.PenStyle.NoPen)

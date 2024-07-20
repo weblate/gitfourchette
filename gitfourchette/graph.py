@@ -299,9 +299,6 @@ class Arc:
     def isParentlessCommitBogusArc(self):
         return self.openedBy == self.closedBy
 
-    def connectsHiddenCommit(self, hiddenCommits: set):
-        return self.openedBy in hiddenCommits or self.closedBy in hiddenCommits
-
     def isIndependentOfRowsAbove(self, row: int):
         """ Return True if this arc is entirely independent of row numbers lower than `row`. """
         return self.openedAt >= row and self.closedAt >= row
@@ -316,6 +313,27 @@ class Arc:
         ca = int(self.closedAt)
         return (0 <= ca < row) or (0 <= ca == self.openedAt <= row)
 
+    def isVisible(self, hiddenCommits: set[Oid], row: int, filterJunctionRows=BatchRow.__lt__) -> bool:
+        # FAIL if closing commit is hidden.
+        if self.closedBy in hiddenCommits:
+            return False
+
+        # PASS if both the opening & closing commits are visible.
+        if self.openedBy not in hiddenCommits:
+            return True
+
+        # Opening Commit hidden (above) and Closing Commit visible (below).
+        # PASS if any of the junctions at/above the current row are visible.
+        # TODO: We're looking at ALL the junctions - is it worth optimizing this?
+        for j in self.junctions:
+            if j.joinedBy in hiddenCommits:
+                continue
+            if filterJunctionRows(j.joinedAt, row):
+                return True
+
+        # All junctions should be hidden.
+        return False
+
 
 @dataclass
 class Frame:
@@ -327,18 +345,57 @@ class Frame:
     openArcs: list[Arc | None]  # Arcs that have not resolved their parent commit yet
     lastArc: Arc
 
-    def getArcsClosedByCommit(self):
-        return (arc for arc in self.solvedArcs if arc and arc.closedAt == self.row)
+    def arcsClosedByCommit(self, hiddenCommits: set[Oid] | None = None):
+        if DEVDEBUG:
+            # Assume that all the arcs in solvedArcs are either None, or are closed by this commit.
+            assert all(arc is None or arc.closedAt == self.row for arc in self.solvedArcs)
+            assert all(arc is None or arc.closedBy == self.commit for arc in self.solvedArcs)
 
-    def getArcsOpenedByCommit(self):
-        return (arc for arc in self.openArcs if arc and arc.openedAt == self.row)
+        gen = (arc for arc in self.solvedArcs if arc)
 
-    def getArcsPassingByCommit(self):
-        return (arc for arc in self.openArcs if arc and arc.openedAt != self.row)
+        if hiddenCommits:
+            assert self.commit not in hiddenCommits, "calling this func is pointless if commit is hidden"
+            row = int(self.row)
+            gen = (arc for arc in gen if arc.isVisible(hiddenCommits, row))
 
-    def getHomeArcForCommit(self) -> Arc:
-        leftmostClosed = next(self.getArcsClosedByCommit(), None)
-        leftmostOpened = next(self.getArcsOpenedByCommit(), None)
+        return gen
+
+    def arcsOpenedByCommit(self, hiddenCommits: set[Oid] | None = None):
+        row = int(self.row)
+        gen = (arc for arc in self.openArcs if arc and arc.openedAt == row)
+
+        if hiddenCommits:
+            assert self.commit not in hiddenCommits, "calling this func is pointless if commit is hidden"
+            # Not looking at junctions here because the parents of a visible commit
+            # are all supposed to be visible too.
+            gen = (arc for arc in gen if arc.closedBy not in hiddenCommits)
+
+        return gen
+
+    def arcsPassingByCommit(self, hiddenCommits: set[Oid] | None = None, filterJunctionRows=BatchRow.__lt__):
+        row = int(self.row)
+        gen = (arc for arc in self.openArcs if arc and arc.openedAt != row)
+
+        if hiddenCommits:
+            assert self.commit not in hiddenCommits, "calling this func is pointless if commit is hidden"
+            gen = (arc for arc in gen if arc.isVisible(hiddenCommits, row, filterJunctionRows))
+
+        return gen
+
+    def junctionsAtCommit(self, hiddenCommits: set[Oid] | None = None):
+        row = int(self.row)
+        for arc in self.arcsPassingByCommit(hiddenCommits, BatchRow.__eq__):
+            # TODO: We're looking at all the junctions here, but isVisible (via getArcsPassingByCommit)
+            #       just looked at the specific junction we were looking for.
+            for j in arc.junctions:
+                if j.joinedAt == row and j.joinedBy not in hiddenCommits:
+                    assert j.joinedBy == self.commit
+                    yield arc
+                    break  # stop iterating on junctions, look at next arc
+
+    def homeArc(self) -> Arc:
+        leftmostClosed = next(self.arcsClosedByCommit(), None)
+        leftmostOpened = next(self.arcsOpenedByCommit(), None)
         if leftmostOpened and leftmostClosed:
             return max(leftmostClosed, leftmostOpened, key=lambda a: a.lane)
         elif leftmostClosed:
@@ -353,11 +410,11 @@ class Frame:
             assert self.lastArc.openedBy == self.commit
             return self.lastArc
 
-    def getHomeLaneForCommit(self) -> int:
-        return self.getHomeArcForCommit().lane
+    def homeLane(self) -> int:
+        return self.homeArc().lane
 
-    def getHomeChainForCommit(self) -> ChainHandle:
-        return self.getHomeArcForCommit().chain
+    def homeChain(self) -> ChainHandle:
+        return self.homeArc().chain
 
     def sealCopy(self) -> Frame:
         """
@@ -414,24 +471,32 @@ class Frame:
     def flattenLanes(self, hiddenCommits: set[Oid]) -> tuple[list[tuple[int, int]], int]:
         """Flatten the lanes so there are no unused columns in-between the lanes."""
 
-        row = self.row
+        row = int(self.row)
 
         # Filter arcs
 
-        def keepArc(a: Arc):
-            return a and not a.connectsHiddenCommit(hiddenCommits)
+        def genArcsAbove():
+            gen1 = (arc for arc in self.solvedArcs if arc)
+            gen2 = (arc for arc in self.openArcs if arc and arc.openedAt < row)
+            if hiddenCommits:
+                gen1 = (arc for arc in gen1 if arc.isVisible(hiddenCommits, row))
+                gen2 = (arc for arc in gen2 if arc.isVisible(hiddenCommits, row))
+            yield from gen1
+            yield from gen2
 
-        arcsAbove = itertools.chain(filter(keepArc, self.solvedArcs),
-                                    (a for a in self.openArcs if keepArc(a) and a.openedAt < row))
-        arcsBelow = filter(keepArc, self.openArcs)
+        def genArcsBelow():
+            gen = (arc for arc in self.openArcs if arc)
+            if hiddenCommits:
+                gen = (arc for arc in gen if arc.isVisible(hiddenCommits, row, BatchRow.__le__))
+            yield from gen
 
         # Sort arcs by Chain Birth Row
 
         def sortArc(a: Arc):
-            return int(a.chain.topRow) * 1000 + a.lane
+            return (int(a.chain.topRow) << 16) + a.lane
 
-        arcsAbove = sorted(arcsAbove, key=sortArc, reverse=True)
-        arcsBelow = sorted(arcsBelow, key=sortArc, reverse=True)
+        arcsAbove = sorted(genArcsAbove(), key=sortArc, reverse=True)
+        arcsBelow = sorted(genArcsBelow(), key=sortArc, reverse=True)
 
         # Assign columns to all lanes used by arcs above and below
 
@@ -461,7 +526,7 @@ class Frame:
             assert lane < maxLanes
             return lane * COLUMN_WIDTH
 
-        homeArc = self.getHomeArcForCommit()
+        homeArc = self.homeArc()
         homeLane = homeArc.lane
         homeChain = homeArc.chain
 
@@ -469,7 +534,7 @@ class Frame:
 
         gridHi = [" "] * (maxLanes * COLUMN_WIDTH + 4)
         gridLo = [" "] * (maxLanes * COLUMN_WIDTH + 4)
-        for pl in self.getArcsPassingByCommit():
+        for pl in self.arcsPassingByCommit():
             if pl.length() > ABRIDGMENT_THRESHOLD:
                 gridHi[getx(pl.lane)] = "┊"  # TODO: Depending on junctions, we may or may not want to abridge
                 gridLo[getx(pl.lane)] = "┊"
@@ -477,9 +542,9 @@ class Frame:
                 gridHi[getx(pl.lane)] = "│"
                 gridLo[getx(pl.lane)] = "│"
 
-        closed = list(self.getArcsClosedByCommit())
-        opened = list(self.getArcsOpenedByCommit())
-        passing = list(self.getArcsPassingByCommit())
+        closed = list(self.arcsClosedByCommit())
+        opened = list(self.arcsOpenedByCommit())
+        passing = list(self.arcsPassingByCommit())
 
         def hline(scanline, fromCol, toCol):
             lcol = min(fromCol, toCol)
