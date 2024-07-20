@@ -426,3 +426,27 @@ def testDiffViewSelectionStableAfterRefresh(tempDir, mainWindow):
     writeFile(f"{wd}/master.txt", "please DO!!! nuke my selection\n")
     rw.refreshRepo()
     assert not diffView.textCursor().hasSelection()
+
+
+def testDiffContextLinesSetting(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        writeFile(f"{wd}/context.txt", "\n".join(f"line {i}" for i in range(1, 50)))
+        repo.index.add("context.txt")
+        repo.create_commit_on_head("context", TEST_SIGNATURE, TEST_SIGNATURE)
+        writeFile(f"{wd}/context.txt", "\n".join(f"line {i}" if i != 25 else f"LINE {i}" for i in range(1, 50)))
+
+    rw = mainWindow.openRepo(wd)
+    assert NavLocator.inUnstaged("context.txt").isSimilarEnoughTo(rw.navLocator)
+
+    # 1 hunk line, 3 context lines above change, 2 changed lines (- then +), 3 context lines below change
+    assert 1+3+2+3 == len(rw.diffView.toPlainText().splitlines())
+
+    prefsDialog = mainWindow.openPrefsDialog("contextLines")
+    QTest.qWait(0)
+    QTest.keyClicks(QApplication.focusWidget(), "8")
+    prefsDialog.accept()
+
+    # 1 hunk line, 8 context lines above change, 2 changed lines (- then +), 8 context lines below change
+    assert 1+8+2+8 == len(rw.diffView.toPlainText().splitlines())

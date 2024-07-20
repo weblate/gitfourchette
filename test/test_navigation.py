@@ -25,7 +25,7 @@ def assertHistoryMatches(rw: RepoWidget, locator: NavLocator):
         assert qlvGetSelection(rw.committedFiles) == [locator.path]
 
 
-@pytest.mark.parametrize("method", ["menubar", "toolbar"])
+@pytest.mark.parametrize("method", ["menubar", "toolbar", "mousebuttons"])
 def testNavigation(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.fileWithStagedAndUnstagedChanges(wd)
@@ -64,6 +64,8 @@ def testNavigation(tempDir, mainWindow, method):
             button: QToolButton = mainWindow.mainToolBar.widgetForAction(mainWindow.mainToolBar.backAction)
             assert expectEnabled == button.isEnabled()
             button.click()
+        elif method == "mousebuttons":
+            QTest.mouseClick(mainWindow, Qt.MouseButton.BackButton)
 
     def forward(expectEnabled=True):
         if method == "menubar":
@@ -72,6 +74,8 @@ def testNavigation(tempDir, mainWindow, method):
             button: QToolButton = mainWindow.mainToolBar.widgetForAction(mainWindow.mainToolBar.forwardAction)
             assert expectEnabled == button.isEnabled()
             button.click()
+        elif method == "mousebuttons":
+            QTest.mouseClick(mainWindow, Qt.MouseButton.ForwardButton)
 
     assertHistoryMatches(rw, history[-1])
 

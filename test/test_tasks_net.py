@@ -282,6 +282,8 @@ def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
     acceptQMessageBox(rw, "n.t tracking.+upstream")
 
 
+@pytest.mark.skipif((PYQT5 or PYQT6) and os.environ.get("COV_CORE_SOURCE", None) is not None,
+                    reason="QMetaObject.connectSlotsByName somehow hangs under coverage with PyQt6")
 @pytest.mark.parametrize("asNewBranch", [False, True])
 def testPush(tempDir, mainWindow, asNewBranch):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
