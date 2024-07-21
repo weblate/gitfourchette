@@ -88,14 +88,12 @@ class GraphDiagram:
     def __init__(self):
         self.scanlines = []
         self.margins = []
-        self.notes = []
 
     def reserve(self, x, y, fill=" "):
         assert len(fill) == 1
         for j in range(len(self.scanlines), y + 1):
             self.scanlines.append([])
             self.margins.append([])
-            self.notes.append("")
         scanline = self.scanlines[y]
         for i in range(len(scanline), padx(x) + 1):
             scanline.append(fill)
@@ -104,6 +102,7 @@ class GraphDiagram:
     def plot(self, x, y, c):
         assert len(c) == 1
         scanline = self.reserve(x, y)
+        assert scanline[padx(x)] not in "╭╮╰╯", "overwriting critical glyph!"
         scanline[padx(x)] = c
 
     def hline(self, x1, y, x2, fill="─"):
@@ -111,20 +110,16 @@ class GraphDiagram:
         left, right = min(x1, x2), max(x1, x2)
         scanline = self.reserve(right, y)
         for i in range(padx(left), padx(right) + 1):
+            assert scanline[i] not in "╭╮╰╯", "overwriting critical glyph!"
             scanline[i] = fill
 
     def addMarginText(self, y, text):
         self.reserve(0, y)
         self.margins[y].append(text)
 
-    def setNotesText(self, y, text):
-        self.reserve(0, y)
-        self.notes[y] = text
-
     def removeLastRow(self):
         self.scanlines.pop()
         self.margins.pop()
-        self.notes.pop()
 
     def bake(self):
         if self.margins:
@@ -137,12 +132,10 @@ class GraphDiagram:
                 marginWidths[i] = max(marginWidths[i], len(mText))
 
         text = ""
-        for margins, scanline, notes in zip(self.margins, self.scanlines, self.notes):
+        for margins, scanline in zip(self.margins, self.scanlines):
             for mWidth, mText in zip_longest(reversed(marginWidths), reversed(margins), fillvalue=""):
                 text += mText.rjust(mWidth) + " "
             text += ''.join(scanline).rstrip()
-            if notes:
-                text += " " + notes
             text += "\n"
         text = text.removesuffix("\n")
         return text
@@ -161,43 +154,39 @@ class GraphDiagram:
 
         closed = list(frame.arcsClosedByCommit(hiddenCommits))
         opened = list(frame.arcsOpenedByCommit(hiddenCommits))
+        trivialClosed = True
 
         if closed:
             leftmostClosedLane = min([cl.lane for cl in closed])
             rightmostClosedLane = max([cl.lane for cl in closed])
             self.hline(leftmostClosedLane, upper, rightmostClosedLane)
             for cl in closed:
-                if cl.lane == homeLane:
-                    self.plot(cl.lane, upper, "│")
-                else:
+                if cl.lane != homeLane:
                     self.plot(cl.lane, upper, "╰╯"[cl.lane > homeLane])
+                    trivialClosed = False
 
-        keepLowScanline = False
         if opened:
+            row = upper if trivialClosed else lower
             leftmostOpenedLane = min([ol.lane for ol in opened])
             rightmostOpenedLane = max([ol.lane for ol in opened])
-            self.hline(leftmostOpenedLane, lower, rightmostOpenedLane)
+            self.hline(leftmostOpenedLane, row, rightmostOpenedLane)
             for ol in opened:
                 if ol.lane == homeLane:
-                    self.plot(ol.lane, lower, "│")
+                    self.plot(ol.lane, row, "│")
                 else:
-                    self.plot(ol.lane, lower, "╭╮"[ol.lane > homeLane])
-                    keepLowScanline = True
+                    self.plot(ol.lane, row, "╭╮"[ol.lane > homeLane])
+                if row == upper:
+                    self.plot(ol.lane, lower, "│")
 
-        junctionExplainer = ""
         for arc, junction in frame.junctionsAtCommit(hiddenCommits):
+            row = upper if trivialClosed else lower
             assert arc.junctions == sorted(arc.junctions), "junction list is supposed to be sorted!"
             assert junction.joinedBy == frame.commit, "junction commit != frame commit"
             assert homeLane != arc.lane, "junction plugged into passing arc that's on my homeLane?"
-            self.hline(homeLane, lower, arc.lane)
-            self.plot(arc.lane, lower, "╭╮"[homeLane < arc.lane])
-            self.plot(homeLane, lower, "╯╰"[homeLane < arc.lane])
-            keepLowScanline = True
-            if not junctionExplainer:
-                junctionExplainer += "Joining "
-            else:
-                junctionExplainer += ", "
-            junctionExplainer += f"({arc.openedBy}⋯{arc.closedBy})"
+            self.hline(homeLane, row, arc.lane)
+            self.plot(arc.lane, row, "╭╮"[homeLane < arc.lane])
+            if row != upper:
+                self.plot(homeLane, row, "╯╰"[homeLane < arc.lane])
 
         commitGlyph = "╳┷┯┿"[bool(opened) << 1 | bool(closed)]
         self.plot(homeLane, upper, commitGlyph)
@@ -206,8 +195,7 @@ class GraphDiagram:
         if verbose:
             self.addMarginText(upper, str(int(frame.row)))
             self.addMarginText(upper, str(int(homeChain.topRow)))
-            self.setNotesText(lower, junctionExplainer)
 
-        if not keepLowScanline:
-            self.reserve(0, lower)  # make sure we're not removing upper row if we didn't plot anything in last row
+        self.reserve(0, lower)  # make sure we're not removing upper row if we didn't plot anything in last row
+        if not any(c in "╭╮╰╯" for c in self.scanlines[-1]):
             self.removeLastRow()
