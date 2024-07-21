@@ -43,21 +43,14 @@ def checkFrame(pb: PlaybackState, row, commit, solved="", open=""):
     return frame
 
 
-def testGraph1():
+def testSimpleGraph():
     """
-
-    a1
-     |
-    a2
-     |
-     |  b1
-     |   |
-     |  b2
-     |   |
-    a3__/
-     |
-    a4
-
+    a1 ┯
+    a2 ┿
+    b1 │ ┯
+    b2 │ ┿
+    a3 ┿─╯
+    a4 ┷
     """
     g = GraphDiagram.parse("a1-a2:a3 b1-b2-a3-a4")
     print("\n" + GraphDiagram.diagram(g))
@@ -73,21 +66,13 @@ def testGraph1():
 
 def testGapBetweenBranches():
     """
-
-    a1
-     |
-     |  b1
-     |   |
-     |   |  c1
-     |   |   |
-    a2__/    |
-     |       |
-     |      c2
-     |       |
-     f______/
-
+    a1 ┯
+    b1 │ ┯
+    c1 │ │ ┯
+    a2 ┿─╯ │
+    c2 │   ┿
+     f ┷───╯
     """
-
     g = GraphDiagram.parse("a1:a2 b1:a2 c1:c2 a2:f c2-f")
     print("\n" + GraphDiagram.diagram(g))
     pb = g.startPlayback(0)
@@ -109,23 +94,14 @@ def testNewBranchInGap():
     Flattening OFF:         Flattening ON:
 
     a1                      a1
-     |                       |
      |  b1                   |  b1
-     |   |                   |   |
      |   |  c1               |   |  c1
-     |   |   |               |   |   |
     a2__/    |              a2__/    |
-     |       |               |       |
-     |      c2               |      c2
-     |       |               |     /
+     |      c2               |     c2
      |  d1   |               |    /   d1
-     |   |   |               |    |    |
     a3   |   |              a3    |    |
-     |   |   |               |    |    |
      f__/___/                f___/____/
-
     """
-
     g = GraphDiagram.parse("a1:a2 b1:a2 c1:c2 a2:a3 c2:f d1:f a3-f")
     print("\n" + GraphDiagram.diagram(g))
     pb = g.startPlayback(0)
@@ -155,3 +131,48 @@ def testNewBranchInGap():
     assert laneRemap[0] == (0, 0)
     assert laneRemap[2] == (1, 1)  # c1 still
     assert laneRemap[1] == (-1, 2)  # tip
+
+
+def testVisibleJunctionOnHiddenArc():
+    # Inspired by a (simplified) version of pygit2's testrepoformerging.zip.
+    # (Enter Detached HEAD at initial commit then hide all branches except ff-branch.)
+    """
+    Start:                      Hide 'a':
+    u ┯
+    a │ ┯                       u ┯
+    b │ │ ┯                     b │   ┯
+    c │ ╭─┿ <- Junction on      c │ ╭─┿ <- Should still show junction
+    d │ │ ┿    arc "a-z"!       d │ │ ┿    and rest of arc downwards
+    e │ ┿ │                     e │ ┿ │
+    z ┷─╯─╯                     z ┷─╯─╯
+    """
+    sequence, parents, heads = GraphDiagram.parseDefinition("u:z a:e b-c:d,e d:z e-z")
+
+    g = Graph()
+    g.generateFullSequence(sequence, parents)
+    print("\n" + GraphDiagram.diagram(g))
+
+    trickle = GraphTrickle.initForHiddenCommits(["u", "a", "b"], hiddenTips=["a"])
+    hiddenCommits = set()
+    for c in sequence:
+        trickle.newCommit(c, parents[c], hiddenCommits)
+    print(GraphDiagram.diagram(g, hiddenCommits=hiddenCommits))
+
+    assert GraphDiagram.diagram(g, hiddenCommits=hiddenCommits, verbose=False).splitlines() == [
+        "u ┯",
+        "b │   ┯",
+        "c │ ╭─┿",
+        "d │ │ ┿",
+        "e │ ┿ │",
+        "z ┷─╯─╯",
+    ]
+
+    laneRemap = {frame.commit: frame.sealCopy().flattenLanes(hiddenCommits)[0]
+                 for frame in g.startPlayback()}
+    X = -1
+    assert laneRemap['u'] == [(X, 0)]
+    assert laneRemap['b'] == [(0, 0), (X, X), (X, 1)]
+    assert laneRemap['c'] == [(0, 0), (X, 1), (1, 2)]
+    assert laneRemap['d'] == [(0, 0), (1, 1), (2, 2)]
+    assert laneRemap['e'] == [(0, 0), (1, 1), (2, 2)]
+    assert laneRemap['z'] == [(0, X), (1, X), (2, X)]
