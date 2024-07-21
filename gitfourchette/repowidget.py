@@ -325,6 +325,10 @@ class RepoWidget(QStackedWidget):
             logger.warning(f"Repo already primed! {path}")
             return None
 
+        # Save prefs before force-reloading the repo.
+        if force and self.isLoaded:
+            self.repoModel.prefs.write()
+
         primingTask = self.repoTaskRunner.currentTask
         if isinstance(primingTask, tasks.PrimeRepo):
             logger.debug(f"Repo is being primed: {path}")
