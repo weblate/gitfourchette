@@ -263,6 +263,12 @@ allFixtures = [
         },
     ),
 
+    # a ┯
+    # b ┿─╮
+    # c │ ┿
+    # d │ ┿
+    # e ┿─╯
+    # f ┷
     ChainMarkerFixture(
         graphName="non-tip head should stay visible",
         graphDef="a-b:e,c c-d-e-f",
@@ -279,43 +285,34 @@ allFixtures = [
 
 
 @pytest.mark.parametrize(
-    argnames=("fixture", "seeds", "expected"),
+    argnames=("fixture", "seeds", "expectedHidden"),
     argvalues=itertools.chain.from_iterable(g.hiddenCommitsParametrizedArgs() for g in allFixtures),
     ids=itertools.chain.from_iterable(g.hiddenCommitsParametrizedNames() for g in allFixtures),
 )
-def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
+def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expectedHidden):
     fixtureHeads = fixture.headsDef.split()
-    sequence, parentMap, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
-    graph = Graph()
-    graphGenerator = graph.generateFullSequence(sequence, parentMap)
+    sequence, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
     assert all(h in fixtureHeads for h in graphHeads)
 
-    print("\n" + GraphDiagram.diagram(graph))
+    hiddenTips = set(c for c in seeds if not c.endswith("!"))
+    hiddenTaps = set(c.removesuffix("!") for c in seeds if c.endswith("!"))
+    gbu = GraphBuildLoop(fixtureHeads, hiddenTips=hiddenTips, hiddenTaps=hiddenTaps)
+    gbu.sendAll(sequence)
+
+    print("\n" + GraphDiagram.diagram(gbu.graph, verbose=False))
     print("Seed hidden commits:", seeds)
-    print("Expected hidden commits:", expected)
+    print("Expected hidden commits:", expectedHidden)
+    assert gbu.hiddenTrickle.done or gbu.weaver.isDangling()
 
-    # Set up trickle
-    trickle = GraphTrickle.initForHiddenCommits(
-        allHeads=fixtureHeads,
-        hiddenTips=set(c for c in seeds if not c.endswith("!")),
-        hiddenTaps=set(c.removesuffix("!") for c in seeds if c.endswith("!")))
+    def verb(hidden: bool):
+        return 'hide' if hidden else 'show'
 
-    print("Trickle frontier:", trickle.done, trickle.frontier)
-
-    marked = set()
-    for c in sequence:
-        trickle.newCommit(c, parentMap[c], marked)
-        if trickle.done:
-            print("Trickle complete at:", c)
-            break
-
-    assert graphGenerator.isDangling() or trickle.done
-
-    for c in sequence:
-        isVisible = c not in marked
-        print(f"Looking up {c} (supposed to be {'hidden' if c in expected else 'visible'}) resulted in {isVisible}")
-        assert isVisible == (c not in expected)
-        print(c, "PASS", isVisible)
+    for commit in sequence:
+        oid = commit.id
+        shouldHide = oid in expectedHidden
+        didHide = oid in gbu.hiddenCommits
+        print(f"{oid}\t: should {verb(shouldHide)}, did {verb(didHide)}")
+        assert shouldHide == didHide
 
 
 @pytest.mark.parametrize(
@@ -325,31 +322,20 @@ def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
 )
 def testLocalCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     fixtureHeads = fixture.headsDef.split()
-    sequence, parentMap, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
-    graph = Graph()
-    graph.generateFullSequence(sequence, parentMap)
+    sequence, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
     assert all(h in fixtureHeads for h in graphHeads)
+
+    builder = GraphBuildLoop(heads=fixtureHeads, localHeads=seeds)
+    builder.sendAll(sequence)
+    assert builder.foreignTrickle.done or builder.weaver.isDangling()
+
+    graph = builder.graph
 
     print("\n" + GraphDiagram.diagram(graph))
     print("Seed commits:", seeds)
     print("Expected commits:", expected)
 
-    trickle = GraphTrickle()
-
-    for c in set(fixtureHeads):
-        trickle.setPipe(c)  # Foreign
-    for c in seeds:
-        print(f"Marking {c} as LOCAL")
-        trickle.setEnd(c)  # Block foreign flow
-
-    marked = set()
-    for c in sequence:
-        trickle.newCommit(c, parentMap[c], marked)
-        if trickle.done:
-            print("Trickle complete at:", c)
-            break
-
-    for c in sequence:
-        isLocal = c not in marked
-        assert isLocal == (c in expected), f"{c} should be marked {c in expected}, was marked {isLocal}"
-        print(c, "PASS", isLocal)
+    for commit in sequence:
+        oid = commit.id
+        isLocal = oid not in builder.foreignCommits
+        assert isLocal == (oid in expected), f"{oid} should be marked {oid in expected}, was marked {isLocal}"

@@ -1,9 +1,9 @@
 import logging
 from collections import defaultdict
-from typing import Generator
+from typing import Generator, Iterable
 
 from gitfourchette import settings
-from gitfourchette.graph import Graph, GraphSplicer, GraphTrickle
+from gitfourchette.graph import Graph, GraphSpliceLoop, GraphTrickle, MockCommit
 from gitfourchette.porcelain import *
 from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
@@ -113,7 +113,6 @@ class RepoModel:
         self.syncSubmodules()
         self.syncRemotes()
         self.superproject = repo.get_superproject()
-        self.resolveHiddenCommits()
 
     @property
     def numRealCommits(self):
@@ -251,12 +250,14 @@ class RepoModel:
 
         return self.walker
 
-    def _uncommittedChangesFakeCommitParents(self):
+    def uncommittedChangesMockCommit(self):
         try:
             head = self.refs["HEAD"]
-            return [head] + self.mergeheads
+            parents = [head] + self.mergeheads
         except KeyError:  # Unborn HEAD
-            return []
+            parents = []
+
+        return MockCommit(UC_FAKEID, parents)
 
     @property
     def nextTruncationThreshold(self) -> int:
@@ -293,84 +294,41 @@ class RepoModel:
         return arcs[0].openedBy == UC_FAKEID
 
     @benchmark
-    def syncTopOfGraph(self, oldRefs: dict[str, Oid]) -> tuple[int, int]:
+    def syncTopOfGraph(self, oldRefs: dict[str, Oid]) -> GraphSpliceLoop:
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
+        gsl = GraphSpliceLoop(
+            self.graph,
+            self.commitSequence,
+            oldHeads=oldRefs.values(),
+            newHeads=self.refs.values(),
+            hiddenTips=self.getHiddenTips(),
+            localHeads=self.getLocalTips(),
+            hiddenCommits=self.hiddenCommits,
+            foreignCommits=self.foreignCommits,
+        )
+        coSplice = gsl.coSplice()
+        coSplice.send(None)  # prime the generator
 
-        newCommitSequence = []
-
-        oldHeads = oldRefs.values()
-        newHeads = self.refs.values()
-
-        graphSplicer = GraphSplicer(self.graph, oldHeads, newHeads)
-        hiddenTrickle = self.newHiddenCommitTrickle()
-        foreignTrickle = self.newForeignCommitTrickle()
-
-        # Generate fake "Uncommitted Changes" with HEAD as parent
-        newCommitSequence.insert(0, None)
-        graphSplicer.spliceNewCommit(UC_FAKEID, self._uncommittedChangesFakeCommitParents())
-
-        if graphSplicer.keepGoing:
-            with Benchmark("Walk graph until equilibrium"):
-                walker = self.primeWalker()
-                for commit in walker:
-                    oid = commit.id
-                    parents = commit.parent_ids
-
-                    newCommitSequence.append(commit)
-                    graphSplicer.spliceNewCommit(oid, parents)
-
-                    hiddenTrickle.newCommit(oid, parents, self.hiddenCommits, discard=True)
-                    foreignTrickle.newCommit(oid, parents, self.foreignCommits, discard=True)
-
-                    if not graphSplicer.keepGoing:
-                        break
-
-        graphSplicer.finish()
-
-        if graphSplicer.foundEquilibrium:
-            nRemoved = graphSplicer.equilibriumOldRow
-            nAdded = graphSplicer.equilibriumNewRow
+        try:
+            coSplice.send(self.uncommittedChangesMockCommit())
+        except StopIteration:
+            # e.g. switching from a branch to Detached HEAD on the same commit as the branch
+            pass
         else:
-            nRemoved = -1  # We could use len(self.commitSequence), but -1 will force refreshRepo to replace the model wholesale
-            nAdded = len(newCommitSequence)
+            walker = self.primeWalker()
+            for commit in walker:
+                try:
+                    coSplice.send(commit)
+                except StopIteration:
+                    break
+        coSplice.close()  # flush it
 
-        # Piece correct commit sequence back together
-        with Benchmark("Reassemble commit sequence"):
-            if not graphSplicer.foundEquilibrium:
-                self.commitSequence = newCommitSequence
-            elif nAdded == 0 and nRemoved == 0:
-                pass
-            elif nRemoved == 0:
-                self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence
-            else:
-                self.commitSequence = newCommitSequence[:nAdded] + self.commitSequence[nRemoved:]
+        self.commitSequence = gsl.commitSequence
+        self.commitSequence[0] = None  # blot out mock commit - TODO: Don't, and fix tests
 
-        # Finish patching hidden/foreign commit sets.
-        # Keep feeding commits to trickle until it stabilizes to its previous state.
-        if graphSplicer.foundEquilibrium:
-            with Benchmark("Finish patching hidden/foreign commits"):
-                row = nAdded + 1
-                r1 = self._stabilizeTrickle(hiddenTrickle, self.hiddenCommits, row)
-                r2 = self._stabilizeTrickle(foreignTrickle, self.foreignCommits, row)
-                logger.debug(f"Trickle stabilization: Hidden={r1}; Foreign={r2}")
-
-        return nRemoved, nAdded
-
-    def _stabilizeTrickle(self, trickle: GraphTrickle, flaggedSet: set[Oid], startRow: int):
-        if trickle.done:
-            return startRow
-
-        for row in range(startRow, len(self.commitSequence)):
-            commit = self.commitSequence[row]
-
-            wasFlagged = commit.id in flaggedSet
-            isFlagged = trickle.newCommit(commit.id, commit.parent_ids, flaggedSet, discard=True)
-
-            trickleEquilibrium = (wasFlagged == isFlagged)
-            if trickleEquilibrium or trickle.done:
-                return row
+        return gsl
 
     @benchmark
     def toggleHideRefPattern(self, refPattern: str):
@@ -413,6 +371,14 @@ class RepoModel:
             self.prefs.hiddenRefPatterns = patternsSeen
             self.prefs.setDirty()
 
+    def getKnownTips(self) -> Iterable[Oid]:
+        return self.refs.values()
+
+    def getLocalTips(self):
+        return set(
+            oid for oid, refList in self.refsAt.items()
+            if any(name == "HEAD" or name.startswith("refs/heads/") for name in refList))
+
     def getHiddenTips(self) -> set[Oid]:
         seeds = set()
         hiddenRefs = self.hiddenRefs
@@ -444,19 +410,13 @@ class RepoModel:
 
     @benchmark
     def resolveHiddenCommits(self):
-        self.hiddenCommits = set()
-        trickle = self.newHiddenCommitTrickle()
+        trickle = GraphTrickle.initForHiddenCommits(self.refs.values(), self.getHiddenTips())
         for i, commit in enumerate(self.commitSequence):
             if not commit:  # May be a fake commit such as Uncommitted Changes
                 continue
-            trickle.newCommit(commit.id, commit.parent_ids, self.hiddenCommits)
+            trickle.newCommit(commit.id, commit.parent_ids)
             # Don't check if trickle is complete too often (expensive)
             if (i % 250 == 0) and trickle.done:
                 logger.debug(f"resolveHiddenCommits complete in {i} iterations")
                 break
-
-    def newHiddenCommitTrickle(self) -> GraphTrickle:
-        return GraphTrickle.initForHiddenCommits(self.refs.values(), self.getHiddenTips())
-
-    def newForeignCommitTrickle(self) -> GraphTrickle:
-        return GraphTrickle.initForForeignCommits(self.refsAt)
+        self.hiddenCommits = trickle.flaggedSet

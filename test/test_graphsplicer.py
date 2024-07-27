@@ -305,14 +305,12 @@ SCENARIOS = {
 @pytest.mark.parametrize('scenarioKey', SCENARIOS.keys())
 def testGraphSplicing(scenarioKey):
     textGraph1, textGraph2, expectEquilibrium = SCENARIOS[scenarioKey]
-    sequence1, parentsOf1, heads1 = GraphDiagram.parseDefinition(textGraph1)
-    sequence2, parentsOf2, heads2 = GraphDiagram.parseDefinition(textGraph2)
+    sequence1, heads1 = GraphDiagram.parseDefinition(textGraph1)
+    sequence2, heads2 = GraphDiagram.parseDefinition(textGraph2)
 
-    g = Graph()
-    g.generateFullSequence(sequence1, parentsOf1, keyframeInterval=KF_INTERVAL_TEST)
+    g = GraphBuildLoop(keyframeInterval=KF_INTERVAL_TEST).sendAll(sequence1).graph
 
-    verification = Graph()
-    verification.generateFullSequence(sequence2, parentsOf2)
+    verification = GraphBuildLoop().sendAll(sequence2).graph
 
     print("---------------------------------------------------")
     print(F"Graph before --------- (heads: {heads1})")
@@ -324,22 +322,23 @@ def testGraphSplicing(scenarioKey):
     g.testConsistency()
 
     # verify that row cache is consistent
-    assert list(range(len(sequence1))) == [g.getCommitRow(c) for c in sequence1]
+    assert list(range(len(sequence1))) == [g.getCommitRow(c.id) for c in sequence1]
 
     print("---------------------------------------------------")
     print("Splice...")
 
     # modify top of history
-    splicer = GraphSplicer.spliceTop(g, heads1, heads2, sequence2, parentsOf2, KF_INTERVAL_TEST)
+    spliceLoop = GraphSpliceLoop(g, sequence1, heads1, heads2, keyframeInterval=KF_INTERVAL_TEST)
+    spliceLoop.sendAll(sequence2)
     g.testConsistency()
 
-    assert expectEquilibrium == splicer.foundEquilibrium
+    assert expectEquilibrium == spliceLoop.splicer.foundEquilibrium
 
-    for trashedCommit in (splicer.oldCommitsSeen - splicer.newCommitsSeen):
-        assert trashedCommit not in sequence2, F"commit '{trashedCommit}' erroneously trashed"
+    for trashedCommit in (spliceLoop.splicer.oldCommitsSeen - spliceLoop.splicer.newCommitsSeen):
+        assert not any(trashedCommit == c.id for c in sequence2), f"commit '{trashedCommit}' erroneously trashed"
 
     # delete the splicer to ensure that any dtors don't mess up the spliced graph
-    del splicer
+    del spliceLoop
 
     print(F"Graph after --------- (heads: {heads2})")
     print("Keyframes AFTER SPLICING:", g.keyframeRows)
@@ -351,10 +350,10 @@ def testGraphSplicing(scenarioKey):
     print(GraphDiagram.diagram(g))
 
     # verify that the splicing was correct
-    assert GraphDiagram.diagram(g) == GraphDiagram.diagram(verification)
+    assert GraphDiagram.diagram(g, verbose=True) == GraphDiagram.diagram(verification, verbose=True)
 
     # verify that row cache is consistent
-    assert list(range(len(sequence2))) == [g.getCommitRow(c) for c in sequence2]
+    assert list(range(len(sequence2))) == [g.getCommitRow(c.id) for c in sequence2]
 
     # verify that all the keyframes are correct after re-creating them
     g.testConsistency()
@@ -362,5 +361,7 @@ def testGraphSplicing(scenarioKey):
     # Stress test: go back to first graph
     print("---------------------------------------------------")
     print("Revert to first graph...")
-    GraphSplicer.spliceTop(g, heads2, heads1, sequence1, parentsOf1, KF_INTERVAL_TEST)
+    gsl2 = GraphSpliceLoop(g, oldCommitSequence=sequence2, oldHeads=heads2,
+                           newHeads=heads1, keyframeInterval=KF_INTERVAL_TEST)
+    gsl2.sendAll(sequence1)
     g.testConsistency()

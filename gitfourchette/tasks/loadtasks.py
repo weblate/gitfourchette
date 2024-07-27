@@ -3,9 +3,9 @@ import logging
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.application import GFApplication
-from gitfourchette.graph import Graph, BatchRow, KF_INTERVAL
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import (ShouldDisplayPatchAsImageDiff, SpecialDiffError, DiffImagePair)
+from gitfourchette.graph import GraphBuildLoop
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator, NavFlags, NavContext
 from gitfourchette.porcelain import *
@@ -36,7 +36,7 @@ class PrimeRepo(RepoTask):
 
     def flow(self, path: str, maxCommits: int = -1):
         from gitfourchette.repowidget import RepoWidget
-        from gitfourchette.repomodel import RepoModel, UC_FAKEID
+        from gitfourchette.repomodel import RepoModel
         from gitfourchette.tasks.jumptasks import Jump
 
         assert path
@@ -83,7 +83,7 @@ class PrimeRepo(RepoTask):
         # Prime the walker (this might take a while)
         walker = repoModel.primeWalker()
 
-        commitSequence: list[Commit | None] = []
+        commitSequence = [repoModel.uncommittedChangesMockCommit()]
 
         # Retrieve the number of commits that we loaded last time we opened this repo
         # so we can estimate how long it'll take to load it again
@@ -102,7 +102,7 @@ class PrimeRepo(RepoTask):
             maxCommits = settings.prefs.maxCommits
         if maxCommits == 0:  # 0 means infinity
             maxCommits = 2**63  # ought to be enough
-        progressInterval = 5000 if maxCommits >= 10000 else 1000
+        progressInterval = 1000 if maxCommits >= 10000 else 1000
 
         for i, commit in enumerate(walker):
             commitSequence.append(commit)
@@ -112,7 +112,7 @@ class PrimeRepo(RepoTask):
                 break
 
             # Report progress, not too often
-            if i != 0 and i % progressInterval == 0:
+            if i % progressInterval == 0:
                 message = self.tr("{0} commits...").format(locale.toString(i))
                 self.progressMessage.emit(message)
                 if numCommitsBallpark > 0 and i <= numCommitsBallpark:
@@ -121,7 +121,7 @@ class PrimeRepo(RepoTask):
         # Can't abort anymore
         self.progressAbortable.emit(False)
 
-        numCommits = len(commitSequence)
+        numCommits = len(commitSequence) - 1
         logger.info(f"{repoModel.shortName}: loaded {numCommits} commits")
         if truncatedHistory:
             message = self.tr("{0} commits (truncated log).").format(locale.toString(numCommits))
@@ -139,46 +139,18 @@ class PrimeRepo(RepoTask):
         # ---------------------------------------------------------------------
         # Build graph
 
-        graph = Graph()
-        graphGenerator = graph.startGenerator()
-
-        # Generate fake "Uncommitted Changes" with HEAD as parent
-        commitSequence.insert(0, None)  # Uncommitted Changes
-
-        repoModel.hiddenCommits = set()
-        repoModel.foreignCommits = set()
-        hiddenTrickle = repoModel.newHiddenCommitTrickle()
-        foreignTrickle = repoModel.newForeignCommitTrickle()
-
-        for commit in commitSequence:
-            if not commit:
-                oid = UC_FAKEID
-                parents = repoModel._uncommittedChangesFakeCommitParents()
-            else:
-                oid = commit.id
-                parents = commit.parent_ids
-
-            graphGenerator.newCommit(oid, parents)
-
-            hiddenTrickle.newCommit(oid, parents, repoModel.hiddenCommits)
-            foreignTrickle.newCommit(oid, parents, repoModel.foreignCommits)
-
-            row = graphGenerator.row
-            rowInt = int(row)
-
-            assert type(row) == BatchRow
-            assert rowInt >= 0
-            graph.commitRows[oid] = row
-
-            # Save keyframes at regular intervals for faster random access.
-            if rowInt % KF_INTERVAL == 0:
-                graph.saveKeyframe(graphGenerator)
-                self.progressValue.emit(rowInt)
-
+        buildLoop = GraphBuildLoop(
+            heads=self.repoModel.getKnownTips(),
+            hiddenTips=self.repoModel.getHiddenTips(),
+            localHeads=self.repoModel.getLocalTips())
+        buildLoop.onKeyframe = self.progressValue.emit
+        buildLoop.sendAll(commitSequence)
         self.progressValue.emit(numCommits)
 
-        logger.debug(f"Peak arc count: {graphGenerator.peakArcCount}")
-
+        commitSequence[0] = None  # blot out mock commit -- TODO: Don't, and fix tests
+        graph = buildLoop.graph
+        repoModel.hiddenCommits = buildLoop.hiddenCommits
+        repoModel.foreignCommits = buildLoop.foreignCommits
         repoModel.commitSequence = commitSequence
         repoModel.truncatedHistory = truncatedHistory
         repoModel.graph = graph

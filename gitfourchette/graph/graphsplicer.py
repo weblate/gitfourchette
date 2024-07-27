@@ -12,23 +12,11 @@ from gitfourchette.graph.graph import (
     Oid,
     logger,
 )
+from gitfourchette.graph.graphweaver import GraphWeaver
 from gitfourchette.toolbox import Benchmark
 
 
 class GraphSplicer:
-    @staticmethod
-    def spliceTop(graph: Graph, oldHeads: set[Oid], newHeads: set[Oid],
-                  sequence: list[Oid], parentsOf: dict[Oid, list[Oid]],
-                  keyframeInterval: int = KF_INTERVAL
-                  ) -> GraphSplicer:
-        splicer = GraphSplicer(graph, oldHeads, newHeads)
-        for commit in sequence:
-            splicer.spliceNewCommit(commit, parentsOf[commit], keyframeInterval)
-            if not splicer.keepGoing:
-                break
-        splicer.finish()
-        return splicer
-
     def __init__(self, oldGraph: Graph, oldHeads: Iterable[Oid], newHeads: Iterable[Oid]):
         self.keepGoing = True
         self.foundEquilibrium = False
@@ -36,8 +24,7 @@ class GraphSplicer:
         self.equilibriumOldRow = -1
         self.oldGraphRowOffset = 0
 
-        self.newGraph = Graph()
-        self.newGenerator = self.newGraph.startGenerator()
+        self.newGraph, self.weaver = GraphWeaver.newGraph()
 
         self.oldGraph = oldGraph
         self.oldPlayer = oldGraph.startPlayback()
@@ -57,14 +44,14 @@ class GraphSplicer:
         self.newCommitsSeen.add(newCommit)
 
         # Generate arcs for new frame.
-        self.newGenerator.newCommit(newCommit, parentsOfNewCommit)
+        self.weaver.newCommit(newCommit, parentsOfNewCommit)
 
         # Save keyframe in new context every now and then.
-        if int(self.newGenerator.row) % keyframeInterval == 0:
-            self.newGraph.saveKeyframe(self.newGenerator)
+        if int(self.weaver.row) % keyframeInterval == 0:
+            self.newGraph.saveKeyframe(self.weaver)
 
         # Register this commit in the new graph's row sequence.
-        self.newGraph.commitRows[newCommit] = self.newGenerator.row
+        self.newGraph.commitRows[newCommit] = self.weaver.row
 
         # Is it one of the commits that we must see before we can stop consuming new commits?
         if newCommit in self.requiredNewCommits:
@@ -90,17 +77,17 @@ class GraphSplicer:
 
         # We just passed by some old commits; remove them from the set of old commits we need to see.
         if self.requiredOldCommits:
-            self.requiredOldCommits.difference_update(oldCommitsPassed)
+            self.requiredOldCommits -= oldCommitsPassed
 
         # Keep track of any commits we may have skipped in the old graph,
         # because they are now unreachable and we want to purge them from the cache afterwards.
-        self.oldCommitsSeen.update(oldCommitsPassed)
+        self.oldCommitsSeen |= oldCommitsPassed
 
         # See if we're done: no more commits we want to see,
         # and the graph frames start being "equal" in both graphs.
-        if len(self.requiredNewCommits) == 0 and \
-                len(self.requiredOldCommits) == 0 and \
-                self.isEquilibriumReached(self.newGenerator, self.oldPlayer):
+        if (len(self.requiredNewCommits) == 0 and
+                len(self.requiredOldCommits) == 0 and
+                self.isEquilibriumReached(self.weaver, self.oldPlayer)):
             self.foundEquilibrium = True
             self.keepGoing = False
             return
@@ -116,7 +103,7 @@ class GraphSplicer:
         """Completion with equilibrium"""
 
         # We'll basically concatenate newContext[eqNewRow:] and oldContext[:eqOldRow].
-        equilibriumNewRow = int(self.newGenerator.row)
+        equilibriumNewRow = int(self.weaver.row)
         equilibriumOldRow = int(self.oldPlayer.row)
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
@@ -124,7 +111,7 @@ class GraphSplicer:
 
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.
-        equilibriumNewOpenArcs = list(filter(None, self.newGenerator.openArcs))
+        equilibriumNewOpenArcs = list(filter(None, self.weaver.openArcs))
         equilibriumOldOpenArcs = list(filter(None, self.oldPlayer.sealCopy().openArcs))
         assert len(equilibriumOldOpenArcs) == len(equilibriumNewOpenArcs)
 
@@ -192,7 +179,7 @@ class GraphSplicer:
         # In that case, steal the contents of newGraph, and bail.
 
         self.equilibriumOldRow = self.oldPlayer.row
-        self.equilibriumNewRow = self.newGenerator.row
+        self.equilibriumNewRow = self.weaver.row
         self.oldGraphRowOffset = 0
 
         self.oldGraph.shallowCopyFrom(self.newGraph)

@@ -151,7 +151,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         # Get the info we need about the commit
         commit: Commit | None = index.data(CommitLogModel.Role.Commit)
-        if commit:
+        if commit and commit.id != UC_FAKEID:
             oid = commit.id
             author = commit.author
             committer = commit.committer

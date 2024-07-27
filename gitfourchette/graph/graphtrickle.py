@@ -6,8 +6,13 @@ TAP = 2
 
 
 class GraphTrickle:
-    def __init__(self):
+    def __init__(self, flaggedSet: set[Oid] | None = None):
         self.frontier = {}
+
+        self.patchExistingSet = flaggedSet is not None
+        if not self.patchExistingSet:
+            flaggedSet = set()
+        self.flaggedSet = flaggedSet
 
     def setEnd(self, commit: Oid):
         self.frontier[commit] = END
@@ -23,13 +28,7 @@ class GraphTrickle:
         frontier = self.frontier
         return all(not frontier[k] for k in self.frontier.keys())
 
-    def newCommit(
-            self,
-            commit: Oid,
-            parents: list[Oid],
-            flaggedSet: set[Oid],
-            discard: bool = False
-    ) -> bool:
+    def newCommit(self, commit: Oid, parents: list[Oid]) -> bool:
         frontier = self.frontier
         flagged = frontier.pop(commit, END)
 
@@ -38,7 +37,7 @@ class GraphTrickle:
             for p in parents:
                 frontier.setdefault(p, PIPE)
 
-            flaggedSet.add(commit)
+            self.flaggedSet.add(commit)
 
         else:
             # Block trickling to parents (that aren't taps themselves)
@@ -46,14 +45,14 @@ class GraphTrickle:
                 if frontier.get(p, END) < TAP:
                     frontier[p] = END
 
-            if discard:
-                flaggedSet.discard(commit)
+            if self.patchExistingSet:
+                self.flaggedSet.discard(commit)
 
         return bool(flagged)
 
     @staticmethod
-    def initForHiddenCommits(allHeads, hiddenTips, hiddenTaps=None):
-        trickle = GraphTrickle()
+    def initForHiddenCommits(allHeads, hiddenTips, hiddenTaps=None, patchFlaggedSet=None):
+        trickle = GraphTrickle(patchFlaggedSet)
 
         # Explicitly show all refs by default
         for head in allHeads:
@@ -77,15 +76,14 @@ class GraphTrickle:
         return trickle
 
     @staticmethod
-    def initForForeignCommits(refsAt):
-        trickle = GraphTrickle()
+    def initForForeignCommits(allHeads, localTips, patchFlaggedSet=None):
+        trickle = GraphTrickle(patchFlaggedSet)
 
-        for oid, refList in refsAt.items():
-            assert oid not in trickle.frontier
-            isLocal = any(name == "HEAD" or name.startswith("refs/heads/") for name in refList)
-            if isLocal:
-                trickle.setEnd(oid)
-            else:
-                trickle.setPipe(oid)
+        for head in allHeads:
+            trickle.setPipe(head)
+
+        # Local heads block propagation of foreign trickle
+        for head in localTips:
+            trickle.setEnd(head)
 
         return trickle

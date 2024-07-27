@@ -2,6 +2,7 @@ import re
 from itertools import zip_longest
 
 from gitfourchette.graph import *
+from gitfourchette.graph.graphbuilder import GraphBuildLoop, MockCommit, Oid
 
 PADDING = 2
 ABRIDGMENT_THRESHOLD = 25
@@ -15,15 +16,12 @@ def padx(x):
 class GraphDiagram:
     @staticmethod
     def parse(text: str):
-        sequence, parentMap, heads = GraphDiagram.parseDefinition(text)
-        graph = Graph()
-        graph.generateFullSequence(sequence, parentMap)
-        return graph
+        sequence, heads = GraphDiagram.parseDefinition(text)
+        return GraphBuildLoop().sendAll(sequence).graph
 
     @staticmethod
-    def parseDefinition(text: str):
+    def parseDefinition(text: str) -> tuple[list[MockCommit], set[Oid]]:
         sequence = []
-        parentMap = {}
         seen = set()
         heads = set()
 
@@ -50,18 +48,18 @@ class GraphDiagram:
             chain = chainStr.split("-")
             parents = [[c] for c in chain[1:]] + [rootParents]
 
-            for commit, commitParents in zip(chain, parents):
-                assert commit not in parentMap, f"Commit hash appears twice in sequence! {commit}"
-                sequence.append(commit)
-                parentMap[commit] = commitParents
-                if commit not in seen:
-                    heads.add(commit)
-                seen.update(parentMap[commit])
+            for oid, commitParents in zip(chain, parents):
+                assert oid not in sequence, f"Commit hash appears twice in sequence! {oid}"
+                mockCommit = MockCommit(oid, commitParents)
+                sequence.append(mockCommit)
+                if mockCommit.id not in seen:
+                    heads.add(mockCommit.id)
+                seen.update(mockCommit.parent_ids)
 
-        return sequence, parentMap, heads
+        return sequence, heads
 
     @staticmethod
-    def diagram(graph: Graph, row0=0, maxRows=20, hiddenCommits=None, verbose=True):
+    def diagram(graph: Graph, row0=0, maxRows=20, hiddenCommits=None, verbose=False):
         if not hiddenCommits:
             hiddenCommits = set()
 

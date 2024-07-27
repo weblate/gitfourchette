@@ -10,22 +10,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     definition = " ".join(args.definition)
-    sequence, parentMap, heads = GraphDiagram.parseDefinition(definition)
-    graph = Graph()
-    graph.generateFullSequence(sequence, parentMap)
+    sequence, heads = GraphDiagram.parseDefinition(definition)
 
-    hiddenCommits = set()
-    if args.hide:
-        hide = args.hide
-        tips = args.tips or heads
-        assert all(c in sequence for c in hide), "one of the given hidden commits isn't in the graph"
-        assert all(c in sequence for c in tips), "one of the given tip commits isn't in the graph"
-        hiddenTrickle = GraphTrickle.initForHiddenCommits(tips, hide)
-        for commit in sequence:
-            hiddenTrickle.newCommit(commit, parentMap[commit], hiddenCommits)
+    idSequence = [c.id for c in sequence]
+    assert all(c in idSequence for c in args.hide), "one of the given hidden commits isn't in the graph"
+    assert all(c in idSequence for c in args.tips), "one of the given tip commits isn't in the graph"
+
+    builder = GraphBuildLoop(args.tips or heads, hiddenTips=args.hide).sendAll(sequence)
 
     if args.verbose:
-        print("Hidden commits:", hiddenCommits)
+        print("Hidden commits:", builder.hiddenCommits)
 
-    diagram = GraphDiagram.diagram(graph, hiddenCommits=hiddenCommits, verbose=args.verbose)
+    diagram = GraphDiagram.diagram(builder.graph, hiddenCommits=builder.hiddenCommits, verbose=args.verbose)
     print(diagram)

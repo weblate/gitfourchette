@@ -146,19 +146,17 @@ def testVisibleJunctionOnHiddenArc():
     e │ ┿ │                     e │ ┿ │
     z ┷─╯─╯                     z ┷─╯─╯
     """
-    sequence, parents, heads = GraphDiagram.parseDefinition("u:z a:e b-c:d,e d:z e-z")
+    sequence, heads = GraphDiagram.parseDefinition("u:z a:e b-c:d,e d:z e-z")
 
-    g = Graph()
-    g.generateFullSequence(sequence, parents)
-    print("\n" + GraphDiagram.diagram(g))
+    gbu = GraphBuildLoop(["u", "a", "b"], hiddenTips=["a"]).sendAll(sequence)
+    g = gbu.graph
+    hiddenCommits = gbu.hiddenCommits
 
-    trickle = GraphTrickle.initForHiddenCommits(["u", "a", "b"], hiddenTips=["a"])
-    hiddenCommits = set()
-    for c in sequence:
-        trickle.newCommit(c, parents[c], hiddenCommits)
+    print()
+    print(GraphDiagram.diagram(g))
     print(GraphDiagram.diagram(g, hiddenCommits=hiddenCommits))
 
-    assert GraphDiagram.diagram(g, hiddenCommits=hiddenCommits, verbose=False).splitlines() == [
+    assert GraphDiagram.diagram(g, hiddenCommits=hiddenCommits).splitlines() == [
         "u ┯",
         "b │   ┯",
         "c │ ╭─┿",
