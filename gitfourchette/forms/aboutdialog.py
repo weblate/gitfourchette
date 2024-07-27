@@ -28,20 +28,24 @@ class AboutDialog(QDialog):
         appVersion = QApplication.applicationVersion()
         appName = qAppName()
 
+        if APP_FREEZE_COMMIT:
+            appVersion += f" ({APP_FREEZE_COMMIT[:7]})"
+
         self.setWindowTitle(self.windowTitle().format(appName))
 
-        if APP_BUILD_DATE:
-            buildDate = " " + self.tr("(built on {date})").format(date=APP_BUILD_DATE)
+        if APP_FREEZE_DATE:
+            buildDate = f" ({APP_FREEZE_DATE})"
         else:
             buildDate = ""
 
         tagline = tr("The comfortable Git UI for Linux.")
         header = dedent(f"""\
-            <span style="font-size: x-large"><b>{appName}</b> {appVersion}</span>{buildDate}
+            <span style="font-size: x-large"><b>{appName}</b></span>
             <br>{tagline}
-            <br>Copyright © 2024 Iliyas Jorio
-            <br>{simpleLink(WEBSITE_URL)}
-            """)
+            <br>{simpleLink(WEBSITE_URL)}""")
+        versionText = dedent(f"""\
+            <span style='color:{mutedTextColorHex(self)}'><b>Version {appVersion}</b>{buildDate}
+            <br>Copyright © 2024 Iliyas Jorio""")
 
         blurb = paragraphs(
             self.tr("{app} is free software that I develop in my spare time."),
@@ -52,6 +56,8 @@ class AboutDialog(QDialog):
 
         self.ui.header.setText(header)
         self.ui.header.setOpenExternalLinks(True)
+
+        self.ui.versionLabel.setText(versionText)
 
         self.ui.mugshot.setText("")
         self.ui.mugshot.setPixmap(QPixmap("assets:icons/mug"))

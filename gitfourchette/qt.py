@@ -28,8 +28,8 @@ PYQT6 = False
 MACOS = False
 WINDOWS = False
 
-if APP_FIXED_QT_BINDING:  # in frozen apps (PyInstaller, AppImage, Flatpak), target a fixed API
-    _qtBindingOrder = [APP_FIXED_QT_BINDING]
+if APP_FREEZE_QT:  # in frozen apps (PyInstaller, AppImage, Flatpak), target a fixed API
+    _qtBindingOrder = [APP_FREEZE_QT]
     _qtBindingBootPref = _qtBindingOrder[0]
 else:
     _qtBindingBootPref = _os.environ.get("QT_API", "").lower()

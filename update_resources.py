@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 import argparse, datetime, difflib, os, re, subprocess, sys, textwrap
 import xml.etree.ElementTree as ET
+import pygit2
 from contextlib import suppress
 from pathlib import Path
 
@@ -241,6 +242,9 @@ def updateQmFiles(lrelease):
 
 
 def writeFreezeFile(qtApi: str):
+    repo = pygit2.Repository(SRC_DIR)
+    headCommit = repo.head.target
+
     buildDate = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M")
     freezeText = textwrap.dedent(f"""\
         # BEGIN_FREEZE_CONSTS
@@ -248,9 +252,9 @@ def writeFreezeFile(qtApi: str):
         # Do not commit these changes!
         ####################################
         
-        APP_FROZEN = True
-        APP_BUILD_DATE = "{buildDate}"
-        APP_FIXED_QT_BINDING = "{qtApi.lower()}"
+        APP_FREEZE_COMMIT = "{headCommit}"
+        APP_FREEZE_DATE = "{buildDate}"
+        APP_FREEZE_QT = "{qtApi.lower()}"
         # END_FREEZE_CONSTS""")
     patchSection(Path(SRC_DIR) / 'appconsts.py', freezeText)
 

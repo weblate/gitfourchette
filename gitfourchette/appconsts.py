@@ -7,7 +7,7 @@ APP_IDENTIFIER = "io.jor.gitfourchette"
 # BEGIN_FREEZE_CONSTS
 # These constants can be overwritten by `update_resources.py --freeze`
 # Do not commit changes in this file unless you know what you are doing!
-APP_FROZEN = False
-APP_BUILD_DATE = ""
-APP_FIXED_QT_BINDING = ""
+APP_FREEZE_COMMIT = ""
+APP_FREEZE_DATE = ""
+APP_FREEZE_QT = ""
 # END_FREEZE_CONSTS

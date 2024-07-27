@@ -211,7 +211,7 @@ class PrefsDialog(QDialog):
             skipKeys.add("showMenuBar")
 
         # If app distribution is frozen, don't expose Qt binding setting
-        if APP_FIXED_QT_BINDING:
+        if APP_FREEZE_QT:
             skipKeys.add("forceQtApi")
 
         return skipKeys
