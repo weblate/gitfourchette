@@ -303,18 +303,9 @@ class RepoModel:
         # DO NOT call processEvents() here. While splicing a large amount of
         # commits, GraphView may try to repaint an incomplete graph.
         # GraphView somehow ignores setUpdatesEnabled(False) here!
-        gsl = GraphSpliceLoop(
-            self.graph,
-            self.commitSequence,
-            oldHeads=oldRefs.values(),
-            newHeads=self.refs.values(),
-            oldHideSeeds=self.hideSeeds,
-            newHideSeeds=self.getHiddenTips(),
-            oldLocalSeeds=self.localSeeds,
-            newLocalSeeds=self.getLocalTips(),
-            hiddenCommits=self.hiddenCommits,
-            foreignCommits=self.foreignCommits,
-        )
+        gsl = GraphSpliceLoop(self.graph, self.commitSequence,
+                              oldHeads=oldRefs.values(), newHeads=self.refs.values(),
+                              hideSeeds=self.getHiddenTips(), localSeeds=self.getLocalTips())
         coSplice = gsl.coSplice()
         coSplice.send(None)  # prime the generator
 
@@ -333,8 +324,8 @@ class RepoModel:
         coSplice.close()  # flush it
 
         self.commitSequence = gsl.commitSequence
-        self.hideSeeds = gsl.newHideSeeds
-        self.localSeeds = gsl.newLocalSeeds
+        self.hideSeeds = gsl.hideSeeds
+        self.localSeeds = gsl.localSeeds
         self.hiddenCommits = gsl.hiddenCommits
         self.foreignCommits = gsl.foreignCommits
 
@@ -350,12 +341,8 @@ class RepoModel:
         heads = self.refs.values(),
         newHideSeeds = self.getHiddenTips()
         newLocalSeeds = self.getLocalTips()
-        gsl = GraphSpliceLoop(
-            self.graph, self.commitSequence,
-            oldHeads=heads, newHeads=heads,
-            oldHideSeeds=self.hideSeeds, newHideSeeds=newHideSeeds,
-            oldLocalSeeds=self.localSeeds, newLocalSeeds=newLocalSeeds,
-            hiddenCommits=self.hiddenCommits, foreignCommits=self.foreignCommits)
+        gsl = GraphSpliceLoop(self.graph, self.commitSequence, oldHeads=heads, newHeads=heads,
+                              hideSeeds=newHideSeeds, localSeeds=newLocalSeeds)
         gsl.sendAll(self.commitSequence)  # send the same commit sequence
         self.hiddenCommits = gsl.hiddenCommits
         self.foreignCommits = gsl.foreignCommits

@@ -8,39 +8,26 @@ SOURCE = 2
 class GraphTrickle:
     def __init__(self):
         self.frontier = {}
-        self.posFlags = set()
-        self.negFlags = set()
+        self.flaggedSet = set()
 
     @property
     def done(self) -> bool:
         return all(v == STOP for v in self.frontier.values())
 
-    def newCommit(self, commit: Oid, parents: list[Oid]) -> bool:
+    def newCommit(self, commit: Oid, parents: list[Oid]):
         frontier = self.frontier
         flagged = frontier.pop(commit, STOP)
 
-        if flagged:
+        if flagged != STOP:
             # Trickle through parents that are not explicitly flagged
             for p in parents:
                 frontier.setdefault(p, PIPE)
-
-            self.posFlags.add(commit)
-
+            self.flaggedSet.add(commit)
         else:
             # Block trickling to parents (that aren't sources themselves)
             for p in parents:
                 if frontier.get(p, STOP) != SOURCE:
                     frontier[p] = STOP
-
-            self.negFlags.add(commit)
-
-        return bool(flagged)
-
-    def getFinalPosFlags(self, oldFlaggedSet=None):
-        if self.done or not oldFlaggedSet:
-            return self.posFlags
-        else:
-            return self.posFlags | (oldFlaggedSet - self.negFlags)
 
     @staticmethod
     def newHiddenTrickle(

@@ -99,6 +99,22 @@ SCENARIOS = [
         oldHiddenCommitsExpected="i e1 e2 e3",
         newHiddenCommitsExpected="i",
     ),
+
+    # a ┯   <--- Initially visible, then hide
+    # b ┿─╮
+    # c │ ┿ <--- Visible ref - should remain visible (along with c-e-f chain)
+    # d ┿ │
+    # e ┿─╯
+    # f ┷
+    TrickleStabilizationFixture(
+        oldSequence="a-b:d,c c:e d-e-f",
+        oldHeads="a c",
+        newHeads="a c",
+        oldHideSeeds="",
+        newHideSeeds="a",
+        oldHiddenCommitsExpected="",
+        newHiddenCommitsExpected="a b d",
+    ),
 ]
 
 
@@ -132,10 +148,7 @@ def testGraphTrickleStabilization(scenario, reverse):
 
     assert gbl.hiddenCommits == oldHiddenCommitsExpected
 
-    gsl = GraphSpliceLoop(gbl.graph, sequence, oldHeads, newHeads,
-                          oldHideSeeds=oldHideSeeds,
-                          newHideSeeds=newHideSeeds,
-                          hiddenCommits=gbl.hiddenCommits)
+    gsl = GraphSpliceLoop(gbl.graph, sequence, oldHeads, newHeads, hideSeeds=newHideSeeds)
     gsl.sendAll(newSequence)
     print("---- Post splicing ----")
     print(GraphDiagram.diagram(gsl.graph, hiddenCommits=gsl.hiddenCommits))
