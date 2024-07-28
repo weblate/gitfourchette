@@ -16,7 +16,7 @@ if __name__ == '__main__':
     assert all(c in idSequence for c in args.hide), "one of the given hidden commits isn't in the graph"
     assert all(c in idSequence for c in args.tips), "one of the given tip commits isn't in the graph"
 
-    builder = GraphBuildLoop(args.tips or heads, hiddenTips=args.hide).sendAll(sequence)
+    builder = GraphBuildLoop(args.tips or heads, hideSeeds=args.hide).sendAll(sequence)
 
     if args.verbose:
         print("Hidden commits:", builder.hiddenCommits)

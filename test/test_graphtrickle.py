@@ -296,7 +296,7 @@ def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expectedHidden):
 
     hiddenTips = set(c for c in seeds if not c.endswith("!"))
     hiddenTaps = set(c.removesuffix("!") for c in seeds if c.endswith("!"))
-    gbu = GraphBuildLoop(fixtureHeads, hiddenTips=hiddenTips, hiddenTaps=hiddenTaps)
+    gbu = GraphBuildLoop(fixtureHeads, hideSeeds=hiddenTips, forceHide=hiddenTaps)
     gbu.sendAll(sequence)
 
     print("\n" + GraphDiagram.diagram(gbu.graph, verbose=False))
@@ -325,7 +325,7 @@ def testLocalCommitMarks(fixture: ChainMarkerFixture, seeds, expected):
     sequence, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
     assert all(h in fixtureHeads for h in graphHeads)
 
-    builder = GraphBuildLoop(heads=fixtureHeads, localHeads=seeds)
+    builder = GraphBuildLoop(heads=fixtureHeads, localSeeds=seeds)
     builder.sendAll(sequence)
     assert builder.foreignTrickle.done or builder.weaver.isDangling()
 

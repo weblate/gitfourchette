@@ -107,7 +107,16 @@ class GraphSplicer:
         equilibriumOldRow = int(self.oldPlayer.row)
         rowShiftInOldGraph = equilibriumNewRow - equilibriumOldRow
 
+        # Save rows for use by external code
+        self.equilibriumNewRow = equilibriumNewRow
+        self.equilibriumOldRow = equilibriumOldRow
+        self.oldGraphRowOffset = rowShiftInOldGraph
+
         logger.debug(f"Equilibrium: commit={str(self.oldPlayer.commit):.7} new={equilibriumNewRow} old={equilibriumOldRow}")
+
+        # We can bail now if nothing changed.
+        if equilibriumOldRow == 0 and equilibriumNewRow == 0:
+            return
 
         # After reaching equilibrium there might still be open arcs that aren't closed yet.
         # Let's find out where they end before we can concatenate the graphs.
@@ -167,10 +176,6 @@ class GraphSplicer:
         # Invalidate volatile player, which may be referring to dead keyframes
         self.oldGraph.volatilePlayer = None
 
-        # Save rows for use by external code
-        self.equilibriumNewRow = equilibriumNewRow
-        self.equilibriumOldRow = equilibriumOldRow
-        self.oldGraphRowOffset = rowShiftInOldGraph
 
     def onOldGraphDepleted(self):
         """Completion without equilibrium: no more commits in oldGraph"""

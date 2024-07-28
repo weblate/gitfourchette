@@ -10,6 +10,16 @@ from gitfourchette.toolbox import Benchmark
 logger = logging.getLogger(__name__)
 
 
+def _ensureSet(x):
+    if x is None:
+        return set()
+    assert type(x) is not dict
+    if type(x) is not set:
+        return set(x)
+    assert type(x) is set
+    return x
+
+
 @dataclasses.dataclass
 class MockCommit:
     id: Oid
@@ -20,19 +30,20 @@ class GraphBuildLoop:
     def __init__(
             self,
             heads=None,
-            hiddenTips=None,
-            hiddenTaps=None,
-            localHeads=None,
+            hideSeeds=None,
+            localSeeds=None,
+            forceHide=None,
             keyframeInterval=KF_INTERVAL
     ):
-        heads = heads or []
-        hiddenTips = hiddenTips or []
-        if localHeads is None:
-            localHeads = heads   # all heads local by default
+        heads = _ensureSet(heads)
+        hideSeeds = _ensureSet(hideSeeds)
+        if localSeeds is None:
+            localSeeds = heads   # all heads local by default
+        localSeeds = _ensureSet(localSeeds)
 
         self.graph, self.weaver = GraphWeaver.newGraph()
-        self.hiddenTrickle = GraphTrickle.initForHiddenCommits(heads, hiddenTips, hiddenTaps)
-        self.foreignTrickle = GraphTrickle.initForForeignCommits(heads, localHeads)
+        self.hiddenTrickle = GraphTrickle.newHiddenTrickle(heads, hideSeeds, forceHide)
+        self.foreignTrickle = GraphTrickle.newForeignTrickle(heads, localSeeds)
         self.keyframeInterval = keyframeInterval
 
     def sendAll(self, sequence):
@@ -81,11 +92,11 @@ class GraphBuildLoop:
 
     @property
     def hiddenCommits(self):
-        return self.hiddenTrickle.flaggedSet
+        return self.hiddenTrickle.posFlags
 
     @property
     def foreignCommits(self):
-        return self.foreignTrickle.flaggedSet
+        return self.foreignTrickle.posFlags
 
 
 class GraphSpliceLoop:
@@ -93,36 +104,45 @@ class GraphSpliceLoop:
             self,
             graph: Graph,
             oldCommitSequence: list[MockCommit],
-            oldHeads,
-            newHeads,
-            hiddenTips: set[Oid] = None,
-            localHeads: set[Oid] = None,
+            oldHeads: set[Oid],
+            newHeads: set[Oid],
+            oldHideSeeds: set[Oid] = None,
+            newHideSeeds: set[Oid] = None,
+            oldLocalSeeds: set[Oid] = None,
+            newLocalSeeds: set[Oid] = None,
             hiddenCommits: set[Oid] = None,
             foreignCommits: set[Oid] = None,
             keyframeInterval=KF_INTERVAL,
     ):
-        oldHeads = oldHeads or []
-        newHeads = newHeads or []
-        hiddenTips = hiddenTips or []
-        if localHeads is None:
-            localHeads = newHeads   # all heads local by default
-        if hiddenCommits is None:
-            hiddenCommits = set()
-        if foreignCommits is None:
-            foreignCommits = set()
+        if newLocalSeeds is None:
+            newLocalSeeds = newHeads   # all heads local by default
+
+        oldHeads = _ensureSet(oldHeads)
+        newHeads = _ensureSet(newHeads)
+        oldHideSeeds = _ensureSet(oldHideSeeds)
+        newHideSeeds = _ensureSet(newHideSeeds)
+        hiddenCommits = _ensureSet(hiddenCommits)
+        foreignCommits = _ensureSet(foreignCommits)
+        oldLocalSeeds = _ensureSet(oldLocalSeeds)
+        newLocalSeeds = _ensureSet(newLocalSeeds)
 
         self.graph = graph
         self.oldCommitSequence = oldCommitSequence
         self.commitSequence = None  # unknown yet
         self.oldHeads = oldHeads
         self.newHeads = newHeads
-        self.hiddenTips = hiddenTips
-        self.localTips = localHeads
+        self.oldHideSeeds = oldHideSeeds
+        self.newHideSeeds = newHideSeeds
+        self.oldLocalSeeds = oldLocalSeeds
+        self.newLocalSeeds = newLocalSeeds
         self.keyframeInterval = keyframeInterval
 
         self.splicer = GraphSplicer(self.graph, self.oldHeads, self.newHeads)
-        self.hiddenTrickle = GraphTrickle.initForHiddenCommits(self.newHeads, self.hiddenTips, patchFlaggedSet=hiddenCommits)
-        self.foreignTrickle = GraphTrickle.initForForeignCommits(self.newHeads, self.localTips, patchFlaggedSet=foreignCommits)
+        self.hiddenTrickle = GraphTrickle.newHiddenTrickle(self.newHeads, self.newHideSeeds)
+        self.foreignTrickle = GraphTrickle.newForeignTrickle(self.newHeads, self.newLocalSeeds)
+
+        self.oldHiddenCommits = hiddenCommits
+        self.oldForeignCommits = foreignCommits
 
         self.numRowsRemoved = 0
         self.numRowsAdded = 0
@@ -179,28 +199,61 @@ class GraphSpliceLoop:
 
         # Finish patching hidden/foreign commit sets.
         # Keep feeding commits to trickle until it stabilizes to its previous state.
-        if splicer.foundEquilibrium:
-            with Benchmark("Finish patching hidden/foreign commits"):
+        if not splicer.foundEquilibrium:
+            newHidden = hiddenTrickle.posFlags
+            newForeign = foreignTrickle.posFlags
+        else:
+            hideSeedDiff = self.newHideSeeds ^ self.oldHideSeeds
+            localSeedDiff = self.newLocalSeeds ^ self.oldLocalSeeds
+
+            with Benchmark("Stabilize trickles"):
                 row = nAdded + 1
-                r1 = self._stabilizeTrickle(hiddenTrickle, row, newCommitSequence)
-                r2 = self._stabilizeTrickle(foreignTrickle, row, newCommitSequence)
-                logger.debug(f"Trickle stabilization: Hidden={r1}; Foreign={r2}")
+                r1 = self._stabilizeTrickle(hiddenTrickle, row, newCommitSequence, self.oldHiddenCommits, hideSeedDiff)
+                r2 = self._stabilizeTrickle(foreignTrickle, row, newCommitSequence, self.oldForeignCommits, localSeedDiff)
+                newHidden = hiddenTrickle.getFinalPosFlags(self.oldHiddenCommits)
+                newForeign = foreignTrickle.getFinalPosFlags(self.oldForeignCommits)
+
+            logger.debug(f"Trickle stabilization: Hidden={r1}/{hiddenTrickle.done}; Foreign={r2}/{foreignTrickle.done}")
 
         self.numRowsRemoved = nRemoved
         self.numRowsAdded = nAdded
         self.commitSequence = newCommitSequence
+        self.hiddenCommits = newHidden
+        self.foreignCommits = newForeign
 
-    @staticmethod
-    def _stabilizeTrickle(trickle: GraphTrickle, startRow: int, newCommitSequence: list[MockCommit]):
-        if trickle.done:
+    def _stabilizeTrickle(
+            self,
+            trickle: GraphTrickle,
+            startRow: int,
+            newCommitSequence: list[MockCommit],
+            oldFlaggedSet: set[MockCommit],
+            seedDiff: set[Oid],
+    ):
+        reachRow = startRow
+        for seed in seedDiff:
+            try:
+                seedRow = self.graph.commitRows[seed]
+                reachRow = max(reachRow, int(seedRow))
+            except KeyError:
+                pass
+
+        if startRow >= reachRow and trickle.done:
             return startRow
 
         for row in range(startRow, len(newCommitSequence)):
             commit = newCommitSequence[row]
 
-            wasFlagged = commit.id in trickle.flaggedSet
             isFlagged = trickle.newCommit(commit.id, commit.parent_ids)
 
-            stabilized = (wasFlagged == isFlagged) or trickle.done
-            if stabilized:
+            # Keep going until minimum row is reached
+            if row < reachRow:
+                continue
+
+            # See if stabilized
+            wasFlagged = commit.id in oldFlaggedSet
+            if wasFlagged == isFlagged:
+                return row
+
+            # See if finished (not too often - expensive)
+            if ((row % 250) == 0) and trickle.done:
                 return row

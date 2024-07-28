@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 RENAME_COUNT_THRESHOLD = 100
 """ Don't find_similar beyond this number of files in the main diff """
 
+
 def contextLines():
     return settings.prefs.contextLines
 
@@ -139,10 +140,9 @@ class PrimeRepo(RepoTask):
         # ---------------------------------------------------------------------
         # Build graph
 
-        buildLoop = GraphBuildLoop(
-            heads=self.repoModel.getKnownTips(),
-            hiddenTips=self.repoModel.getHiddenTips(),
-            localHeads=self.repoModel.getLocalTips())
+        hideSeeds = self.repoModel.getHiddenTips()
+        localSeeds = self.repoModel.getLocalTips()
+        buildLoop = GraphBuildLoop(heads=self.repoModel.getKnownTips(), hideSeeds=hideSeeds, localSeeds=localSeeds)
         buildLoop.onKeyframe = self.progressValue.emit
         buildLoop.sendAll(commitSequence)
         self.progressValue.emit(numCommits)
@@ -153,6 +153,8 @@ class PrimeRepo(RepoTask):
         repoModel.commitSequence = commitSequence
         repoModel.truncatedHistory = truncatedHistory
         repoModel.graph = graph
+        repoModel.hideSeeds = hideSeeds
+        repoModel.localSeeds = localSeeds
 
         # ---------------------------------------------------------------------
         # RETURN TO UI THREAD

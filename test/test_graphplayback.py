@@ -148,7 +148,7 @@ def testVisibleJunctionOnHiddenArc():
     """
     sequence, heads = GraphDiagram.parseDefinition("u:z a:e b-c:d,e d:z e-z")
 
-    gbu = GraphBuildLoop(["u", "a", "b"], hiddenTips=["a"]).sendAll(sequence)
+    gbu = GraphBuildLoop(["u", "a", "b"], hideSeeds=["a"]).sendAll(sequence)
     g = gbu.graph
     hiddenCommits = gbu.hiddenCommits
 

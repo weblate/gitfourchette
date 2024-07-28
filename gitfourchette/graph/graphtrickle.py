@@ -1,89 +1,84 @@
 from gitfourchette.porcelain import Oid
 
-END = 0
+STOP = 0
 PIPE = 1
-TAP = 2
+SOURCE = 2
 
 
 class GraphTrickle:
-    def __init__(self, flaggedSet: set[Oid] | None = None):
+    def __init__(self):
         self.frontier = {}
-
-        self.patchExistingSet = flaggedSet is not None
-        if not self.patchExistingSet:
-            flaggedSet = set()
-        self.flaggedSet = flaggedSet
-
-    def setEnd(self, commit: Oid):
-        self.frontier[commit] = END
-
-    def setPipe(self, commit: Oid):
-        self.frontier[commit] = PIPE
-
-    def setTap(self, commit: Oid):
-        self.frontier[commit] = TAP
+        self.posFlags = set()
+        self.negFlags = set()
 
     @property
     def done(self) -> bool:
-        frontier = self.frontier
-        return all(not frontier[k] for k in self.frontier.keys())
+        return all(v == STOP for v in self.frontier.values())
 
     def newCommit(self, commit: Oid, parents: list[Oid]) -> bool:
         frontier = self.frontier
-        flagged = frontier.pop(commit, END)
+        flagged = frontier.pop(commit, STOP)
 
         if flagged:
             # Trickle through parents that are not explicitly flagged
             for p in parents:
                 frontier.setdefault(p, PIPE)
 
-            self.flaggedSet.add(commit)
+            self.posFlags.add(commit)
 
         else:
-            # Block trickling to parents (that aren't taps themselves)
+            # Block trickling to parents (that aren't sources themselves)
             for p in parents:
-                if frontier.get(p, END) < TAP:
-                    frontier[p] = END
+                if frontier.get(p, STOP) != SOURCE:
+                    frontier[p] = STOP
 
-            if self.patchExistingSet:
-                self.flaggedSet.discard(commit)
+            self.negFlags.add(commit)
 
         return bool(flagged)
 
+    def getFinalPosFlags(self, oldFlaggedSet=None):
+        if self.done or not oldFlaggedSet:
+            return self.posFlags
+        else:
+            return self.posFlags | (oldFlaggedSet - self.negFlags)
+
     @staticmethod
-    def initForHiddenCommits(allHeads, hiddenTips, hiddenTaps=None, patchFlaggedSet=None):
-        trickle = GraphTrickle(patchFlaggedSet)
+    def newHiddenTrickle(
+            allHeads: set[Oid],
+            hideSeeds: set[Oid],
+            forceHide: set[Oid] | None = None
+    ):
+        trickle = GraphTrickle()
 
-        # Explicitly show all refs by default
+        # Explicitly show all refs by default (block foreign trickle)
         for head in allHeads:
-            trickle.setEnd(head)
+            trickle.frontier[head] = STOP
 
-        # Explicitly hide tips
-        for hiddenBranchTip in hiddenTips:
-            trickle.setPipe(hiddenBranchTip)
+        # Explicitly hide tips (allow foreign trickle)
+        for head in hideSeeds:
+            trickle.frontier[head] = PIPE
 
-        # # Explicitly hide stash junk parents
-        # if settings.prefs.hideStashJunkParents:
-        #     for stash in self.repo.listall_stashes():
-        #         stashCommit = self.repo.peel_commit(stash.commit_id)
-        #         for i, parent in enumerate(stashCommit.parent_ids):
-        #             if i > 0:
-        #                 trickle.setTap(parent)
-        if hiddenTaps:
-            for hiddenTap in hiddenTaps:
-                trickle.setTap(hiddenTap)
+        # Explicitly hide stash junk parents (beyond parent #0)
+        # NOTE: Dropped this from the actual app but kept around in unit tests.
+        if forceHide:
+            for head in forceHide:
+                trickle.frontier[head] = SOURCE
 
         return trickle
 
     @staticmethod
-    def initForForeignCommits(allHeads, localTips, patchFlaggedSet=None):
-        trickle = GraphTrickle(patchFlaggedSet)
+    def newForeignTrickle(
+            allHeads: set[Oid],
+            localSeeds: set[Oid]
+    ):
+        trickle = GraphTrickle()
 
+        # Start with all foreign heads
         for head in allHeads:
-            trickle.setPipe(head)
+            trickle.frontier[head] = PIPE
 
         # Local heads block propagation of foreign trickle
-        for head in localTips:
-            trickle.setEnd(head)
+        for head in localSeeds:
+            trickle.frontier[head] = STOP
 
         return trickle

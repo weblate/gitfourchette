@@ -60,6 +60,9 @@ class RepoModel:
     hiddenRefs: set[str]
     "All cached refs that are hidden, either explicitly or via ref patterns."
 
+    hideSeeds: set[Oid]
+    localSeeds: set[Oid]
+
     hiddenCommits: set[Oid]
     "All cached commit oids that are hidden."
 
@@ -99,6 +102,8 @@ class RepoModel:
 
         self.hiddenRefs = set()
         self.hiddenCommits = set()
+        self.hideSeeds = set()
+        self.localSeeds = set()
 
         self.repo = repo
 
@@ -303,8 +308,10 @@ class RepoModel:
             self.commitSequence,
             oldHeads=oldRefs.values(),
             newHeads=self.refs.values(),
-            hiddenTips=self.getHiddenTips(),
-            localHeads=self.getLocalTips(),
+            oldHideSeeds=self.hideSeeds,
+            newHideSeeds=self.getHiddenTips(),
+            oldLocalSeeds=self.localSeeds,
+            newLocalSeeds=self.getLocalTips(),
             hiddenCommits=self.hiddenCommits,
             foreignCommits=self.foreignCommits,
         )
@@ -326,6 +333,10 @@ class RepoModel:
         coSplice.close()  # flush it
 
         self.commitSequence = gsl.commitSequence
+        self.hideSeeds = gsl.newHideSeeds
+        self.localSeeds = gsl.newLocalSeeds
+        self.hiddenCommits = gsl.hiddenCommits
+        self.foreignCommits = gsl.foreignCommits
 
         return gsl
 
@@ -334,7 +345,22 @@ class RepoModel:
         toggleSetElement(self.prefs.hiddenRefPatterns, refPattern)
         self.prefs.setDirty()
         self.refreshHiddenRefCache()
-        self.resolveHiddenCommits()
+
+        # Sync hidden commits
+        heads = self.refs.values(),
+        newHideSeeds = self.getHiddenTips()
+        newLocalSeeds = self.getLocalTips()
+        gsl = GraphSpliceLoop(
+            self.graph, self.commitSequence,
+            oldHeads=heads, newHeads=heads,
+            oldHideSeeds=self.hideSeeds, newHideSeeds=newHideSeeds,
+            oldLocalSeeds=self.localSeeds, newLocalSeeds=newLocalSeeds,
+            hiddenCommits=self.hiddenCommits, foreignCommits=self.foreignCommits)
+        gsl.sendAll(self.commitSequence)  # send the same commit sequence
+        self.hiddenCommits = gsl.hiddenCommits
+        self.foreignCommits = gsl.foreignCommits
+        self.hideSeeds = newHideSeeds
+        self.localSeeds = newLocalSeeds
 
     @benchmark
     def refreshHiddenRefCache(self):
@@ -406,16 +432,3 @@ class RepoModel:
             for ref, oid in self.refs.items():
                 if ref.startswith(refPattern):
                     yield oid
-
-    @benchmark
-    def resolveHiddenCommits(self):
-        trickle = GraphTrickle.initForHiddenCommits(self.refs.values(), self.getHiddenTips())
-        for i, commit in enumerate(self.commitSequence):
-            if not commit:  # May be a fake commit such as Uncommitted Changes
-                continue
-            trickle.newCommit(commit.id, commit.parent_ids)
-            # Don't check if trickle is complete too often (expensive)
-            if (i % 250 == 0) and trickle.done:
-                logger.debug(f"resolveHiddenCommits complete in {i} iterations")
-                break
-        self.hiddenCommits = trickle.flaggedSet
