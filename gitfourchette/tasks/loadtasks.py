@@ -147,7 +147,6 @@ class PrimeRepo(RepoTask):
         buildLoop.sendAll(commitSequence)
         self.progressValue.emit(numCommits)
 
-        commitSequence[0] = None  # blot out mock commit -- TODO: Don't, and fix tests
         graph = buildLoop.graph
         repoModel.hiddenCommits = buildLoop.hiddenCommits
         repoModel.foreignCommits = buildLoop.foreignCommits

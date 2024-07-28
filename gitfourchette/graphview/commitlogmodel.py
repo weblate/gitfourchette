@@ -4,6 +4,7 @@ from typing import Literal
 
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.toolbox import *
 
 
@@ -125,7 +126,7 @@ class CommitLogModel(QAbstractListModel):
                 zones = self._toolTipZones[row]
             except (IndexError, KeyError):
                 return tip
-            if commit is None:
+            if commit is None or commit.id == UC_FAKEID:
                 return tip
 
             x = self.parent().mapFromGlobal(QCursor.pos()).x()

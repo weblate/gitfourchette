@@ -1,11 +1,9 @@
-from typing import Literal
-
 from contextlib import suppress
 
 from gitfourchette import settings
-from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.graph import MockCommit
 from gitfourchette.graphview.commitlogdelegate import CommitLogDelegate
 from gitfourchette.graphview.commitlogfilter import CommitLogFilter
 from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
@@ -309,7 +307,6 @@ class GraphView(QListView):
     # Find text in commit message or hash
 
     def searchRange(self, searchRange: range) -> QModelIndex | None:
-        # print(searchRange)
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly
 
         term = self.searchBar.searchTerm
@@ -320,7 +317,7 @@ class GraphView(QListView):
         for i in searchRange:
             index = model.index(i, 0)
             commit = model.data(index, CommitLogModel.Role.Commit)
-            if commit is None:
+            if commit is None or type(commit) is MockCommit:
                 continue
             if likelyHash and str(commit.id).startswith(term):
                 return index

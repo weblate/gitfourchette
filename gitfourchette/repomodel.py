@@ -326,7 +326,6 @@ class RepoModel:
         coSplice.close()  # flush it
 
         self.commitSequence = gsl.commitSequence
-        self.commitSequence[0] = None  # blot out mock commit - TODO: Don't, and fix tests
 
         return gsl
 
