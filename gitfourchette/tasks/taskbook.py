@@ -88,6 +88,7 @@ class TaskBook:
             tasks.StageFiles: translate("task", "Stage files"),
             tasks.SwitchBranch: translate("task", "Switch to branch"),
             tasks.UpdateSubmodule: translate("task", "Update submodule"),
+            tasks.UpdateSubmodulesRecursive: translate("task", "Update submodules recursively"),
             tasks.UnstageFiles: translate("task", "Unstage files"),
             tasks.UnstageModeChanges: translate("task", "Unstage mode changes"),
         }

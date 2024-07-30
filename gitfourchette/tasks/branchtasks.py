@@ -49,8 +49,9 @@ class SwitchBranch(RepoTask):
         self.repo.checkout_local_branch(newBranch)
 
         if recurseSubmodules:
-            for submo in self.repo.recurse_submodules():
-                submo.update()
+            from gitfourchette.tasks import UpdateSubmodulesRecursive
+            yield from self.flowEnterUiThread()
+            yield from self.flowSubtask(UpdateSubmodulesRecursive)
 
 
 class RenameBranch(RepoTask):

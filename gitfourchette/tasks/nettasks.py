@@ -207,3 +207,9 @@ class UpdateSubmodule(_BaseNetTask):
         # if the submodule uses an SSH connection.
         with self.remoteLink.remoteKeyFileContext(submodule.url or ""):
             submodule.update(init=init, callbacks=self.remoteLink)
+
+
+class UpdateSubmodulesRecursive(_BaseNetTask):
+    def flow(self):
+        for submodule in self.repo.recurse_submodules():
+            yield from self.flowSubtask(UpdateSubmodule, submodule.name)

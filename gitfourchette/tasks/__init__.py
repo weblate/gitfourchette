@@ -40,10 +40,15 @@ from gitfourchette.tasks.misctasks import (
 from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward, JumpBack, JumpForward, RefreshRepo
 from gitfourchette.tasks.loadtasks import PrimeRepo
 from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch
-from gitfourchette.tasks.nettasks import DeleteRemoteBranch, RenameRemoteBranch
-from gitfourchette.tasks.nettasks import FetchRemote, FetchRemoteBranch
-from gitfourchette.tasks.nettasks import PullBranch
-from gitfourchette.tasks.nettasks import UpdateSubmodule
+from gitfourchette.tasks.nettasks import (
+    DeleteRemoteBranch,
+    RenameRemoteBranch,
+    FetchRemote,
+    FetchRemoteBranch,
+    PullBranch,
+    UpdateSubmodule,
+    UpdateSubmodulesRecursive,
+)
 from gitfourchette.tasks.remotetasks import NewRemote, EditRemote, DeleteRemote
 
 from gitfourchette.tasks.indextasks import (
