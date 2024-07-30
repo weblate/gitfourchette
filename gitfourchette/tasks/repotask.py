@@ -166,6 +166,7 @@ class RepoTask(QObject):
         self.effects = TaskEffects.Nothing
         self.didSucceed = True
         self._taskStack = [self]
+        self._runningOnUiThread = True  # for debugging
 
     @property
     def rootTask(self) -> RepoTask:
@@ -205,6 +206,9 @@ class RepoTask(QObject):
         Return true if this task is allowed to take precedence over the given running task.
         """
         return False
+
+    def _isRunningOnAppThread(self):
+        return onAppThread() and self._runningOnUiThread
 
     @classmethod
     def makeInternalLink(cls, **kwargs):
@@ -289,6 +293,7 @@ class RepoTask(QObject):
         This function is intended to be called by flow() with "yield from".
         """
         assert self._currentFlow is not None
+        self._runningOnUiThread = False
         yield FlowControlToken(FlowControlToken.Kind.ContinueOnWorkThread)
 
     def flowEnterUiThread(self):
@@ -299,6 +304,7 @@ class RepoTask(QObject):
         This function is intended to be called by flow() with "yield from".
         """
         assert self._currentFlow is not None
+        self._runningOnUiThread = True
         yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
     def flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
@@ -312,7 +318,7 @@ class RepoTask(QObject):
         """
 
         assert self._currentFlow is not None
-        assert onAppThread(), "Subtask must be started start on UI thread"
+        assert self._isRunningOnAppThread(), "Subtask must be started start on UI thread"
 
         # To ensure correct deletion of the subtask when we get deleted, we are the subtask's parent
         subtask = subtaskClass(self)
@@ -332,7 +338,7 @@ class RepoTask(QObject):
         yield from subtask._currentFlow
 
         # Make sure we're back on the UI thread before re-entering the root task
-        if not onAppThread():
+        if not self._isRunningOnAppThread():
             yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
         # Percolate effect bits to caller task
@@ -354,7 +360,7 @@ class RepoTask(QObject):
         This function is intended to be called by flow() with "yield from".
         """
         assert self._currentFlow is not None
-        assert onAppThread()
+        assert self._isRunningOnAppThread()
 
         if not self.parentWidget().isVisible():
             token = FlowControlToken(FlowControlToken.Kind.WaitReady)
@@ -372,7 +378,7 @@ class RepoTask(QObject):
         """
 
         assert self._currentFlow is not None
-        assert onAppThread()  # we'll touch the UI
+        assert self._isRunningOnAppThread()  # we'll touch the UI
 
         yield from self.flowRequestForegroundUi()
 
@@ -419,7 +425,7 @@ class RepoTask(QObject):
         """
 
         assert self._currentFlow is not None
-        assert onAppThread()  # we'll touch the UI
+        assert self._isRunningOnAppThread()  # we'll touch the UI
 
         if dontShowAgainKey:
             from gitfourchette import settings
