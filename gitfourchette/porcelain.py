@@ -1522,8 +1522,9 @@ class Repo(_VanillaRepository):
             # otherwise the contents of the commits we're pulling will spill into the unstaged area.
             # Note: checkout_tree defaults to a safe checkout, so it'll raise GitError if any uncommitted changes
             # affect any of the files that are involved in the pull.
-            with CheckoutBreakdown() as callbacks:
-                self.checkout_tree(rb.peel(Tree), callbacks=callbacks)
+            if lb.is_checked_out():
+                with CheckoutBreakdown() as callbacks:
+                    self.checkout_tree(rb.peel(Tree), callbacks=callbacks)
 
             # Then make the local branch point to the same commit as the remote branch.
             lb.set_target(rb.target)

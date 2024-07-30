@@ -608,18 +608,60 @@ def testRecallCommit(tempDir, mainWindow):
     assert rw.navLocator.commit == lostId
 
 
-def testFastForward(tempDir, mainWindow):
+def testFastForwardCurrentBranch(tempDir, mainWindow):
+    targetCommit = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+
     wd = unpackRepo(tempDir)
     with RepoContext(wd) as repo:
+        assert repo.branches["origin/master"].target == targetCommit
+        assert repo.branches["no-parent"].target != targetCommit
         repo.checkout_local_branch("no-parent")
         repo.edit_upstream_branch("no-parent", "origin/master")
     rw = mainWindow.openRepo(wd)
+
+    # This file doesn't exist on no-parent initally
+    assert not os.path.exists(f"{wd}/a/a1")
 
     node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fast.forward")
 
-    assert rw.navLocator.commit == Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+    # Make sure fastforward actually worked
+    assert rw.repo.head_branch_shorthand == "no-parent"
+    assert rw.repo.head_commit_id == targetCommit
+    assert os.path.exists(f"{wd}/a/a1")  # should have checked out new file
+
+    # UI should jump to new commit
+    assert rw.navLocator.commit == targetCommit
+
+
+def testFastForwardOtherBranch(tempDir, mainWindow):
+    targetCommit = Oid(hex="49322bb17d3acc9146f98c97d078513228bbf3c0")
+
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        assert repo.branches["origin/master"].target == targetCommit
+        assert repo.branches["no-parent"].target != targetCommit
+        repo.checkout_local_branch("no-parent")
+        repo.create_branch_on_head("no-parent-ffwd")
+        repo.edit_upstream_branch("no-parent-ffwd", "origin/master")
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent-ffwd")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "fast.forward")
+
+    # Make sure fastforward actually worked
+    assert rw.repo.branches["no-parent-ffwd"].target == targetCommit
+
+    # Make sure we're still on no-parent unaffected
+    assert rw.repo.head_branch_shorthand == "no-parent"
+    assert b"c1\n" == readFile(f"{wd}/c/c1.txt")
+    assert not os.path.exists(f"{wd}/a/a1")
+    assert not os.path.exists(f"{wd}/master.txt")
+
+    # UI should jump to new commit
+    assert rw.navLocator.commit == targetCommit
 
 
 @pytest.mark.parametrize("branch", ["master", "no-parent"])
