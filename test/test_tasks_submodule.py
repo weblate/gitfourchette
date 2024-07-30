@@ -337,3 +337,32 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
     QTest.qWait(1)
     assert sm not in qlvGetRowData(rw.dirtyFiles)
     assert sm not in qlvGetRowData(rw.stagedFiles)
+
+
+@pytest.mark.parametrize("recurse", [True, False])
+def testSwitchBranchAskIfRecurse(tempDir, mainWindow, recurse):
+    oid = Oid(hex="ea953d3ba4c5326d530dc09b4ca9781b01c18e00")
+    contentsHead = b"hello from submodule\nan update!\n"
+    contentsOld = b"hello from submodule\n"
+
+    wd = unpackRepo(tempDir, "submoroot")
+
+    with RepoContext(wd) as repo:
+        repo.create_branch_from_commit("old", oid)
+
+    rw = mainWindow.openRepo(wd)
+    assert contentsHead == readFile(f"{wd}/submosub/subhello.txt")
+
+    node = rw.sidebar.findNodeByRef("refs/heads/old")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "switch")
+
+    qmb = findQMessageBox(rw, "switch to")
+    assert "submodule" in qmb.checkBox().text().lower()
+    assert qmb.checkBox().isChecked()
+    qmb.checkBox().setChecked(recurse)
+    qmb.accept()
+
+    if recurse:
+        assert contentsOld == readFile(f"{wd}/submosub/subhello.txt")
+    else:
+        assert contentsHead == readFile(f"{wd}/submosub/subhello.txt")

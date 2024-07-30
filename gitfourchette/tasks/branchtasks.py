@@ -22,10 +22,20 @@ class SwitchBranch(RepoTask):
             message = self.tr("Branch {0} is already checked out.").format(bquo(newBranch))
             raise AbortTask(message, 'information')
 
-        if askForConfirmation:
+        anySubmodules = bool(self.repo.listall_submodules_fast())
+        recurseSubmodules = False
+
+        if askForConfirmation or anySubmodules:
             text = self.tr("Do you want to switch to branch {0}?").format(bquo(newBranch))
             verb = self.tr("Switch")
-            yield from self.flowConfirm(text=text, verb=verb)
+
+            recurseCheckbox = None
+            if anySubmodules:
+                recurseCheckbox = QCheckBox(self.tr("Recurse into submodules"))
+                recurseCheckbox.setChecked(True)
+
+            yield from self.flowConfirm(text=text, verb=verb, checkbox=recurseCheckbox)
+            recurseSubmodules = recurseCheckbox is not None and recurseCheckbox.isChecked()
 
         if self.repoModel.dangerouslyDetachedHead() and branchObj.target != self.repoModel.headCommitId:
             text = paragraphs(
@@ -37,6 +47,10 @@ class SwitchBranch(RepoTask):
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs | TaskEffects.Head
         self.repo.checkout_local_branch(newBranch)
+
+        if recurseSubmodules:
+            for submo in self.repo.recurse_submodules():
+                submo.update()
 
 
 class RenameBranch(RepoTask):

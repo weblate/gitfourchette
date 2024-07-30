@@ -409,6 +409,7 @@ class RepoTask(QObject):
             dontShowAgainKey: str = "",
             canCancel: bool = True,
             icon: MessageBoxIconName = "",
+            checkbox: QCheckBox | None = None,
     ):
         """
         Ask the user to confirm the operation via a message box.
@@ -443,10 +444,13 @@ class RepoTask(QObject):
 
         dontShowAgainCheckBox = None
         if dontShowAgainKey:
+            assert not checkbox
             dontShowAgainPrompt = tr("Don’t ask me to confirm this again") if canCancel else tr("Don’t show this again")
             dontShowAgainCheckBox = QCheckBox(dontShowAgainPrompt, qmb)
             tweakWidgetFont(dontShowAgainCheckBox, 80)
             qmb.setCheckBox(dontShowAgainCheckBox)
+        elif checkbox:
+            qmb.setCheckBox(checkbox)
 
         # Using QMessageBox.StandardButton.Ok instead of QMessageBox.StandardButton.Discard
         # so it connects to the "accepted" signal.
