@@ -68,7 +68,7 @@ class GraphView(QListView):
     def repoModel(self):
         return self.repoWidget.repoModel
 
-    def makeContextMenu(self):
+    def makeContextMenu(self) -> QMenu:
         kind = self.currentRowKind
         oid = self.currentCommitId
         repoModel = self.repoModel

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class SwitchBranch(RepoTask):
-    def flow(self, newBranch: str, askForConfirmation: bool):
+    def flow(self, newBranch: str, askForConfirmation: bool = True, recurseSubmodules: bool = False):
         assert not newBranch.startswith(RefPrefix.HEADS)
 
         branchObj: Branch = self.repo.branches.local[newBranch]
@@ -22,14 +22,13 @@ class SwitchBranch(RepoTask):
             message = self.tr("Branch {0} is already checked out.").format(bquo(newBranch))
             raise AbortTask(message, 'information')
 
-        anySubmodules = bool(self.repo.listall_submodules_fast())
-        recurseSubmodules = False
-
-        if askForConfirmation or anySubmodules:
+        if askForConfirmation:
             text = self.tr("Do you want to switch to branch {0}?").format(bquo(newBranch))
             verb = self.tr("Switch")
 
             recurseCheckbox = None
+            anySubmodules = bool(self.repo.listall_submodules_fast())
+            anySubmodules &= pygit2_version_at_least("1.15.1", False)  # TODO: Nuke this once we can drop support for old versions of pygit2
             if anySubmodules:
                 recurseCheckbox = QCheckBox(self.tr("Recurse into submodules"))
                 recurseCheckbox.setChecked(True)
@@ -263,6 +262,10 @@ class _NewBranchBaseTask(RepoTask):
             reservedNames=forbiddenBranchNames,
             parent=self.parentWidget())
 
+        if not repo.listall_submodules_fast():
+            dlg.ui.recurseSubmodulesCheckBox.setChecked(False)
+            dlg.ui.recurseSubmodulesCheckBox.setVisible(False)
+
         if trackUpstream == self.TRACK_ANY_UPSTREAM:
             trackUpstream = ""
         elif trackUpstream:
@@ -280,6 +283,7 @@ class _NewBranchBaseTask(RepoTask):
         localName = dlg.ui.nameEdit.text()
         trackUpstream = ""
         switchTo = dlg.ui.switchToBranchCheckBox.isChecked()
+        recurseSubmodules = dlg.ui.recurseSubmodulesCheckBox.isChecked()
         if dlg.ui.upstreamCheckBox.isChecked():
             trackUpstream = dlg.ui.upstreamComboBox.currentText()
 
@@ -309,6 +313,11 @@ class _NewBranchBaseTask(RepoTask):
                 yield from self.flowConfirm(text=text, icon='warning', verb=self.tr("Switch to {0}").format(lquoe(localName)), cancelText=self.tr("Don’t Switch"))
 
             repo.checkout_local_branch(localName)
+
+            if recurseSubmodules:
+                from gitfourchette.tasks.nettasks import UpdateSubmodulesRecursive
+                yield from self.flowEnterUiThread()
+                yield from self.flowSubtask(UpdateSubmodulesRecursive)
 
 
 class NewBranchFromHead(_NewBranchBaseTask):

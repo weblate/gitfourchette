@@ -483,6 +483,7 @@ def testSwitchBranch(tempDir, mainWindow, method):
         node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "switch to")
+        acceptQMessageBox(rw, "switch to")
     elif method == "sidebarkey":
         rw.sidebar.selectAnyRef("refs/heads/no-parent")
         QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
@@ -582,6 +583,7 @@ def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):
     node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "switch to")
+    acceptQMessageBox(rw, "switch to.+no-parent")
 
     acceptQMessageBox(rw, "conflict.+with.+file")  # this will fail if the messagebox doesn't show up
 

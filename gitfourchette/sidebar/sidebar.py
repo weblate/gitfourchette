@@ -181,7 +181,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(self,
                     SwitchBranch,
                     self.tr("&Switch to {0}").format(thisBranchDisplay),
-                    taskArgs=(branchName, False),  # False: don't ask for confirmation
+                    taskArgs=branchName,
                 ).replace(enabled=not isCurrentBranch),
 
                 ActionDef.SEPARATOR,
@@ -519,7 +519,7 @@ class Sidebar(QTreeView):
             pass
 
         elif item == EItem.LocalBranch:
-            SwitchBranch.invoke(self, node.data.removeprefix(RefPrefix.HEADS), True)  # True: ask for confirmation
+            SwitchBranch.invoke(self, node.data.removeprefix(RefPrefix.HEADS))
 
         elif item == EItem.Remote:
             EditRemote.invoke(self, node.data)

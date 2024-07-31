@@ -339,8 +339,10 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
     assert sm not in qlvGetRowData(rw.stagedFiles)
 
 
+@pytest.mark.skipif(pygit2OlderThan("1.15.1"), reason="old pygit2")
 @pytest.mark.parametrize("recurse", [True, False])
-def testSwitchBranchAskIfRecurse(tempDir, mainWindow, recurse):
+@pytest.mark.parametrize("method", ["switch1", "switch2", "detach", "newbranch"])
+def testSwitchBranchAskRecurse(tempDir, mainWindow, method, recurse):
     oid = Oid(hex="ea953d3ba4c5326d530dc09b4ca9781b01c18e00")
     contentsHead = b"hello from submodule\nan update!\n"
     contentsOld = b"hello from submodule\n"
@@ -354,13 +356,39 @@ def testSwitchBranchAskIfRecurse(tempDir, mainWindow, recurse):
     assert contentsHead == readFile(f"{wd}/submosub/subhello.txt")
 
     node = rw.sidebar.findNodeByRef("refs/heads/old")
-    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "switch")
+    rw.jump(NavLocator.inCommit(oid))
 
-    qmb = findQMessageBox(rw, "switch to")
-    assert "submodule" in qmb.checkBox().text().lower()
-    assert qmb.checkBox().isChecked()
-    qmb.checkBox().setChecked(recurse)
-    qmb.accept()
+    if method == "switch1":
+        triggerMenuAction(rw.sidebar.makeNodeMenu(node), "switch")
+        qmb = findQMessageBox(rw, "switch to")
+        assert "submodule" in qmb.checkBox().text().lower()
+        assert qmb.checkBox().isChecked()
+        qmb.checkBox().setChecked(recurse)
+        qmb.accept()
+    elif method == "newbranch":
+        triggerMenuAction(rw.sidebar.makeNodeMenu(node), "new branch")
+        dlg = findQDialog(rw, "new branch")
+        dlg.ui.nameEdit.setText("blahblah")
+        assert dlg.ui.recurseSubmodulesCheckBox.isVisible()
+        assert dlg.ui.recurseSubmodulesCheckBox.isChecked()
+        dlg.ui.recurseSubmodulesCheckBox.setChecked(recurse)
+        dlg.accept()
+    elif method == "switch2":
+        triggerMenuAction(rw.graphView.makeContextMenu(), "check.?out")
+        dlg = findQDialog(rw, "check.?out")
+        assert dlg.ui.switchToLocalBranchRadioButton.isChecked()
+        assert dlg.ui.recurseSubmodulesCheckBox.isVisible()
+        assert dlg.ui.recurseSubmodulesCheckBox.isChecked()
+        dlg.ui.recurseSubmodulesCheckBox.setChecked(recurse)
+        dlg.accept()
+    elif method == "detach":
+        triggerMenuAction(rw.graphView.makeContextMenu(), "check.?out")
+        dlg = findQDialog(rw, "check.?out")
+        dlg.ui.detachedHeadRadioButton.setChecked(True)
+        dlg.ui.recurseSubmodulesCheckBox.setChecked(recurse)
+        dlg.accept()
+    else:
+        raise NotImplementedError("unsupported method")
 
     if recurse:
         assert contentsOld == readFile(f"{wd}/submosub/subhello.txt")

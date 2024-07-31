@@ -3,7 +3,7 @@
  <class>CheckoutCommitDialog</class>
  <widget class="QDialog" name="CheckoutCommitDialog">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="enabled">
    <bool>true</bool>
@@ -33,50 +33,115 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="label">
-     <property name="text">
+    <widget class="QGroupBox" name="groupBox_2">
+     <property name="title">
       <string>How do you want to check out this commit?</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_3">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="sizeConstraint">
+         <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+        </property>
+        <item>
+         <widget class="QRadioButton" name="switchToLocalBranchRadioButton">
+          <property name="text">
+           <string>Switch to &amp;branch:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="switchToLocalBranchComboBox">
+          <property name="toolTip">
+           <string>List of branches that point to this commit.</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="detachedHeadRadioButton">
+        <property name="text">
+         <string>Enter &amp;detached HEAD here</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="createBranchRadioButton">
+        <property name="text">
+         <string>Start &amp;new branch here...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <property name="sizeConstraint">
-      <enum>QLayout::SetDefaultConstraint</enum>
+    <widget class="QFrame" name="recurseSubmodulesSpacer">
+     <property name="frameShape">
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
-     <item>
-      <widget class="QRadioButton" name="switchToLocalBranchRadioButton">
-       <property name="text">
-        <string>Switch to a &amp;branch that points here:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="switchToLocalBranchComboBox"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QRadioButton" name="detachedHeadRadioButton">
-     <property name="text">
-      <string>Enter &amp;detached HEAD here</string>
+     <property name="lineWidth">
+      <number>0</number>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_4">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item>
+       <spacer name="spacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Policy::MinimumExpanding</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>16</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QRadioButton" name="createBranchRadioButton">
-     <property name="text">
-      <string>Start &amp;new branch here...</string>
+    <widget class="QGroupBox" name="recurseSubmodulesGroupBox">
+     <property name="title">
+      <string>After the checkout:</string>
      </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QCheckBox" name="recurseSubmodulesCheckBox">
+        <property name="text">
+         <string>Recurse into submodules</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
      <property name="centerButtons">
       <bool>false</bool>

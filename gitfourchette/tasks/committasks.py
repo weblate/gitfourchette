@@ -200,15 +200,21 @@ class CheckoutCommit(RepoTask):
 
         commitMessage = self.repo.get_commit_message(oid)
         commitMessage, junk = messageSummary(commitMessage)
+        anySubmodules = bool(self.repo.listall_submodules_fast())
+        anySubmodules &= pygit2_version_at_least("1.15.1", False)  # TODO: Nuke this once we can drop support for old versions of pygit2
 
         dlg = QDialog(self.parentWidget())
 
         ui = Ui_CheckoutCommitDialog()
         ui.setupUi(dlg)
+        dlg.ui = ui  # for unit tests
         ok = ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setText(self.tr("Detach HEAD")))
+        ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("git-head-detached")))
         ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Switch Branch")))
+        ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("git-branch")))
         ui.createBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Create Branch...")))
+        ui.createBranchRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("vcs-branch-new")))
         if refs:
             ui.switchToLocalBranchComboBox.addItems(refs)
             ui.switchToLocalBranchRadioButton.click()
@@ -217,6 +223,12 @@ class CheckoutCommit(RepoTask):
             ui.switchToLocalBranchComboBox.setVisible(False)
             ui.switchToLocalBranchRadioButton.setVisible(False)
 
+        if not anySubmodules:
+            ui.recurseSubmodulesSpacer.setVisible(False)
+            ui.recurseSubmodulesGroupBox.setVisible(False)
+
+        ui.createBranchRadioButton.toggled.connect(lambda t: ui.recurseSubmodulesGroupBox.setEnabled(not t))
+
         dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=tquo(commitMessage))
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
@@ -224,6 +236,8 @@ class CheckoutCommit(RepoTask):
 
         # Make sure to copy user input from dialog UI *before* starting worker thread
         dlg.deleteLater()
+
+        wantSubmodules = anySubmodules and ui.recurseSubmodulesCheckBox.isChecked()
 
         self.effects |= TaskEffects.Refs | TaskEffects.Head
 
@@ -241,10 +255,15 @@ class CheckoutCommit(RepoTask):
             # Force sidebar to select detached HEAD
             self.jumpTo = NavLocator.inRef("HEAD")
 
+            if wantSubmodules:
+                from gitfourchette.tasks import UpdateSubmodulesRecursive
+                yield from self.flowEnterUiThread()
+                yield from self.flowSubtask(UpdateSubmodulesRecursive)
+
         elif ui.switchToLocalBranchRadioButton.isChecked():
             branchName = ui.switchToLocalBranchComboBox.currentText()
-            from gitfourchette.tasks.branchtasks import SwitchBranch
-            yield from self.flowSubtask(SwitchBranch, branchName, False)
+            from gitfourchette.tasks import SwitchBranch
+            yield from self.flowSubtask(SwitchBranch, branchName, askForConfirmation=False, recurseSubmodules=wantSubmodules)
 
         elif ui.createBranchRadioButton.isChecked():
             from gitfourchette.tasks.branchtasks import NewBranchFromCommit

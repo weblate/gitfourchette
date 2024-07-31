@@ -3,7 +3,7 @@
  <class>NewBranchDialog</class>
  <widget class="QDialog" name="NewBranchDialog">
   <property name="windowModality">
-   <enum>Qt::NonModal</enum>
+   <enum>Qt::WindowModality::NonModal</enum>
   </property>
   <property name="enabled">
    <bool>true</bool>
@@ -27,7 +27,7 @@
   </property>
   <layout class="QFormLayout" name="formLayout">
    <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+    <enum>QFormLayout::FieldGrowthPolicy::AllNonFixedFieldsGrow</enum>
    </property>
    <item row="0" column="0">
     <widget class="QLabel" name="nameLabel">
@@ -56,7 +56,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="4" column="1">
     <layout class="QHBoxLayout" name="upstreamLayout">
      <item>
       <widget class="QCheckBox" name="upstreamCheckBox">
@@ -80,19 +80,19 @@
         </sizepolicy>
        </property>
        <property name="insertPolicy">
-        <enum>QComboBox::NoInsert</enum>
+        <enum>QComboBox::InsertPolicy::NoInsert</enum>
        </property>
       </widget>
      </item>
     </layout>
    </item>
-   <item row="6" column="1">
+   <item row="7" column="1">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
      <property name="centerButtons">
       <bool>false</bool>
@@ -101,6 +101,16 @@
    </item>
    <item row="0" column="1">
     <widget class="QLineEdit" name="nameEdit"/>
+   </item>
+   <item row="3" column="1">
+    <widget class="QCheckBox" name="recurseSubmodulesCheckBox">
+     <property name="text">
+      <string>...then recurse into submodules</string>
+     </property>
+     <property name="checked">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
@@ -157,6 +167,22 @@
     <hint type="destinationlabel">
      <x>244</x>
      <y>117</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>switchToBranchCheckBox</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>recurseSubmodulesCheckBox</receiver>
+   <slot>setEnabled(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>191</x>
+     <y>62</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>242</x>
+     <y>84</y>
     </hint>
    </hints>
   </connection>
