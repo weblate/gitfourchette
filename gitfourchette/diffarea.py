@@ -132,8 +132,8 @@ class DiffArea(QWidget):
         # Row 0
         layout.addItem(gridPadding(),           0, 0)
         layout.addWidget(header,                0, 1)
-        layout.addWidget(discardButton,         0, 2)
-        layout.addWidget(stageButton,           0, 3)
+        layout.addWidget(stageButton,           0, 2)
+        layout.addWidget(discardButton,         0, 3)
         # Row 1
         layout.addItem(QSpacerItem(1, 1),       1, 0, 1, 4)
         # Row 2
@@ -249,11 +249,31 @@ class DiffArea(QWidget):
     def _makeDiffContainer(self):
         header = QLabel(" ")
         header.setObjectName("diffHeader")
-        header.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         header.setMinimumHeight(FILEHEADER_HEIGHT)
-        header.setContentsMargins(0, 0, 4, 0)
+        header.setContentsMargins(4, 0, 4, 0)
         # Don't let header dictate window width if displaying long filename
         header.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
+
+        topContainer = QWidget()
+        topLayout = QHBoxLayout(topContainer)
+        diffDiscardButton = QToolButton()
+        diffDiscardButton.setText(self.tr("Discard"))
+        diffDiscardButton.setIcon(stockIcon("git-discard-lines"))
+        diffDiscardButton.setToolTip(self.tr("Discard selected lines"))
+        diffStageButton = QToolButton()
+        diffStageButton.setText(self.tr("Stage"))
+        diffStageButton.setIcon(stockIcon("git-stage-lines"))
+        diffStageButton.setToolTip(self.tr("Stage selected lines"))
+        appendShortcutToToolTip(diffStageButton, GlobalShortcuts.stageHotkeys[0])
+        diffUnstageButton = QToolButton()
+        diffUnstageButton.setText(self.tr("Unstage"))
+        diffUnstageButton.setIcon(stockIcon("git-unstage-lines"))
+        diffUnstageButton.setToolTip(self.tr("Unstage selected lines"))
+        topLayout.setContentsMargins(0,0,0,0)
+        topLayout.addWidget(header)
+        topLayout.addWidget(diffStageButton)
+        topLayout.addWidget(diffDiscardButton)
+        topLayout.addWidget(diffUnstageButton)
 
         diff = DiffView()
 
@@ -282,7 +302,7 @@ class DiffArea(QWidget):
         layout = QVBoxLayout(stackContainer)
         layout.setContentsMargins(0,0,0,0)
         layout.setSpacing(1)
-        layout.addWidget(header)
+        layout.addWidget(topContainer)
         layout.addWidget(stack)
 
         self.diffHeader = header
@@ -290,16 +310,31 @@ class DiffArea(QWidget):
         self.conflictView = conflict
         self.specialDiffView = specialDiff
         self.diffView = diff
+        self.diffStageButton = diffStageButton
+        self.diffDiscardButton = diffDiscardButton
+        self.diffUnstageButton = diffUnstageButton
+
+        def onSelectionActionableChanged(actionable: bool):
+            for button in diffDiscardButton, diffStageButton, diffUnstageButton:
+                button.setEnabled(actionable)
+        diff.selectionActionable.connect(onSelectionActionableChanged)
+        diffDiscardButton.clicked.connect(lambda: diff.discardSelection())
+        diffStageButton.clicked.connect(lambda: diff.stageSelection())
+        diffUnstageButton.clicked.connect(lambda: diff.unstageSelection())
 
         return stackContainer
 
     def applyCustomStyling(self):
-        for smallButton in (self.discardButton, self.unstageButton, self.stageButton):
+        for smallButton in (self.discardButton, self.unstageButton, self.stageButton,
+                            self.diffDiscardButton, self.diffUnstageButton, self.diffStageButton):
             smallButton.setMaximumHeight(FILEHEADER_HEIGHT)
             smallButton.setEnabled(False)
             smallButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             smallButton.setAutoRaise(True)
-            smallButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            smallButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
+        for button in self.stageButton, self.unstageButton, self.diffStageButton, self.diffUnstageButton:
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         # Smaller font for header text
         for smallWidget in (
@@ -313,6 +348,9 @@ class DiffArea(QWidget):
                 self.stageButton,
                 self.unstageButton,
                 self.discardButton,
+                self.diffStageButton,
+                self.diffUnstageButton,
+                self.diffDiscardButton,
         ):
             tweakWidgetFont(smallWidget, 90)
 
@@ -326,8 +364,7 @@ class DiffArea(QWidget):
         elif page == "workdir":
             widgets = [self.dirtyFiles, self.stagedFiles]
         else:
-            logger.warning(f"Unknown FileStackPage {page})")
-            return
+            raise NotImplementedError(f"Unknown FileStackPage {page}")
 
         numWidgets = len(widgets)
         selections = [w.selectedIndexes() for w in widgets]
@@ -422,16 +459,31 @@ class DiffArea(QWidget):
                 self.discardButton.setEnabled(hasFile and not staged)
                 self.unstageButton.setEnabled(hasFile and staged)
 
+                self.diffDiscardButton.setHidden(not (hasFile and not staged))
+                self.diffStageButton.setHidden(not (hasFile and not staged))
+                self.diffUnstageButton.setHidden(not (hasFile and staged))
+
                 # Clear selection in opposite FileList
                 oppositeFileList = self.dirtyFiles if staged else self.stagedFiles
                 oppositeFileList.clearSelection()
                 if hasFile:
                     oppositeFileList.highlightCounterpart(locator)
+            else:
+                self.diffDiscardButton.setHidden(True)
+                self.diffStageButton.setHidden(True)
+                self.diffUnstageButton.setHidden(True)
 
             # Set correct card in fileStack (after selecting the file to avoid flashing)
             self.setFileStackPageByContext(locator.context)
 
         return locator
+
+    # -------------------------------------------------------------------------
+    # Diff buttons
+
+    def onSelectionActionableChanged(self, actionable: bool):
+        for button in self.diffDiscardButton, self.diffStageButton, self.diffUnstageButton:
+            button.setEnabled(actionable)
 
     # -------------------------------------------------------------------------
     # Clear
@@ -448,10 +500,20 @@ class DiffArea(QWidget):
         if sourceFileList and not sourceFileList.hasFocus():
             return
 
-        self.setDiffStackPage("special")
+        # Enter empty special page
         self.specialDiffView.clear()
-        self.diffView.clear()  # might as well free up any memory taken by DiffView document
+        self.setDiffStackPage("special")
+
+        # Might as well free up any memory taken by DiffView document
+        self.diffView.clear()
+
         self.diffHeader.setText(" ")
+
+        if sourceFileList:
+            locator = NavLocator(sourceFileList.navContext, sourceFileList.commitId)
+        else:
+            locator = NavLocator(NavContext.WORKDIR if self.fileStackPage() else NavContext.COMMITTED)
+        self.setUpForLocator(locator)
 
     # -------------------------------------------------------------------------
     # Stacked widget helpers

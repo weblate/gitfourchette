@@ -56,6 +56,7 @@ class DiffView(QPlainTextEdit):
     DetachedWindowObjectName = "DiffViewDetachedWindow"
 
     contextualHelp = Signal(str)
+    selectionActionable = Signal(bool)
 
     lineData: list[LineData]
     lineCursorStartCache: list[int]
@@ -724,6 +725,7 @@ class DiffView(QPlainTextEdit):
 
         if not self.isSelectionActionable():
             self.contextualHelp.emit("")
+            self.selectionActionable.emit(False)
             return
 
         start, end = self.getSelectedLineExtents()
@@ -748,6 +750,7 @@ class DiffView(QPlainTextEdit):
             discardkey=QKeySequence(GlobalShortcuts.discardHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText))
 
         self.contextualHelp.emit("💡 " + help)
+        self.selectionActionable.emit(True)
 
     # ---------------------------------------------
     # Search
