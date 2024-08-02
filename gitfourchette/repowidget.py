@@ -110,6 +110,7 @@ class RepoWidget(QStackedWidget):
         self.pendingPath = os.path.normpath(pendingWorkdir)
         self.pendingLocator = NavLocator()
         self.pendingEffects = TaskEffects.Nothing
+        self.pendingStatusMessage = ""
         self.allowAutoLoad = True
 
         self.busyCursorDelayer = QTimer(self)
@@ -739,7 +740,9 @@ class RepoWidget(QStackedWidget):
             tasks.Jump.invoke(self, jumpTo)
         else:
             # End of refresh chain.
-            pass
+            if self.pendingStatusMessage:
+                self.statusMessage.emit(self.pendingStatusMessage)
+                self.pendingStatusMessage = ""
 
     def refreshWindowChrome(self):
         shortname = self.getTitle()
@@ -871,6 +874,8 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
 
     def refreshPostTask(self, task: tasks.RepoTask):
+        if task.postStatus:
+            self.pendingStatusMessage = task.postStatus
         self.refreshRepo(task.effects, task.jumpTo)
 
     def onRepoTaskProgress(self, progressText: str, withSpinner: bool = False):

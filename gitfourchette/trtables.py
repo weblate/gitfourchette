@@ -34,6 +34,7 @@ class TrTables:
         cls._fileModes = cls._init_fileModes()
         cls._shortFileModes = cls._init_shortFileModes()
         cls._patchPurposes = cls._init_patchPurposes()
+        cls._patchPurposesPastTense = cls._init_patchPurposesPastTense()
         cls._conflictHelp = cls._init_conflictHelp()
 
     @classmethod
@@ -84,6 +85,10 @@ class TrTables:
     @classmethod
     def patchPurpose(cls, purpose: PatchPurpose):
         return cls._patchPurposes.get(purpose, "???")
+
+    @classmethod
+    def patchPurposePastTense(cls, purpose: PatchPurpose):
+        return cls._patchPurposesPastTense.get(purpose, "???")
 
     @classmethod
     def conflictHelp(cls, key: str):
@@ -190,6 +195,24 @@ class TrTables:
             pp.FILE | pp.STAGE: translate("PatchPurpose", "Stage file"),
             pp.FILE | pp.UNSTAGE: translate("PatchPurpose", "Unstage file"),
             pp.FILE | pp.DISCARD: translate("PatchPurpose", "Discard file"),
+        }
+
+    @staticmethod
+    def _init_patchPurposesPastTense():
+        from gitfourchette.toolbox.gitutils import PatchPurpose as pp
+        return {
+            pp.STAGE: translate("PatchPurpose", "Staged."),
+            pp.UNSTAGE: translate("PatchPurpose", "Unstaged."),
+            pp.DISCARD: translate("PatchPurpose", "Discarded."),
+            pp.LINES | pp.STAGE: translate("PatchPurpose", "Lines staged."),
+            pp.LINES | pp.UNSTAGE: translate("PatchPurpose", "Lines unstaged."),
+            pp.LINES | pp.DISCARD: translate("PatchPurpose", "Lines discarded."),
+            pp.HUNK | pp.STAGE: translate("PatchPurpose", "Hunk staged."),
+            pp.HUNK | pp.UNSTAGE: translate("PatchPurpose", "Hunk unstaged."),
+            pp.HUNK | pp.DISCARD: translate("PatchPurpose", "Hunk discarded."),
+            pp.FILE | pp.STAGE: translate("PatchPurpose", "File staged."),
+            pp.FILE | pp.UNSTAGE: translate("PatchPurpose", "File unstaged."),
+            pp.FILE | pp.DISCARD: translate("PatchPurpose", "File discarded."),
         }
 
     @staticmethod

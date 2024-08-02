@@ -137,6 +137,9 @@ class RepoTask(QObject):
     effects: TaskEffects.Nothing
     """ Which parts of the UI should be refreshed when this task completes. """
 
+    postStatus: str
+    """ Display this message in the status bar after completion. """
+
     didSucceed: bool
 
     _currentFlow: FlowGeneratorType | None
@@ -164,6 +167,7 @@ class RepoTask(QObject):
         self.setObjectName(self.__class__.__name__)
         self.jumpTo = NavLocator()
         self.effects = TaskEffects.Nothing
+        self.postStatus = ""
         self.didSucceed = True
         self._taskStack = [self]
         self._runningOnUiThread = True  # for debugging

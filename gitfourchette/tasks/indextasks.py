@@ -67,6 +67,8 @@ class StageFiles(_BaseStagingTask):
 
         yield from self.debriefPostStage(patches)
 
+        self.postStatus = self.tr("%n files staged.", "", len(patches))
+
     def debriefPostStage(self, patches: list[Patch]):
         debrief = {}
 
@@ -168,6 +170,8 @@ class DiscardFiles(_BaseStagingTask):
             for patch in submos:
                 self.restoreSubmodule(patch)
 
+        self.postStatus = self.tr("%n files discarded.", "", len(patches))
+
     def restoreSubmodule(self, patch: Patch):
         path = patch.delta.new_file.path
         submodule = self.repo.submodules[path]
@@ -196,6 +200,8 @@ class UnstageFiles(_BaseStagingTask):
         self.effects |= TaskEffects.Workdir
 
         self.repo.unstage_files(patches)
+
+        self.postStatus = self.tr("%n files unstaged.", "", len(patches))
 
 
 class DiscardModeChanges(_BaseStagingTask):
@@ -265,6 +271,8 @@ class ApplyPatch(RepoTask):
         self.effects |= TaskEffects.Workdir
 
         self.repo.apply(subPatch, applyLocation)
+
+        self.postStatus = TrTables.patchPurposePastTense(purpose)
 
     def _applyFullPatch(self, fullPatch: Patch, purpose: PatchPurpose):
         action = TrTables.patchPurpose(purpose)
