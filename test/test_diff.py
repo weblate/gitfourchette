@@ -450,3 +450,60 @@ def testDiffContextLinesSetting(tempDir, mainWindow):
 
     # 1 hunk line, 8 context lines above change, 2 changed lines (- then +), 8 context lines below change
     assert 1+8+2+8 == len(rw.diffView.toPlainText().splitlines())
+
+
+def testDiffGutterMouseInputs(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    dv = rw.diffView
+    LMB = Qt.MouseButton.LeftButton
+
+    oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+    rw.jump(NavLocator.inCommit(oid, "c/c1.txt"))
+
+    def selection():
+        text = dv.textCursor().selectedText()
+        return text.replace("\u2029", "\n")
+
+    def clearSelection():
+        cursor = dv.textCursor()
+        cursor.clearSelection()
+        dv.setTextCursor(cursor)
+
+    assert not selection()
+
+    cr = dv.cursorRect(dv.textCursor())
+    lineH = cr.height()
+    line1y = cr.y()
+    line2y = cr.y() + 1 * lineH
+    line3y = cr.y() + 2 * lineH
+
+    clearSelection()
+    QTest.mouseClick(dv.gutter, LMB, pos=QPoint(1, line1y))
+    assert "@@ -1 +1,2 @@" == selection()
+
+    # Shift-click on second line
+    clearSelection()
+    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=QPoint(1, line2y))
+    assert "@@ -1 +1,2 @@\nc1" == selection()
+
+    # Click on second line, then shift-click on first line
+    clearSelection()
+    QTest.mouseClick(dv.gutter, LMB, pos=QPoint(1, line2y))
+    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=QPoint(1, line1y))
+    assert "@@ -1 +1,2 @@\nc1" == selection()
+
+    # Double-click on first line: Select entire hunk
+    clearSelection()
+    QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line1y))
+    assert "@@ -1 +1,2 @@\nc1\nc1" == selection()
+
+    # Double-click on context line: Nothing happens
+    clearSelection()
+    QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line2y))
+    assert not selection()
+
+    # Double-click on green/red line: Select clump
+    clearSelection()
+    QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line3y))
+    assert "c1" == selection()
