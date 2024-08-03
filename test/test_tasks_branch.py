@@ -797,3 +797,60 @@ def testMergeCausesConflicts(tempDir, mainWindow):
     rw.conflictView.ui.confirmButton.click()
     assert not rw.conflictView.isVisible()
     assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)
+
+
+@pytest.mark.parametrize("method", ["switchbranch", "newbranch", "checkout"])
+def testMightLoseDetachedHead(tempDir, mainWindow, method):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.checkout_commit(repo.head_commit_id)
+        looseOid = repo.create_commit_on_head("lost commit", TEST_SIGNATURE, TEST_SIGNATURE)
+
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.repo.head_is_detached
+    assert looseOid in rw.repoModel.graph.commitRows
+
+    if method == "switchbranch":
+        node = rw.sidebar.findNodeByRef("refs/heads/master")
+        triggerMenuAction(rw.sidebar.makeNodeMenu(node), "switch to")
+        acceptQMessageBox(rw, "switch to")
+        acceptQMessageBox(rw, "lose track of this commit")
+    elif method == "newbranch":
+        oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
+        rw.jump(NavLocator.inCommit(oid))
+        triggerMenuAction(rw.graphView.makeContextMenu(), "start branch")
+        findQDialog(rw, "new branch").accept()
+        acceptQMessageBox(rw, "lose track of this commit")
+    elif method == "checkout":
+        oid = Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17")
+        rw.jump(NavLocator.inCommit(oid))
+        triggerMenuAction(rw.graphView.makeContextMenu(), "check out")
+        findQDialog(rw, "check out").accept()
+        acceptQMessageBox(rw, "lose track of this commit")
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
+    assert looseOid not in rw.repoModel.graph.commitRows
+
+
+def testCreateBranchOnDetachedHead(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.checkout_commit(repo.head_commit_id)
+        looseOid = repo.create_commit_on_head("lost commit", TEST_SIGNATURE, TEST_SIGNATURE)
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.repo.head_is_detached
+
+    rw.jump(NavLocator.inCommit(looseOid))
+    triggerMenuAction(rw.graphView.makeContextMenu(), "start branch")
+    dlg: NewBranchDialog = findQDialog(rw, "new branch")
+    dlg.ui.nameEdit.setText("hellobranch")
+    assert dlg.ui.switchToBranchCheckBox.isChecked()
+    dlg.accept()
+
+    # Create the branch without complaining about losing detached HEAD
+    assert "hellobranch" in rw.repo.branches.local
