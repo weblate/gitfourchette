@@ -19,6 +19,7 @@ class AutoHideMenuBar(QObject):
         self.hideScheduler.setSingleShot(True)
         self.hideScheduler.timeout.connect(self.doScheduledHide)
 
+        self.menusConnected = []
         self.refreshPrefs()
 
     def refreshPrefs(self):
@@ -38,18 +39,24 @@ class AutoHideMenuBar(QObject):
             self.sticky = False
 
     def reconnectToMenus(self):
+        connect = self.enabled
+        newConnections = []
+
         menu: QMenu
         for menu in self.menuBar.findChildren(QMenu, options=Qt.FindChildOption.FindDirectChildrenOnly):
-            # Disconnect any existing connections
-            with suppress(RuntimeError, TypeError):  # PySide6, PyQt6
-                menu.aboutToShow.disconnect(self.onMenuAboutToShow)
-            with suppress(RuntimeError, TypeError):
-                menu.aboutToHide.disconnect(self.onMenuAboutToHide)
+            wasConnected = menu in self.menusConnected
 
-            # Reconnect signals if auto-hide is enabled
-            if self.enabled:
-                menu.aboutToShow.connect(self.onMenuAboutToShow)
-                menu.aboutToHide.connect(self.onMenuAboutToHide)
+            if connect:
+                if not wasConnected:
+                    menu.aboutToShow.connect(self.onMenuAboutToShow)
+                    menu.aboutToHide.connect(self.onMenuAboutToHide)
+                newConnections.append(menu)
+            else:
+                if wasConnected:
+                    menu.aboutToShow.disconnect(self.onMenuAboutToShow)
+                    menu.aboutToHide.disconnect(self.onMenuAboutToHide)
+
+        self.menusConnected = newConnections
 
     @property
     def enabled(self):
