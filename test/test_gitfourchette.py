@@ -100,11 +100,11 @@ def testSkipRenameDetection(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(oid))
     assert 102 == len(qlvGetRowData(rw.committedFiles))
     assert rw.diffBanner.isVisibleTo(rw)
-    assert rw.diffBanner.button.isVisibleTo(rw)
     assert "rename" in rw.diffBanner.label.text().lower()
-    assert "detect" in rw.diffBanner.button.text().lower()
 
-    rw.diffBanner.button.click()
+    assert "detect" in rw.diffBanner.buttons[-1].text().lower()
+    rw.diffBanner.buttons[-1].click()
+
     assert 101 == len(qlvGetRowData(rw.committedFiles))
     assert rw.diffBanner.isVisibleTo(rw)
     print(rw.diffBanner.label.text())

@@ -158,12 +158,11 @@ def testResetIndexWithConflicts(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     assert rw.repo.any_conflicts
     assert rw.mergeBanner.isVisible()
-    assert rw.mergeBanner.button.isVisible()
     assert "fix the conflicts" in rw.mergeBanner.label.text().lower()
-    assert "reset index" in rw.mergeBanner.button.text().lower()
+    assert "reset index" in rw.mergeBanner.buttons[-1].text().lower()
 
     # Now reset the index
-    rw.mergeBanner.button.click()
+    rw.mergeBanner.buttons[-1].click()
     acceptQMessageBox(rw, "reset the index")
     assert not rw.repo.any_conflicts
     assert not rw.mergeBanner.isVisible()

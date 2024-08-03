@@ -860,8 +860,9 @@ class RepoWidget(QStackedWidget):
             ).format(app=qAppName(), state=bquo(rstate.name.replace("_", " ").title()))
 
         if bannerText or bannerTitle:
-            self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False,
-                                   buttonLabel=bannerAction, buttonCallback=bannerCallback)
+            self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False)
+            if bannerAction:
+                self.mergeBanner.addButton(bannerAction, bannerCallback)
         else:
             self.mergeBanner.setVisible(False)
 

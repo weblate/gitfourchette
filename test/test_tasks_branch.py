@@ -730,10 +730,10 @@ def testMergeAborted(tempDir, mainWindow):
     assert rw.repo.state() == RepositoryState.MERGE
     assert rw.repo.status() == {"bye.txt": FileStatus.INDEX_NEW}
     assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)
-    assert re.search(r"abort", rw.mergeBanner.button.text(), re.I)
+    assert re.search(r"abort", rw.mergeBanner.buttons[-1].text(), re.I)
 
     # Abort the merge
-    rw.mergeBanner.button.click()
+    rw.mergeBanner.buttons[-1].click()
     acceptQMessageBox(rw, "abort.+merge")
     assert not rw.mergeBanner.isVisible()
     assert rw.repo.state() == RepositoryState.NONE

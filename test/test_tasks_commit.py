@@ -391,9 +391,9 @@ def testAbortRevertCommit(tempDir, mainWindow):
     assert rw.repo.state() == RepositoryState.REVERT
     assert rw.mergeBanner.isVisible()
     assert "revert" in rw.mergeBanner.label.text().lower()
-    assert "abort" in rw.mergeBanner.button.text().lower()
+    assert "abort" in rw.mergeBanner.buttons[-1].text().lower()
 
-    rw.mergeBanner.button.click()
+    rw.mergeBanner.buttons[-1].click()
     acceptQMessageBox(rw, "abort revert")
     assert rw.repo.state() == RepositoryState.NONE
     assert not os.path.exists(f"{wd}/c/c2-2.txt")
@@ -459,10 +459,10 @@ def testAbortCherrypick(tempDir, mainWindow):
     assert "First a/a1" in rw.repoModel.prefs.draftCommitMessage
     assert rw.mergeBanner.isVisibleTo(rw)
     assert re.search(r"cherry.+commit to conclude", rw.mergeBanner.label.text(), re.I | re.S)
-    assert "abort" in rw.mergeBanner.button.text().lower()
+    assert "abort" in rw.mergeBanner.buttons[-1].text().lower()
 
     # Abort cherrypick
-    rw.mergeBanner.button.click()
+    rw.mergeBanner.buttons[-1].click()
     acceptQMessageBox(rw, "abort.+cherry.+a/a1")
 
     assert rw.repo.state() == RepositoryState.NONE

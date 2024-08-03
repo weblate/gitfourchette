@@ -1,4 +1,3 @@
-from contextlib import suppress
 from typing import Callable
 
 from gitfourchette.qt import *
@@ -7,9 +6,12 @@ from gitfourchette.toolbox import *
 
 HORIZONTAL_CONTENT_HEIGHT = 20
 FONT_POINT_PERCENT = 90
+PERMANENT_PROPERTY = "permanent"
 
 
 class Banner(QFrame):
+    buttons: list[QToolButton]
+
     def __init__(self, parent, orientation: Qt.Orientation):
         super().__init__(parent)
         self.setObjectName("Banner")
@@ -20,51 +22,53 @@ class Banner(QFrame):
         label = QLabel(__name__, self)
         label.setWordWrap(True)
 
-        button = QToolButton(self)
-        button.setText(self.tr("Abort"))
-
-        dismissButton = QToolButton(self)
-        dismissButton.setText(self.tr("Dismiss", "clicking the Dismiss button will make the info banner disappear"))
-        dismissButton.clicked.connect(self.dismiss)
-        dismissButton.clicked.connect(self.hide)
-
         if orientation == Qt.Orientation.Vertical:
             layout = QVBoxLayout(self)
         else:
             label.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Minimum)
             layout = QHBoxLayout(self)
 
-        layout.setContentsMargins(0,0,0,0)
-        # layout.setSpacing(0)
+        layout.setContentsMargins(QMargins())
         layout.addWidget(icon)
         layout.addWidget(label)
-        layout.addWidget(button)
-        layout.addWidget(dismissButton)
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
-        if orientation == Qt.Orientation.Horizontal:
-            for b in button, dismissButton:
-                tweakWidgetFont(b, FONT_POINT_PERCENT)
-                b.setMaximumHeight(HORIZONTAL_CONTENT_HEIGHT)
-
         self.icon = icon
         self.label = label
-        self.button = button
-        self.dismissButton = dismissButton
         self.lastWarningWasDismissed = False
         self.orientation = orientation
+        self.buttons = []
 
-    def popUp(
-            self,
-            title: str,
-            text: str,
-            heeded=False,
-            canDismiss=False,
-            withIcon=False,
-            buttonLabel: str = "",
-            buttonCallback: Callable = None
-    ):
+        self.dismissButton = self.addButton(self.tr("Dismiss"), self.dismiss, permanent=True)
+
+    def addButton(self, text: str, callback: Callable = None, permanent=False) -> QToolButton:
+        button = QToolButton(self)
+        button.setText(text)
+        button.setProperty(PERMANENT_PROPERTY, "true" if permanent else "")
+        self.buttons.append(button)
+
+        if callback:
+            button.clicked.connect(callback)
+
+        layout: QHBoxLayout = self.layout()
+        layout.insertWidget(2, button)
+
+        if self.orientation == Qt.Orientation.Horizontal:
+            tweakWidgetFont(button, FONT_POINT_PERCENT)
+            button.setMaximumHeight(HORIZONTAL_CONTENT_HEIGHT)
+
+        return button
+
+    def clearButtons(self):
+        for i in range(len(self.buttons) - 1, -1, -1):
+            button = self.buttons[i]
+            if not button.property(PERMANENT_PROPERTY):
+                button.deleteLater()
+                del self.buttons[i]
+
+    def popUp(self, title: str, text: str, heeded=False, canDismiss=False, withIcon=False):
+        self.clearButtons()
         self.setProperty("heeded", str(heeded).lower())
         self.setStyleSheet("* {}")  # reset stylesheet to percolate property change
 
@@ -84,21 +88,9 @@ class Banner(QFrame):
         self.dismissButton.setVisible(canDismiss)
         self.lastWarningWasDismissed = False
 
-        # Always disconnect any previous callback
-        with suppress(BaseException):
-            self.button.clicked.disconnect()
-
-        if not buttonLabel:
-            assert not buttonCallback
-            self.button.setVisible(False)
-        else:
-            assert buttonCallback
-            self.button.setVisible(True)
-            self.button.setText(buttonLabel)
-            self.button.clicked.connect(buttonCallback)
-
         self.setVisible(True)
 
     def dismiss(self):
         self.lastWarningWasDismissed = True
         self.hide()
+        self.clearButtons()
