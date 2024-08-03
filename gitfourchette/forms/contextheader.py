@@ -56,3 +56,7 @@ class ContextHeader(QFrame):
         elif locator.context.isWorkdir():
             self.mainLabel.setText(self.tr("Uncommitted changes"))
             self.infoButton.setVisible(False)
+        else:
+            # Special context (e.g. history truncated)
+            self.mainLabel.setText(" ")
+            self.infoButton.setVisible(False)

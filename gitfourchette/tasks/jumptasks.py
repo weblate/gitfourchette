@@ -193,6 +193,7 @@ class Jump(RepoTask):
             rw.diffArea.committedFiles.clear()
             rw.diffArea.committedHeader.setText(" ")
             rw.diffArea.diffBanner.hide()
+            rw.diffArea.contextHeader.setContext(locator)
             rw.graphView.selectRowForLocator(locator)
 
         if locator.path == str(SpecialRow.EndOfShallowHistory):
