@@ -507,3 +507,64 @@ def testDiffGutterMouseInputs(tempDir, mainWindow):
     clearSelection()
     QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line3y))
     assert "c1" == selection()
+
+
+def testToggleWordWrap(tempDir, mainWindow):
+    text = ("pen pineapple apple pen " * 250) + "\n"
+    text *= 12
+
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/longline.txt", text)
+    rw = mainWindow.openRepo(wd)
+    dv = rw.diffView
+    assert NavLocator.inUnstaged("longline.txt").isSimilarEnoughTo(rw.navLocator)
+    assert dv.horizontalScrollBar().isVisible()
+
+    menu = dv.contextMenu(QPoint(0, 0))
+    triggerMenuAction(menu, "word wrap")
+    QTest.qWait(0)
+    assert not dv.horizontalScrollBar().isVisible()
+
+
+def testExportPatchFromHunk(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    dv = rw.diffView
+
+    oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+    rw.jump(NavLocator.inCommit(oid, "c/c1.txt"))
+
+    cr = dv.cursorRect(dv.textCursor())
+    lineH = cr.height()
+    lineX = cr.x()
+    line1y = cr.y()
+
+    menu = dv.contextMenu(dv.mapToGlobal(QPoint(lineX, line1y)))
+    triggerMenuAction(menu, "export hunk.+as patch")
+    exportedPath = acceptQFileDialog(rw, "export", f"{tempDir.name}", useSuggestedName=True)
+    assert exportedPath.endswith("c1.txt[partial].patch")
+    assert readFile(exportedPath).decode("utf-8").endswith(
+        "--- a/c/c1.txt\n"
+        "+++ b/c/c1.txt\n"
+        "@@ -1,1 +1,2 @@\n"
+        " c1\n"
+        "+c1\n")
+
+
+def testRevertHunk(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    dv = rw.diffView
+
+    assert readFile(f"{wd}/c/c1.txt") == b"c1\nc1\n"
+
+    oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
+    rw.jump(NavLocator.inCommit(oid, "c/c1.txt"))
+
+    cr = dv.cursorRect(dv.textCursor())
+    menu = dv.contextMenu(dv.mapToGlobal(QPoint(cr.x(), cr.y())))
+    triggerMenuAction(menu, "revert hunk")
+
+    assert NavLocator.inUnstaged("c/c1.txt").isSimilarEnoughTo(rw.navLocator)
+    assert readFile(f"{wd}/c/c1.txt") == b"c1\n"
+

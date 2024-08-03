@@ -86,7 +86,7 @@ class DiffView(QPlainTextEdit):
         self.highlighter = DiffSearchHighlighter(self)
 
         self.gutter = DiffGutter(self)
-        self.gutter.customContextMenuRequested.connect(lambda p: self.doContextMenu(self.gutter.mapToGlobal(p)))
+        self.gutter.customContextMenuRequested.connect(lambda p: self.execContextMenu(self.gutter.mapToGlobal(p)))
         self.updateRequest.connect(self.gutter.onParentUpdateRequest)
         # self.blockCountChanged.connect(self.updateGutterWidth)
         self.syncViewportMarginsWithGutter()
@@ -110,12 +110,7 @@ class DiffView(QPlainTextEdit):
     # Qt events
 
     def contextMenuEvent(self, event: QContextMenuEvent):
-        try:
-            self.doContextMenu(event.globalPos())
-        except Exception as exc:
-            # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
-            excMessageBox(exc, message="Failed to create DiffView context menu")
-            return
+        self.execContextMenu(event.globalPos())
 
     def resizeEvent(self, event: QResizeEvent):
         """Update gutter geometry"""
@@ -359,10 +354,10 @@ class DiffView(QPlainTextEdit):
     # ---------------------------------------------
     # Context menu
 
-    def doContextMenu(self, globalPos: QPoint):
+    def contextMenu(self, globalPos: QPoint):
         # Don't show the context menu if we're empty
         if self.document().isEmpty():
-            return
+            return None
 
         # Get position of click in document
         clickedPosition = self.cursorForPosition(self.mapFromGlobal(globalPos)).position()
@@ -476,8 +471,18 @@ class DiffView(QPlainTextEdit):
         menu = ActionDef.makeQMenu(self, actions, bottom)
         bottom.deleteLater()  # don't need this menu anymore
         menu.setObjectName("DiffViewContextMenu")
-        menu.exec(globalPos)
-        menu.deleteLater()
+        return menu
+
+    def execContextMenu(self, globalPos: QPoint):  # pragma: no cover
+        try:
+            menu = self.contextMenu(globalPos)
+            if not menu:
+                return
+            menu.exec(globalPos)
+            menu.deleteLater()
+        except Exception as exc:
+            # Avoid exceptions in contextMenuEvent at all costs to prevent a crash
+            excMessageBox(exc, message="Failed to create DiffView context menu")
 
     # ---------------------------------------------
     # Patch
