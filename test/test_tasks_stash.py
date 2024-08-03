@@ -262,7 +262,7 @@ def testCancelApplyStash(tempDir, mainWindow):
     assert rw.navLocator.commit == rw.repoModel.stashes[0]
 
 
-@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "contextheader"])
 def testDropStash(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     reposcenario.stashedChange(wd)
@@ -276,10 +276,14 @@ def testDropStash(tempDir, mainWindow, method):
 
     if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
-        triggerMenuAction(menu, "delete")
+        triggerMenuAction(menu, "drop")
     elif method == "sidebarkey":
         rw.sidebar.selectNode(node)
         QTest.keyPress(rw.sidebar, Qt.Key.Key_Delete)
+    elif method == "contextheader":
+        rw.sidebar.selectNode(node)
+        button = next(b for b in rw.diffArea.contextHeader.buttons if "drop" in b.text().lower())
+        button.click()
     else:
         raise NotImplementedError(f"unknown method {method}")
 

@@ -383,13 +383,13 @@ class Sidebar(QTreeView):
             oid = Oid(hex=data)
 
             actions += [
-                TaskBook.action(self, ApplyStash, self.tr("&Apply"), taskArgs=oid),
+                TaskBook.action(self, ApplyStash, self.tr("&Apply", "apply stash"), taskArgs=oid),
 
                 TaskBook.action(self, ExportStashAsPatch, self.tr("E&xport As Patch..."), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, DropStash, self.tr("&Delete"), taskArgs=oid),
+                TaskBook.action(self, DropStash, self.tr("&Drop", "drop stash"), taskArgs=oid),
 
                 ActionDef.SEPARATOR,
 

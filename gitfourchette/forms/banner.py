@@ -46,6 +46,7 @@ class Banner(QFrame):
         button = QToolButton(self)
         button.setText(text)
         button.setProperty(PERMANENT_PROPERTY, "true" if permanent else "")
+        button.setAutoRaise(True)
         self.buttons.append(button)
 
         if callback:
@@ -64,6 +65,7 @@ class Banner(QFrame):
         for i in range(len(self.buttons) - 1, -1, -1):
             button = self.buttons[i]
             if not button.property(PERMANENT_PROPERTY):
+                button.hide()
                 button.deleteLater()
                 del self.buttons[i]
 

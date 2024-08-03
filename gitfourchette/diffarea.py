@@ -49,8 +49,6 @@ class DiffArea(QWidget):
         splitter.setObjectName("Split_DiffArea")
 
         contextHeader = ContextHeader(self)
-        for b in (contextHeader.maximizeButton, contextHeader.infoButton):
-            b.setMaximumHeight(FILEHEADER_HEIGHT)
 
         diffBanner = Banner(self, orientation=Qt.Orientation.Horizontal)
         diffBanner.setProperty("class", "diff")
@@ -339,8 +337,6 @@ class DiffArea(QWidget):
         # Smaller font for header text
         for smallWidget in (
                 self.contextHeader,
-                self.contextHeader.maximizeButton,
-                self.contextHeader.infoButton,
                 self.diffHeader,
                 self.committedHeader,
                 self.dirtyHeader,

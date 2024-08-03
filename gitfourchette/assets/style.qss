@@ -16,3 +16,5 @@ Banner[heeded="true"] { background-color: #3d9970; }
 Banner[heeded="true"] QLabel { color: white; }
 
 SearchBar[red="true"] QLineEdit { color: red; }
+
+Banner QToolButton, ContextHeader QToolButton { text-decoration: underline; }

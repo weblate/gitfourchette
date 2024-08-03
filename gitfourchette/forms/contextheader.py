@@ -1,8 +1,12 @@
+from typing import Callable
+
 from gitfourchette.application import GFApplication
-from gitfourchette.nav import NavLocator, NavContext, NavFlags
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.qt import *
-from gitfourchette.tasks import GetCommitInfo
+from gitfourchette.tasks import *
 from gitfourchette.toolbox import *
+
+PERMANENT_PROPERTY = "permanent"
 
 
 class ContextHeader(QFrame):
@@ -10,31 +14,20 @@ class ContextHeader(QFrame):
         super().__init__(parent)
         self.setObjectName("ContextHeader")
         self.locator = NavLocator()
+        self.buttons = []
 
         layout = QHBoxLayout(self)
         self.setMinimumHeight(24)
 
-        mainLabel = QElidedLabel(self)
-        maximizeButton = QToolButton(self)
-        maximizeButton.setCheckable(True)
-
-        infoButton = QToolButton(self)
-        infoButton.setText(self.tr("Commit Info"))
-        infoButton.clicked.connect(lambda: GetCommitInfo.invoke(self, self.locator.commit))
-
-        maximizeButton.setText(self.tr("Maximize"))
-        maximizeButton.setToolTip(self.tr("Maximize the diff area and hide the commit graph"))
-        for b in (maximizeButton, infoButton):
-            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.mainLabel = QElidedLabel(self)
 
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(mainLabel)
-        layout.addWidget(infoButton)
-        layout.addWidget(maximizeButton)
+        layout.addWidget(self.mainLabel)
 
-        self.mainLabel = mainLabel
-        self.infoButton = infoButton
-        self.maximizeButton = maximizeButton
+        self.maximizeButton = self.addButton(self.tr("Maximize"), permanent=True)
+        self.maximizeButton.setIcon(stockIcon("maximize"))
+        self.maximizeButton.setToolTip(self.tr("Maximize the diff area and hide the commit graph"))
+        self.maximizeButton.setCheckable(True)
 
         self.restyle()
         GFApplication.instance().restyle.connect(self.restyle)
@@ -44,19 +37,56 @@ class ContextHeader(QFrame):
         fg = mutedTextColorHex(self, .8)
         self.setStyleSheet(f"ContextHeader {{ background-color: {bg}; }}  ContextHeader QLabel {{ color: {fg}; }}")
 
+    def addButton(self, text: str, callback: Callable = None, permanent=False) -> QToolButton:
+        button = QToolButton(self)
+        button.setText(text)
+        button.setProperty(PERMANENT_PROPERTY, "true" if permanent else "")
+        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button.setAutoRaise(True)
+        self.buttons.append(button)
+
+        if callback:
+            button.clicked.connect(callback)
+
+        layout: QHBoxLayout = self.layout()
+        layout.insertWidget(1, button)
+
+        button.setMaximumHeight(24)
+
+        return button
+
+    def clearButtons(self):
+        for i in range(len(self.buttons) - 1, -1, -1):
+            button = self.buttons[i]
+            if not button.property(PERMANENT_PROPERTY):
+                button.hide()
+                button.deleteLater()
+                del self.buttons[i]
+
+    @DisableWidgetUpdatesContext.methodDecorator
     def setContext(self, locator: NavLocator, commitMessage: str = "", isStash=False):
+        self.clearButtons()
+
         self.locator = locator
+
         if locator.context == NavContext.COMMITTED:
-            kind = self.tr("Commit")
-            if isStash:
-                kind = self.tr("Stash")
+            kind = self.tr("Stash") if isStash else self.tr("Commit")
             summary, _ = messageSummary(commitMessage)
             self.mainLabel.setText(f"{kind} {shortHash(locator.commit)} – {summary}")
-            self.infoButton.setVisible(True)
+
+            infoButton = self.addButton(self.tr("Info"), lambda: GetCommitInfo.invoke(self, self.locator.commit))
+            infoButton.setToolTip(self.tr("Show details about this commit") if not isStash
+                                  else self.tr("Show details about this stash"))
+
+            if isStash:
+                dropButton = self.addButton(self.tr("Drop"), lambda: DropStash.invoke(self, locator.commit))
+                dropButton.setToolTip(self.tr("Delete this stash"))
+
+                applyButton = self.addButton(self.tr("Apply"), lambda: ApplyStash.invoke(self, locator.commit))
+                applyButton.setToolTip(self.tr("Apply this stash"))
+
         elif locator.context.isWorkdir():
             self.mainLabel.setText(self.tr("Uncommitted changes"))
-            self.infoButton.setVisible(False)
         else:
             # Special context (e.g. history truncated)
             self.mainLabel.setText(" ")
-            self.infoButton.setVisible(False)
