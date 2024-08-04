@@ -3,7 +3,6 @@ Remote management tests.
 """
 
 import pytest
-from . import reposcenario
 from .util import *
 from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.sidebar.sidebarmodel import EItem
@@ -117,3 +116,61 @@ def testDeleteRemote(tempDir, mainWindow, method):
 
     assert len(list(repo.remotes)) == 0
     assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
+
+
+def testRemoteCustomKeyUI(tempDir, mainWindow):
+    keyfileConfigKey = "remote.origin.gitfourchette-keyfile"
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    def openRemoteDialog():
+        node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "edit remote")
+        dialog: RemoteDialog = findQDialog(rw, "edit remote")
+        picker = dialog.ui.keyFilePicker
+        return dialog, picker
+
+    assert keyfileConfigKey not in rw.repo.config
+
+    dialog, picker = openRemoteDialog()
+    assert not picker.checkBox.isChecked()
+    assert not picker.pathLabel.isVisible()
+
+    # Set key files
+    for path, warning in [
+        ("keys/doesntexist", "file not found"),
+        ("keys/passphrase", "passphrase"),
+        ("keys/missingpriv.pub", "private key not found"),
+        ("keys/missingpub", "public key not found"),
+        ("keys/simple", ""),
+    ]:
+        if not picker.checkBox.isChecked():
+            picker.checkBox.click()
+        else:
+            picker.browseButton.click()
+        acceptQFileDialog(picker, "key file", getTestDataPath(path))
+        assert picker.pathLabel.text().endswith(path)
+        assert bool(warning) == picker.warningButton.isVisible()
+        if warning:
+            assert warning in picker.warningButton.toolTip().lower()
+
+    # Save settings
+    dialog.accept()
+    assert rw.repo.config[keyfileConfigKey].endswith("keys/simple")
+
+    # Reopen remote dialog and check that the setting is still set
+    dialog, picker = openRemoteDialog()
+    assert picker.checkBox.isChecked()
+    assert picker.pathLabel.isVisible()
+    assert picker.pathLabel.text().endswith("keys/simple")
+    assert picker.browseButton.isVisible()
+    assert not picker.warningButton.isVisible()
+    dialog.accept()
+
+    # Reopen remote dialog and unset custom key
+    dialog, picker = openRemoteDialog()
+    picker.checkBox.setChecked(False)
+    dialog.accept()
+    assert keyfileConfigKey not in rw.repo.config

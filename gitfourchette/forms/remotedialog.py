@@ -28,6 +28,7 @@ class RemoteDialog(QDialog):
 
         self.ui.keyFilePicker.makeFixedHeight()
         self.ui.keyFilePicker.setPath(customKeyFile)
+        self.ui.keyFilePicker.checkBox.setChecked(bool(customKeyFile))
 
         nameTaken = translate("NameValidationError", "This name is already taken by another remote.")
         cannotBeEmpty = translate("NameValidationError", "Cannot be empty.")

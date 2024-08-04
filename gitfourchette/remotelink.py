@@ -8,6 +8,7 @@ from gitfourchette import settings
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repoprefs import RepoPrefs
+from gitfourchette.settings import TEST_MODE
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,29 @@ def isPrivateKeyPassphraseProtected(path: str):
     keyContents = base64.b64decode("".join(lines))
 
     return b"bcrypt" in keyContents
+
+
+def collectUserKeyFiles():
+    if TEST_MODE:
+        from test.util import getTestDataPath
+        sshDirectory = getTestDataPath("keys")
+    else:  # pragma: no cover
+        sshDirectory = QStandardPaths.locate(QStandardPaths.StandardLocation.HomeLocation, ".ssh", QStandardPaths.LocateOption.LocateDirectory)
+
+    keypairFiles = []
+
+    if not sshDirectory:
+        return keypairFiles
+
+    for file in os.listdir(sshDirectory):
+        pubkey = os.path.join(sshDirectory, file)
+        if pubkey.endswith(".pub"):
+            privkey = pubkey.removesuffix(".pub")
+            if os.path.isfile(privkey) and os.path.isfile(pubkey):
+                logger.debug(f"Discovered key pair {privkey}")
+                keypairFiles.append((pubkey, privkey))
+
+    return keypairFiles
 
 
 class RemoteLink(QObject, RemoteCallbacks):
@@ -111,15 +135,7 @@ class RemoteLink(QObject, RemoteCallbacks):
 
         # Find user key files
         else:
-            sshDirectory = QStandardPaths.locate(QStandardPaths.StandardLocation.HomeLocation, ".ssh", QStandardPaths.LocateOption.LocateDirectory)
-            if sshDirectory:
-                for file in os.listdir(sshDirectory):
-                    pubkey = os.path.join(sshDirectory, file)
-                    if pubkey.endswith(".pub"):
-                        privkey = pubkey.removesuffix(".pub")
-                        if os.path.isfile(privkey) and os.path.isfile(pubkey):
-                            logger.debug(f"Discovered key pair {privkey}")
-                            self.keypairFiles.append((pubkey, privkey))
+            self.keypairFiles.extend(collectUserKeyFiles())
 
             # If we've already connected to this host before,
             # give higher priority to the key that we used last

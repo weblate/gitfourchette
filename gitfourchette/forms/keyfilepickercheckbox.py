@@ -6,15 +6,18 @@ from gitfourchette.toolbox import QFilePickerCheckBox, PersistentFileDialog, par
 
 
 class KeyFilePickerCheckBox(QFilePickerCheckBox):
+    DefaultSshDir = "~/.ssh"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         filePickerTip = paragraphs(
             self.tr("{app} normally uses public/private keys in {path} to authenticate you with remote servers."),
-            self.tr("Tick this box if you want to access this remote with a custom key.")).format(app=qAppName(), path="~/.ssh")
+            self.tr("Tick this box if you want to access this remote with a custom key.")
+        ).format(app=qAppName(), path=KeyFilePickerCheckBox.DefaultSshDir)
         self.checkBox.setToolTip(filePickerTip)
 
     def fileDialog(self):
-        sshDir = Path("~/.ssh").expanduser()
+        sshDir = Path(KeyFilePickerCheckBox.DefaultSshDir).expanduser()
         if not sshDir.exists():
             sshDir = ""
 
