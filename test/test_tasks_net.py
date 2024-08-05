@@ -11,6 +11,7 @@ import pytest
 
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.mainwindow import NoRepoWidgetError
 from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
@@ -280,6 +281,24 @@ def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     triggerMenuAction(mainWindow.menuBar(), "repo/fetch")
     acceptQMessageBox(rw, "n.t tracking.+upstream")
+
+
+def testFetchRemoteHistoryWithUnbornHead(tempDir, mainWindow):
+    originWd = unpackRepo(tempDir)
+
+    rw = mainWindow.newRepo(tempDir.name + "/newrepo")
+    triggerMenuAction(mainWindow.menuBar(), "repo/add remote")
+    remoteDialog: RemoteDialog = findQDialog(rw, "add remote")
+    remoteDialog.ui.urlEdit.setText(originWd)
+    remoteDialog.ui.nameEdit.setText("localfs")
+    remoteDialog.accept()
+    QTest.qWait(1)
+
+    assert rw.sidebar.findNode(lambda n: n.kind == EItem.UnbornHead)
+    assert rw.sidebar.findNode(lambda n: n.kind == EItem.Remote)
+    assert rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+    with pytest.raises(StopIteration):
+        rw.sidebar.findNode(lambda n: n.kind == EItem.LocalBranch)
 
 
 @pytest.mark.skipif((PYQT5 or PYQT6) and os.environ.get("COV_CORE_SOURCE", None) is not None,

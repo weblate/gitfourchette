@@ -127,10 +127,7 @@ class RepoModel:
     @property
     def headCommitId(self) -> Oid:
         """ Oid of the currently checked-out commit. """
-        try:
-            return self.refs["HEAD"]
-        except GitError:
-            return NULL_OID
+        return self.refs.get("HEAD", NULL_OID)
 
     @benchmark
     def syncRefs(self):

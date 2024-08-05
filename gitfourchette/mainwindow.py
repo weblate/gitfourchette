@@ -677,8 +677,7 @@ class MainWindow(QMainWindow):
 
             try:
                 pygit2.init_repository(path)
-                self.openRepo(path, exactMatch=True)
-                return
+                return self.openRepo(path, exactMatch=True)
             except Exception as exc:
                 message = self.tr("Couldn’t create an empty repository in {0}.").format(bquo(path))
                 excMessageBox(exc, self.tr("New repository"), message, parent=self, icon='warning')
