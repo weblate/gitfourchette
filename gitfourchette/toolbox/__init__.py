@@ -62,6 +62,7 @@ from .qtutils import (
     lerp,
     DocumentLinks,
     writeTempFile,
+    waitForSignal,
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide,

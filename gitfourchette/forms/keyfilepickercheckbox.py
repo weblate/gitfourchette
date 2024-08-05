@@ -43,9 +43,6 @@ class KeyFilePickerCheckBox(QFilePickerCheckBox):
             if not privateKey.with_suffix(".pub").is_file():
                 return self.tr("Accompanying public key not found.")
 
-        if isPrivateKeyPassphraseProtected(str(privateKey)):
-            return self.tr("{app} doesn’t support passphrase-protected private keys yet.").format(app=qAppName())
-
         return ""
 
     def privateKeyPath(self):

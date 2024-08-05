@@ -70,6 +70,9 @@ class RemoteLink(QObject, RemoteCallbacks):
     message = Signal(str)
     progress = Signal(int, int)
 
+    requestSecret = Signal(str)
+    secretReady = Signal(str, str)
+
     @staticmethod
     def mayAbortNetworkOperation(f):
         def wrapper(*args):
@@ -82,6 +85,10 @@ class RemoteLink(QObject, RemoteCallbacks):
     def __init__(self, parent: QObject):
         QObject.__init__(self, parent)
         RemoteCallbacks.__init__(self)
+
+        self.secretReady.connect(self.setAsyncSecret)
+        self._asyncSecret = ""
+        self._asyncSecretForKeyFile = ""
 
         self.setObjectName("RemoteLink")
         self.userAbort.connect(self._onAbort)
@@ -106,7 +113,6 @@ class RemoteLink(QObject, RemoteCallbacks):
         self._aborting = False
         self._sidebandProgressBuffer = ""
 
-        self.anyKeyIsPassphraseProtected = False
         self.anyKeyIsUnreadable = False
 
     def forceCustomKeyFile(self, privKeyPath):
@@ -121,7 +127,6 @@ class RemoteLink(QObject, RemoteCallbacks):
         if self.usingCustomKeyFile:
             privkey = self.usingCustomKeyFile
             pubkey = privkey + ".pub"
-            self.keypairFiles.append((pubkey, privkey))
 
             if not os.path.isfile(pubkey):
                 raise FileNotFoundError(self.tr("Remote-specific public key file not found:") + " " + compactPath(pubkey))
@@ -149,13 +154,14 @@ class RemoteLink(QObject, RemoteCallbacks):
                     logger.debug(f"Will try key '{workingKey}' first because it has been used in the past to access '{strippedUrl}'")
                     self.usingKnownKeyFirst = True
 
-        # See if any of the keys are passphrase-protected or unreadable
+        # See if any of the keys are unreadable
         for pubkey, privkey in self.keypairFiles:
             try:
-                if isPrivateKeyPassphraseProtected(privkey):
-                    self.anyKeyIsPassphraseProtected = True
+                # Just some dummy read
+                isPrivateKeyPassphraseProtected(privkey)
             except IOError:
                 self.anyKeyIsUnreadable = True
+                break
 
     def isAborting(self):
         return self._aborting
@@ -210,9 +216,13 @@ class RemoteLink(QObject, RemoteCallbacks):
             else:
                 self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
 
+            secret = None
+            if isPrivateKeyPassphraseProtected(privkey):
+                secret = self.getAsyncSecret(privkey)
+
             self.lastAttemptKey = privkey
             self.lastAttemptUrl = url
-            return Keypair(username_from_url, pubkey, privkey, "")
+            return Keypair(username_from_url, pubkey, privkey, secret)
             # return KeypairFromAgent(username_from_url)
         elif self.attempts == 0:
             raise NotImplementedError(
@@ -222,15 +232,6 @@ class RemoteLink(QObject, RemoteCallbacks):
             raise ConnectionRefusedError(
                 self.tr("Could not find suitable key files for this remote.") + " " +
                 self.tr("The key files couldn’t be opened (permission issues?)."))
-        elif self.anyKeyIsPassphraseProtected:
-            if self.usingCustomKeyFile:
-                message = self.tr("Sorry, {app} does not support passphrase-protected private keys yet.")
-            else:
-                message = (self.tr("Could not find suitable key files for this remote.") + " " +
-                           self.tr("Please note that {app} does not support passphrase-protected private keys yet. "
-                                   "You may have better luck with a decrypted private key."))
-            message = message.format(app=qAppName())
-            raise NotImplementedError(message)
         elif self.usingCustomKeyFile:
             message = self.tr("The remote has rejected your custom key file ({0})."
                               ).format(compactPath(self.usingCustomKeyFile))
@@ -292,6 +293,20 @@ class RemoteLink(QObject, RemoteCallbacks):
 
     def remoteKeyFileContext(self, remote: Remote | str):
         return RemoteLinkKeyFileContext(self, remote)
+
+    def setAsyncSecret(self, keyfile: str, secret: str):
+        self._asyncSecret = secret
+        self._asyncSecretForKeyFile = keyfile
+
+    def getAsyncSecret(self, keyfile: str) -> str | None:
+        assert not onAppThread()
+        self._asyncSecret = ""
+        self._asyncSecretForKeyFile = ""
+        self.requestSecret.emit(keyfile)
+        waitForSignal(self, self.secretReady)
+        if self._asyncSecretForKeyFile == keyfile:
+            return self._asyncSecret
+        return None
 
 
 class RemoteLinkKeyFileContext:

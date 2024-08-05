@@ -370,6 +370,13 @@ def writeTempFile(namePattern: str, data: bytes | str) -> QTemporaryFile:
     return tempFile
 
 
+def waitForSignal(parent: QObject | QWidget, signal: SignalInstance):
+    loop = QEventLoop(parent)
+    signal.connect(lambda: loop.quit())
+    loop.exec()
+    loop.deleteLater()
+
+
 class DocumentLinks:
     """
     Bundle of ad-hoc links bound to callback functions.

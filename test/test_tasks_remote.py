@@ -141,7 +141,6 @@ def testRemoteCustomKeyUI(tempDir, mainWindow):
     # Set key files
     for path, warning in [
         ("keys/doesntexist", "file not found"),
-        ("keys/passphrase", "passphrase"),
         ("keys/missingpriv.pub", "private key not found"),
         ("keys/missingpub", "public key not found"),
         ("keys/simple", ""),
