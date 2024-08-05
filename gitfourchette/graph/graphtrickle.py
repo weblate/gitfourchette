@@ -51,6 +51,7 @@ class GraphTrickle:
             for head in forceHide:
                 trickle.frontier[head] = SOURCE
 
+        assert trickle.testFrontierInputs()
         return trickle
 
     @staticmethod
@@ -68,4 +69,8 @@ class GraphTrickle:
         for head in localSeeds:
             trickle.frontier[head] = STOP
 
+        assert trickle.testFrontierInputs()
         return trickle
+
+    def testFrontierInputs(self):
+        return all(type(head) in (str, Oid) for head in self.frontier)

@@ -199,6 +199,9 @@ class GraphSpliceLoop:
 
     @staticmethod
     def _stabilizeTrickle(trickle: GraphTrickle, startRow: int, newCommitSequence: list[MockCommit]):
+        if trickle.done:
+            return startRow
+
         for row in range(startRow, len(newCommitSequence)):
             commit = newCommitSequence[row]
             trickle.newCommit(commit.id, commit.parent_ids)

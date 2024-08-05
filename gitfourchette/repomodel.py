@@ -335,7 +335,7 @@ class RepoModel:
         self.refreshHiddenRefCache()
 
         # Sync hidden commits
-        heads = self.refs.values(),
+        heads = self.refs.values()
         newHideSeeds = self.getHiddenTips()
         newLocalSeeds = self.getLocalTips()
         gsl = GraphSpliceLoop(self.graph, self.commitSequence, oldHeads=heads, newHeads=heads,
