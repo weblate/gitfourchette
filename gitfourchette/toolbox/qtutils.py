@@ -377,6 +377,15 @@ def waitForSignal(parent: QObject | QWidget, signal: SignalInstance):
     loop.deleteLater()
 
 
+def findParentWidget(o: QObject) -> QWidget:
+    p = o.parent()
+    while p:
+        if isinstance(p, QWidget):
+            return p
+        p = p.parent()
+    raise ValueError(f"No parent widget found for {repr(o)}")
+
+
 class DocumentLinks:
     """
     Bundle of ad-hoc links bound to callback functions.

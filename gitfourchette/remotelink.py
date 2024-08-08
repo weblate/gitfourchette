@@ -5,6 +5,7 @@ import re
 from contextlib import suppress
 
 from gitfourchette import settings
+from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repoprefs import RepoPrefs
@@ -86,9 +87,12 @@ class RemoteLink(QObject, RemoteCallbacks):
         QObject.__init__(self, parent)
         RemoteCallbacks.__init__(self)
 
+        assert findParentWidget(self)
+
         self.secretReady.connect(self.setAsyncSecret)
         self._asyncSecret = ""
         self._asyncSecretForKeyFile = ""
+        self.requestSecret.connect(self.requestSecretUi)
 
         self.setObjectName("RemoteLink")
         self.userAbort.connect(self._onAbort)
@@ -307,6 +311,18 @@ class RemoteLink(QObject, RemoteCallbacks):
         if self._asyncSecretForKeyFile == keyfile:
             return self._asyncSecret
         return None
+
+    def requestSecretUi(self, keyfile: str):
+        assert onAppThread()
+        dlg = showTextInputDialog(
+            findParentWidget(self),
+            self.tr("Passphrase-protected key file"),
+            self.tr("Enter passphrase to use this key file:"),
+            subtitleText=escape(compactPath(keyfile)),
+            onAccept=lambda secret: self.secretReady.emit(keyfile, secret))
+        dlg.rejected.connect(lambda: self.secretReady.emit(keyfile, None))
+        lineEdit: QLineEdit = dlg.findChild(QLineEdit)
+        lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
 
 
 class RemoteLinkKeyFileContext:

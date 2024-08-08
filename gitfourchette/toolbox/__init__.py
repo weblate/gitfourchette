@@ -63,6 +63,7 @@ from .qtutils import (
     DocumentLinks,
     writeTempFile,
     waitForSignal,
+    findParentWidget,
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide,

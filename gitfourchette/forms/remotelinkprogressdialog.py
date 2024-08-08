@@ -31,8 +31,6 @@ class RemoteLinkProgressDialog(QProgressDialog):
         self.remoteLink.message.connect(self.setLabelText)
         self.remoteLink.progress.connect(self.onRemoteLinkProgress)
 
-        self.remoteLink.requestSecret.connect(self.requestSecret)
-
     #def reject(self):
     #    """Called when user clicks window close button"""
     #    self.userAbort()
@@ -49,14 +47,3 @@ class RemoteLinkProgressDialog(QProgressDialog):
         # We're being closed by user code on completion, don't raise abort flag
         self.canceled.disconnect(self.userAbort)
         super().close()
-
-    def requestSecret(self, privkey: str):
-        dlg = showTextInputDialog(
-            self,
-            self.tr("Passphrase-protected key file"),
-            self.tr("Enter passphrase to use this key file:"),
-            subtitleText=escape(compactPath(privkey)),
-            onAccept=lambda secret: self.remoteLink.secretReady.emit(privkey, secret))
-        dlg.rejected.connect(lambda: self.remoteLink.secretReady.emit(privkey, None))
-        lineEdit: QLineEdit = dlg.findChild(QLineEdit)
-        lineEdit.setEchoMode(QLineEdit.EchoMode.Password)

@@ -182,12 +182,7 @@ class RepoTask(QObject):
         return self.rootTask is self
 
     def parentWidget(self) -> QWidget:
-        p = self.parent()
-        while p:
-            if isinstance(p, QWidget):
-                return p
-            p = p.parent()
-        raise ValueError(F"RepoTask {self} has no parent widget")
+        return findParentWidget(self)
 
     @property
     def rw(self) -> RepoWidget:  # hack for now - assume parent is a RepoWidget
