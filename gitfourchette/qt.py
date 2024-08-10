@@ -175,10 +175,10 @@ if PYQT5 or PYQT6:
     SignalInstance = pyqtBoundSignal
     Slot = pyqtSlot
 
-# Work around PYSIDE-2234. PySide6 6.5.0+ does implement QRunnable.create, but
-# its implementation sometimes causes random QRunnable objects to bubble up to
-# MainWindow.eventFilter as the 'event' arg, somehow.
 if PYSIDE6:
+    # Work around PYSIDE-2234. PySide6 6.5.0+ does implement QRunnable.create, but
+    # its implementation sometimes causes random QRunnable objects to bubble up to
+    # MainWindow.eventFilter as the 'event' arg, somehow.
     class QRunnableFunctionWrapper(QRunnable):
         def __init__(self, func):
             super().__init__()
@@ -192,9 +192,15 @@ if PYSIDE6:
             self.addOption(o)
     QCommandLineParser.addOptions = QCommandLineParser_addOptions
 
-# Disable "What's this?" in dialog box title bars (Qt 5 only -- this is off by default in Qt 6)
 if QT5:
+    # Disable "What's this?" in Qt 5 dialog box title bars (Qt 6 sets this off by default.)
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
+
+    # QMouseEvent.pos() is deprecated in Qt 6, so we don't use it.
+    # Fill in QMouseEvent.position() for Qt 5.
+    def QMouseEvent_position(self):
+        return QPointF(self.pos())
+    QMouseEvent.position = QMouseEvent_position
 
 
 # -----------------------------------------------------------------------------

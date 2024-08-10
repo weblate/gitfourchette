@@ -705,7 +705,8 @@ class Sidebar(QTreeView):
         QAbstractItemView.mouseMoveEvent(self, event)
 
     def mousePressEvent(self, event: QMouseEvent):
-        index, node, zone = self.resolveClick(event.pos())
+        pos = event.position().toPoint()
+        index, node, zone = self.resolveClick(pos)
 
         # Save click info for mouseReleaseEvent
         self.mousePressCache = (index.row(), zone)
@@ -720,7 +721,8 @@ class Sidebar(QTreeView):
         event.accept()
 
     def mouseReleaseEvent(self, event: QMouseEvent):
-        index, node, zone = self.resolveClick(event.pos())
+        pos = event.position().toPoint()
+        index, node, zone = self.resolveClick(pos)
 
         # Only perform special actions (hide, expand) if mouse was released
         # on same row/zone as mousePressEvent
@@ -749,7 +751,8 @@ class Sidebar(QTreeView):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.
 
-        index, node, zone = self.resolveClick(event.pos())
+        pos = event.position().toPoint()
+        index, node, zone = self.resolveClick(pos)
 
         # Let user collapse/expand/hide a single node in quick succession
         # without triggering a double click

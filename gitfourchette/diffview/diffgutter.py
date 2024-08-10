@@ -59,18 +59,21 @@ class DiffGutter(QWidget):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         # Double click to select clump of lines
         if event.button() == Qt.MouseButton.LeftButton:
-            self.diffView.selectClumpOfLinesAt(clickPoint=event.pos())
+            pos = event.position().toPoint()
+            self.diffView.selectClumpOfLinesAt(clickPoint=pos)
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
+            pos = event.position().toPoint()
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
-                self.diffView.selectWholeLinesTo(event.pos())
+                self.diffView.selectWholeLinesTo(pos)
             else:
-                self.diffView.selectWholeLineAt(event.pos())
+                self.diffView.selectWholeLineAt(pos)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         if event.buttons() == Qt.MouseButton.LeftButton:
-            self.diffView.selectWholeLinesTo(event.pos())
+            pos = event.position().toPoint()
+            self.diffView.selectWholeLinesTo(pos)
 
     def paintEvent(self, event: QPaintEvent):
         diffView = self.diffView
