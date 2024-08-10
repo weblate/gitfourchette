@@ -73,7 +73,7 @@ class CommitDialog(QDialog):
 
         self.validator = ValidatorMultiplexer(self)
         self.validator.setGatedWidgets(self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok))
-        self.validator.connectInput(self.ui.summaryEditor, self.hasNonBlankSummary, showWarning=False)
+        self.validator.connectInput(self.ui.summaryEditor, self.hasNonBlankSummary, showError=False)
         self.ui.signature.installValidator(self.validator)
 
         self.ui.summaryEditor.textChanged.connect(self.updateCounterLabel)

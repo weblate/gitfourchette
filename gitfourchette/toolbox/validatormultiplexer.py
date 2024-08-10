@@ -1,14 +1,10 @@
-from contextlib import suppress
+from __future__ import annotations
+
 from dataclasses import dataclass
-from gitfourchette.qt import *
-from gitfourchette.toolbox.iconbank import stockIcon
 from typing import Callable
 
-
-def _showValidationToolTip(widget: QLineEdit, text: str):
-    p = QPoint(0, widget.height() // 2)
-    p = widget.mapToGlobal(p)
-    QToolTip.showText(p, text)
+from gitfourchette.qt import *
+from gitfourchette.toolbox.iconbank import stockIcon
 
 
 class ValidatorMultiplexer(QObject):
@@ -35,24 +31,25 @@ class ValidatorMultiplexer(QObject):
 
     @dataclass
     class Input:
-        edit: QLineEdit
+        widget: QLineEdit
         validate: Callable[[str], str]
-        showWarning: bool
+        showError: bool
         mustBeValid: bool
-        inEditIcon: QAction | None = None
+        errorButton: QAction
+        error: str = ""
 
     gatedWidgets: list[QWidget]
     inputs: list[Input]
-    timer: QTimer
+    toolTipDelay: QTimer
 
     def __init__(self, parent):
         super().__init__(parent)
         from gitfourchette.settings import TEST_MODE
         self.gatedWidgets = []
         self.inputs = []
-        self.timer = QTimer(self)
-        self.timer.setSingleShot(True)
-        self.timer.setInterval(500 if not TEST_MODE else 0)
+        self.toolTipDelay = QTimer(self)
+        self.toolTipDelay.setSingleShot(True)
+        self.toolTipDelay.setInterval(500 if not TEST_MODE else 0)
 
     def setGatedWidgets(self, *args: QWidget):
         self.gatedWidgets = list(args)
@@ -61,63 +58,62 @@ class ValidatorMultiplexer(QObject):
             self,
             edit: QLineEdit,
             validate: Callable[[str], str],
-            showWarning: bool = True,
+            showError: bool = True,
             mustBeValid: bool = True):
         assert isinstance(edit, QLineEdit)
         assert isinstance(validate, Callable)
-        newInput = ValidatorMultiplexer.Input(edit, validate, showWarning, mustBeValid)
+
+        errorButton = edit.addAction(stockIcon("achtung"), QLineEdit.ActionPosition.TrailingPosition)
+        errorButton.setVisible(False)
+
+        newInput = ValidatorMultiplexer.Input(edit, validate, showError, mustBeValid, errorButton)
+
         self.inputs.append(newInput)
         edit.textChanged.connect(self.run)
 
-    def run(self, silenceEmptyWarnings=False):
-        # Run validator on inputs
-        success = True
-        errors: list[str] = []
-        for input in self.inputs:
-            if not input.edit.isEnabled():  # Skip disabled inputs
-                newError = ""
-            else:
-                inputText = input.edit.text()
-                newError = input.validate(inputText)
-                if newError:
-                    success &= not input.mustBeValid
-                    if silenceEmptyWarnings and not inputText:
-                        # Hide "cannot be empty" message, but do disable gated widgets if this input is required
-                        newError = ""
-            errors.append(newError)
+        self.toolTipDelay.timeout.connect(lambda: self.showToolTip(newInput, False))
+        errorButton.triggered[bool].connect(lambda _: self.showToolTip(newInput, True))  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
 
-        # Enable/disable gated widgets
+    def run(self, silenceEmptyWarnings=False):
+        self.toolTipDelay.stop()
+        QToolTip.hideText()
+
+        # Run validators on each input
+        success = True
+        for input in self.inputs:
+            if not input.widget.isEnabled():  # Skip disabled inputs
+                input.error = ""
+                continue
+            inputText = input.widget.text()
+            input.error = input.validate(inputText)
+            if input.error:
+                success &= not input.mustBeValid
+                if silenceEmptyWarnings and not inputText:
+                    # Hide "cannot be empty" message, but do disable gated widgets if this input is required
+                    input.error = ""
+
+            input.errorButton.setToolTip(input.error)
+            input.errorButton.setVisible(input.showError and bool(input.error))
+
+            # Schedule tooltip only if failed input has focus
+            if input.error and input.showError and input.widget.hasFocus():
+                self.toolTipDelay.start()
+
+        # Enable/disable gated widgets depending on validation success
         for w in self.gatedWidgets:
             w.setEnabled(success)
 
-        # Disable error tooltip on success
-        if success:
-            with suppress(BaseException):
-                self.timer.timeout.disconnect()
-            self.timer.stop()
-            QToolTip.hideText()
+    def showToolTip(self, input: ValidatorMultiplexer.Input, atMousePosition=True):
+        self.toolTipDelay.stop()  # Prevent delayed warning from appearing after clicking errorButton
 
-        # Set validation feedback
-        for input, err in zip(self.inputs, errors):
-            if not input.showWarning:
-                continue
+        if not input.error:
+            return
 
-            if err:
-                if not input.inEditIcon:
-                    input.inEditIcon = input.edit.addAction(stockIcon("achtung"), QLineEdit.ActionPosition.TrailingPosition)
-                    input.inEditIcon.triggered[bool].connect(  # [bool]: for PySide <6.7.0 (PYSIDE-2524)
-                        lambda _: QToolTip.showText(QCursor.pos(), input.inEditIcon.toolTip(), input.edit))
+        if atMousePosition:
+            pos = QCursor.pos()
+        else:
+            pos = QPoint(0, input.widget.height() // 2)
+            pos = input.widget.mapToGlobal(pos)
 
-                input.inEditIcon.setToolTip(err)
-
-                if input.edit.hasFocus():
-                    with suppress(BaseException):
-                        self.timer.timeout.disconnect()
-                    self.timer.stop()
-                    self.timer.timeout.connect(lambda edit=input.edit, text=err: _showValidationToolTip(edit, text))
-                    self.timer.start()
-
-            elif not err and input.inEditIcon:
-                input.edit.removeAction(input.inEditIcon)
-                input.inEditIcon.deleteLater()
-                input.inEditIcon = None
+        # Don't pass a parent widget to QToolTip.showText otherwise tooltip vanishes too quickly
+        QToolTip.showText(pos, input.error)
