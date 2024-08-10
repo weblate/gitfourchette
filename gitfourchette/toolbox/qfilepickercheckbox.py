@@ -77,6 +77,9 @@ class QFilePickerCheckBox(QWidget):
     def setPath(self, path: str):
         self.cachedPath = path
         self.warningButton.setToolTip(self.validatePath(path))
+
+        with QSignalBlocker(self.checkBox):
+            self.checkBox.setChecked(bool(path))
         self.updateControls()
 
     def onRejectFileDialog(self):

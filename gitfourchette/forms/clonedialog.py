@@ -40,7 +40,6 @@ class CloneDialog(QDialog):
         if not initialUrl:
             initialUrl = guessRemoteUrlFromText(QApplication.clipboard().text())
 
-        self.remoteLink = None
         self.taskRunner = RepoTaskRunner(self)
 
         self.ui = Ui_CloneDialog()

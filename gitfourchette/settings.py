@@ -27,13 +27,6 @@ Enable expensive assertions and debugging features.
 Can be forced with command-line switch "--debug".
 """
 
-SYNC_TASKS = False
-"""
-Force tasks to run synchronously on the UI thread.
-Useful for debugging.
-Can be forced with command-line switch "--no-threads".
-"""
-
 SHORT_DATE_PRESETS = {
     "ISO": "yyyy-MM-dd HH:mm",
     "Universal 1": "dd MMM yyyy HH:mm",

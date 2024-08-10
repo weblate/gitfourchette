@@ -89,17 +89,17 @@ class GFApplication(QApplication):
         self.restyle.connect(self.onRestyle)
 
         from gitfourchette.globalshortcuts import GlobalShortcuts
-        from gitfourchette.tasks import TaskBook, TaskInvoker
+        from gitfourchette.tasks import TaskBook, TaskInvoker, RepoTaskRunner
         from gitfourchette import settings
 
         # Set up global flags from command line
         if parser.isSet("debug"):
             settings.DEVDEBUG = True
         if parser.isSet("no-threads"):
-            settings.SYNC_TASKS = True
+            RepoTaskRunner.ForceSerial = True
         if parser.isSet("test-mode"):
             settings.TEST_MODE = True
-            settings.SYNC_TASKS = True
+            RepoTaskRunner.ForceSerial = True
             self.setApplicationName(APP_SYSTEM_NAME + "_TESTMODE")
 
         # Prepare session-wide temporary directory

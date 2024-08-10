@@ -526,6 +526,13 @@ class RepoTask(QObject):
 
 
 class RepoTaskRunner(QObject):
+    ForceSerial = False
+    """
+    Force tasks to run synchronously on the UI thread.
+    Useful for debugging.
+    Can be forced with command-line switch "--no-threads".
+    """
+
     postTask = Signal(RepoTask)
     progress = Signal(str, bool)
     repoGone = Signal()
@@ -555,10 +562,6 @@ class RepoTaskRunner(QObject):
         self._zombieTask = None
         self._currentTaskBenchmark = None
         self._criticalTaskQueue = []
-
-        from gitfourchette import settings
-        self.forceSerial = bool(settings.SYNC_TASKS)
-
         self._threadPool = QThreadPool(parent)
         self._threadPool.setMaxThreadCount(1)
 
@@ -692,7 +695,7 @@ class RepoTaskRunner(QObject):
                     # Re-enter when user is ready
                     result.ready.connect(lambda: self._iterateFlow(task, FlowControlToken()))
 
-                elif not self.forceSerial and control == FlowControlToken.Kind.ContinueOnWorkThread:
+                elif not RepoTaskRunner.ForceSerial and control == FlowControlToken.Kind.ContinueOnWorkThread:
                     busyMessage = self.tr("Busy: {0}...").format(task.name())
                     self.progress.emit(busyMessage, True)
 

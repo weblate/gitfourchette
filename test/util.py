@@ -228,6 +228,22 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
     assert False, F"did not find qdialog matching \"{pattern}\""
 
 
+def waitFor(callable, timeout=5000, interval=100):
+    interval = 100
+    timeout = 5000
+    assert timeout >= interval
+    for i in range(0, timeout, interval):
+        try:
+            return callable()
+        except AssertionError:
+            QTest.qWait(interval)
+    assert False, f"retry failed after {timeout} ms timeout"
+
+
+def waitForQDialog(parent: QWidget, pattern: str) -> QDialog:
+    return waitFor(lambda: findQDialog(parent, pattern))
+
+
 def findQMessageBox(parent: QWidget, textPattern: str) -> QMessageBox:
     for qmb in parent.findChildren(QMessageBox):
         qmb: QMessageBox

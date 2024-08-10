@@ -22,7 +22,7 @@ from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
 from gitfourchette.sidebar.sidebar import Sidebar
-from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge
+from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge, RepoTaskRunner
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -767,7 +767,7 @@ class RepoWidget(QStackedWidget):
             chain = []
             if settings.TEST_MODE:
                 chain.append("TEST_MODE")
-            if settings.SYNC_TASKS:
+            if RepoTaskRunner.ForceSerial:
                 chain.append("SYNC_TASKS")
             chain.append(f"PID {os.getpid()}")
             chain.append(QT_BINDING)

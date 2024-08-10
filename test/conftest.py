@@ -56,12 +56,12 @@ def tempDir() -> tempfile.TemporaryDirectory:
 
 @pytest.fixture
 def mainWindow(qtbot: QtBot) -> MainWindow:
-    from gitfourchette import settings, qt, trash, porcelain
+    from gitfourchette import settings, qt, trash, porcelain, tasks
     from .util import TEST_SIGNATURE
 
     # Turn on test mode: Prevent loading/saving prefs; disable multithreaded work queue
     assert settings.TEST_MODE
-    assert settings.SYNC_TASKS
+    assert tasks.RepoTaskRunner.ForceSerial
 
     # Prevent unit tests from reading actual user settings.
     # (The prefs and the trash should use a temp folder with TEST_MODE,
@@ -104,3 +104,13 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     # Clean up the app without destroying it completely.
     # This will reset the temp settings folder.
     app.endSession()
+
+
+@pytest.fixture
+def taskThread():
+    """ In this unit test, run RepoTasks in a separate thread """
+    from gitfourchette import tasks
+    assert tasks.RepoTaskRunner.ForceSerial
+    tasks.RepoTaskRunner.ForceSerial = False
+    yield
+    tasks.RepoTaskRunner.ForceSerial = True
