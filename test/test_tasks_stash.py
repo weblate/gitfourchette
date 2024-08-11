@@ -41,6 +41,7 @@ def testNewStash(tempDir, mainWindow, method):
         raise NotImplementedError("unknown method")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
+    assert not dlg.ui.indexAndWtWarning.isVisible()
     assert not dlg.ui.keepCheckBox.isChecked()
     dlg.ui.messageEdit.setText("helloworld")
     dlg.accept()
@@ -72,6 +73,7 @@ def testNewPartialStash(tempDir, mainWindow, method):
     with RepoContext(wd, write_index=True) as repo:
         repo.index.add("b/b1.txt")
         repo.index.add("b/b2.txt")
+        repo.index.add("both.txt")
     writeFile(F"{wd}/both.txt", "STAGED\nUNSTAGED\n")  # staged & unstaged change
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
@@ -102,11 +104,12 @@ def testNewPartialStash(tempDir, mainWindow, method):
         raise NotImplementedError(f"unknown method {method}")
 
     dlg: StashDialog = findQDialog(rw, "new stash")
+    assert dlg.ui.indexAndWtWarning.isVisible()
     assert not dlg.ui.keepCheckBox.isChecked()
     dlg.ui.messageEdit.setText("helloworld")
 
     fl = dlg.ui.fileList
-    assert set(qlvGetRowData(fl)) == dirtyFiles.union(stagedFiles)
+    assert set(qlvGetRowData(fl, Qt.ItemDataRole.UserRole)) == dirtyFiles.union(stagedFiles)
 
     # Uncheck some files to produce a partial stash
     if method == "stashcommand":
