@@ -5,6 +5,7 @@ Library of widgets and utilities that aren't specifically tied to GitFourchette'
 from .actiondef import ActionDef
 from .autohidemenubar import AutoHideMenuBar
 from .benchmark import Benchmark, benchmark
+from .calledfromqthread import calledFromQThread
 from .fittedtext import (
     fitText,
     drawFittedText,

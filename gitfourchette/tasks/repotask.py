@@ -758,6 +758,7 @@ class RepoTaskRunner(QObject):
         except BaseException as exception:
             return exception
 
+    @calledFromQThread  # enable code coverage in task threads
     def _emitNextToken(self, flow: RepoTask.FlowGeneratorType):
         nextToken = self._getNextToken(flow)
         self._continueFlow.emit(nextToken)
