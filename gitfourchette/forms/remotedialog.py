@@ -5,64 +5,78 @@ from gitfourchette.toolbox import *
 
 
 class RemoteDialog(QDialog):
-    def __init__(self, edit: bool, name: str, url: str, customKeyFile: str,
+    def __init__(self, editExistingRemote: bool, name: str, url: str, customKeyFile: str,
                  existingRemotes: list[str], parent: QWidget):
 
         super().__init__(parent)
 
         self.ui = Ui_RemoteDialog()
         self.ui.setupUi(self)
-
         okButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
 
         self.ui.urlEdit.setText(url)
         self.ui.nameEdit.setText(name)
         self.existingRemotes = existingRemotes
 
-        if not edit:
-            self.ui.urlEdit.textChanged.connect(self.autoFillName)
-            self.ui.nameEdit.textChanged.connect(self.onNameEdited)
-            self.allowAutoFillName = True
-        else:
-            self.allowAutoFillName = False
+        # Detect protocol when URL changes
+        self.ui.urlEdit.textChanged.connect(self.onUrlChangedDetectProtocol)
 
+        # Set up key file picker
         self.ui.keyFilePicker.makeFixedHeight()
         self.ui.keyFilePicker.setPath(customKeyFile)
         self.ui.keyFilePicker.checkBox.setChecked(bool(customKeyFile))
 
+        # Set up input validator
         nameTaken = translate("NameValidationError", "This name is already taken by another remote.")
         cannotBeEmpty = translate("NameValidationError", "Cannot be empty.")
-
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(okButton)
         validator.connectInput(self.ui.nameEdit, lambda s: nameValidationMessage(s, existingRemotes, nameTaken))
         validator.connectInput(self.ui.urlEdit, lambda s: cannotBeEmpty if not s.strip() else "")
 
-        if edit:
+        # Different behavior if editing existing remote or creating a new one
+        if editExistingRemote:
+            # Edit existing remote
             title = self.tr("Edit remote {0}").format(hquoe(name))
             self.setWindowTitle(self.tr("Edit remote"))
             okButton.setText(self.tr("Save"))
             self.ui.fetchAfterAddCheckBox.setVisible(False)
+            # Don't touch name automatically on existing remotes
+            self.allowAutoFillName = False
         else:
+            # Create new remote
             title = self.tr("Add remote")
             self.setWindowTitle(self.tr("Add remote"))
             okButton.setText(self.tr("Add"))
             self.ui.fetchAfterAddCheckBox.setVisible(True)
+            # Autofill name on new remotes
+            self.allowAutoFillName = True
+            self.ui.urlEdit.textChanged.connect(self.onUrlChangedAutoFillName)
+            self.ui.nameEdit.textChanged.connect(self.onNameChanged)
+            # Automatically paste URL in clipboard
+            if not url:
+                url = guessRemoteUrlFromText(QApplication.clipboard().text())
+                self.ui.urlEdit.setText(url)
+                self.ui.urlEdit.setFocus()
+
+        self.ui.protocolButton.setFixedWidth(self.ui.protocolButton.fontMetrics().horizontalAdvance("----https----"))
 
         convertToBrandedDialog(self, title)
+        self.resize(max(self.width(), 600), self.height())
 
-        if not url and not edit:
-            url = guessRemoteUrlFromText(QApplication.clipboard().text())
-            self.ui.urlEdit.setText(url)
-            self.ui.urlEdit.setFocus()
-
+        # Run input callbacks
+        self.onUrlChangedDetectProtocol(self.ui.urlEdit.text())
         validator.run(silenceEmptyWarnings=True)
 
     @property
     def privateKeyFilePath(self):
         return self.ui.keyFilePicker.privateKeyPath()
 
-    def autoFillName(self, url: str):
+    def onNameChanged(self, name: str):
+        # Allow autofilling name again if user has erased it
+        self.allowAutoFillName = name == ""
+
+    def onUrlChangedAutoFillName(self, url: str):
         if not self.allowAutoFillName:
             return
 
@@ -84,5 +98,26 @@ class RemoteDialog(QDialog):
         self.ui.nameEdit.setText(host)
         self.allowAutoFillName = True  # re-enable this since we got this far
 
-    def onNameEdited(self, name: str):
-        self.allowAutoFillName = name == ""
+    def onUrlChangedDetectProtocol(self, url: str):
+        protocolButton = self.ui.protocolButton
+        protocol = remoteUrlProtocol(url)
+
+        if not protocol:  # unknown protocol, hide protocol button
+            protocolButton.hide()
+            return
+
+        # Build alternative URL
+        host, path = splitRemoteUrl(url)
+        if protocol == "ssh":
+            newUrl = f"https://{host}/{path}"
+            newUrl = newUrl.removesuffix(".git")
+        else:
+            host = host.split(":", 1)[0]  # remove port, if any
+            newUrl = f"git@{host}:{path}"
+
+        protocolButton.show()
+        # protocolButton.setFixedHeight(self.ui.urlEdit.height())
+        protocolButton.setText(protocol)
+
+        menu = ActionDef.makeQMenu(protocolButton, [ActionDef(newUrl, lambda: self.ui.urlEdit.setText(newUrl))])
+        protocolButton.setMenu(menu)

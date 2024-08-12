@@ -173,3 +173,40 @@ def testRemoteCustomKeyUI(tempDir, mainWindow):
     picker.checkBox.setChecked(False)
     dialog.accept()
     assert keyfileConfigKey not in rw.repo.config
+
+
+def testRemoteUrlProtocolSwap(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "edit remote")
+    dialog: RemoteDialog = findQDialog(rw, "edit remote")
+
+    for url, protocol, alternative in [
+        ("file:///home/toto/bugdom", "", ""),
+        ("https://github.com/jorio/bugdom", "https", "git@github.com:jorio/bugdom"),
+        ("https://github.com:80/jorio/bugdom", "https", "git@github.com:jorio/bugdom"),
+        ("git@github.com:jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
+        ("git@github.com:jorio/bugdom.git", "ssh", "https://github.com/jorio/bugdom"),
+        ("github.com:jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
+        ("ssh://github.com:21/jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
+        ("ssh://git@github.com/jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
+        ("git://github.com/jorio/bugdom", "git", "git@github.com:jorio/bugdom"),
+        ("whatever", "", ""),
+    ]:
+        print("testing", url, protocol, alternative)
+        dialog.ui.urlEdit.setText(url)
+        if not protocol:
+            assert dialog.ui.protocolButton.isHidden()
+            continue
+        assert dialog.ui.protocolButton.isVisible()
+        protocolMenu = dialog.ui.protocolButton.menu()
+        assert len(protocolMenu.actions()) == 1
+        action = protocolMenu.actions()[0]
+        assert action.text() == alternative
+        action.trigger()
+        assert dialog.ui.urlEdit.text() == alternative
+
+    dialog.reject()

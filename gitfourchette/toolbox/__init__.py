@@ -16,6 +16,7 @@ from .gitutils import (
     AuthorDisplayStyle, abbreviatePerson,
     PatchPurpose,
     simplifyOctalFileMode,
+    remoteUrlProtocol,
     splitRemoteUrl,
     stripRemoteUrlPath,
     guessRemoteUrlFromText,

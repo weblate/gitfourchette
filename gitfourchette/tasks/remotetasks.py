@@ -13,7 +13,7 @@ class NewRemote(RepoTask):
         existingRemotes = [r.name for r in self.repo.remotes]
 
         dlg = RemoteDialog(
-            edit=False,
+            editExistingRemote=False,
             name="",
             url="",
             customKeyFile="",
@@ -49,7 +49,7 @@ class EditRemote(RepoTask):
         existingRemotes.remove(oldRemoteName)
 
         dlg = RemoteDialog(
-            edit=True,
+            editExistingRemote=True,
             name=oldRemoteName,
             url=oldRemoteUrl,
             customKeyFile=self.repoModel.prefs.getRemoteKeyFile(oldRemoteName),

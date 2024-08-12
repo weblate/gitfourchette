@@ -34,12 +34,29 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QLineEdit" name="urlEdit"/>
+    <layout class="QHBoxLayout" name="urlLayout">
+     <item>
+      <widget class="QLineEdit" name="urlEdit"/>
+     </item>
+     <item>
+      <widget class="QToolButton" name="protocolButton">
+       <property name="toolTip">
+        <string>Change URL protocol</string>
+       </property>
+       <property name="text">
+        <string notr="true">https</string>
+       </property>
+       <property name="popupMode">
+        <enum>QToolButton::ToolButtonPopupMode::InstantPopup</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="nameLabel">
      <property name="text">
-      <string>Na&amp;me:</string>
+      <string>&amp;Name:</string>
      </property>
      <property name="buddy">
       <cstring>nameEdit</cstring>
@@ -91,7 +108,7 @@
    <item row="5" column="0" colspan="2">
     <widget class="QCheckBox" name="fetchAfterAddCheckBox">
      <property name="text">
-      <string>Fetch remote branches after adding</string>
+      <string>&amp;Fetch remote branches after adding</string>
      </property>
      <property name="checked">
       <bool>true</bool>
@@ -122,6 +139,7 @@
  </customwidgets>
  <tabstops>
   <tabstop>urlEdit</tabstop>
+  <tabstop>protocolButton</tabstop>
   <tabstop>nameEdit</tabstop>
   <tabstop>keyFilePicker</tabstop>
   <tabstop>fetchAfterAddCheckBox</tabstop>
