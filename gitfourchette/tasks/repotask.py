@@ -340,15 +340,24 @@ class RepoTask(QObject):
         if not self._isRunningOnAppThread():
             yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
+        # Pop subtask off stack
+        rc = self._popSubtask()
+        assert rc is subtask
+
+        return subtask
+
+    def _popSubtask(self) -> RepoTask:
+        assert self._taskStack, "task stack is already empty!"
+        assert onAppThread()
+
+        # Pop last subtask off stack
+        subtask = self._taskStack.pop()
+
         # Percolate effect bits to caller task
         self.effects |= subtask.effects
 
         # Clean up subtask (on UI thread)
         subtask.cleanup()
-
-        # Pop subtask off stack
-        assert self._taskStack[-1] is subtask
-        self._taskStack.pop()
 
         return subtask
 
@@ -776,8 +785,7 @@ class RepoTaskRunner(QObject):
         # Clean up all tasks in the stack (remember, we're the root stack)
         assert task in task._taskStack
         while task._taskStack:
-            subtask = task._taskStack.pop()
-            subtask.cleanup()
+            task._popSubtask()
 
         self._continueFlow.disconnect()
 

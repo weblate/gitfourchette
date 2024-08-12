@@ -155,8 +155,7 @@ def testRenameRemoteBranch(tempDir, mainWindow):
     triggerMenuAction(menu, "rename")
 
     dlg = findQDialog(rw, "rename")
-    qle = dlg.findChild(QLineEdit)
-    qle.setText("new-name")
+    dlg.findChild(QLineEdit).setText("new-name")
     dlg.accept()
 
     assert "localfs/no-parent" not in rw.repo.branches.remote
@@ -166,7 +165,8 @@ def testRenameRemoteBranch(tempDir, mainWindow):
     rw.sidebar.findNodeByRef("refs/remotes/localfs/new-name")
 
 
-def testFetchRemote(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["sidebar", "toolbar"])
+def testFetchRemote(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
 
     barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
@@ -185,9 +185,14 @@ def testFetchRemote(tempDir, mainWindow):
     assert {"localfs/master", "localfs/no-parent"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
 
     # Fetch the remote
-    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "localfs")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "fetch")
+    if method == "sidebar":
+        node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "localfs")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "fetch")
+    elif method == "toolbar":
+        findQToolButton(mainWindow.mainToolBar, "fetch").click()
+    else:
+        raise NotImplementedError(f"Unsupported method {method}")
 
     # We must see that no-parent is gone and that new-remote-branch appeared
     assert {"localfs/master", "localfs/new-remote-branch"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
@@ -224,7 +229,8 @@ def testFetchRemoteBranch(tempDir, mainWindow):
     assert rw.repo.branches.remote["localfs/master"].target == newHead
 
 
-def testFetchRemoteBranchVanishes(tempDir, mainWindow):
+@pytest.mark.parametrize("pull", [False, True])
+def testFetchRemoteBranchVanishes(tempDir, mainWindow, pull):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     wd = unpackRepo(tempDir)
 
@@ -235,28 +241,32 @@ def testFetchRemoteBranchVanishes(tempDir, mainWindow):
         assert bareRepo.is_bare
         bareRepo.branches.local['master'].rename('switcheroo')
 
-    with RepoContext(wd) as repo:
-        repo.edit_upstream_branch('master', 'localfs/master')
-
     rw = mainWindow.openRepo(wd)
 
     # We still think the remote's master branch is on the old head for now
     assert rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
     assert rw.repo.branches.remote["localfs/master"].target == oldHead
 
-    # Fetch the remote branch
-    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "fetch")
+    if not pull:
+        # Fetch the remote branch
+        node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "fetch")
+    else:
+        # Pull the remote branch
+        node = rw.sidebar.findNodeByRef("refs/heads/master")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "pull")
     acceptQMessageBox(rw, fr"localfs/master.+disappeared")
 
     # It's gone
+    assert "localfs/master" not in rw.repo.branches.remote
     with pytest.raises(KeyError):
         rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
-    assert "localfs/master" not in rw.repo.branches.remote
 
 
-def testFetchRemoteBranchNoChange(tempDir, mainWindow):
+@pytest.mark.parametrize("pull", [False, True])
+def testFetchRemoteBranchNoChange(tempDir, mainWindow, pull):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     wd = unpackRepo(tempDir)
@@ -265,10 +275,16 @@ def testFetchRemoteBranchNoChange(tempDir, mainWindow):
 
     assert rw.repo.branches.remote["localfs/master"].target == oldHead
 
-    node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "fetch")
-    acceptQMessageBox(rw, "no new commits")
+    if not pull:
+        node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "fetch")
+        acceptQMessageBox(rw, "no new commits")
+    else:
+        node = rw.sidebar.findNodeByRef("refs/heads/master")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "pull")
+        # No message box on pull
 
     assert rw.repo.branches.remote["localfs/master"].target == oldHead
 
@@ -308,7 +324,7 @@ def testPush(tempDir, mainWindow, asNewBranch):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     wd = unpackRepo(tempDir)
-    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True)
+    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
 
     # Make some update in our repo
     with RepoContext(wd) as repo:

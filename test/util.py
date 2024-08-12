@@ -68,7 +68,7 @@ def unpackRepo(
     return path
 
 
-def makeBareCopy(path: str, addAsRemote: str, preFetch: bool, barePath=""):
+def makeBareCopy(path: str, addAsRemote: str, preFetch: bool, barePath="", keepOldUpstream=False):
     if not barePath:
         basename = os.path.basename(os.path.normpath(path))  # normpath first, because basename may return an empty string if path ends with a slash
         barePath = f"{path}/../{basename}-bare.git"  # create bare repo besides real repo in temporary directory
@@ -82,9 +82,12 @@ def makeBareCopy(path: str, addAsRemote: str, preFetch: bool, barePath=""):
 
     if addAsRemote:
         with RepoContext(path) as repo:
-            remote = repo.remotes.create(addAsRemote, barePath)  # TODO: Should we add file:// ?
+            remote = repo.remotes.create(addAsRemote, barePath)
             if preFetch:
                 remote.fetch()
+                if not keepOldUpstream:
+                    for localBranch in repo.branches.local:
+                        repo.edit_upstream_branch(localBranch, f"{addAsRemote}/{localBranch}")
 
     return barePath
 
@@ -258,6 +261,7 @@ def findQMessageBox(parent: QWidget, textPattern: str) -> QMessageBox:
 
 def acceptQMessageBox(parent: QWidget, textPattern: str):
     findQMessageBox(parent, textPattern).accept()
+    parent.activateWindow()  # in offscreen tests, accepting the QMB doesn't restore an active window, for some reason (as of Qt 6.7.1)
 
 
 def rejectQMessageBox(parent: QWidget, textPattern: str):
@@ -277,3 +281,13 @@ def acceptQFileDialog(parent: QWidget, textPattern: str, path: str, useSuggested
     qfd.show()
     qfd.accept()
     return path
+
+
+def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
+    for button in parent.findChildren(QToolButton):
+        button: QToolButton
+        if re.search(textPattern, button.text(), re.IGNORECASE | re.DOTALL):
+            return button
+
+    assert False, F"did not find QToolButton \"{textPattern}\""
+
