@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 import logging
+import warnings
 from typing import Any, Generator, Type, TYPE_CHECKING
 
 from gitfourchette.nav import NavLocator
@@ -355,6 +356,11 @@ class RepoTask(QObject):
 
         # Percolate effect bits to caller task
         self.effects |= subtask.effects
+
+        if not self.jumpTo:
+            self.jumpTo = subtask.jumpTo
+        elif subtask.jumpTo and subtask.jumpTo != self.jumpTo:
+            warnings.warn(f"Subtask {subtask}: Ignoring subtask jumpTo")
 
         # Clean up subtask (on UI thread)
         subtask.cleanup()

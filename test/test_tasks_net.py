@@ -317,6 +317,20 @@ def testFetchRemoteHistoryWithUnbornHead(tempDir, mainWindow):
         rw.sidebar.findNode(lambda n: n.kind == EItem.LocalBranch)
 
 
+def testPullRemoteBranchCausesConflict(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, testRepoName="testrepoformerging")
+    makeBareCopy(wd, "localfs", True)
+    with RepoContext(wd) as repo:
+        repo.edit_upstream_branch("master", "localfs/branch-conflicts")
+
+    rw = mainWindow.openRepo(wd)
+    masterNode = rw.sidebar.findNodeByRef("refs/heads/master")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(masterNode), "pull")
+    acceptQMessageBox(rw, "fix the conflicts")
+
+    assert rw.navLocator.context.isWorkdir()
+
+
 @pytest.mark.skipif((PYQT5 or PYQT6) and os.environ.get("COV_CORE_SOURCE", None) is not None,
                     reason="QMetaObject.connectSlotsByName somehow hangs under coverage with PyQt6")
 @pytest.mark.parametrize("asNewBranch", [False, True])

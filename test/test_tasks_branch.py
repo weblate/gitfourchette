@@ -789,6 +789,10 @@ def testMergeCausesConflicts(tempDir, mainWindow):
     rw.diffArea.commitButton.click()
     acceptQMessageBox(rw, "fix.+conflicts before")
 
+    # Shouldn't be able to merge again
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
+    acceptQMessageBox(rw, "merging is not possible.+fix the conflicts")
+
     rw.jump(NavLocator.inUnstaged(".gitignore"))
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged(".gitignore"))
     assert rw.conflictView.isVisible()
