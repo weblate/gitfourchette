@@ -365,7 +365,9 @@ class NewBranchFromRef(_NewBranchBaseTask):
 class EditUpstreamBranch(RepoTask):
     def flow(self, localBranchName: str, remoteBranchName: str):
         # Bail if no-op
-        if remoteBranchName == self.repo.branches.local[localBranchName].upstream:
+        currentUpstream = self.repo.branches.local[localBranchName].upstream
+        currentUpstreamName = "" if not currentUpstream else currentUpstream.branch_name
+        if remoteBranchName == currentUpstreamName:
             raise AbortTask()
 
         yield from self.flowEnterWorkerThread()

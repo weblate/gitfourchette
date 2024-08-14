@@ -76,6 +76,13 @@ def testSetUpstreamBranch(tempDir, mainWindow, branchSettings: tuple[str, str]):
     originMasterAction.trigger()
     assert repo.branches.local[branchName].upstream == repo.branches.remote[upstreamName]
 
+    # Do that again to cover no-op case
+    menu = rw.sidebar.makeNodeMenu(node)
+    originMasterAction = findMenuAction(menu, rf"upstream branch/{upstreamMenuRegex}")
+    assert originMasterAction.isChecked()
+    originMasterAction.trigger()
+    assert repo.branches.local[branchName].upstream == repo.branches.remote[upstreamName]
+
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
 def testRenameBranch(tempDir, mainWindow, method):
