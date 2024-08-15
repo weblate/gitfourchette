@@ -465,7 +465,7 @@ class Sidebar(QTreeView):
     def restoreSelectionBackup(self):
         if self.selectionBackup is None:
             return
-        with suppress(StopIteration), QSignalBlockerContext(self, skipAlreadyBlocked=True):
+        with suppress(StopIteration), QSignalBlockerContext(self):
             newNode = self.findNode(self.selectionBackup.isSimilarEnoughTo)
             restoreIndex = newNode.createIndex(self.sidebarModel)
             self.setCurrentIndex(restoreIndex)
