@@ -425,7 +425,7 @@ def testPushTagOnCreate(tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
 
-    node = next(rw.sidebar.findNodesByKind(EItem.TagsHeader))
+    node = rw.sidebar.findNodeByKind(EItem.TagsHeader)
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), "new tag.+HEAD")
 
     dlg: NewTagDialog = findQDialog(rw, "new tag")
@@ -443,18 +443,38 @@ def testPushExistingTag(tempDir, mainWindow):
     barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
 
     with RepoContext(wd) as repo:
-        # Remove origin so that we don't attempt to push to the network
-        repo.remotes.delete("origin")
-        # Create the tag locally
         repo.create_reference("refs/tags/etiquette", repo.head_commit_id)
 
     with RepoContext(barePath) as bareRepo:
         assert "etiquette" not in bareRepo.listall_tags()
 
     rw = mainWindow.openRepo(wd)
-
     node = rw.sidebar.findNode(lambda n: n.kind == EItem.Tag and n.data == "refs/tags/etiquette")
-    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "push to/all remotes")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "push to/localfs")
 
     with RepoContext(barePath) as bareRepo:
         assert "etiquette" in bareRepo.listall_tags()
+
+
+def testPushAllTags(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
+
+    with RepoContext(wd) as repo, RepoContext(barePath) as bareRepo:
+        repo.create_reference("refs/tags/etiquette1", repo.head_commit_id)
+        repo.create_reference("refs/tags/etiquette2", repo.head_commit_id)
+        repo.create_reference("refs/tags/etiquette3", repo.head_commit_id)
+
+    with RepoContext(barePath) as bareRepo:
+        assert "etiquette1" not in bareRepo.listall_tags()
+        assert "etiquette2" not in bareRepo.listall_tags()
+        assert "etiquette3" not in bareRepo.listall_tags()
+
+    rw = mainWindow.openRepo(wd)
+    node = rw.sidebar.findNodeByKind(EItem.TagsHeader)
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "push all tags to/localfs")
+
+    with RepoContext(barePath) as bareRepo:
+        assert "etiquette1" in bareRepo.listall_tags()
+        assert "etiquette2" in bareRepo.listall_tags()
+        assert "etiquette3" in bareRepo.listall_tags()

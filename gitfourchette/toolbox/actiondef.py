@@ -95,6 +95,7 @@ class ActionDef:
 
         submenu = ActionDef.makeQMenu(parent=parent, actionDefs=self.submenu)
         submenu.setTitle(self.caption)
+        submenu.setEnabled(self.enabled)
         if self.icon:
             submenu.setIcon(stockIcon(self.icon))
         if self.objectName:

@@ -395,8 +395,12 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.TagsHeader:
+            refspecs = [ref for ref in self.sidebarModel.repoModel.refs.keys()
+                        if ref.startswith(RefPrefix.TAGS)]
+
             actions += [
                 TaskBook.action(self, NewTag, self.tr("&New Tag on HEAD Commit...")),
+                ActionDef(self.tr("&Push All Tags To"), submenu=self.pushRefspecMenu(refspecs), enabled=bool(refspecs)),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortTags")),
             ]
@@ -404,22 +408,12 @@ class Sidebar(QTreeView):
         elif item == EItem.Tag:
             prefix, shorthand = RefPrefix.split(data)
             assert prefix == RefPrefix.TAGS
-
-            remotes = self.sidebarModel.repoModel.remotes
-            remotesSubmenu = []
-            if remotes:
-                refspecs = [data]
-                remotesSubmenu.append(TaskBook.action(self, PushRefspecs, self.tr("&All Remotes"), taskArgs=("*", refspecs)))
-                remotesSubmenu.append(ActionDef.SEPARATOR)
-                for remote in remotes:
-                    remotesSubmenu.append(TaskBook.action(self, PushRefspecs, escamp(remote), taskArgs=(remote, refspecs)))
-            else:
-                remotesSubmenu.append(ActionDef(self.tr("No Remotes"), enabled=False))
+            refspecs = [data]
 
             actions += [
                 TaskBook.action(self, DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
                 ActionDef.SEPARATOR,
-                ActionDef(self.tr("Push To"), submenu=remotesSubmenu),
+                ActionDef(self.tr("Push To"), submenu=self.pushRefspecMenu(refspecs)),
             ]
 
         elif item == EItem.Submodule:
@@ -788,6 +782,11 @@ class Sidebar(QTreeView):
     def findNodesByKind(self, kind: EItem) -> Iterable[SidebarNode]:
         return (node for node in self.walk() if node.kind == kind)
 
+    def findNodeByKind(self, kind: EItem) -> SidebarNode:
+        nodes = [node for node in self.walk() if node.kind == kind]
+        assert len(nodes) == 1
+        return nodes[0]
+
     def findNodeByRef(self, ref: str) -> SidebarNode:
         return self.sidebarModel.nodesByRef[ref]
 
@@ -906,5 +905,19 @@ class Sidebar(QTreeView):
                 explainer = self.tr("No remote branches found. Try fetching the remotes.")
             menu.append(ActionDef.SEPARATOR)
             menu.append(ActionDef(explainer, enabled=False))
+
+        return menu
+
+    def pushRefspecMenu(self, refspecs):
+        remotes = self.sidebarModel.repoModel.remotes
+        menu = []
+
+        if remotes:
+            menu.append(TaskBook.action(self, PushRefspecs, self.tr("&All Remotes"), taskArgs=("*", refspecs)))
+            menu.append(ActionDef.SEPARATOR)
+            for remote in remotes:
+                menu.append(TaskBook.action(self, PushRefspecs, escamp(remote), taskArgs=(remote, refspecs)))
+        else:
+            menu.append(ActionDef(self.tr("No Remotes"), enabled=False))
 
         return menu
