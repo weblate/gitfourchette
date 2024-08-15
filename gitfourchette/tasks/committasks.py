@@ -4,6 +4,7 @@ from contextlib import suppress
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.identitydialog import IdentityDialog
+from gitfourchette.forms.newtagdialog import NewTagDialog
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 from gitfourchette.nav import NavLocator
@@ -281,31 +282,41 @@ class NewTag(RepoTask):
         if signIt:
             yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to New Tag"))
 
+        repo = self.repo
         if not oid:
-            oid = self.repo.head_commit_id
+            oid = repo.head_commit_id
 
-        reservedNames = self.repo.listall_tags()
-        nameTaken = self.tr("This name is already taken by another tag.")
+        reservedNames = repo.listall_tags()
+        commitMessage = repo.get_commit_message(oid)
+        commitMessage, _ = messageSummary(commitMessage)
 
-        dlg = showTextInputDialog(
-            self.parentWidget(),
-            self.tr("New tag on commit {0}").format(tquo(shortHash(oid))),
-            self.tr("Enter tag name:"),
-            okButtonText=self.tr("Create Tag"),
-            deleteOnClose=False,
-            validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken))
+        dlg = NewTagDialog(shortHash(oid), commitMessage, reservedNames,
+                           remotes=self.repoModel.remotes,
+                           parent=self.parentWidget())
+
+        dlg.setFixedHeight(dlg.sizeHint().height())
+        dlg.show()
         yield from self.flowDialog(dlg)
 
+        tagName = dlg.ui.nameEdit.text()
+        pushIt = dlg.ui.pushCheckBox.isChecked()
+        pushTo = dlg.ui.remotesComboBox.currentData()
         dlg.deleteLater()
-        tagName = dlg.lineEdit.text()
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs
 
+        refName = RefPrefix.TAGS + tagName
+
         if signIt:
-            self.repo.create_tag(tagName, oid, ObjectType.COMMIT, self.repo.default_signature, "")
+            repo.create_tag(tagName, oid, ObjectType.COMMIT, self.repo.default_signature, "")
         else:
-            self.repo.create_reference(RefPrefix.TAGS + tagName, oid)
+            repo.create_reference(refName, oid)
+
+        if pushIt:
+            from gitfourchette.tasks import PushRefspecs
+            yield from self.flowEnterUiThread()
+            yield from self.flowSubtask(PushRefspecs, pushTo, [refName])
 
 
 class DeleteTag(RepoTask):

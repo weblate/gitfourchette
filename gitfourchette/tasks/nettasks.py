@@ -213,3 +213,23 @@ class UpdateSubmodulesRecursive(_BaseNetTask):
     def flow(self):
         for submodule in self.repo.recurse_submodules():
             yield from self.flowSubtask(UpdateSubmodule, submodule.name)
+
+
+class PushRefspecs(_BaseNetTask):
+    def flow(self, remoteName: str, refspecs: list[str]):
+        assert type(remoteName) is str
+        assert type(refspecs) is list
+        if remoteName == "*":
+            remotes = list(self.repo.remotes)
+        else:
+            remotes = [self.repo.remotes[remoteName]]
+
+        self._showRemoteLinkDialog()
+
+        yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
+
+        for remote in remotes:
+            self.remoteLink.resetLoginState()
+            with self.remoteLink.remoteKeyFileContext(remote):
+                remote.push(refspecs, callbacks=self.remoteLink)

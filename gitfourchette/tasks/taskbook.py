@@ -70,6 +70,7 @@ class TaskBook:
             tasks.NewTag: translate("task", "New tag"),
             tasks.PrimeRepo: translate("task", "Open repo"),
             tasks.PullBranch: translate("task", "Pull remote branch"),
+            tasks.PushRefspecs: translate("task", "Push refspecs"),
             tasks.RecallCommit: translate("task", "Recall lost commit"),
             tasks.RefreshRepo: translate("task", "Refresh repo"),
             tasks.RegisterSubmodule: translate("task", "Register submodule"),

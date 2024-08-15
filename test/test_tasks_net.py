@@ -10,6 +10,7 @@ import os.path
 import pytest
 
 from gitfourchette.forms.clonedialog import CloneDialog
+from gitfourchette.forms.newtagdialog import NewTagDialog
 from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.mainwindow import NoRepoWidgetError
@@ -409,3 +410,29 @@ def testPushNoRemotes(tempDir, mainWindow):
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "push")
     acceptQMessageBox(rw, "add a remote")
+
+
+def testPushTagOnCreate(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
+
+    with RepoContext(barePath) as bareRepo:
+        assert "etiquette" not in bareRepo.listall_tags()
+
+    # Remove origin so that we don't attempt to push to the network
+    with RepoContext(wd) as repo:
+        repo.remotes.delete("origin")
+
+    rw = mainWindow.openRepo(wd)
+
+    node = next(rw.sidebar.findNodesByKind(EItem.TagsHeader))
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "new tag.+HEAD")
+
+    dlg: NewTagDialog = findQDialog(rw, "new tag")
+    dlg.ui.nameEdit.setText("etiquette")
+    assert not dlg.ui.pushCheckBox.isChecked()
+    dlg.ui.pushCheckBox.setChecked(True)
+    dlg.accept()
+
+    with RepoContext(barePath) as bareRepo:
+        assert "etiquette" in bareRepo.listall_tags()
