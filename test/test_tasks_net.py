@@ -436,3 +436,25 @@ def testPushTagOnCreate(tempDir, mainWindow):
 
     with RepoContext(barePath) as bareRepo:
         assert "etiquette" in bareRepo.listall_tags()
+
+
+def testPushExistingTag(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
+
+    with RepoContext(wd) as repo:
+        # Remove origin so that we don't attempt to push to the network
+        repo.remotes.delete("origin")
+        # Create the tag locally
+        repo.create_reference("refs/tags/etiquette", repo.head_commit_id)
+
+    with RepoContext(barePath) as bareRepo:
+        assert "etiquette" not in bareRepo.listall_tags()
+
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Tag and n.data == "refs/tags/etiquette")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "push to/all remotes")
+
+    with RepoContext(barePath) as bareRepo:
+        assert "etiquette" in bareRepo.listall_tags()

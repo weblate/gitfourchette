@@ -405,8 +405,21 @@ class Sidebar(QTreeView):
             prefix, shorthand = RefPrefix.split(data)
             assert prefix == RefPrefix.TAGS
 
+            remotes = self.sidebarModel.repoModel.remotes
+            remotesSubmenu = []
+            if remotes:
+                refspecs = [data]
+                remotesSubmenu.append(TaskBook.action(self, PushRefspecs, self.tr("&All Remotes"), taskArgs=("*", refspecs)))
+                remotesSubmenu.append(ActionDef.SEPARATOR)
+                for remote in remotes:
+                    remotesSubmenu.append(TaskBook.action(self, PushRefspecs, escamp(remote), taskArgs=(remote, refspecs)))
+            else:
+                remotesSubmenu.append(ActionDef(self.tr("No Remotes"), enabled=False))
+
             actions += [
                 TaskBook.action(self, DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
+                ActionDef.SEPARATOR,
+                ActionDef(self.tr("Push To"), submenu=remotesSubmenu),
             ]
 
         elif item == EItem.Submodule:
