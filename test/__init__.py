@@ -3,6 +3,7 @@ import os
 
 # Verbose logging by default in unit tests
 logging.basicConfig(level=logging.DEBUG)
+logging.captureWarnings(True)
 
 # Keep QT_API env var (used by our qt.py module) in sync with Qt binding used by pytest-qt
 if os.environ.get("PYTEST_QT_API") and os.environ.get("QT_API"):

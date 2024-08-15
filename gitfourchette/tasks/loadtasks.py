@@ -234,7 +234,7 @@ class PrimeRepo(RepoTask):
 class LoadWorkdir(RepoTask):
     def canKill(self, task: RepoTask):
         if type(task) is LoadWorkdir:
-            logger.warning("LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
+            warnings.warn("LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
             return True
         return type(task) in [LoadCommit, LoadPatch]
 

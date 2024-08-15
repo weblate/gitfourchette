@@ -206,7 +206,8 @@ class SidebarModel(QAbstractItemModel):
 
         if settings.DEVDEBUG and QAbstractItemModelTester is not None:
             self.modelTester = QAbstractItemModelTester(self)
-            logger.warning("Sidebar model tester enabled. This will SIGNIFICANTLY slow down SidebarModel.rebuild!")
+            if not settings.TEST_MODE:
+                logger.warning("Sidebar model tester enabled. This will SIGNIFICANTLY slow down SidebarModel.rebuild!")
 
     def clear(self, emitSignals=True):
         # IMPORTANT: Do not clear collapseCache in this function!
@@ -370,7 +371,7 @@ class SidebarModel(QAbstractItemModel):
                 try:
                     remoteBranchesDict[remote].append(branchName)
                 except KeyError:
-                    logger.warning(f"Refresh cache: missing remote: {remote}")
+                    warnings.warn(f"SidebarModel: missing remote: {remote}")
 
             elif prefix == RefPrefix.TAGS:
                 tags.append(shorthand)
@@ -379,7 +380,7 @@ class SidebarModel(QAbstractItemModel):
                 pass  # handled separately
 
             else:
-                logger.warning(f"Refresh cache: unsupported ref prefix: {name}")
+                warnings.warn(f"SidebarModel: unsupported ref prefix: {name}")
 
         # Populate local branch tree
         self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS, repoModel.prefs.sortBranches)

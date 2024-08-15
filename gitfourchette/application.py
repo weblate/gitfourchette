@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Type
 
@@ -217,7 +218,7 @@ class GFApplication(QApplication):
         from gitfourchette.toolbox import showInformation
 
         if self.mainWindow is None:
-            logging.warning(f"Ignoring task request {taskType.__name__} because we don't have a window")
+            warnings.warn(f"Ignoring task request {taskType.__name__} because we don't have a window")
             return
 
         assert isinstance(invoker, QObject)

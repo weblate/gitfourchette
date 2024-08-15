@@ -1,5 +1,5 @@
+import warnings
 from contextlib import suppress
-import logging
 from typing import Iterable, Callable
 
 from gitfourchette import porcelain
@@ -15,8 +15,6 @@ from gitfourchette.sidebar.sidebardelegate import SidebarDelegate, SidebarClickZ
 from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
 from gitfourchette.toolbox import *
 from gitfourchette.webhost import WebHost
-
-logger = logging.getLogger(__name__)
 
 INVALID_MOUSEPRESS = (-1, SidebarClickZone.Invalid)
 
@@ -746,7 +744,7 @@ class Sidebar(QTreeView):
                     self.expand(index)
             event.accept()
         else:
-            logger.warning(f"Unknown click zone {zone}")
+            warnings.warn(f"Unknown click zone {zone}")
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         # NOT calling "super().mouseDoubleClickEvent(event)" on purpose.

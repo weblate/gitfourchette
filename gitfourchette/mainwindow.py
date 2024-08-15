@@ -980,7 +980,7 @@ class MainWindow(QMainWindow):
         elif action == "patch":
             tasks.ApplyPatchFile.invoke(self, False, data)
         else:
-            logger.warning(f"Unsupported drag-and-drop outcome {action}")
+            warnings.warn(f"Unsupported drag-and-drop outcome {action}")
 
     # -------------------------------------------------------------------------
     # Prefs

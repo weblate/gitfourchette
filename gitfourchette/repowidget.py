@@ -323,7 +323,7 @@ class RepoWidget(QStackedWidget):
 
     def primeRepo(self, path: str = "", force: bool = False, maxCommits: int = -1):
         if not force and self.isLoaded:
-            logger.warning(f"Repo already primed! {path}")
+            warnings.warn(f"Repo already primed! {path}")
             return None
 
         # Save prefs before force-reloading the repo.
@@ -428,13 +428,13 @@ class RepoWidget(QStackedWidget):
 
     def saveFilePositions(self):
         if self.navHistory.isWriteLocked():
-            logger.warning("Ignoring saveFilePositions because history is locked")
+            warnings.warn("Ignoring saveFilePositions because history is locked")
             return
 
         if self.diffView.isVisibleTo(self):
             newLocator = self.diffView.getPreciseLocator()
             if not newLocator.isSimilarEnoughTo(self.navLocator):
-                logger.warning(f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")
+                warnings.warn(f"RepoWidget/DiffView locator mismatch: {self.navLocator} vs. {newLocator}")
         else:
             newLocator = self.navLocator.coarse()
 
@@ -716,7 +716,7 @@ class RepoWidget(QStackedWidget):
             logger.debug(f"Stashing refresh bits {repr(effects)}")
             self.pendingEffects |= effects
             if jumpTo:
-                logger.warning(f"Ignoring post-refresh jump {jumpTo} because can't refresh yet")
+                warnings.warn(f"Ignoring post-refresh jump {jumpTo} because can't refresh yet")
             return
 
         # Consume pending effect bits, if any
@@ -730,7 +730,7 @@ class RepoWidget(QStackedWidget):
             if not jumpTo:
                 jumpTo = self.pendingLocator
             else:
-                logger.warning(f"Dropping pendingLocator {self.pendingLocator} - overridden by {jumpTo}")
+                warnings.warn(f"Ignoring pendingLocator {self.pendingLocator} - overridden by {jumpTo}")
             self.pendingLocator = NavLocator()  # Consume it
 
         # Invoke refresh task
@@ -936,7 +936,7 @@ class RepoWidget(QStackedWidget):
             return
 
         if url.scheme() != APP_URL_SCHEME:
-            logger.warning(f"Unsupported scheme in internal link: {url.toDisplayString()}")
+            warnings.warn(f"Unsupported scheme in internal link: {url.toDisplayString()}")
             return
 
         logger.info(f"Internal link: {url.toDisplayString()}")
@@ -968,7 +968,7 @@ class RepoWidget(QStackedWidget):
             taskClass = tasks.__dict__[cmdName]
             self.runTask(taskClass, **kwargs)
         else:
-            logger.warning(f"Unsupported authority in internal link: {url.toDisplayString()}")
+            warnings.warn(f"Unsupported authority in internal link: {url.toDisplayString()}")
 
     # -------------------------------------------------------------------------
 

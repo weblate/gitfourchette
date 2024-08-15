@@ -731,7 +731,7 @@ class RepoTaskRunner(QObject):
                 # Flush thread pool - Wait for task background thread to wrap up cleanly,
                 # otherwise we'll still appear to be busy for postTask callbacks.
                 if not self._threadPool.waitForDone():
-                    logger.warning("QThreadPool failed to flush")
+                    warnings.warn("QThreadPool failed to flush")
 
                 # Stop tracking this task
                 self._releaseTask(task)

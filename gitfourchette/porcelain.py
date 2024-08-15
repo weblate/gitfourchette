@@ -245,7 +245,7 @@ def _version_at_least(
     if raise_error:
         raise NotImplementedError(message)
     else:
-        _logger.warning(message)
+        warnings.warn(message)
         return False
 
 
@@ -549,7 +549,7 @@ class GitConfigHelper:
         try:
             lines.remove(f"[{section_key}]\n")
         except ValueError:
-            _logger.warning(f".git/config: Standalone section line not found: [{section_key}]")
+            warnings.warn(f".git/config: Standalone section line not found: [{section_key}]")
             return
 
         timestamp = datetime.datetime.now().timestamp()

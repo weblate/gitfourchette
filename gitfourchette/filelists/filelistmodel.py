@@ -179,13 +179,10 @@ class FileListModel(QAbstractListModel):
         try:
             patch: Patch = entry.diff[entry.patchNo]
             return patch
-        except GitError as e:
-            logger.warning(f"GitError when attempting to get patch: {type(e).__name__}", exc_info=True)
-            return None
-        except OSError as e:
-            # We might get here if the UI attempts to update itself while a long async
-            # operation is ongoing. (e.g. a file is being recreated)
-            logger.warning(f"UI attempting to update during async operation? {type(e).__name__}", exc_info=True)
+        except (GitError, OSError) as e:
+            # GitError may occur if patch data is outdated.
+            # OSError may rarely occur if the file happens to be recreated.
+            logger.warning(f"Failed to get patch: {type(e).__name__}", exc_info=True)
             return None
 
     def getDeltaAt(self, index: QModelIndex) -> DiffDelta:

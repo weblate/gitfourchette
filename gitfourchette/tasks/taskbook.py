@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import logging
+import warnings
 from typing import Any, Type, Union
 
 from gitfourchette import tasks
 from gitfourchette.qt import *
 from gitfourchette.tasks import RepoTask, TaskInvoker
 from gitfourchette.toolbox import MultiShortcut, makeMultiShortcut, ActionDef, englishTitleCase
-
-logger = logging.getLogger(__name__)
 
 
 class TaskBook:
@@ -194,7 +192,7 @@ class TaskBook:
         except KeyError:
             name = t.__name__
             cls.names[t] = name
-            logger.warning(f"Missing name for task '{name}'")
+            warnings.warn(f"Missing name for task '{name}'")
 
         name = englishTitleCase(name)
 

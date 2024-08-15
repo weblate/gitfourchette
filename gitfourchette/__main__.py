@@ -18,6 +18,7 @@ def main():
         level=logging.DEBUG,
         format='%(levelname).1s %(asctime)s %(filename)-16s | %(message)s',
         datefmt="%H:%M:%S")
+    logging.captureWarnings(True)
 
     # inject our own exception hook to show an error dialog in case of unhandled exceptions
     # (note that this may get overridden when running under a debugger)
