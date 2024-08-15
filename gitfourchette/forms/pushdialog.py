@@ -347,10 +347,10 @@ class PushDialog(QDialog):
         class PushTask(tasks.RepoTask):
             def flow(self, repo: Repo):
                 yield from self.flowEnterWorkerThread()
-                self.effects |= tasks.TaskEffects.Remotes
+                self.effects |= tasks.TaskEffects.Refs
 
-                link.discoverKeyFiles(remote)
-                remote.push([pushDialog.refspec], callbacks=link)
+                with link.remoteKeyFileContext(remote):
+                    remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
                     repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
 
