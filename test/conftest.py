@@ -81,16 +81,20 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     # Boot the UI
     assert app.mainWindow is None
     app.bootUi()
-    mw = app.mainWindow
-    assert mw is not None
 
-    # Don't let window linger in memory after this test
-    mw.setAttribute(qt.Qt.WidgetAttribute.WA_DeleteOnClose)
+    # Run the test...
+    assert app.mainWindow is not None  # help out code analysis a bit
+    yield app.mainWindow
 
-    # Let qtbot track the window and close it at the end of the test
-    qtbot.addWidget(mw)
+    # Look for any unclosed dialogs after the test
+    leakedDialog = ""
+    for dialog in app.mainWindow.findChildren(qt.QDialog):
+        if dialog.isVisible():
+            leakedDialog = dialog.windowTitle()
+            break
 
-    yield mw
+    # Kill the main window
+    app.mainWindow.deleteLater()
 
     # Qt 5 may need a breather to collect the window
     qt.QTest.qWait(0)
@@ -104,6 +108,9 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     # Clean up the app without destroying it completely.
     # This will reset the temp settings folder.
     app.endSession()
+
+    # Die here if any dialogs are still visible after the unit test
+    assert not leakedDialog, f"Unit test has leaked dialog: '{leakedDialog}'"
 
 
 @pytest.fixture

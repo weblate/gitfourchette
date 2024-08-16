@@ -113,6 +113,7 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
     assert qteFind(special, r"uncommitted changes")
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)  # attempt to stage it
+    acceptQMessageBox(rw, "cannot be staged from the parent repo")
     assert rw.repo.status() == {"submodir": FileStatus.WT_MODIFIED}  # shouldn't do anything (the actual app will emit a beep)
 
     if method == "link":

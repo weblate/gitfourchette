@@ -286,7 +286,7 @@ def testFetchRemoteBranchNoChange(tempDir, mainWindow, pull):
         node = rw.sidebar.findNodeByRef("refs/heads/master")
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "pull")
-        # No message box on pull
+        acceptQMessageBox(rw, "up.to.date")
 
     assert rw.repo.branches.remote["localfs/master"].target == oldHead
 

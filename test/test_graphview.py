@@ -162,9 +162,6 @@ def testCommitInfo(tempDir, mainWindow, method):
     else:
         raise NotImplementedError(f"unknown method {method}")
 
-    menu = rw.graphView.makeContextMenu()
-    triggerMenuAction(menu, "get info")
-
     qmb = findQMessageBox(rw, "Merge branch 'a' into c")
     assert str(oid1) in qmb.text()
     assert "A U Thor" in qmb.text()

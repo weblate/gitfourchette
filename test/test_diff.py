@@ -218,6 +218,8 @@ def testSearchInDiff(tempDir, mainWindow):
 
     assert not searchBar.isVisibleTo(rw)
     diffView.setFocus()
+    # Give it two event loop iterations to react...
+    QTest.qWait(1)
     QTest.qWait(1)
     QTest.keySequence(diffView, "Ctrl+F")  # window to be shown for this to work!
     assert searchBar.isVisibleTo(rw)
@@ -266,7 +268,8 @@ def testSearchInDiff(tempDir, mainWindow):
         QTest.keyClicks(searchLine, "MadeUpGarbage")
         assert searchBar.lineEdit.text() == "MadeUpGarbage"
         QTest.keyPress(searchLine, Qt.Key.Key_Return)
-    acceptQMessageBox(rw, "no.+occurrence.+of.+MadeUpGarbage.+found")
+    # Reject last message box to prevent wrapping again
+    rejectQMessageBox(rw, "no.+occurrence.+of.+MadeUpGarbage.+found")
 
 
 def testCopyFromDiffWithoutU2029(tempDir, mainWindow):
