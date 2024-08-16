@@ -4,13 +4,17 @@ from gitfourchette.webhost import WebHost
 
 EXAMPLE_REMOTE_URLS = [
     "https://example.com/user/repo",
+    "https://personal!access_token-1234@example.com/user/repo",
     "example.com:user/repo",
     "example.com:user/repo.git",
     "git@example.com:user/repo",
     "git@example.com:user/repo.git",
+    "git!1234@example.com:user/repo",
     "ssh://example.com/user/repo",
     "ssh://git@example.com/user/repo",
     "ssh://git@example.com:1234/user/repo",
+    "ssh://git_1234@example.com:1234/user/repo",
+    "ssh://git!1234@example.com:1234/user/repo",
     "git://example.com/user/repo",
     "git://example.com:1234/user/repo",
 ]

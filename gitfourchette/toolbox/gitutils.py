@@ -16,18 +16,19 @@ REMOTE_URL_PATTERNS = [
     # HTTP/HTTPS
     # http://example.com/user/repo
     # https://example.com/user/repo
-    re.compile(r"^(?P<protocol>https?):\/\/(?P<host>[^\/]+?)\/(?P<path>.+)"),
+    # https://personal_access_token@example.com/user/repo (GitHub write access over HTTPS)
+    re.compile(r"^(?P<protocol>https?):\/\/(?P<user>[^@/]+@)?(?P<host>[^\/]+?)\/(?P<path>.+)"),
 
     # SSH (scp-like syntax)
     # example.com:user/repo
     # git@example.com:user/repo
-    re.compile(r"^(\w+?@)?(?P<host>[^\/]+?):(?!\/)(?P<path>.+)"),
+    re.compile(r"^(?P<user>[^@/]+@)?(?P<host>[^\/]+?):(?!\/)(?P<path>.+)"),
 
     # SSH (full syntax)
     # ssh://example.com/user/repo
     # ssh://git@example.com/user/repo
     # ssh://git@example.com:1234/user/repo
-    re.compile(r"^(?P<protocol>ssh):\/\/(\w+?@)?(?P<host>[^\/]+?)(:\d+)?\/(?P<path>.+)"),
+    re.compile(r"^(?P<protocol>ssh):\/\/(?P<user>[^@/]+@)?(?P<host>[^\/]+?)(:\d+)?\/(?P<path>.+)"),
 
     # Git protocol
     # git://example.com/user/repo
