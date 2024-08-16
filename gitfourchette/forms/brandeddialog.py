@@ -30,19 +30,29 @@ def makeBrandedDialogLayout(
     titleLayout.addWidget(title)
 
     if subtitleText:
+        title.setAlignment(Qt.AlignmentFlag.AlignBottom)
+        subtitleWidgets = []
+
         if multilineSubtitle:
             subtitle = QLabel(subtitleText)
             subtitle.setWordWrap(True)
+            subtitleWidgets.append(subtitle)
         else:
-            subtitle = QElidedLabel(subtitleText, dialog)
-        tweakWidgetFont(subtitle, relativeSize=90)
-        titleLayout.addWidget(subtitle)
-        title.setAlignment(Qt.AlignmentFlag.AlignBottom)
-        subtitle.setAlignment(Qt.AlignmentFlag.AlignTop)
+            for line in subtitleText.splitlines():
+                subtitleWidgets.append(QElidedLabel(line, dialog))
 
-    gridLayout.addWidget(iconLabel, 1, 0, 1, 1)
-    gridLayout.addItem(horizontalSpacer, 1, 1, 1, 1)
-    gridLayout.addLayout(titleLayout, 1, 3, 1, 1)
+        for subtitle in subtitleWidgets:
+            subtitle.setAlignment(Qt.AlignmentFlag.AlignTop)
+            tweakWidgetFont(subtitle, relativeSize=90)
+            titleLayout.addWidget(subtitle)
+
+    gridLayout.addWidget(iconLabel, 0, 0, 1, 1)
+    gridLayout.addItem(horizontalSpacer, 0, 1, 1, 1)
+    gridLayout.addLayout(titleLayout, 0, 3, 1, 1)
+
+    if subtitleText:
+        breather = QSpacerItem(0, 8, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        gridLayout.addItem(breather, 1, 0)
 
     return gridLayout
 
