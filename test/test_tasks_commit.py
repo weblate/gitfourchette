@@ -5,7 +5,7 @@ import pytest
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.signatureform import SignatureOverride
-from gitfourchette.graphview.commitlogmodel import CommitLogModel
+from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.nav import NavLocator
 from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem
@@ -147,7 +147,7 @@ def testAmendCommit(qtbot, tempDir, mainWindow):
     # Ensure no error dialog boxes after operation
     assert not mainWindow.findChildren(QDialog)
 
-    assert UC_FAKEID == rw.graphView.currentCommitId  # "uncommitted changes" should still be selected
+    assert rw.graphView.currentRowKind == SpecialRow.UncommittedChanges  # uncommitted changes should still be selected
     assert rw.stagedFiles.isVisibleTo(rw)
     assert rw.dirtyFiles.isVisibleTo(rw)
     assert not rw.committedFiles.isVisibleTo(rw)

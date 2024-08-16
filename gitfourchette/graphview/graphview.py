@@ -10,6 +10,7 @@ from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.tasks import *
 from gitfourchette.toolbox import *
 
@@ -169,15 +170,18 @@ class GraphView(QListView):
 
         k = event.key()
         oid = self.currentCommitId
+        currentIndex = self.currentIndex()
+        rowKind = currentIndex.data(CommitLogModel.Role.SpecialRow)
+        isValidCommit = oid and oid != UC_FAKEID
 
         if k in GlobalShortcuts.getCommitInfoHotkeys:
-            if oid:
+            if isValidCommit:
                 self.getInfoOnCurrentCommit()
             else:
                 QApplication.beep()
 
         elif k in GlobalShortcuts.checkoutCommitFromGraphHotkeys:
-            if oid:
+            if isValidCommit:
                 CheckoutCommit.invoke(self, oid)
             else:
                 NewCommit.invoke(self)
@@ -200,9 +204,12 @@ class GraphView(QListView):
 
     @property
     def currentCommitId(self) -> Oid | None:
-        if not self.currentIndex().isValid():
+        currentIndex = self.currentIndex()
+        if not currentIndex.isValid():
             return
-        oid = self.currentIndex().data(CommitLogModel.Role.Oid)
+        if SpecialRow.Commit != currentIndex.data(CommitLogModel.Role.SpecialRow):
+            return
+        oid = currentIndex.data(CommitLogModel.Role.Oid)
         return oid
 
     def getInfoOnCurrentCommit(self):
@@ -216,7 +223,6 @@ class GraphView(QListView):
         oid = self.currentCommitId
         if not oid:  # uncommitted changes
             return
-
         text = str(oid)
         QApplication.clipboard().setText(text)
         self.statusMessage.emit(clipboardStatusMessage(text))

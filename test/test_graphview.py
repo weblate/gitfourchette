@@ -1,6 +1,7 @@
 import pygit2.enums
 import pytest
 
+from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavLocator
 from .util import *
 
@@ -168,10 +169,26 @@ def testCommitInfo(tempDir, mainWindow, method):
     qmb.accept()
 
 
+def testUncommittedChangesGraphHotkeys(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inWorkdir())
+
+    assert rw.graphView.currentRowKind == SpecialRow.UncommittedChanges
+
+    QTest.keyClick(rw.graphView, Qt.Key.Key_Return)
+    rejectQMessageBox(rw, "empty commit")
+
+    QTest.keyClick(rw.graphView, Qt.Key.Key_Space)
+    # The mainWindow fixture will catch any leaked dialogs,
+    # so if nothing happens here, we're good.
+
+
 @pytest.mark.parametrize("method", ["hotkey", "contextmenu"])
 def testCopyCommitHash(tempDir, mainWindow, method):
     """
     WARNING: THIS TEST MODIFIES THE SYSTEM'S CLIPBOARD.
+    (No worries if you're running the tests offscreen.)
     """
 
     # Make sure the clipboard is clean before we begin

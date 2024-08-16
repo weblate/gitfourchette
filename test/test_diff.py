@@ -275,6 +275,7 @@ def testSearchInDiff(tempDir, mainWindow):
 def testCopyFromDiffWithoutU2029(tempDir, mainWindow):
     """
     WARNING: THIS TEST MODIFIES THE SYSTEM'S CLIPBOARD.
+    (No worries if you're running the tests offscreen.)
 
     At some point, Qt 6 used to replace line breaks with U+2029 (PARAGRAPH
     SEPARATOR) when copying text from a QPlainTextEdit. We used to have a

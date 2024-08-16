@@ -1,5 +1,6 @@
 import pytest
 
+from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavContext, NavLocator
 from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.repowidget import RepoWidget
@@ -11,7 +12,7 @@ def assertHistoryMatches(rw: RepoWidget, locator: NavLocator):
     assert rw.navLocator.isSimilarEnoughTo(locator)
     assert rw.diffView.currentPatch.delta.old_file.path == locator.path
     if locator.context.isWorkdir():
-        assert rw.graphView.currentCommitId == UC_FAKEID
+        assert rw.graphView.currentRowKind == SpecialRow.UncommittedChanges
         assert rw.diffArea.fileStackPage() == "workdir"
         if locator.context == NavContext.UNSTAGED:
             assert qlvGetSelection(rw.dirtyFiles) == [locator.path]
