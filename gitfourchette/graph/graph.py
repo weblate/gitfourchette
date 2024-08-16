@@ -72,18 +72,23 @@ class BatchRow:
 
         @classmethod
         def freeBatch(cls, batchNo: int):
-            cls.globalOffsets[batchNo] = -1
+            cls.globalOffsets[batchNo] = -0xDEADBEEF
             cls.freeBatchNos.append(batchNo)
 
-            # Compact end of list
-            while cls.globalOffsets and cls.globalOffsets[-1] == -1:
-                with suppress(ValueError):
-                    cls.freeBatchNos.remove(len(cls.globalOffsets) - 1)
-                cls.globalOffsets.pop()
+            # Compact freed batches at end of list
+            for bn in range(len(cls.globalOffsets) - 1, -1, -1):
+                assert bn == len(cls.globalOffsets) - 1
+                if bn in cls.freeBatchNos:
+                    cls.freeBatchNos.remove(bn)
+                    cls.globalOffsets.pop()
+                else:
+                    # Stop iterating once the last batch is non-free
+                    break
 
         @classmethod
         def shiftBatches(cls, shift: int, batchNos: Iterable[int]):
             for b in batchNos:
+                assert b not in cls.freeBatchNos, "trying to shift a freed batch"
                 cls.globalOffsets[b] += shift
 
     def isValid(self):
