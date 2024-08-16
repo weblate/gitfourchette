@@ -28,21 +28,20 @@ class Ui_NewTagDialog(object):
         self.nameEdit.setSizePolicy(sizePolicy)
         self.nameEdit.setObjectName("nameEdit")
         self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.nameEdit)
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
         self.pushCheckBox = QCheckBox(parent=NewTagDialog)
         self.pushCheckBox.setObjectName("pushCheckBox")
-        self.horizontalLayout_2.addWidget(self.pushCheckBox)
-        self.remotesComboBox = QComboBox(parent=NewTagDialog)
+        self.horizontalLayout.addWidget(self.pushCheckBox)
+        self.remoteComboBox = QComboBox(parent=NewTagDialog)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.remotesComboBox.sizePolicy().hasHeightForWidth())
-        self.remotesComboBox.setSizePolicy(sizePolicy)
-        self.remotesComboBox.setObjectName("remotesComboBox")
-        self.remotesComboBox.addItem("")
-        self.horizontalLayout_2.addWidget(self.remotesComboBox)
-        self.formLayout.setLayout(1, QFormLayout.ItemRole.FieldRole, self.horizontalLayout_2)
+        sizePolicy.setHeightForWidth(self.remoteComboBox.sizePolicy().hasHeightForWidth())
+        self.remoteComboBox.setSizePolicy(sizePolicy)
+        self.remoteComboBox.setObjectName("remoteComboBox")
+        self.horizontalLayout.addWidget(self.remoteComboBox)
+        self.formLayout.setLayout(1, QFormLayout.ItemRole.FieldRole, self.horizontalLayout)
         self.buttonBox = QDialogButtonBox(parent=NewTagDialog)
         self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
         self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
@@ -53,7 +52,7 @@ class Ui_NewTagDialog(object):
         self.retranslateUi(NewTagDialog)
         self.buttonBox.accepted.connect(NewTagDialog.accept) # type: ignore
         self.buttonBox.rejected.connect(NewTagDialog.reject) # type: ignore
-        self.pushCheckBox.toggled['bool'].connect(self.remotesComboBox.setEnabled) # type: ignore
+        self.pushCheckBox.toggled['bool'].connect(self.remoteComboBox.setEnabled) # type: ignore
         QMetaObject.connectSlotsByName(NewTagDialog)
 
     def retranslateUi(self, NewTagDialog):
@@ -62,4 +61,3 @@ class Ui_NewTagDialog(object):
         self.label.setText(_translate("NewTagDialog", "&Name:"))
         self.nameEdit.setPlaceholderText(_translate("NewTagDialog", "Enter tag name"))
         self.pushCheckBox.setText(_translate("NewTagDialog", "&Push to:"))
-        self.remotesComboBox.setItemText(0, _translate("NewTagDialog", "All remotes"))

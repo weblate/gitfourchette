@@ -497,7 +497,6 @@ def testDeleteTag(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     assert tagToDelete in rw.repo.listall_tags()
-
     node = rw.sidebar.findNodeByRef(f"refs/tags/{tagToDelete}")
 
     if method == "sidebarmenu":
@@ -509,5 +508,5 @@ def testDeleteTag(tempDir, mainWindow, method):
     else:
         raise NotImplementedError(f"unknown method {method}")
 
-    acceptQMessageBox(rw, "delete tag")
+    findQDialog(rw, "delete tag").accept()
     assert tagToDelete not in rw.repo.listall_tags()

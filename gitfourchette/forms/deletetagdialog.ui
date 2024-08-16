@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>NewTagDialog</class>
- <widget class="QDialog" name="NewTagDialog">
+ <class>DeleteTagDialog</class>
+ <widget class="QDialog" name="DeleteTagDialog">
   <property name="windowModality">
    <enum>Qt::WindowModality::WindowModal</enum>
   </property>
@@ -14,41 +14,22 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>New tag</string>
+   <string>Delete tag</string>
   </property>
-  <layout class="QFormLayout" name="formLayout">
-   <property name="fieldGrowthPolicy">
-    <enum>QFormLayout::FieldGrowthPolicy::ExpandingFieldsGrow</enum>
-   </property>
-   <item row="0" column="0">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>&amp;Name:</string>
-     </property>
-     <property name="buddy">
-      <cstring>nameEdit</cstring>
+      <string>Really delete tag {0}?</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QLineEdit" name="nameEdit">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="placeholderText">
-      <string>Enter tag name</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QCheckBox" name="pushCheckBox">
        <property name="text">
-        <string>&amp;Push to:</string>
+        <string>&amp;Push deletion to:</string>
        </property>
       </widget>
      </item>
@@ -64,7 +45,7 @@
      </item>
     </layout>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Orientation::Horizontal</enum>
@@ -76,15 +57,12 @@
    </item>
   </layout>
  </widget>
- <tabstops>
-  <tabstop>nameEdit</tabstop>
- </tabstops>
  <resources/>
  <connections>
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>NewTagDialog</receiver>
+   <receiver>DeleteTagDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -100,7 +78,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>NewTagDialog</receiver>
+   <receiver>DeleteTagDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

@@ -217,8 +217,10 @@ class UpdateSubmodulesRecursive(_BaseNetTask):
 
 class PushRefspecs(_BaseNetTask):
     def flow(self, remoteName: str, refspecs: list[str]):
+        assert remoteName
         assert type(remoteName) is str
         assert type(refspecs) is list
+
         if remoteName == "*":
             remotes = list(self.repo.remotes)
         else:

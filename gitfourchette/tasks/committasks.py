@@ -3,6 +3,7 @@ from contextlib import suppress
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
 from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.deletetagdialog import DeleteTagDialog
 from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.newtagdialog import NewTagDialog
 from gitfourchette.forms.signatureform import SignatureOverride
@@ -295,12 +296,11 @@ class NewTag(RepoTask):
                            parent=self.parentWidget())
 
         dlg.setFixedHeight(dlg.sizeHint().height())
-        dlg.show()
         yield from self.flowDialog(dlg)
 
         tagName = dlg.ui.nameEdit.text()
         pushIt = dlg.ui.pushCheckBox.isChecked()
-        pushTo = dlg.ui.remotesComboBox.currentData()
+        pushTo = dlg.ui.remoteComboBox.currentData()
         dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
@@ -321,24 +321,40 @@ class NewTag(RepoTask):
 
 class DeleteTag(RepoTask):
     def flow(self, tagName: str):
-        # TODO: This won't delete the tag on remotes
-
         assert not tagName.startswith("refs/")
 
-        yield from self.flowConfirm(
-            text=self.tr("Really delete tag {0}?").format(bquo(tagName)),
-            verb=self.tr("Delete tag"),
-            buttonIcon="SP_DialogDiscardButton")
+        tagTarget = self.repo.commit_id_from_tag_name(tagName)
+        commitMessage = self.repo.get_commit_message(tagTarget)
+        commitMessage, _ = messageSummary(commitMessage)
+
+        dlg = DeleteTagDialog(
+            tagName,
+            shortHash(tagTarget),
+            commitMessage,
+            self.repoModel.remotes,
+            parent=self.parentWidget())
+
+        dlg.setFixedHeight(dlg.sizeHint().height())
+        yield from self.flowDialog(dlg)
+
+        pushIt = dlg.ui.pushCheckBox.isChecked()
+        pushTo = dlg.ui.remoteComboBox.currentData()
+        dlg.deleteLater()
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs
 
         # Stay on this commit after the operation
-        tagTarget = self.repo.commit_id_from_tag_name(tagName)
         if tagTarget:
             self.jumpTo = NavLocator.inCommit(tagTarget)
 
         self.repo.delete_tag(tagName)
+
+        if pushIt:
+            refspec = f":{RefPrefix.TAGS}{tagName}"
+            from gitfourchette.tasks import PushRefspecs
+            yield from self.flowEnterUiThread()
+            yield from self.flowSubtask(PushRefspecs, pushTo, [refspec])
 
 
 class RevertCommit(RepoTask):
