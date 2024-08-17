@@ -510,3 +510,33 @@ def testDeleteTag(tempDir, mainWindow, method):
 
     findQDialog(rw, "delete tag").accept()
     assert tagToDelete not in rw.repo.listall_tags()
+
+
+@pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "sidebardclick"])
+def testCheckoutTag(tempDir, mainWindow, method):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    repo = rw.repo
+
+    node = sb.findNodeByRef("refs/tags/annotated_tag")
+    if method == "sidebarmenu":
+        menu = sb.makeNodeMenu(node)
+        triggerMenuAction(menu, "check out")
+    elif method == "sidebarkey":
+        sb.selectNode(node)
+        QTest.keyPress(rw.sidebar, Qt.Key.Key_Return)
+    elif method == "sidebardclick":
+        rect = sb.visualRect(node.createIndex(sb.sidebarModel))
+        QTest.mouseDClick(sb.viewport(), Qt.MouseButton.LeftButton, pos=rect.topLeft())
+    else:
+        raise NotImplementedError(f"unknown method {method}")
+
+    dlg = findQDialog(rw, "check.?out commit")
+    dlg.findChild(QRadioButton, "detachedHeadRadioButton", Qt.FindChildOption.FindChildrenRecursively).setChecked(True)
+    dlg.accept()
+
+    oid = Oid(hex="c070ad8c08840c8116da865b2d65593a6bb9cd2a")
+    assert repo.head_is_detached
+    assert repo.head_commit_id == oid
+    assert rw.graphView.currentCommitId == oid

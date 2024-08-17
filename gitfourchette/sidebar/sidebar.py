@@ -410,7 +410,10 @@ class Sidebar(QTreeView):
             assert prefix == RefPrefix.TAGS
             refspecs = [data]
 
+            target = self.sidebarModel.repoModel.refs[data]
+
             actions += [
+                TaskBook.action(self, CheckoutCommit, self.tr("&Check Out Tagged Commit..."), taskArgs=target),
                 TaskBook.action(self, DeleteTag, self.tr("&Delete Tag"), taskArgs=shorthand),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Push To"), submenu=self.pushRefspecMenu(refspecs)),
@@ -562,6 +565,10 @@ class Sidebar(QTreeView):
 
         elif item == EItem.TagsHeader:
             NewTag.invoke(self)
+
+        elif item == EItem.Tag:
+            target = self.sidebarModel.repoModel.refs[node.data]
+            CheckoutCommit.invoke(self, target)
 
         else:
             QApplication.beep()
