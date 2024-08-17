@@ -96,8 +96,9 @@ class NavLocator:
 
     URL_AUTHORITY: ClassVar[str] = "jump"
 
-    def __post_init__(self):
-        if DEVDEBUG:
+    if DEVDEBUG:
+        def __post_init__(self):
+            assert not self.path.endswith("/")
             assert isinstance(self.context, NavContext)
             assert isinstance(self.commit, Oid)
             assert isinstance(self.path, str)

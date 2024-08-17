@@ -495,7 +495,7 @@ class FileList(QListView):
     def getPatchForFile(self, file: str):
         try:
             row = self.flModel.getRowForFile(file)
-            return self.flModel.getPatchAt(self.flModel.index(row, 0))
+            return self.flModel.entries[row].patch
         except KeyError:
             return None
 

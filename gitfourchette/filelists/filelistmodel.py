@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def deltaModeText(delta: DiffDelta):
+    if not delta:
+        return "NO DELTA"
+
     om = delta.old_file.mode
     nm = delta.new_file.mode
 
@@ -125,6 +128,18 @@ class FileListModel(QAbstractListModel):
         delta: DiffDelta
         diff: Diff
         patchNo: int
+        canonicalPath: str
+
+        @property
+        def patch(self) -> Patch | None:
+            try:
+                patch: Patch = self.diff[self.patchNo]
+                return patch
+            except (GitError, OSError) as e:
+                # GitError may occur if patch data is outdated.
+                # OSError may rarely occur if the file happens to be recreated.
+                logger.warning(f"Failed to get patch: {type(e).__name__}", exc_info=True)
+                return None
 
     class Role:
         PatchObject = Qt.ItemDataRole.UserRole + 0
@@ -165,59 +180,39 @@ class FileListModel(QAbstractListModel):
             for patchNo, delta in enumerate(diff.deltas):
                 if self.skipConflicts and delta.status == DeltaStatus.CONFLICTED:
                     continue
-                self.fileRows[delta.new_file.path] = len(self.entries)
-                self.entries.append(FileListModel.Entry(delta, diff, patchNo))
+                path = delta.new_file.path
+                path = path.removesuffix("/")  # trees (submodules) have a trailing slash - remove for NavLocator consistency
+                self.fileRows[path] = len(self.entries)
+                self.entries.append(FileListModel.Entry(delta, diff, patchNo, path))
 
         self.endResetModel()
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         return len(self.entries)
 
-    def getPatchAt(self, index: QModelIndex) -> Patch:
-        row = index.row()
-        entry = self.entries[row]
-        try:
-            patch: Patch = entry.diff[entry.patchNo]
-            return patch
-        except (GitError, OSError) as e:
-            # GitError may occur if patch data is outdated.
-            # OSError may rarely occur if the file happens to be recreated.
-            logger.warning(f"Failed to get patch: {type(e).__name__}", exc_info=True)
-            return None
-
-    def getDeltaAt(self, index: QModelIndex) -> DiffDelta:
-        return self.entries[index.row()].delta
-
     def data(self, index: QModelIndex, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Any:
         if role == FileListModel.Role.PatchObject:
-            return self.getPatchAt(index)
+            entry = self.entries[index.row()]
+            return entry.patch
 
         elif role == FileListModel.Role.FilePath:
-            delta = self.getDeltaAt(index)
-            if not delta:
-                return ""
-
-            path: str = self.getDeltaAt(index).new_file.path
-            return path
+            entry = self.entries[index.row()]
+            return entry.canonicalPath
 
         elif role == Qt.ItemDataRole.DisplayRole:
-            delta = self.getDeltaAt(index)
-            if not delta:
-                return "<NO DELTA>"
-
-            path: str = self.getDeltaAt(index).new_file.path
-
-            path = abbreviatePath(path, settings.prefs.pathDisplayStyle)
+            entry = self.entries[index.row()]
+            text = abbreviatePath(entry.canonicalPath, settings.prefs.pathDisplayStyle)
 
             # Show important mode info in brackets
-            modeInfo = deltaModeText(delta)
+            modeInfo = deltaModeText(entry.delta)
             if modeInfo:
-                path = f"[{modeInfo}] {path}"
+                text = f"[{modeInfo}] {text}"
 
-            return path
+            return text
 
         elif role == Qt.ItemDataRole.DecorationRole:
-            delta = self.getDeltaAt(index)
+            entry = self.entries[index.row()]
+            delta = entry.delta
             if not delta:
                 iconName = "status_x"
             elif delta.status == DeltaStatus.UNTRACKED:
@@ -229,7 +224,8 @@ class FileListModel(QAbstractListModel):
             return stockIcon(iconName)
 
         elif role == Qt.ItemDataRole.ToolTipRole:
-            delta = self.getDeltaAt(index)
+            entry = self.entries[index.row()]
+            delta = entry.delta
             isCounterpart = index.row() == self.highlightedCounterpartRow
             return fileTooltip(self.repo, delta, self.navContext, isCounterpart)
 
