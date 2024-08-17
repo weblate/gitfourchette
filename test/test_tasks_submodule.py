@@ -5,6 +5,7 @@ import pygit2
 import pytest
 from pygit2.enums import SubmoduleStatus
 
+from gitfourchette.forms.registersubmoduledialog import RegisterSubmoduleDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
 from . import reposcenario
@@ -184,8 +185,17 @@ def testAbsorbSubmodule(tempDir, mainWindow):
     assert foundLink
     QTest.keyPress(rw.specialDiffView, Qt.Key.Key_Enter)
 
-    # Let AbsorbSubmodule run to completion
-    dlg = findQDialog(rw, "absorb.+submodule")
+    # Play with RegisterSubmoduleDialog a bit
+    # then let AbsorbSubmodule task run to completion
+    dlg: RegisterSubmoduleDialog = findQDialog(rw, "absorb.+submodule")
+    assert dlg.ui.nameEdit.text() == "submo"
+    assert dlg.okButton.isEnabled()
+    assert not dlg.resetNameAction.isVisible()
+    dlg.ui.nameEdit.setText("")
+    assert dlg.resetNameAction.isVisible()
+    assert not dlg.okButton.isEnabled()
+    dlg.resetNameAction.trigger()
+    assert dlg.ui.nameEdit.text() == "submo"
     dlg.accept()
 
     # There must be a submodule now

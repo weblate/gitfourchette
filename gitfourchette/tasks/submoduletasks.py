@@ -45,12 +45,13 @@ class RegisterSubmodule(RepoTask):
             ).format(bquo(subName))
             raise AbortTask(message)
 
+        reservedNames = self.repo.listall_submodules_dict().keys()
         dlg = RegisterSubmoduleDialog(
-            currentName="",
-            fallbackName=path,
+            workdirPath=path,
             superprojectName=thisName,
             remotes=subRemotes,
             absorb=absorb,
+            reservedNames=reservedNames,
             parent=self.parentWidget())
 
         if preferredRemote:
@@ -58,10 +59,8 @@ class RegisterSubmodule(RepoTask):
             if i >= 0:
                 dlg.ui.remoteComboBox.setCurrentIndex(i)
 
-        convertToBrandedDialog(dlg, subtitleText=lquo(path))
-        dlg.setWindowModality(Qt.WindowModality.WindowModal)
-        dlg.show()
-
+        subtitle = translate("RegisterSubmoduleDialog", "Settings will be saved in {0}").format(tquo(".gitmodules"))
+        convertToBrandedDialog(dlg, subtitleText=subtitle)
         yield from self.flowDialog(dlg)
 
         remoteUrl = dlg.remoteUrl
