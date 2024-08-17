@@ -193,8 +193,10 @@ class SpecialDiffError(Exception):
         elif smDiff.is_add:
             titleText = translate("Diff", "Submodule {0} was [added.]")
             titleText = tagify(titleText, "<add><b>")
-        else:
+        elif smDiff.head_did_move:
             titleText = translate("Diff", "Submodule {0} was updated.")
+        else:
+            titleText = translate("Diff", "Submodule {0} contains changes.")
         titleText = titleText.format(bquo(smDiff.short_name))
 
         specialDiff = SpecialDiffError(titleText)

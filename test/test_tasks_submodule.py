@@ -109,7 +109,7 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
 
     special = rw.specialDiffView
     assert special.isVisibleTo(rw)
-    assert qteFind(special, r"submodule.+submo.+was updated")
+    assert qteFind(special, r"submodule.+submo.+contains changes")
     assert qteFind(special, r"uncommitted changes")
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)  # attempt to stage it
