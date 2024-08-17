@@ -209,7 +209,8 @@ def qteFind(qte: QTextEdit, pattern: str, plainText=False):
 
 
 def qteClickLink(qte: QTextEdit, pattern: str):
-    qteFind(qte, pattern)
+    foundLink = qteFind(qte, pattern)
+    assert foundLink
     QTest.keyPress(qte, Qt.Key.Key_Enter)
 
 

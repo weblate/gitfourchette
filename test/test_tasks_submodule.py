@@ -114,7 +114,7 @@ def testSubmoduleDirty(tempDir, mainWindow, method):
     assert qteFind(special, r"uncommitted changes")
 
     QTest.keyPress(rw.dirtyFiles, Qt.Key.Key_Return)  # attempt to stage it
-    acceptQMessageBox(rw, "cannot be staged from the parent repo")
+    acceptQMessageBox(rw, "can.+t be staged from the parent repo")
     assert rw.repo.status() == {"submodir": FileStatus.WT_MODIFIED}  # shouldn't do anything (the actual app will emit a beep)
 
     if method == "link":
@@ -143,11 +143,11 @@ def testSubmoduleDeletedDiff(tempDir, mainWindow):
 
     rw.jump(NavLocator.inCommit(subAddId, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
-    assert re.search(r"submodule.+submo.+added", rw.specialDiffView.toPlainText(), re.I)
+    assert qteFind(rw.specialDiffView, r"submodule.+submo.+added")
 
     rw.jump(NavLocator.inCommit(subDelId, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
-    assert re.search(r"submodule.+submo.+(deleted|removed)", rw.specialDiffView.toPlainText(), re.I)
+    assert qteFind(rw.specialDiffView, r"submodule.+submo.+(deleted|removed)")
 
 
 def testDeleteSubmodule(tempDir, mainWindow):
@@ -166,44 +166,54 @@ def testDeleteSubmodule(tempDir, mainWindow):
 
 
 def testAbsorbSubmodule(tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-    subWd = unpackRepo(wd, renameTo="submo")
+    wd = unpackRepo(tempDir, "submoroot")
+    subWd = unpackRepo(wd, renameTo="newsubmo")
+
+    with RepoContext(subWd) as subRepo:
+        originURL = subRepo.remotes["origin"].url
+        subRepo.delete_remote("origin")
+
     rw = mainWindow.openRepo(wd)
     assert rw.isVisibleTo(mainWindow)
 
-    # Start without any submodules
-    assert [] == rw.repo.listall_submodules_fast()
-    assert [] == list(rw.sidebar.findNodesByKind(EItem.Submodule))
+    # Start with 1 submodule
+    assert ["submosub"] == rw.repo.listall_submodules_fast()
+    assert ["submosub"] == [node.data for node in rw.sidebar.findNodesByKind(EItem.Submodule)]
 
     # Select subfolder in dirty files
-    rw.jump(NavLocator.inUnstaged("submo"))
+    rw.jump(NavLocator.inUnstaged("newsubmo"))
     assert rw.specialDiffView.isVisibleTo(rw)
-    assert "root of another git repo" in rw.specialDiffView.toPlainText().lower()
+    assert qteFind(rw.specialDiffView, "root of another git repo")
 
-    # Click "absorb 'submo' as submodule" link
-    foundLink = rw.specialDiffView.find(QRegularExpression(r"absorb.+as submodule"))
-    assert foundLink
-    QTest.keyPress(rw.specialDiffView, Qt.Key.Key_Enter)
+    # Absorb as submodule - won't work, it has no remotes
+    qteClickLink(rw.specialDiffView, r"absorb.+as submodule")
+    acceptQMessageBox(rw, "submodule.+has no remote")
+
+    # Restore the remote and absorb as submodule
+    with RepoContext(subWd) as subRepo:
+        subRepo.remotes.create("origin", originURL)
+    qteClickLink(rw.specialDiffView, r"absorb.+as submodule")
 
     # Play with RegisterSubmoduleDialog a bit
     # then let AbsorbSubmodule task run to completion
     dlg: RegisterSubmoduleDialog = findQDialog(rw, "absorb.+submodule")
-    assert dlg.ui.nameEdit.text() == "submo"
+    assert dlg.ui.nameEdit.text() == "newsubmo"
     assert dlg.okButton.isEnabled()
     assert not dlg.resetNameAction.isVisible()
-    dlg.ui.nameEdit.setText("")
-    assert dlg.resetNameAction.isVisible()
-    assert not dlg.okButton.isEnabled()
+    for badName in ["", "submosub"]:
+        dlg.ui.nameEdit.setText(badName)
+        assert not dlg.okButton.isEnabled()
+        assert dlg.resetNameAction.isVisible()
     dlg.resetNameAction.trigger()
-    assert dlg.ui.nameEdit.text() == "submo"
+    assert dlg.ui.nameEdit.text() == "newsubmo"
     dlg.accept()
 
     # There must be a submodule now
-    assert ["submo"] == rw.repo.listall_submodules_fast()
-    assert "submo" == next(rw.sidebar.findNodesByKind(EItem.Submodule)).data
+    assert ["newsubmo", "submosub"] == sorted(rw.repo.listall_submodules_fast())
+    assert ["newsubmo", "submosub"] == sorted(node.data for node in rw.sidebar.findNodesByKind(EItem.Submodule))
 
     # The submodule is there, but it's unstaged
-    rw.jump(NavLocator.inStaged("submo"))
+    rw.jump(NavLocator.inStaged("newsubmo"))
 
     # Click "open submodule" link
     qteClickLink(rw.specialDiffView, "open submodule")
@@ -219,6 +229,64 @@ def testAbsorbSubmodule(tempDir, mainWindow):
     triggerMenuAction(tabMenu, r"open superproject")
     assert 0 == mainWindow.tabs.currentIndex()  # back to first tab
     assert rw is mainWindow.tabs.currentWidget()  # back to first tab
+
+
+def testSubmoduleStagingSuggestions(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, "submoroot")
+    subWd = unpackRepo(wd, renameTo="newsubmo")
+
+    # Create uncommitted change in submodule to keep it forever unstaged
+    writeFile(f"{subWd}/uncommitted.txt", "hello")
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.isVisibleTo(mainWindow)
+
+    # Start without any submodules
+    assert ["submosub"] == rw.repo.listall_submodules_fast()
+    assert ["submosub"] == [node.data for node in rw.sidebar.findNodesByKind(EItem.Submodule)]
+
+    # Jump to unstaged submodule entry
+    submoUnstagedLoc = NavLocator.inUnstaged("newsubmo")
+    rw.jump(submoUnstagedLoc)
+
+    # Stage submodule without absorbing it
+    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    rw.diffArea.stageButton.click()
+    acceptQMessageBox(rw, "you should absorb")
+    print(rw.navLocator)
+
+    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    qteClickLink(rw.specialDiffView, r"absorb the submodule")
+    findQDialog(rw, "absorb").accept()
+
+    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    assert qteFind(rw.specialDiffView, r"make sure to commit \.gitmodules")
+
+    # Prompt submodule re-registration
+    GitConfigHelper.delete_section(f"{wd}/.gitmodules", "submodule", "newsubmo")
+    rw.refreshRepo()
+
+    # Register a submodule that has already been absorbed
+    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    assert qteFind(rw.specialDiffView, r"to complete the addition.+register.+\.gitmodules")
+    qteClickLink(rw.specialDiffView, r"register.+\.gitmodules")
+    findQDialog(rw, "register submodule").accept()
+
+    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    assert qteFind(rw.specialDiffView, r"make sure to commit \.gitmodules")
+
+    # Delete another submodule and stage the deletion
+    shutil.rmtree(f"{wd}/submosub")
+    rw.refreshRepo()
+    rw.jump(NavLocator.inUnstaged("submosub"))
+    assert qteFind(rw.specialDiffView, r"to complete the removal.+remove.+from.+\.gitmodules")
+    rw.diffArea.stageButton.click()
+    acceptQMessageBox(rw, r"remove.+from.+\.gitmodules")
+
+    # Remove deleted submodules from .gitmodules and check new suggestion
+    GitConfigHelper.delete_section(f"{wd}/.gitmodules", "submodule", "submosub")
+    rw.jump(NavLocator.inStaged("submosub"))
+    assert qteFind(rw.specialDiffView, r"to complete the removal.+commit \.gitmodules")
 
 
 def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):

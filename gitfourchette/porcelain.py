@@ -95,7 +95,7 @@ DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\
 SUBPROJECT_COMMIT_MINUS_PATTERN = _re.compile(r"^-Subproject commit (.+)$", _re.M)
 SUBPROJECT_COMMIT_PLUS_PATTERN = _re.compile(r"^\+Subproject commit (.+)$", _re.M)
 
-SUBMODULE_CONFIG_KEY_PATTERN = _re.compile(r"^submodule\.(.+)\.path$")
+SUBMODULE_CONFIG_SECTION_PATTERN = _re.compile(r'^submodule "(.+)"$')
 
 FileStatus_INDEX_MASK = (
         FileStatus.INDEX_NEW
@@ -598,6 +598,10 @@ class GitConfigHelper:
                 break
 
         return name, email, level
+
+    @staticmethod
+    def unescape(s: str):
+        return s.encode('raw_unicode_escape').decode('unicode_escape')
 
 
 class Repo(_VanillaRepository):
@@ -1400,30 +1404,48 @@ class Repo(_VanillaRepository):
         """
         return list(self.listall_submodules_dict().values())
 
-    def listall_submodules_dict(self, absolute_paths=False) -> dict[str, str]:
+    def listall_submodules_dict(self, absolute_paths=False, config_text="") -> dict[str, str]:
         """
         Return a dict of submodule names to paths.
-        Information is sourced from .gitmodules.
+        Information is sourced from .gitmodules (or config_text if given).
 
         You should use this instead of pygit2's Repository.listall_submodules,
         because the latter doesn't give you information about submodule names.
+        It is also faster.
         """
+        # We use ConfigParser instead of pygit2.Config so that we can load the
+        # config from a blob in memory.
 
-        config_path = self.in_workdir(DOT_GITMODULES)
-        if not _isfile(config_path):
-            return {}
-
-        config = GitConfig(config_path)
         submos = {}
-        for entry in config:
-            key: str = entry.name
-            match = SUBMODULE_CONFIG_KEY_PATTERN.fullmatch(key)
-            if match:
-                name = match.group(1)
-                path = entry.value
-                if absolute_paths:
-                    path = self.in_workdir(path)
-                submos[name] = path
+
+        if config_text:
+            config = _configparser.ConfigParser()
+            config.read_string(config_text)
+        else:
+            config_path = self.in_workdir(DOT_GITMODULES)
+            if not _isfile(config_path):
+                return submos
+            config = _configparser.ConfigParser()
+            config.read(config_path)
+
+        for section in config.sections():
+            match = SUBMODULE_CONFIG_SECTION_PATTERN.fullmatch(section)
+            if not match:
+                continue
+
+            try:
+                path = config[section]["path"]
+            except KeyError:
+                continue
+
+            path = GitConfigHelper.unescape(path)
+            if absolute_paths:
+                path = self.in_workdir(path)
+
+            name = match.group(1)
+            name = GitConfigHelper.unescape(name)
+
+            submos[name] = path
 
         return submos
 
@@ -1451,7 +1473,7 @@ class Repo(_VanillaRepository):
             with RepoContext(submodule.open()) as subrepo:
                 frontier.extend(gen_frontier(subrepo))
 
-    def get_submodule_diff(self, patch: Patch) -> SubmoduleDiff:
+    def get_submodule_diff(self, patch: Patch, in_workdir: bool = False) -> SubmoduleDiff:
         assert FileMode.COMMIT in (patch.delta.new_file.mode, patch.delta.old_file.mode)
 
         path = patch.delta.new_file.path
@@ -1471,6 +1493,16 @@ class Repo(_VanillaRepository):
 
         is_absorbed = still_exists and _isfile(_joinpath(abs_path, ".git"))
 
+        if in_workdir:
+            try:
+                old_gitmodules = self.head_tree['.gitmodules'].data.decode('utf-8')
+                old_submodules = self.listall_submodules_dict(config_text=old_gitmodules)
+                was_registered = path in old_submodules.values()
+            except KeyError:
+                was_registered = False
+        else:
+            was_registered = True
+
         return SubmoduleDiff(
             name=name,
             workdir=abs_path,
@@ -1480,6 +1512,7 @@ class Repo(_VanillaRepository):
             dirty=dirty,
             still_exists=still_exists,
             is_registered=is_registered,
+            was_registered=was_registered,
             is_absorbed=is_absorbed)
 
     def fast_forward_branch(self, local_branch_name: str, target_branch_name: str = ""):
@@ -1876,6 +1909,7 @@ class SubmoduleDiff:
     dirty: bool
     still_exists: bool
     is_registered: bool
+    was_registered: bool
     is_absorbed: bool
 
     @staticmethod

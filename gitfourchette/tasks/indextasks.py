@@ -78,7 +78,7 @@ class StageFiles(_BaseStagingTask):
 
             if newFile.mode == FileMode.TREE:
                 m = self.tr("You’ve added another Git repo inside your current repo. "
-                            "You probably want to absorb it as a submodule.")
+                            "You should absorb it as a submodule.")
             elif SubmoduleDiff.is_submodule_patch(patch):
                 info = self.repo.get_submodule_diff(patch)
                 if info.is_del:
@@ -86,7 +86,7 @@ class StageFiles(_BaseStagingTask):
                                 "to complete its deletion.")
                 elif not info.is_trivially_indexable:
                     m = self.tr("Uncommitted changes in the submodule "
-                                "cannot be staged from the parent repository.")
+                                "can’t be staged from the parent repository.")
 
             if m:
                 debrief[newFile.path] = m

@@ -184,7 +184,7 @@ class SpecialDiffError(Exception):
     def submoduleDiff(repo: Repo, patch: Patch, locator: NavLocator):
         from gitfourchette.tasks.indextasks import DiscardFiles
 
-        smDiff = repo.get_submodule_diff(patch)
+        smDiff = repo.get_submodule_diff(patch, in_workdir=locator.context.isWorkdir())
         openLink = QUrl.fromLocalFile(smDiff.workdir)
 
         if smDiff.is_del:
@@ -244,42 +244,45 @@ class SpecialDiffError(Exception):
             longformParts.append(f"{intro}<p>{table}</p>")
 
         if locator.context.isWorkdir():
+            from gitfourchette.tasks import AbsorbSubmodule, RegisterSubmodule
+            gitmodulesTag = "<tt>.gitmodules</tt>"
+
+            m = ""
             if smDiff.is_del:
-                m = ""
                 if smDiff.is_registered:
-                    m = translate("Diff", "To delete this submodule completely, you should also "
-                                          "<b>remove it from <tt>.gitmodules</tt></b>.")
+                    m = translate("Diff", "To complete the removal of this submodule, "
+                                          "<b>remove it from {0}</b>.").format(gitmodulesTag)
                 else:
-                    m = translate("Diff", "To delete this submodule completely, make sure to commit "
-                                          "the modification to <tt>.gitmodules</tt> at the same time "
-                                          "as the submodule folder itself.")
-                longformParts.append(m)
+                    m = translate("Diff", "To complete the removal of this submodule, "
+                                          "make sure to commit <b>{0}</b> at the same time "
+                                          "as the submodule folder itself.").format(gitmodulesTag)
 
-            if smDiff.is_add:
-                if smDiff.is_registered:
-                    m = translate("Diff", "To complete the addition of this submodule to your repository, "
-                                          "make sure to <b>commit the modification to <tt>.gitmodules</tt></b> "
-                                          "at the same time as the submodule folder itself.")
-                else:
-                    from gitfourchette.tasks import AbsorbSubmodule, RegisterSubmodule
-                    if not smDiff.is_absorbed:
-                        m = translate("Diff", "To complete the addition of this submodule to your repository, "
-                                              "you should [absorb the submodule] into the parent repository.")
-                        m = linkify(m, AbsorbSubmodule.makeInternalLink(path=patch.delta.new_file.path))
-                    else:
-                        m = translate("Diff", "To complete the addition of this submodule to your repository, "
-                                              "you should [register it in <tt>.gitmodules</tt>].")
-                        m = linkify(m, RegisterSubmodule.makeInternalLink(path=patch.delta.new_file.path))
+            elif smDiff.is_registered and not smDiff.was_registered:
+                m = translate("Diff", "To complete the addition of this submodule, "
+                                      "make sure to <b>commit {0}</b> at the same time "
+                                      "as the submodule folder itself.").format(gitmodulesTag)
 
-                    m = "<img src='assets:icons/achtung'> <b>" + translate("Diff", "IMPORTANT") + "</b> &ndash; " + m
+            elif not smDiff.is_absorbed:
+                m = translate("Diff", "To complete the addition of this submodule, "
+                                      "you should [absorb the submodule] into the parent repository.")
+                m = linkify(m, AbsorbSubmodule.makeInternalLink(path=patch.delta.new_file.path))
+
+            elif not smDiff.is_registered:
+                m = translate("Diff", "To complete the addition of this submodule, "
+                                      "[register it in {0}].").format(gitmodulesTag)
+                m = linkify(m, RegisterSubmodule.makeInternalLink(path=patch.delta.new_file.path))
+
+            if m:
+                important = translate("Diff", "IMPORTANT")
+                m = f"<img src='assets:icons/achtung'> <b>{important}</b> &ndash; {m}"
                 longformParts.insert(0, m)
 
             # Tell about any uncommitted changes
             if smDiff.dirty:
                 discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
 
-                m = translate("Diff", "The submodule has <b>uncommitted changes</b>, which cannot be committed from the parent repo.")
-                m += " " + translate("Diff", "You can:")
+                m = translate("Diff", "The submodule has <b>uncommitted changes</b>. "
+                                      "They can’t be committed from the parent repo. You can:")
                 m += "<ul>"
                 m += "<li>" + translate("Diff", "[Open] the submodule and commit the changes.")
                 m += "<li>" + translate("Diff", "Or, [Reset] the submodule to a clean state.")
@@ -289,7 +292,9 @@ class SpecialDiffError(Exception):
 
         # Add link to open the submodule as a subtitle
         if smDiff.still_exists:
-            subtitle = translate("Diff", "Open submodule {0}").format(bquo(smDiff.short_name))
+            subtitle = translate("Diff", "Open submodule")
+            if smDiff.short_name != patch.delta.new_file.path:
+                subtitle += " " + translate("Diff", "(path: {0})").format(escape(patch.delta.new_file.path))
             subtitle = linkify(subtitle, openLink)
             specialDiff.details = subtitle
 
