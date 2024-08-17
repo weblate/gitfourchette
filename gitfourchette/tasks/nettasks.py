@@ -189,7 +189,7 @@ class PullBranch(_BaseNetTask):
 
 
 class UpdateSubmodule(_BaseNetTask):
-    def flow(self, submoduleName: str, init=False):
+    def flow(self, submoduleName: str, init=True):
         self._showRemoteLinkDialog()
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir

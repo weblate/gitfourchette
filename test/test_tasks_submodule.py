@@ -352,7 +352,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
     assert node.data == sm
     menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "init")
+    triggerMenuAction(menu, "update")
 
     assert ".git" in os.listdir(f"{wd}/{sm}")
     assert not repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED

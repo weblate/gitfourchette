@@ -432,8 +432,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, UpdateSubmodule, taskArgs=[data]),
-                TaskBook.action(self, UpdateSubmodule, name="Init && " + TaskBook.autoActionName(UpdateSubmodule), taskArgs=[data, True]),
+                TaskBook.action(self, UpdateSubmodule, taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
