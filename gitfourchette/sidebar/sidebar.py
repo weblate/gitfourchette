@@ -416,6 +416,13 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("Push To"), submenu=self.pushRefspecMenu(refspecs)),
             ]
 
+        elif item == EItem.SubmodulesHeader:
+            submodules = self.sidebarModel.repoModel.submodules
+
+            actions += [
+                TaskBook.action(self, UpdateSubmodulesRecursive, enabled=bool(submodules)),
+            ]
+
         elif item == EItem.Submodule:
             model = self.sidebarModel
             repo = model.repo

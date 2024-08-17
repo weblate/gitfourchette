@@ -209,7 +209,8 @@ class TaskBook:
             taskType: Type[RepoTask],
             name="",
             accel="",
-            taskArgs: Any = None
+            taskArgs: Any = None,
+            **kwargs
     ) -> ActionDef:
         if not name:
             name = cls.autoActionName(taskType)
@@ -232,8 +233,13 @@ class TaskBook:
         def callback():
             TaskInvoker.invoke(invoker, taskType, *taskArgs)
 
-        return ActionDef(name, callback=callback,
-                         icon=icon, shortcuts=shortcuts, statusTip=statusTip)
+        actionDef = ActionDef(name, callback=callback,
+                              icon=icon, shortcuts=shortcuts, statusTip=statusTip)
+
+        if kwargs:
+            actionDef = actionDef.replace(**kwargs)
+
+        return actionDef
 
     @classmethod
     def toolbarAction(cls, invoker: QObject, taskType: Type[RepoTask]):

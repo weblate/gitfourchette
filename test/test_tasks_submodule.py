@@ -359,7 +359,8 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
 
 
 @pytest.mark.skipif(pygit2OlderThan("1.15.1"), reason="old pygit2")
-def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["single", "recurse"])
+def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow, method):
     sm = "submosub"
 
     # Unpack full-blown repo (complete with submodule) as our upstream
@@ -408,10 +409,17 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow):
     assert qteFind(rw.specialDiffView, fr"old.+{newHash}.+new.+{oldHash}", True)  # yes, old/new look inverted, that's on purpose
 
     # Update the submodule
-    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
-    assert node.data == sm
-    menu = rw.sidebar.makeNodeMenu(node)
-    triggerMenuAction(menu, "update")
+    if method == "single":
+        node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+        assert node.data == sm
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "update")
+    elif method == "recurse":
+        node = next(rw.sidebar.findNodesByKind(EItem.SubmodulesHeader))
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "update.+recursively")
+    else:
+        raise NotImplementedError(f"Unsupported method {method}")
 
     QTest.qWait(1)
     assert sm not in qlvGetRowData(rw.dirtyFiles)

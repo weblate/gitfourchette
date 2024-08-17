@@ -208,11 +208,18 @@ class UpdateSubmodule(_BaseNetTask):
         with self.remoteLink.remoteKeyFileContext(submodule.url or ""):
             submodule.update(init=init, callbacks=self.remoteLink)
 
+        self.postStatus = self.tr("Submodule updated.")
+
 
 class UpdateSubmodulesRecursive(_BaseNetTask):
     def flow(self):
+        count = 0
+
         for submodule in self.repo.recurse_submodules():
+            count += 1
             yield from self.flowSubtask(UpdateSubmodule, submodule.name)
+
+        self.postStatus = self.tr("%n submodules updated.", "", count)
 
 
 class PushRefspecs(_BaseNetTask):
