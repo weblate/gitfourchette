@@ -15,7 +15,7 @@ class CommittedFiles(FileList):
     def __init__(self, parent: QWidget):
         super().__init__(parent, NavContext.COMMITTED)
 
-    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+    def contextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
         actions = []
 
         n = len(patches)
@@ -30,16 +30,7 @@ class CommittedFiles(FileList):
                     self.wantOpenDiffInNewWindow,
                 ),
 
-                ActionDef(
-                    self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
-                    self.wantOpenInDiffTool,
-                    icon="vcs-diff"
-                ),
-
-                ActionDef(
-                    self.tr("E&xport Diffs As Patch...", "", n),
-                    self.savePatchAs
-                ),
+                *self.contextMenuActionsDiff(patches),
 
                 ActionDef.SEPARATOR,
 
@@ -97,7 +88,7 @@ class CommittedFiles(FileList):
                 ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False)
             ]
 
-        actions += super().createContextMenuActions(patches)
+        actions += super().contextMenuActions(patches)
         return actions
 
     def setCommit(self, oid: Oid):

@@ -158,12 +158,15 @@ class FileList(QListView):
         self.commitId = NULL_OID
         self.skippedRenameDetection = False
 
+    # -------------------------------------------------------------------------
+    # Context menu
+
     def makeContextMenu(self):
         patches = list(self.selectedPatches())
         if len(patches) == 0:
             return None
 
-        actions = self.createContextMenuActions(patches)
+        actions = self.contextMenuActions(patches)
         menu = ActionDef.makeQMenu(self, actions)
         menu.setObjectName("FileListContextMenu")
         return menu
@@ -188,7 +191,7 @@ class FileList(QListView):
         # was called" -- I suppose this means the context menu won't be deleted until the FileList has control again.
         menu.deleteLater()
 
-    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+    def contextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
         """ To be overridden """
 
         def pathDisplayStyleAction(pds: PathDisplayStyle):
@@ -221,6 +224,64 @@ class FileList(QListView):
                 submenu=[pathDisplayStyleAction(style) for style in PathDisplayStyle],
             ),
         ]
+
+    def contextMenuActionStash(self):
+        return ActionDef(
+            self.tr("Stas&h Changes..."),
+            self.wantPartialStash,
+            icon="git-stash-black",
+            shortcuts=TaskBook.shortcuts.get(NewStash, []))
+
+    def contextMenuActionRevertMode(self, patches, callback: Callable):
+        n = len(patches)
+        action = ActionDef(tr("Revert Mode Change", "", n), callback, enabled=False)
+
+        for patch in patches:
+            if not patch:  # stale diff
+                break
+            om = patch.delta.old_file.mode
+            nm = patch.delta.new_file.mode
+            if (patch.delta.status in [DeltaStatus.MODIFIED, DeltaStatus.RENAMED]
+                    and om != nm
+                    and nm in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]):
+                action.enabled = True
+                if n == 1:
+                    if nm == FileMode.BLOB_EXECUTABLE:
+                        action.caption = tr("Revert Mode to Non-Executable")
+                    elif nm == FileMode.BLOB:
+                        action.caption = tr("Revert Mode to Executable")
+
+        return action
+
+    def contextMenuActionsDiff(self, patches):
+        n = len(patches)
+
+        return [
+            ActionDef(
+                self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
+                self.wantOpenInDiffTool,
+                icon="vcs-diff"),
+
+            ActionDef(
+                self.tr("E&xport Diffs As Patch...", "", n),
+                self.savePatchAs),
+        ]
+
+    def contextMenuActionsEdit(self, patches):
+        n = len(patches)
+
+        return [
+            ActionDef(
+                self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
+                self.openWorkdirFile,
+                icon="SP_FileIcon"),
+
+            ActionDef(
+                self.tr("Edit &HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),
+                self.openHeadRevision),
+        ]
+
+    # -------------------------------------------------------------------------
 
     def confirmBatch(self, callback: Callable[[Patch], None], title: str, prompt: str, threshold: int = 3):
         patches = list(self.selectedPatches())
@@ -520,30 +581,6 @@ class FileList(QListView):
         patches = list(p for p in self.selectedPatches() if p.delta.new_file.mode in [FileMode.COMMIT])
         for patch in patches:
             self.openSubRepo.emit(patch.delta.new_file.path)
-
-    def revertModeActionDef(self, n: int, callback: Callable):
-        action = ActionDef(tr("Revert Mode Change", "", n), callback, enabled=False)
-
-        try:
-            patches = self.selectedPatches()
-        except ValueError:
-            # If selectedPatches fails (e.g. due to stale diff), just return the default action
-            return action
-
-        for patch in patches:
-            om = patch.delta.old_file.mode
-            nm = patch.delta.new_file.mode
-            if (patch.delta.status in [DeltaStatus.MODIFIED, DeltaStatus.RENAMED]
-                    and om != nm
-                    and nm in [FileMode.BLOB, FileMode.BLOB_EXECUTABLE]):
-                action.enabled = True
-                if n == 1:
-                    if nm == FileMode.BLOB_EXECUTABLE:
-                        action.caption = tr("Revert Mode to Non-Executable")
-                    elif nm == FileMode.BLOB:
-                        action.caption = tr("Revert Mode to Executable")
-
-        return action
 
     def searchRange(self, searchRange: range) -> QModelIndex | None:
         model = self.model()  # to filter out hidden rows, don't use self.clModel directly

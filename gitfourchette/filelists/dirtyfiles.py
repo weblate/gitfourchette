@@ -14,7 +14,7 @@ class DirtyFiles(FileList):
 
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+    def contextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
         actions = []
 
         n = len(patches)
@@ -28,42 +28,25 @@ class DirtyFiles(FileList):
         onlySubmodules = anySubmodules and len(modeSet) == 1
 
         if not anyConflicts and not anySubmodules:
+            contextMenuActionStage = ActionDef(
+                self.tr("&Stage %n Files", "", n),
+                self.stage,
+                icon="git-stage",
+                shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys))
+
+            contextMenuActionDiscard = ActionDef(
+                self.tr("&Discard Changes"),
+                self.discard,
+                icon="git-discard",
+                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys))
+
             actions += [
-                ActionDef(
-                    self.tr("&Stage %n Files", "", n),
-                    self.stage,
-                    icon="git-stage",
-                    shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys),
-                ),
-
-                ActionDef(
-                    self.tr("&Discard Changes"),
-                    self.discard,
-                    icon="git-discard",
-                    shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
-                ),
-
-                ActionDef(
-                    self.tr("Stas&h Changes..."),
-                    self.wantPartialStash,
-                    icon="git-stash-black",
-                    shortcuts=TaskBook.shortcuts.get(NewStash, [])
-                ),
-
-                self.revertModeActionDef(n, self.discardModeChanges),
-
+                contextMenuActionStage,
+                contextMenuActionDiscard,
+                self.contextMenuActionStash(),
+                self.contextMenuActionRevertMode(patches, self.discardModeChanges),
                 ActionDef.SEPARATOR,
-
-                ActionDef(
-                    self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
-                    self.wantOpenInDiffTool,
-                    icon="vcs-diff",
-                ),
-
-                ActionDef(
-                    self.tr("E&xport Diffs As Patch...", "", n),
-                    self.savePatchAs
-                ),
+                *self.contextMenuActionsDiff(patches),
             ]
 
         elif onlyConflicts:
@@ -121,19 +104,11 @@ class DirtyFiles(FileList):
 
         if not onlySubmodules:
             actions += [
-                ActionDef(
-                    self.tr("&Edit in {0}", "", n).format(settings.getExternalEditorName()),
-                    self.openWorkdirFile,
-                    icon="SP_FileIcon",
-                ),
-                ActionDef(
-                    self.tr("Edit HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),
-                    self.openHeadRevision,
-                ),
+                *self.contextMenuActionsEdit(patches),
                 ActionDef.SEPARATOR,
             ]
 
-        actions += super().createContextMenuActions(patches)
+        actions += super().contextMenuActions(patches)
         return actions
 
     def keyPressEvent(self, event: QKeyEvent):

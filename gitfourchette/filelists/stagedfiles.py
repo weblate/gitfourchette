@@ -14,7 +14,7 @@ class StagedFiles(FileList):
 
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-    def createContextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
+    def contextMenuActions(self, patches: list[Patch]) -> list[ActionDef]:
         actions = []
 
         n = len(patches)
@@ -23,48 +23,20 @@ class StagedFiles(FileList):
         onlySubmodules = anySubmodules and len(modeSet) == 1
 
         if not anySubmodules:
+            contextMenuActionUnstage = ActionDef(
+                self.tr("&Unstage %n Files", "", n),
+                self.unstage,
+                icon="git-unstage",
+                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys))
+
             actions += [
-                ActionDef(
-                    self.tr("&Unstage %n Files", "", n),
-                    self.unstage,
-                    icon="git-unstage",
-                    shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys),
-                ),
-
-                ActionDef(
-                    self.tr("Stas&h Changes..."),
-                    self.wantPartialStash,
-                    shortcuts=TaskBook.shortcuts.get(NewStash, []),
-                    icon="vcs-stash",
-                ),
-
-                self.revertModeActionDef(n, self.unstageModeChange),
-
+                contextMenuActionUnstage,
+                self.contextMenuActionStash(),
+                self.contextMenuActionRevertMode(patches, self.unstageModeChange),
                 ActionDef.SEPARATOR,
-
-                ActionDef(
-                    self.tr("Open Diff in {0}").format(settings.getDiffToolName()),
-                    self.wantOpenInDiffTool,
-                    icon="vcs-diff",
-                ),
-
-                ActionDef(
-                    self.tr("E&xport Diffs As Patch...", "", n),
-                    self.savePatchAs,
-                ),
-
+                *self.contextMenuActionsDiff(patches),
                 ActionDef.SEPARATOR,
-
-                ActionDef(
-                    self.tr("&Edit in {0}").format(settings.getExternalEditorName()),
-                    self.openWorkdirFile,
-                    icon="SP_FileIcon",
-                ),
-
-                ActionDef(
-                    self.tr("Edit &HEAD Versions in {0}", "", n).format(settings.getExternalEditorName()),
-                    self.openHeadRevision,
-                ),
+                *self.contextMenuActionsEdit(patches),
             ]
 
         elif onlySubmodules:
@@ -90,7 +62,7 @@ class StagedFiles(FileList):
                 ActionDef(self.tr("Selected files must be reviewed individually."), enabled=False)
             ]
 
-        actions += super().createContextMenuActions(patches)
+        actions += super().contextMenuActions(patches)
         return actions
 
     def keyPressEvent(self, event: QKeyEvent):
