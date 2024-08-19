@@ -87,6 +87,7 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
     "assert False",
+    "warnings.warn\\(",
 
     # Don't complain if non-runnable code isn't run:
     "if 0:",
@@ -94,6 +95,9 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "if not TEST_MODE:",
     "if not settings.TEST_MODE:",
+    "if APP_FREEZE_.+:",
+    "if MACOS:",
+    "if WINDOWS:",
 
     # Don't complain about abstract methods, they aren't run:
     "@(abc\\.)?abstractmethod",

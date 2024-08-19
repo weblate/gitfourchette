@@ -274,7 +274,7 @@ class GFApplication(QApplication):
             # Fall back to English in unit tests regardless of the host machine's locale
             # because many unit tests look for pieces of text in dialogs.
             locale = QLocale(QLocale.Language.English)
-        else:
+        else:  # pragma: no cover
             locale = QLocale()  # "Automatic" setting: Get system locale
 
         # Force English locale for RTL languages. RTL support isn't great for now,

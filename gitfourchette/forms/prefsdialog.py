@@ -261,8 +261,6 @@ class PrefsDialog(QDialog):
             return control
         elif issubclass(valueType, enum.Enum):
             return self.enumControl(key, value, type(value))
-        elif valueType is str:
-            return self.strControl(key, value)
         elif valueType is int:
             return self.intControl(key, value)
         elif valueType is bool:
@@ -275,6 +273,8 @@ class PrefsDialog(QDialog):
                 control.setCheckState(Qt.CheckState.Checked if value else Qt.CheckState.Unchecked)
                 control.stateChanged.connect(lambda v, k=key, c=control: self.assign(k, c.isChecked()))  # PySide6: "v==Qt.CheckState.Checked" doesn't work anymore?
                 return control
+        else:
+            raise NotImplementedError(f"Write pref widget for {key}")
 
     def languageControl(self, prefKey: str, prefValue: str):
         defaultCaption = translate("Prefs", "System default", "system default language setting")
@@ -319,12 +319,14 @@ class PrefsDialog(QDialog):
             qfd.show()
 
         fontButton = QPushButton(translate("Prefs", "Font"))
+        fontButton.setObjectName("PickFontButton")
         fontButton.clicked.connect(lambda e: pickFont())
         fontButton.setMinimumWidth(256)
         fontButton.setMaximumWidth(256)
         fontButton.setMaximumHeight(128)
 
         resetButton = QToolButton(self)
+        resetButton.setObjectName("ResetFontButton")
         resetButton.setText(translate("Prefs", "Reset", "reset font"))
         resetButton.clicked.connect(lambda: resetFont())
 
@@ -343,11 +345,6 @@ class PrefsDialog(QDialog):
         refreshFontButton()
 
         return hBoxWidget(fontButton, resetButton)
-
-    def strControl(self, prefKey, prefValue):
-        control = QLineEdit(prefValue, self)
-        control.textEdited.connect(lambda v, k=prefKey: self.assign(k, v))
-        return control
 
     def strControlWithPresets(self, prefKey, prefValue, presets, leaveBlankHint=False, validate=None):
         control = QComboBoxWithPreview(self)
@@ -394,17 +391,6 @@ class PrefsDialog(QDialog):
         control.setStepType(QSpinBox.StepType.AdaptiveDecimalStepType)
         control.valueChanged.connect(lambda v, k=prefKey: self.assign(k, v))
         return control
-
-    def boolRadioControl(self, prefKey, prefValue, falseName, trueName):
-        falseButton = QRadioButton(falseName)
-        falseButton.setChecked(not prefValue)
-        falseButton.toggled.connect(lambda b: self.assign(prefKey, not b))
-
-        trueButton = QRadioButton(trueName)
-        trueButton.setChecked(prefValue)
-        trueButton.toggled.connect(lambda b: self.assign(prefKey, b))
-
-        return vBoxWidget(trueButton, falseButton)
 
     def boolComboBoxControl(self, prefKey: str, prefValue: bool, falseName: str, trueName: str) -> QComboBox:
         control = QComboBox(self)

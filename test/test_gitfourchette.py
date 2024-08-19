@@ -114,64 +114,6 @@ def testSkipRenameDetection(tempDir, mainWindow):
     assert not rw.diffBanner.isVisibleTo(rw)
 
 
-def testPrefsDialog(tempDir, mainWindow):
-    # Open a repo so that refreshPrefs functions are exercized in coverage
-    wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
-
-    def openPrefs() -> PrefsDialog:
-        triggerMenuAction(mainWindow.menuBar(), "file/settings")
-        return findQDialog(mainWindow, "settings")
-
-    # Open prefs, reset to first tab to prevent spillage from any previous test
-    dlg = openPrefs()
-    dlg.tabs.setCurrentIndex(0)
-    dlg.reject()
-
-    # Open prefs, navigate to some tab and reject
-    dlg = openPrefs()
-    assert dlg.tabs.currentIndex() == 0
-    dlg.tabs.setCurrentIndex(2)
-    dlg.reject()
-
-    # Open prefs again and check that the tab was restored
-    dlg = openPrefs()
-    assert dlg.tabs.currentIndex() == 2
-    dlg.reject()
-
-    # Change statusbar setting, and cancel
-    assert mainWindow.statusBar().isVisible()
-    dlg = openPrefs()
-    checkBox: QCheckBox = dlg.findChild(QCheckBox, "prefctl_showStatusBar")
-    assert checkBox.isChecked()
-    checkBox.setChecked(False)
-    dlg.reject()
-    assert mainWindow.statusBar().isVisible()
-
-    # Change statusbar setting, and accept
-    dlg = openPrefs()
-    checkBox: QCheckBox = dlg.findChild(QCheckBox, "prefctl_showStatusBar")
-    assert checkBox.isChecked()
-    checkBox.setChecked(False)
-    dlg.accept()
-    assert not mainWindow.statusBar().isVisible()
-
-    # Play with QComboBoxWithPreview (for coverage)
-    dlg = mainWindow.openPrefsDialog("shortTimeFormat")
-    comboBox: QComboBox = dlg.findChild(QWidget, "prefctl_shortTimeFormat").findChild(QComboBox)
-    comboBox.setFocus()
-    QTest.keyClick(comboBox, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
-    QTest.qWait(0)
-    QTest.keyClick(comboBox, Qt.Key.Key_Down)
-    QTest.qWait(0)
-    QTest.keyClick(comboBox, Qt.Key.Key_Down, Qt.KeyboardModifier.AltModifier)
-    QTest.qWait(0)  # trigger ItemDelegate.paint
-    comboBox.setFocus()
-    QTest.keyClicks(comboBox, "MMMM")  # trigger activation of out-of-bounds index
-    QTest.keyClick(comboBox, Qt.Key.Key_Enter)
-    dlg.reject()
-
-
 def testNewRepo(tempDir, mainWindow):
     triggerMenuAction(mainWindow.menuBar(), "file/new repo")
 
