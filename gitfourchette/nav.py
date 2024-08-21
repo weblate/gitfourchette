@@ -35,16 +35,6 @@ class NavFlags(enum.IntFlag):
 
     DefaultFlags = 0
 
-    @staticmethod
-    def parseUrl(url: QUrl):
-        query = QUrlQuery(url)
-        value = query.queryItemValue("jumpflags")
-
-        if value:
-            return NavFlags(int(value))
-        else:
-            return NavFlags.DefaultFlags
-
 
 @enum.unique
 class NavContext(enum.IntEnum):
@@ -173,14 +163,6 @@ class NavLocator:
             query["flags"] = str(self.flags.value)
 
         return makeInternalLink(NavLocator.URL_AUTHORITY, self.path, fragment, **query)
-
-    def toHtml(self, text: str):
-        href = self.url()
-        assert '"' not in href
-        if "[" in text:
-            return text.replace("[", f"<a href=\"{href}\">").replace("]", "</a>")
-        else:
-            return f"<a href=\"{href}\">{text}</a>"
 
     def replace(self, **kwargs) -> NavLocator:
         return dataclasses.replace(self, **kwargs)

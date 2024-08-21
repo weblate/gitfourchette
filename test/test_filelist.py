@@ -195,7 +195,7 @@ def testSearchFileList(tempDir, mainWindow):
         # TODO: Can't get Qt 5 unit tests to hide the searchbar this way, but it does work manually.
         # Qt 5 is on the way out so it's not worth troubleshooting this.
         return
-    QTest.keyClick(searchBar, Qt.Key.Key_Escape)
+    QTest.keyClick(fileList, Qt.Key.Key_Escape)
     assert not searchBar.isVisible()
 
 
@@ -302,6 +302,42 @@ def testFileListToolTip(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17"), "c/c2-2.txt"))
     tip = rw.committedFiles.currentIndex().data(Qt.ItemDataRole.ToolTipRole)
     assert all(re.search(p, tip, re.I) for p in ("c/c2.txt", "c/c2-2.txt", "renamed", "similarity"))
+
+
+def testFileListCopyPath(tempDir, mainWindow):
+    """
+    WARNING: THIS TEST MODIFIES THE SYSTEM'S CLIPBOARD.
+    (No worries if you're running the tests offscreen.)
+    """
+
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    # Make sure the clipboard is clean before we begin
+    clipboard = QApplication.clipboard()
+    clipboard.clear()
+    assert not clipboard.text()
+
+    rw.jump(NavLocator.inCommit(Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17"), "c/c2-2.txt"))
+    QTest.keySequence(rw.committedFiles, "Ctrl+C")
+    clipped = clipboard.text()
+    assert clipped == os.path.normpath(f"{wd}/c/c2-2.txt")
+
+
+def testFileListChangePathDisplayStyle(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inCommit(Oid(hex="ce112d052bcf42442aa8563f1e2b7a8aabbf4d17"), "c/c2-2.txt"))
+    assert ["c/c2-2.txt"] == qlvGetRowData(rw.committedFiles)
+
+    menu = rw.committedFiles.makeContextMenu()
+    triggerMenuAction(menu, "path display style/name only")
+    assert ["c2-2.txt"] == qlvGetRowData(rw.committedFiles)
+
+    menu = rw.committedFiles.makeContextMenu()
+    triggerMenuAction(menu, "path display style/full")
+    assert ["c/c2-2.txt"] == qlvGetRowData(rw.committedFiles)
 
 
 def testMiddleClickToStageFile(tempDir, mainWindow):

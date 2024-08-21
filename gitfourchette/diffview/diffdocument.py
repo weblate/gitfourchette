@@ -164,10 +164,11 @@ class DiffDocument:
                     continue
 
                 if len(content) > MAX_LINE_LENGTH and not locator.hasFlags(NavFlags.AllowLongLines):
-                    loadAnyway = locator.withExtraFlags(NavFlags.AllowLongLines)
+                    loadAnywayLoc = locator.withExtraFlags(NavFlags.AllowLongLines)
+                    loadAnywayText = translate("Diff", "[Load diff anyway] (this may take a moment)")
                     raise SpecialDiffError(
                         translate("Diff", "This file contains very long lines."),
-                        loadAnyway.toHtml(translate("Diff", "[Load diff anyway] (this may take a moment)")),
+                        linkify(loadAnywayText, loadAnywayLoc.url()),
                         "SP_MessageBoxWarning")
 
                 ld = LineData(text=content, hunkPos=DiffLinePos(hunkID, hunkLineNum), diffLine=diffLine)

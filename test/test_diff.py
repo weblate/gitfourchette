@@ -379,7 +379,25 @@ def testDiffVeryLongLines(tempDir, mainWindow):
     assert rw.diffView.toPlainText().rstrip() == "@@ -0,0 +1 @@\n" + contents.rstrip()
 
 
-def testImageDiff(tempDir, mainWindow):
+def testDiffLargeFile(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    # About one megabyte
+    contents = "\n".join(f"{i:08x}." for i in range(100_000)) + "\n"
+    writeFile(f"{wd}/bigfile.txt", contents)
+
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inUnstaged(path="bigfile.txt"))
+    assert not rw.diffView.isVisible()
+    assert rw.specialDiffView.isVisible()
+    assert "too large to be previewed" in rw.specialDiffView.toPlainText().lower()
+
+    qteClickLink(rw.specialDiffView, "load.+anyway")
+    assert rw.diffView.isVisible()
+    assert rw.diffView.toPlainText().rstrip() == "@@ -0,0 +1,100000 @@\n" + contents.rstrip()
+
+
+def testDiffImage(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     shutil.copyfile(getTestDataPath("image1.png"), f"{wd}/image.png")
 
@@ -404,6 +422,22 @@ def testImageDiff(tempDir, mainWindow):
     rw.jump(NavLocator.inUnstaged("image.png"))
     assert rw.specialDiffView.isVisibleTo(rw)
     assert re.search("6.6 pixels", rw.specialDiffView.toPlainText())
+
+
+def testDiffLargeImage(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    shutil.copyfile(getTestDataPath("image1.png"), f"{wd}/image.png")
+    with open(f"{wd}/image.png", "ab") as binfile:
+        binfile.write(b"\x00" * 6_000_000)
+
+    rw = mainWindow.openRepo(wd)
+    rw.jump(NavLocator.inUnstaged("image.png"))
+    assert rw.specialDiffView.isVisible()
+    assert "too large to be previewed" in rw.specialDiffView.toPlainText().lower()
+
+    qteClickLink(rw.specialDiffView, "load.+anyway")
+    assert rw.specialDiffView.isVisible()
+    assert "too large" not in rw.specialDiffView.toPlainText().lower()
 
 
 def testDiffViewSelectionStableAfterRefresh(tempDir, mainWindow):

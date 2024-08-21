@@ -97,6 +97,10 @@ def testPatchBecameInvalid(tempDir, mainWindow):
     text = doc.toRawText()
     assert "changed on disk" in text.lower()
 
+    qteClickLink(rw.specialDiffView, "try to reload the file")
+    assert rw.diffView.isVisibleTo(rw)
+    assert not rw.specialDiffView.isVisibleTo(rw)
+
 
 def testExternalChangeWhileTaskIsBusyThenAborts(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
