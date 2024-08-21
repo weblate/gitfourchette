@@ -65,9 +65,6 @@ def testEditRemote(tempDir, mainWindow, method):
 
     node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
 
-    toolTip = node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
-    assert "https://github.com/libgit2/TestGitRepository" in toolTip
-
     if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "edit remote")

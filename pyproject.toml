@@ -98,6 +98,7 @@ exclude_lines = [
     "if APP_FREEZE_.+:",
     "if MACOS:",
     "if WINDOWS:",
+    "if not BRANCH_FOLDERS:",
 
     # Don't complain about abstract methods, they aren't run:
     "@(abc\\.)?abstractmethod",

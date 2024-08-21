@@ -351,6 +351,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
 
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
     assert node.data == sm
+    assert "not initialized" in node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "update")
 

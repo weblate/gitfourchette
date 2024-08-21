@@ -193,3 +193,35 @@ def testHideNestedRefFolders(tempDir, mainWindow, explicit, implicit, method):
             assert sm.isExplicitlyHidden(node)
         else:
             assert sm.isImplicitlyHidden(node) == (node.data in implicit)
+
+
+def testSidebarToolTips(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.create_tag("folder/leaf", repo.head_commit_id, ObjectType.COMMIT, TEST_SIGNATURE, "hello")
+        repo.create_branch_on_head("folder/leaf")
+        writeFile(f"{wd}/.git/refs/remotes/origin/folder/leaf", str(repo.head_commit_id) + "\n")
+
+    rw = mainWindow.openRepo(wd)
+
+    def test(kind, data, *patterns):
+        node = rw.sidebar.findNode(lambda n: n.kind == kind and n.data == data)
+        tip = node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
+        for pattern in patterns:
+            assert re.search(pattern, tip, re.I), f"pattern missing in tooltip: {tip}"
+
+    test(EItem.LocalBranch, "refs/heads/master",
+         r"local branch", r"upstream.+origin/master", r"checked.out")
+
+    test(EItem.RemoteBranch, "refs/remotes/origin/master",
+         r"origin/master", r"remote-tracking branch", r"upstream for.+checked.out.+\bmaster\b")
+
+    test(EItem.Tag, "refs/tags/annotated_tag", r"\btag\b")
+    test(EItem.UncommittedChanges, "", r"go to uncommitted changes.+(ctrl|⌘)")
+    test(EItem.Remote, "origin", r"https://github.com/libgit2/TestGitRepository")
+    test(EItem.RefFolder, "refs/heads/folder", r"local branch folder")
+    test(EItem.RefFolder, "refs/remotes/origin/folder", r"remote branch folder")
+    test(EItem.RefFolder, "refs/tags/folder", r"tag folder")
+
+

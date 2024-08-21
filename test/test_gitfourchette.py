@@ -141,9 +141,7 @@ def testNewRepo(tempDir, mainWindow):
     commitDialog.accept()
 
     assert not list(rw.sidebar.findNodesByKind(EItem.UnbornHead))
-    branchNode = next(rw.sidebar.findNodesByKind(EItem.LocalBranch))
-    branchNodeIndex = branchNode.createIndex(rw.sidebar.sidebarModel)
-    assert re.search(r"checked.out", branchNodeIndex.data(Qt.ItemDataRole.ToolTipRole), re.I)
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.LocalBranch)))
 
 
 def testNewRepoFromExistingSources(tempDir, mainWindow):

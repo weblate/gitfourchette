@@ -185,8 +185,7 @@ class SidebarModel(QAbstractItemModel):
 
     class Role:
         Ref = Qt.ItemDataRole.UserRole + 0
-        Hidden = Qt.ItemDataRole.UserRole + 1
-        IconKey = Qt.ItemDataRole.UserRole + 2
+        IconKey = Qt.ItemDataRole.UserRole + 1
 
     @property
     def _parentWidget(self) -> QWidget:
@@ -471,9 +470,8 @@ class SidebarModel(QAbstractItemModel):
     def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
         # Return an index given a parent and a row (i.e. child number within parent)
 
-        # Illegal
-        if column != 0 or row < 0:
-            return QModelIndex()
+        assert column == 0
+        assert row >= 0
 
         if not parent or not parent.isValid():
             parentNode = self.rootNode
@@ -501,16 +499,6 @@ class SidebarModel(QAbstractItemModel):
             return QModelIndex()
 
         return node.createIndex(self)
-
-    """
-    # What's the use of this if it works fine without?
-    def hasChildren(self, parent: QModelIndex):
-        if not parent.isValid():
-            node = self.rootNode
-        else:
-            node = SidebarNode.fromIndex(parent)
-        return len(node.children) >= 1
-    """
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         if not parent.isValid():  # root
@@ -541,7 +529,6 @@ class SidebarModel(QAbstractItemModel):
         toolTipRole = role == Qt.ItemDataRole.ToolTipRole
         sizeHintRole = role == Qt.ItemDataRole.SizeHintRole
         fontRole = role == Qt.ItemDataRole.FontRole
-        hiddenRole = role == SidebarModel.Role.Hidden
         refRole = role == SidebarModel.Role.Ref
         iconKeyRole = role == SidebarModel.Role.IconKey
 
@@ -549,22 +536,15 @@ class SidebarModel(QAbstractItemModel):
         item = node.kind
 
         if item == EItem.Spacer:
-            if sizeHintRole:
-                # Note: If uniform row heights are on, this won't actually be effective
-                # (unless the Spacer is the first item, in which case all other rows will be short)
-                parentWidget: QWidget = QObject.parent(self)
-                return QSize(-1, int(0.5 * parentWidget.fontMetrics().height()))
-            else:
-                return None
+            pass
 
         elif item == EItem.LocalBranch:
             refName = node.data
             branchName = refName.removeprefix(RefPrefix.HEADS)
             if displayRole:
-                if BRANCH_FOLDERS:
-                    return branchName.rsplit("/", 1)[-1]
-                else:
+                if not BRANCH_FOLDERS:
                     return branchName
+                return branchName.rsplit("/", 1)[-1]
             elif refRole:
                 return refName
             elif toolTipRole:
@@ -581,8 +561,6 @@ class SidebarModel(QAbstractItemModel):
                     text += "HEAD " + self.tr("(this is the checked-out branch)")
                 self.cacheTooltip(index, text)
                 return text
-            elif hiddenRole:
-                return self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-branch" if branchName != self._checkedOut else "git-head"
 
@@ -597,8 +575,6 @@ class SidebarModel(QAbstractItemModel):
                         ).format(bquo(target))
                 self.cacheTooltip(index, text)
                 return text
-            elif hiddenRole:
-                return False
 
         elif item == EItem.DetachedHead:
             if displayRole:
@@ -607,8 +583,6 @@ class SidebarModel(QAbstractItemModel):
                 oid = Oid(hex=node.data)
                 caption = self.tr("Detached HEAD")
                 return f"<p style='white-space: pre'>{caption} @ {shortHash(oid)}"
-            elif hiddenRole:
-                return False
             elif refRole:
                 return "HEAD"
             elif iconKeyRole:
@@ -621,8 +595,6 @@ class SidebarModel(QAbstractItemModel):
             elif toolTipRole:
                 url = self.repo.remotes[remoteName].url
                 return "<p style='white-space: pre'>" + escape(url)
-            elif hiddenRole:
-                return False
             elif iconKeyRole:
                 return "git-remote"
 
@@ -631,10 +603,9 @@ class SidebarModel(QAbstractItemModel):
             shorthand = refName.removeprefix(RefPrefix.REMOTES)
             remoteName, branchName = split_remote_branch_shorthand(shorthand)
             if displayRole:
-                if BRANCH_FOLDERS:
-                    return branchName.rsplit("/", 1)[-1]
-                else:
+                if not BRANCH_FOLDERS:
                     return branchName
+                return branchName.rsplit("/", 1)[-1]
             elif refRole:
                 return refName
             elif toolTipRole:
@@ -651,8 +622,6 @@ class SidebarModel(QAbstractItemModel):
                     return font
                 else:
                     return None
-            elif hiddenRole:
-                return self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-branch"
 
@@ -671,8 +640,6 @@ class SidebarModel(QAbstractItemModel):
                 else:
                     text += self.tr("{0} (local branch folder)").format(btag(name))
                 return text
-            elif hiddenRole:
-                return self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-folder"
 
@@ -680,18 +647,15 @@ class SidebarModel(QAbstractItemModel):
             refName = node.data
             tagName = refName.removeprefix(RefPrefix.TAGS)
             if displayRole:
-                if BRANCH_FOLDERS:
-                    return tagName.rsplit("/", 1)[-1]
-                else:
+                if not BRANCH_FOLDERS:
                     return tagName
+                return tagName.rsplit("/", 1)[-1]
             elif refRole:
                 return refName
             elif toolTipRole:
                 text = "<p style='white-space: pre'>"
                 text += self.tr("Tag {0}").format(bquo(tagName))
                 return text
-            elif hiddenRole:
-                return False
             elif iconKeyRole:
                 return "git-tag"
 
@@ -710,8 +674,6 @@ class SidebarModel(QAbstractItemModel):
                 text += f"<b>{self.tr('date:')}</b> {commitTimeStr}"
                 self.cacheTooltip(index, text)
                 return text
-            elif hiddenRole:
-                self.isExplicitlyHidden(node)
             elif iconKeyRole:
                 return "git-stash"
 
@@ -727,8 +689,6 @@ class SidebarModel(QAbstractItemModel):
                 if node.warning:
                     text += "<br>\u26a0 " + node.warning
                 return text
-            elif hiddenRole:
-                return False
             elif iconKeyRole:
                 return "achtung" if node.warning else "git-submodule"
 
@@ -743,8 +703,6 @@ class SidebarModel(QAbstractItemModel):
             elif refRole:
                 # Return fake ref so we can select Uncommitted Changes from elsewhere
                 return UC_FAKEREF
-            elif hiddenRole:
-                return False
             elif iconKeyRole:
                 return "git-workdir"
             elif toolTipRole:
@@ -767,14 +725,10 @@ class SidebarModel(QAbstractItemModel):
                 font = self._parentWidget.font()
                 font.setWeight(QFont.Weight.DemiBold)
                 return font
-            elif hiddenRole:
-                return False
 
         # fallback
         if sizeHintRole:
             return QSize(-1, int(1.2 * self._parentWidget.fontMetrics().height()))
-        elif hiddenRole:
-            return False
 
         return None
 
