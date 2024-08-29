@@ -7,8 +7,10 @@ from bisect import bisect_left, bisect_right
 
 from gitfourchette import colors
 from gitfourchette import settings
+from gitfourchette.application import GFApplication
 from gitfourchette.diffview.diffdocument import DiffDocument, LineData
 from gitfourchette.diffview.diffgutter import DiffGutter
+from gitfourchette.diffview.diffrubberband import DiffRubberBand
 from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
@@ -94,6 +96,8 @@ class DiffView(QPlainTextEdit):
         # Emit contextual help with non-empty selection
         self.cursorPositionChanged.connect(self.emitSelectionHelp)
         self.selectionChanged.connect(self.emitSelectionHelp)
+        self.cursorPositionChanged.connect(self.updateRubberBand)
+        self.selectionChanged.connect(self.updateRubberBand)
 
         self.searchBar = SearchBar(self, self.tr("Find in Diff"))
         # self.searchBar.textChanged.connect(self.onSearchTextChanged)
@@ -103,8 +107,12 @@ class DiffView(QPlainTextEdit):
         self.searchBar.visibilityChanged.connect(lambda: self.highlighter.rehighlight())
         self.searchBar.hide()
 
-        # Initialize font
+        self.rubberBand = DiffRubberBand(self.viewport())
+        self.rubberBand.hide()
+
+        # Initialize font & styling
         self.refreshPrefs()
+        GFApplication.instance().restyle.connect(self.refreshPrefs)
 
     # ---------------------------------------------
     # Qt events
@@ -113,9 +121,9 @@ class DiffView(QPlainTextEdit):
         self.execContextMenu(event.globalPos())
 
     def resizeEvent(self, event: QResizeEvent):
-        """Update gutter geometry"""
         super().resizeEvent(event)
         self.resizeGutter()
+        self.updateRubberBand()
 
     def keyPressEvent(self, event: QKeyEvent):
         # In a detached window, we can't rely on the main window's menu bar to
@@ -338,6 +346,9 @@ class DiffView(QPlainTextEdit):
 
         self.gutter.setFont(monoFont)
         self.syncViewportMarginsWithGutter()
+
+        self.setProperty("dark", "true" if isDarkTheme() else "false")
+        self.setStyleSheet(self.styleSheet())
 
     def refreshWordWrap(self):
         if settings.prefs.wordWrap:
@@ -627,6 +638,31 @@ class DiffView(QPlainTextEdit):
         self.setMinimumWidth(gutterWidth * 2)
 
         self.setViewportMargins(gutterWidth, 0, 0, 0)
+
+    # ---------------------------------------------
+    # Rubberband
+
+    def updateRubberBand(self):
+        textCursor: QTextCursor = self.textCursor()
+        start = textCursor.selectionStart()
+        end = textCursor.selectionEnd()
+        assert start <= end
+
+        if start == end == 0:
+            self.rubberBand.hide()
+            return
+
+        textCursor.setPosition(start)
+        textCursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)  # for wrapped lines
+        top = self.cursorRect(textCursor).top()
+
+        textCursor.setPosition(end)
+        textCursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)  # for wrapped lines
+        bottom = self.cursorRect(textCursor).bottom()
+
+        pad = 4
+        self.rubberBand.setGeometry(0, top-pad, self.viewport().width(), bottom-top+1+pad*2)
+        self.rubberBand.show()
 
     # ---------------------------------------------
     # Cursor/selection

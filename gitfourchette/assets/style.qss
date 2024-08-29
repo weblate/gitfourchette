@@ -18,3 +18,6 @@ Banner[heeded="true"] QLabel { color: white; }
 SearchBar[red="true"] QLineEdit { color: red; }
 
 Banner QToolButton, ContextHeader QToolButton { text-decoration: underline; }
+
+DiffView[dark=false] { selection-background-color: rgba(0, 0, 0, 50); selection-color: black; }
+DiffView[dark=true] { selection-background-color: rgba(255, 255, 255, 80); }
