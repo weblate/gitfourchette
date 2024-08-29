@@ -164,6 +164,32 @@ class DiffView(QPlainTextEdit):
             return False
         return True
 
+    def wheelEvent(self, event: QWheelEvent):
+        # Drop-in replacement for QPlainTextEdit::wheelEvent which scales text
+        # on ctrl+wheel. The vanilla version doesn't emit a signal, but we need
+        # to percolate the new font to the gutter & rubberband.
+        # See https://github.com/qt/qtbase/blob/6.7.2/src/widgets/widgets/qplaintextedit.cpp#L2327
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            self.wheelZoom(event.angleDelta().y())
+            return
+
+        super().wheelEvent(event)
+
+    def wheelZoom(self, delta: int):
+        delta /= 120
+        if delta == 0:
+            return
+        font = self.font()
+        newSize = font.pointSizeF() + delta
+        if newSize <= 0:
+            return
+        font.setPointSizeF(newSize)
+        self.setFont(font)
+        self.gutter.setFont(font)
+        self.resizeGutter()
+        self.syncViewportMarginsWithGutter()
+        self.updateRubberBand()
+
     # ---------------------------------------------
     # Document replacement
 
