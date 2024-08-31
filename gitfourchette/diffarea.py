@@ -254,24 +254,8 @@ class DiffArea(QWidget):
 
         topContainer = QWidget()
         topLayout = QHBoxLayout(topContainer)
-        diffDiscardButton = QToolButton()
-        diffDiscardButton.setText(self.tr("Discard"))
-        diffDiscardButton.setIcon(stockIcon("git-discard-lines"))
-        diffDiscardButton.setToolTip(self.tr("Discard selected lines"))
-        diffStageButton = QToolButton()
-        diffStageButton.setText(self.tr("Stage"))
-        diffStageButton.setIcon(stockIcon("git-stage-lines"))
-        diffStageButton.setToolTip(self.tr("Stage selected lines"))
-        appendShortcutToToolTip(diffStageButton, GlobalShortcuts.stageHotkeys[0])
-        diffUnstageButton = QToolButton()
-        diffUnstageButton.setText(self.tr("Unstage"))
-        diffUnstageButton.setIcon(stockIcon("git-unstage-lines"))
-        diffUnstageButton.setToolTip(self.tr("Unstage selected lines"))
         topLayout.setContentsMargins(0,0,0,0)
         topLayout.addWidget(header)
-        topLayout.addWidget(diffStageButton)
-        topLayout.addWidget(diffDiscardButton)
-        topLayout.addWidget(diffUnstageButton)
 
         diff = DiffView()
 
@@ -308,30 +292,18 @@ class DiffArea(QWidget):
         self.conflictView = conflict
         self.specialDiffView = specialDiff
         self.diffView = diff
-        self.diffStageButton = diffStageButton
-        self.diffDiscardButton = diffDiscardButton
-        self.diffUnstageButton = diffUnstageButton
-
-        def onSelectionActionableChanged(actionable: bool):
-            for button in diffDiscardButton, diffStageButton, diffUnstageButton:
-                button.setEnabled(actionable)
-        diff.selectionActionable.connect(onSelectionActionableChanged)
-        diffDiscardButton.clicked.connect(lambda: diff.discardSelection())
-        diffStageButton.clicked.connect(lambda: diff.stageSelection())
-        diffUnstageButton.clicked.connect(lambda: diff.unstageSelection())
 
         return stackContainer
 
     def applyCustomStyling(self):
-        for smallButton in (self.discardButton, self.unstageButton, self.stageButton,
-                            self.diffDiscardButton, self.diffUnstageButton, self.diffStageButton):
+        for smallButton in self.discardButton, self.unstageButton, self.stageButton:
             smallButton.setMaximumHeight(FILEHEADER_HEIGHT)
             smallButton.setEnabled(False)
             smallButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             smallButton.setAutoRaise(True)
             smallButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
 
-        for button in self.stageButton, self.unstageButton, self.diffStageButton, self.diffUnstageButton:
+        for button in self.stageButton, self.unstageButton:
             button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
 
         # Smaller font for header text
@@ -344,9 +316,6 @@ class DiffArea(QWidget):
                 self.stageButton,
                 self.unstageButton,
                 self.discardButton,
-                self.diffStageButton,
-                self.diffUnstageButton,
-                self.diffDiscardButton,
         ):
             tweakWidgetFont(smallWidget, 90)
 
@@ -455,31 +424,16 @@ class DiffArea(QWidget):
                 self.discardButton.setEnabled(hasFile and not staged)
                 self.unstageButton.setEnabled(hasFile and staged)
 
-                self.diffDiscardButton.setHidden(not (hasFile and not staged))
-                self.diffStageButton.setHidden(not (hasFile and not staged))
-                self.diffUnstageButton.setHidden(not (hasFile and staged))
-
                 # Clear selection in opposite FileList
                 oppositeFileList = self.dirtyFiles if staged else self.stagedFiles
                 oppositeFileList.clearSelection()
                 if hasFile:
                     oppositeFileList.highlightCounterpart(locator)
-            else:
-                self.diffDiscardButton.setHidden(True)
-                self.diffStageButton.setHidden(True)
-                self.diffUnstageButton.setHidden(True)
 
             # Set correct card in fileStack (after selecting the file to avoid flashing)
             self.setFileStackPageByContext(locator.context)
 
         return locator
-
-    # -------------------------------------------------------------------------
-    # Diff buttons
-
-    def onSelectionActionableChanged(self, actionable: bool):
-        for button in self.diffDiscardButton, self.diffStageButton, self.diffUnstageButton:
-            button.setEnabled(actionable)
 
     # -------------------------------------------------------------------------
     # Clear
