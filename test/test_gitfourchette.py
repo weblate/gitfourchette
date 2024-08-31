@@ -340,6 +340,19 @@ def testTabOverflow(tempDir, mainWindow):
     assert mainWindow.tabs.overflowButton.isVisibleTo(mainWindow)
 
 
+def testTabOverflowSingleTab(tempDir, mainWindow):
+    mainWindow.resize(640, 480)  # make sure it's narrow enough for overflow
+
+    wd = unpackRepo(tempDir, renameTo=f"Extremely Long Repo Name " * 10)
+    rw = mainWindow.openRepo(wd)
+    QTest.qWait(1)
+    assert not mainWindow.tabs.overflowButton.isVisible()
+
+    mainWindow.onAcceptPrefsDialog({"autoHideTabs": True})
+    QTest.qWait(1)
+    assert not mainWindow.tabs.overflowButton.isVisible()
+
+
 @pytest.mark.skipif(MACOS, reason="this feature is disabled on macOS")
 def testAutoHideMenuBar(mainWindow):
     menuBar: QMenuBar = mainWindow.menuBar()

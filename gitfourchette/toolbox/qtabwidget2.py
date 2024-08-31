@@ -197,6 +197,7 @@ class QTabWidget2(QWidget):
         self.tabs.update()
         self.syncBarSize()
         self.onResize()
+        self.updateOverflowDropdown()
 
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.tabs.mapToGlobal(localPoint)
@@ -315,9 +316,14 @@ class QTabWidget2(QWidget):
 
     @CallbackAccumulator.deferredMethod  # don't update overflow button too often
     def updateOverflowDropdown(self):
-        isOverflowing = self.topWidget.width() < self.tabs.width()
-        self.overflowButton.setVisible(isOverflowing)
+        if self.tabs.count() <= 1:  # never overflow if there's just one tab
+            isOverflowing = False
+        else:
+            isOverflowing = self.topWidget.width() < self.tabs.width()
+
         self.overflowGradient.setVisible(isOverflowing)
+        self.overflowButton.setVisible(isOverflowing)
+
         if isOverflowing:
             self.overflowButton.setMaximumHeight(self.tabs.height())
 
