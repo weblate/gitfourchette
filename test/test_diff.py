@@ -66,14 +66,17 @@ def testDiffViewStageLines(tempDir, mainWindow, method):
     assert not rw.diffView.rubberBand.isVisible()
     assert not rw.diffView.rubberBandButton.isVisible()
 
-    lineC = qteBlockPoint(rw.diffView, 3)
-    lineD = qteBlockPoint(rw.diffView, 4, atEnd=True)
-    QTest.mousePress(rw.diffView.viewport(), Qt.MouseButton.LeftButton, pos=lineC)
-    QTest.mouseMove(rw.diffView.viewport(), pos=lineD)
-    QTest.mouseRelease(rw.diffView.viewport(), Qt.MouseButton.LeftButton, pos=lineD)
+    qteClickBlock(rw.diffView, 0)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+    assert re.search(r"can.t stage", mainWindow.statusBar().currentMessage(), re.I)
+    qteSelectBlocks(rw.diffView, 3, 4)
 
     assert rw.diffView.rubberBand.isVisible()
     assert rw.diffView.rubberBandButton.isVisible()
+    assert rw.diffView.rubberBandButton.pos().y() < rw.diffView.rubberBand.pos().y()
+
+    qteSelectBlocks(rw.diffView, 4, 3)
+    assert rw.diffView.rubberBandButton.pos().y() > rw.diffView.rubberBand.pos().y()
 
     if method == "key":
         QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
@@ -97,7 +100,7 @@ def testPartialPatchSpacesInFilename(tempDir, mainWindow):
     qlvClickNthRow(rw.dirtyFiles, 0)
     assert rw.repo.status() == {"file with spaces.txt": FileStatus.WT_NEW}
 
-    rw.diffView.setFocus()
+    qteClickBlock(rw.diffView, 1)
     QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     assert rw.repo.status() == {"file with spaces.txt": FileStatus.INDEX_NEW | FileStatus.WT_MODIFIED}

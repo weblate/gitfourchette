@@ -245,8 +245,10 @@ class UnstageModeChanges(_BaseStagingTask):
 class ApplyPatch(RepoTask):
     def flow(self, fullPatch: Patch, subPatch: bytes, purpose: PatchPurpose):
         if not subPatch:
-            yield from self._applyFullPatch(fullPatch, purpose)
-            return
+            QApplication.beep()
+            verb = TrTables.patchPurpose(purpose & PatchPurpose.VERB_MASK).lower()
+            message = self.tr("Can’t {verb} the selection because no red/green lines are selected.").format(verb=verb)
+            raise AbortTask(message, asStatusMessage=True)
 
         if purpose & PatchPurpose.DISCARD:
             title = TrTables.patchPurpose(purpose)
@@ -273,44 +275,6 @@ class ApplyPatch(RepoTask):
         self.repo.apply(subPatch, applyLocation)
 
         self.postStatus = TrTables.patchPurposePastTense(purpose)
-
-    def _applyFullPatch(self, fullPatch: Patch, purpose: PatchPurpose):
-        action = TrTables.patchPurpose(purpose)
-        verb = TrTables.patchPurpose(purpose & PatchPurpose.VERB_MASK).lower()
-        shortPath = os.path.basename(fullPatch.delta.new_file.path)
-
-        questionText = paragraphs(
-            self.tr("You are trying to {0} changes from the line-by-line editor, "
-                    "but you haven’t selected any red/green lines."),
-            self.tr("Do you want to {0} this entire file {1}?")
-        ).format(verb, bquo(shortPath))
-
-        qmb = asyncMessageBox(
-            self.parentWidget(),
-            'information',
-            self.tr("{0}: selection empty").format(action),
-            questionText,
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-
-        applyButton: QPushButton = qmb.button(QMessageBox.StandardButton.Ok)
-        applyButton.setText(self.tr("{0} entire &file").format(verb.title()))
-        applyButton.setIcon(QIcon())
-
-        # We want the user to pay attention here. Don't let them press enter to stage/unstage the entire file.
-        qmb.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        yield from self.flowDialog(qmb)
-        qmb.deleteLater()
-
-        yield from self.flowEnterWorkerThread()
-        if purpose & PatchPurpose.UNSTAGE:
-            self.repo.unstage_files([fullPatch])
-        elif purpose & PatchPurpose.STAGE:
-            self.repo.stage_files([fullPatch])
-        elif purpose & PatchPurpose.DISCARD:
-            Trash.instance().backupPatches(self.repo.workdir, [fullPatch])
-            self.repo.restore_files_from_index([fullPatch.delta.new_file.path])
-        else:
-            raise KeyError(f"applyFullPatch: unsupported purpose {purpose}")
 
 
 class RevertPatch(RepoTask):

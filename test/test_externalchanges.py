@@ -64,7 +64,7 @@ def testStayOnFileAfterPartialPatchDespiteExternalChange(tempDir, mainWindow):
 
     # Stage a single line
     qlvClickNthRow(rw.dirtyFiles, 1)
-    rw.diffView.setFocus()
+    qteClickBlock(rw.diffView, 1)
     QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
 
     # This was a partial patch, so b2 is both dirty and staged;

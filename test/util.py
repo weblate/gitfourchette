@@ -226,6 +226,25 @@ def qteBlockPoint(qte: QTextEdit, blockNo: int, atEnd=False) -> QPoint:
     return qte.cursorRect(cursor).topLeft()
 
 
+def qteClickBlock(qte: QTextEdit, block1: int):
+    point1 = qteBlockPoint(qte, block1)
+    QTest.mouseClick(qte.viewport(), Qt.MouseButton.LeftButton, pos=point1)
+
+
+def qteSelectBlocks(qte: QTextEdit, block1: int, block2: int):
+    # Clear selection first
+    cursor = qte.textCursor()
+    cursor.clearSelection()
+    qte.setTextCursor(cursor)
+
+    point1 = qteBlockPoint(qte, block1, atEnd=block1 > block2)
+    point2 = qteBlockPoint(qte, block2, atEnd=block1 <= block2)
+
+    QTest.mousePress(qte.viewport(), Qt.MouseButton.LeftButton, pos=point1)
+    QTest.mouseMove(qte.viewport(), pos=point2)
+    QTest.mouseRelease(qte.viewport(), Qt.MouseButton.LeftButton, pos=point2)
+
+
 def qcbSetIndex(qcb: QComboBox, pattern: str):
     i = qcb.findText(pattern, Qt.MatchFlag.MatchRegularExpression)
     assert i >= 0

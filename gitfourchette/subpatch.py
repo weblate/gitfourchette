@@ -135,6 +135,10 @@ def extractSubpatch(
     Creates a patch (in unified diff format) from the range of selected diff lines given as input.
     """
 
+    # Edge case: a single hunk header line is selected
+    if startPos.hunkID == endPos.hunkID and startPos.hunkLineNum < 0 and endPos.hunkLineNum < 0:
+        return b""
+
     patch = io.BytesIO()
 
     preamble = getPatchPreamble(masterPatch.delta, reverse)
