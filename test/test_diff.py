@@ -52,22 +52,41 @@ def testDiffDeletedFile(tempDir, mainWindow):
     rw.diffView.toPlainText().startswith("@@ -1,2 +0,0 @@")
 
 
-def testStagePartialPatchInUntrackedFile(tempDir, mainWindow):
+@pytest.mark.parametrize("method", ["key", "button"])
+def testDiffViewStageLines(tempDir, mainWindow, method):
     wd = unpackRepo(tempDir)
-    writeFile(F"{wd}/NewFile.txt", "line A\nline B\nline C\n")
+    writeFile(F"{wd}/NewFile.txt", "line A\nline B\nline C\nline D\nline E")
     rw = mainWindow.openRepo(wd)
 
     qlvClickNthRow(rw.dirtyFiles, 0)
     assert rw.repo.status() == {"NewFile.txt": FileStatus.WT_NEW}
 
     rw.diffView.setFocus()
-    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+
+    assert not rw.diffView.rubberBand.isVisible()
+    assert not rw.diffView.rubberBandButton.isVisible()
+
+    lineC = qteBlockPoint(rw.diffView, 3)
+    lineD = qteBlockPoint(rw.diffView, 4, atEnd=True)
+    QTest.mousePress(rw.diffView.viewport(), Qt.MouseButton.LeftButton, pos=lineC)
+    QTest.mouseMove(rw.diffView.viewport(), pos=lineD)
+    QTest.mouseRelease(rw.diffView.viewport(), Qt.MouseButton.LeftButton, pos=lineD)
+
+    assert rw.diffView.rubberBand.isVisible()
+    assert rw.diffView.rubberBandButton.isVisible()
+
+    if method == "key":
+        QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+    elif method == "button":
+        rw.diffView.rubberBandButton.click()
+    else:
+        raise NotImplementedError(f"Unknown method {method}")
 
     assert rw.repo.status() == {"NewFile.txt": FileStatus.INDEX_NEW | FileStatus.WT_MODIFIED}
 
     stagedId = rw.repo.index["NewFile.txt"].id
     stagedBlob = rw.repo.peel_blob(stagedId)
-    assert stagedBlob.data == b"line A\n"
+    assert stagedBlob.data == b"line C\nline D\n"
 
 
 def testPartialPatchSpacesInFilename(tempDir, mainWindow):
@@ -492,6 +511,7 @@ def testDiffContextLinesSetting(tempDir, mainWindow):
 
 def testDiffGutterMouseInputs(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/manylines.txt", "\n".join(f"line {i}" for i in range(1, 1001)))
     rw = mainWindow.openRepo(wd)
     dv = rw.diffView
     LMB = Qt.MouseButton.LeftButton
@@ -510,41 +530,74 @@ def testDiffGutterMouseInputs(tempDir, mainWindow):
 
     assert not selection()
 
-    cr = dv.cursorRect(dv.textCursor())
-    lineH = cr.height()
-    line1y = cr.y()
-    line2y = cr.y() + 1 * lineH
-    line3y = cr.y() + 2 * lineH
+    line1 = qteBlockPoint(dv, 0)
+    line2 = qteBlockPoint(dv, 1)
+    line3 = qteBlockPoint(dv, 2)
 
+    # Click on first line
     clearSelection()
-    QTest.mouseClick(dv.gutter, LMB, pos=QPoint(1, line1y))
+    QTest.mouseClick(dv.gutter, LMB, pos=line1)
     assert "@@ -1 +1,2 @@" == selection()
 
     # Shift-click on second line
     clearSelection()
-    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=QPoint(1, line2y))
+    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=line2)
+    assert "@@ -1 +1,2 @@\nc1" == selection()
+
+    # Click on first line, hold button and move to second line
+    clearSelection()
+    QTest.mousePress(dv.gutter, LMB, pos=line1)
+    QTest.mouseMove(dv.gutter, pos=line2)
+    QTest.mouseRelease(dv.gutter, LMB, pos=line2)
     assert "@@ -1 +1,2 @@\nc1" == selection()
 
     # Click on second line, then shift-click on first line
     clearSelection()
-    QTest.mouseClick(dv.gutter, LMB, pos=QPoint(1, line2y))
-    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=QPoint(1, line1y))
+    QTest.mouseClick(dv.gutter, LMB, pos=line2)
+    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=line1)
     assert "@@ -1 +1,2 @@\nc1" == selection()
 
     # Double-click on first line: Select entire hunk
     clearSelection()
-    QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line1y))
+    QTest.mouseDClick(dv.gutter, LMB, pos=line1)
     assert "@@ -1 +1,2 @@\nc1\nc1" == selection()
 
     # Double-click on context line: Nothing happens
     clearSelection()
-    QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line2y))
+    QTest.mouseDClick(dv.gutter, LMB, pos=line2)
     assert not selection()
 
     # Double-click on green/red line: Select clump
     clearSelection()
-    QTest.mouseDClick(dv.gutter, LMB, pos=QPoint(1, line3y))
+    QTest.mouseDClick(dv.gutter, LMB, pos=line3)
     assert "c1" == selection()
+
+    rw.jump(NavLocator.inUnstaged("manylines.txt"))
+    assert dv.firstVisibleBlock().blockNumber() == 0
+    postMouseWheelEvent(dv.gutter, -120)
+    QTest.qWait(1)
+    assert dv.firstVisibleBlock().blockNumber() == 3
+
+
+def testDiffViewMouseWheelZoom(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/manylines.txt", "\n".join(f"line {i}" for i in range(1, 1001)))
+    rw = mainWindow.openRepo(wd)
+    dv = rw.diffView
+
+    initialFont = dv.font()
+
+    postMouseWheelEvent(dv.gutter, 120, modifiers=Qt.KeyboardModifier.ControlModifier)
+    QTest.qWait(1)
+    assert dv.font().pointSize() > initialFont.pointSize()
+
+    postMouseWheelEvent(dv.gutter, -120, modifiers=Qt.KeyboardModifier.ControlModifier)
+    QTest.qWait(1)
+    assert dv.font().pointSize() == initialFont.pointSize()
+
+    postMouseWheelEvent(dv.gutter, -120, modifiers=Qt.KeyboardModifier.ControlModifier)
+    QTest.qWait(1)
+    assert dv.font().pointSize() < initialFont.pointSize()
 
 
 def testToggleWordWrap(tempDir, mainWindow):
@@ -572,12 +625,7 @@ def testExportPatchFromHunk(tempDir, mainWindow):
     oid = Oid(hex="bab66b48f836ed950c99134ef666436fb07a09a0")
     rw.jump(NavLocator.inCommit(oid, "c/c1.txt"))
 
-    cr = dv.cursorRect(dv.textCursor())
-    lineH = cr.height()
-    lineX = cr.x()
-    line1y = cr.y()
-
-    menu = dv.contextMenu(dv.mapToGlobal(QPoint(lineX, line1y)))
+    menu = dv.contextMenu(dv.viewport().mapToGlobal(qteBlockPoint(dv, 0)))
     triggerMenuAction(menu, "export hunk.+as patch")
     exportedPath = acceptQFileDialog(rw, "export", f"{tempDir.name}", useSuggestedName=True)
     assert exportedPath.endswith("c1.txt[partial].patch")

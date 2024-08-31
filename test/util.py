@@ -214,6 +214,18 @@ def qteClickLink(qte: QTextEdit, pattern: str):
     QTest.keyPress(qte, Qt.Key.Key_Enter)
 
 
+def qteBlockPoint(qte: QTextEdit, blockNo: int, atEnd=False) -> QPoint:
+    b = qte.document().firstBlock()
+    for i in range(blockNo):
+        b = b.next()
+    p = b.position()
+    cursor = qte.textCursor()
+    cursor.setPosition(p)
+    if atEnd:
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+    return qte.cursorRect(cursor).topLeft()
+
+
 def qcbSetIndex(qcb: QComboBox, pattern: str):
     i = qcb.findText(pattern, Qt.MatchFlag.MatchRegularExpression)
     assert i >= 0
@@ -292,3 +304,18 @@ def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
 
     assert False, F"did not find QToolButton \"{textPattern}\""
 
+
+def postMouseWheelEvent(target: QWidget, angleDelta: int, point = QPoint(), modifiers=Qt.KeyboardModifier.NoModifier):
+    point = QPointF(point)
+
+    fakeWheelEvent = QWheelEvent(
+        point,
+        target.mapToGlobal(point),
+        QPoint(0, 0),
+        QPoint(0, angleDelta),
+        Qt.MouseButton.NoButton,
+        modifiers,
+        Qt.ScrollPhase.NoScrollPhase,
+        False)
+
+    QApplication.instance().postEvent(target, fakeWheelEvent)
