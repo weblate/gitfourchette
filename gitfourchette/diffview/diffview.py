@@ -259,12 +259,12 @@ class DiffView(QPlainTextEdit):
         self.syncViewportMarginsWithGutter()
 
         if locator.context == NavContext.UNSTAGED:
-            self.rubberBandButton.setText(self.tr("Stage Lines"))
+            self.rubberBandButton.setText(self.tr("Stage Selection"))
             self.rubberBandButton.setIcon(stockIcon("git-stage-lines"))
             self.rubberBandButton.setToolTip(self.tr("Stage selected lines"))
             appendShortcutToToolTip(self.rubberBandButton, GlobalShortcuts.stageHotkeys[0])
         elif locator.context == NavContext.STAGED:
-            self.rubberBandButton.setText(self.tr("Unstage Lines"))
+            self.rubberBandButton.setText(self.tr("Unstage Selection"))
             self.rubberBandButton.setIcon(stockIcon("git-unstage-lines"))
             self.rubberBandButton.setToolTip(self.tr("Unstage selected lines"))
             appendShortcutToToolTip(self.rubberBandButton, GlobalShortcuts.discardHotkeys[0])
@@ -566,11 +566,6 @@ class DiffView(QPlainTextEdit):
         if posStart < 0 or posEnd < 0:
             return -1, -1
 
-        # If line 1 is completely selected and the cursor has landed at the very beginning of line 2,
-        # don't select line 2.
-        if posEnd - posStart > 0:
-            posEnd -= 1
-
         # Find indices of first and last LineData objects given the current selection
         biStart = self.findLineDataIndexAt(posStart)
         biEnd = self.findLineDataIndexAt(posEnd, biStart)
@@ -693,26 +688,25 @@ class DiffView(QPlainTextEdit):
         textCursor: QTextCursor = self.textCursor()
         start = textCursor.selectionStart()
         end = textCursor.selectionEnd()
-        anchor = textCursor.anchor()
         assert start <= end
-        selectionExpandingDownward = anchor == start or start == end
 
-        i, j = self.getSelectedLineExtents()
-        if i < 0 or j < 0 or (start == 0 and end == 0):
+        selectionExpandingDownward = start == end or start == textCursor.anchor() == start
+
+        actionable = self.isSelectionActionable()
+        startLine, endLine = self.getSelectedLineExtents()
+
+        if startLine < 0 or endLine < 0 or (not actionable and start == end):
             self.rubberBand.hide()
             self.rubberBandButton.hide()
             return
-        start = self.lineData[i].cursorStart
-        end = self.lineData[j].cursorEnd
 
-        actionable = self.isSelectionActionable()
+        start = self.lineData[startLine].cursorStart
+        end = self.lineData[endLine].cursorEnd
 
         textCursor.setPosition(start)
-        textCursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)  # for wrapped lines
         top = self.cursorRect(textCursor).top()
 
         textCursor.setPosition(end)
-        textCursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)  # for wrapped lines
         bottom = self.cursorRect(textCursor).bottom()
 
         viewportWidth = self.viewport().width()
@@ -736,11 +730,11 @@ class DiffView(QPlainTextEdit):
             rbbHeight = self.rubberBandButton.height()
 
             if selectionExpandingDownward:
-                # Above rubberband
+                # Place button above rubberband
                 rbbTop = top - rbbHeight
                 rbbTop = max(rbbTop, 0)  # keep it visible
             else:
-                # Below rubberband
+                # Place button below rubberband
                 rbbTop = bottom
                 rbbTop = min(rbbTop, viewportHeight-rbbHeight)  # keep it visible
 
@@ -842,7 +836,7 @@ class DiffView(QPlainTextEdit):
                 end += 1
 
         startPosition = ldList[start].cursorStart
-        endPosition = min(self.getMaxPosition(), ldList[end].cursorEnd + 1)  # +1 to select empty lines
+        endPosition = min(self.getMaxPosition(), ldList[end].cursorEnd)
 
         cursor: QTextCursor = self.textCursor()
         cursor.setPosition(startPosition, QTextCursor.MoveMode.MoveAnchor)
@@ -882,7 +876,7 @@ class DiffView(QPlainTextEdit):
             unstagekey=QKeySequence(GlobalShortcuts.discardHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText),
             discardkey=QKeySequence(GlobalShortcuts.discardHotkeys[0]).toString(QKeySequence.SequenceFormat.NativeText))
 
-        self.contextualHelp.emit("💡 " + help)
+        self.contextualHelp.emit(help)
         self.selectionActionable.emit(True)
 
     # ---------------------------------------------

@@ -579,6 +579,32 @@ def testDiffGutterMouseInputs(tempDir, mainWindow):
     assert dv.firstVisibleBlock().blockNumber() == 3
 
 
+def testDiffViewStageBlankLines(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/hello.txt", "Hello1\n\nHello2\n\n")
+    rw = mainWindow.openRepo(wd)
+    dv = rw.diffView
+    LMB = Qt.MouseButton.LeftButton
+
+    rw.jump(NavLocator.inUnstaged("hello.txt"))
+
+    line1 = qteBlockPoint(dv, 1)  # Hello1
+    line2 = qteBlockPoint(dv, 2)  # (blank)
+    line3 = qteBlockPoint(dv, 3)  # Hello2
+    line4 = qteBlockPoint(dv, 4)  # (blank)
+
+    # Stage "Hello1\n\n"
+    QTest.mouseClick(dv.gutter, LMB, pos=line1)
+    QTest.mouseClick(dv.gutter, LMB, Qt.KeyboardModifier.ShiftModifier, pos=line2)
+    QTest.keyPress(dv, Qt.Key.Key_Enter)
+    assert b"Hello1\n\n" == rw.repo.peel_blob(rw.repo.index["hello.txt"].id).data
+
+    # Stage blank line before Hello2
+    QTest.mouseClick(dv.gutter, LMB, pos=line4)
+    QTest.keyPress(dv, Qt.Key.Key_Enter)
+    assert b"Hello1\n\n\n" == rw.repo.peel_blob(rw.repo.index["hello.txt"].id).data
+
+
 def testDiffViewMouseWheelZoom(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(f"{wd}/manylines.txt", "\n".join(f"line {i}" for i in range(1, 1001)))
