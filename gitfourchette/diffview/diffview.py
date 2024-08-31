@@ -695,11 +695,15 @@ class DiffView(QPlainTextEdit):
         end = textCursor.selectionEnd()
         anchor = textCursor.anchor()
         assert start <= end
+        selectionExpandingDownward = anchor == start or start == end
 
-        if start == end == 0:
+        i, j = self.getSelectedLineExtents()
+        if i < 0 or j < 0 or (start == 0 and end == 0):
             self.rubberBand.hide()
             self.rubberBandButton.hide()
             return
+        start = self.lineData[i].cursorStart
+        end = self.lineData[j].cursorEnd
 
         actionable = self.isSelectionActionable()
 
@@ -731,7 +735,7 @@ class DiffView(QPlainTextEdit):
             rbbWidth = self.rubberBandButton.width()
             rbbHeight = self.rubberBandButton.height()
 
-            if anchor == start or start == end:
+            if selectionExpandingDownward:
                 # Above rubberband
                 rbbTop = top - rbbHeight
                 rbbTop = max(rbbTop, 0)  # keep it visible
