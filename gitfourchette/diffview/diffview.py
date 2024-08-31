@@ -702,13 +702,13 @@ class DiffView(QPlainTextEdit):
 
         # Snap anchor to start of home line
         cursor.setPosition(cursor.anchor(), QTextCursor.MoveMode.MoveAnchor)
-        cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.MoveAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock, QTextCursor.MoveMode.MoveAnchor)
 
         return cursor.anchor()
 
     def getStartOfLineAt(self, point: QPoint):
         clickedCursor: QTextCursor = self.cursorForPosition(point)
-        clickedCursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
+        clickedCursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
         return clickedCursor.position()
 
     def replaceCursor(self, cursor: QTextCursor):
@@ -721,7 +721,7 @@ class DiffView(QPlainTextEdit):
 
         cursor: QTextCursor = self.textCursor()
         cursor.setPosition(clickedPosition)
-        cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
 
         self.replaceCursor(cursor)
 
@@ -743,7 +743,7 @@ class DiffView(QPlainTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.MoveAnchor)
             # Move cursor to START of clicked line
             cursor.setPosition(clickedPosition, QTextCursor.MoveMode.KeepAnchor)
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock, QTextCursor.MoveMode.KeepAnchor)
 
         self.replaceCursor(cursor)
 
