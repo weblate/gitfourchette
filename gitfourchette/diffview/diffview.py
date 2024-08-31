@@ -110,6 +110,16 @@ class DiffView(QPlainTextEdit):
         self.rubberBand = DiffRubberBand(self.viewport())
         self.rubberBand.hide()
 
+        self.rubberBandButton = QToolButton(self.viewport())
+        self.rubberBandButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.rubberBandButton.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.rubberBandButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.rubberBandButton.clicked.connect(self.rubberBandButtonClicked)
+        self.rubberBandButton.hide()
+
+        self.verticalScrollBar().valueChanged.connect(self.updateRubberBand)
+        self.horizontalScrollBar().valueChanged.connect(self.updateRubberBand)
+
         # Initialize font & styling
         self.refreshPrefs()
         GFApplication.instance().restyle.connect(self.refreshPrefs)
@@ -247,6 +257,17 @@ class DiffView(QPlainTextEdit):
             maxLine = 0
         self.gutter.setMaxLineNumber(maxLine)
         self.syncViewportMarginsWithGutter()
+
+        if locator.context == NavContext.UNSTAGED:
+            self.rubberBandButton.setText(self.tr("Stage Lines"))
+            self.rubberBandButton.setIcon(stockIcon("git-stage-lines"))
+            self.rubberBandButton.setToolTip(self.tr("Stage selected lines"))
+            appendShortcutToToolTip(self.rubberBandButton, GlobalShortcuts.stageHotkeys[0])
+        elif locator.context == NavContext.STAGED:
+            self.rubberBandButton.setText(self.tr("Unstage Lines"))
+            self.rubberBandButton.setIcon(stockIcon("git-unstage-lines"))
+            self.rubberBandButton.setToolTip(self.tr("Unstage selected lines"))
+            appendShortcutToToolTip(self.rubberBandButton, GlobalShortcuts.discardHotkeys[0])
 
         # Now restore cursor/scrollbar positions
         self.restorePosition(locator)
@@ -672,11 +693,15 @@ class DiffView(QPlainTextEdit):
         textCursor: QTextCursor = self.textCursor()
         start = textCursor.selectionStart()
         end = textCursor.selectionEnd()
+        anchor = textCursor.anchor()
         assert start <= end
 
         if start == end == 0:
             self.rubberBand.hide()
+            self.rubberBandButton.hide()
             return
+
+        actionable = self.isSelectionActionable()
 
         textCursor.setPosition(start)
         textCursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)  # for wrapped lines
@@ -686,9 +711,46 @@ class DiffView(QPlainTextEdit):
         textCursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)  # for wrapped lines
         bottom = self.cursorRect(textCursor).bottom()
 
+        viewportWidth = self.viewport().width()
+        viewportHeight = self.viewport().height()
+
         pad = 4
-        self.rubberBand.setGeometry(0, top-pad, self.viewport().width(), bottom-top+1+pad*2)
+        self.rubberBand.setGeometry(0, top-pad, viewportWidth, bottom-top+1+pad*2)
         self.rubberBand.show()
+
+        # Move rubberBandButton to edge of rubberBand
+        if not self.currentLocator.context.isWorkdir():
+            # No rubberBandButton in this context
+            assert self.rubberBandButton.isHidden()
+        elif top >= viewportHeight-4 or bottom < 4:
+            # Scrolled past rubberband, no point in showing button
+            self.rubberBandButton.hide()
+        else:
+            # Show button before moving so that width/height are correct
+            self.rubberBandButton.show()
+            rbbWidth = self.rubberBandButton.width()
+            rbbHeight = self.rubberBandButton.height()
+
+            if anchor == start or start == end:
+                # Above rubberband
+                rbbTop = top - rbbHeight
+                rbbTop = max(rbbTop, 0)  # keep it visible
+            else:
+                # Below rubberband
+                rbbTop = bottom
+                rbbTop = min(rbbTop, viewportHeight-rbbHeight)  # keep it visible
+
+            self.rubberBandButton.move(viewportWidth//2 - rbbWidth//2, rbbTop)
+            self.rubberBandButton.setEnabled(actionable)
+
+    def rubberBandButtonClicked(self):
+        navContext = self.currentLocator.context
+        if navContext == NavContext.UNSTAGED:
+            self.stageSelection()
+        elif navContext == NavContext.STAGED:
+            self.unstageSelection()
+        else:
+            raise NotImplementedError(f"Rubberband button not clickable in context {navContext}")
 
     # ---------------------------------------------
     # Cursor/selection
