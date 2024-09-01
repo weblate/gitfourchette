@@ -583,12 +583,16 @@ class MainWindow(QMainWindow):
 
     def focusFiles(self):
         rw = self.currentRepoWidget()
-        if rw.navLocator.context == NavContext.COMMITTED:
+        context = rw.navLocator.context
+        if context == NavContext.COMMITTED:
             rw.committedFiles.setFocus()
-        elif rw.navLocator.context == NavContext.STAGED:
-            rw.stagedFiles.setFocus()
         else:
-            rw.dirtyFiles.setFocus()
+            target = rw.stagedFiles if context == NavContext.STAGED else rw.dirtyFiles
+            fallback = rw.dirtyFiles if context == NavContext.STAGED else rw.stagedFiles
+            if not target.isEmpty() or fallback.isEmpty():
+                target.setFocus()
+            else:
+                fallback.setFocus()
 
     def focusDiff(self):
         rw = self.currentRepoWidget()

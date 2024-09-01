@@ -152,11 +152,18 @@ class FileList(QListView):
     def setContents(self, diffs: list[Diff], skippedRenameDetection: bool):
         self.flModel.setDiffs(diffs)
         self.skippedRenameDetection = skippedRenameDetection
+        self.updateFocusPolicy()
 
     def clear(self):
         self.flModel.clear()
         self.commitId = NULL_OID
         self.skippedRenameDetection = False
+        assert self.isEmpty()
+        self.updateFocusPolicy()
+
+    def updateFocusPolicy(self):
+        focusPolicy = Qt.FocusPolicy.StrongFocus if not self.isEmpty() else Qt.FocusPolicy.ClickFocus
+        self.setFocusPolicy(focusPolicy)
 
     # -------------------------------------------------------------------------
     # Context menu

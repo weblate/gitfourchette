@@ -135,6 +135,7 @@ class QTabWidget2(QWidget):
         self.tabScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tabScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tabScrollArea.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)  # works ok but tries to expand the window width when opening a new tab?
+        self.tabScrollArea.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.tabs = QTabBar2(self.tabScrollArea)
         self.tabs.tabMoved.connect(self.onTabMoved)
@@ -232,11 +233,7 @@ class QTabWidget2(QWidget):
         self.currentChanged.emit(i)
 
     def addTab(self, w: QWidget, name: str) -> int:
-        i1 = self.stacked.addWidget(w)
-        i2 = self.tabs.addTab(name)
-        self.syncBarSize()
-        assert i1 == i2
-        return i1
+        return self.insertTab(self.count(), w, name)
 
     def insertTab(self, index: int, w: QWidget, name: str) -> int:
         i1 = self.stacked.insertWidget(index, w)

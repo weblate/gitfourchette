@@ -250,6 +250,17 @@ class RepoWidget(QStackedWidget):
         # Smaller fonts in diffArea buttons
         self.diffArea.applyCustomStyling()
 
+        setTabOrder(
+            self.sidebar,
+            self.graphView,
+            self.diffArea.committedFiles,
+            self.diffArea.dirtyFiles,
+            self.diffArea.stagedFiles,
+            self.diffArea.diffView,
+            self.diffArea.specialDiffView,
+            self.diffArea.conflictView,
+        )
+
         # ----------------------------------
         # We're ready
 

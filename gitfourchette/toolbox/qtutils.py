@@ -1,4 +1,5 @@
 import base64
+import itertools
 import os
 from typing import Callable
 
@@ -384,6 +385,15 @@ def findParentWidget(o: QObject) -> QWidget:
             return p
         p = p.parent()
     raise ValueError(f"No parent widget found for {repr(o)}")
+
+
+def setTabOrder(*args: QWidget):
+    """
+    Qt 6.6 introduces QWidget::setTabOrder(std::initializer_list<QWidget *> widgets)
+    but neither PySide6 nor PyQt6 expose it yet.
+    """
+    for widget1, widget2 in itertools.pairwise(args):
+        QWidget.setTabOrder(widget1, widget2)
 
 
 class DocumentLinks:

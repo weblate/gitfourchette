@@ -66,6 +66,7 @@ from .qtutils import (
     writeTempFile,
     waitForSignal,
     findParentWidget,
+    setTabOrder,
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide,

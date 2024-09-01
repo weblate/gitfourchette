@@ -86,6 +86,48 @@ def testOpenSameRepoTwice(tempDir, mainWindow):
     assert mainWindow.currentRepoWidget() == rw4
 
 
+def testFileListFocusPolicy(tempDir, mainWindow):
+    wd = unpackRepo(tempDir, renameTo="repo1")
+    writeFile(f"{wd}/untracked.txt", "hello")
+
+    rw = mainWindow.openRepo(wd)
+
+    # GraphView -> TAB -> DirtyFiles
+    rw.graphView.setFocus()
+    QTest.keyClick(rw, Qt.Key.Key_Tab)
+    assert rw.diffArea.dirtyFiles.hasFocus()
+
+    # DirtyFiles -> TAB -> Skip over empty StagedFiles -> DiffView
+    QTest.keyClick(rw, Qt.Key.Key_Tab)
+    assert rw.diffArea.diffView.hasFocus()
+
+    # DiffView -> Shift+TAB -> Back to DirtyFiles
+    QTest.keyClick(rw, Qt.Key.Key_Tab, Qt.KeyboardModifier.ShiftModifier)
+    assert rw.diffArea.dirtyFiles.hasFocus()
+
+    # Back to DirtyFiles via menu action
+    triggerMenuAction(mainWindow.menuBar(), "view/focus.+file")
+    assert rw.diffArea.dirtyFiles.hasFocus()
+
+    # Stage the file; DirtyFiles becomes empty but it still has focus
+    qlvClickNthRow(rw.diffArea.dirtyFiles, 0)
+    QTest.keyClick(rw.diffArea.dirtyFiles, Qt.Key.Key_Return)
+    assert rw.diffArea.dirtyFiles.isEmpty()
+    assert rw.diffArea.dirtyFiles.hasFocus()
+
+    # Menu action goes to StagedFiles now because it's not empty
+    triggerMenuAction(mainWindow.menuBar(), "view/focus.+file")
+    assert rw.diffArea.stagedFiles.hasFocus()
+
+    # StagedFiles -> Shift+TAB -> Skip over empty DirtyFiles -> GraphView
+    QTest.keyClick(rw, Qt.Key.Key_Tab, Qt.KeyboardModifier.ShiftModifier)
+    assert rw.graphView.hasFocus()
+
+    # GraphView -> TAB -> Skip over empty DirtyFiles -> StagedFiles
+    QTest.keyClick(rw, Qt.Key.Key_Tab)
+    assert rw.diffArea.stagedFiles.hasFocus()
+
+
 def testMainWindowMenuItems(tempDir, mainWindow):
     wd1 = unpackRepo(tempDir, renameTo="repo1")
     wd2 = unpackRepo(tempDir, renameTo="repo2")
