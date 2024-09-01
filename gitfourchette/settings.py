@@ -209,6 +209,7 @@ class Prefs(PrefsFile):
     defaultCloneLocation        : str                   = ""
     dontShowAgain               : list[str]             = dataclasses.field(default_factory=list)
     resetDontShowAgain          : bool                  = False
+    donatePrompt                : int                   = 0
 
     @property
     def listViewScrollMode(self) -> QAbstractItemView.ScrollMode:
@@ -235,6 +236,7 @@ class History(PrefsFile):
     cloneHistory: list = dataclasses.field(default_factory=list)
     fileDialogPaths: dict = dataclasses.field(default_factory=dict)
     workingKeys: dict = dataclasses.field(default_factory=dict)
+    startups: int = 0
 
     _maxSeq = -1
 

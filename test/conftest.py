@@ -114,6 +114,35 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
 
 @pytest.fixture
+def mockDesktopServices():
+    from gitfourchette import qt
+
+    protocols = ["http", "https", "file"]
+
+    class MockDesktopServices(qt.QObject):
+        urlSlot = qt.Signal(qt.QUrl)
+        urls: list[qt.QUrl]
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.urlSlot.connect(self.recordUrl)
+            self.urls = []
+
+        def recordUrl(self, url: qt.QUrl):
+            self.urls.append(url)
+
+    handler = MockDesktopServices()
+
+    for protocol in protocols:
+        qt.QDesktopServices.setUrlHandler(protocol, handler, "urlSlot")
+
+    yield handler
+
+    for protocol in protocols:
+        qt.QDesktopServices.unsetUrlHandler(protocol)
+
+
+@pytest.fixture
 def taskThread():
     """ In this unit test, run RepoTasks in a separate thread """
     from gitfourchette import tasks

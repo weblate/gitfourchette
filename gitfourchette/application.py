@@ -139,6 +139,8 @@ class GFApplication(QApplication):
         settings.history.reset()
         with NonCriticalOperation("Loading history"):
             settings.history.load()
+            settings.history.startups += 1
+            settings.history.setDirty()
 
         # Set logging level from prefs
         self.applyLoggingLevelPref()
@@ -175,6 +177,7 @@ class GFApplication(QApplication):
         from gitfourchette.mainwindow import MainWindow
         from gitfourchette.toolbox import bquo
         from gitfourchette.settings import QtApiNames
+        from gitfourchette.forms.donateprompt import DonatePrompt
 
         assert self.mainWindow is None, "already have a MainWindow"
 
@@ -205,6 +208,8 @@ class GFApplication(QApplication):
                                known=", ".join(e for e in QtApiNames if e))
 
             QMessageBox.information(self.mainWindow, translate("Prefs", "Qt binding unavailable"), text)
+
+        DonatePrompt.onBoot(self.mainWindow)
 
     def onMainWindowDestroyed(self):
         logger.debug("Main window destroyed")

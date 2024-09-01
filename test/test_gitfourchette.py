@@ -7,6 +7,7 @@ import pytest
 from gitfourchette import qt
 from gitfourchette.application import GFApplication
 from gitfourchette.forms.commitdialog import CommitDialog
+from gitfourchette.forms.donateprompt import DonatePrompt
 from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
@@ -406,6 +407,81 @@ def testAllTaskNamesTranslated(mainWindow):
                     and type is not tasks.RepoTask
                     and type not in tasks.TaskBook.names):
                 assert False, f"Missing task name translation for {key}"
+
+
+def testDonatePrompt(mainWindow, mockDesktopServices):
+    from gitfourchette import settings
+    app = GFApplication.instance()
+
+    class Session:
+        def __init__(self, begin=True, end=True):
+            self.begin = begin
+            self.end = end
+
+        def __enter__(self) -> MainWindow:
+            if self.begin:
+                app.mainWindow = None
+                app.beginSession()
+                QTest.qWait(1)
+            assert app.mainWindow is not None
+            return app.mainWindow
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if self.end:
+                app.mainWindow.close()
+                app.endSession(clearTempDir=False)
+
+    def schedulePromptInThePast(assertFuture=True):
+        now = QDateTime.currentDateTime().toSecsSinceEpoch()
+        if assertFuture:
+            assert settings.prefs.donatePrompt > now  # must currently be scheduled to run in the future
+        settings.prefs.donatePrompt = now - 1
+        settings.prefs.write(True)
+
+    # Launch many sessions in the same day - Donate prompt mustn't show up
+    for i in range(10):
+        with Session(begin=i != 0):
+            assert not mainWindow.findChild(DonatePrompt)
+    # Force prompt to appear at the next launch (we've launched enough sessions)
+    schedulePromptInThePast()
+
+    # Make a bogus session. A dialog is vying for our attention so the donate prompt shouldn't get in the way
+    bogusSesh = settings.Session()
+    bogusSesh.tabs = [qTempDir() + "/---this-path-should-not-exist---"]
+    bogusSesh.write(True)
+    with Session() as mainWindow:
+        acceptQMessageBox(mainWindow, "session couldn.t be restored")
+        assert not mainWindow.findChild(DonatePrompt)
+
+    # Intercept prompt and click "never show again"
+    with Session() as mainWindow:
+        donate: DonatePrompt = mainWindow.findChild(DonatePrompt)
+        donate.ui.byeButton.click()
+    with Session(end=False) as mainWindow:
+        assert not mainWindow.findChild(DonatePrompt)
+        assert settings.prefs.donatePrompt < 0  # permanently disabled
+    # Force prompt to appear at the next launch
+    schedulePromptInThePast(assertFuture=False)
+
+    # Intercept prompt and click "remind me next month"
+    with Session() as mainWindow:
+        donate: DonatePrompt = mainWindow.findChild(DonatePrompt)
+        donate.ui.postponeButton.click()
+    schedulePromptInThePast()
+
+    # Intercept prompt and click "donate"
+    with Session() as mainWindow:
+        assert not mockDesktopServices.urls
+        donate: DonatePrompt = mainWindow.findChild(DonatePrompt)
+        donate.ui.donateButton.click()
+        QTest.qWait(1500)
+        assert len(mockDesktopServices.urls) == 1
+        assert mockDesktopServices.urls[0].toString() == "https://ko-fi.com/jorio"
+
+    # Prompt must not show up again
+    with Session(end=False) as mainWindow:
+        assert not mainWindow.findChild(DonatePrompt)
+        assert settings.prefs.donatePrompt < 0  # permanently disabled
 
 
 def testRestoreSession(tempDir, mainWindow):
