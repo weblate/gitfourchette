@@ -200,6 +200,14 @@ class DiffView(QPlainTextEdit):
         self.syncViewportMarginsWithGutter()
         self.updateRubberBand()
 
+    def focusInEvent(self, event: QFocusEvent):
+        self.rubberBand.repaint()
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event: QFocusEvent):
+        self.rubberBand.repaint()
+        super().focusOutEvent(event)
+
     # ---------------------------------------------
     # Document replacement
 

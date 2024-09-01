@@ -12,10 +12,19 @@ class DiffRubberBand(QWidget):
         HT = T//2  # half thickness
         CT = 2  # clipped thickness
 
+        palette: QPalette = self.palette()
         painter = QPainter(self)
         rect: QRect = self.rect().marginsRemoved(QMargins(HT, HT, HT, HT))
 
-        penColor = colors.teal if isDarkTheme() else colors.blue
+        if self.parent().hasFocus():
+            try:
+                penColor = palette.accent().color()
+            except AttributeError:
+                # QPalette.accent() was introduced in Qt 6.7
+                penColor = colors.teal if isDarkTheme() else colors.blue
+        else:
+            penColor = palette.color(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight)
+
         pen = QPen(penColor, T)
         painter.setPen(pen)
 
