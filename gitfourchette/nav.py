@@ -168,7 +168,8 @@ class NavLocator:
         return dataclasses.replace(self, **kwargs)
 
     def coarse(self, keepFlags=False):
-        return NavLocator(context=self.context, commit=self.commit, path=self.path)
+        flags = NavFlags.DefaultFlags if not keepFlags else self.flags
+        return NavLocator(context=self.context, commit=self.commit, path=self.path, ref=self.ref, flags=flags)
 
     def withExtraFlags(self, flags: NavFlags) -> NavLocator:
         return self.replace(flags=self.flags | flags)

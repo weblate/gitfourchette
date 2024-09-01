@@ -92,6 +92,20 @@ def testDiffViewStageLines(tempDir, mainWindow, method):
     assert stagedBlob.data == b"line C\nline D\n"
 
 
+def testDiffViewStageAllLinesThenJumpToNextFile(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/aaaaa.txt", "line A\nlineB\n")
+    writeFile(f"{wd}/master.txt", "\n".join(["On master"]*50))
+    rw = mainWindow.openRepo(wd)
+
+    rw.jump(NavLocator.inUnstaged("aaaaa.txt"))
+    qteSelectBlocks(rw.diffView, 1, 2)
+    QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
+
+    assert NavLocator.inUnstaged("master.txt").isSimilarEnoughTo(rw.navLocator)
+    assert 0 == rw.diffView.textCursor().blockNumber()
+
+
 def testPartialPatchSpacesInFilename(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     writeFile(F"{wd}/file with spaces.txt", "line A\nline B\nline C\n")

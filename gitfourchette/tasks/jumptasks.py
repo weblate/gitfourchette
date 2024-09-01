@@ -177,9 +177,11 @@ class Jump(RepoTask):
         isStaged = locator.context == NavContext.STAGED
         flModel = (rw.stagedFiles if isStaged else rw.dirtyFiles).flModel
         flPrevRow = previousRowStaged if isStaged else previousRowDirty
+
         if locator.path and not flModel.hasFile(locator.path) and flPrevRow >= 0:
             path = flModel.getFileAtRow(min(flPrevRow, flModel.rowCount()-1))
             locator = locator.replace(path=path)
+            locator = locator.coarse(keepFlags=True)  # don't carry cursor over from old locator
             locator = rw.navHistory.refine(locator)
 
         return locator
