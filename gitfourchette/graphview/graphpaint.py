@@ -1,5 +1,4 @@
 import logging
-from itertools import zip_longest
 
 from gitfourchette import colors
 from gitfourchette import settings
@@ -27,20 +26,20 @@ def flattenLanes(frame: Frame, hiddenCommits: set[Oid]) -> tuple[list[tuple[int,
     """
 
     if settings.prefs.flattenLanes:
-        laneRemap, flatTotal = frame.flattenLanes(hiddenCommits)
+        laneRemap, columnCount = frame.flattenLanes(hiddenCommits)
     else:
         # Straightforward lane positions (lane column == lane ID)
         laneRemap = []
-        for i, (cl, ol) in enumerate(zip_longest(frame.solvedArcs, frame.openArcs)):
-            laneRemap.append( (i, i) )
-        flatTotal = len(laneRemap)
+        columnCount = max(len(frame.solvedArcs), len(frame.openArcs))
+        for i in range(columnCount):
+            laneRemap.append((i, i))
 
-    return laneRemap, flatTotal
+    return laneRemap, columnCount
 
 
 def getCommitBulletColumn(
         commitLane: int,
-        flatTotal: int,
+        columnCount: int,
         lanePositionsAB: list[tuple[int, int]]
 ) -> tuple[int, int]:
     # Find out at which position to draw the commit's bullet point.
@@ -59,11 +58,11 @@ def getCommitBulletColumn(
 
     # If that still didn't work, we have a lone commit without parents or children; just toss the bullet to the right.
     if myLanePosition < 0:
-        flatTotal += 1
-        myLanePosition = flatTotal
-        #assert myLanePosition == commitLane, "expecting GraphGenerator to put lone commits on the rightmost column"
+        myLanePosition = columnCount
+        columnCount += 1
+        assert myLanePosition == commitLane, "expecting GraphGenerator to put lone commits on the rightmost column"
 
-    return myLanePosition, flatTotal
+    return myLanePosition, columnCount
 
 
 def paintGraphFrame(
@@ -111,7 +110,7 @@ def paintGraphFrame(
     # Get column (horizontal position) of commit bullet point.
     myColumn, numFlattenedColumns = getCommitBulletColumn(commitLane, numFlattenedColumns, laneColumnsAB)
 
-    rect.setRight(x + numFlattenedColumns * LANE_WIDTH)
+    rect.setRight(x + (numFlattenedColumns - 1) * LANE_WIDTH)
     mx = x + myColumn * LANE_WIDTH  # the screen X of this commit's bullet point
 
     # draw bullet point _outline_ for this commit, beneath everything else

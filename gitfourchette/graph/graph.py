@@ -516,7 +516,7 @@ class Frame:
                 a = arcsBelow.pop()
                 mapBelow[a.lane] = column
 
-        return list(zip(mapAbove, mapBelow)), column
+        return list(zip(mapAbove, mapBelow)), column + 1
 
 
 class PlaybackState(Frame):

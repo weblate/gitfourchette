@@ -84,8 +84,10 @@ def testGapBetweenBranches():
     frameC2 = checkFrame(pb, 4, "c2", solved="c1-c2", open="a2-f,c2-f")
     checkFrame(pb, 5, "f", solved="a2-f,c2-f")
 
-    laneRemap, numFlattenedLanes = frameC2.flattenLanes([])
+    laneRemap, numColumns = frameC2.flattenLanes(set())
+    assert numColumns == 2
     assert laneRemap[0] == (0, 0)
+    assert laneRemap[1] == (-1, -1)
     assert laneRemap[2] == (1, 1)
 
 
@@ -115,22 +117,57 @@ def testNewBranchInGap():
     frameA3 = checkFrame(pb, 6, "a3", solved="a2-a3", open="a3-f,c2-f,d1-f")
     frameF = checkFrame(pb, 7, "f", solved="a3-f,c2-f,d1-f")
 
-    laneRemap, numFlattenedLanes = frameA2.flattenLanes([])
-    print("Frame A2:", laneRemap)
+    hiddenCommits = set()
+
+    laneRemap, numColumns = frameA1.flattenLanes(hiddenCommits)
+    print("Frame A1:", laneRemap, numColumns)
+    assert numColumns == 1
+    assert laneRemap[0] == (-1, 0)  # a1: new branch tip in column 0
+
+    laneRemap, numColumns = frameB1.flattenLanes(hiddenCommits)
+    print("Frame B1:", laneRemap, numColumns)
+    assert numColumns == 2
+    assert laneRemap[0] == (0, 0)  # a1 still
+    assert laneRemap[1] == (-1, 1)  # b1: new branch tip in column 1
+
+    laneRemap, numColumns = frameC1.flattenLanes(hiddenCommits)
+    print("Frame C1:", laneRemap, numColumns)
+    assert numColumns == 3
+    assert laneRemap[0] == (0, 0)  # a1 still
+    assert laneRemap[1] == (1, 1)  # b1 still
+    assert laneRemap[2] == (-1, 2)  # c1: new branch tip in column 2
+
+    laneRemap, numColumns = frameA2.flattenLanes(hiddenCommits)
+    print("Frame A2:", laneRemap, numColumns)
+    assert numColumns == 3
     assert laneRemap[0] == (0, 0)  # A1-A2 in column 0
     assert laneRemap[1] == (1, -1)  # B1 comes from above in column 1, frees up column 1 as it merges into A2
     assert laneRemap[2] == (2, 1)  # C1 comes from above in column 2, and gets remapped to column 1 below
 
-    laneRemap, numFlattenedLanes = frameC2.flattenLanes([])
-    print("Frame C2:", laneRemap)
+    laneRemap, numColumns = frameC2.flattenLanes(hiddenCommits)
+    print("Frame C2:", laneRemap, numColumns)
+    assert numColumns == 2
     assert laneRemap[0] == (0, 0)  # A2-A3 in column 0
+    assert laneRemap[1] == (-1, -1)  # vacant
     assert laneRemap[2] == (1, 1)  # C2 is in lane 2, but it can use the gap in column 1 left by vacant lane 1
 
-    laneRemap, numFlattenedLanes = frameD1.flattenLanes([])
-    print("Frame D1:", laneRemap)
-    assert laneRemap[0] == (0, 0)
-    assert laneRemap[2] == (1, 1)  # c1 still
-    assert laneRemap[1] == (-1, 2)  # tip
+    laneRemap, numColumns = frameD1.flattenLanes(hiddenCommits)
+    print("Frame D1:", laneRemap, numColumns)
+    assert numColumns == 3
+    assert laneRemap[0] == (0, 0)  # a2-a3 still
+    assert laneRemap[1] == (-1, 2)  # d1: branch tip
+    assert laneRemap[2] == (1, 1)  # c2 still
+
+    laneRemap, numColumns = frameA3.flattenLanes(hiddenCommits)
+    print("Frame A3:", laneRemap, numColumns)
+    assert numColumns == 3
+
+    laneRemap, numColumns = frameF.flattenLanes(hiddenCommits)
+    print("Frame F:", laneRemap, numColumns)
+    assert numColumns == 3
+    assert laneRemap[0] == (0, -1)  # free up F
+    assert laneRemap[1] == (2, -1)  # free up D1
+    assert laneRemap[2] == (1, -1)  # free up C2
 
 
 def testVisibleJunctionOnHiddenArc():
