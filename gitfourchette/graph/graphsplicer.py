@@ -80,8 +80,13 @@ class GraphSplicer:
             self.requiredOldCommits -= oldCommitsPassed
 
         # Keep track of any commits we may have skipped in the old graph,
-        # because they are now unreachable and we want to purge them from the cache afterwards.
+        # because they are now unreachable and we want to purge them from the cache afterward.
         self.oldCommitsSeen |= oldCommitsPassed
+
+        # Topological sort may reorder branches. If that happens, we can't infer whether splicing is
+        # complete from a commit that has no parents. Examine at least one more commit.
+        if not parentsOfNewCommit:
+            return
 
         # See if we're done: no more commits we want to see,
         # and the graph frames start being "equal" in both graphs.

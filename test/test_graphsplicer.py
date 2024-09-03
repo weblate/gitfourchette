@@ -173,13 +173,13 @@ SCENARIOS = {
     "1 to 2": (
         "b",
         "a-b",
-        True,
+        False,
     ),
 
     "1 to 2b": (
         "y-x-c",
         "a-b-c",
-        True,
+        False,
     ),
 
     "1 to 0": (
@@ -271,8 +271,8 @@ SCENARIOS = {
     ),
 
     "careful not to rewire main dead branch into LL of branches after splicing": (
-        "a:d b:d,c c-d-f",
-        "m:d b:d,c c-d-f",
+        "a:d b:d,c c-d-f-g",
+        "m:d b:d,c c-d-f-g",
         True
     ),
 
@@ -295,8 +295,32 @@ SCENARIOS = {
     ),
 
     "equilibrium in between disjoint branches 3": (
-        "a-b c",
-        "x-b c",
+        "a-b c-d",
+        "x-b c-d",
+        True,
+    ),
+
+    "topo sort branch shuffle 1": (
+        "p-o m",
+        "n-m p-o",
+        False,
+    ),
+
+    "topo sort branch shuffle 1b": (
+        "p-o m x-y-z",
+        "n-m p-o x-y-z",
+        True,
+    ),
+
+    "topo sort branch shuffle 2": (
+        "p-o m",
+        "n-m o",
+        False,
+    ),
+
+    "topo sort branch shuffle 3": (
+        "a:m b-c:m d-e-m-n-z",
+        "a:m f-d-e:m b-c-m-n-z",
         True,
     ),
 }
@@ -332,10 +356,12 @@ def testGraphSplicing(scenarioKey):
     spliceLoop.sendAll(sequence2)
     g.testConsistency()
 
-    assert expectEquilibrium == spliceLoop.splicer.foundEquilibrium
+    assert [c.id for c in sequence2] == [c.id for c in spliceLoop.commitSequence], "output commit sequence incorrect"
 
     for trashedCommit in (spliceLoop.splicer.oldCommitsSeen - spliceLoop.splicer.newCommitsSeen):
         assert not any(trashedCommit == c.id for c in sequence2), f"commit '{trashedCommit}' erroneously trashed"
+
+    assert expectEquilibrium == spliceLoop.splicer.foundEquilibrium
 
     # delete the splicer to ensure that any dtors don't mess up the spliced graph
     del spliceLoop
