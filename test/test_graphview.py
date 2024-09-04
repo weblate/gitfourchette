@@ -235,6 +235,8 @@ def testCommitToolTip(tempDir, mainWindow):
     masterId = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
+    QTest.qWait(0)
+
     graphView = rw.graphView
     y = 30
 
@@ -289,3 +291,18 @@ def testUnknownRefPrefix(tempDir, mainWindow):
     assert rw.navLocator.commit == ghostOid
     assert rw.diffArea.diffBanner.isVisible()
     assert re.search(r"n.t shown in the graph", rw.diffArea.diffBanner.label.text(), re.I)
+
+
+def testCommitAmendedOutsideAppVanishesFromGraph(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    rw = mainWindow.openRepo(wd)
+    assert rw.navLocator.context.isWorkdir()
+
+    rw.jump(NavLocator.inCommit(rw.repo.head_commit_id))
+    assert rw.navLocator.commit == rw.repo.head_commit_id
+
+    with RepoContext(rw.repo) as repo:
+        newHeadId = repo.amend_commit_on_head("blahblah", TEST_SIGNATURE, TEST_SIGNATURE)
+
+    rw.refreshRepo()
+    assert rw.navLocator.commit == newHeadId

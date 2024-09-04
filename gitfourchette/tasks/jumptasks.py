@@ -6,6 +6,7 @@ Unlike most other tasks, jump tasks directly manipulate the UI extensively, via 
 import dataclasses
 import logging
 import os
+import warnings
 
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
@@ -223,7 +224,7 @@ class Jump(RepoTask):
             raise Jump.Result(locator, self.tr("History truncated"), sde)
 
         else:
-            raise Jump.Result(locator, "", SpecialDiffError(f"Unsupported special locator: {locator}"))
+            raise NotImplementedError(f"Unsupported special locator: {locator}")
 
     def showCommit(self, locator: NavLocator) -> NavLocator:
         """
@@ -380,10 +381,7 @@ class Jump(RepoTask):
             area.specialDiffView.displayImageDiff(result.patch.delta, document.oldImage, document.newImage)
 
         else:
-            area.setDiffStackPage("special")
-            area.specialDiffView.displaySpecialDiffError(SpecialDiffError(
-                escape(f"Can't display {documentType}."),
-                icon="SP_MessageBoxCritical"))
+            raise NotImplementedError(f"Can't display {documentType}")
 
 
 class JumpBackOrForward(RepoTask):
@@ -507,7 +505,7 @@ class RefreshRepo(RepoTask):
 
         jumpTo = jumpTo or initialLocator
 
-        jumpToWorkdir = jumpTo.context.isWorkdir() or (jumpTo.context == NavContext.EMPTY and rw.isWorkdirShown)
+        jumpToWorkdir = jumpTo.context.isWorkdir() or (jumpTo.context == NavContext.EMPTY and initialLocator.context.isWorkdir())
 
         if effectFlags & TaskEffects.Workdir and not jumpToWorkdir:
             # Clear uncommitted change count if we know the workdir is stale

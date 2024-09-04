@@ -703,10 +703,6 @@ class RepoWidget(QStackedWidget):
 
     # -------------------------------------------------------------------------
 
-    @property
-    def isWorkdirShown(self):
-        return self.fileStackPage() == "workdir"
-
     def setInitialFocus(self):
         """
         Focus on some useful widget within RepoWidget.

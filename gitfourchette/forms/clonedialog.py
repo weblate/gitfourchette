@@ -100,9 +100,6 @@ class CloneDialog(QDialog):
 
     def validatePath(self, _ignored: str) -> str:
         path = self.path
-        if not path:
-            # Avoid wording this as "cannot be empty" to prevent confusion with "directory not empty".
-            return translate("NameValidationError", "Please fill in this field.")
         path = Path(path)
         if not path.is_absolute():
             return translate("NameValidationError", "Please enter an absolute path.")

@@ -2,6 +2,7 @@ import pytest
 
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.remotedialog import RemoteDialog
+from gitfourchette.nav import NavContext
 from gitfourchette.sidebar.sidebarmodel import EItem
 from gitfourchette.tasks import RepoTaskRunner
 from .util import *
@@ -45,6 +46,31 @@ def testSshCloneRepo(tempDir, mainWindow, taskThread, qtbot):
     assert "master" in rw.repo.branches.local
     assert "origin/master" in rw.repo.branches.remote
     assert "origin/no-parent" in rw.repo.branches.remote
+
+
+@requiresNetwork
+def testHttpsShallowClone(tempDir, mainWindow, taskThread, qtbot):
+    triggerMenuAction(mainWindow.menuBar(), "file/clone")
+    cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
+    cloneDialog.ui.urlEdit.setEditText("https://github.com/libgit2/TestGitRepository")
+    cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
+    cloneDialog.ui.shallowCloneCheckBox.setChecked(True)
+    cloneDialog.cloneButton.click()
+    qtbot.waitSignal(cloneDialog.finished).wait()
+
+    rw = mainWindow.currentRepoWidget()
+    qtbot.waitSignal(rw.repoTaskRunner.ready).wait()
+    assert "master" in rw.repo.branches.local
+    assert "origin/master" in rw.repo.branches.remote
+    assert "origin/no-parent" in rw.repo.branches.remote
+
+    # 5 rows: Uncommitted changes; 1 lone commit for each of the 3 branches; Shallow clone row
+    assert rw.graphView.clModel.rowCount() == 5
+
+    qlvClickNthRow(rw.graphView, 4)
+    assert rw.navLocator.context == NavContext.SPECIAL
+    assert rw.specialDiffView.isVisible()
+    assert "shallow" in rw.specialDiffView.toPlainText().lower()
 
 
 @requiresNetwork

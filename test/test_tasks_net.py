@@ -33,6 +33,7 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
 
     # Bring up clone dialog
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
+    QTest.qWait(0)
     cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
     assert not cloneDialog.ui.pathEdit.text()  # path initially empty
     assert -1 == cloneDialog.ui.urlEdit.currentIndex()
@@ -42,16 +43,34 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
 
     # Set URL in clone dialog
     cloneDialog.ui.urlEdit.setEditText(bare)
+    QTest.qWait(0)
     assert "unpacked-repo-bare" in cloneDialog.ui.pathEdit.text()  # autofilled after entering URL
 
     # Test expanduser on manual path entry
+    cloneDialog.ui.pathEdit.setFocus()
     cloneDialog.ui.pathEdit.setText("~/thisshouldwork")
     assert cloneDialog.path == str(Path("~/thisshouldwork").expanduser())
 
+    # Disallow cloning to non-empty directory
+    cloneDialog.ui.pathEdit.setText(tempDir.name)
+    QTest.qWait(0)
+    assert not cloneDialog.cloneButton.isEnabled()
+    assert re.search(r"isn.t empty", QToolTip.text(), re.I)
+
+    # Disallow cloning to empty path
+    cloneDialog.ui.pathEdit.setText("")
+    QTest.qWait(0)
+    assert not cloneDialog.cloneButton.isEnabled()
+    assert re.search(r"enter.+absolute path", QToolTip.text(), re.I)
+
+    # Disallow cloning to file path
+    cloneDialog.ui.pathEdit.setText(f"{wd}/master.txt")
+    QTest.qWait(0)
+    assert not cloneDialog.cloneButton.isEnabled()
+    assert re.search(r"file at this path", QToolTip.text(), re.I)
+
     # Set target path in clone dialog
-    cloneDialog.ui.pathEdit.clear()
     cloneDialog.ui.browseButton.click()
-    assert not cloneDialog.cloneButton.isEnabled()  # disallow cloning to empty path
     qfd: QFileDialog = cloneDialog.findChild(QFileDialog)
     assert "clone" in qfd.windowTitle().lower()
     qfd.selectFile(target)

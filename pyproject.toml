@@ -99,6 +99,7 @@ exclude_lines = [
     "if MACOS:",
     "if WINDOWS:",
     "if not BRANCH_FOLDERS:",
+    "if not pygit2_version_at_least\\(",
 
     # Don't complain about abstract methods, they aren't run:
     "@(abc\\.)?abstractmethod",
