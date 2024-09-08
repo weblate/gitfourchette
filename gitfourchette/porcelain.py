@@ -384,6 +384,9 @@ def signatures_equalish(a: Signature, b: Signature):
     if a == b:
         return True
 
+    if not isinstance(a, Signature) or not isinstance(b, Signature):
+        return False
+
     if a._encoding == b._encoding:
         # If the encodings match and a != b, then the signatures are really different
         return False

@@ -26,16 +26,20 @@ def testCommit(tempDir, mainWindow):
 
     dialog: CommitDialog = findQDialog(rw, "commit")
     QTest.keyClicks(dialog.ui.summaryEditor, "Some New Commit")
+    assert dialog.acceptButton.isEnabled()
 
     dialog.ui.revealSignature.click()
 
     enteredDate = QDateTime.fromString("1999-12-31 23:59:00", "yyyy-MM-dd HH:mm:ss")
     sigUI = dialog.ui.signature.ui
     qcbSetIndex(sigUI.replaceComboBox, "author")
+    sigUI.nameEdit.clear()
+    assert not dialog.acceptButton.isEnabled()
     sigUI.nameEdit.setText("Custom Author")
     sigUI.emailEdit.setText("custom.author@example.com")
     sigUI.timeEdit.setDateTime(enteredDate)
 
+    assert dialog.acceptButton.isEnabled()
     dialog.accept()
 
     headCommit = rw.repo.head_commit
@@ -110,6 +114,31 @@ def testCommitMessageDraftSavedOnCancel(tempDir, mainWindow):
     assert dialog.ui.summaryEditor.text() == ""
     assert dialog.getOverriddenSignatureKind() == SignatureOverride.Nothing
     dialog.reject()
+
+
+def testCommitMessageDraftWithInvalidSignatureSavedOnCancel(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.stagedNewEmptyFile(wd)
+    rw = mainWindow.openRepo(wd)
+
+    rw.diffArea.commitButton.click()
+    dialog: CommitDialog = findQDialog(rw, "commit")
+    dialog.ui.summaryEditor.setText("hoping to save this message")
+    dialog.ui.revealSignature.click()
+    dialog.ui.signature.ui.replaceComboBox.setCurrentIndex(2)
+    dialog.ui.signature.ui.nameEdit.setText("")
+    dialog.ui.signature.ui.emailEdit.setText("")
+    assert not dialog.acceptButton.isEnabled()
+    dialog.reject()
+    assert rw.repoModel.prefs.draftCommitMessage == "hoping to save this message"
+    assert rw.repoModel.prefs.draftCommitSignatureOverride == SignatureOverride.Nothing
+    assert rw.repoModel.prefs.draftCommitSignature is None
+
+    rw.diffArea.commitButton.click()
+    dialog: CommitDialog = findQDialog(rw, "commit")
+    assert dialog.ui.summaryEditor.text() == "hoping to save this message"
+    assert dialog.getOverriddenSignatureKind() == SignatureOverride.Nothing
+    dialog.accept()  # Go through with the commit this time
 
 
 def testAmendCommit(qtbot, tempDir, mainWindow):

@@ -118,9 +118,9 @@ class CommitDialog(QDialog):
         return F"{summary}\n\n{details}"
 
     def getOverriddenSignatureKind(self):
-        if not self.ui.revealSignature.isChecked():
-            return SignatureOverride.Nothing
-        return self.ui.signature.replaceWhat()
+        if self.ui.revealSignature.isChecked() and self.ui.signature.getSignature():
+            return self.ui.signature.replaceWhat()
+        return SignatureOverride.Nothing
 
     def getOverriddenAuthorSignature(self):
         if self.getOverriddenSignatureKind() in [SignatureOverride.Author, SignatureOverride.Both]:
@@ -142,19 +142,11 @@ class CommitDialog(QDialog):
             return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
                 + "<small>" + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat)) + "</small>"
 
-        try:
-            author = self.getOverriddenAuthorSignature() or self.originalAuthorSignature
-        except ValueError:
-            author = None
-
-        try:
-            committer = self.getOverriddenCommitterSignature() or self.originalCommitterSignature
-        except ValueError:
-            committer = None
+        author = self.getOverriddenAuthorSignature() or self.originalAuthorSignature
+        committer = self.getOverriddenCommitterSignature() or self.originalCommitterSignature
 
         muted = mutedToolTipColorHex()
         tt = "<p style='white-space: pre'>"
-        # tt += self.tr("The commit will be saved with the following signatures:") + "\n\n"
 
         tt += f"<span style='color: {muted}'>" + self.tr("Authored by:") + "</span> "
         tt += formatSignatureForToolTip(author)

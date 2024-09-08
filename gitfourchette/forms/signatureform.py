@@ -97,14 +97,17 @@ class SignatureForm(QWidget):
         validator.connectInput(self.ui.nameEdit, SignatureForm.validateInput)
         validator.connectInput(self.ui.emailEdit, SignatureForm.validateInput)
 
-    def getSignature(self) -> Signature:
+    def getSignature(self) -> Signature | None:
         qdt = self.ui.timeEdit.dateTime()
-        return Signature(
-            name=self.ui.nameEdit.text(),
-            email=self.ui.emailEdit.text(),
-            time=qdt.toSecsSinceEpoch(),
-            offset=self.ui.offsetEdit.currentData(),
-        )
+        try:
+            return Signature(
+                name=self.ui.nameEdit.text(),
+                email=self.ui.emailEdit.text(),
+                time=qdt.toSecsSinceEpoch(),
+                offset=self.ui.offsetEdit.currentData(),
+            )
+        except ValueError:
+            return None
 
     def replaceWhat(self):
         index = self.ui.replaceComboBox.currentIndex()
