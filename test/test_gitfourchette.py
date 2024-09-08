@@ -543,3 +543,36 @@ def testRestoreSession(tempDir, mainWindow):
 
     mainWindow2.close()
     mainWindow2.deleteLater()
+
+
+def testMaximizeDiffArea(tempDir, mainWindow):
+    wd1 = unpackRepo(tempDir, renameTo="Repo1")
+    wd2 = unpackRepo(tempDir, renameTo="Repo2")
+    rw1 = mainWindow.openRepo(wd1)
+    rw2 = mainWindow.openRepo(wd2)
+
+    assert mainWindow.tabs.currentWidget() is rw2
+    assert rw2.centralSplitter.sizes()[0] != 0
+    assert not rw2.diffArea.contextHeader.maximizeButton.isChecked()
+
+    # Maximize rw2's diffArea
+    rw2.diffArea.contextHeader.maximizeButton.click()
+    assert rw2.diffArea.contextHeader.maximizeButton.isChecked()
+    assert rw2.centralSplitter.sizes()[0] == 0
+
+    # Switch to rw1, diffArea must be maximized
+    mainWindow.tabs.setCurrentIndex(0)
+    assert mainWindow.tabs.currentWidget() is rw1
+    assert rw1.diffArea.contextHeader.maximizeButton.isChecked()
+    assert rw1.centralSplitter.sizes()[0] == 0
+
+    # De-maximize rw1's diffArea
+    rw1.diffArea.contextHeader.maximizeButton.click()
+    assert not rw1.diffArea.contextHeader.maximizeButton.isChecked()
+    assert rw1.centralSplitter.sizes()[0] > 0
+
+    # Switch to rw2, diffArea must not be maximized
+    mainWindow.tabs.setCurrentIndex(1)
+    assert mainWindow.tabs.currentWidget() is rw2
+    assert not rw2.diffArea.contextHeader.maximizeButton.isChecked()
+    assert rw2.centralSplitter.sizes()[0] > 0

@@ -373,6 +373,7 @@ class RepoWidget(QStackedWidget):
                 name = splitter.objectName()
                 sizes = self.sharedSplitterSizes[name]
                 splitter.setSizes(sizes)
+        self.syncDiffAreaMaximizeButton()
 
     def isDiffAreaMaximized(self):
         sizes = self.centralSplitter.sizes()
@@ -387,6 +388,7 @@ class RepoWidget(QStackedWidget):
             self.centralSplitSizesBackup = self.centralSplitter.sizes()
             newSizes = [0, 1]
         self.centralSplitter.setSizes(newSizes)
+        self.saveSplitterState(self.centralSplitter)
         self.syncDiffAreaMaximizeButton()
 
     def syncDiffAreaMaximizeButton(self):
