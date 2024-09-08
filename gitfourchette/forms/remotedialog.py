@@ -18,9 +18,6 @@ class RemoteDialog(QDialog):
         self.ui.nameEdit.setText(name)
         self.existingRemotes = existingRemotes
 
-        # Detect protocol when URL changes
-        self.ui.urlEdit.textChanged.connect(self.onUrlChangedDetectProtocol)
-
         # Set up key file picker
         self.ui.keyFilePicker.makeFixedHeight()
         self.ui.keyFilePicker.setPath(customKeyFile)
@@ -59,13 +56,13 @@ class RemoteDialog(QDialog):
                 self.ui.urlEdit.setText(url)
                 self.ui.urlEdit.setFocus()
 
-        self.ui.protocolButton.setFixedWidth(self.ui.protocolButton.fontMetrics().horizontalAdvance("----https----"))
+        # Connect protocol button to URL editor
+        self.ui.protocolButton.connectTo(self.ui.urlEdit)
 
         convertToBrandedDialog(self, title)
         self.resize(max(self.width(), 600), self.height())
 
-        # Run input callbacks
-        self.onUrlChangedDetectProtocol(self.ui.urlEdit.text())
+        # Run input callback
         validator.run(silenceEmptyWarnings=True)
 
     @property
@@ -97,27 +94,3 @@ class RemoteDialog(QDialog):
         host = withUniqueSuffix(host, self.existingRemotes)
         self.ui.nameEdit.setText(host)
         self.allowAutoFillName = True  # re-enable this since we got this far
-
-    def onUrlChangedDetectProtocol(self, url: str):
-        protocolButton = self.ui.protocolButton
-        protocol = remoteUrlProtocol(url)
-
-        if not protocol:  # unknown protocol, hide protocol button
-            protocolButton.hide()
-            return
-
-        # Build alternative URL
-        host, path = splitRemoteUrl(url)
-        if protocol == "ssh":
-            newUrl = f"https://{host}/{path}"
-            newUrl = newUrl.removesuffix(".git")
-        else:
-            host = host.split(":", 1)[0]  # remove port, if any
-            newUrl = f"git@{host}:{path}"
-
-        protocolButton.show()
-        # protocolButton.setFixedHeight(self.ui.urlEdit.height())
-        protocolButton.setText(protocol)
-
-        menu = ActionDef.makeQMenu(protocolButton, [ActionDef(newUrl, lambda: self.ui.urlEdit.setText(newUrl))])
-        protocolButton.setMenu(menu)

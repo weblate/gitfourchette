@@ -39,15 +39,9 @@
       <widget class="QLineEdit" name="urlEdit"/>
      </item>
      <item>
-      <widget class="QToolButton" name="protocolButton">
-       <property name="toolTip">
-        <string>Change URL protocol</string>
-       </property>
+      <widget class="ProtocolButton" name="protocolButton">
        <property name="text">
         <string notr="true">https</string>
-       </property>
-       <property name="popupMode">
-        <enum>QToolButton::ToolButtonPopupMode::InstantPopup</enum>
        </property>
       </widget>
      </item>
@@ -135,6 +129,11 @@
    <class>KeyFilePickerCheckBox</class>
    <extends>QCheckBox</extends>
    <header>gitfourchette.forms.keyfilepickercheckbox</header>
+  </customwidget>
+  <customwidget>
+   <class>ProtocolButton</class>
+   <extends>QToolButton</extends>
+   <header>gitfourchette.forms.protocolbutton</header>
   </customwidget>
  </customwidgets>
  <tabstops>

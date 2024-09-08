@@ -45,6 +45,7 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
     cloneDialog.ui.urlEdit.setEditText(bare)
     QTest.qWait(0)
     assert "unpacked-repo-bare" in cloneDialog.ui.pathEdit.text()  # autofilled after entering URL
+    assert cloneDialog.ui.protocolButton.isHidden()  # protocol swap button shouldn't be visible for file URLs
 
     # Test expanduser on manual path entry
     cloneDialog.ui.pathEdit.setFocus()

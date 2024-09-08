@@ -26,9 +26,8 @@ class Ui_RemoteDialog(object):
         self.urlEdit = QLineEdit(parent=RemoteDialog)
         self.urlEdit.setObjectName("urlEdit")
         self.urlLayout.addWidget(self.urlEdit)
-        self.protocolButton = QToolButton(parent=RemoteDialog)
+        self.protocolButton = ProtocolButton(parent=RemoteDialog)
         self.protocolButton.setText("https")
-        self.protocolButton.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.protocolButton.setObjectName("protocolButton")
         self.urlLayout.addWidget(self.protocolButton)
         self.formLayout.setLayout(0, QFormLayout.ItemRole.FieldRole, self.urlLayout)
@@ -71,8 +70,8 @@ class Ui_RemoteDialog(object):
         _translate = QCoreApplication.translate
         RemoteDialog.setWindowTitle(_translate("RemoteDialog", "Edit remote"))
         self.urlLabel.setText(_translate("RemoteDialog", "&URL:"))
-        self.protocolButton.setToolTip(_translate("RemoteDialog", "Change URL protocol"))
         self.nameLabel.setText(_translate("RemoteDialog", "&Name:"))
         self.keyFilePicker.setText(_translate("RemoteDialog", "Log in with custom &key file"))
         self.fetchAfterAddCheckBox.setText(_translate("RemoteDialog", "&Fetch remote branches after adding"))
 from gitfourchette.forms.keyfilepickercheckbox import KeyFilePickerCheckBox
+from gitfourchette.forms.protocolbutton import ProtocolButton

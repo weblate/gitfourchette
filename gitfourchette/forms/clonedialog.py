@@ -82,6 +82,9 @@ class CloneDialog(QDialog):
         self.ui.urlEdit.setCurrentText(initialUrl)
         self.ui.urlEdit.setFocus()
 
+        # Connect protocol button to URL editor
+        self.ui.protocolButton.connectTo(self.ui.urlEdit.lineEdit())
+
         validator = ValidatorMultiplexer(self)
         validator.setGatedWidgets(self.cloneButton)
         validator.connectInput(self.ui.urlEdit.lineEdit(), self.validateUrl)
@@ -280,6 +283,11 @@ class CloneDialog(QDialog):
 
         self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
         self.taskRunner.put(CloneTask(self), url=self.url, path=self.path, depth=depth, privKeyPath=privKeyPath, recursive=recursive)
+
+    def onUrlProtocolChanged(self, newUrl: str):
+        # This pushes the new text to the QLineEdit's undo stack (whereas setText clears the undo stack).
+        self.ui.urlEdit.lineEdit().selectAll()
+        self.ui.urlEdit.lineEdit().insert(newUrl)
 
 
 class CloneTask(RepoTask):

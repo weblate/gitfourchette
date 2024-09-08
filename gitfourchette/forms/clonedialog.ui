@@ -46,20 +46,31 @@
     </widget>
    </item>
    <item row="0" column="1">
-    <widget class="QComboBox" name="urlEdit">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="editable">
-      <bool>true</bool>
-     </property>
-     <property name="insertPolicy">
-      <enum>QComboBox::InsertPolicy::NoInsert</enum>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="urlLayout">
+     <item>
+      <widget class="QComboBox" name="urlEdit">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+       <property name="insertPolicy">
+        <enum>QComboBox::InsertPolicy::NoInsert</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="ProtocolButton" name="protocolButton">
+       <property name="text">
+        <string notr="true">https</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item row="1" column="0">
     <widget class="QLabel" name="pathLabel">
@@ -94,7 +105,7 @@
       <string>Options:</string>
      </property>
      <property name="buddy">
-      <cstring>shallowCloneCheckBox</cstring>
+      <cstring>recurseSubmodulesCheckBox</cstring>
      </property>
     </widget>
    </item>
@@ -231,11 +242,18 @@
    <header>gitfourchette.forms.statusform</header>
    <container>1</container>
   </customwidget>
+  <customwidget>
+   <class>ProtocolButton</class>
+   <extends>QToolButton</extends>
+   <header>gitfourchette.forms.protocolbutton</header>
+  </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>urlEdit</tabstop>
+  <tabstop>protocolButton</tabstop>
   <tabstop>pathEdit</tabstop>
   <tabstop>browseButton</tabstop>
+  <tabstop>recurseSubmodulesCheckBox</tabstop>
   <tabstop>shallowCloneCheckBox</tabstop>
   <tabstop>shallowCloneDepthSpinBox</tabstop>
   <tabstop>keyFilePicker</tabstop>

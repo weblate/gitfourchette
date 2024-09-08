@@ -31,8 +31,17 @@ def testHttpsCloneRepo(tempDir, mainWindow, taskThread, qtbot):
 def testSshCloneRepo(tempDir, mainWindow, taskThread, qtbot):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
     cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
-    cloneDialog.ui.urlEdit.setEditText("ssh://git@github.com/libgit2/TestGitRepository")
+    cloneDialog.ui.urlEdit.setEditText("https://github.com/libgit2/TestGitRepository")
     cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
+
+    # Set SSH URL via protocol swap button
+    protocolButton = cloneDialog.ui.protocolButton
+    assert protocolButton.isVisible()
+    assert protocolButton.text() == "https"
+    protocolButton.menu().actions()[0].trigger()
+    assert protocolButton.text() == "ssh"
+    assert cloneDialog.ui.urlEdit.lineEdit().text() == "git@github.com:libgit2/TestGitRepository"
+
     cloneDialog.ui.keyFilePicker.setPath(getTestDataPath("keys/pygit2_empty.pub"))
     cloneDialog.cloneButton.click()
 
