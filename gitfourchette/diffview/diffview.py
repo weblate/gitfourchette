@@ -110,12 +110,8 @@ class DiffView(QPlainTextEdit):
         self.rubberBand = DiffRubberBand(self.viewport())
         self.rubberBand.hide()
 
-        self.rubberBandButton = QToolButton(self.viewport())
-        self.rubberBandButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.rubberBandButton.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.rubberBandButton.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.rubberBandButton.clicked.connect(self.rubberBandButtonClicked)
-        self.rubberBandButton.hide()
+        self._initRubberBandButtons()
+        self.rubberBandButtonGroup.hide()
 
         self.verticalScrollBar().valueChanged.connect(self.updateRubberBand)
         self.horizontalScrollBar().valueChanged.connect(self.updateRubberBand)
@@ -123,6 +119,36 @@ class DiffView(QPlainTextEdit):
         # Initialize font & styling
         self.refreshPrefs()
         GFApplication.instance().restyle.connect(self.refreshPrefs)
+
+    def _initRubberBandButtons(self):
+        self.rubberBandButtonGroup = QWidget(parent=self.viewport())
+        rubberBandButtonLayout = QHBoxLayout(self.rubberBandButtonGroup)
+        rubberBandButtonLayout.setSpacing(0)
+        rubberBandButtonLayout.setContentsMargins(0, 0, 0, 0)
+
+        self.stageButton = QToolButton()
+        self.stageButton.setText(self.tr("Stage Selection"))
+        self.stageButton.setIcon(stockIcon("git-stage-lines"))
+        self.stageButton.setToolTip(appendShortcutToToolTipText(self.tr("Stage selected lines"), GlobalShortcuts.stageHotkeys[0]))
+        self.stageButton.clicked.connect(self.stageSelection)
+
+        self.unstageButton = QToolButton()
+        self.unstageButton.setText(self.tr("Unstage Selection"))
+        self.unstageButton.setIcon(stockIcon("git-unstage-lines"))
+        self.unstageButton.clicked.connect(self.unstageSelection)
+        self.unstageButton.setToolTip(appendShortcutToToolTipText(self.tr("Unstage selected lines"), GlobalShortcuts.discardHotkeys[0]))
+
+        self.discardButton = QToolButton()
+        self.discardButton.setText(self.tr("Discard"))
+        self.discardButton.setIcon(stockIcon("git-discard-lines"))
+        self.discardButton.clicked.connect(self.discardSelection)
+        self.discardButton.setToolTip(appendShortcutToToolTipText(self.tr("Discard selected lines"), GlobalShortcuts.discardHotkeys[0]))
+
+        for button in self.stageButton, self.discardButton, self.unstageButton:
+            button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            rubberBandButtonLayout.addWidget(button)
 
     # ---------------------------------------------
     # Qt events
@@ -266,16 +292,14 @@ class DiffView(QPlainTextEdit):
         self.gutter.setMaxLineNumber(maxLine)
         self.syncViewportMarginsWithGutter()
 
+        buttonMask = 0
         if locator.context == NavContext.UNSTAGED:
-            self.rubberBandButton.setText(self.tr("Stage Selection"))
-            self.rubberBandButton.setIcon(stockIcon("git-stage-lines"))
-            self.rubberBandButton.setToolTip(self.tr("Stage selected lines"))
-            appendShortcutToToolTip(self.rubberBandButton, GlobalShortcuts.stageHotkeys[0])
+            buttonMask = PatchPurpose.STAGE | PatchPurpose.DISCARD
         elif locator.context == NavContext.STAGED:
-            self.rubberBandButton.setText(self.tr("Unstage Selection"))
-            self.rubberBandButton.setIcon(stockIcon("git-unstage-lines"))
-            self.rubberBandButton.setToolTip(self.tr("Unstage selected lines"))
-            appendShortcutToToolTip(self.rubberBandButton, GlobalShortcuts.discardHotkeys[0])
+            buttonMask = PatchPurpose.UNSTAGE
+        self.stageButton.setVisible(bool(buttonMask & PatchPurpose.STAGE))
+        self.discardButton.setVisible(bool(buttonMask & PatchPurpose.DISCARD))
+        self.unstageButton.setVisible(bool(buttonMask & PatchPurpose.UNSTAGE))
 
         # Now restore cursor/scrollbar positions
         self.restorePosition(locator)
@@ -705,7 +729,7 @@ class DiffView(QPlainTextEdit):
 
         if startLine < 0 or endLine < 0 or (not actionable and start == end):
             self.rubberBand.hide()
-            self.rubberBandButton.hide()
+            self.rubberBandButtonGroup.hide()
             return
 
         start = self.lineData[startLine].cursorStart
@@ -727,15 +751,16 @@ class DiffView(QPlainTextEdit):
         # Move rubberBandButton to edge of rubberBand
         if not self.currentLocator.context.isWorkdir():
             # No rubberBandButton in this context
-            assert self.rubberBandButton.isHidden()
+            assert self.rubberBandButtonGroup.isHidden()
         elif top >= viewportHeight-4 or bottom < 4:
             # Scrolled past rubberband, no point in showing button
-            self.rubberBandButton.hide()
+            self.rubberBandButtonGroup.hide()
         else:
             # Show button before moving so that width/height are correct
-            self.rubberBandButton.show()
-            rbbWidth = self.rubberBandButton.width()
-            rbbHeight = self.rubberBandButton.height()
+            self.rubberBandButtonGroup.show()
+            self.rubberBandButtonGroup.ensurePolished()
+            rbbWidth = self.rubberBandButtonGroup.width()
+            rbbHeight = self.rubberBandButtonGroup.height()
 
             if selectionExpandingDownward:
                 # Place button above rubberband
@@ -746,8 +771,8 @@ class DiffView(QPlainTextEdit):
                 rbbTop = bottom
                 rbbTop = min(rbbTop, viewportHeight-rbbHeight)  # keep it visible
 
-            self.rubberBandButton.move(viewportWidth//2 - rbbWidth//2, rbbTop)
-            self.rubberBandButton.setEnabled(actionable)
+            self.rubberBandButtonGroup.move(viewportWidth - rbbWidth, rbbTop)
+            self.rubberBandButtonGroup.setEnabled(actionable)
 
     def rubberBandButtonClicked(self):
         navContext = self.currentLocator.context

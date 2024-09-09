@@ -64,7 +64,7 @@ def testDiffViewStageLines(tempDir, mainWindow, method):
     rw.diffView.setFocus()
 
     assert not rw.diffView.rubberBand.isVisible()
-    assert not rw.diffView.rubberBandButton.isVisible()
+    assert not rw.diffView.rubberBandButtonGroup.isVisible()
 
     qteClickBlock(rw.diffView, 0)
     QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
@@ -72,16 +72,16 @@ def testDiffViewStageLines(tempDir, mainWindow, method):
     qteSelectBlocks(rw.diffView, 3, 4)
 
     assert rw.diffView.rubberBand.isVisible()
-    assert rw.diffView.rubberBandButton.isVisible()
-    assert rw.diffView.rubberBandButton.pos().y() < rw.diffView.rubberBand.pos().y()
+    assert rw.diffView.rubberBandButtonGroup.isVisible()
+    assert rw.diffView.rubberBandButtonGroup.pos().y() < rw.diffView.rubberBand.pos().y()
 
     qteSelectBlocks(rw.diffView, 4, 3)
-    assert rw.diffView.rubberBandButton.pos().y() > rw.diffView.rubberBand.pos().y()
+    assert rw.diffView.rubberBandButtonGroup.pos().y() > rw.diffView.rubberBand.pos().y()
 
     if method == "key":
         QTest.keyPress(rw.diffView, Qt.Key.Key_Return)
     elif method == "button":
-        rw.diffView.rubberBandButton.click()
+        rw.diffView.stageButton.click()
     else:
         raise NotImplementedError(f"Unknown method {method}")
 
