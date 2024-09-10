@@ -1070,11 +1070,19 @@ class MainWindow(QMainWindow):
         if any(k in warnIfNeedRestart for k in prefDiff):
             showInformation(
                 self, self.tr("Apply Settings"),
-                self.tr("You may need to restart {app} for all new settings to take effect.").format(app=qAppName()))
+                self.tr("You may need to restart {app} for the new settings to take effect fully.").format(app=qAppName()))
         elif any(k in warnIfChanged for k in prefDiff) and self.tabs.count():
-            showInformation(
-                self, self.tr("Apply Settings"),
-                self.tr("You may need to reload the current repository for all new settings to take effect."))
+            qmb = asyncMessageBox(
+                self, "question", self.tr("Apply Settings"),
+                self.tr("The new settings won’t take effect fully until you reload the current repositories."),
+                buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
+            reloadButton = qmb.button(QMessageBox.StandardButton.Ok)
+            reloadButton.setText(self.tr("&Reload"))
+            reloadButton.clicked.connect(lambda: self.unloadOtherTabs(self.tabs.currentIndex()))
+            reloadButton.clicked.connect(lambda: self.currentRepoWidget().primeRepo(force=True))
+            cancelButton = qmb.button(QMessageBox.StandardButton.Cancel)
+            cancelButton.setText(self.tr("&Not Now"))
+            qmb.show()
 
         # If any changed setting matches autoReload, schedule a "forced" refresh of all loaded RepoWidgets
         if any(k in autoReload for k in prefDiff):

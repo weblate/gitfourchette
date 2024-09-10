@@ -249,6 +249,7 @@ def qcbSetIndex(qcb: QComboBox, pattern: str):
     i = qcb.findText(pattern, Qt.MatchFlag.MatchRegularExpression)
     assert i >= 0
     qcb.setCurrentIndex(i)
+    qcb.activated.emit(i)
     return i
 
 

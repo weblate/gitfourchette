@@ -59,6 +59,13 @@ def testPrefsDialog(tempDir, mainWindow):
     dlg.accept()
     assert not mainWindow.statusBar().isVisible()
 
+    # Change topo setting, and accept
+    dlg = openPrefs()
+    comboBox: QComboBox = dlg.findChild(QComboBox, "prefctl_chronologicalOrder")
+    qcbSetIndex(comboBox, "topological")
+    dlg.accept()
+    acceptQMessageBox(mainWindow, "take effect.+reload")
+
 
 def testPrefsComboBoxWithPreview(tempDir, mainWindow):
     # Play with QComboBoxWithPreview (for coverage)
