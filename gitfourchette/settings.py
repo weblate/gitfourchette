@@ -198,12 +198,12 @@ class Prefs(PrefsFile):
     middleClickToStage          : bool                  = False
     flattenLanes                : bool                  = True
     animations                  : bool                  = True
-    smoothScroll                : bool                  = True
     autoRefresh                 : bool                  = True
     verbosity                   : LoggingLevel          = LoggingLevel.WARNING
     forceQtApi                  : QtApiNames            = QtApiNames.QTAPI_AUTOMATIC
 
     _category_hidden            : int                   = 0
+    smoothScroll                : bool                  = True
     toolBarButtonStyle          : Qt.ToolButtonStyle    = Qt.ToolButtonStyle.ToolButtonTextBesideIcon
     toolBarIconSize             : int                   = 16
     defaultCloneLocation        : str                   = ""
