@@ -74,6 +74,8 @@ class NavLocator:
     Used to navigate the UI to a specific area of a repository.
     """
 
+    Empty: ClassVar[NavLocator]
+
     context: NavContext = NavContext.EMPTY
     commit: Oid = NULL_OID
     path: str = ""
@@ -219,6 +221,8 @@ class NavLocator:
     def fileKey(self):
         """ For NavHistory.recallFileInContext(). """
         return f"{self.contextKey}:{self.path}"
+
+NavLocator.Empty = NavLocator()
 
 
 class NavHistory:

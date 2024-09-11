@@ -712,7 +712,7 @@ class RepoWidget(QStackedWidget):
         if not self.focusWidget():  # only if nothing has the focus yet
             self.graphView.setFocus()
 
-    def refreshRepo(self, effects: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
+    def refreshRepo(self, effects: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator.Empty):
         """Refresh the repo as soon as possible."""
 
         if (not self.isLoaded) or self.isPriming:

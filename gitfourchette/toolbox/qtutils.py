@@ -7,6 +7,8 @@ from gitfourchette.qt import *
 
 _supportedImageFormats = None
 
+QModelIndex_default = QModelIndex()
+QPoint_zero = QPoint()
 
 MultiShortcut = list[QKeySequence]
 

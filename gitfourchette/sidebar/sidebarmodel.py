@@ -506,14 +506,14 @@ class SidebarModel(QAbstractItemModel):
 
         return node.createIndex(self)
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex = QModelIndex_default) -> int:
         if not parent.isValid():  # root
             node = self.rootNode
         else:
             node = SidebarNode.fromIndex(parent)
         return len(node.children)
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def columnCount(self, parent: QModelIndex = QModelIndex_default) -> int:
         return 1
 
     def cacheTooltip(self, index: QModelIndex, text: str):

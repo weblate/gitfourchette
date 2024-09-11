@@ -438,7 +438,7 @@ class RefreshRepo(RepoTask):
     def canKill(self, task: RepoTask):
         return RefreshRepo.canKill_static(task)
 
-    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator()):
+    def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator.Empty):
         rw = self.rw
         repoModel = rw.repoModel
         assert onAppThread()

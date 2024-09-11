@@ -7,6 +7,7 @@ from pathlib import Path
 import pygit2
 
 from gitfourchette.porcelain import *
+from gitfourchette.toolbox import QPoint_zero
 from . import *
 
 TEST_SIGNATURE = Signature("Test Person", "toto@example.com", 1672600000, 0)
@@ -323,7 +324,7 @@ def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
     raise KeyError(f"did not find QToolButton \"{textPattern}\"")
 
 
-def postMouseWheelEvent(target: QWidget, angleDelta: int, point=QPoint(), modifiers=Qt.KeyboardModifier.NoModifier):
+def postMouseWheelEvent(target: QWidget, angleDelta: int, point=QPoint_zero, modifiers=Qt.KeyboardModifier.NoModifier):
     point = QPointF(point)
 
     fakeWheelEvent = QWheelEvent(

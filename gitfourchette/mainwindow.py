@@ -477,7 +477,7 @@ class MainWindow(QMainWindow):
         self.saveSession()
         return rw
 
-    def _openRepo(self, path: str, foreground=True, tabIndex=-1, exactMatch=True, locator=NavLocator()) -> RepoWidget:
+    def _openRepo(self, path: str, foreground=True, tabIndex=-1, exactMatch=True, locator=NavLocator.Empty) -> RepoWidget:
         # Make sure the path exists
         if not os.path.exists(path):
             raise FileNotFoundError(self.tr("There’s nothing at this path."))
@@ -827,7 +827,7 @@ class MainWindow(QMainWindow):
         title = escamp(rw.getTitle())
         self.tabs.setTabText(index, title)
 
-    def openRepoNextTo(self, rw, path: str, locator: NavLocator = NavLocator()):
+    def openRepoNextTo(self, rw, path: str, locator: NavLocator = NavLocator.Empty):
         index = self.tabs.indexOf(rw)
         if index >= 0:
             index += 1

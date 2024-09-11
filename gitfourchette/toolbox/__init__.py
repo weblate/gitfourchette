@@ -67,6 +67,8 @@ from .qtutils import (
     waitForSignal,
     findParentWidget,
     setTabOrder,
+    QModelIndex_default,
+    QPoint_zero,
 )
 from .textutils import (
     escape, escamp, paragraphs, messageSummary, elide,
