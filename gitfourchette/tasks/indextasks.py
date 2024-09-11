@@ -427,7 +427,7 @@ class ApplyPatchFile(RepoTask):
 
         yield from self.flowEnterWorkerThread()
 
-        with open(path, 'rt', encoding='utf-8') as patchFile:
+        with open(path, encoding='utf-8') as patchFile:
             patchData = patchFile.read()
 
         # May raise:

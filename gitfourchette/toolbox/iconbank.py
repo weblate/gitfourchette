@@ -45,7 +45,7 @@ def lookUpNamedIcon(name: str) -> QIcon:
 
 def remapSvgColors(name: str, colorRemapTable: str) -> QIcon:
     path = getBestIconFile(name)
-    with open(path, "rt", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         originalData = f.read()
 
     data = originalData

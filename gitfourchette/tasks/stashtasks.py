@@ -25,7 +25,7 @@ Original stash message below:
 {repo.peel_commit(stashCommitId).message}
 """
 
-    with open(trashFile, 'wt', encoding="utf-8") as f:
+    with open(trashFile, "w", encoding="utf-8") as f:
         f.write(text)
 
 

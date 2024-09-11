@@ -85,7 +85,7 @@ def writeIfDifferent(path, text, ignoreChangedLines=None):
             ignoreList.append("- " + icl)
 
         if os.path.isfile(path):
-            with open(path) as existingFile:
+            with open(path, encoding="utf-8") as existingFile:
                 oldText = existingFile.read()
 
             # See if the differences can be ignored (e.g. Qt User Interface Compiler version comment)
@@ -102,7 +102,7 @@ def writeIfDifferent(path, text, ignoreChangedLines=None):
                         break
 
     if needRewrite:
-        with open(path, 'w') as f:
+        with open(path, "w", encoding="utf-8") as f:
             f.write(text)
             print("Wrote", path)
     else:
@@ -113,7 +113,7 @@ def patchSection(path: str, contents: str):
     def ensureNewline(s: str):
         return s + ("" if s.endswith("\n") else "\n")
 
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         text = f.read()
 
     contents = ensureNewline(contents)

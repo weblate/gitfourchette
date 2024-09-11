@@ -39,7 +39,7 @@ if not _qtBindingBootPref:
     _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
     _prefsPath = _os.path.join(_prefsPath, APP_SYSTEM_NAME, "prefs.json")
     with _suppress(OSError, ValueError):
-        with open(_prefsPath, 'rt', encoding='utf-8') as _f:
+        with open(_prefsPath, encoding="utf-8") as _f:
             _jsonPrefs = _json.load(_f)
         _qtBindingBootPref = _jsonPrefs.get("forceQtApi", "").lower()
 

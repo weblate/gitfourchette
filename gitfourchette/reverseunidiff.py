@@ -102,7 +102,7 @@ def reverseUnidiff(original: str):
 if __name__ == "__main__":
     import sys
     path = sys.argv[1]
-    with open(path, 'rt', encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         text = f.read()
     rev = reverseUnidiff(text)
     print(rev)

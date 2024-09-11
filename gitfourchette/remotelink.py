@@ -26,7 +26,7 @@ def getAuthNamesFromFlags(allowedTypes):
 
 
 def isPrivateKeyPassphraseProtected(path: str):
-    with open(path, "rt") as f:
+    with open(path, encoding="utf-8") as f:
         lines = f.read().splitlines(False)
 
     while lines and not re.match("^-+END OPENSSH PRIVATE KEY-+ *$", lines.pop()):

@@ -106,7 +106,7 @@ class PrefsFile:
             return ""
 
         # Dump the object to disk
-        with open(prefsPath, 'wt', encoding='utf-8') as jsonFile:
+        with open(prefsPath, "w", encoding="utf-8") as jsonFile:
             json.dump(obj=filtered, fp=jsonFile, indent='\t')
         self._dirty = False
 
@@ -119,7 +119,7 @@ class PrefsFile:
             return False
 
         # Load JSON blob
-        with open(prefsPath, 'rt', encoding='utf-8') as file:
+        with open(prefsPath, encoding="utf-8") as file:
             try:
                 jsonObject = json.load(file)
             except ValueError as loadError:

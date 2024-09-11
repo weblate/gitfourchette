@@ -494,7 +494,7 @@ class GitConfigHelper:
 
     @staticmethod
     def is_empty(config_path: str):
-        with open(config_path, "rt") as f:
+        with open(config_path, encoding="utf-8") as f:
             data = f.read()
         return not data or data.isspace()
 
@@ -547,7 +547,7 @@ class GitConfigHelper:
 
         # We could call ini.remove_section(section_key) and then write the ini back to disk.
         # But this destroys the file's formatting. So, remove the offending line surgically.
-        with open(config_path, "rt") as f:
+        with open(config_path, encoding="utf-8") as f:
             lines = f.readlines()
         try:
             lines.remove(f"[{section_key}]\n")
@@ -559,7 +559,7 @@ class GitConfigHelper:
         temp_path = config_path + f".{timestamp}.new.tmp"
         backup_path = config_path + f".{timestamp}.old.tmp"
 
-        with open(temp_path, "wt") as f:
+        with open(temp_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
 
         _os.rename(config_path, backup_path)
@@ -1683,7 +1683,7 @@ class Repo(_VanillaRepository):
             submodule_config = GitConfig(str(inner_g / "config"))
             submodule_config["core.worktree"] = _relpath(inner_w, inner_g2)
 
-            with open(inner_w / ".git", "wt") as submodule_dotgit_file:
+            with open(inner_w / ".git", "w", encoding="utf-8") as submodule_dotgit_file:
                 submodule_dotgit_file.write(f"gitdir: {_relpath(inner_g2, inner_w)}\n")
 
         # Poor man's workaround for git_submodule_add_to_index (not available in pygit2 yet)
@@ -1761,7 +1761,7 @@ class Repo(_VanillaRepository):
 
         # Restore gitlink file
         _os.makedirs(_dirname(sub_dotgit), exist_ok=True)
-        with open(sub_dotgit, "wt") as f:
+        with open(sub_dotgit, "w", encoding="utf-8") as f:
             rel_gitdir = _relpath(sub_gitdir, sub_wd)
             f.write(f"gitdir: {rel_gitdir}\n")
         return True
