@@ -3,7 +3,8 @@ from __future__ import annotations
 import enum
 import logging
 import warnings
-from typing import Any, Generator, TYPE_CHECKING
+from collections.abc import Generator
+from typing import Any, TYPE_CHECKING
 
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import ConflictError, MultiFileError, RepositoryState

@@ -1,6 +1,6 @@
 import os
+from collections.abc import Callable, Generator
 from contextlib import suppress
-from typing import Callable, Generator
 
 from gitfourchette import settings
 from gitfourchette.exttools import openInTextEditor, openInDiffTool

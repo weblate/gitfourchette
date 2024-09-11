@@ -1,6 +1,7 @@
+from collections.abc import Callable
+
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from typing import Callable
 
 
 def makeBrandedDialogLayout(

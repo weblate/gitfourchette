@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from gitfourchette.application import GFApplication
 from gitfourchette.nav import NavLocator, NavContext

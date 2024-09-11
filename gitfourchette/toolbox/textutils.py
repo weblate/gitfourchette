@@ -1,11 +1,10 @@
 import html
 import io
 import re
-from typing import Iterable, Callable, Container
-
-from gitfourchette.qt import *
+from collections.abc import Iterable, Callable, Container
 from html import escape as escape
 
+from gitfourchette.qt import *
 
 _elideMetrics: QFontMetrics | None = None
 

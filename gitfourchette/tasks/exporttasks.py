@@ -1,7 +1,7 @@
 import itertools
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *

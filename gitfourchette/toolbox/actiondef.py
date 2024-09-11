@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-from typing import ClassVar, Callable
+from collections.abc import Callable
+from typing import ClassVar
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox.iconbank import stockIcon

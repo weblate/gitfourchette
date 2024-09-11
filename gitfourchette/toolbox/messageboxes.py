@@ -3,7 +3,8 @@ import logging
 import re
 import sys
 import traceback
-from typing import Callable, Literal
+from collections.abc import Callable
+from typing import Literal
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox.excutils import shortenTracebackPath
@@ -238,7 +239,7 @@ def askConfirmation(
         parent: QWidget,
         title: str,
         text: str,
-        callback: Callable | Slot | None = None,
+        callback: Callable | None = None,
         buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
         okButtonText: str = "",
         okButtonIcon: QIcon | None = None,

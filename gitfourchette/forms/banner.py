@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *

@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Generator, Iterable
+from collections.abc import Generator, Iterable
 
 from gitfourchette import settings
 from gitfourchette.graph import Graph, GraphSpliceLoop, MockCommit

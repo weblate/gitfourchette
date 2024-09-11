@@ -1,6 +1,6 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from gitfourchette.porcelain import *
-from typing import Iterable
 import io
 
 

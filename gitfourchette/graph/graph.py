@@ -3,7 +3,8 @@ from __future__ import annotations
 import bisect
 import logging
 from dataclasses import dataclass
-from typing import ClassVar, Iterable, Iterator
+from collections.abc import Iterable, Iterator
+from typing import ClassVar
 
 from gitfourchette.porcelain import Oid as _RealOidType
 from gitfourchette.settings import DEVDEBUG

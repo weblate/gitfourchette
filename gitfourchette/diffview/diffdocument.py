@@ -1,6 +1,6 @@
 import difflib
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator
 
 from gitfourchette import colors
 from gitfourchette import settings

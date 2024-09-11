@@ -1,6 +1,6 @@
 import warnings
+from collections.abc import Iterable, Callable
 from contextlib import suppress
-from typing import Iterable, Callable
 
 from gitfourchette import porcelain
 from gitfourchette import settings
