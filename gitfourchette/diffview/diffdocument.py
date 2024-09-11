@@ -217,7 +217,7 @@ class DiffDocument:
         assert document.isEmpty()
 
         # Build up document from the lineData array.
-        for i, ld in enumerate(lineData):
+        for ld in lineData:
             # Decide block format & character format
             if ld.diffLine is None:
                 bf = style.hunkBF

@@ -4,7 +4,7 @@ import gc
 import logging
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
 # Import as few internal modules as possible here to avoid premature initialization
 # from cascading imports before the QApplication has booted.
@@ -217,7 +217,7 @@ class GFApplication(QApplication):
 
     # -------------------------------------------------------------------------
 
-    def onInvokeTask(self, invoker: QObject, taskType: Type[RepoTask], args: tuple, kwargs: dict) -> RepoTask | None:
+    def onInvokeTask(self, invoker: QObject, taskType: type[RepoTask], args: tuple, kwargs: dict) -> RepoTask | None:
         from gitfourchette.mainwindow import MainWindow
         from gitfourchette.repowidget import RepoWidget
         from gitfourchette.toolbox import showInformation
@@ -228,14 +228,14 @@ class GFApplication(QApplication):
 
         assert isinstance(invoker, QObject)
         if invoker.signalsBlocked():
-            logger.debug("Ignoring task request {0} from invoker with blocked signals: {1}"
-                         .format(taskType.__name__, invoker.objectName() or invoker.__class__.__name__))
+            logger.debug(f"Ignoring task request {taskType.__name__} from invoker with blocked signals: " +
+                         (invoker.objectName() or invoker.__class__.__name__))
             return
 
         # Find parent in hierarchy
         candidate = invoker
         while candidate is not None:
-            if isinstance(candidate, (RepoWidget, MainWindow)):
+            if isinstance(candidate, RepoWidget | MainWindow):
                 break
             candidate = candidate.parent()
 
@@ -251,8 +251,7 @@ class GFApplication(QApplication):
             repoWidget = None
 
         if repoWidget is None:
-            assert False, "RepoTasks must be invoked from a child of RepoWidget or MainWindow"
-            return
+            raise AssertionError("RepoTasks must be invoked from a child of RepoWidget or MainWindow")
 
         return repoWidget.runTask(taskType, *args, **kwargs)
 
@@ -367,4 +366,3 @@ class GFApplication(QApplication):
             self.setStyleSheet(styleSheet)
             styleSheetFile.close()
         clearStockIconCache()
-

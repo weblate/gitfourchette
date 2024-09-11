@@ -61,7 +61,7 @@ def excMessageBox(
                 from gitfourchette.trtables import TrTables
                 TrTables.init()
                 summary = f"{TrTables.exceptionName(exc)}: {exc}"
-            except:
+            except:  # noqa: E722
                 summary = traceback.format_exception_only(exc.__class__, exc)
                 summary = ''.join(summary).strip()
 
@@ -112,9 +112,9 @@ def excMessageBox(
             _showExcMessageBox(qmb)
 
     except BaseException as excMessageBoxError:
-        sys.stderr.write(f"*********************************************\n")
-        sys.stderr.write(f"excMessageBox failed!!!\n")
-        sys.stderr.write(f"*********************************************\n")
+        sys.stderr.write("*********************************************\n")
+        sys.stderr.write("excMessageBox failed!!!\n")
+        sys.stderr.write("*********************************************\n")
         traceback.print_exception(excMessageBoxError)
 
     if abortUnitTest:
@@ -123,7 +123,7 @@ def excMessageBox(
             raise exc
 
 
-def _popExcMessageBoxQueue(result = QMessageBox.StandardButton.Ok):
+def _popExcMessageBoxQueue(result=QMessageBox.StandardButton.Ok):
     if result == QMessageBox.StandardButton.Reset:
         logger.warning("Application aborted from message box.")
         QApplication.exit(1)

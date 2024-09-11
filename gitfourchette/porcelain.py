@@ -186,7 +186,7 @@ class CheckoutBreakdown(CheckoutCallbacks):
 
     def __init__(self):
         super().__init__()
-        self.status = dict()
+        self.status = {}
 
     def checkout_notify(self, why: CheckoutNotify, path: str, baseline=None, target=None, workdir=None):
         self.status[path] = why
@@ -459,9 +459,9 @@ class GitConfigHelper:
 
         try:
             path = next(path for path in search_paths if _isdir(path))
-        except StopIteration:
+        except StopIteration as exc:
             if not missing_dir_ok:
-                raise FileNotFoundError(f"no parent dir exists for git config level {level}")
+                raise FileNotFoundError(f"no parent dir exists for git config level {level}") from exc
             path = search_paths[0]
 
         # Select appropriate filename (see libgit2/config.h: GIT_CONFIG_FILENAME_SYSTEM, etc.)
@@ -584,7 +584,7 @@ class GitConfigHelper:
         ]
         getters.sort(key=lambda item: item[0], reverse=True)
 
-        for (level, getter) in getters:
+        for _, getter in getters:
             try:
                 config = getter()
             except OSError:
@@ -1166,7 +1166,7 @@ class Repo(_VanillaRepository):
         # Reinsert all tips in chronological order
         # (In Python 3.7+, dict key order is stable)
         tips.sort(key=lambda item: item[1].commit_time)
-        return dict((ref, commit.id) for ref, commit in tips)
+        return {ref: commit.id for ref, commit in tips}
 
     def listall_refs_pointing_at(self, commit_id: Oid):
         refs = []
@@ -1178,7 +1178,7 @@ class Repo(_VanillaRepository):
         for ref in self.references.objects:
             ref_key = ref.name
 
-            if type(ref.target) != Oid:
+            if type(ref.target) is not Oid:
                 # Symbolic reference
                 _logger.debug(f"Skipping symbolic reference {ref_key} --> {ref.target}")
                 continue
@@ -1325,8 +1325,8 @@ class Repo(_VanillaRepository):
         try:
             return next(i for i, stash in enumerate(self.listall_stashes())
                         if stash.commit_id == commit_id)
-        except StopIteration:
-            raise KeyError(f"Stash not found: {commit_id}")
+        except StopIteration as exc:
+            raise KeyError(f"Stash not found: {commit_id}") from exc
 
     def stash_apply_id(self, commit_id: Oid):
         i = self.find_stash_index(commit_id)
@@ -1628,7 +1628,7 @@ class Repo(_VanillaRepository):
         for key in ["user.name", "user.email"]:
             with _suppress(KeyError):
                 entry = config._get_entry(key)
-                if GitConfigLevel.LOCAL <= entry.level: # <= GitConfigLevel.WORKTREE: -----requires pg2 1.15
+                if GitConfigLevel.LOCAL <= entry.level:  # <= GitConfigLevel.WORKTREE: -----requires pygit2 1.15
                     local[key] = entry.value
 
         name = local.get("user.name", "")
@@ -1828,7 +1828,7 @@ class Repo(_VanillaRepository):
 
 class RepoContext:
     def __init__(self, repo_or_path: Repo | str | _Path, flags: RepositoryOpenFlag = 0, write_index=False):
-        assert isinstance(repo_or_path, (Repo, str, _Path))
+        assert isinstance(repo_or_path, Repo | str | _Path)
         if isinstance(repo_or_path, Repo):
             self.repo = repo_or_path
             assert flags == 0, "flags are ignored if passing in a Repo"

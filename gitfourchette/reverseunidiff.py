@@ -9,7 +9,7 @@ def reverseUnidiff(original: str):
     for lineNum, ol in enumerate(lines, start=1):
         def check(condition):
             if not condition:  # pragma: no cover
-                raise ValueError(f"Cannot reverse line {lineNum} in this patch.")
+                raise ValueError(f"Cannot reverse line {lineNum} in this patch.")  # noqa: B023
 
         if ol.startswith("diff "):
             p = r"^(diff( --git)?) a/(.+) b/(.+)"

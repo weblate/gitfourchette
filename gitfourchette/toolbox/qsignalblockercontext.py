@@ -8,7 +8,7 @@ class QSignalBlockerContext:
     Context manager wrapper around QSignalBlocker.
     """
 
-    nestingLevels = dict()
+    nestingLevels = {}
     concurrentBlockers = 0
 
     def __init__(self, *objectsToBlock: QObject | QWidget):

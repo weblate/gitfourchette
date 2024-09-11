@@ -233,10 +233,10 @@ class PrimeRepo(RepoTask):
 
 class LoadWorkdir(RepoTask):
     def canKill(self, task: RepoTask):
-        if type(task) is LoadWorkdir:
+        if isinstance(task, LoadWorkdir):
             warnings.warn("LoadWorkdir is killing another LoadWorkdir. This is inefficient!")
             return True
-        return type(task) in [LoadCommit, LoadPatch]
+        return isinstance(task, LoadCommit | LoadPatch)
 
     def flow(self, allowWriteIndex: bool):
         yield from self.flowEnterWorkerThread()
@@ -254,7 +254,7 @@ class LoadWorkdir(RepoTask):
 
 class LoadCommit(RepoTask):
     def canKill(self, task: RepoTask):
-        return type(task) in [LoadWorkdir, LoadCommit, LoadPatch]
+        return isinstance(task, LoadWorkdir | LoadCommit | LoadPatch)
 
     def flow(self, locator: NavLocator):
         yield from self.flowEnterWorkerThread()
@@ -269,7 +269,7 @@ class LoadCommit(RepoTask):
 
 class LoadPatch(RepoTask):
     def canKill(self, task: RepoTask):
-        return type(task) in [LoadPatch]
+        return isinstance(task, LoadPatch)
 
     def _processPatch(self, patch: Patch, locator: NavLocator
                       ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:

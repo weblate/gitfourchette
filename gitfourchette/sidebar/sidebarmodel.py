@@ -19,6 +19,8 @@ BRANCH_FOLDERS = True
 UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /refs/, so this name is safe
 "Fake reference for Uncommitted Changes."
 
+DefaultQModelIndex = QModelIndex()
+
 
 class EItem(enum.IntEnum):
     Root = -1
@@ -174,8 +176,12 @@ class SidebarModel(QAbstractItemModel):
     rootNode: SidebarNode
     nodesByRef: dict[str, SidebarNode]
     _unbornHead: str
-    _checkedOut: str; "Shorthand of checked-out local branch"
-    _checkedOutUpstream: str; "Shorthand of the checked-out branch's upstream"
+
+    _checkedOut: str
+    "Shorthand of checked-out local branch"
+
+    _checkedOutUpstream: str
+    "Shorthand of the checked-out branch's upstream"
 
     _cachedTooltipIndex: QModelIndex | None
     _cachedTooltipText: str

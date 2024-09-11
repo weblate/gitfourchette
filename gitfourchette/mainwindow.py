@@ -224,7 +224,7 @@ class MainWindow(QMainWindow):
                       menuRole=QAction.MenuRole.PreferencesRole,
                       statusTip=self.tr("Edit {app} settings").format(app=qAppName())),
 
-            TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('',False)
+            TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('', False)
                             ).replace(menuRole=QAction.MenuRole.ApplicationSpecificRole),
 
             ActionDef.SEPARATOR,
@@ -556,7 +556,7 @@ class MainWindow(QMainWindow):
 
     # -------------------------------------------------------------------------
     # View menu
-    
+
     def toggleStatusBar(self):
         settings.prefs.showStatusBar = not settings.prefs.showStatusBar
         settings.prefs.setDirty()

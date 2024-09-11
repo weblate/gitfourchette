@@ -304,7 +304,8 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
     triggerMenuAction(menu, "remove")
     acceptQMessageBox(rw, "remove submodule")
 
-    with pytest.raises(KeyError): rw.repo.config["submodule.submoname.url"]
+    with pytest.raises(KeyError):
+        rw.repo.config["submodule.submoname.url"]
     assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
     assert set(qlvGetRowData(rw.stagedFiles)) == {".gitmodules", "submodir"}
 

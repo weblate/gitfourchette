@@ -1,7 +1,6 @@
 import logging
 import os
 from contextlib import suppress
-from typing import Type
 
 from gitfourchette import settings
 from gitfourchette import tasks
@@ -317,7 +316,7 @@ class RepoWidget(QStackedWidget):
     # -------------------------------------------------------------------------
     # Tasks
 
-    def runTask(self, taskClass: Type[RepoTask], *args, **kwargs) -> RepoTask:
+    def runTask(self, taskClass: type[RepoTask], *args, **kwargs) -> RepoTask:
         assert issubclass(taskClass, RepoTask)
 
         # Initialize the task
@@ -424,7 +423,7 @@ class RepoWidget(QStackedWidget):
 
     def setPlaceholderWidgetOpenRepoProgress(self):
         pw = self.placeholderWidget
-        if type(pw) is not OpenRepoProgress:
+        if not isinstance(pw, OpenRepoProgress):
             name = self.getTitle()
             pw = OpenRepoProgress(self, name)
         self.setPlaceholderWidget(pw)
@@ -502,8 +501,8 @@ class RepoWidget(QStackedWidget):
                 uiPrefs.collapseCache = set()
             try:
                 uiPrefs.write()
-            except IOError as e:
-                logger.warning(f"IOError when writing prefs: {e}")
+            except OSError as e:
+                logger.warning(f"OSError when writing prefs: {e}")
 
         # Clear UI
         if installPlaceholder:
@@ -558,7 +557,7 @@ class RepoWidget(QStackedWidget):
         except Exception as exc:
             excMessageBox(exc, self.tr("Open diff in new window"),
                           self.tr("Only text diffs may be opened in a separate window."),
-                          showExcSummary=type(exc) is not ShouldDisplayPatchAsImageDiff,
+                          showExcSummary=not isinstance(exc, ShouldDisplayPatchAsImageDiff),
                           icon='information')
             return
 
@@ -580,7 +579,7 @@ class RepoWidget(QStackedWidget):
         diffWindow.show()
 
     def startPushFlow(self, branchName: str = ""):
-        pushDialog = PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
+        PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = self.repo.get_submodule_workdir(submoduleKey)
@@ -807,6 +806,9 @@ class RepoWidget(QStackedWidget):
         bannerAction = ""
         bannerCallback = None
 
+        def abortMerge():
+            self.runTask(AbortMerge)
+
         if rstate == RepositoryState.MERGE:
             bannerTitle = self.tr("Merging")
             try:
@@ -824,7 +826,7 @@ class RepoWidget(QStackedWidget):
                 bannerText += self.tr("Conflicts need fixing.")
 
             bannerAction = self.tr("Abort Merge")
-            bannerCallback = lambda: self.runTask(AbortMerge)
+            bannerCallback = abortMerge
 
         elif rstate == RepositoryState.CHERRYPICK:
             bannerTitle = self.tr("Cherry-picking")
@@ -838,7 +840,7 @@ class RepoWidget(QStackedWidget):
 
             bannerText = message
             bannerAction = self.tr("Abort Cherry-Pick")
-            bannerCallback = lambda: self.runTask(AbortMerge)
+            bannerCallback = abortMerge
 
         elif rstate == RepositoryState.REVERT:
             bannerTitle = self.tr("Reverting")
@@ -852,14 +854,14 @@ class RepoWidget(QStackedWidget):
 
             bannerText = message
             bannerAction = self.tr("Abort Revert")
-            bannerCallback = lambda: self.runTask(AbortMerge)
+            bannerCallback = abortMerge
 
         elif rstate == RepositoryState.NONE:
             if repo.any_conflicts:
                 bannerTitle = self.tr("Conflicts")
                 bannerText = self.tr("Fix the conflicts among the uncommitted changes.")
                 bannerAction = self.tr("Reset Index")
-                bannerCallback = lambda: self.runTask(AbortMerge)
+                bannerCallback = abortMerge
 
         else:
             bannerTitle = self.tr("Warning")
@@ -951,7 +953,7 @@ class RepoWidget(QStackedWidget):
         logger.info(f"Internal link: {url.toDisplayString()}")
 
         simplePath = url.path().removeprefix("/")
-        kwargs = {k: v for k, v in QUrlQuery(url).queryItems(QUrl.ComponentFormattingOption.FullyDecoded)}
+        kwargs = dict(QUrlQuery(url).queryItems(QUrl.ComponentFormattingOption.FullyDecoded))
 
         if url.authority() == NavLocator.URL_AUTHORITY:
             locator = NavLocator.parseUrl(url)
@@ -1064,4 +1066,3 @@ class RepoWidget(QStackedWidget):
                 enabled=superprojectEnabled,
             ),
         ]
-

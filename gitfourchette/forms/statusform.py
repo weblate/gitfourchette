@@ -12,7 +12,7 @@ class StatusForm(QStackedWidget):
         self.blurbLabel = QLabel("")
         self.blurbLabel.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.blurbLabel.setWordWrap(True)
-        self.blurbLabel.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.blurbLabel.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.TextSelectableByMouse)
         blurbPage = QScrollArea()
         blurbPage.setWidget(self.blurbLabel)
         blurbPage.setFrameShape(QFrame.Shape.NoFrame)
@@ -28,8 +28,8 @@ class StatusForm(QStackedWidget):
         progressLayout.addWidget(self.progressMessage)
         progressLayout.addWidget(self.progressBar)
 
-        self.blurbLabel.setContentsMargins(4,4,4,4)
-        progressLayout.setContentsMargins(4,4,4,4)
+        self.blurbLabel.setContentsMargins(4, 4, 4, 4)
+        progressLayout.setContentsMargins(4, 4, 4, 4)
 
         self.addWidget(blurbPage)
         self.addWidget(progressPage)

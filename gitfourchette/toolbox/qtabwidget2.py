@@ -1,5 +1,5 @@
+from gitfourchette import settings
 from gitfourchette.qt import *
-from gitfourchette import settings, colors
 from gitfourchette.toolbox import stockIcon
 from gitfourchette.toolbox.qtutils import CallbackAccumulator
 

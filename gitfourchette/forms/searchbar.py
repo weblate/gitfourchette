@@ -1,13 +1,11 @@
 import enum
 import re
-from typing import Literal, Callable
 
 from gitfourchette import colors
+from gitfourchette.forms.ui_searchbar import Ui_SearchBar
 from gitfourchette.qt import *
 from gitfourchette.settings import TEST_MODE
 from gitfourchette.toolbox import *
-from gitfourchette.forms.ui_searchbar import Ui_SearchBar
-
 
 SEARCH_PULSE_DELAY = 250
 LIKELY_HASH_PATTERN = re.compile(r"[0-9A-Fa-f]{1,40}")

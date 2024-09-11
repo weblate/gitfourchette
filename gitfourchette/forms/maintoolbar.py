@@ -1,13 +1,12 @@
 from contextlib import suppress
 
-from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.qt import *
-from gitfourchette.toolbox import *
 from gitfourchette import settings
 from gitfourchette import tasks
-from gitfourchette.nav import NavLocator
-from gitfourchette.tasks import TaskBook
+from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.qt import *
 from gitfourchette.repowidget import RepoWidget
+from gitfourchette.tasks import TaskBook
+from gitfourchette.toolbox import *
 
 
 class MainToolBar(QToolBar):
@@ -41,10 +40,10 @@ class MainToolBar(QToolBar):
         self.backAction = TaskBook.toolbarAction(self, tasks.JumpBack).toQAction(self)
         self.forwardAction = TaskBook.toolbarAction(self, tasks.JumpForward).toQAction(self)
         self.recentAction = ActionDef(
-            self.tr("Open..."), self.openDialog,
-            icon="git-folder", #"folder-open-recent",
+            self.tr("Open..."), self.openDialog, icon="git-folder",
             shortcuts=QKeySequence.StandardKey.Open,
-            toolTip=self.tr("Open a Git repo on your machine")).toQAction(self)
+            toolTip=self.tr("Open a Git repo on your machine")
+        ).toQAction(self)
 
         defs = [
             self.backAction,
@@ -64,14 +63,12 @@ class MainToolBar(QToolBar):
                       shortcuts=GlobalShortcuts.pushBranch),
             ActionDef.SPACER,
 
-            ActionDef(self.tr("Reveal"), self.reveal,
-                      icon="reveal", #"go-parent-folder",
+            ActionDef(self.tr("Reveal"), self.reveal, icon="reveal",
                       shortcuts=GlobalShortcuts.openRepoFolder,
                       toolTip=self.tr("Open repo folder in file manager")),
             self.recentAction,
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Settings"), self.openPrefs,
-                      icon="git-settings", #"configure",
+            ActionDef(self.tr("Settings"), self.openPrefs, icon="git-settings",
                       shortcuts=QKeySequence.StandardKey.Preferences,
                       toolTip=self.tr("Edit {app} settings").format(app=qAppName())),
         ]
@@ -79,7 +76,7 @@ class MainToolBar(QToolBar):
 
         self.recentAction.setIconVisibleInMenu(True)
         recentButton: QToolButton = self.widgetForAction(self.recentAction)
-        assert type(recentButton) is QToolButton
+        assert isinstance(recentButton, QToolButton)
         recentButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
 
         self.setToolButtonStyle(settings.prefs.toolBarButtonStyle)

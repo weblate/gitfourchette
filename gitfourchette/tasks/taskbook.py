@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Any, Type, Union
+from typing import Any
 
 from gitfourchette import tasks
 from gitfourchette.qt import *
@@ -12,12 +12,12 @@ from gitfourchette.toolbox import MultiShortcut, makeMultiShortcut, ActionDef, e
 class TaskBook:
     """ Registry of metadata about task commands """
 
-    names: dict[Type[RepoTask], str] = {}
-    toolbarNames: dict[Type[RepoTask], str] = {}
-    tips: dict[Type[RepoTask], str] = {}
-    shortcuts: dict[Type[RepoTask], MultiShortcut] = {}
-    icons: dict[Type[RepoTask], Union[str, int]] = {}
-    noEllipsis: set[Type[RepoTask]]
+    names: dict[type[RepoTask], str] = {}
+    toolbarNames: dict[type[RepoTask], str] = {}
+    tips: dict[type[RepoTask], str] = {}
+    shortcuts: dict[type[RepoTask], MultiShortcut] = {}
+    icons: dict[type[RepoTask], str | int] = {}
+    noEllipsis: set[type[RepoTask]]
 
     @classmethod
     def retranslate(cls):
@@ -149,7 +149,7 @@ class TaskBook:
         }
 
         cls.icons = {
-            tasks.AmendCommit: "git-commit-amend", #"document-save-as",
+            tasks.AmendCommit: "git-commit-amend",
             tasks.CherrypickCommit: "git-cherrypick",
             tasks.DeleteBranch: "vcs-branch-delete",
             tasks.DeleteRemote: "SP_TrashIcon",
@@ -160,13 +160,13 @@ class TaskBook:
             tasks.FastForwardBranch: "media-skip-forward",
             tasks.FetchRemote: "git-fetch",
             tasks.FetchRemoteBranch: "git-fetch",
-            tasks.JumpBack: "back", #"SP_ArrowBack",
-            tasks.JumpForward: "forward", #"SP_ArrowForward",
+            tasks.JumpBack: "back",
+            tasks.JumpForward: "forward",
             tasks.MergeBranch: "vcs-merge",
             tasks.NewBranchFromCommit: "git-branch",
             tasks.NewBranchFromHead: "git-branch",
             tasks.NewBranchFromRef: "git-branch",
-            tasks.NewCommit: "git-commit", #"document-save",
+            tasks.NewCommit: "git-commit",
             tasks.NewRemote: "git-remote",
             tasks.NewStash: "git-stash-black",
             tasks.NewTag: "git-tag",
@@ -186,7 +186,7 @@ class TaskBook:
         cls.retranslate()
 
     @classmethod
-    def autoActionName(cls, t: Type[RepoTask]):
+    def autoActionName(cls, t: type[RepoTask]):
         assert cls.names
         try:
             name = cls.names[t]
@@ -206,7 +206,7 @@ class TaskBook:
     def action(
             cls,
             invoker: QObject,
-            taskType: Type[RepoTask],
+            taskType: type[RepoTask],
             name="",
             accel="",
             taskArgs: Any = None,
@@ -223,8 +223,8 @@ class TaskBook:
 
         if taskArgs is None:
             taskArgs = ()
-        elif type(taskArgs) not in [tuple, list]:
-            taskArgs = tuple([taskArgs])
+        elif not isinstance(taskArgs, tuple | list):
+            taskArgs = (taskArgs,)
 
         icon = cls.icons.get(taskType, "")
         shortcuts = cls.shortcuts.get(taskType, [])
@@ -242,7 +242,7 @@ class TaskBook:
         return actionDef
 
     @classmethod
-    def toolbarAction(cls, invoker: QObject, taskType: Type[RepoTask]):
+    def toolbarAction(cls, invoker: QObject, taskType: type[RepoTask]):
         name = cls.toolbarNames.get(taskType, "")
         tip = cls.autoActionName(taskType)
         return cls.action(invoker, taskType, name).replace(toolTip=tip)

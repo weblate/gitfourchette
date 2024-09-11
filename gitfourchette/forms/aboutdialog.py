@@ -1,11 +1,11 @@
-from gitfourchette.qt import *
-from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
-from gitfourchette.toolbox import *
-from contextlib import suppress
-from textwrap import dedent
-import pygit2
 import sys
+from textwrap import dedent
 
+import pygit2
+
+from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 
 WEBSITE_URL = "https://github.com/jorio/gitfourchette"
 DONATE_URL = "https://ko-fi.com/jorio"
@@ -17,6 +17,7 @@ def getPygit2FeatureStrings():
 
 def simpleLink(url):
     return f"<a href='{url}'>{url}</a>"
+
 
 class AboutDialog(QDialog):
     def __init__(self, parent):
@@ -85,7 +86,7 @@ class AboutDialog(QDialog):
             <li><b>Qt</b> {qVersion()}
             <li><b>Python</b> {'.'.join(str(i) for i in sys.version_info)}
             </ul>
-            
+
             <hr>
             {thirdPartyCreditsTitle}<br>
             <small>

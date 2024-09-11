@@ -6,7 +6,7 @@ import traceback
 def shortenTracebackPath(line):
     return re.sub(r'^\s*File "([^"]+)", line (\d+)',
                   lambda m: F'{os.path.basename(m.group(1))}:{m.group(2)}',
-                  line, 1)
+                  line, count=1)
 
 
 def excStrings(exc):

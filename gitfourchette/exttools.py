@@ -35,7 +35,7 @@ def onLocateTool(prefKey: str, newPath: str):
     newCommand = shlex.join(tokens)
 
     # Remove single quotes added around our placeholders by shlex.join() (e.g. $L --> '$L')
-    newCommand = re.sub(r" '(\$[0-9A-Z])'", r" \1", newCommand, re.I | re.A)
+    newCommand = re.sub(r" '(\$[0-9A-Z])'", r" \1", newCommand, flags=re.I | re.A)
 
     setattr(prefs, prefKey, newCommand)
     prefs.write()
@@ -113,7 +113,7 @@ def buildExternalToolCommand(command: str, replacements: dict[str, str], positio
     tokens = shlex.split(command, posix=not WINDOWS)
 
     for placeholder, replacement in replacements.items():
-        for i, tok in enumerate(tokens):
+        for i, tok in enumerate(tokens):  # noqa: B007
             if tok.endswith(placeholder):
                 prefix = tok.removesuffix(placeholder)
                 break

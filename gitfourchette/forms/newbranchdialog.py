@@ -1,8 +1,7 @@
-from gitfourchette import exttools
-from gitfourchette.qt import *
-from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_newbranchdialog import Ui_NewBranchDialog
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
 
 
 class NewBranchDialog(QDialog):

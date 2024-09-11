@@ -3,10 +3,10 @@ from __future__ import annotations
 import enum
 import logging
 import warnings
-from typing import Any, Generator, Type, TYPE_CHECKING
+from typing import Any, Generator, TYPE_CHECKING
 
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import Repo, ConflictError, MultiFileError, RepositoryState
+from gitfourchette.porcelain import ConflictError, MultiFileError, RepositoryState
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
 from gitfourchette.settings import DEVDEBUG
@@ -307,7 +307,7 @@ class RepoTask(QObject):
         self._runningOnUiThread = True
         yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
-    def flowSubtask(self, subtaskClass: Type[RepoTask], *args, **kwargs
+    def flowSubtask(self, subtaskClass: type[RepoTask], *args, **kwargs
                     ) -> Generator[FlowControlToken, None, RepoTask]:
         """
         Run a subtask's flow() method as if it were part of this task.
@@ -489,7 +489,7 @@ class RepoTask(QObject):
         elif not informativeLink:
             qmb.setInformativeText(informativeText)
         else:
-            qmb.setInformativeText("<a href='_'>{0}</a>".format(informativeLink))
+            qmb.setInformativeText(f"<a href='_'>{informativeLink}</a>")
 
             infoLabel: QLabel = qmb.findChild(QLabel, "qt_msgbox_informativelabel")
             if infoLabel:
@@ -716,7 +716,7 @@ class RepoTaskRunner(QObject):
 
                     # Wrapper around `next(flow)`.
                     # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
-                    wrapper = QRunnable.create(lambda: self._emitNextToken(flow))
+                    wrapper = QRunnable.create(lambda f=flow: self._emitNextToken(f))
                     self._threadPool.start(wrapper)
 
                 else:
@@ -802,7 +802,7 @@ class RepoTaskRunner(QObject):
         elif task is self._zombieTask:
             self._zombieTask = None
         else:
-            assert False
+            raise AssertionError("_releaseTask: task is neither current nor zombie")
 
     def reportAbortTask(self, task: RepoTask, exception: AbortTask):
         message = str(exception)
@@ -827,5 +827,5 @@ class TaskInvoker(QObject):
         return TaskInvoker._instance
 
     @staticmethod
-    def invoke(invoker: QObject, taskType: Type[RepoTask], *args, **kwargs):
+    def invoke(invoker: QObject, taskType: type[RepoTask], *args, **kwargs):
         TaskInvoker.instance().invokeSignal.emit(invoker, taskType, args, kwargs)

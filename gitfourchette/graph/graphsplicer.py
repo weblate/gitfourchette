@@ -130,7 +130,7 @@ class GraphSplicer:
         assert len(equilibriumOldOpenArcs) == len(equilibriumNewOpenArcs)
 
         # Fix up dangling open arcs in new graph
-        for oldOpenArc, newOpenArc in zip(equilibriumOldOpenArcs, equilibriumNewOpenArcs):
+        for oldOpenArc, newOpenArc in zip(equilibriumOldOpenArcs, equilibriumNewOpenArcs, strict=True):
             # Find out where the arc is resolved
             assert newOpenArc.openedBy == oldOpenArc.openedBy
             assert newOpenArc.closedBy == oldOpenArc.closedBy
@@ -180,7 +180,6 @@ class GraphSplicer:
 
         # Invalidate volatile player, which may be referring to dead keyframes
         self.oldGraph.volatilePlayer = None
-
 
     def onOldGraphDepleted(self):
         """Completion without equilibrium: no more commits in oldGraph"""

@@ -1,20 +1,17 @@
 import os.path
-import shutil
 from contextlib import suppress
 
 import pytest
 
-from gitfourchette import qt
 from gitfourchette.application import GFApplication
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.donateprompt import DonatePrompt
-from gitfourchette.forms.prefsdialog import PrefsDialog
 from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.mainwindow import MainWindow
 from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import EItem, SidebarNode
+from gitfourchette.sidebar.sidebarmodel import EItem
 from .util import *
 
 
@@ -330,22 +327,22 @@ def testTabOverflow(tempDir, mainWindow):
 
     for i in range(10):
         wd = unpackRepo(tempDir, renameTo=f"RepoCopy{i:04}")
-        rw = mainWindow.openRepo(wd)
+        mainWindow.openRepo(wd)
         QTest.qWait(1)
 
         if i <= 2:  # assume no overflow when there are few repos
-            assert not mainWindow.tabs.overflowGradient.isVisibleTo(mainWindow)
-            assert not mainWindow.tabs.overflowButton.isVisibleTo(mainWindow)
+            assert not mainWindow.tabs.overflowGradient.isVisible()
+            assert not mainWindow.tabs.overflowButton.isVisible()
 
-    assert mainWindow.tabs.overflowGradient.isVisibleTo(mainWindow)
-    assert mainWindow.tabs.overflowButton.isVisibleTo(mainWindow)
+    assert mainWindow.tabs.overflowGradient.isVisible()
+    assert mainWindow.tabs.overflowButton.isVisible()
 
 
 def testTabOverflowSingleTab(tempDir, mainWindow):
     mainWindow.resize(640, 480)  # make sure it's narrow enough for overflow
 
-    wd = unpackRepo(tempDir, renameTo=f"Extremely Long Repo Name " * 10)
-    rw = mainWindow.openRepo(wd)
+    wd = unpackRepo(tempDir, renameTo="Extremely Long Repo Name " * 10)
+    mainWindow.openRepo(wd)
     QTest.qWait(1)
     assert not mainWindow.tabs.overflowButton.isVisible()
 
@@ -406,7 +403,7 @@ def testAllTaskNamesTranslated(mainWindow):
             if (issubclass(type, tasks.RepoTask)
                     and type is not tasks.RepoTask
                     and type not in tasks.TaskBook.names):
-                assert False, f"Missing task name translation for {key}"
+                raise AssertionError(f"Missing task name translation for {key}")
 
 
 def testDonatePrompt(mainWindow, mockDesktopServices):

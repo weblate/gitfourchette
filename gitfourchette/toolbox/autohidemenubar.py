@@ -1,5 +1,3 @@
-from contextlib import suppress
-
 from gitfourchette import settings
 from gitfourchette.qt import *
 

@@ -19,6 +19,7 @@ EXAMPLE_REMOTE_URLS = [
     "git://example.com:1234/user/repo",
 ]
 
+
 @pytest.mark.parametrize("exampleUrl", EXAMPLE_REMOTE_URLS)
 def testWebHostRegexes(exampleUrl):
     remoteUrl = exampleUrl

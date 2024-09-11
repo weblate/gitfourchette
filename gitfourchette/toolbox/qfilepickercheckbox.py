@@ -1,5 +1,4 @@
 from gitfourchette.qt import *
-from gitfourchette.toolbox.iconbank import stockIcon
 from gitfourchette.toolbox.pathutils import compactPath
 from gitfourchette.toolbox.qelidedlabel import QElidedLabel
 from gitfourchette.toolbox.qhintbutton import QHintButton

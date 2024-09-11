@@ -96,7 +96,7 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
 
     # Modified time
     if navContext.isWorkdir() and sc not in 'DU':
-        with suppress(IOError):
+        with suppress(OSError):
             fullPath = os.path.join(repo.workdir, nf.path)
             fileStat = os.stat(fullPath)
             timeQdt = QDateTime.fromSecsSinceEpoch(int(fileStat.st_mtime))
@@ -262,4 +262,3 @@ class FileListModel(QAbstractListModel):
         Return True if the given path is present in this model.
         """
         return path in self.fileRows
-

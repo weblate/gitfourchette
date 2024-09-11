@@ -38,7 +38,7 @@ else:
 if not _qtBindingBootPref:
     _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
     _prefsPath = _os.path.join(_prefsPath, APP_SYSTEM_NAME, "prefs.json")
-    with _suppress(IOError, ValueError):
+    with _suppress(OSError, ValueError):
         with open(_prefsPath, 'rt', encoding='utf-8') as _f:
             _jsonPrefs = _json.load(_f)
         _qtBindingBootPref = _jsonPrefs.get("forceQtApi", "").lower()
@@ -100,20 +100,6 @@ if not QT_BINDING:
     _sys.exit(1)
 
 # -----------------------------------------------------------------------------
-# Try to import test stuff
-
-QAbstractItemModelTester = None
-QTest = None
-QSignalSpy = None
-with _suppress(ImportError):
-    if QT_BINDING.lower() == "pyqt6":
-        from PyQt6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
-    elif QT_BINDING.lower() == "pyqt5":
-        from PyQt5.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
-    elif QT_BINDING.lower() == "pyside6":
-        from PySide6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
-
-# -----------------------------------------------------------------------------
 # Set up platform constants
 
 QT_BINDING_BOOTPREF = _qtBindingBootPref
@@ -162,8 +148,7 @@ if PYSIDE6:
     ]
     if any(v == QT_BINDING_VERSION for v in _badPyside6Versions):
         QApplication()
-        QMessageBox.critical(None, "", f"PySide6 version {QT_BINDING_VERSION} isn't supported.\n"
-                                       f"Please upgrade to the latest version of PySide6.")
+        QMessageBox.critical(None, "", f"PySide6 version {QT_BINDING_VERSION} isn't supported.\nPlease upgrade to the latest version of PySide6.")
         _sys.exit(1)
 
 # -----------------------------------------------------------------------------
@@ -179,18 +164,20 @@ if PYSIDE6:
     # Work around PYSIDE-2234. PySide6 6.5.0+ does implement QRunnable.create, but
     # its implementation sometimes causes random QRunnable objects to bubble up to
     # MainWindow.eventFilter as the 'event' arg, somehow.
-    class QRunnableFunctionWrapper(QRunnable):
+    class _QRunnableFunctionWrapper(QRunnable):
         def __init__(self, func):
             super().__init__()
             self._func = func
+
         def run(self):
             self._func()
-    QRunnable.create = lambda func: QRunnableFunctionWrapper(func)
 
-    def QCommandLineParser_addOptions(self, options):
+    def _QCommandLineParser_addOptions(self, options):
         for o in options:
             self.addOption(o)
-    QCommandLineParser.addOptions = QCommandLineParser_addOptions
+
+    QRunnable.create = _QRunnableFunctionWrapper
+    QCommandLineParser.addOptions = _QCommandLineParser_addOptions
 
 if QT5:
     # Disable "What's this?" in Qt 5 dialog box title bars (Qt 6 sets this off by default.)
@@ -198,9 +185,10 @@ if QT5:
 
     # QMouseEvent.pos() is deprecated in Qt 6, so we don't use it.
     # Fill in QMouseEvent.position() for Qt 5.
-    def QMouseEvent_position(self):
+    def _QMouseEvent_position(self):
         return QPointF(self.pos())
-    QMouseEvent.position = QMouseEvent_position
+
+    QMouseEvent.position = _QMouseEvent_position
 
 
 # -----------------------------------------------------------------------------

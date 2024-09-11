@@ -1,4 +1,3 @@
-from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
@@ -30,10 +29,6 @@ class RemoteLinkProgressDialog(QProgressDialog):
         self.remoteLink = RemoteLink(self)
         self.remoteLink.message.connect(self.setLabelText)
         self.remoteLink.progress.connect(self.onRemoteLinkProgress)
-
-    #def reject(self):
-    #    """Called when user clicks window close button"""
-    #    self.userAbort()
 
     def userAbort(self):
         self.remoteLink.raiseAbortFlag()

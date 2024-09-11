@@ -91,7 +91,7 @@ class FileList(QListView):
     repo: Repo | None
 
     navContext: NavContext
-    """ 
+    """
     COMMITTED, STAGED or DIRTY.
     Does not change throughout the lifespan of this FileList.
     """
@@ -317,7 +317,7 @@ class FileList(QListView):
                 runBatch,
                 QMessageBox.StandardButton.YesAll | QMessageBox.StandardButton.Cancel,
                 show=False)
-            
+
             addULToMessageBox(qmb, [p.delta.new_file.path for p in patches])
 
             qmb.button(QMessageBox.StandardButton.YesAll).clicked.connect(runBatch)
@@ -585,7 +585,7 @@ class FileList(QListView):
         NewStash.invoke(self, list(paths))
 
     def openSubmoduleTabs(self):
-        patches = list(p for p in self.selectedPatches() if p.delta.new_file.mode in [FileMode.COMMIT])
+        patches = [p for p in self.selectedPatches() if p.delta.new_file.mode in [FileMode.COMMIT]]
         for patch in patches:
             self.openSubRepo.emit(patch.delta.new_file.path)
 

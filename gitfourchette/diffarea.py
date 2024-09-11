@@ -254,7 +254,7 @@ class DiffArea(QWidget):
 
         topContainer = QWidget()
         topLayout = QHBoxLayout(topContainer)
-        topLayout.setContentsMargins(0,0,0,0)
+        topLayout.setContentsMargins(0, 0, 0, 0)
         topLayout.addWidget(header)
 
         diff = DiffView()
@@ -282,7 +282,7 @@ class DiffArea(QWidget):
 
         stackContainer = QWidget()
         layout = QVBoxLayout(stackContainer)
-        layout.setContentsMargins(0,0,0,0)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(1)
         layout.addWidget(topContainer)
         layout.addWidget(stack)

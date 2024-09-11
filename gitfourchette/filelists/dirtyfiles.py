@@ -19,8 +19,8 @@ class DirtyFiles(FileList):
 
         n = len(patches)
 
-        statusSet = set(patch.delta.status for patch in patches)
-        modeSet = set(patch.delta.new_file.mode for patch in patches)
+        statusSet = {patch.delta.status for patch in patches}
+        modeSet = {patch.delta.new_file.mode for patch in patches}
 
         anyConflicts = DeltaStatus.CONFLICTED in statusSet
         anySubmodules = FileMode.COMMIT in modeSet

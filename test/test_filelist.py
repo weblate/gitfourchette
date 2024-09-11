@@ -25,7 +25,7 @@ def testSaveRevisionAtCommit(tempDir, mainWindow):
     rw.jump(loc)
     assert loc.isSimilarEnoughTo(rw.navLocator)
 
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save.+copy/as of.+commit")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "save.+copy/as of.+commit")
     acceptQFileDialog(rw, "save.+revision as", tempDir.name, useSuggestedName=True)
     assert b"c2\nc2\n" == readFile(f"{tempDir.name}/c2@1203b03.txt")
 
@@ -39,7 +39,7 @@ def testSaveRevisionBeforeCommit(tempDir, mainWindow):
     rw.jump(loc)
     assert loc.isSimilarEnoughTo(rw.navLocator)
 
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), f"save.+copy/before.+commit")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), "save.+copy/before.+commit")
     acceptQFileDialog(rw, "save.+revision as", tempDir.name, useSuggestedName=True)
     assert b"c2\n" == readFile(f"{tempDir.name}/c2@before-1203b03.txt")
 
@@ -52,7 +52,7 @@ def testSaveOldRevisionOfDeletedFile(tempDir, mainWindow):
     rw.jump(NavLocator.inCommit(commitId, "c/c2-2.txt"))
 
     # c2-2.txt was deleted by the commit. Expect a warning about this.
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "save.+copy/as of.+commit")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), r"save.+copy/as of.+commit")
     acceptQMessageBox(rw, r"file.+deleted by.+commit")
 
 
@@ -348,7 +348,7 @@ def testMiddleClickToStageFile(tempDir, mainWindow):
     from gitfourchette import settings
 
     initialStatus = rw.repo.status()
-    assert initialStatus == {'a/a1.txt': FileStatus.INDEX_MODIFIED|FileStatus.WT_MODIFIED}
+    assert initialStatus == {'a/a1.txt': FileStatus.INDEX_MODIFIED | FileStatus.WT_MODIFIED}
 
     # Middle-clicking has no effect as long as middleClickToStage is off (by default)
     QTest.mouseClick(rw.stagedFiles.viewport(), Qt.MouseButton.MiddleButton, pos=QPoint(2, 2))
@@ -382,4 +382,3 @@ def testGrayOutStageButtonsAfterDiscardingOnlyFile(tempDir, mainWindow):
     assert not rw.diffArea.stageButton.isEnabled()
     assert not rw.diffArea.discardButton.isEnabled()
     assert not rw.diffArea.unstageButton.isEnabled()
-

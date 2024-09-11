@@ -40,7 +40,6 @@ class PushDialog(QDialog):
 
         dlg = PushDialog(repo, repoTaskRunner, branch, parent)
         dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        #dlg.accepted.connect(self.pushComplete)
         dlg.show()
         return dlg
 
@@ -324,7 +323,7 @@ class PushDialog(QDialog):
             for w in widgets:
                 w.setEnabled(False)
         else:
-            for w, enableW in zip(widgets, self.enableInputsBackup):
+            for w, enableW in zip(widgets, self.enableInputsBackup, strict=True):
                 w.setEnabled(enableW)
 
     def onPushClicked(self):

@@ -14,7 +14,7 @@ from gitfourchette.diffview.diffrubberband import DiffRubberBand
 from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.nav import NavLocator, NavContext, NavFlags
+from gitfourchette.nav import NavLocator, NavContext
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
@@ -954,4 +954,3 @@ class DiffView(QPlainTextEdit):
         ]
         askConfirmation(self, self.tr("Find in Diff"), paragraphs(prompt), okButtonText=self.tr("Wrap Around"),
                         messageBoxIcon="information", callback=wrapAround)
-

@@ -1,6 +1,5 @@
-from . import reposcenario
-from .util import *
 from gitfourchette.trash import Trash
+from .util import *
 
 
 def _fillTrashWithJunk(n):

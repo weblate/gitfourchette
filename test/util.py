@@ -42,7 +42,7 @@ def unpackRepo(
         testRepoName="TestGitRepository",
         renameTo="",
 ) -> str:
-    tempDirPath = tempDir if type(tempDir) is str else tempDir.name
+    tempDirPath = tempDir if isinstance(tempDir, str) else tempDir.name
 
     path = f"{tempDirPath}/{testRepoName}"
     path = os.path.realpath(path)
@@ -175,14 +175,14 @@ def findMenuAction(menu: QMenu | QMenuBar, pattern: str) -> QAction:
                 menu = submenu
                 break
         else:
-            assert False, f"didn't find menu '{pattern}' (failed pattern part: '{submenuPattern}')"
+            raise KeyError(f"didn't find menu '{pattern}' (failed pattern part: '{submenuPattern}')")
 
     assert isinstance(menu, QMenu)
     for action in menu.actions():
         actionText = re.sub(r"&([A-Za-z])", r"\1", action.text())
         if re.search(patternParts[-1], actionText, re.IGNORECASE):
             return action
-    assert False, f"didn't find menu item '{pattern}' in menu"
+    raise KeyError(f"didn't find menu item '{pattern}' in menu")
 
 
 def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):
@@ -216,7 +216,7 @@ def qteClickLink(qte: QTextEdit, pattern: str):
 
 def qteBlockPoint(qte: QTextEdit, blockNo: int, atEnd=False) -> QPoint:
     b = qte.document().firstBlock()
-    for i in range(blockNo):
+    for _ in range(blockNo):
         b = b.next()
     p = b.position()
     cursor = qte.textCursor()
@@ -261,19 +261,19 @@ def findQDialog(parent: QWidget, pattern: str) -> QDialog:
         if re.search(pattern, dlg.windowTitle(), re.IGNORECASE):
             return dlg
 
-    assert False, F"did not find qdialog matching \"{pattern}\""
+    raise KeyError(f"did not find qdialog matching \"{pattern}\"")
 
 
 def waitFor(callable, timeout=5000, interval=100):
     interval = 100
     timeout = 5000
     assert timeout >= interval
-    for i in range(0, timeout, interval):
+    for _ in range(0, timeout, interval):
         try:
             return callable()
-        except AssertionError:
+        except KeyError:
             QTest.qWait(interval)
-    assert False, f"retry failed after {timeout} ms timeout"
+    raise TimeoutError(f"retry failed after {timeout} ms timeout")
 
 
 def waitForQDialog(parent: QWidget, pattern: str) -> QDialog:
@@ -288,8 +288,7 @@ def findQMessageBox(parent: QWidget, textPattern: str) -> QMessageBox:
         haystack = "\n".join([qmb.windowTitle(), qmb.text(), qmb.informativeText()])
         if re.search(textPattern, haystack, re.IGNORECASE | re.DOTALL):
             return qmb
-
-    assert False, F"did not find qmessagebox \"{textPattern}\""
+    raise KeyError(f"did not find qmessagebox \"{textPattern}\"")
 
 
 def acceptQMessageBox(parent: QWidget, textPattern: str):
@@ -321,11 +320,10 @@ def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
         button: QToolButton
         if re.search(textPattern, button.text(), re.IGNORECASE | re.DOTALL):
             return button
+    raise KeyError(f"did not find QToolButton \"{textPattern}\"")
 
-    assert False, F"did not find QToolButton \"{textPattern}\""
 
-
-def postMouseWheelEvent(target: QWidget, angleDelta: int, point = QPoint(), modifiers=Qt.KeyboardModifier.NoModifier):
+def postMouseWheelEvent(target: QWidget, angleDelta: int, point=QPoint(), modifiers=Qt.KeyboardModifier.NoModifier):
     point = QPointF(point)
 
     fakeWheelEvent = QWheelEvent(

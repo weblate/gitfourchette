@@ -1,11 +1,8 @@
-import shutil
-
 import pytest
 
-from . import reposcenario
-from .util import *
-from gitfourchette.nav import NavLocator
 from gitfourchette.diffview.diffview import DiffView
+from gitfourchette.nav import NavLocator
+from .util import *
 
 
 def testEmptyDiffEmptyFile(tempDir, mainWindow):
@@ -607,7 +604,7 @@ def testDiffViewStageBlankLines(tempDir, mainWindow):
 
     line1 = qteBlockPoint(dv, 1)  # Hello1
     line2 = qteBlockPoint(dv, 2)  # (blank)
-    line3 = qteBlockPoint(dv, 3)  # Hello2
+    # line3 = qteBlockPoint(dv, 3)  # Hello2
     line4 = qteBlockPoint(dv, 4)  # (blank)
 
     # Stage "Hello1\n\n"
@@ -696,4 +693,3 @@ def testRevertHunk(tempDir, mainWindow):
 
     assert NavLocator.inUnstaged("c/c1.txt").isSimilarEnoughTo(rw.navLocator)
     assert readFile(f"{wd}/c/c1.txt") == b"c1\n"
-

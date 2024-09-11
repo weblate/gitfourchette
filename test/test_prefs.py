@@ -1,19 +1,5 @@
-import os.path
-import shutil
-from contextlib import suppress
-
-import pytest
-
-from gitfourchette import qt
-from gitfourchette.application import GFApplication
-from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.prefsdialog import PrefsDialog
-from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
-from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
-from gitfourchette.graphview.commitlogmodel import SpecialRow
-from gitfourchette.mainwindow import MainWindow
-from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import EItem, SidebarNode
+from gitfourchette.nav import NavLocator
 from .util import *
 
 
@@ -22,9 +8,9 @@ def testPrefsDialog(tempDir, mainWindow):
         triggerMenuAction(mainWindow.menuBar(), "file/settings")
         return findQDialog(mainWindow, "settings")
 
-    # Open a repo so that refreshPrefs functions are exercized in coverage
+    # Open a repo so that refreshPrefs functions are exercised in coverage
     wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
+    mainWindow.openRepo(wd)
 
     # Open prefs, reset to first tab to prevent spillage from any previous test
     dlg = openPrefs()
@@ -121,7 +107,7 @@ def testPrefsFontControl(tempDir, mainWindow):
 def testPrefsLanguageControl(tempDir, mainWindow):
     # Open a repo so that refreshPrefs functions are exercized in coverage
     wd = unpackRepo(tempDir)
-    rw = mainWindow.openRepo(wd)
+    mainWindow.openRepo(wd)
 
     # Change font setting, and accept
     dlg = mainWindow.openPrefsDialog("language")

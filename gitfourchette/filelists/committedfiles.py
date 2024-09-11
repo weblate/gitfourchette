@@ -19,7 +19,7 @@ class CommittedFiles(FileList):
         actions = []
 
         n = len(patches)
-        modeSet = set(patch.delta.new_file.mode for patch in patches)
+        modeSet = {patch.delta.new_file.mode for patch in patches}
         anySubmodules = FileMode.COMMIT in modeSet
         onlySubmodules = anySubmodules and len(modeSet) == 1
 
@@ -41,8 +41,7 @@ class CommittedFiles(FileList):
 
                 ActionDef(
                     self.tr("Restor&e File Revision..."),
-                    submenu=
-                    [
+                    submenu=[
                         ActionDef(self.tr("&As Of This Commit"), self.restoreNewRevision),
                         ActionDef(self.tr("&Before This Commit"), self.restoreOldRevision),
                     ]
@@ -52,8 +51,7 @@ class CommittedFiles(FileList):
 
                 ActionDef(
                     self.tr("&Open File in {0}", "", n).format(settings.getExternalEditorName()),
-                    icon="SP_FileIcon", submenu=
-                    [
+                    icon="SP_FileIcon", submenu=[
                         ActionDef(self.tr("&As Of This Commit"), self.openNewRevision),
                         ActionDef(self.tr("&Before This Commit"), self.openOldRevision),
                         ActionDef(self.tr("&Current Revision (Working Copy)"), self.openWorkingCopyRevision),
@@ -62,8 +60,7 @@ class CommittedFiles(FileList):
 
                 ActionDef(
                     self.tr("&Save a Copy..."),
-                    icon="SP_DialogSaveButton", submenu=
-                    [
+                    icon="SP_DialogSaveButton", submenu=[
                         ActionDef(self.tr("&As Of This Commit"), self.saveNewRevision),
                         ActionDef(self.tr("&Before This Commit"), self.saveOldRevision),
                     ]
@@ -120,7 +117,7 @@ class CommittedFiles(FileList):
         try:
             name, blob, _ = self.getFileRevisionInfo(patch, beforeCommit)
         except FileNotFoundError as fnf:
-            raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
+            raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror) from fnf
 
         tempPath = os.path.join(qTempDir(), name)
 
@@ -154,7 +151,7 @@ class CommittedFiles(FileList):
             try:
                 name, blob, diffFile = self.getFileRevisionInfo(patch, beforeCommit)
             except FileNotFoundError as fnf:
-                raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror)
+                raise SelectedFileBatchError(fnf.filename + ": " + fnf.strerror) from fnf
 
             qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Save file revision as"), name)
             qfd.fileSelected.connect(lambda path: dump(path, diffFile.mode, blob.data))

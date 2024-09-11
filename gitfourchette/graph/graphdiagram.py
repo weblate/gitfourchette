@@ -48,7 +48,7 @@ class GraphDiagram:
             chain = chainStr.split("-")
             parents = [[c] for c in chain[1:]] + [rootParents]
 
-            for oid, commitParents in zip(chain, parents):
+            for oid, commitParents in zip(chain, parents, strict=True):
                 assert oid not in sequence, f"Commit hash appears twice in sequence! {oid}"
                 mockCommit = MockCommit(oid, commitParents)
                 sequence.append(mockCommit)
@@ -89,11 +89,11 @@ class GraphDiagram:
 
     def reserve(self, x, y, fill=" "):
         assert len(fill) == 1
-        for j in range(len(self.scanlines), y + 1):
+        for _ in range(len(self.scanlines), y + 1):
             self.scanlines.append([])
             self.margins.append([])
         scanline = self.scanlines[y]
-        for i in range(len(scanline), padx(x) + 1):
+        for _ in range(len(scanline), padx(x) + 1):
             scanline.append(fill)
         return scanline
 
@@ -130,7 +130,7 @@ class GraphDiagram:
                 marginWidths[i] = max(marginWidths[i], len(mText))
 
         text = ""
-        for margins, scanline in zip(self.margins, self.scanlines):
+        for margins, scanline in zip(self.margins, self.scanlines, strict=True):
             for mWidth, mText in zip_longest(reversed(marginWidths), reversed(margins), fillvalue=""):
                 text += mText.rjust(mWidth) + " "
             text += ''.join(scanline).rstrip()

@@ -183,7 +183,7 @@ def paintGraphFrame(
         submitPath(path, arc.lane, arc.openedBy == UC_FAKEID, dashOffset=1)
 
     # draw arc junctions
-    for arc, junction in frame.junctionsAtCommit(hiddenCommits):
+    for arc, _junction in frame.junctionsAtCommit(hiddenCommits):
         columnA, columnB = laneColumnsAB[arc.lane]
         ax = x + columnA * LANE_WIDTH
         bx = x + columnB * LANE_WIDTH

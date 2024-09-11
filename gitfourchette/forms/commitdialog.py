@@ -1,8 +1,8 @@
-from gitfourchette.forms.signatureform import SignatureForm, SignatureOverride
+from gitfourchette.forms.signatureform import SignatureOverride
+from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
-from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
 
 INFO_ICON_SIZE = 16
 
@@ -146,18 +146,17 @@ class CommitDialog(QDialog):
         committer = self.getOverriddenCommitterSignature() or self.originalCommitterSignature
 
         muted = mutedToolTipColorHex()
-        tt = "<p style='white-space: pre'>"
 
+        tt = "<p style='white-space: pre'>"
         tt += f"<span style='color: {muted}'>" + self.tr("Authored by:") + "</span> "
         tt += formatSignatureForToolTip(author)
         if not signatures_equalish(author, self.originalAuthorSignature):
-            tt += f"\n<span style='font-weight: bold;'>" + self.tr("(overridden manually)") + "</span>"
+            tt += "\n<span style='font-weight: bold'>" + self.tr("(overridden manually)") + "</span>"
 
         tt += f"\n\n<span style='color: {muted}'>" + self.tr("Committed by:") + "</span> "
         tt += formatSignatureForToolTip(committer)
         if not signatures_equalish(committer, self.originalCommitterSignature):
-            tt += f"\n<span style='font-weight: bold;'>" + self.tr("(overridden manually)") + "</span>"
+            tt += "\n<span style='font-weight: bold'>" + self.tr("(overridden manually)") + "</span>"
 
         self.ui.signatureButton.setToolTip(tt)
         self.ui.revealSignature.setToolTip(tt)
-

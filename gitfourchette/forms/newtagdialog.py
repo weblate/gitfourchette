@@ -1,7 +1,8 @@
-from gitfourchette.qt import *
-from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_newtagdialog import Ui_NewTagDialog
+from gitfourchette.qt import *
+from gitfourchette.toolbox import *
+
 
 def populateRemoteComboBox(comboBox: QComboBox, remotes: list[str]):
     assert 0 == comboBox.count()

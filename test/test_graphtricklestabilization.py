@@ -154,4 +154,3 @@ def testGraphTrickleStabilization(scenario, reverse):
     print(GraphDiagram.diagram(gsl.graph, hiddenCommits=gsl.hiddenCommits))
 
     assert gsl.hiddenCommits == newHiddenCommitsExpected
-

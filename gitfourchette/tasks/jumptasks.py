@@ -6,7 +6,6 @@ Unlike most other tasks, jump tasks directly manipulate the UI extensively, via 
 import dataclasses
 import logging
 import os
-import warnings
 
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
@@ -38,7 +37,7 @@ class Jump(RepoTask):
         patch: Patch = None
 
     def canKill(self, task: RepoTask):
-        return isinstance(task, (Jump, RefreshRepo))
+        return isinstance(task, Jump | RefreshRepo)
 
     def flow(self, locator: NavLocator):
         if not locator:
@@ -242,8 +241,8 @@ class Jump(RepoTask):
             try:
                 oid = rw.repoModel.refs[locator.ref]
                 locator = locator.replace(commit=oid, ref="")
-            except KeyError:
-                raise AbortTask(self.tr("Unknown reference {0}.").format(tquo(locator.ref)))
+            except KeyError as exc:
+                raise AbortTask(self.tr("Unknown reference {0}.").format(tquo(locator.ref))) from exc
 
         assert locator.commit
         assert not locator.ref
@@ -434,7 +433,7 @@ class JumpForward(JumpBackOrForward):
 class RefreshRepo(RepoTask):
     @staticmethod
     def canKill_static(task: RepoTask):
-        return task is None or isinstance(task, (Jump, RefreshRepo))
+        return task is None or isinstance(task, Jump | RefreshRepo)
 
     def canKill(self, task: RepoTask):
         return RefreshRepo.canKill_static(task)

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from gitfourchette.qt import *
-from gitfourchette.remotelink import isPrivateKeyPassphraseProtected
 from gitfourchette.toolbox import QFilePickerCheckBox, PersistentFileDialog, paragraphs
 
 

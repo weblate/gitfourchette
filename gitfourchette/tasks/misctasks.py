@@ -6,7 +6,7 @@ from gitfourchette.forms.reposettingsdialog import RepoSettingsDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Oid, Signature
 from gitfourchette.qt import *
-from gitfourchette.tasks.repotask import RepoTask, TaskEffects
+from gitfourchette.tasks.repotask import RepoTask
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)

@@ -188,5 +188,5 @@ def testMainWindowMenuItems(tempDir, mainWindow):
     assert os.path.samefile(mainWindow.currentRepoWidget().workdir, wd2)
     triggerMenuAction(mainWindow.menuBar(), "file/close tab")
     triggerMenuAction(mainWindow.menuBar(), "file/recent/clear")
-    with pytest.raises(AssertionError):
-        triggerMenuAction(mainWindow.menuBar(), "file/recent/repo2")
+    with pytest.raises(KeyError):
+        findMenuAction(mainWindow.menuBar(), "file/recent/repo2")

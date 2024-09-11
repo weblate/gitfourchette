@@ -6,7 +6,7 @@ import os
 import shlex
 import sys
 
-from gitfourchette import pycompat  # StrEnum for Python 3.10
+from gitfourchette import pycompat  # noqa: F401 - StrEnum for Python 3.10
 from gitfourchette.prefsfile import PrefsFile
 from gitfourchette.qt import *
 from gitfourchette.toolbox.benchmark import BENCHMARK_LOGGING_LEVEL
@@ -319,7 +319,7 @@ class History(PrefsFile):
         sortedPaths = (path for path, _ in
                        sorted(self.repos.items(), key=lambda i: i[1].get('seq', -1), reverse=newestFirst))
 
-        return (path for path, _ in zip(sortedPaths, range(n)))
+        return (path for path, _ in zip(sortedPaths, range(n), strict=False))
 
     def write(self, force=False):
         self.trim()

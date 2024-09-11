@@ -18,7 +18,7 @@ class StagedFiles(FileList):
         actions = []
 
         n = len(patches)
-        modeSet = set(patch.delta.new_file.mode for patch in patches)
+        modeSet = {patch.delta.new_file.mode for patch in patches}
         anySubmodules = FileMode.COMMIT in modeSet
         onlySubmodules = anySubmodules and len(modeSet) == 1
 

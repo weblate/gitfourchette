@@ -111,7 +111,7 @@ class NavLocator:
         (e.g. in the STAGED context, with no files selected.)
         """
         return self.context.value != NavContext.EMPTY
-    
+
     def __repr__(self) -> str:
         return F"{self.__class__.__name__}({self.contextKey:.8} {self.path})"
 
@@ -405,4 +405,3 @@ class NavHistory:
             s += f"{h.contextKey[:7]} {h.path:32} {h.diffScroll} {h.diffCursor}"
             i -= 1
         return s
-

@@ -1,6 +1,5 @@
 import pytest
 
-from . import reposcenario
 from .util import *
 
 
@@ -9,7 +8,6 @@ def testExternalUnstage(tempDir, mainWindow):
     writeFile(F"{wd}/master.txt", "same old file -- brand new contents!\n")
 
     rw = mainWindow.openRepo(wd)
-    repo = rw.repo
 
     # Stage master.txt
     assert (qlvGetRowData(rw.dirtyFiles), qlvGetRowData(rw.stagedFiles)) == (["master.txt"], [])

@@ -204,7 +204,7 @@ def testFetchRemote(tempDir, mainWindow, method):
     rw = mainWindow.openRepo(wd)
 
     # We only know about master and no-parent in the remote for now
-    assert {"localfs/master", "localfs/no-parent"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
+    assert {"localfs/master", "localfs/no-parent"} == {x for x in rw.repo.branches.remote if x.startswith("localfs/")}
 
     # Fetch the remote
     if method == "sidebar":
@@ -217,7 +217,7 @@ def testFetchRemote(tempDir, mainWindow, method):
         raise NotImplementedError(f"Unsupported method {method}")
 
     # We must see that no-parent is gone and that new-remote-branch appeared
-    assert {"localfs/master", "localfs/new-remote-branch"} == set(x for x in rw.repo.branches.remote if x.startswith("localfs/"))
+    assert {"localfs/master", "localfs/new-remote-branch"} == {x for x in rw.repo.branches.remote if x.startswith("localfs/")}
 
 
 def testFetchRemoteBranch(tempDir, mainWindow):
@@ -279,7 +279,7 @@ def testFetchRemoteBranchVanishes(tempDir, mainWindow, pull):
         node = rw.sidebar.findNodeByRef("refs/heads/master")
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "pull")
-    acceptQMessageBox(rw, fr"localfs/master.+disappeared")
+    acceptQMessageBox(rw, "localfs/master.+disappeared")
 
     # It's gone
     assert "localfs/master" not in rw.repo.branches.remote
@@ -360,7 +360,7 @@ def testPush(tempDir, mainWindow, asNewBranch):
     oldHead = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
 
     wd = unpackRepo(tempDir)
-    barePath = makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
+    makeBareCopy(wd, addAsRemote="localfs", preFetch=True, keepOldUpstream=True)
 
     # Make some update in our repo
     with RepoContext(wd) as repo:

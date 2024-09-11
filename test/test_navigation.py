@@ -2,7 +2,6 @@ import pytest
 
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.nav import NavContext, NavLocator
-from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.repowidget import RepoWidget
 from . import reposcenario
 from .util import *
@@ -235,7 +234,7 @@ def testNavigationAfterDiscardingChangeAtTopOfHistory(tempDir, mainWindow):
     assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
     # Can't go further
-    for i in range(10):
+    for _ in range(10):
         rw.navigateForward()
         assertHistoryMatches(rw, NavLocator.inUnstaged("c/c1.txt"))
 
@@ -262,8 +261,10 @@ def testRestoreLastSelectedFileInContext(tempDir, mainWindow):
     oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
 
     # Stage c1 and c2
-    assert "c/c2.txt" == qlvClickNthRow(rw.dirtyFiles, 4); rw.dirtyFiles.stage()
-    assert "c/c1.txt" == qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()
+    assert "c/c2.txt" == qlvClickNthRow(rw.dirtyFiles, 4)
+    rw.dirtyFiles.stage()
+    assert "c/c1.txt" == qlvClickNthRow(rw.dirtyFiles, 3)
+    rw.dirtyFiles.stage()
 
     # Select b1.txt in UNSTAGED context
     qlvClickNthRow(rw.dirtyFiles, 2)
@@ -318,14 +319,15 @@ def testAbstractWorkdirLocatorRedirectsToConcreteLocator(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     oid1 = Oid(hex="83834a7afdaa1a1260568567f6ad90020389f664")
-    oid2 = Oid(hex="6e1475206e57110fcef4b92320436c1e9872a322")
 
     # Ensure we're starting from the workdir
     assertHistoryMatches(rw, NavLocator.inUnstaged("a/a1"))
 
     # Stage c1 and c2
-    assert "c/c2.txt" == qlvClickNthRow(rw.dirtyFiles, 4); rw.dirtyFiles.stage()
-    assert "c/c1.txt" == qlvClickNthRow(rw.dirtyFiles, 3); rw.dirtyFiles.stage()
+    assert "c/c2.txt" == qlvClickNthRow(rw.dirtyFiles, 4)
+    rw.dirtyFiles.stage()
+    assert "c/c1.txt" == qlvClickNthRow(rw.dirtyFiles, 3)
+    rw.dirtyFiles.stage()
 
     # Select an unstaged file, jump to a commit, and then back to the workdir.
     # Ensure our selection is kept.

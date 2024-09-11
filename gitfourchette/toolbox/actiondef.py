@@ -52,7 +52,7 @@ class ActionDef:
 
         if self.callback is None:
             pass
-        elif type(self.callback) is SignalInstance:
+        elif isinstance(self.callback, SignalInstance):
             action.triggered.connect(self.callback)
         else:
             action.triggered.connect(lambda: self.callback())
@@ -70,7 +70,7 @@ class ActionDef:
         if self.toolTip:
             tip = self.toolTip
             if self.shortcuts:
-                if type(self.shortcuts) is list:
+                if isinstance(self.shortcuts, list):
                     tip = appendShortcutToToolTipText(tip, self.shortcuts[0])
                 else:
                     tip = appendShortcutToToolTipText(tip, self.shortcuts)
@@ -82,7 +82,7 @@ class ActionDef:
         action.setEnabled(bool(self.enabled))
 
         if self.shortcuts:
-            if type(self.shortcuts) is list:
+            if isinstance(self.shortcuts, list):
                 action.setShortcuts(self.shortcuts)
             else:
                 action.setShortcut(self.shortcuts)
@@ -108,7 +108,7 @@ class ActionDef:
         radioGroups = {}
 
         for item in actionDefs:
-            if type(item) is QAction:
+            if isinstance(item, QAction):
                 item.setParent(menu)  # reparent it
                 menu.addAction(item)
             elif item.kind == ActionDef.Kind.Separator:
@@ -138,7 +138,7 @@ class ActionDef:
     @staticmethod
     def addToQToolBar(toolbar: QToolBar, *actionDefs: ActionDef | QAction):
         for item in actionDefs:
-            if type(item) is QAction:
+            if isinstance(item, QAction):
                 action: QAction = item
                 action.setParent(toolbar)  # reparent it
                 action.setShortcut("")  # clear shortcut for toolbar

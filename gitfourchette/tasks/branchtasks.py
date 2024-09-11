@@ -448,7 +448,6 @@ class FastForwardBranch(RepoTask):
         if isinstance(exc, DivergentBranchesError):
             parentWidget = self.parentWidget()
 
-            repo = self.repo
             lb = exc.local_branch
             rb = exc.remote_branch
             text = paragraphs(

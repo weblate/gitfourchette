@@ -66,7 +66,7 @@ class GraphWeaver(Frame):
                     arc.chain.bottomRow = row
             del self.parentLookup[me]
 
-            """ 
+            """
             # Compact null arcs at right of graph
             if not allocLanesInGaps:
                 for _ in range(len(self.openArcs)-1, myHomeLane, -1):

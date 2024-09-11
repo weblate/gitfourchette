@@ -4,15 +4,15 @@ from typing import Iterable, Callable
 
 from gitfourchette import porcelain
 from gitfourchette import settings
-from gitfourchette.nav import NavLocator, NavFlags
-from gitfourchette.repoprefs import RefSort
-from gitfourchette.tasks import *
 from gitfourchette.globalshortcuts import GlobalShortcuts
+from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
+from gitfourchette.repoprefs import RefSort
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate, SidebarClickZone
 from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
+from gitfourchette.tasks import *
 from gitfourchette.toolbox import *
 from gitfourchette.webhost import WebHost
 
@@ -176,7 +176,8 @@ class Sidebar(QTreeView):
             upstreamBranchDisplay = lquoe(upstreamBranchName)
 
             actions += [
-                TaskBook.action(self,
+                TaskBook.action(
+                    self,
                     SwitchBranch,
                     self.tr("&Switch to {0}").format(thisBranchDisplay),
                     taskArgs=branchName,
@@ -184,7 +185,8 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self,
+                TaskBook.action(
+                    self,
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
@@ -192,7 +194,8 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self,
+                TaskBook.action(
+                    self,
                     FetchRemoteBranch,
                     self.tr("&Fetch {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fetch..."),
                     taskArgs=branch.upstream.shorthand if hasUpstream else None,
@@ -204,7 +207,8 @@ class Sidebar(QTreeView):
                     self.tr("Pu&ll from {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Pull..."),
                 ).replace(enabled=hasUpstream and isCurrentBranch),
 
-                TaskBook.action(self,
+                TaskBook.action(
+                    self,
                     FastForwardBranch,
                     self.tr("Fast-Forward to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Fast-Forward..."),
                     taskArgs=branchName,
@@ -268,7 +272,8 @@ class Sidebar(QTreeView):
                 ]
 
             actions += [
-                TaskBook.action(self,
+                TaskBook.action(
+                    self,
                     NewBranchFromRef,
                     self.tr("Start Local &Branch from Here..."),
                     taskArgs=refName,
@@ -278,7 +283,8 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self,
+                TaskBook.action(
+                    self,
                     MergeBranch,
                     self.tr("&Merge into {0}...").format(activeBranchDisplay),
                     taskArgs=refName,
@@ -294,9 +300,11 @@ class Sidebar(QTreeView):
 
                 *webActions,
 
-                ActionDef(self.tr("&Hide in Graph"),
-                          lambda: self.wantHideNode(node),
-                          checkState=[-1, 1][isHidden]),
+                ActionDef(
+                    self.tr("&Hide in Graph"),
+                    lambda: self.wantHideNode(node),
+                    checkState=[-1, 1][isHidden]
+                ),
             ]
 
         elif item == EItem.Remote:
@@ -900,7 +908,7 @@ class Sidebar(QTreeView):
                 radioGroup=RADIO_GROUP),
         ]
 
-        for remoteName, remoteBranches in repo.listall_remote_branches(value_style="shorthand").items():
+        for remoteBranches in repo.listall_remote_branches(value_style="shorthand").values():
             if not remoteBranches:
                 continue
             menu.append(ActionDef.SEPARATOR)

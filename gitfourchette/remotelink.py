@@ -159,11 +159,11 @@ class RemoteLink(QObject, RemoteCallbacks):
                     self.usingKnownKeyFirst = True
 
         # See if any of the keys are unreadable
-        for pubkey, privkey in self.keypairFiles:
+        for _pubkey, privkey in self.keypairFiles:
             try:
                 # Just some dummy read
                 isPrivateKeyPassphraseProtected(privkey)
-            except IOError:
+            except OSError:
                 self.anyKeyIsUnreadable = True
                 break
 

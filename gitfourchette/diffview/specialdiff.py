@@ -1,8 +1,6 @@
 """Non-textual diffs"""
 from contextlib import suppress
 import os
-import re
-from dataclasses import dataclass
 
 from gitfourchette import settings
 from gitfourchette.nav import NavLocator, NavContext, NavFlags

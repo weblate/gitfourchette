@@ -7,7 +7,7 @@ def findSolvedArc(frame: Frame, openedBy, closedBy):
             continue
         if a.openedBy == openedBy and a.closedBy == closedBy:
             return a
-    assert False, f"did not find solved arc {openedBy} -> {closedBy} in frame {frame.row}"
+    raise AssertionError(f"did not find solved arc {openedBy} -> {closedBy} in frame {frame.row}")
 
 
 def findOpenArc(frame: Frame, openedBy, closedBy):
@@ -16,7 +16,7 @@ def findOpenArc(frame: Frame, openedBy, closedBy):
             continue
         if a.openedBy == openedBy and a.closedBy == closedBy:
             return a
-    assert False, f"did not find open arc {openedBy} -> {closedBy} in frame {frame.row}"
+    raise AssertionError(f"did not find open arc {openedBy} -> {closedBy} in frame {frame.row}")
 
 
 def checkFrame(pb: PlaybackState, row, commit, solved="", open=""):

@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import Generator, Iterable
 
 from gitfourchette import settings
-from gitfourchette.graph import Graph, GraphSpliceLoop, GraphTrickle, MockCommit
+from gitfourchette.graph import Graph, GraphSpliceLoop, MockCommit
 from gitfourchette.porcelain import *
 from gitfourchette.repoprefs import RepoPrefs
 from gitfourchette.toolbox import *
@@ -384,9 +384,9 @@ class RepoModel:
         return self.refs.values()
 
     def getLocalTips(self):
-        return set(
+        return {
             oid for oid, refList in self.refsAt.items()
-            if any(name == "HEAD" or name.startswith("refs/heads/") for name in refList))
+            if any(name == "HEAD" or name.startswith("refs/heads/") for name in refList)}
 
     def getHiddenTips(self) -> set[Oid]:
         seeds = set()

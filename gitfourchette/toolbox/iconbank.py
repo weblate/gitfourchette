@@ -1,7 +1,6 @@
 """
 If SVG icons don't show up, you may need to install the 'qt6-svg' package.
 """
-import os
 
 from gitfourchette.qt import *
 from gitfourchette.toolbox.qtutils import isDarkTheme, writeTempFile
@@ -23,8 +22,8 @@ def getBestIconFile(name: str) -> str:
     try:
         f = next(f for f in assetCandidates(name) if f.exists())
         return f.fileName()
-    except StopIteration:
-        raise KeyError(f"no built-in icon asset '{name}'")
+    except StopIteration as exc:
+        raise KeyError(f"no built-in icon asset '{name}'") from exc
 
 
 def lookUpNamedIcon(name: str) -> QIcon:

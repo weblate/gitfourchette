@@ -31,5 +31,3 @@ def abbreviatePath(path: str, style: PathDisplayStyle = PathDisplayStyle.FULL_PA
         return path.rsplit('/', 1)[-1]
     else:
         return path
-
-

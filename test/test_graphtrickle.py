@@ -294,8 +294,8 @@ def testHiddenCommitMarks(fixture: ChainMarkerFixture, seeds, expectedHidden):
     sequence, graphHeads = GraphDiagram.parseDefinition(fixture.graphDef)
     assert all(h in fixtureHeads for h in graphHeads)
 
-    hiddenTips = set(c for c in seeds if not c.endswith("!"))
-    hiddenTaps = set(c.removesuffix("!") for c in seeds if c.endswith("!"))
+    hiddenTips = {c for c in seeds if not c.endswith("!")}
+    hiddenTaps = {c.removesuffix("!") for c in seeds if c.endswith("!")}
     gbu = GraphBuildLoop(fixtureHeads, hideSeeds=hiddenTips, forceHide=hiddenTaps)
     gbu.sendAll(sequence)
 

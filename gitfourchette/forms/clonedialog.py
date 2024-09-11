@@ -202,7 +202,7 @@ class CloneDialog(QDialog):
     def onShallowCloneDepthChanged(self, depth: int):
         # Re-translate text for correct plural form
         text = self.tr("&Shallow clone: Fetch up to %n commits per branch", "", depth)
-        parts = re.split(r"\b\d(?:.*\d)?\b", text, 1)
+        parts = re.split(r"\b\d(?:.*\d)?\b", text, maxsplit=1)
         assert len(parts) >= 2
         self.ui.shallowCloneCheckBox.setText(parts[0].strip())
         self.ui.shallowCloneSuffix.setText(parts[1].strip())

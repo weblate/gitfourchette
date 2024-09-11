@@ -1,10 +1,9 @@
 import pytest
 
-from gitfourchette.toolbox import naturalSort
-from . import reposcenario
-from .util import *
 from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem, SidebarNode
+from gitfourchette.toolbox import naturalSort
+from .util import *
 
 
 def testCurrentBranchCannotSwitchOrMerge(tempDir, mainWindow):
@@ -35,7 +34,7 @@ def testSidebarWithDetachedHead(tempDir, mainWindow):
     assert re.search(r"detached head.+7f82283", toolTip, re.I)
 
     assert {'refs/heads/master', 'refs/heads/no-parent'
-            } == set(n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
+            } == {n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch)}
 
 
 def testSidebarSelectionSync(tempDir, mainWindow):
@@ -135,7 +134,7 @@ def testRefSortModes(tempDir, mainWindow, headerKind, leafKind):
         return [node.data for node in sb.findNodesByKind(leafKind)]
 
     sortedByTime = getNodeDatas()
-    sortedAlpha = list(sorted(getNodeDatas(), key=naturalSort))
+    sortedAlpha = sorted(getNodeDatas(), key=naturalSort)
 
     triggerMenuAction(sb.makeNodeMenu(headerNode), "sort.+by/newest first")
     assert getNodeDatas() == sortedByTime
@@ -223,5 +222,3 @@ def testSidebarToolTips(tempDir, mainWindow):
     test(EItem.RefFolder, "refs/heads/folder", r"local branch folder")
     test(EItem.RefFolder, "refs/remotes/origin/folder", r"remote branch folder")
     test(EItem.RefFolder, "refs/tags/folder", r"tag folder")
-
-

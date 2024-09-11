@@ -6,9 +6,9 @@ import logging
 import os
 import typing
 from types import NoneType, UnionType
-from typing import Any, Type
+from typing import Any
 
-from gitfourchette import pycompat  # StrEnum for Python 3.10
+from gitfourchette import pycompat  # noqa: F401 - StrEnum for Python 3.10
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 
@@ -157,12 +157,12 @@ class PrefsFile:
             return base64.b64encode(o).decode("ascii")
         elif type(o) is set:
             return list(o)
-        elif isinstance(o, Signature):
+        elif type(o) is Signature:
             return {"name": o.name, "email": o.email, "time": o.time, "offset": o.offset}
         return o
 
     @staticmethod
-    def decode(o: Any, dstType: Type | UnionType) -> Any:
+    def decode(o: Any, dstType: type | UnionType) -> Any:
         """ Convert a value coming from a JSON blob to a target type """
         construct = None
 
@@ -179,7 +179,7 @@ class PrefsFile:
             srcType = list
         elif issubclass(dstType, enum.StrEnum):
             srcType = str
-        elif issubclass(dstType, (enum.IntEnum, enum.Enum)):
+        elif issubclass(dstType, enum.IntEnum | enum.Enum):
             srcType = int
         elif dstType is Signature:
             srcType = dict

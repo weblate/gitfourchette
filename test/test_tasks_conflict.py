@@ -285,8 +285,8 @@ def testMergeToolInBackgroundTab(tempDir, mainWindow):
     QTest.qWait(100)
 
     # Our tab is in the background so it must NOT show a messagebox yet
-    with pytest.raises(AssertionError):
-        acceptQMessageBox(rw, "looks like.+resolved")
+    with pytest.raises(KeyError):
+        findQMessageBox(rw, "looks like.+resolved")
 
     mainWindow.tabs.setCurrentIndex(1)  # switch BACK to our tab
     QTest.qWait(1)

@@ -84,12 +84,12 @@ def getPatchPreamble(delta: DiffDelta, reverse=False):
     if ofExists:
         preamble += F"--- a/{of.path}\n"
     else:
-        preamble += F"--- /dev/null\n"
+        preamble += "--- /dev/null\n"
 
     if nfExists:
         preamble += F"+++ b/{nf.path}\n"
     else:
-        preamble += F"+++ /dev/null\n"
+        preamble += "+++ /dev/null\n"
 
     return preamble
 

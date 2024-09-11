@@ -1,7 +1,7 @@
 import logging
 from contextlib import suppress
 
-from gitfourchette.forms.brandeddialog import convertToBrandedDialog, showTextInputDialog
+from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.deletetagdialog import DeleteTagDialog
 from gitfourchette.forms.identitydialog import IdentityDialog

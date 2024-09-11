@@ -1,4 +1,3 @@
-from gitfourchette import exttools
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 from typing import Callable
@@ -76,7 +75,7 @@ def convertToBrandedDialog(
 
     innerContent = QWidget(dialog)
     innerContent.setLayout(dialog.layout())
-    innerContent.layout().setContentsMargins(0,0,0,0)
+    innerContent.layout().setContentsMargins(0, 0, 0, 0)
 
     gridLayout = makeBrandedDialogLayout(dialog, promptText, subtitleText, multilineSubtitle)
     gridLayout.addWidget(innerContent, 2, 3, 1, 1)

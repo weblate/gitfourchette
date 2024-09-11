@@ -20,4 +20,4 @@ else:
 # Force qtpy (if used) to honor QT_API
 os.environ["FORCE_QT_API"] = "1"
 
-from gitfourchette.qt import *
+from gitfourchette.qt import *  # noqa: E402 - intentionally importing Qt at this specific point

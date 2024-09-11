@@ -631,7 +631,7 @@ def testFastForwardCurrentBranch(tempDir, mainWindow):
     # This file doesn't exist on no-parent initally
     assert not os.path.exists(f"{wd}/a/a1")
 
-    node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fast.forward")
 
@@ -656,7 +656,7 @@ def testFastForwardOtherBranch(tempDir, mainWindow):
         repo.edit_upstream_branch("no-parent-ffwd", "origin/master")
     rw = mainWindow.openRepo(wd)
 
-    node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent-ffwd")
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent-ffwd")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fast.forward")
 
@@ -692,7 +692,7 @@ def testFastForwardDivergent(tempDir, mainWindow):
         repo.edit_upstream_branch("no-parent", "origin/first-merge")
     rw = mainWindow.openRepo(wd)
 
-    node = rw.sidebar.findNodeByRef(f"refs/heads/no-parent")
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fast.forward")
     acceptQMessageBox(rw, "can.+t fast.forward.+branches are divergent")

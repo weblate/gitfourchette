@@ -170,8 +170,6 @@ class GraphView(QListView):
 
         k = event.key()
         oid = self.currentCommitId
-        currentIndex = self.currentIndex()
-        rowKind = currentIndex.data(CommitLogModel.Role.SpecialRow)
         isValidCommit = oid and oid != UC_FAKEID
 
         if k in GlobalShortcuts.getCommitInfoHotkeys:
@@ -279,8 +277,8 @@ class GraphView(QListView):
     def getFilterIndexForCommit(self, oid: Oid) -> QModelIndex | None:
         try:
             rawIndex = self.repoModel.graph.getCommitRow(oid)
-        except KeyError:
-            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=self.repoModel.truncatedHistory)
+        except KeyError as exc:
+            raise GraphView.SelectCommitError(oid, foundButHidden=False, likelyTruncated=self.repoModel.truncatedHistory) from exc
 
         newSourceIndex = self.clModel.index(rawIndex, 0)
         newFilterIndex = self.clFilter.mapFromSource(newSourceIndex)

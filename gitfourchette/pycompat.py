@@ -2,11 +2,7 @@ import enum
 
 
 # Python 3.10 compatibility (enum.StrEnum is new in Python 3.11)
-try:
-    enum.StrEnum
-
-except AttributeError:
-
+if not hasattr(enum, "StrEnum"):
     class _StrEnumCompat(str, enum.Enum):
         def __new__(cls, *values):
             if len(values) != 1 or not isinstance(values[0], str):

@@ -3,8 +3,6 @@ import pytest
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.nav import NavContext
-from gitfourchette.sidebar.sidebarmodel import EItem
-from gitfourchette.tasks import RepoTaskRunner
 from .util import *
 
 hasNetwork = os.environ.get("TESTNET", "0").lower() not in ["0", ""]

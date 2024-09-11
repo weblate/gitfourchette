@@ -70,7 +70,7 @@ class StashDialog(QDialog):
             if not preTicked or filePath in preTicked:
                 listItem.setCheckState(Qt.CheckState.Checked)
                 if not scrollTo:
-                   scrollTo = listItem
+                    scrollTo = listItem
             else:
                 listItem.setCheckState(Qt.CheckState.Unchecked)
 

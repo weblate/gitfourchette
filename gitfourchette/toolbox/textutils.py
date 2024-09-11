@@ -45,7 +45,7 @@ def paragraphs(*args) -> str:
     """
 
     # If passed an actual list object, use that as the argument list.
-    if len(args) == 1 and type(args[0]) == list:
+    if len(args) == 1 and isinstance(args[0], list):
         args = args[0]
 
     builder = io.StringIO()

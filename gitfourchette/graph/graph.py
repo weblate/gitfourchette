@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import bisect
 import logging
-from contextlib import suppress
 from dataclasses import dataclass
 from typing import ClassVar, Iterable, Iterator
 
@@ -276,8 +275,8 @@ class Arc:
         return f"Arc({self.chain} {ob}\u2192{cb}{dangling} {oa}\u2192{ca})"
 
     def length(self):
-        assert type(self.openedAt) == BatchRow
-        assert type(self.closedAt) == BatchRow
+        assert type(self.openedAt) is BatchRow
+        assert type(self.closedAt) is BatchRow
         return int(self.closedAt) - int(self.openedAt)
 
     def __next__(self):
@@ -451,11 +450,11 @@ class Frame:
     def reserveArcListCapacity(theList, newLength):
         if len(theList) >= newLength:
             return
-        for i in range(newLength - len(theList)):
+        for _ in range(newLength - len(theList)):
             theList.append(None)
 
     @staticmethod
-    def cleanUpArcList(theList: list[Arc|None], olderThanRow: BatchRow, alsoTrimBack: bool = True):
+    def cleanUpArcList(theList: list[Arc | None], olderThanRow: BatchRow, alsoTrimBack: bool = True):
         # Remove references to arcs that were closed earlier than `olderThanRow`
         for j, arc in enumerate(theList):
             if arc and 0 <= arc.closedAt < olderThanRow:
@@ -516,7 +515,8 @@ class Frame:
                 a = arcsBelow.pop()
                 mapBelow[a.lane] = column
 
-        return list(zip(mapAbove, mapBelow)), column + 1
+        remapTable = list(zip(mapAbove, mapBelow, strict=True))
+        return remapTable, column + 1
 
 
 class PlaybackState(Frame):
@@ -862,7 +862,7 @@ class Graph:
 
         # Verify keyframes
         playback = self.startPlayback(0)
-        for row, keyframe in zip(self.keyframeRows, self.keyframes):
+        for row, keyframe in zip(self.keyframeRows, self.keyframes, strict=True):
             playback.advanceToCommit(keyframe.commit)
             frame1 = playback.sealCopy()
             frame2 = keyframe.sealCopy()

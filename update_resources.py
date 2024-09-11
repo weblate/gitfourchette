@@ -1,9 +1,17 @@
 #! /usr/bin/env python3
-import argparse, datetime, difflib, os, re, subprocess, sys, textwrap
+import argparse
+import datetime
+import difflib
+import os
+import re
+import subprocess
+import sys
+import textwrap
 import xml.etree.ElementTree as ET
-import pygit2
 from contextlib import suppress
 from pathlib import Path
+
+import pygit2
 
 REPO_ROOTDIR = os.path.dirname(os.path.realpath(sys.argv[0]))
 REPO_ROOTDIR = os.path.relpath(REPO_ROOTDIR)
@@ -77,7 +85,7 @@ def writeIfDifferent(path, text, ignoreChangedLines=None):
             ignoreList.append("- " + icl)
 
         if os.path.isfile(path):
-            with open(path, 'r') as existingFile:
+            with open(path) as existingFile:
                 oldText = existingFile.read()
 
             # See if the differences can be ignored (e.g. Qt User Interface Compiler version comment)
@@ -105,7 +113,7 @@ def patchSection(path: str, contents: str):
     def ensureNewline(s: str):
         return s + ("" if s.endswith("\n") else "\n")
 
-    with open(path, "rt") as f:
+    with open(path) as f:
         text = f.read()
 
     contents = ensureNewline(contents)
@@ -129,7 +137,7 @@ def writeStatusIcon(fill='#ff00ff', char='X', round=2):
         svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'>\n"
         svg += f"<rect rx='{round}' ry='{round}' x='0.5' y='0.5' width='15' height='15' stroke='{color}' stroke-width='1' fill='{fill}'/>\n"
         svg += f"<text x='8' y='12' font-weight='bold' font-size='11' font-family='sans-serif' text-anchor='middle' fill='{color}'>{char}</text>\n"
-        svg += f"</svg>"
+        svg += "</svg>"
         svgFileName = F"{ASSETS_DIR}/icons/status_{char.lower()}{suffix}.svg"
         writeIfDifferent(svgFileName, svg)
 
@@ -228,9 +236,8 @@ def updateQmFiles(lrelease):
                 if translationPlaceholders != sourcePlaceholders:
                     anyPlaceholderMismatches = True
                     print(f"******* {file}: PLACEHOLDER MISMATCH! "
-                        f"Missing: {' '.join(s for s in missingPlaceholders)} "
-                        f"in: \"{tt}\"")
-
+                          f"Missing: {' '.join(s for s in missingPlaceholders)} "
+                          f"in: \"{tt}\"")
 
     if anyPlaceholderMismatches:
         print("""
@@ -251,7 +258,7 @@ def writeFreezeFile(qtApi: str):
         ####################################
         # Do not commit these changes!
         ####################################
-        
+
         APP_FREEZE_COMMIT = "{headCommit}"
         APP_FREEZE_DATE = "{buildDate}"
         APP_FREEZE_QT = "{qtApi.lower()}"
@@ -287,7 +294,7 @@ if __name__ == '__main__':
     writeStatusIcon('#ff00ff', 'X')  # unknown
 
     # Generate .py files from .ui files
-    for root, dirs, files in os.walk(SRC_DIR):
+    for root, _, files in os.walk(SRC_DIR):
         for file in files:
             basename = os.path.splitext(file)[0]
             fullpath = os.path.join(root, file)

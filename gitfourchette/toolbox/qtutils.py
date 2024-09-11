@@ -145,7 +145,7 @@ def mutedToolTipColorHex() -> str:
 
 
 def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
-    if type(shortcut) in [QKeySequence.StandardKey, Qt.Key]:
+    if isinstance(shortcut, QKeySequence.StandardKey | Qt.Key):
         shortcut = QKeySequence(shortcut)
 
     hint = shortcut.toString(QKeySequence.SequenceFormat.NativeText)
@@ -248,7 +248,7 @@ class QScrollBackupContext:
         self.values = [o.value() for o in self.scrollBars]
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for o, v in zip(self.scrollBars, self.values):
+        for o, v in zip(self.scrollBars, self.values, strict=True):
             o.setValue(v)
 
 
@@ -322,7 +322,7 @@ def makeInternalLink(urlAuthority: str, urlPath: str = "", urlFragment: str = ""
 
 
 def makeMultiShortcut(*args) -> MultiShortcut:
-    if len(args) == 1 and type(args[0]) is list:
+    if len(args) == 1 and isinstance(args[0], list):
         args = args[0]
 
     shortcuts = []
@@ -363,7 +363,7 @@ def writeTempFile(namePattern: str, data: bytes | str) -> QTemporaryFile:
     assert "XXX" in namePattern
     tempFile = QTemporaryFile(os.path.join(qTempDir(), namePattern))
     tempFile.open(QFile.OpenModeFlag.WriteOnly)
-    if type(data) is str:
+    if isinstance(data, str):
         data = data.encode('utf-8')
     tempFile.write(data)
     tempFile.close()
@@ -412,7 +412,7 @@ class DocumentLinks:
         return makeInternalLink(self.AUTHORITY, urlPath="", urlFragment=key)
 
     def processLink(self, url: QUrl | str, invoker: QObject) -> bool:
-        if type(url) is str:
+        if isinstance(url, str):
             url = QUrl(url)
         if url.scheme() == APP_URL_SCHEME and url.authority() == self.AUTHORITY:
             cb = self.callbacks[url.fragment()]

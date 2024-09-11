@@ -21,7 +21,7 @@ class _BaseStagingTask(RepoTask):
         # when the user holds down RETURN/DELETE in a FileListView
         # to stage/unstage a series of files.
         from gitfourchette import tasks
-        return isinstance(task, (tasks.Jump, tasks.RefreshRepo))
+        return isinstance(task, tasks.Jump | tasks.RefreshRepo)
 
     def denyConflicts(self, patches: list[Patch], purpose: PatchPurpose):
         conflicts = [p for p in patches if p.delta.status == DeltaStatus.CONFLICTED]
@@ -362,7 +362,7 @@ class MarkConflictSolved(RepoTask):
 class AcceptMergeConflictResolution(RepoTask):
     def canKill(self, task: RepoTask) -> bool:
         from gitfourchette.tasks import RefreshRepo, Jump
-        return isinstance(task, (RefreshRepo, Jump))
+        return isinstance(task, RefreshRepo | Jump)
 
     def isCritical(self) -> bool:
         """
@@ -431,7 +431,7 @@ class ApplyPatchFile(RepoTask):
             patchData = patchFile.read()
 
         # May raise:
-        # - IOError
+        # - OSError
         # - GitError
         # - UnicodeDecodeError (if passing in a random binary file)
         # - KeyError ('no patch found')

@@ -7,7 +7,6 @@ from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.nav import NavLocator
-from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem
 from . import reposcenario
 from .util import *

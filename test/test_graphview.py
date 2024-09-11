@@ -100,8 +100,8 @@ def testCommitSearchByHash(tempDir, mainWindow):
     QTest.keySequence(mainWindow, "Ctrl+F")
     assert searchBar.isVisibleTo(rw)
 
-    for j in range(2):  # first run in order, second run reversed
-        for i in range(2):  # do it twice to make it wrap around
+    for _j in range(2):  # first run in order, second run reversed
+        for _i in range(2):  # do it twice to make it wrap around
             for oid in searchCommits:
                 searchEdit.selectAll()
                 QTest.keyClicks(searchEdit, str(oid)[:5])
