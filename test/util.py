@@ -331,7 +331,10 @@ def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
 
 
 def postMouseWheelEvent(target: QWidget, angleDelta: int, point=QPoint_zero, modifiers=Qt.KeyboardModifier.NoModifier):
-    point = QPointF(point)
+    if QT5:
+        point = QPoint(point)
+    else:
+        point = QPointF(point)
 
     fakeWheelEvent = QWheelEvent(
         point,

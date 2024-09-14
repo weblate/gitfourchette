@@ -83,8 +83,12 @@ def testPrefsFontControl(tempDir, mainWindow):
 
     rw.jump(NavLocator.inCommit(rw.repo.head_commit_id))
     defaultFamily = rw.diffView.document().defaultFont().family()
-    randomFamily = next(family for family in QFontDatabase.families(QFontDatabase.WritingSystem.Latin)
-                        if not QFontDatabase.isPrivateFamily(family))
+    if QT5:
+        fontDB = QFontDatabase()  # Qt 5 compat (QFontDatabase.families() static function was introduced in Qt 6)
+    else:
+        fontDB = QFontDatabase
+    randomFamily = next(family for family in fontDB.families(QFontDatabase.WritingSystem.Latin)
+                        if not fontDB.isPrivateFamily(family))
     assert defaultFamily != randomFamily
 
     # Change font setting, and accept

@@ -9,7 +9,8 @@
 #       pyqt6
 #       pyside6
 #       pyqt5
-# (Note: PySide2 is not supported.)
+# NOTE: PyQt5 support is deprecated and will be removed soon.
+# PySide2 is not supported at all.
 #
 # If you're running unit tests, use the PYTEST_QT_API environment variable instead.
 # If you're packaging the app, you may prefer to force a binding via appconsts.py.
