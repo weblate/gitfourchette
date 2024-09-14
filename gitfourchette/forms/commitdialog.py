@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.forms.ui_commitdialog import Ui_CommitDialog
 from gitfourchette.porcelain import *

@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 # GitFourchette's preferred Qt binding is PyQt6, but you can use another
 # binding via the QT_API environment variable. Values recognized by QT_API:
 #       pyqt6

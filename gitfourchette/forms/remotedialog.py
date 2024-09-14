@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_remotedialog import Ui_RemoteDialog
 from gitfourchette.qt import *

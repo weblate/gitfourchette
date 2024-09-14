@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *

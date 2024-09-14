@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 """
 Library of widgets and utilities that aren't specifically tied to GitFourchette's core functionality.
 """

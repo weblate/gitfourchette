@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 from gitfourchette.forms.ui_welcomewidget import Ui_WelcomeWidget
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *

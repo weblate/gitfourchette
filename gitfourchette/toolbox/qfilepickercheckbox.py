@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# Copyright (C) 2024 Iliyas Jorio.
+# This file is part of GitFourchette, distributed under the GNU GPL v3.
+# For full terms, see the included LICENSE file.
+# -----------------------------------------------------------------------------
+
 from gitfourchette.qt import *
 from gitfourchette.toolbox.pathutils import compactPath
 from gitfourchette.toolbox.qelidedlabel import QElidedLabel
