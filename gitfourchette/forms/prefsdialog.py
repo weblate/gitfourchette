@@ -180,6 +180,7 @@ class PrefsDialog(QDialog):
         if not focusOn:
             # Restore last open tab
             tabWidget.setCurrentIndex(PrefsDialog.lastOpenTab)
+            buttonBox.button(QDialogButtonBox.StandardButton.Ok).setFocus()
         else:
             # Save this tab if we close the dialog without changing tabs
             self.saveLastOpenTab(tabWidget.currentIndex())
