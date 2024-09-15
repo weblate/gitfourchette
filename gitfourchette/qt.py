@@ -43,7 +43,10 @@ else:
 
 # If QT_API isn't set, see if the app's prefs file specifies a preferred Qt binding
 if not _qtBindingBootPref:
-    _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
+    if _sys.platform == "darwin":
+        _prefsPath = _os.path.expanduser("~/Library/Preferences")
+    else:
+        _prefsPath = _os.environ.get("XDG_CONFIG_HOME", _os.path.expanduser("~/.config"))
     _prefsPath = _os.path.join(_prefsPath, APP_SYSTEM_NAME, "prefs.json")
     with _suppress(OSError, ValueError):
         with open(_prefsPath, encoding="utf-8") as _f:
