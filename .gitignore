@@ -4,3 +4,8 @@ __pycache__
 build/
 dist/
 gitfourchette.egg-info/
+
+/.idea/*
+!/.idea/icon.svg
+!/.idea/modules.xml
+!/.idea/runConfigurations/
