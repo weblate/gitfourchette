@@ -3,7 +3,7 @@ name: Mac App
 on: [workflow_dispatch]
 
 env:
-  PYVER: "3.12"
+  PYVER: "3.13"
   QT_API: "pyqt6"
 
 jobs:
@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "${{ env.PYVER }}" }
+      - run: python --version
       - run: python -m pip install --upgrade pip setuptools wheel
       - run: python -m pip install --upgrade -e .[$QT_API]  # install dependencies (installing GF itself isn't necessary)
       - run: python -m pip install --upgrade pyinstaller
