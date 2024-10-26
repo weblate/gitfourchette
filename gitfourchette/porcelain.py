@@ -94,7 +94,7 @@ _logger = _logging.getLogger(__name__)
 NULL_OID = Oid(raw=b'')
 DOT_GITMODULES = ".gitmodules"
 
-CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On ([^\s:]+|\(no branch\)): (.+)")
+CORE_STASH_MESSAGE_PATTERN = _re.compile(r"^On (?:[^\s:]+|\(no branch\)): (.+)")
 WINDOWS_RESERVED_FILENAMES_PATTERN = _re.compile(r"(.*/)?(AUX|COM[1-9]|CON|LPT[1-9]|NUL|PRN)($|\.|/)", _re.IGNORECASE)
 DIFF_HEADER_PATTERN = _re.compile(r"^diff --git (\"?\w/[^\"]+\"?) (\"?\w/[^\"]+\"?)")
 
@@ -421,9 +421,9 @@ def DiffFile_compare(f1: DiffFile, f2: DiffFile):
 def strip_stash_message(stash_message: str) -> str:
     m = CORE_STASH_MESSAGE_PATTERN.match(stash_message)
     if m:
-        return m.group(2)
-    else:
-        return stash_message
+        return m.group(1)
+    # Remove linebreaks in WIP-type messages
+    return stash_message.split('\n', maxsplit=1)[0]
 
 
 def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
