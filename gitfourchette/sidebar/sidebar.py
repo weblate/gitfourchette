@@ -239,7 +239,7 @@ class Sidebar(QTreeView):
 
                 ActionDef.SEPARATOR,
 
-                TaskBook.action(self, NewBranchFromRef, self.tr("New &Branch from Here..."), taskArgs=refName),
+                TaskBook.action(self, NewBranchFromRef, self.tr("New &Branch Here..."), taskArgs=refName),
 
                 ActionDef.SEPARATOR,
 
@@ -252,7 +252,7 @@ class Sidebar(QTreeView):
             ]
 
         elif item == EItem.DetachedHead:
-            actions += [TaskBook.action(self, NewBranchFromHead, self.tr("New &Branch from Here...")), ]
+            actions += [TaskBook.action(self, NewBranchFromHead, self.tr("New &Branch Here...")), ]
 
         elif item == EItem.RemoteBranch:
             activeBranchName = repo.head_branch_shorthand
@@ -281,7 +281,7 @@ class Sidebar(QTreeView):
                 TaskBook.action(
                     self,
                     NewBranchFromRef,
-                    self.tr("Start Local &Branch from Here..."),
+                    self.tr("New Local &Branch Here..."),
                     taskArgs=refName,
                 ),
 

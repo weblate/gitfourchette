@@ -442,7 +442,7 @@ def testNewBranchFromLocalBranch(tempDir, mainWindow, method):
     if method == "sidebar":
         node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
         menu = rw.sidebar.makeNodeMenu(node)
-        findMenuAction(menu, "new.+branch from here").trigger()
+        findMenuAction(menu, "new.+branch.+here").trigger()
     elif method == "graphstart":
         rw.jump(NavLocator.inRef("refs/heads/no-parent"))
         triggerMenuAction(rw.graphView.makeContextMenu(), r"(start|new) branch")
@@ -837,7 +837,7 @@ def testMightLoseDetachedHead(tempDir, mainWindow, method):
     elif method == "newbranch":
         oid = Oid(hex="c9ed7bf12c73de26422b7c5a44d74cfce5a8993b")
         rw.jump(NavLocator.inCommit(oid))
-        triggerMenuAction(rw.graphView.makeContextMenu(), "start branch")
+        triggerMenuAction(rw.graphView.makeContextMenu(), "new branch")
         findQDialog(rw, "new branch").accept()
         acceptQMessageBox(rw, "lose track of this commit")
     elif method == "checkout":
@@ -863,7 +863,7 @@ def testCreateBranchOnDetachedHead(tempDir, mainWindow):
     assert rw.repo.head_is_detached
 
     rw.jump(NavLocator.inCommit(looseOid))
-    triggerMenuAction(rw.graphView.makeContextMenu(), "start branch")
+    triggerMenuAction(rw.graphView.makeContextMenu(), "new branch")
     dlg: NewBranchDialog = findQDialog(rw, "new branch")
     dlg.ui.nameEdit.setText("hellobranch")
     assert dlg.ui.switchToBranchCheckBox.isChecked()

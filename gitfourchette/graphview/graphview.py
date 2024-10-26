@@ -124,7 +124,7 @@ class GraphView(QListView):
             actions = [
                 *mergeActions,
                 ActionDef.SEPARATOR,
-                TaskBook.action(self, NewBranchFromCommit, self.tr("Start &Branch from Here..."), taskArgs=oid),
+                TaskBook.action(self, NewBranchFromCommit, self.tr("New &Branch Here..."), taskArgs=oid),
                 TaskBook.action(self, NewTag, self.tr("&Tag This Commit..."), taskArgs=oid),
                 ActionDef.SEPARATOR,
                 checkoutAction,
