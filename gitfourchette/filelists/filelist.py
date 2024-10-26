@@ -210,6 +210,7 @@ class FileList(QListView):
         def pathDisplayStyleAction(pds: PathDisplayStyle):
             def setIt():
                 settings.prefs.pathDisplayStyle = pds
+                settings.prefs.setDirty()
             isCurrent = settings.prefs.pathDisplayStyle == pds
             name = TrTables.prefKey(pds.name)
             name = englishTitleCase(name)
