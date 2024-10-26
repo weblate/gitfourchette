@@ -11,9 +11,8 @@ from contextlib import suppress
 from gitfourchette.porcelain import *
 from gitfourchette.trtables import TrTables
 
-INITIALS_PATTERN = re.compile(r"(?:^|\s|-)+([^\s\-])[^\s\-]*")
-FIRST_NAME_PATTERN = re.compile(r"(\w(\.?-|\.\s?|\s))*[\w.-]+")
-
+INITIALS_PATTERN = re.compile(r"(?:^|[\s\-.'‘’\"“”])+([^\s\-.'‘’\"“”])[^\s\-.]*")
+FIRST_NAME_PATTERN = re.compile(r"(\S(\.?-|\.\s?|\s))*\S+")
 
 REMOTE_URL_PATTERNS = [
     # HTTP/HTTPS
@@ -71,7 +70,7 @@ def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplaySt
             return re.match(FIRST_NAME_PATTERN, sig.name)[0]
 
         elif style == AuthorDisplayStyle.LAST_NAME:
-            return sig.name.split(' ')[-1]
+            return sig.name.rsplit(' ', maxsplit=1)[-1]
 
         elif style == AuthorDisplayStyle.INITIALS:
             return re.sub(INITIALS_PATTERN, r"\1", sig.name)
