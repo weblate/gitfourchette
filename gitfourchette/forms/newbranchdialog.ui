@@ -117,6 +117,7 @@
  <tabstops>
   <tabstop>nameEdit</tabstop>
   <tabstop>switchToBranchCheckBox</tabstop>
+  <tabstop>recurseSubmodulesCheckBox</tabstop>
   <tabstop>upstreamCheckBox</tabstop>
   <tabstop>upstreamComboBox</tabstop>
  </tabstops>
