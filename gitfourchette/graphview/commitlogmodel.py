@@ -175,9 +175,7 @@ class CommitLogModel(QAbstractListModel):
 
 def commitAuthorTooltip(commit: Commit) -> str:
     def formatTime(sig: Signature):
-        qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
-        s = QLocale().toString(qdt, QLocale.FormatType.LongFormat)
-        return escape(s)
+        return escape(signatureDateFormat(sig))
 
     def formatPerson(sig: Signature):
         return f"<b>{escape(sig.name)}</b> &lt;{escape(sig.email)}&gt;"

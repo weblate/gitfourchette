@@ -46,9 +46,8 @@ class EditRepoSettings(RepoTask):
 class GetCommitInfo(RepoTask):
     @staticmethod
     def formatSignature(sig: Signature):
-        qdt = QDateTime.fromSecsSinceEpoch(sig.time, Qt.TimeSpec.OffsetFromUTC, sig.offset * 60)
-        return F"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br>" \
-            + "<small>" + escape(QLocale().toString(qdt, QLocale.FormatType.LongFormat)) + "</small>"
+        dateText = signatureDateFormat(sig)
+        return f"{escape(sig.name)} &lt;{escape(sig.email)}&gt;<br><small>{escape(dateText)}</small>"
 
     def flow(self, oid: Oid, withDebugInfo=False):
         links = DocumentLinks()

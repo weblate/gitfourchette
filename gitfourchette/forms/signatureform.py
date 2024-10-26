@@ -40,6 +40,10 @@ class SignatureForm(QWidget):
         super().__init__(parent)
         self.ui = Ui_SignatureForm()
         self.ui.setupUi(self)
+        try:
+            self.ui.timeEdit.setTimeZone(QTimeZone.systemTimeZone())
+        except AttributeError:  # pragma: no cover - TODO: Remove once we can drop compatibility with Qt <6.7.
+            self.ui.timeEdit.setTimeSpec(Qt.TimeSpec.LocalTime)
         self.primeTimeOffsetComboBox()
 
         self.ui.replaceComboBox.currentIndexChanged.connect(self.signatureChanged)
@@ -50,7 +54,7 @@ class SignatureForm(QWidget):
         self.ui.nowButton.clicked.connect(self.setDateTimeNow)
 
     def setSignature(self, signature: Signature):
-        qdt: QDateTime = QDateTime.fromSecsSinceEpoch(signature.time, Qt.TimeSpec.OffsetFromUTC, signature.offset * 60)
+        qdt = signatureQDateTime(signature)
         with QSignalBlockerContext(self):
             self.ui.nameEdit.setText(signature.name)
             self.ui.emailEdit.setText(signature.email)

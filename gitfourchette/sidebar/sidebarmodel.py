@@ -679,11 +679,10 @@ class SidebarModel(QAbstractItemModel):
             elif toolTipRole:
                 oid = Oid(hex=node.data)
                 commit = self.repo.peel_commit(oid)
-                commitQdt = QDateTime.fromSecsSinceEpoch(commit.commit_time, Qt.TimeSpec.OffsetFromUTC, commit.commit_time_offset * 60)
-                commitTimeStr = QLocale().toString(commitQdt, settings.prefs.shortTimeFormat)
+                dateText = signatureDateFormat(commit.committer, settings.prefs.shortTimeFormat)
                 text = "<p style='white-space: pre'>"
                 text += f"<b>stash@{{{row}}}</b>: {escape(commit.message)}<br/>"
-                text += f"<b>{self.tr('date:')}</b> {commitTimeStr}"
+                text += f"<b>{self.tr('date:')}</b> {escape(dateText)}"
                 self.cacheTooltip(index, text)
                 return text
             elif iconKeyRole:

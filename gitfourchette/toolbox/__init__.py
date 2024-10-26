@@ -26,6 +26,8 @@ from .gitutils import (
     splitRemoteUrl,
     stripRemoteUrlPath,
     guessRemoteUrlFromText,
+    signatureQDateTime,
+    signatureDateFormat,
 )
 from .memoryindicator import MemoryIndicator
 from .messageboxes import (
