@@ -18,11 +18,11 @@ _condensedStretchPresets = [
     QFont.Stretch.UltraCondensed,  # 50
 ]
 
-_defaultMinStretch = QFont.Stretch.Condensed
-
 if MACOS:
-    # WEIRD! SemiCondensed is actually wider than Unstretched with Mac system font (Qt 6.7.2, macOS 14.5)
+    # WEIRD! SemiCondensed is actually wider than Unstretched with Mac system font (Qt 6.8.0, macOS 15)
     _condensedStretchPresets.remove(QFont.Stretch.SemiCondensed)
+
+_defaultMinStretch = _condensedStretchPresets[0]
 
 
 def fitText(
