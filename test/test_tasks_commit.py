@@ -209,7 +209,13 @@ def testEmptyCommitRaisesWarning(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     rw.diffArea.commitButton.click()
-    rejectQMessageBox(rw, "create.+empty commit")
+    acceptQMessageBox(rw, "create.+empty commit")
+
+    commitDialog = findQDialog(rw, "commit")
+    assert isinstance(commitDialog, CommitDialog)
+    assert commitDialog.ui.infoText.isVisible()
+    assert "empty commit" in commitDialog.ui.infoText.text().lower()
+    commitDialog.reject()
 
 
 def testCommitWithoutUserIdentity(tempDir, mainWindow):

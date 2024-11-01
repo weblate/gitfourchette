@@ -26,6 +26,7 @@ class CommitDialog(QDialog):
             amendingCommitHash: str,
             detachedHead: bool,
             repositoryState: RepositoryState,
+            emptyCommit: bool,
             parent: QWidget):
         super().__init__(parent)
 
@@ -64,6 +65,8 @@ class CommitDialog(QDialog):
         elif detachedHead:
             warning = self.tr("<b>Detached HEAD</b> – You are not in any branch! "
                               "You should create a branch to keep track of your commit.")
+        elif emptyCommit:
+            warning = self.tr("You are creating an empty commit (no staged changes).")
 
         self.ui.infoBox.setVisible(bool(warning))
         self.ui.infoText.setText(warning)

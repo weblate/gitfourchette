@@ -36,7 +36,8 @@ class NewCommit(RepoTask):
         # Jump to workdir
         yield from self.flowSubtask(Jump, NavLocator.inWorkdir())
 
-        if not self.repo.any_staged_changes:
+        emptyCommit = not self.repo.any_staged_changes
+        if emptyCommit:
             yield from self.flowConfirm(
                 title=self.tr("Create empty commit"),
                 verb=self.tr("Empty commit"),
@@ -56,6 +57,7 @@ class NewCommit(RepoTask):
             amendingCommitHash="",
             detachedHead=self.repo.head_is_detached,
             repositoryState=self.repo.state(),
+            emptyCommit=emptyCommit,
             parent=self.parentWidget())
 
         if uiPrefs.draftCommitSignatureOverride == SignatureOverride.Nothing:
@@ -128,6 +130,7 @@ class AmendCommit(RepoTask):
             amendingCommitHash=shortHash(headCommit.id),
             detachedHead=self.repo.head_is_detached,
             repositoryState=self.repo.state(),
+            emptyCommit=False,
             parent=self.parentWidget())
 
         cd.setWindowModality(Qt.WindowModality.WindowModal)
