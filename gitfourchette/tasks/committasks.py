@@ -94,10 +94,12 @@ class NewCommit(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
-        self.repo.create_commit_on_head(message, author, committer)
+        newOid = self.repo.create_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
         uiPrefs.clearDraftCommit()
+
+        self.postStatus = self.tr("Commit {0} created.").format(tquo(shortHash(newOid)))
 
 
 class AmendCommit(RepoTask):
@@ -153,10 +155,13 @@ class AmendCommit(RepoTask):
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir | TaskEffects.Refs | TaskEffects.Head
 
-        self.repo.amend_commit_on_head(message, author, committer)
+        newOid = self.repo.amend_commit_on_head(message, author, committer)
 
         yield from self.flowEnterUiThread()
         self.repoModel.prefs.clearDraftAmend()
+
+        self.postStatus = self.tr("Commit {0} amended. New hash: {1}."
+                                  ).format(tquo(shortHash(headCommit.id)), tquo(shortHash(newOid)))
 
 
 class SetUpGitIdentity(RepoTask):
@@ -263,6 +268,8 @@ class CheckoutCommit(RepoTask):
             yield from self.flowEnterWorkerThread()
             self.repo.checkout_commit(oid)
 
+            self.postStatus = self.tr("Entered detached HEAD on {0}.").format(lquo(shortHash(oid)))
+
             # Force sidebar to select detached HEAD
             self.jumpTo = NavLocator.inRef("HEAD")
 
@@ -321,6 +328,8 @@ class NewTag(RepoTask):
             repo.create_tag(tagName, oid, ObjectType.COMMIT, self.repo.default_signature, "")
         else:
             repo.create_reference(refName, oid)
+
+        self.postStatus = self.tr("Tag {0} created on commit {1}.").format(tquo(tagName), tquo(shortHash(oid)))
 
         if pushIt:
             from gitfourchette.tasks import PushRefspecs

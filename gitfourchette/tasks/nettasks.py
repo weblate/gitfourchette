@@ -72,9 +72,12 @@ class DeleteRemoteBranch(_BaseNetTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Remotes | TaskEffects.Refs
+
         remote = self.repo.remotes[remoteName]
         with self.remoteLink.remoteKeyFileContext(remote):
             self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
+
+        self.postStatus = self.tr("Remote branch {0} deleted.").format(tquo(remoteBranchShorthand))
 
 
 class RenameRemoteBranch(_BaseNetTask):
@@ -107,10 +110,13 @@ class RenameRemoteBranch(_BaseNetTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Remotes | TaskEffects.Refs
+
         remote = self.repo.remotes[remoteName]
         with self.remoteLink.remoteKeyFileContext(remote):
             self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
 
+        self.postStatus = self.tr("Remote branch {0} renamed to {1}."
+                                  ).format(tquo(remoteBranchName), tquo(newBranchName))
 
 class FetchRemote(_BaseNetTask):
     def prereqs(self) -> TaskPrereqs:
@@ -179,6 +185,7 @@ class FetchRemoteBranch(_BaseNetTask):
                 text = self.tr("{0} has moved from {1} to {2}.", "RemoteBranch has moved from OldCommit to NewCommit"
                                ).format(bquoe(remoteBranchName), shortHash(oldTarget), shortHash(newTarget))
                 dontShowAgainKey = "FetchDebriefTargetChanged"
+            self.postStatus = stripHtml(text)
             yield from self.flowConfirm(text=text, canCancel=False, dontShowAgainKey=dontShowAgainKey)
 
 

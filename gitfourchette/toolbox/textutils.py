@@ -141,6 +141,10 @@ def btag(text):
     return text
 
 
+def stripHtml(markup: str):
+    return QTextDocumentFragment.fromHtml(markup).toPlainText()
+
+
 def elide(text: str, mode: Qt.TextElideMode = Qt.TextElideMode.ElideMiddle, ems: int = 20):
     metrics = getElideMetrics()
     maxWidth = metrics.horizontalAdvance(ems * 'M')

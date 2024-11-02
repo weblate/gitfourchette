@@ -546,6 +546,7 @@ class RestoreRevisionToWorkdir(RepoTask):
                 f.write(blob.data)
             os.chmod(path, diffFile.mode)
 
+        self.postStatus = self.tr("File {path} {processed}.").format(path=tquoe(diffFile.path), processed=actionVerb)
         self.jumpTo = NavLocator.inUnstaged(diffFile.path)
 
 
@@ -565,15 +566,20 @@ class AbortMerge(RepoTask):
         if isCherryPicking:
             clause = self.tr("abort the ongoing cherry-pick")
             title = self.tr("Abort cherry-pick")
+            postStatus = self.tr("Cherry-pick aborted.")
         elif isMerging:
             clause = self.tr("abort the ongoing merge")
             title = self.tr("Abort merge")
+            postStatus = self.tr("Merge aborted.")
         elif isReverting:
             clause = self.tr("abort the ongoing revert")
             title = self.tr("Abort revert")
+            postStatus = self.tr("Revert aborted.")
         else:
             clause = self.tr("reset the index")
             title = self.tr("Reset index")
+            verb = self.tr("Reset")
+            postStatus = self.tr("Index reset.")
 
         try:
             abortList = self.repo.get_reset_merge_file_list()
@@ -602,6 +608,8 @@ class AbortMerge(RepoTask):
 
         self.repo.reset_merge()
         self.repo.state_cleanup()
+
+        self.postStatus = postStatus
 
         # If cherrypicking, clear draft commit message that was set in CherrypickCommit
         if isCherryPicking or isReverting:

@@ -360,6 +360,10 @@ class PushDialog(QDialog):
                     repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
 
                 yield from self.flowEnterUiThread()
+
+                self.postStatus = self.tr("Branch {0} successfully pushed to {1}.").format(
+                    tquo(pushDialog.currentLocalBranchName), tquo(pushDialog.currentRemoteBranchFullName))
+
                 pushDialog.pushInProgress = False
                 pushDialog.accept()
 

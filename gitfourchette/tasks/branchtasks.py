@@ -51,7 +51,10 @@ class SwitchBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs | TaskEffects.Head
+
         self.repo.checkout_local_branch(newBranch)
+
+        self.postStatus = self.tr("Switched to branch {0}.").format(tquo(newBranch))
 
         if recurseSubmodules:
             from gitfourchette.tasks import UpdateSubmodulesRecursive
@@ -88,7 +91,10 @@ class RenameBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs
+
         self.repo.rename_local_branch(oldBranchName, newBranchName)
+
+        self.postStatus = self.tr("Branch {0} renamed to {1}.").format(tquo(oldBranchName), tquo(newBranchName))
 
 
 class RenameBranchFolder(RepoTask):
@@ -151,9 +157,13 @@ class RenameBranchFolder(RepoTask):
         # Perform rename
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs
+
         for oldBranchName in folderBranches:
             newBranchName = transformBranchName(oldBranchName, newFolderName)
             self.repo.rename_local_branch(oldBranchName, newBranchName)
+
+        self.postStatus = self.tr("Branch folder {0} renamed to {1}, %n branches affected.", "", len(folderBranches)
+                                  ).format(tquo(oldFolderName), tquo(newFolderName))
 
 
 class DeleteBranch(RepoTask):
@@ -175,8 +185,12 @@ class DeleteBranch(RepoTask):
             buttonIcon="SP_DialogDiscardButton")
 
         yield from self.flowEnterWorkerThread()
+        target = self.repo.branches[localBranchName].target
         self.effects |= TaskEffects.Refs
         self.repo.delete_local_branch(localBranchName)
+
+        self.postStatus = self.tr("Branch {0} deleted (commit at tip was {1})."
+                                  ).format(tquo(localBranchName), tquo(shortHash(target)))
 
 
 class DeleteBranchFolder(RepoTask):
@@ -213,6 +227,9 @@ class DeleteBranchFolder(RepoTask):
 
         for b in folderBranches:
             self.repo.delete_local_branch(b)
+
+        self.postStatus = self.tr("%n branches deleted in folder {0}.", "", len(folderBranches)
+                                  ).format(tquo(folderName))
 
 
 class _NewBranchBaseTask(RepoTask):
@@ -298,6 +315,8 @@ class _NewBranchBaseTask(RepoTask):
         # Create local branch
         repo.create_branch_from_commit(localName, tip)
         self.effects |= TaskEffects.Refs | TaskEffects.Head
+        self.postStatus = self.tr("Branch {0} created on commit {1}."
+                                  ).format(tquo(localName), tquo(shortHash(tip)))
 
         # Optionally make it track a remote branch
         if trackUpstream:
@@ -378,8 +397,12 @@ class EditUpstreamBranch(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs
-
         self.repo.edit_upstream_branch(localBranchName, remoteBranchName)
+
+        if remoteBranchName:
+            self.postStatus = self.tr("Branch {0} now tracks {1}.").format(tquo(localBranchName), tquo(remoteBranchName))
+        else:
+            self.postStatus = self.tr("Branch {0} now tracks no upstream.").format(tquo(localBranchName))
 
 
 class ResetHead(RepoTask):
@@ -448,7 +471,8 @@ class FastForwardBranch(RepoTask):
             else:
                 message.append(self.tr("Your local branch {0} is already up-to-date with {1}."))
             message = paragraphs(message).format(bquo(localBranchName), bquo(remoteBranchName))
-            yield from self.flowConfirm(text=message, canCancel=False)
+            self.postStatus = stripHtml(message)
+            yield from self.flowConfirm(text=message, canCancel=False, dontShowAgainKey="NoFastForwardingNecessary")
 
     def onError(self, exc):
         if isinstance(exc, DivergentBranchesError):

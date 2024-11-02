@@ -40,6 +40,8 @@ class NewRemote(RepoTask):
         self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.create_remote(newRemoteName, newRemoteUrl)
 
+        self.postStatus = self.tr("Remote {0} added.").format(tquo(newRemoteName))
+
         if fetchAfterAdd:
             yield from self.flowEnterUiThread()
 
@@ -92,3 +94,5 @@ class DeleteRemote(RepoTask):
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs | TaskEffects.Remotes
         self.repo.delete_remote(remoteName)
+
+        self.postStatus = self.tr("Remote {0} removed.").format(tquo(remoteName))

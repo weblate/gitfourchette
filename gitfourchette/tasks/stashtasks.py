@@ -75,6 +75,8 @@ class NewStash(RepoTask):
             self.effects |= TaskEffects.Workdir
             self.repo.restore_files_from_head(tickedFiles)
 
+        self.postStatus = self.tr("%n files stashed.", "", len(tickedFiles))
+
 
 class ApplyStash(RepoTask):
     def prereqs(self):
@@ -112,8 +114,11 @@ class ApplyStash(RepoTask):
 
         self.repo.stash_apply_id(stashCommitId)
 
+        self.postStatus = self.tr("Stash {0} applied.").format(tquoe(stashMessage))
+
         if self.repo.index.conflicts:
             yield from self.flowEnterUiThread()
+            self.postStatus = self.tr("Stash {0} applied, with conflicts.").format(tquoe(stashMessage))
             message = [self.tr("Applying the stash {0} has caused merge conflicts "
                                "because your files have diverged since they were stashed."
                                ).format(bquoe(stashMessage))]
@@ -126,6 +131,7 @@ class ApplyStash(RepoTask):
             self.effects |= TaskEffects.Refs
             backupStash(self.repo, stashCommitId)
             self.repo.stash_drop_id(stashCommitId)
+            self.postStatus = self.tr("Stash {0} applied and deleted.").format(tquoe(stashMessage))
 
 
 class DropStash(RepoTask):
@@ -139,5 +145,7 @@ class DropStash(RepoTask):
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Refs
+
         backupStash(self.repo, stashCommitId)
         self.repo.stash_drop_id(stashCommitId)
+        self.postStatus = self.tr("Stash {0} deleted.").format(tquoe(stashMessage))

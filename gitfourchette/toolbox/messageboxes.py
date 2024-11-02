@@ -6,7 +6,6 @@
 
 import html
 import logging
-import re
 import sys
 import traceback
 from collections.abc import Callable
@@ -15,7 +14,7 @@ from typing import Literal
 from gitfourchette.qt import *
 from gitfourchette.toolbox.excutils import shortenTracebackPath
 from gitfourchette.toolbox.qtutils import onAppThread, MakeNonNativeDialog
-from gitfourchette.toolbox.textutils import ulify
+from gitfourchette.toolbox.textutils import stripHtml, ulify
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +183,7 @@ def asyncMessageBox(
     title = title.split("\u009C", 1)[0]
     text = text.split("\u009C", 1)[0]
 
-    loggedMessage = F"[{title}] " + html.unescape(re.sub(r"<[^<]+?>", " ", text))
+    loggedMessage = f"[{title}] {stripHtml(text)}"
     if icon in ['information', 'question']:
         logger.debug(loggedMessage)
     else:

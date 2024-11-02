@@ -87,6 +87,7 @@ from .textutils import (
     clipboardStatusMessage,
     hquo, hquoe, bquo, bquoe, lquo, lquoe, tquo, tquoe,
     btag,
+    stripHtml,
     withUniqueSuffix,
     englishTitleCase,
     naturalSort,
