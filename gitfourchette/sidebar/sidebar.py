@@ -138,6 +138,7 @@ class Sidebar(QTreeView):
         if menu is None:
             menu = QMenu(self)
             menu.setObjectName("SidebarContextMenu")
+        menu.setToolTipsVisible(True)
 
         actions = []
 
@@ -225,7 +226,7 @@ class Sidebar(QTreeView):
                     lambda: self.pushBranch.emit(branchName),
                     "git-push",
                     shortcuts=GlobalShortcuts.pushBranch,
-                    statusTip=self.tr("Upload your commits to the remote server")),
+                    tip=self.tr("Upload your commits to the remote server")),
 
                 ActionDef(
                     self.tr("&Upstream Branch"),
@@ -247,7 +248,7 @@ class Sidebar(QTreeView):
                     self.tr("&Hide in Graph"),
                     lambda: self.wantHideNode(node),
                     checkState=[-1, 1][isHidden],
-                    statusTip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
+                    tip=self.tr("Hide this branch from the graph (effective if no other branches/tags point here)"),
                 ),
             ]
 

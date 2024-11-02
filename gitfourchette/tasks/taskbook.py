@@ -234,13 +234,12 @@ class TaskBook:
 
         icon = cls.icons.get(taskType, "")
         shortcuts = cls.shortcuts.get(taskType, [])
-        statusTip = cls.tips.get(taskType, "")
+        tip = cls.tips.get(taskType, "")
 
         def callback():
             TaskInvoker.invoke(invoker, taskType, *taskArgs)
 
-        actionDef = ActionDef(name, callback=callback,
-                              icon=icon, shortcuts=shortcuts, statusTip=statusTip)
+        actionDef = ActionDef(name, callback=callback, icon=icon, shortcuts=shortcuts, tip=tip)
 
         if kwargs:
             actionDef = actionDef.replace(**kwargs)
@@ -251,4 +250,4 @@ class TaskBook:
     def toolbarAction(cls, invoker: QObject, taskType: type[RepoTask]):
         name = cls.toolbarNames.get(taskType, "")
         tip = cls.autoActionName(taskType)
-        return cls.action(invoker, taskType, name).replace(toolTip=tip)
+        return cls.action(invoker, taskType, name).replace(tip=tip)

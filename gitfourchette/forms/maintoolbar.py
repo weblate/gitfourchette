@@ -48,7 +48,7 @@ class MainToolBar(QToolBar):
         self.recentAction = ActionDef(
             self.tr("Open..."), self.openDialog, icon="git-folder",
             shortcuts=QKeySequence.StandardKey.Open,
-            toolTip=self.tr("Open a Git repo on your machine")
+            tip=self.tr("Open a Git repo on your machine")
         ).toQAction(self)
 
         defs = [
@@ -65,18 +65,18 @@ class MainToolBar(QToolBar):
             TaskBook.toolbarAction(self, tasks.FetchRemote),
             TaskBook.toolbarAction(self, tasks.PullBranch),
             ActionDef(self.tr("Push"), self.push, icon="git-push",
-                      toolTip=self.tr("Push local branch to remote"),
+                      tip=self.tr("Push local branch to remote"),
                       shortcuts=GlobalShortcuts.pushBranch),
             ActionDef.SPACER,
 
             ActionDef(self.tr("Reveal"), self.reveal, icon="reveal",
                       shortcuts=GlobalShortcuts.openRepoFolder,
-                      toolTip=self.tr("Open repo folder in file manager")),
+                      tip=self.tr("Open repo folder in file manager")),
             self.recentAction,
             ActionDef.SEPARATOR,
             ActionDef(self.tr("Settings"), self.openPrefs, icon="git-settings",
                       shortcuts=QKeySequence.StandardKey.Preferences,
-                      toolTip=self.tr("Edit {app} settings").format(app=qAppName())),
+                      tip=self.tr("Configure {app}").format(app=qAppName())),
         ]
         ActionDef.addToQToolBar(self, *defs)
 

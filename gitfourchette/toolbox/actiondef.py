@@ -39,8 +39,7 @@ class ActionDef:
     enabled: bool = True
     submenu: list[ActionDef] = dataclasses.field(default_factory=list)
     shortcuts: MultiShortcut | str = dataclasses.field(default_factory=list)
-    statusTip: str = ""
-    toolTip: str = ""
+    tip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
     kind: Kind = Kind.Action
@@ -71,16 +70,15 @@ class ActionDef:
             action.setCheckable(True)
             action.setChecked(self.checkState == 1)
 
-        if self.statusTip:
-            action.setStatusTip(self.statusTip)
-
-        if self.toolTip:
-            tip = self.toolTip
-            if self.shortcuts:
+        if self.tip:
+            tip = self.tip
+            if self.shortcuts and not isinstance(parent, QMenu):
                 if isinstance(self.shortcuts, list):
                     tip = appendShortcutToToolTipText(tip, self.shortcuts[0])
                 else:
                     tip = appendShortcutToToolTipText(tip, self.shortcuts)
+            if "<" not in tip and len(tip) > 40:  # wrap long tooltips
+                tip = f"<p>{tip}</p>"
             action.setToolTip(tip)
 
         if self.menuRole != QAction.MenuRole.NoRole:

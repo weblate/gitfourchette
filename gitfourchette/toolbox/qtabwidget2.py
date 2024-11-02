@@ -191,6 +191,7 @@ class QTabWidget2(QWidget):
 
         self.overflowMenu = QMenu(self)
         self.overflowMenu.setObjectName("QTW2OverflowMenu")
+        self.overflowMenu.setToolTipsVisible(True)
 
         self.refreshPrefs()
 
@@ -335,7 +336,7 @@ class QTabWidget2(QWidget):
         for i in range(self.count()):
             action = QAction(self.overflowMenu)
             action.setText(self.tabs.tabText(i))
-            action.setStatusTip(self.tabs.tabToolTip(i))
+            action.setToolTip(self.tabs.tabToolTip(i))
             action.triggered[bool].connect(lambda _, j=i: self.setCurrentIndex(j))  # [bool] for PySide6 <6.7.0 (PYSIDE-2524)
             self.overflowMenu.addAction(action)
 

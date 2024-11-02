@@ -1011,7 +1011,7 @@ class RepoWidget(QStackedWidget):
                 lambda: proxy().startPushFlow(),
                 "git-push",
                 shortcuts=GlobalShortcuts.pushBranch,
-                statusTip=invoker.tr("Upload your commits on the current branch to the remote server"),
+                tip=invoker.tr("Upload your commits on the current branch to the remote server"),
             ),
 
             TaskBook.action(invoker, tasks.PullBranch, accel="L"),
@@ -1057,13 +1057,13 @@ class RepoWidget(QStackedWidget):
                 invoker.tr("&Open Repo Folder"),
                 lambda: proxy().openRepoFolder(),
                 shortcuts=GlobalShortcuts.openRepoFolder,
-                statusTip=invoker.tr("Open this repo’s working directory in the system’s file manager"),
+                tip=invoker.tr("Open this repo’s working directory in the system’s file manager"),
             ),
 
             ActionDef(
                 invoker.tr("Cop&y Repo Path"),
                 lambda: proxy().copyRepoPath(),
-                statusTip=invoker.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
+                tip=invoker.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
             ),
 
             ActionDef(

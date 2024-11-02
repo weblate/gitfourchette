@@ -192,6 +192,9 @@ class MainWindow(QMainWindow):
         repoMenu.setObjectName("MWRepoMenu")
         helpMenu.setObjectName("MWHelpMenu")
 
+        for menu in fileMenu, editMenu, viewMenu, repoMenu, helpMenu:
+            menu.setToolTipsVisible(True)
+
         self.repoMenu = repoMenu
 
         # -------------------------------------------------------------
@@ -201,21 +204,21 @@ class MainWindow(QMainWindow):
 
             ActionDef(self.tr("&New Repository..."), self.newRepo,
                       shortcuts=QKeySequence.StandardKey.New, icon="folder-new",
-                      statusTip=self.tr("Create an empty Git repo")),
+                      tip=self.tr("Create an empty Git repo")),
 
             ActionDef(self.tr("C&lone Repository..."), self.cloneDialog,
                       shortcuts="Ctrl+Shift+N", icon="folder-download",
-                      statusTip=self.tr("Download a Git repo and open it")),
+                      tip=self.tr("Download a Git repo and open it")),
 
             ActionDef.SEPARATOR,
 
             ActionDef(self.tr("&Open Repository..."), self.openDialog,
                       shortcuts=QKeySequence.StandardKey.Open, icon="folder-open",
-                      statusTip=self.tr("Open a Git repo on your machine")),
+                      tip=self.tr("Open a Git repo on your machine")),
 
             ActionDef(self.tr("Open &Recent"),
                       icon="folder-open-recent",
-                      statusTip=self.tr("List of recently opened Git repos"),
+                      tip=self.tr("List of recently opened Git repos"),
                       objectName="RecentMenuPlaceholder"),
 
             ActionDef.SEPARATOR,
@@ -228,7 +231,7 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("&Settings..."), self.openPrefsDialog,
                       shortcuts=QKeySequence.StandardKey.Preferences, icon="configure",
                       menuRole=QAction.MenuRole.PreferencesRole,
-                      statusTip=self.tr("Edit {app} settings").format(app=qAppName())),
+                      tip=self.tr("Configure {app}").format(app=qAppName())),
 
             TaskBook.action(self, tasks.SetUpGitIdentity, taskArgs=('', False)
                             ).replace(menuRole=QAction.MenuRole.ApplicationSpecificRole),
@@ -237,11 +240,11 @@ class MainWindow(QMainWindow):
 
             ActionDef(self.tr("&Close Tab"), self.dispatchCloseCommand,
                       shortcuts=QKeySequence.StandardKey.Close, icon="document-close",
-                      statusTip=self.tr("Close current repository tab")),
+                      tip=self.tr("Close current repository tab")),
 
             ActionDef(self.tr("&Quit"), self.close,
                       shortcuts=QKeySequence.StandardKey.Quit, icon="application-exit",
-                      statusTip=self.tr("Quit {app}").format(app=qAppName()),
+                      tip=self.tr("Quit {app}").format(app=qAppName()),
                       menuRole=QAction.MenuRole.QuitRole),
         )
 
@@ -252,15 +255,15 @@ class MainWindow(QMainWindow):
 
             ActionDef(self.tr("&Find..."), lambda: self.dispatchSearchCommand(),
                       shortcuts=GlobalShortcuts.find, icon="edit-find",
-                      statusTip=self.tr("Search for a piece of text in commit messages or in the current diff")),
+                      tip=self.tr("Search for a piece of text in commit messages, the current diff, or the name of a file")),
 
             ActionDef(self.tr("Find Next"), lambda: self.dispatchSearchCommand(SearchBar.Op.NEXT),
                       shortcuts=QKeySequence.StandardKey.FindNext,
-                      statusTip=self.tr("Find next occurrence")),
+                      tip=self.tr("Find next occurrence")),
 
             ActionDef(self.tr("Find Previous"), lambda: self.dispatchSearchCommand(SearchBar.Op.PREVIOUS),
                       shortcuts=QKeySequence.StandardKey.FindPrevious,
-                      statusTip=self.tr("Find previous occurrence"))
+                      tip=self.tr("Find previous occurrence"))
         )
 
         # -------------------------------------------------------------
@@ -310,15 +313,14 @@ class MainWindow(QMainWindow):
                 lambda: self.currentRepoWidget().refreshRepo(),
                 shortcuts=GlobalShortcuts.refresh,
                 icon="SP_BrowserReload",
-                statusTip=self.tr(
-                    "Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
+                tip=self.tr("Check for changes in the repo (on the local filesystem only – will not fetch remotes)"),
             ),
 
             ActionDef(
                 self.tr("Reloa&d"),
                 lambda: self.currentRepoWidget().primeRepo(force=True),
                 shortcuts="Ctrl+F5",
-                statusTip=self.tr("Reopen the repo from scratch"),
+                tip=self.tr("Reopen the repo from scratch"),
             ),
         )
 
@@ -336,10 +338,10 @@ class MainWindow(QMainWindow):
 
         a = helpMenu.addAction(self.tr("Open Trash..."), self.openRescueFolder)
         a.setIcon(stockIcon("SP_TrashIcon"))
-        a.setStatusTip(self.tr("Explore changes that you may have discarded by mistake"))
+        a.setToolTip(self.tr("Explore changes that you may have discarded by mistake"))
 
         a = helpMenu.addAction(self.tr("Empty Trash..."), self.clearRescueFolder)
-        a.setStatusTip(self.tr("Delete all discarded changes from the trash folder"))
+        a.setToolTip(self.tr("Delete all discarded changes from the trash folder"))
 
         # -------------------------------------------------------------
 
@@ -347,6 +349,7 @@ class MainWindow(QMainWindow):
         self.recentMenu = QMenu(fileMenu)
         recentAction.setMenu(self.recentMenu)
         self.recentMenu.setObjectName("RecentMenu")
+        self.recentMenu.setToolTipsVisible(True)
         self.fillRecentMenu()
 
         self.autoHideMenuBar.reconnectToMenus()
@@ -365,11 +368,11 @@ class MainWindow(QMainWindow):
                 caption += f" ({tquo(nickname)})"
             caption = escamp(caption)
             action = self.recentMenu.addAction(caption, lambda p=path: self.openRepo(p, exactMatch=True))
-            action.setStatusTip(path)
+            action.setToolTip(path)
         self.recentMenu.addSeparator()
 
         clearAction = self.recentMenu.addAction(self.tr("Clear List", "clear list of recently opened repositories"), onClearRecents)
-        clearAction.setStatusTip(self.tr("Clear the list of recently opened repositories"))
+        clearAction.setToolTip(self.tr("Clear the list of recently opened repositories"))
         clearAction.setIcon(stockIcon("edit-clear-history"))
 
         self.welcomeWidget.ui.recentReposButton.setMenu(self.recentMenu)

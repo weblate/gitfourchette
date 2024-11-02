@@ -152,8 +152,8 @@ def mutedToolTipColorHex() -> str:
     return mutedColor
 
 
-def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key, singleLine=True):
-    if isinstance(shortcut, QKeySequence.StandardKey | Qt.Key):
+def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key | str, singleLine=True):
+    if isinstance(shortcut, QKeySequence.StandardKey | Qt.Key | str):
         shortcut = QKeySequence(shortcut)
 
     hint = shortcut.toString(QKeySequence.SequenceFormat.NativeText)
