@@ -1100,7 +1100,7 @@ class MainWindow(QMainWindow):
                 if not rw.isLoaded:
                     continue
                 locator = rw.pendingLocator or rw.navLocator
-                locator = locator.withExtraFlags(NavFlags.Force)
+                locator = locator.withExtraFlags(NavFlags.ForceDiff | NavFlags.ForceRecreateDocument)
                 rw.refreshRepo(jumpTo=locator)
 
     def openPrefsDialog(self, focusOn: str = ""):

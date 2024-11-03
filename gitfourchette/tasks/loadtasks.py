@@ -280,7 +280,7 @@ class LoadPatch(RepoTask):
     def _processPatch(self, patch: Patch, locator: NavLocator
                       ) -> DiffDocument | SpecialDiffError | DiffConflict | DiffImagePair:
         if not patch:
-            locator = locator.withExtraFlags(NavFlags.Force)
+            locator = locator.withExtraFlags(NavFlags.ForceDiff)
             longformItems = [linkify(self.tr("Try to reload the file."), locator.url())]
 
             if locator.context.isWorkdir() and not settings.prefs.autoRefresh:

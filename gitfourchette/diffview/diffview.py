@@ -20,7 +20,7 @@ from gitfourchette.diffview.diffrubberband import DiffRubberBand
 from gitfourchette.exttools import openPrefsDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.globalshortcuts import GlobalShortcuts
-from gitfourchette.nav import NavLocator, NavContext
+from gitfourchette.nav import NavContext, NavFlags, NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.subpatch import extractSubpatch
@@ -314,6 +314,9 @@ class DiffView(QPlainTextEdit):
     def canReuseCurrentDocument(self, newLocator: NavLocator, newPatch: Patch, newDocument: DiffDocument
                                 ) -> bool:
         """Detect if we're trying to reload the same patch that's already being displayed"""
+
+        if newLocator.hasFlags(NavFlags.ForceRecreateDocument):
+            return False
 
         if not self.currentLocator.isSimilarEnoughTo(newLocator):
             return False

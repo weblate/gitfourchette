@@ -126,3 +126,21 @@ def testPrefsLanguageControl(tempDir, mainWindow):
     comboBox.activated.emit(comboBox.currentIndex())
     dlg.accept()
     acceptQMessageBox(mainWindow, "application des pr.f.rences")
+
+
+def testPrefsRecreateDiffDocument(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    writeFile(f"{wd}/crlf.txt", "hello\r\nthat's it")
+    rw = mainWindow.openRepo(wd)
+
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged("crlf.txt"))
+    assert "<CRLF>" in rw.diffView.toPlainText()
+
+    dlg = mainWindow.openPrefsDialog("showStrayCRs")
+    checkBox: QCheckBox = dlg.findChild(QCheckBox, "prefctl_showStrayCRs")
+    assert checkBox.isChecked()
+    checkBox.setChecked(False)
+    dlg.accept()
+
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged("crlf.txt"))
+    assert "<CRLF>" not in rw.diffView.toPlainText()

@@ -20,9 +20,11 @@ PUSH_INTERVAL = 0.5
 
 
 class NavFlags(enum.IntFlag):
-    Force = enum.auto()
-    """Force reloading the diff, even if what's currently displayed
-    already matches the current locator."""
+    ForceDiff = enum.auto()
+    "Force reloading the pygit2.Diff of the commit or workdir."
+
+    ForceRecreateDocument = enum.auto()
+    "Force re-rendering the DiffDocument."
 
     AllowWriteIndex = enum.auto()
     "Allow writing to the index while loading the diff at this location."

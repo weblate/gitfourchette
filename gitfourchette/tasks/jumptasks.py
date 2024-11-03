@@ -121,7 +121,7 @@ class Jump(RepoTask):
 
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY
-                or locator.hasFlags(NavFlags.Force)
+                or locator.hasFlags(NavFlags.ForceDiff)
                 or rw.repoModel.workdirStale):
             # Don't clear stale flag until AFTER we're done reloading the workdir
             # so that it stays stale if this task gets interrupted.
@@ -289,7 +289,7 @@ class Jump(RepoTask):
         area.diffBanner.setVisible(False)
         area.contextHeader.setContext(locator, commit.message, isStash)
 
-        if locator.commit == flv.commitId and not locator.hasFlags(NavFlags.Force):
+        if locator.commit == flv.commitId and not locator.hasFlags(NavFlags.ForceDiff):
             # No need to reload the same commit
             # (if this flv was dormant and is sent back to the foreground).
             pass
@@ -330,7 +330,7 @@ class Jump(RepoTask):
         if not area.diffBanner.lastWarningWasDismissed:
             if flv.skippedRenameDetection:
                 warnings.append(self.tr("Rename detection was skipped to load this large commit faster."))
-            elif locator.hasFlags(NavFlags.AllowLargeCommits | NavFlags.Force):
+            elif locator.hasFlags(NavFlags.AllowLargeCommits | NavFlags.ForceDiff):
                 n = sum(sum(1 if delta.status == DeltaStatus.RENAMED else 0 for delta in diff.deltas) for diff in diffs)
                 warnings.append(self.tr("%n renames detected.", "", n))
 
@@ -341,14 +341,14 @@ class Jump(RepoTask):
             if flv.skippedRenameDetection:
                 area.diffBanner.addButton(
                     self.tr("Detect Renames"),
-                    lambda: Jump.invoke(rw, locator.withExtraFlags(NavFlags.AllowLargeCommits | NavFlags.Force)))
+                    lambda: Jump.invoke(rw, locator.withExtraFlags(NavFlags.AllowLargeCommits | NavFlags.ForceDiff)))
 
         return locator
 
     def saveFinalLocator(self, locator: NavLocator):
-        # Clear Force flag before saving the locator
+        # Strip Force flags before saving the locator
         # (otherwise switching back and forth into the app may reload a commit)
-        locator = locator.withoutFlags(NavFlags.Force)
+        locator = locator.withoutFlags(NavFlags.ForceDiff | NavFlags.ForceRecreateDocument)
 
         self.rw.navLocator = locator
 
@@ -523,7 +523,7 @@ class RefreshRepo(RepoTask):
                 jumpTo = NavLocator(NavContext.WORKDIR)
 
             if effectFlags & TaskEffects.Workdir:
-                newFlags = jumpTo.flags | NavFlags.Force | NavFlags.AllowWriteIndex
+                newFlags = jumpTo.flags | NavFlags.ForceDiff | NavFlags.AllowWriteIndex
                 jumpTo = jumpTo.replace(flags=newFlags)
 
         elif initialLocator and initialLocator.context == NavContext.COMMITTED:
