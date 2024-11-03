@@ -155,7 +155,9 @@ class TaskBook:
         }
 
         cls.icons = {
+            # tasks.FastForwardBranch: "media-skip-forward",
             tasks.AmendCommit: "git-commit-amend",
+            tasks.CheckoutCommit: "git-checkout",
             tasks.CherrypickCommit: "git-cherrypick",
             tasks.DeleteBranch: "vcs-branch-delete",
             tasks.DeleteRemote: "SP_TrashIcon",
@@ -163,12 +165,12 @@ class TaskBook:
             tasks.DeleteTag: "SP_TrashIcon",
             tasks.DropStash: "SP_TrashIcon",
             tasks.EditRemote: "document-edit",
-            tasks.FastForwardBranch: "media-skip-forward",
+            tasks.EditRepoSettings: "configure",
             tasks.FetchRemote: "git-fetch",
             tasks.FetchRemoteBranch: "git-fetch",
             tasks.JumpBack: "back",
             tasks.JumpForward: "forward",
-            tasks.MergeBranch: "vcs-merge",
+            tasks.MergeBranch: "git-merge",
             tasks.NewBranchFromCommit: "git-branch",
             tasks.NewBranchFromHead: "git-branch",
             tasks.NewBranchFromRef: "git-branch",
@@ -178,8 +180,7 @@ class TaskBook:
             tasks.NewTag: "git-tag",
             tasks.PullBranch: "git-pull",
             tasks.SetUpGitIdentity: "user-identity",
-            tasks.EditRepoSettings: "configure",
-            tasks.SwitchBranch: "document-swap",
+            tasks.SwitchBranch: "git-checkout",
         }
 
         cls.noEllipsis = {
