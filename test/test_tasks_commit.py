@@ -465,6 +465,10 @@ def testCherrypick(tempDir, mainWindow):
 
     headCommit = rw.repo.head_commit
     assert headCommit.message == "First a/a1"
+
+    headCommitHash = str(headCommit.id)[:5]
+    assert re.match(rf"commit.+{headCommitHash}.+created", mainWindow.statusBar().currentMessage(), re.I)
+
     rw.jump(NavLocator.inCommit(headCommit.id))
     assert qlvGetRowData(rw.committedFiles) == ["a/a1.txt"]
 

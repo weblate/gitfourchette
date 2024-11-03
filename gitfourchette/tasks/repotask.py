@@ -145,10 +145,12 @@ class RepoTask(QObject):
     effects: TaskEffects.Nothing
     """ Which parts of the UI should be refreshed when this task completes. """
 
-    postStatus: str
-    """ Display this message in the status bar after completion. """
+    _postStatus: str
+    """ Display this message in the status bar after completion (user code should use the getter/setter). """
 
-    didSucceed: bool
+    _postStatusLocked: bool
+    """ Subtasks can override postStatus as long as this flag is unset.
+    This flag is set when user code sets postStatus manually (via the setter). """
 
     _currentFlow: FlowGeneratorType | None
     _currentIteration: int
@@ -175,8 +177,8 @@ class RepoTask(QObject):
         self.setObjectName(self.__class__.__name__)
         self.jumpTo = NavLocator()
         self.effects = TaskEffects.Nothing
-        self.postStatus = ""
-        self.didSucceed = True
+        self._postStatus = ""
+        self._postStatusLocked = False
         self._taskStack = [self]
         self._runningOnUiThread = True  # for debugging
 
@@ -231,6 +233,16 @@ class RepoTask(QObject):
         and you don't want this task to be silently dropped.
         """
         return False
+
+    @property
+    def postStatus(self):
+        """ Display this message in the status bar after completion. """
+        return self._postStatus
+
+    @postStatus.setter
+    def postStatus(self, value):
+        self._postStatus = value
+        self._postStatusLocked = True
 
     def flow(self, *args, **kwargs) -> FlowGeneratorType:
         """
@@ -364,6 +376,11 @@ class RepoTask(QObject):
         # Percolate effect bits to caller task
         self.effects |= subtask.effects
 
+        # Percolate postStatus to caller task if it's not manually overridden
+        if not self._postStatusLocked and subtask.postStatus:
+            self._postStatus = subtask.postStatus
+
+        # Percolate jumpTo to caller task
         if not self.jumpTo:
             self.jumpTo = subtask.jumpTo
         elif subtask.jumpTo and subtask.jumpTo != self.jumpTo:
@@ -744,8 +761,8 @@ class RepoTaskRunner(QObject):
                 self._releaseTask(task)
 
                 if isinstance(exception, StopIteration):
-                    # No more steps in the flow
-                    task.didSucceed = True
+                    # No more steps in the flow. Task completed successfully.
+                    pass
                 elif isinstance(exception, AbortTask):
                     # Controlled exit, show message (if any)
                     self.reportAbortTask(task, exception)
