@@ -22,6 +22,7 @@ class TrTables:
     _diffStatusChars = {}
     _fileModes = {}
     _shortFileModes = {}
+    _repositoryStates = {}
     _patchPurposes = {}
     _patchPurposesPastTense = {}
     _conflictSides = {}
@@ -42,6 +43,7 @@ class TrTables:
         cls._diffStatusChars = cls._init_diffStatusChars()
         cls._fileModes = cls._init_fileModes()
         cls._shortFileModes = cls._init_shortFileModes()
+        cls._repositoryStates = cls._init_repositoryStates()
         cls._patchPurposes = cls._init_patchPurposes()
         cls._patchPurposesPastTense = cls._init_patchPurposesPastTense()
         cls._conflictSides = cls._init_conflictSides()
@@ -92,6 +94,13 @@ class TrTables:
             return cls._shortFileModes[m]
         except KeyError:
             return f"{m:o}"
+
+    @classmethod
+    def repositoryState(cls, s: RepositoryState):
+        try:
+            return cls._repositoryStates[s]
+        except KeyError:
+            return f"#{s}"
 
     @classmethod
     def patchPurpose(cls, purpose: PatchPurpose):
@@ -196,6 +205,23 @@ class TrTables:
             FileMode.LINK: "link",
             FileMode.TREE: "tree",
             FileMode.COMMIT: "commit",
+        }
+
+    @staticmethod
+    def _init_repositoryStates():
+        return {
+            RepositoryState.NONE                : translate("RepositoryState", "None"),
+            RepositoryState.MERGE               : translate("RepositoryState", "Merging"),
+            RepositoryState.REVERT              : translate("RepositoryState", "Reverting"),
+            RepositoryState.REVERT_SEQUENCE     : translate("RepositoryState", "Reverting (sequence)"),
+            RepositoryState.CHERRYPICK          : translate("RepositoryState", "Cherry-picking"),
+            RepositoryState.CHERRYPICK_SEQUENCE : translate("RepositoryState", "Cherry-picking (sequence)"),
+            RepositoryState.BISECT              : translate("RepositoryState", "Bisecting"),
+            RepositoryState.REBASE              : translate("RepositoryState", "Rebasing"),
+            RepositoryState.REBASE_INTERACTIVE  : translate("RepositoryState", "Rebasing (interactive)"),
+            RepositoryState.REBASE_MERGE        : translate("RepositoryState", "Rebasing (merging)"),
+            RepositoryState.APPLY_MAILBOX       : "Apply Mailbox",  # intentionally untranslated
+            RepositoryState.APPLY_MAILBOX_OR_REBASE: "Apply Mailbox or Rebase",  # intentionally untranslated
         }
 
     @staticmethod

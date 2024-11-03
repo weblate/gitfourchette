@@ -29,6 +29,7 @@ from gitfourchette.repomodel import RepoModel
 from gitfourchette.sidebar.sidebar import Sidebar
 from gitfourchette.tasks import RepoTask, TaskEffects, TaskBook, AbortMerge, RepoTaskRunner
 from gitfourchette.toolbox import *
+from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
@@ -806,7 +807,7 @@ class RepoWidget(QStackedWidget):
 
         rstate = repo.state() if repo else RepositoryState.NONE
 
-        bannerTitle = ""
+        bannerTitle = TrTables.repositoryState(rstate) if rstate != RepositoryState.NONE else ""
         bannerText = ""
         bannerHeeded = False
         bannerAction = ""
@@ -816,7 +817,6 @@ class RepoWidget(QStackedWidget):
             self.runTask(AbortMerge)
 
         if rstate == RepositoryState.MERGE:
-            bannerTitle = self.tr("Merging")
             try:
                 mergehead = self.repoModel.mergeheads[0]
                 name = self.repoModel.refsAt[mergehead][0]
@@ -835,30 +835,22 @@ class RepoWidget(QStackedWidget):
             bannerCallback = abortMerge
 
         elif rstate == RepositoryState.CHERRYPICK:
-            bannerTitle = self.tr("Cherry-picking")
-
-            message = ""
             if not repo.any_conflicts:
-                message = self.tr("Commit to conclude the cherry-pick.")
+                bannerText += self.tr("Commit to conclude the cherry-pick.")
                 bannerHeeded = True
             else:
-                message += self.tr("Conflicts need fixing.")
+                bannerText += self.tr("Conflicts need fixing.")
 
-            bannerText = message
             bannerAction = self.tr("Abort Cherry-Pick")
             bannerCallback = abortMerge
 
         elif rstate == RepositoryState.REVERT:
-            bannerTitle = self.tr("Reverting")
-
-            message = ""
             if not repo.any_conflicts:
-                message = self.tr("Commit to conclude the revert.")
+                bannerText += self.tr("Commit to conclude the revert.")
                 bannerHeeded = True
             else:
-                message += self.tr("Conflicts need fixing.")
+                bannerText += self.tr("Conflicts need fixing.")
 
-            bannerText = message
             bannerAction = self.tr("Abort Revert")
             bannerCallback = abortMerge
 
@@ -874,7 +866,7 @@ class RepoWidget(QStackedWidget):
             bannerText = self.tr(
                 "The repo is currently in state {state}, which {app} doesn’t support yet. "
                 "Use <code>git</code> on the command line to continue."
-            ).format(app=qAppName(), state=bquo(rstate.name.replace("_", " ").title()))
+            ).format(app=qAppName(), state=bquo(TrTables.repositoryState(rstate)))
 
         if bannerText or bannerTitle:
             self.mergeBanner.popUp(bannerTitle, bannerText, heeded=bannerHeeded, canDismiss=False)
