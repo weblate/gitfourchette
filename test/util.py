@@ -195,6 +195,7 @@ def findMenuAction(menu: QMenu | QMenuBar, pattern: str) -> QAction:
 def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):
     action = findMenuAction(menu, pattern)
     assert action is not None, f"did not find menu action matching \"{pattern}\""
+    assert action.isEnabled(), f"menu action is disabled: \"{pattern}\""
     action.trigger()
 
 

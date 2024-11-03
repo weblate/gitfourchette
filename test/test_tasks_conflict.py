@@ -12,7 +12,8 @@ from .util import *
 from gitfourchette.porcelain import *
 
 
-def testConflictDeletedByUs(tempDir, mainWindow):
+@pytest.mark.parametrize("viaContextMenu", [False, True])
+def testConflictDeletedByUs(tempDir, mainWindow, viaContextMenu):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -35,25 +36,36 @@ def testConflictDeletedByUs(tempDir, mainWindow):
     # Keep our deletion of a1.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
-    qlvClickNthRow(rw.dirtyFiles, 0)
-    assert rw.conflictView.ui.radioDbuOurs.isVisibleTo(rw)
-    rw.conflictView.ui.radioDbuOurs.click()
-    rw.conflictView.ui.confirmButton.click()
+    rw.jump(NavLocator.inUnstaged("a/a1.txt"))
+    assert rw.conflictView.currentConflict.deleted_by_us
+    assert rw.conflictView.ui.radioDbuOurs.isVisible()
+    if not viaContextMenu:
+        rw.conflictView.ui.radioDbuOurs.click()
+        rw.conflictView.ui.confirmButton.click()
+    else:
+        menu = rw.dirtyFiles.makeContextMenu()
+        triggerMenuAction(menu, "resolve by.+ours")
 
     # Take their a2.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
-    qlvClickNthRow(rw.dirtyFiles, 0)
-    assert rw.conflictView.ui.radioDbuTheirs.isVisibleTo(rw)
-    rw.conflictView.ui.radioDbuTheirs.click()
-    rw.conflictView.ui.confirmButton.click()
+    rw.jump(NavLocator.inUnstaged("a/a2.txt"))
+    assert rw.conflictView.currentConflict.deleted_by_us
+    assert rw.conflictView.ui.radioDbuOurs.isVisible()
+    if not viaContextMenu:
+        rw.conflictView.ui.radioDbuTheirs.click()
+        rw.conflictView.ui.confirmButton.click()
+    else:
+        menu = rw.dirtyFiles.makeContextMenu()
+        triggerMenuAction(menu, "resolve by.+theirs")
 
     assert not rw.repo.index.conflicts
-    assert not rw.conflictView.isVisibleTo(rw)
+    assert not rw.conflictView.isVisible()
     assert rw.repo.status() == {"a/a2.txt": FileStatus.INDEX_NEW}
 
 
-def testConflictDeletedByThem(tempDir, mainWindow):
+@pytest.mark.parametrize("viaContextMenu", [False, True])
+def testConflictDeletedByThem(tempDir, mainWindow, viaContextMenu):
     wd = unpackRepo(tempDir)
 
     with RepoContext(wd) as repo:
@@ -79,18 +91,26 @@ def testConflictDeletedByThem(tempDir, mainWindow):
     # Keep our a1.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
-    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.jump(NavLocator.inUnstaged("a/a1.txt"))
+    assert rw.conflictView.currentConflict.deleted_by_them
     assert rw.conflictView.ui.radioDbtOurs.isVisibleTo(rw)
-    rw.conflictView.ui.radioDbtOurs.click()
-    rw.conflictView.ui.confirmButton.click()
+    if not viaContextMenu:
+        rw.conflictView.ui.radioDbtOurs.click()
+        rw.conflictView.ui.confirmButton.click()
+    else:
+        triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "resolve by.+ours")
 
     # Take their deletion of a2.txt
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
-    qlvClickNthRow(rw.dirtyFiles, 0)
+    rw.jump(NavLocator.inUnstaged("a/a2.txt"))
+    assert rw.conflictView.currentConflict.deleted_by_them
     assert rw.conflictView.ui.radioDbtTheirs.isVisibleTo(rw)
-    rw.conflictView.ui.radioDbtTheirs.click()
-    rw.conflictView.ui.confirmButton.click()
+    if not viaContextMenu:
+        rw.conflictView.ui.radioDbtTheirs.click()
+        rw.conflictView.ui.confirmButton.click()
+    else:
+        triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "resolve by.+theirs")
 
     assert not rw.repo.index.conflicts
     assert not rw.conflictView.isVisibleTo(rw)

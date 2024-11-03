@@ -148,12 +148,10 @@ class DirtyFiles(FileList):
         for patch in patches:
             path = patch.delta.new_file.path
             ancestor, ours, theirs = conflicts[path]
-            if not ours and not theirs:  # special treatment for DELETED_BY_BOTH
-                table[path] = NULL_OID
-            elif keepOurs:
-                table[path] = ours.id
-            else:
-                table[path] = theirs.id
+
+            keepEntry = ours if keepOurs else theirs
+            keepId = keepEntry.id if keepEntry is not None else NULL_OID
+            table[path] = keepId
 
         HardSolveConflicts.invoke(self, table)
 
