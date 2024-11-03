@@ -92,4 +92,5 @@ from .textutils import (
     englishTitleCase,
     naturalSort,
 )
+from .urltooltip import UrlToolTip
 from .validatormultiplexer import ValidatorMultiplexer

@@ -19,7 +19,7 @@ from gitfourchette import tasks
 from gitfourchette.application import GFApplication
 from gitfourchette.diffview.diffview import DiffView
 from gitfourchette.exttools import openPrefsDialog
-from gitfourchette.forms.aboutdialog import showAboutDialog
+from gitfourchette.forms.aboutdialog import AboutDialog
 from gitfourchette.forms.clonedialog import CloneDialog
 from gitfourchette.forms.maintoolbar import MainToolBar
 from gitfourchette.forms.prefsdialog import PrefsDialog
@@ -330,9 +330,9 @@ class MainWindow(QMainWindow):
 
         # -------------------------------------------------------------
 
-        a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: showAboutDialog(self))
+        a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: AboutDialog.popUp(self))
+        a.setIcon(stockIcon("gitfourchette"))
         a.setMenuRole(QAction.MenuRole.AboutRole)
-        a.setIcon(QIcon("assets:icons/gitfourchette"))
 
         helpMenu.addSeparator()
 
