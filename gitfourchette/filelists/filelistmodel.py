@@ -70,17 +70,8 @@ def fileTooltip(repo: Repo, delta: DiffDelta, navContext: NavContext, isCounterp
     if sc not in '?U':  # show status char except for untracked and conflict
         statusCaption += f" ({sc})"
     if sc == 'U':  # conflict sides
-        dc = repo.wrap_conflict(nf.path)
-        if dc.deleted_by_us:
-            postfix = translate("git", "deleted by us")
-        elif dc.deleted_by_them:
-            postfix = translate("git", "deleted by them")
-        elif dc.deleted_by_both:
-            postfix = translate("git", "deleted by both sides")
-        elif dc.added_by_both:
-            postfix = translate("git", "added by both sides")
-        else:
-            postfix = translate("git", "modified by both sides")
+        diffConflict = repo.wrap_conflict(nf.path)
+        postfix = TrTables.conflictSides(diffConflict.sides)
         statusCaption += f" ({postfix})"
     text += newLine(translate("FileList", "status:"), statusCaption)
 

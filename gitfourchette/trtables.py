@@ -23,6 +23,9 @@ class TrTables:
     _fileModes = {}
     _shortFileModes = {}
     _patchPurposes = {}
+    _patchPurposesPastTense = {}
+    _conflictSides = {}
+    _conflictSidesDescription = {}
     _conflictHelp = {}
 
     @classmethod
@@ -41,6 +44,8 @@ class TrTables:
         cls._shortFileModes = cls._init_shortFileModes()
         cls._patchPurposes = cls._init_patchPurposes()
         cls._patchPurposesPastTense = cls._init_patchPurposesPastTense()
+        cls._conflictSides = cls._init_conflictSides()
+        cls._conflictSidesDescription = cls._init_conflictSidesDescription()
         cls._conflictHelp = cls._init_conflictHelp()
 
     @classmethod
@@ -95,6 +100,14 @@ class TrTables:
     @classmethod
     def patchPurposePastTense(cls, purpose: PatchPurpose):
         return cls._patchPurposesPastTense.get(purpose, "???")
+
+    @classmethod
+    def conflictSides(cls, key: ConflictSides):
+        return cls._conflictSides.get(key, f"?{key}")
+
+    @classmethod
+    def conflictSidesDescription(cls, key: ConflictSides):
+        return cls._conflictSidesDescription.get(key, f"?{key}")
 
     @classmethod
     def conflictHelp(cls, key: str):
@@ -353,38 +366,32 @@ class TrTables:
         }
 
     @staticmethod
+    def _init_conflictSides():
+        return {
+            ConflictSides.MODIFIED_BY_BOTH: translate("ConflictSides", "modified by both sides"),
+            ConflictSides.DELETED_BY_US: translate("ConflictSides", "deleted by us"),
+            ConflictSides.DELETED_BY_THEM: translate("ConflictSides", "deleted by them"),
+            ConflictSides.DELETED_BY_BOTH: translate("ConflictSides", "deleted by both"),
+            ConflictSides.ADDED_BY_US: translate("ConflictSides", "added by us"),
+            ConflictSides.ADDED_BY_THEM: translate("ConflictSides", "added by us"),
+            ConflictSides.ADDED_BY_BOTH: translate("ConflictSides", "added by both"),
+        }
+
+    @staticmethod
+    def _init_conflictSidesDescription():
+        return {
+            ConflictSides.MODIFIED_BY_BOTH: translate("ConflictSides", "This file has received changes from both <i>our</i> branch and <i>their</i> branch."),
+            ConflictSides.DELETED_BY_US: translate("ConflictSides", "This file was deleted from <i>our</i> branch, but <i>their</i> branch kept it and made changes to it."),
+            ConflictSides.DELETED_BY_THEM: translate("ConflictSides", "We’ve made changes to this file in <i>our</i> branch, but <i>their</i> branch has deleted it."),
+            ConflictSides.DELETED_BY_BOTH: translate("ConflictSides", "The file was deleted from <i>our</i> branch, and <i>their</i> branch has deleted it too."),
+            ConflictSides.ADDED_BY_US: translate("ConflictSides", "No common ancestor."),
+            ConflictSides.ADDED_BY_THEM: translate("ConflictSides", "No common ancestor."),
+            ConflictSides.ADDED_BY_BOTH: translate("ConflictSides", "This file has been created in both <i>our</i> branch and <i>their</i> branch, independently from each other. So, there is no common ancestor."),
+        }
+
+    @staticmethod
     def _init_conflictHelp():
         return {
-            "DELETED_BY_US": translate(
-                "ConflictView",
-                "<b>Deleted by us:</b> this file was deleted from <i>our</i> branch, "
-                "but <i>their</i> branch kept it and made changes to it."),
-
-            "DELETED_BY_THEM": translate(
-                "ConflictView",
-                "<b>Deleted by them:</b> we’ve made changes to this file, "
-                "but <i>their</i> branch has deleted it."),
-
-            "DELETED_BY_BOTH": translate(
-                "ConflictView",
-                "<b>Deleted by both sides:</b> the file was deleted from <i>our</i> branch, "
-                "and <i>their</i> branch has deleted it too."),
-
-            "MODIFIED_BY_BOTH": translate(
-                "ConflictView",
-                "<b>Modified by both sides:</b> This file has received changes "
-                "from both <i>our</i> branch and <i>their</i> branch."),
-
-            "ADDED_BY_BOTH": translate(
-                "ConflictView",
-                "<b>Added by both sides:</b> This file has been created in "
-                "both <i>our</i> branch and <i>their</i> branch, independently "
-                "from each other. So, there is no common ancestor."),
-
-            "ADDED_BY_THEM": translate("ConflictView", "<b>Added by them</b>, no common ancestor."),
-
-            "ADDED_BY_US": translate("ConflictView", "<b>Added by us</b>, no common ancestor."),
-
             "tool": translate(
                 "ConflictView",
                 "You will be able to merge the changes in {tool}. When you are done merging, "

@@ -144,7 +144,12 @@ class ConflictView(QWidget):
         group = self.buttonGroups[sides]
         for radio in group.buttons():
             radio.setVisible(True)
-        self.ui.subtitleLabel.setText(TrTables.conflictHelp(sides.name))
+
+        sidesName = TrTables.conflictSides(sides)
+        sidesName = sidesName[0].upper() + sidesName[1:]
+        sidesHelp = TrTables.conflictSidesDescription(sides)
+        helpText = f"<b>{sidesName}</b> – {sidesHelp}"
+        self.ui.subtitleLabel.setText(helpText)
 
     def reformatWidgetText(self):
         formatWidgetText(self.ui.radioTool, tool=settings.getMergeToolName())
