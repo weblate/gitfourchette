@@ -7,7 +7,7 @@
 import pytest
 
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem, SidebarNode
+from gitfourchette.sidebar.sidebarmodel import EItem, SidebarModel, SidebarNode
 from gitfourchette.toolbox import naturalSort
 from .util import *
 
@@ -228,3 +228,31 @@ def testSidebarToolTips(tempDir, mainWindow):
     test(EItem.RefFolder, "refs/heads/folder", r"local branch folder")
     test(EItem.RefFolder, "refs/remotes/origin/folder", r"remote branch folder")
     test(EItem.RefFolder, "refs/tags/folder", r"tag folder")
+
+
+def testSidebarHeadIconAfterSwitchingBranchesPointingToSameCommit(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.create_branch_on_head("other-master")
+
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    sm = rw.sidebar.sidebarModel
+
+    masterNode = sb.findNodeByRef("refs/heads/master")
+    otherNode = sb.findNodeByRef("refs/heads/other-master")
+    masterIcon = sm.data(masterNode.createIndex(sm), SidebarModel.Role.IconKey)
+    otherIcon = sm.data(otherNode.createIndex(sm), SidebarModel.Role.IconKey)
+    assert masterIcon == "git-head"
+    assert otherIcon == "git-branch"
+
+    triggerMenuAction(sb.makeNodeMenu(otherNode), "switch")
+    acceptQMessageBox(rw, "switch")
+
+    masterNode = sb.findNodeByRef("refs/heads/master")
+    otherNode = sb.findNodeByRef("refs/heads/other-master")
+    masterIcon = sm.data(masterNode.createIndex(sm), SidebarModel.Role.IconKey)
+    otherIcon = sm.data(otherNode.createIndex(sm), SidebarModel.Role.IconKey)
+    assert masterIcon == "git-branch"
+    assert otherIcon == "git-head"

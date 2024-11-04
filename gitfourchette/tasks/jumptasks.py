@@ -473,6 +473,7 @@ class RefreshRepo(RepoTask):
         stashesChanged = False
         submodulesChanged = False
         remotesChanged = False
+        homeBranchChanged = False
 
         # Refresh the index
         if effectFlags & TaskEffects.Index:
@@ -487,9 +488,12 @@ class RefreshRepo(RepoTask):
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes | TaskEffects.Head):
             # Refresh ref cache
             oldRefs = repoModel.refs
+            oldHeadBranch = repoModel.homeBranch
+
             refsChanged = repoModel.syncRefs()
             refsChanged |= repoModel.syncMergeheads()
             stashesChanged = repoModel.syncStashes()
+            homeBranchChanged = oldHeadBranch != repoModel.homeBranch
 
             # Load commits from changed refs only
             if refsChanged:
@@ -501,7 +505,7 @@ class RefreshRepo(RepoTask):
 
         # Refresh sidebar
         rw.sidebar.backUpSelection()
-        if refsChanged | stashesChanged | submodulesChanged | remotesChanged:
+        if refsChanged | stashesChanged | submodulesChanged | remotesChanged | homeBranchChanged:
             with QSignalBlockerContext(rw.sidebar):
                 rw.sidebar.refresh(repoModel)
 
