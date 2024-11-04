@@ -350,6 +350,10 @@ class PushDialog(QDialog):
         pushDialog = self
 
         class PushTask(tasks.RepoTask):
+            @classmethod
+            def name(cls) -> str:
+                return pushDialog.windowTitle()
+
             def flow(self, repo: Repo):
                 yield from self.flowEnterWorkerThread()
                 self.effects |= tasks.TaskEffects.Refs
@@ -361,8 +365,16 @@ class PushDialog(QDialog):
 
                 yield from self.flowEnterUiThread()
 
-                self.postStatus = self.tr("Branch {0} successfully pushed to {1}.").format(
-                    tquo(pushDialog.currentLocalBranchName), tquo(pushDialog.currentRemoteBranchFullName))
+                ps = self.tr("Push successful.")
+                for ref in link.updatedTips:
+                    rb = RefPrefix.split(ref)[1]
+                    oldTip, newTip = link.updatedTips[ref]
+                    ps += " "
+                    if oldTip == newTip:
+                        ps += self.tr("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
+                    else:
+                        ps += self.tr("{0} updated: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
+                self.postStatus = ps
 
                 pushDialog.pushInProgress = False
                 pushDialog.accept()

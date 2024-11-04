@@ -105,6 +105,8 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.downloadRateTimer = QElapsedTimer()
         self.resetLoginState()
 
+        self.updatedTips = {}
+
     def resetLoginState(self):
         self.attempts = 0
 
@@ -287,8 +289,9 @@ class RemoteLink(QObject, RemoteCallbacks):
 
         self.message.emit(message)
 
-    def update_tips(self, refname, old, new):
+    def update_tips(self, refname: str, old: Oid, new: Oid):
         logger.info(f"Update tip {refname}: {old} ---> {new}")
+        self.updatedTips[refname] = (old, new)
 
     def push_update_reference(self, refname: str, message: str | None):
         if not message:
