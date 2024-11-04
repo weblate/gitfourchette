@@ -36,6 +36,20 @@ def stashedChange(path):
         assert repo.status() == {}
 
 
+def statelessConflictingChange(path):
+    """
+    Cause a conflict via a stash in order to keep RepositoryState.NONE
+    """
+    with RepoContext(path) as repo:
+        writeFile(f"{path}/a/a1.txt", "a1\nPENDING CHANGE\n")
+        repo.stash(TEST_SIGNATURE, "helloworld")
+        writeFile(f"{path}/a/a1.txt", "a1\nCONFLICTING CHANGE\n")
+        repo.index.add_all()
+        repo.create_commit_on_head("conflicting thing", TEST_SIGNATURE, TEST_SIGNATURE)
+        repo.stash_apply()
+        assert repo.status() == {"a/a1.txt": FileStatus.CONFLICTED}
+
+
 def submodule(path, absorb=False):
     subPath = os.path.join(path, "submodir")
     shutil.copytree(path, subPath)

@@ -13,11 +13,13 @@ from gitfourchette.forms.newbranchdialog import NewBranchDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.sidebar.sidebarmodel import EItem
+from . import reposcenario
 from .util import *
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "sidebardclick", "shortcut"])
-def testNewBranch(tempDir, mainWindow, method):
+@pytest.mark.parametrize("switch", [False, True])
+def testNewBranch(tempDir, mainWindow, method, switch):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar
@@ -40,11 +42,40 @@ def testNewBranch(tempDir, mainWindow, method):
     else:
         raise NotImplementedError(f"unknown method {method}")
 
-    q = findQDialog(rw, "new branch")
-    q.findChild(QLineEdit).setText("hellobranch")
-    q.accept()
+    dlg: NewBranchDialog = findQDialog(rw, "new branch")
+    dlg.ui.nameEdit.setText("hellobranch")
+    assert dlg.ui.switchToBranchCheckBox.isChecked()
+    if not switch:
+        dlg.ui.switchToBranchCheckBox.setChecked(False)
+    dlg.accept()
 
     assert repo.branches.local['hellobranch'] is not None
+    if switch:
+        assert repo.head_branch_shorthand == 'hellobranch'
+    else:
+        assert repo.head_branch_shorthand == 'master'
+
+
+def testNewBranchThenSwitchBlockedByConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.statelessConflictingChange(wd)
+
+    rw = mainWindow.openRepo(wd)
+    sb = rw.sidebar
+    repo = rw.repo
+
+    node = sb.findNode(lambda n: n.kind == EItem.LocalBranchesHeader)
+    menu = sb.makeNodeMenu(node)
+    triggerMenuAction(menu, "new branch")
+
+    dlg: NewBranchDialog = findQDialog(rw, "new branch")
+    dlg.ui.nameEdit.setText("hellobranch")
+    assert not dlg.ui.switchToBranchCheckBox.isChecked()
+    assert not dlg.ui.switchToBranchCheckBox.isEnabled()
+    dlg.accept()
+
+    assert repo.branches.local['hellobranch'] is not None
+    assert repo.head_branch_shorthand == 'master'
 
 
 @pytest.mark.parametrize("branchSettings", [("master", "origin/master"), ("no-parent", "origin/no-parent")])
@@ -580,6 +611,22 @@ def testResetHeadRecurseSubmodules(tempDir, mainWindow):
     assert rw.repo.head.target == rootId2
     assert rw.repo.submodules["submosub"].head_id == subId2
     assert uncommittedContents != readFile(uncommittedPath).decode("utf-8")
+
+
+def testSwitchBranchBlockedByConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.statelessConflictingChange(wd)
+
+    rw = mainWindow.openRepo(wd)
+    assert rw.repo.any_conflicts
+    assert rw.mergeBanner.isVisible()
+    assert "fix the conflicts" in rw.mergeBanner.label.text().lower()
+    assert "reset index" in rw.mergeBanner.buttons[-1].text().lower()
+
+    node = rw.sidebar.findNodeByRef("refs/heads/no-parent")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "switch to")
+    acceptQMessageBox(rw, "fix merge conflicts before performing this action")
 
 
 def testSwitchBranchWorkdirConflicts(tempDir, mainWindow):

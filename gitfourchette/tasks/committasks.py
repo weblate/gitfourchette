@@ -210,6 +210,9 @@ class SetUpGitIdentity(RepoTask):
 
 
 class CheckoutCommit(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoConflicts
+
     def flow(self, oid: Oid):
         refs = self.repo.listall_refs_pointing_at(oid)
         refs = [r.removeprefix(RefPrefix.HEADS) for r in refs if r.startswith(RefPrefix.HEADS)]

@@ -172,14 +172,7 @@ def testShowConflictInBannerEvenIfNotViewingWorkdir(tempDir, mainWindow):
 
 def testResetIndexWithConflicts(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
-
-    # Cause a conflict, via a stash in order to keep RepositoryState.NONE
-    reposcenario.stashedChange(wd)
-    with RepoContext(wd) as repo:
-        writeFile(f"{wd}/a/a1.txt", "a1\nCONFLICTING CHANGE\n")
-        repo.index.add_all()
-        repo.create_commit_on_head("conflicting thing", TEST_SIGNATURE, TEST_SIGNATURE)
-        repo.stash_apply()
+    reposcenario.statelessConflictingChange(wd)
 
     rw = mainWindow.openRepo(wd)
     assert rw.repo.any_conflicts

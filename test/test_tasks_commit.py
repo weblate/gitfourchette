@@ -339,6 +339,19 @@ def testCheckoutCommitDetachedHead(tempDir, mainWindow, method):
         assert rw.graphView.currentCommitId == oid, "graphview's selected commit has jumped around"
 
 
+def testCheckoutCommitBlockedByConflicts(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    reposcenario.statelessConflictingChange(wd)
+
+    rw = mainWindow.openRepo(wd)
+
+    oid = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
+    rw.jump(NavLocator.inCommit(oid))
+    triggerMenuAction(rw.graphView.makeContextMenu(), r"check.?out")
+
+    acceptQMessageBox(rw, "fix merge conflicts before performing this action")
+
+
 def testDetachHeadOnSameCommitAsCheckedOutBranch(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)

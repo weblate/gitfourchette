@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class SwitchBranch(RepoTask):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoConflicts
+
     def flow(self, newBranch: str, askForConfirmation: bool = True, recurseSubmodules: bool = False):
         assert not newBranch.startswith(RefPrefix.HEADS)
 
@@ -283,6 +286,7 @@ class _NewBranchBaseTask(RepoTask):
             targetSubtitle=commitMessage,
             upstreams=upstreams,
             reservedNames=forbiddenBranchNames,
+            allowSwitching=not self.repo.any_conflicts,
             parent=self.parentWidget())
 
         if not repo.listall_submodules_fast():
