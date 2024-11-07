@@ -329,7 +329,7 @@ class CloneTask(RepoTask):
 
         # Clone the repo
         self.stickyStatus.emit(self.tr("Cloning..."))
-        with self.remoteLink.remoteKeyFileContext(url):
+        with self.remoteLink.remoteContext(url):
             repo = pygit2.clone_repository(url, path, callbacks=self.remoteLink, depth=depth)
 
         # Convert to our extended Repo class
@@ -355,11 +355,7 @@ class CloneTask(RepoTask):
             stickyStatus = self.tr("Initializing submodule {0}: {1}...").format(i, lquoe(submodule.name))
             self.stickyStatus.emit(stickyStatus)
 
-            # Reset remoteLink state before each submodule
-            # (so that we don't tally failed login attempts across submodules)
-            self.remoteLink.resetLoginState()
-
-            with self.remoteLink.remoteKeyFileContext(submodule.url or ""):
+            with self.remoteLink.remoteContext(submodule.url or ""):
                 submodule.update(init=True, callbacks=self.remoteLink, depth=depth)
 
     def onError(self, exc: BaseException):

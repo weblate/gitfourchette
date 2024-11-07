@@ -16,11 +16,11 @@ from gitfourchette.tasks.branchtasks import MergeBranch
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.forms.brandeddialog import showTextInputDialog
-from gitfourchette.forms.remotelinkprogressdialog import RemoteLinkProgressDialog
+from gitfourchette.forms.remotelinkdialog import RemoteLinkDialog
 
 
 class _BaseNetTask(RepoTask):
-    remoteLinkDialog: RemoteLinkProgressDialog | None
+    remoteLinkDialog: RemoteLinkDialog | None
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -29,7 +29,7 @@ class _BaseNetTask(RepoTask):
     def _showRemoteLinkDialog(self, title: str = ""):
         assert not self.remoteLinkDialog
         assert onAppThread()
-        self.remoteLinkDialog = RemoteLinkProgressDialog(title, self.parentWidget())
+        self.remoteLinkDialog = RemoteLinkDialog(title, self.parentWidget())
 
     def cleanup(self):
         assert onAppThread()
@@ -74,7 +74,7 @@ class DeleteRemoteBranch(_BaseNetTask):
         self.effects |= TaskEffects.Remotes | TaskEffects.Refs
 
         remote = self.repo.remotes[remoteName]
-        with self.remoteLink.remoteKeyFileContext(remote):
+        with self.remoteLink.remoteContext(remote):
             self.repo.delete_remote_branch(remoteBranchShorthand, self.remoteLink)
 
         self.postStatus = self.tr("Remote branch {0} deleted.").format(tquo(remoteBranchShorthand))
@@ -112,7 +112,7 @@ class RenameRemoteBranch(_BaseNetTask):
         self.effects |= TaskEffects.Remotes | TaskEffects.Refs
 
         remote = self.repo.remotes[remoteName]
-        with self.remoteLink.remoteKeyFileContext(remote):
+        with self.remoteLink.remoteContext(remote):
             self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
 
         self.postStatus = self.tr("Remote branch {0} renamed to {1}."
@@ -130,13 +130,11 @@ class FetchRemote(_BaseNetTask):
         remote = self.repo.remotes[remoteName]
 
         title = self.tr("Fetch remote {0}").format(lquo(remoteName))
-        connectingMessage = self.tr("Connecting to remote {0}...").format(lquo(remoteName)) + "\n" + remote.url
         self._showRemoteLinkDialog(title)
-        self.remoteLinkDialog.setLabelText(connectingMessage)
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Remotes | TaskEffects.Refs
-        with self.remoteLink.remoteKeyFileContext(remote):
+        with self.remoteLink.remoteContext(remote):
             self.repo.fetch_remote(remoteName, self.remoteLink)
 
 
@@ -163,7 +161,7 @@ class FetchRemoteBranch(_BaseNetTask):
         with suppress(KeyError):
             oldTarget = self.repo.branches.remote[remoteBranchName].target
 
-        with self.remoteLink.remoteKeyFileContext(remote):
+        with self.remoteLink.remoteContext(remote):
             self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
 
         with suppress(KeyError):
@@ -218,7 +216,7 @@ class UpdateSubmodule(_BaseNetTask):
 
         # Wrap update operation with RemoteLinkKeyFileContext: we need the keys
         # if the submodule uses an SSH connection.
-        with self.remoteLink.remoteKeyFileContext(submodule.url or ""):
+        with self.remoteLink.remoteContext(submodule.url or ""):
             submodule.update(init=init, callbacks=self.remoteLink)
 
         self.postStatus = self.tr("Submodule updated.")
@@ -252,6 +250,5 @@ class PushRefspecs(_BaseNetTask):
         self.effects |= TaskEffects.Refs
 
         for remote in remotes:
-            self.remoteLink.resetLoginState()
-            with self.remoteLink.remoteKeyFileContext(remote):
+            with self.remoteLink.remoteContext(remote):
                 remote.push(refspecs, callbacks=self.remoteLink)

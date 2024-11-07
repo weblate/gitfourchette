@@ -4,6 +4,8 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from __future__ import annotations
+
 import base64
 import logging
 import os.path
@@ -76,6 +78,7 @@ class RemoteLink(QObject, RemoteCallbacks):
     userAbort = Signal()
     message = Signal(str)
     progress = Signal(int, int)
+    beginRemote = Signal(str, str)
 
     requestSecret = Signal(str)
     secretReady = Signal(str, str)
@@ -105,6 +108,9 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.downloadRateTimer = QElapsedTimer()
         self.resetLoginState()
 
+        self._aborting = False
+        self._busy = False
+
         self.updatedTips = {}
 
     def resetLoginState(self):
@@ -122,7 +128,6 @@ class RemoteLink(QObject, RemoteCallbacks):
         self.receivedBytesOnTimerStart = 0
         self.downloadRateTimer.invalidate()
 
-        self._aborting = False
         self._sidebandProgressBuffer = ""
 
         self.anyKeyIsUnreadable = False
@@ -178,6 +183,9 @@ class RemoteLink(QObject, RemoteCallbacks):
     def isAborting(self):
         return self._aborting
 
+    def isBusy(self):
+        return self._busy
+
     def raiseAbortFlag(self):
         self.message.emit(self.tr("Aborting remote operation..."))
         self.progress.emit(0, 0)
@@ -221,12 +229,7 @@ class RemoteLink(QObject, RemoteCallbacks):
             pubkey, privkey = self.keypairFiles.pop(0)
             logger.info(f"Logging in with: {compactPath(pubkey)}")
 
-            if self.usingCustomKeyFile:
-                self.message.emit(self.tr("Logging in with remote-specific key...") + "\n" + compactPath(pubkey))
-            elif self.attempts == 1 and self.usingKnownKeyFirst:
-                self.message.emit(self.tr("Logging in...") + "\n" + compactPath(pubkey))
-            else:
-                self.message.emit(self.tr("Attempting login...") + "\n" + compactPath(pubkey))
+            self.message.emit(self.tr("Logging in with key:") + " " + compactPath(pubkey))
 
             secret = None
             if isPrivateKeyPassphraseProtected(privkey):
@@ -304,8 +307,8 @@ class RemoteLink(QObject, RemoteCallbacks):
             settings.history.setRemoteWorkingKey(strippedUrl, self.lastAttemptKey)
             logger.debug(f"Remembering key '{self.lastAttemptKey}' for host '{strippedUrl}'")
 
-    def remoteKeyFileContext(self, remote: Remote | str):
-        return RemoteLinkKeyFileContext(self, remote)
+    def remoteContext(self, remote: Remote | str) -> RemoteLink.RemoteContext:
+        return RemoteLink.RemoteContext(self, remote)
 
     def setAsyncSecret(self, keyfile: str, secret: str):
         self._asyncSecret = secret
@@ -333,15 +336,26 @@ class RemoteLink(QObject, RemoteCallbacks):
         lineEdit: QLineEdit = dlg.findChild(QLineEdit)
         lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
 
+    class RemoteContext:
+        def __init__(self, remoteLink: RemoteLink, remote: Remote | str):
+            self.remoteLink = remoteLink
+            self.remote = remote
 
-class RemoteLinkKeyFileContext:
-    def __init__(self, remoteLink: RemoteLink, remote: Remote | str):
-        self.remoteLink = remoteLink
-        self.remote = remote
+        def __enter__(self):
+            self.remoteLink._busy = True
 
-    def __enter__(self):
-        self.remoteLink.discoverKeyFiles(self.remote)
+            # Reset login state before each remote
+            self.remoteLink.resetLoginState()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            self.remoteLink.rememberSuccessfulKeyFile()
+            if isinstance(self.remote, Remote):
+                self.remoteLink.beginRemote.emit(self.remote.name, self.remote.url)
+            else:
+                self.remoteLink.beginRemote.emit("", self.remote)
+
+            # Discover key files to use for this remote
+            self.remoteLink.discoverKeyFiles(self.remote)
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if exc_type is None:
+                self.remoteLink.rememberSuccessfulKeyFile()
+            self.remoteLink._busy = False

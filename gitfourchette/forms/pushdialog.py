@@ -358,7 +358,7 @@ class PushDialog(QDialog):
                 yield from self.flowEnterWorkerThread()
                 self.effects |= tasks.TaskEffects.Refs
 
-                with link.remoteKeyFileContext(remote):
+                with link.remoteContext(remote):
                     remote.push([pushDialog.refspec], callbacks=link)
                 if resetTrackingReference:
                     repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
