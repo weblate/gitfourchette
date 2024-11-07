@@ -37,7 +37,6 @@ class ComposePatch(RepoTask):
                 diffFile = patch.delta.new_file
 
             data = patch.data
-            print(data)
 
             if patch.delta.is_binary:
                 startOfLastLine = data.rfind(b"\n", 0, -1) + 1

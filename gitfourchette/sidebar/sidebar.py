@@ -95,9 +95,6 @@ class Sidebar(QTreeView):
 
         return vr
 
-    def updateHiddenBranches(self, hiddenBranches: list[str]):
-        self.model().updateHiddenBranches(hiddenBranches)
-
     def refSortMenu(self, prefKey: str) -> list[ActionDef]:
         repoModel = self.sidebarModel.repoModel
         repoPrefs = repoModel.prefs

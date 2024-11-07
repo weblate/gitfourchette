@@ -316,10 +316,8 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
     assert set(qlvGetRowData(rw.stagedFiles)) == {".gitmodules", "submodir"}
 
     # Discard submodule deletion
-    qlvClickNthRow(rw.stagedFiles, 0)  # TODO: selectAll won't actually select everything without this first
     rw.stagedFiles.selectAll()
     rw.stagedFiles.unstage()
-    qlvClickNthRow(rw.dirtyFiles, 0)  # TODO: selectAll won't actually select everything without this first
     rw.dirtyFiles.selectAll()
     rw.dirtyFiles.discard()
     acceptQMessageBox(rw, "discard changes")

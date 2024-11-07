@@ -769,8 +769,6 @@ class RepoWidget(QStackedWidget):
             pass
         elif repo.head_is_unborn:
             inBrackets = self.tr("unborn HEAD")
-        elif repo.is_empty:  # getActiveBranchShorthand won't work on an empty repo
-            inBrackets = self.tr("repo is empty")
         elif repo.head_is_detached:
             oid = repo.head_commit_id
             inBrackets = self.tr("detached HEAD @ {0}").format(shortHash(oid))
@@ -956,17 +954,12 @@ class RepoWidget(QStackedWidget):
         if url.authority() == NavLocator.URL_AUTHORITY:
             locator = NavLocator.parseUrl(url)
             self.jump(locator)
-        elif url.authority() == "refresh":
-            self.refreshRepo()
         elif url.authority() == "expandlog":
-            try:
-                n = int(kwargs["n"])
-            except KeyError:
-                n = self.repoModel.nextTruncationThreshold
             # After loading, jump back to what is currently the last commit
             self.pendingLocator = NavLocator.inCommit(self.repoModel.commitSequence[-1].id)
             # Reload the repo
-            self.primeRepo(force=True, maxCommits=n)
+            maxCommits = int(kwargs.get("n", self.repoModel.nextTruncationThreshold))
+            self.primeRepo(force=True, maxCommits=maxCommits)
         elif url.authority() == "opensubfolder":
             p = self.repo.in_workdir(simplePath)
             self.openRepo.emit(p, NavLocator())

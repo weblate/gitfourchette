@@ -38,7 +38,6 @@ class RepoModel:
 
     commitSequence: list[Commit]
     "Ordered list of commits."
-    # TODO PYGIT2 ^^^ do we want to store the actual commits? wouldn't the oids be enough? not for search though i guess...
 
     truncatedHistory: bool
 

@@ -855,15 +855,6 @@ class Repo(_VanillaRepository):
         """Create a local branch pointing to the commit at the current HEAD."""
         return self.create_branch(name, self.head_commit)
 
-    def create_branch_tracking(self, name: str, remote_branch_name: str) -> Branch:
-        """Create a local branch pointing to the commit at the tip of a remote branch,
-        and set up the local branch to track the remote branch."""
-        remote_branch = self.branches.remote[remote_branch_name]
-        commit: Commit = remote_branch.peel(Commit)
-        branch = self.create_branch(name, commit)
-        branch.upstream = remote_branch
-        return branch
-
     def create_branch_from_commit(self, name: str, commit_id: Oid) -> Branch:
         """Create a local branch pointing to the given commit id."""
         commit = self.peel_commit(commit_id)
@@ -1174,7 +1165,7 @@ class Repo(_VanillaRepository):
         tips.sort(key=lambda item: item[1].commit_time)
         return {ref: commit.id for ref, commit in tips}
 
-    def listall_refs_pointing_at(self, commit_id: Oid):
+    def listall_refs_pointing_at(self, commit_id: Oid, include_stashes=False):
         refs = []
 
         # Detached HEAD isn't in repo.references
@@ -1195,14 +1186,16 @@ class Repo(_VanillaRepository):
             assert ref_key.startswith("refs/")
 
             if ref_key == "refs/stash":
-                # Stashes must be dealt with separately
+                # This is just the topmost stash.
+                # Exhaustive stash info must be obtained separately.
                 continue
 
             refs.append(ref_key)
 
-        for stash_index, stash in enumerate(self.listall_stashes()):
-            if stash.commit_id == commit_id:
-                refs.append(F"stash@{{{stash_index}}}")
+        if include_stashes:
+            for stash_index, stash in enumerate(self.listall_stashes()):
+                if stash.commit_id == commit_id:
+                    refs.append(f"stash@{{{stash_index}}}")
 
         return refs
 
