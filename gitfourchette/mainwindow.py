@@ -95,7 +95,6 @@ class MainWindow(QMainWindow):
         self.addToolBar(self.mainToolBar)
         self.mainToolBar.openDialog.connect(self.openDialog)
         self.mainToolBar.openPrefs.connect(self.openPrefsDialog)
-        self.mainToolBar.push.connect(lambda: self.currentRepoWidget().startPushFlow())
         self.mainToolBar.reveal.connect(lambda: self.currentRepoWidget().openRepoFolder())
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.PreventContextMenu)
 

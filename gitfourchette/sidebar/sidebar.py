@@ -10,7 +10,6 @@ from contextlib import suppress
 
 from gitfourchette import porcelain
 from gitfourchette import settings
-from gitfourchette.globalshortcuts import GlobalShortcuts
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import Oid, RefPrefix
 from gitfourchette.qt import *
@@ -27,8 +26,6 @@ INVALID_MOUSEPRESS = (-1, SidebarClickZone.Invalid)
 
 class Sidebar(QTreeView):
     toggleHideRefPattern = Signal(str)
-
-    pushBranch = Signal(str)
 
     openSubmoduleRepo = Signal(str)
     openSubmoduleFolder = Signal(str)
@@ -218,12 +215,12 @@ class Sidebar(QTreeView):
                     taskArgs=branchName,
                 ).replace(enabled=hasUpstream),
 
-                ActionDef(
+                TaskBook.action(
+                    self,
+                    PushBranch,
                     self.tr("&Push to {0}...").format(upstreamBranchDisplay) if hasUpstream else self.tr("Push..."),
-                    lambda: self.pushBranch.emit(branchName),
-                    "git-push",
-                    shortcuts=GlobalShortcuts.pushBranch,
-                    tip=self.tr("Upload your commits to the remote server")),
+                    taskArgs=branchName,
+                ),
 
                 ActionDef(
                     self.tr("&Upstream Branch"),

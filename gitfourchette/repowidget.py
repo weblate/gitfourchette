@@ -17,7 +17,6 @@ from gitfourchette.diffview.specialdiff import ShouldDisplayPatchAsImageDiff
 from gitfourchette.exttools import PREFKEY_MERGETOOL, openInTextEditor
 from gitfourchette.forms.banner import Banner
 from gitfourchette.forms.openrepoprogress import OpenRepoProgress
-from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.forms.searchbar import SearchBar
 from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.globalshortcuts import GlobalShortcuts
@@ -229,7 +228,6 @@ class RepoWidget(QStackedWidget):
         self.diffArea.specialDiffView.linkActivated.connect(self.processInternalLink)
 
         self.sidebar.statusMessage.connect(self.statusMessage)
-        self.sidebar.pushBranch.connect(self.startPushFlow)
         self.sidebar.toggleHideRefPattern.connect(self.toggleHideRefPattern)
         self.sidebar.openSubmoduleRepo.connect(self.openSubmoduleRepo)
         self.sidebar.openSubmoduleFolder.connect(self.openSubmoduleFolder)
@@ -584,9 +582,6 @@ class RepoWidget(QStackedWidget):
         layout.addWidget(diff.searchBar)
         diffWindow.resize(550, 700)
         diffWindow.show()
-
-    def startPushFlow(self, branchName: str = ""):
-        PushDialog.startPushFlow(self, self.repo, self.repoTaskRunner, branchName)
 
     def openSubmoduleRepo(self, submoduleKey: str):
         path = self.repo.get_submodule_workdir(submoduleKey)
@@ -990,17 +985,9 @@ class RepoWidget(QStackedWidget):
             ActionDef.SEPARATOR,
 
             TaskBook.action(invoker, tasks.NewBranchFromHead, accel="B"),
-
-            ActionDef(
-                invoker.tr("&Push Branch..."),
-                lambda: proxy().startPushFlow(),
-                "git-push",
-                shortcuts=GlobalShortcuts.pushBranch,
-                tip=invoker.tr("Upload your commits on the current branch to the remote server"),
-            ),
-
             TaskBook.action(invoker, tasks.PullBranch, accel="L"),
             TaskBook.action(invoker, tasks.FetchRemote, accel="F"),
+            TaskBook.action(invoker, tasks.PushBranch, accel="P"),
 
             TaskBook.action(invoker, tasks.NewRemote),
 

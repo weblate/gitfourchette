@@ -5,17 +5,12 @@
 # -----------------------------------------------------------------------------
 
 import logging
-import enum
-import traceback
 
-from gitfourchette import tasks
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
-from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
-from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
 
@@ -26,29 +21,6 @@ class ERemoteItem(enum.Enum):
 
 
 class PushDialog(QDialog):
-    @staticmethod
-    def startPushFlow(parent, repo: Repo, repoTaskRunner: tasks.RepoTaskRunner, branchName: str = ""):
-        if len(repo.remotes) == 0:
-            text = paragraphs(
-                translate("PushDialog", "To push a local branch to a remote, you must first add a remote to your repo."),
-                translate("PushDialog", "You can do so via <i>“Repo &rarr; Add Remote”</i>."))
-            showWarning(parent, translate("PushDialog", "No remotes tracked by this repository"), text)
-            return
-
-        try:
-            if not branchName:
-                branchName = repo.head_branch_shorthand
-            branch = repo.branches.local[branchName]
-        except (GitError, KeyError):
-            showWarning(parent, translate("PushDialog", "No branch to push"),
-                        tr("Please switch to a local branch before performing this action."))
-            return
-
-        dlg = PushDialog(repo, repoTaskRunner, branch, parent)
-        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        dlg.show()
-        return dlg
-
     def onPickLocalBranch(self, index: int):
         localBranch = self.currentLocalBranch
 
@@ -239,10 +211,9 @@ class PushDialog(QDialog):
 
                 firstRemote = False
 
-    def __init__(self, repo: Repo, repoTaskRunner: tasks.RepoTaskRunner, branch: Branch, parent: QWidget):
+    def __init__(self, repo: Repo, branch: Branch, parent: QWidget):
         super().__init__(parent)
         self.repo = repo
-        self.repoTaskRunner = repoTaskRunner
         self.reservedRemoteBranchNames = self.repo.listall_remote_branches()
 
         self.fallbackAutoNewIndex = 0
@@ -257,7 +228,6 @@ class PushDialog(QDialog):
         self.startOperationButton: QPushButton = self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
         self.startOperationButton.setText(self.tr("&Push"))
         self.startOperationButton.setIcon(stockIcon("git-push"))
-        self.startOperationButton.clicked.connect(self.onPushClicked)
 
         pickBranchIndex = 0
 
@@ -331,67 +301,6 @@ class PushDialog(QDialog):
         else:
             for w, enableW in zip(widgets, self.enableInputsBackup, strict=True):
                 w.setEnabled(enableW)
-
-    def onPushClicked(self):
-        remote = self.repo.remotes[self.currentRemoteName]
-        logger.info(f"Will push to: {self.refspec} ({remote.name})")
-        link = RemoteLink(self)
-        self.remoteLink = link
-
-        self.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
-        link.message.connect(self.ui.statusForm.setProgressMessage)
-        link.progress.connect(self.ui.statusForm.setProgressValue)
-
-        if self.ui.trackCheckBox.isEnabled() and self.ui.trackCheckBox.isChecked():
-            resetTrackingReference = self.currentRemoteBranchFullName
-        else:
-            resetTrackingReference = None
-
-        pushDialog = self
-
-        class PushTask(tasks.RepoTask):
-            @classmethod
-            def name(cls) -> str:
-                return pushDialog.windowTitle()
-
-            def flow(self, repo: Repo):
-                yield from self.flowEnterWorkerThread()
-                self.effects |= tasks.TaskEffects.Refs
-
-                with link.remoteContext(remote):
-                    remote.push([pushDialog.refspec], callbacks=link)
-                if resetTrackingReference:
-                    repo.edit_upstream_branch(pushDialog.currentLocalBranchName, resetTrackingReference)
-
-                yield from self.flowEnterUiThread()
-
-                ps = self.tr("Push successful.")
-                for ref in link.updatedTips:
-                    rb = RefPrefix.split(ref)[1]
-                    oldTip, newTip = link.updatedTips[ref]
-                    ps += " "
-                    if oldTip == newTip:
-                        ps += self.tr("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
-                    else:
-                        ps += self.tr("{0} updated: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
-                self.postStatus = ps
-
-                pushDialog.pushInProgress = False
-                pushDialog.accept()
-
-            def onError(self, exc: BaseException):
-                traceback.print_exception(exc)
-                QApplication.beep()
-                QApplication.alert(pushDialog, 500)
-                pushDialog.pushInProgress = False
-                pushDialog.enableInputs(True)
-                pushDialog.ui.statusForm.setBlurb(F"<b>{TrTables.exceptionName(exc)}:</b> {escape(str(exc))}")
-
-        self.pushInProgress = True
-        self.enableInputs(False)
-
-        task = PushTask(self)
-        self.repoTaskRunner.put(task, self.repo)
 
     def reject(self):
         if self.pushInProgress:

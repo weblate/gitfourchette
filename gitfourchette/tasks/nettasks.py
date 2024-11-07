@@ -8,15 +8,24 @@
 Remote access tasks.
 """
 
+import logging
+import traceback
 from contextlib import suppress
+
+from gitfourchette.forms.brandeddialog import showTextInputDialog
+from gitfourchette.forms.pushdialog import PushDialog
+from gitfourchette.forms.remotelinkdialog import RemoteLinkDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.remotelink import RemoteLink
 from gitfourchette.tasks import TaskPrereqs
 from gitfourchette.tasks.branchtasks import MergeBranch
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.forms.brandeddialog import showTextInputDialog
-from gitfourchette.forms.remotelinkdialog import RemoteLinkDialog
+from gitfourchette.trtables import TrTables
+
+
+logger = logging.getLogger(__name__)
 
 
 class _BaseNetTask(RepoTask):
@@ -252,3 +261,97 @@ class PushRefspecs(_BaseNetTask):
         for remote in remotes:
             with self.remoteLink.remoteContext(remote):
                 remote.push(refspecs, callbacks=self.remoteLink)
+
+
+class PushBranch(RepoTask):
+    def flow(self, branchName: str = ""):
+        if len(self.repo.remotes) == 0:
+            text = paragraphs(
+                self.tr("To push a local branch to a remote, you must first add a remote to your repo."),
+                self.tr("You can do so via <i>“Repo &rarr; Add Remote”</i>."))
+            raise AbortTask(text)
+
+        try:
+            if not branchName:
+                branchName = self.repo.head_branch_shorthand
+            branch = self.repo.branches.local[branchName]
+        except (GitError, KeyError) as exc:
+            raise AbortTask(tr("Please switch to a local branch before performing this action.")) from exc
+
+        dialog = PushDialog(self.repo, branch, self.parentWidget())
+        dialog.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+        tryAgain = True
+        while tryAgain:
+            tryAgain = yield from self.attempt(dialog)
+
+        dialog.accept()
+
+    def attempt(self, dialog: PushDialog):
+        yield from self.flowDialog(dialog, proceedSignal=dialog.startOperationButton.clicked)
+
+        # ---------------
+        # Push clicked
+
+        remote = self.repo.remotes[dialog.currentRemoteName]
+        logger.info(f"Will push to: {dialog.refspec} ({remote.name})")
+        link = RemoteLink(self)
+        dialog.remoteLink = link
+
+        dialog.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
+        link.message.connect(dialog.ui.statusForm.setProgressMessage)
+        link.progress.connect(dialog.ui.statusForm.setProgressValue)
+
+        if dialog.ui.trackCheckBox.isEnabled() and dialog.ui.trackCheckBox.isChecked():
+            resetTrackingReference = dialog.currentRemoteBranchFullName
+        else:
+            resetTrackingReference = None
+
+        # Disable inputs AFTER looking at checkboxes
+        dialog.enableInputs(False)
+        dialog.pushInProgress = True
+
+        # ----------------
+        # Task meat
+
+        yield from self.flowEnterWorkerThread()
+        self.effects |= TaskEffects.Refs
+
+        error = None
+        try:
+            with link.remoteContext(remote):
+                remote.push([dialog.refspec], callbacks=link)
+            if resetTrackingReference:
+                self.repo.edit_upstream_branch(dialog.currentLocalBranchName, resetTrackingReference)
+        except Exception as exc:
+            error = exc
+
+        # ---------------
+        # Debrief
+
+        yield from self.flowEnterUiThread()
+        dialog.pushInProgress = False
+        dialog.enableInputs(True)
+        dialog.remoteLink = None
+        link.deleteLater()
+
+        if error:
+            traceback.print_exception(error)
+            QApplication.beep()
+            QApplication.alert(dialog, 500)
+            dialog.pushInProgress = False
+            dialog.enableInputs(True)
+            dialog.ui.statusForm.setBlurb(F"<b>{TrTables.exceptionName(error)}:</b> {escape(str(error))}")
+        else:
+            ps = self.tr("Push successful.")
+            for ref in link.updatedTips:
+                rb = RefPrefix.split(ref)[1]
+                oldTip, newTip = link.updatedTips[ref]
+                ps += " "
+                if oldTip == newTip:
+                    ps += self.tr("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
+                else:
+                    ps += self.tr("{0} updated: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
+            self.postStatus = ps
+
+        return bool(error)

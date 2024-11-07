@@ -52,6 +52,7 @@ from gitfourchette.tasks.nettasks import (
     FetchRemote,
     FetchRemoteBranch,
     PullBranch,
+    PushBranch,
     PushRefspecs,
     UpdateSubmodule,
     UpdateSubmodulesRecursive,

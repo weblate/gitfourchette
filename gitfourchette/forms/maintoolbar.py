@@ -64,9 +64,7 @@ class MainToolBar(QToolBar):
             ActionDef.SEPARATOR,
             TaskBook.toolbarAction(self, tasks.FetchRemote),
             TaskBook.toolbarAction(self, tasks.PullBranch),
-            ActionDef(self.tr("Push"), self.push, icon="git-push",
-                      tip=self.tr("Push local branch to remote"),
-                      shortcuts=GlobalShortcuts.pushBranch),
+            TaskBook.toolbarAction(self, tasks.PushBranch),
             ActionDef.SPACER,
 
             ActionDef(self.tr("Reveal"), self.reveal, icon="reveal",

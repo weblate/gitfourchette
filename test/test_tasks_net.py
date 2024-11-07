@@ -416,6 +416,7 @@ def testPush(tempDir, mainWindow, asNewBranch):
         assert rw.repo.branches.remote["localfs/master"].target == newHead
     else:
         assert rw.repo.branches.remote["localfs/new"].target == newHead
+        assert rw.repo.branches["master"].upstream_name == "refs/remotes/localfs/new"
 
 
 def testPushNoBranch(tempDir, mainWindow):

@@ -405,7 +405,7 @@ class RepoTask(QObject):
             self.parentWidget().becameVisible.connect(token.ready)
             yield token
 
-    def flowDialog(self, dialog: QDialog, abortTaskIfRejected=True):
+    def flowDialog(self, dialog: QDialog, abortTaskIfRejected=True, proceedSignal=None):
         """
         Show a QDialog, then pause the coroutine until it's accepted or rejected.
 
@@ -422,6 +422,7 @@ class RepoTask(QObject):
 
         waitToken = FlowControlToken(FlowControlToken.Kind.WaitReady)
         didReject = False
+        proceedSignal = proceedSignal or dialog.accepted
 
         def onReject():
             nonlocal didReject
@@ -429,11 +430,15 @@ class RepoTask(QObject):
 
         dialog.rejected.connect(onReject)
         dialog.rejected.connect(waitToken.ready)
-        dialog.accepted.connect(waitToken.ready)
+        proceedSignal.connect(waitToken.ready)
 
         dialog.show()
 
         yield waitToken
+
+        dialog.rejected.disconnect(onReject)
+        dialog.rejected.disconnect(waitToken.ready)
+        proceedSignal.disconnect(waitToken.ready)
 
         if abortTaskIfRejected and didReject:
             dialog.deleteLater()
