@@ -13,6 +13,7 @@ from gitfourchette.toolbox import *
 class RemoteLinkDialog(QDialog):
     def __init__(self, title: str, parent: QWidget):
         super().__init__(parent)
+        self.statusPrefix = ""
         title = title or self.tr("Remote operation")
 
         self.ui = Ui_RemoteLinkDialog()
@@ -22,7 +23,6 @@ class RemoteLinkDialog(QDialog):
         self.setWindowTitle(title)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)  # hide close button
         self.setWindowModality(Qt.WindowModality.WindowModal)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         tweakWidgetFont(self.ui.remoteLabel, 88)
         self.setStatusText(title)
@@ -42,11 +42,12 @@ class RemoteLinkDialog(QDialog):
 
     def beginRemote(self, name: str, url: str):
         if name:
-            self.ui.remoteLabel.setText(f"<b>{escape(name)}:</b> {escape(url)}")
-            self.setStatusText(self.tr("Connecting to {0}...").format(lquo(name)))
-        else:
+            self.statusPrefix = f"<b>{escape(name)}:</b> "
             self.ui.remoteLabel.setText(escamp(url))
-            self.setStatusText(self.tr("Connecting..."))
+        else:
+            self.statusPrefix = ""
+            self.ui.remoteLabel.setText(escamp(url))
+        self.setStatusText(self.tr("Connecting..."))
 
     def onRemoteLinkProgress(self, value: int, maximum: int):
         self.ui.progressBar.setMaximum(maximum)
@@ -57,6 +58,7 @@ class RemoteLinkDialog(QDialog):
         # so that it doesn't jump around when updating label text
         if "\n" not in text:
             text += "\n"
+        text = "<p style='white-space: pre'>" + self.statusPrefix + text + "</p>"
         self.ui.statusLabel.setText(text)
 
     def reject(self):  # bound to abort button
@@ -71,4 +73,5 @@ class RemoteLinkDialog(QDialog):
         self.remoteLink.raiseAbortFlag()
         self.abortButton.setEnabled(False)
         self.abortButton.setText(self.tr("Aborting"))
+
         self.onRemoteLinkProgress(0, 0)

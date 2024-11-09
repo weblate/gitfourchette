@@ -45,8 +45,8 @@ class NewRemote(RepoTask):
         if fetchAfterAdd:
             yield from self.flowEnterUiThread()
 
-            from gitfourchette.tasks import FetchRemote
-            yield from self.flowSubtask(FetchRemote, newRemoteName)
+            from gitfourchette.tasks import FetchRemotes
+            yield from self.flowSubtask(FetchRemotes, newRemoteName)
 
 
 class EditRemote(RepoTask):

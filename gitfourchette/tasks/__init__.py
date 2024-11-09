@@ -49,7 +49,7 @@ from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch
 from gitfourchette.tasks.nettasks import (
     DeleteRemoteBranch,
     RenameRemoteBranch,
-    FetchRemote,
+    FetchRemotes,
     FetchRemoteBranch,
     PullBranch,
     PushBranch,

@@ -985,8 +985,8 @@ class RepoWidget(QStackedWidget):
             ActionDef.SEPARATOR,
 
             TaskBook.action(invoker, tasks.NewBranchFromHead, accel="B"),
+            TaskBook.action(invoker, tasks.FetchRemotes, accel="F"),
             TaskBook.action(invoker, tasks.PullBranch, accel="L"),
-            TaskBook.action(invoker, tasks.FetchRemote, accel="F"),
             TaskBook.action(invoker, tasks.PushBranch, accel="P"),
 
             TaskBook.action(invoker, tasks.NewRemote),

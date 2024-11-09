@@ -336,14 +336,30 @@ class RemoteLink(QObject, RemoteCallbacks):
         lineEdit: QLineEdit = dlg.findChild(QLineEdit)
         lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
 
+    def formatUpdatedTipsMessage(self, header, noNewCommits=""):
+        messages = [header]
+        for ref in self.updatedTips:
+            rb = RefPrefix.split(ref)[1]
+            oldTip, newTip = self.updatedTips[ref]
+            if oldTip == newTip:  # for pushing
+                ps = self.tr("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
+            elif oldTip == NULL_OID:
+                ps = self.tr("{0} created: {1}.").format(tquo(rb), shortHash(newTip))
+            elif newTip == NULL_OID:
+                ps = self.tr("{0} deleted, was {1}.").format(tquo(rb), shortHash(oldTip))
+            else:
+                ps = self.tr("{0}: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
+            messages.append(ps)
+        if not self.updatedTips:
+            messages.append(noNewCommits or self.tr("No new commits."))
+        return " ".join(messages)
+
     class RemoteContext:
         def __init__(self, remoteLink: RemoteLink, remote: Remote | str):
             self.remoteLink = remoteLink
             self.remote = remote
 
         def __enter__(self):
-            self.remoteLink._busy = True
-
             # Reset login state before each remote
             self.remoteLink.resetLoginState()
 
@@ -355,7 +371,9 @@ class RemoteLink(QObject, RemoteCallbacks):
             # Discover key files to use for this remote
             self.remoteLink.discoverKeyFiles(self.remote)
 
+            self.remoteLink._busy = True
+
         def __exit__(self, exc_type, exc_val, exc_tb):
+            self.remoteLink._busy = False
             if exc_type is None:
                 self.remoteLink.rememberSuccessfulKeyFile()
-            self.remoteLink._busy = False

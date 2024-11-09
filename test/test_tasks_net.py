@@ -251,7 +251,10 @@ def testFetchRemoteBranch(tempDir, mainWindow):
     node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fetch")
-    acceptQMessageBox(rw, fr"localfs/master.+moved.+{str(oldHead)[:7]}.+{str(newHead)[:7]}")
+    assert re.search(
+        fr"localfs/master.+{str(oldHead)[:7]}.+{str(newHead)[:7]}",
+        mainWindow.statusBar().currentMessage(),
+        re.I)
 
     # The position of the remote's master branch should be up-to-date now
     assert rw.repo.branches.remote["localfs/master"].target == newHead
@@ -307,7 +310,7 @@ def testFetchRemoteBranchNoChange(tempDir, mainWindow, pull):
         node = rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "fetch")
-        acceptQMessageBox(rw, "no new commits")
+        assert re.search(r"no new commits", mainWindow.statusBar().currentMessage(), re.I)
     else:
         node = rw.sidebar.findNodeByRef("refs/heads/master")
         menu = rw.sidebar.makeNodeMenu(node)
@@ -315,16 +318,6 @@ def testFetchRemoteBranchNoChange(tempDir, mainWindow, pull):
         acceptQMessageBox(rw, "up.to.date")
 
     assert rw.repo.branches.remote["localfs/master"].target == oldHead
-
-
-def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
-    wd = unpackRepo(tempDir)
-    with RepoContext(wd) as repo:
-        repo.edit_upstream_branch("master", "")
-
-    rw = mainWindow.openRepo(wd)
-    triggerMenuAction(mainWindow.menuBar(), "repo/fetch")
-    acceptQMessageBox(rw, "n.t tracking.+upstream")
 
 
 def testFetchRemoteHistoryWithUnbornHead(tempDir, mainWindow):
@@ -343,6 +336,27 @@ def testFetchRemoteHistoryWithUnbornHead(tempDir, mainWindow):
     assert rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
     with pytest.raises(StopIteration):
         rw.sidebar.findNode(lambda n: n.kind == EItem.LocalBranch)
+
+
+def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.edit_upstream_branch("master", "")
+
+    rw = mainWindow.openRepo(wd)
+    node = rw.sidebar.findNodeByRef("refs/heads/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    assert not findMenuAction(menu, "fetch").isEnabled()
+
+
+def testPullRemoteBranchNoUpstream(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    with RepoContext(wd) as repo:
+        repo.edit_upstream_branch("master", "")
+
+    rw = mainWindow.openRepo(wd)
+    triggerMenuAction(mainWindow.menuBar(), "repo/pull")
+    acceptQMessageBox(rw, "n.t tracking.+upstream")
 
 
 def testPullRemoteBranchCausesConflict(tempDir, mainWindow):

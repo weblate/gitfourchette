@@ -62,7 +62,7 @@ class MainToolBar(QToolBar):
             ActionDef.SEPARATOR,
             TaskBook.toolbarAction(self, tasks.NewBranchFromHead),
             ActionDef.SEPARATOR,
-            TaskBook.toolbarAction(self, tasks.FetchRemote),
+            TaskBook.toolbarAction(self, tasks.FetchRemotes),
             TaskBook.toolbarAction(self, tasks.PullBranch),
             TaskBook.toolbarAction(self, tasks.PushBranch),
             ActionDef.SPACER,

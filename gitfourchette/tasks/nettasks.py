@@ -15,6 +15,7 @@ from contextlib import suppress
 from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.forms.remotelinkdialog import RemoteLinkDialog
+from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.remotelink import RemoteLink
@@ -127,24 +128,57 @@ class RenameRemoteBranch(_BaseNetTask):
         self.postStatus = self.tr("Remote branch {0} renamed to {1}."
                                   ).format(tquo(remoteBranchName), tquo(newBranchName))
 
-class FetchRemote(_BaseNetTask):
+class FetchRemotes(_BaseNetTask):
     def prereqs(self) -> TaskPrereqs:
         return TaskPrereqs.NoUnborn | TaskPrereqs.NoDetached
 
-    def flow(self, remoteName: str = ""):
-        if not remoteName:
-            upstream = self._autoDetectUpstream()
-            remoteName = upstream.remote_name
+    def flow(self, singleRemoteName: str = ""):
+        remotes: list[Remote] = list(self.repo.remotes)
 
-        remote = self.repo.remotes[remoteName]
+        if len(remotes) == 0:
+            text = paragraphs(
+                self.tr("To fetch remote branches, you must first add a remote to your repo."),
+                self.tr("You can do so via <i>“Repo &rarr; Add Remote”</i>."))
+            raise AbortTask(text)
 
-        title = self.tr("Fetch remote {0}").format(lquo(remoteName))
+        if singleRemoteName:
+            remotes = [next(r for r in remotes if r.name == singleRemoteName)]
+
+        if len(remotes) == 1:
+            title = self.tr("Fetch remote {0}").format(lquo(remotes[0].name))
+        else:
+            title = self.tr("Fetch %n remotes", "", len(remotes))
+
         self._showRemoteLinkDialog(title)
 
-        yield from self.flowEnterWorkerThread()
-        self.effects |= TaskEffects.Remotes | TaskEffects.Refs
-        with self.remoteLink.remoteContext(remote):
-            self.repo.fetch_remote(remoteName, self.remoteLink)
+        errors = []
+        for remote in remotes:
+            # Bail if user clicked Abort button
+            yield from self.flowEnterUiThread()
+            assert onAppThread()
+            if self.remoteLink.isAborting():
+                break
+
+            remoteName = remote.name
+
+            self.effects |= TaskEffects.Remotes | TaskEffects.Refs
+            yield from self.flowEnterWorkerThread()
+            try:
+                with self.remoteLink.remoteContext(remote):
+                    self.repo.fetch_remote(remoteName, self.remoteLink)
+            except Exception as e:
+                errors.append(f"<p><b>{escape(remoteName)}</b> — {TrTables.exceptionName(e)}.<br>{escape(str(e))}</p>")
+
+        yield from self.flowEnterUiThread()
+        self.postStatus = self.remoteLink.formatUpdatedTipsMessage(self.tr("Fetch complete."))
+
+        # Clean up RemoteLinkDialog before showing any error text
+        self.cleanup()
+
+        if errors:
+            errorMessage = self.tr("Couldn’t fetch %n remotes:", "", len(errors))
+            errorMessage = f"<span style='white-space:pre'>{errorMessage}{' ' * 70}</span>"  # hack to prevent short wrapped lines on detail list
+            yield from self.flowConfirm(title, errorMessage, detailList=errors, canCancel=False, icon='warning')
 
 
 class FetchRemoteBranch(_BaseNetTask):
@@ -176,24 +210,20 @@ class FetchRemoteBranch(_BaseNetTask):
         with suppress(KeyError):
             newTarget = self.repo.branches.remote[remoteBranchName].target
 
-        # Clean up remote link dialog before showing any debriefing text
         yield from self.flowEnterUiThread()
+        self.postStatus = self.remoteLink.formatUpdatedTipsMessage(
+            self.tr("Fetch complete."), noNewCommits=self.tr("No new commits on {0}.").format(lquo(remoteBranchName)))
+
+        # Jump to new commit (if branch didn't vanish)
+        if oldTarget != newTarget and newTarget != NULL_OID:
+            self.jumpTo = NavLocator.inCommit(newTarget)
+
+        # Clean up RemoteLinkDialog before showing any error text
         self.cleanup()
 
         if newTarget == NULL_OID:
             # Raise exception to prevent PullBranch from continuing
             raise AbortTask(self.tr("{0} has disappeared from the remote server.").format(bquoe(remoteBranchName)))
-
-        if debrief:
-            if oldTarget == newTarget:
-                text = self.tr("There are no new commits on {0}.").format(bquoe(remoteBranchName))
-                dontShowAgainKey = "FetchDebriefNoNewCommits"
-            else:
-                text = self.tr("{0} has moved from {1} to {2}.", "RemoteBranch has moved from OldCommit to NewCommit"
-                               ).format(bquoe(remoteBranchName), shortHash(oldTarget), shortHash(newTarget))
-                dontShowAgainKey = "FetchDebriefTargetChanged"
-            self.postStatus = stripHtml(text)
-            yield from self.flowConfirm(text=text, canCancel=False, dontShowAgainKey=dontShowAgainKey)
 
 
 class PullBranch(_BaseNetTask):
@@ -343,15 +373,6 @@ class PushBranch(RepoTask):
             dialog.enableInputs(True)
             dialog.ui.statusForm.setBlurb(F"<b>{TrTables.exceptionName(error)}:</b> {escape(str(error))}")
         else:
-            ps = self.tr("Push successful.")
-            for ref in link.updatedTips:
-                rb = RefPrefix.split(ref)[1]
-                oldTip, newTip = link.updatedTips[ref]
-                ps += " "
-                if oldTip == newTip:
-                    ps += self.tr("{0} is already up-to-date with {1}.").format(tquo(rb), tquo(shortHash(oldTip)))
-                else:
-                    ps += self.tr("{0} updated: {1} → {2}.").format(tquo(rb), shortHash(oldTip), shortHash(newTip))
-            self.postStatus = ps
+            self.postStatus = link.formatUpdatedTipsMessage(self.tr("Push complete."))
 
         return bool(error)

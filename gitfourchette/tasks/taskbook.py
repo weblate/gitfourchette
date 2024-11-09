@@ -54,7 +54,7 @@ class TaskBook:
             tasks.ExportStashAsPatch: translate("task", "Export stash as patch file"),
             tasks.ExportWorkdirAsPatch: translate("task", "Export changes as patch file"),
             tasks.FastForwardBranch: translate("task", "Fast-forward branch"),
-            tasks.FetchRemote: translate("task", "Fetch remote"),
+            tasks.FetchRemotes: translate("task", "Fetch remotes"),
             tasks.FetchRemoteBranch: translate("task", "Fetch remote branch"),
             tasks.GetCommitInfo: translate("task", "Get commit information"),
             tasks.HardSolveConflicts: translate("task", "Accept/reject incoming changes"),
@@ -101,7 +101,7 @@ class TaskBook:
 
         cls.toolbarNames = {
             tasks.AmendCommit: translate("task", "Amend"),
-            tasks.FetchRemote: translate("task", "Fetch"),
+            tasks.FetchRemotes: translate("task", "Fetch"),
             tasks.JumpBack: translate("task", "Back"),
             tasks.JumpForward: translate("task", "Forward"),
             tasks.NewBranchFromHead: translate("task", "Branch"),
@@ -120,7 +120,7 @@ class TaskBook:
             tasks.EditUpstreamBranch: translate("task", "Choose the remote branch to be tracked by this local branch"),
             tasks.ExportStashAsPatch: translate("task", "Create a patch file from this stash"),
             tasks.FastForwardBranch: translate("task", "Advance this local branch to the tip of the remote-tracking branch"),
-            tasks.FetchRemote: translate("task", "Get the latest commits on all remote branches from the server"),
+            tasks.FetchRemotes: translate("task", "Get the latest commits on all remote branches"),
             tasks.FetchRemoteBranch: translate("task", "Get the latest commits from the remote server"),
             tasks.NewBranchFromCommit: translate("task", "Start a new branch from this commit"),
             tasks.NewBranchFromHead: translate("task", "Start a new branch from the current HEAD"),
@@ -149,6 +149,7 @@ class TaskBook:
         cls.shortcuts = {
             tasks.AmendCommit: makeMultiShortcut(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S"),
             tasks.ApplyPatchFile: makeMultiShortcut("Ctrl+I"),
+            tasks.FetchRemotes: makeMultiShortcut("Ctrl+Shift+R"),
             tasks.NewBranchFromHead: makeMultiShortcut("Ctrl+B"),
             tasks.NewCommit: makeMultiShortcut(QKeySequence.StandardKey.Save),
             tasks.NewStash: makeMultiShortcut("Ctrl+Alt+S"),
@@ -170,7 +171,7 @@ class TaskBook:
             tasks.DropStash: "SP_TrashIcon",
             tasks.EditRemote: "document-edit",
             tasks.EditRepoSettings: "configure",
-            tasks.FetchRemote: "git-fetch",
+            tasks.FetchRemotes: "git-fetch",
             tasks.FetchRemoteBranch: "git-fetch",
             tasks.JumpBack: "back",
             tasks.JumpForward: "forward",

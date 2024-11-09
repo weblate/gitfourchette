@@ -338,7 +338,7 @@ class Sidebar(QTreeView):
             actions += [
                 TaskBook.action(self, EditRemote, self.tr("&Edit Remote..."), taskArgs=data),
 
-                TaskBook.action(self, FetchRemote, self.tr("&Fetch All Remote Branches..."), taskArgs=data),
+                TaskBook.action(self, FetchRemotes, self.tr("&Fetch Remote Branches..."), taskArgs=data),
 
                 ActionDef.SEPARATOR,
 
@@ -363,6 +363,7 @@ class Sidebar(QTreeView):
         elif item == EItem.RemotesHeader:
             actions += [
                 TaskBook.action(self, NewRemote, accel="A"),
+                TaskBook.action(self, FetchRemotes, accel="F"),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Sort Remote Branches By"), submenu=self.refSortMenu("sortRemoteBranches")),
             ]
