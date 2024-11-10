@@ -487,3 +487,21 @@ def testSwitchBranchAskRecurse(tempDir, mainWindow, method, recurse):
         assert contentsOld == readFile(f"{wd}/submosub/subhello.txt")
     else:
         assert contentsHead == readFile(f"{wd}/submosub/subhello.txt")
+
+
+def testDetachHeadBeforeFirstSubmodule(tempDir, mainWindow):
+    initialCommit = Oid(hex="2b6471b8999e560c9601ffaa0a5b8376ac403ce4")
+
+    wd = unpackRepo(tempDir, "submoroot")
+    rw = mainWindow.openRepo(wd)
+
+    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Submodule)))
+    rw.jump(NavLocator.inCommit(initialCommit))
+
+    triggerMenuAction(rw.graphView.makeContextMenu(), "check.?out")
+    dlg = findQDialog(rw, "check.?out")
+    dlg.ui.detachedHeadRadioButton.setChecked(True)
+    dlg.ui.recurseSubmodulesCheckBox.setChecked(True)
+    dlg.accept()
+
+    assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Submodule)))

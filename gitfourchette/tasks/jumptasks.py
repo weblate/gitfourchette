@@ -479,7 +479,7 @@ class RefreshRepo(RepoTask):
         if effectFlags & TaskEffects.Index:
             repoModel.repo.refresh_index()
 
-        if effectFlags & TaskEffects.Workdir:
+        if effectFlags & (TaskEffects.Head | TaskEffects.Workdir):
             submodulesChanged = repoModel.syncSubmodules()
 
         if effectFlags & (TaskEffects.Refs | TaskEffects.Remotes):
