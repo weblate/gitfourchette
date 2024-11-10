@@ -531,36 +531,38 @@ class GitConfigHelper:
             name = name.replace('"', r'\"')
             section_key = f'{prefix} "{name}"'
         else:
-            raise NotImplementedError("scrub_empty_section: section key must be 1 or 2 tokens")
+            raise NotImplementedError("scrub_empty_section: Section key must be 1 or 2 tokens")
 
-        ini = _configparser.ConfigParser()
+        # strict=False: Don't raise DuplicateSectionError.
+        # If there are duplicate sections, their contents are merged.
+        ini = _configparser.ConfigParser(strict=False)
         ini.read(config_path)
 
-        if not ini.has_section(section_key):
-            # Section doesn't appear in file, let it be
-            _logger.debug(f".git/config: Section [{section_key}] doesn't appear, no scrubbing needed")
+        # Get section. Bail if it doesn't appear in the file.
+        try:
+            section = ini[section_key]
+            assert isinstance(section, _configparser.SectionProxy)
+        except KeyError:
+            _logger.debug(f"scrub_empty_section: Section [{section_key}] doesn't appear, no scrubbing needed")
             return
 
-        section = ini[section_key]
-        assert isinstance(section, _configparser.SectionProxy)
-
+        # Bail if section isn't empty.
         if len(section) != 0:
-            # Section isn't empty, leave it alone
-            _logger.debug(f".git/config: Section [{section_key}] isn't empty, won't scrub")
+            _logger.debug(f"scrub_empty_section: Section [{section_key}] isn't empty, won't scrub")
             return
 
-        _logger.debug(f".git/config: Scrubbing empty section [{section_key}]")
+        _logger.debug(f"scrub_empty_section: Scrubbing empty section [{section_key}]")
 
-        # We could call ini.remove_section(section_key) and then write the ini back to disk.
-        # But this destroys the file's formatting. So, remove the offending line surgically.
+        # We could call ini.remove_section(section_key) then write the ini back
+        # to disk, but this destroys the file's formatting. So, remove the
+        # offending lines surgically. There may be multiple lines to remove if
+        # the config file is fragmented (several remnants of empty sections).
         with open(config_path, encoding="utf-8") as f:
             lines = f.readlines()
-        try:
-            lines.remove(f"[{section_key}]\n")
-        except ValueError:
-            warnings.warn(f".git/config: Standalone section line not found: [{section_key}]")
-            return
+        evict = f"[{section_key}]\n"
+        lines = [line for line in lines if line != evict]
 
+        # Write result to disk.
         timestamp = datetime.datetime.now().timestamp()
         temp_path = config_path + f".{timestamp}.new.tmp"
         backup_path = config_path + f".{timestamp}.old.tmp"

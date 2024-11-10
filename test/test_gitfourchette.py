@@ -579,3 +579,27 @@ def testMaximizeDiffArea(tempDir, mainWindow):
     assert mainWindow.tabs.currentWidget() is rw2
     assert not rw2.diffArea.contextHeader.maximizeButton.isChecked()
     assert rw2.centralSplitter.sizes()[0] > 0
+
+
+def testConfigFileScrubbing(tempDir, mainWindow):
+    wd = unpackRepo(tempDir)
+    configPath = f"{wd}/.git/config"
+
+    assert b'[branch "master"]' in readFile(configPath)
+    with open(configPath, "a") as configFile:
+        configFile.write('[branch "master"]\n')  # add duplicate section
+        configFile.write('[branch "scrubme"]\n')  # add vestigial section
+    assert b'[branch "scrubme"]' in readFile(configPath)
+
+    rw = mainWindow.openRepo(wd)
+
+    for (renameFrom, renameTo) in ("master", "scrubme"), ("scrubme", "hello"):
+        node = rw.sidebar.findNodeByRef(f"refs/heads/{renameFrom}")
+        menu = rw.sidebar.makeNodeMenu(node)
+        triggerMenuAction(menu, "rename")
+        dlg = findQDialog(rw, "rename.+branch")
+        dlg.findChild(QLineEdit).setText(renameTo)
+        dlg.accept()
+
+    assert b'[branch "master"]' not in readFile(configPath)
+    assert b'[branch "scrubme"]' not in readFile(configPath)
