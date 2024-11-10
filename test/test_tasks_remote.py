@@ -11,7 +11,7 @@ Remote management tests.
 import pytest
 from .util import *
 from gitfourchette.forms.remotedialog import RemoteDialog
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 
 
 @pytest.mark.parametrize("method", ["menubar", "sidebarmenu", "sidebarkey"])
@@ -26,10 +26,9 @@ def testNewRemote(tempDir, mainWindow, method):
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
-    assert any("origin" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
-    assert not any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
+    assert rw.sidebar.findNodeByKind(SidebarItem.Remote).data == "origin"
 
-    node = next(rw.sidebar.findNodesByKind(EItem.RemotesHeader))
+    node = rw.sidebar.findNodeByKind(SidebarItem.RemotesHeader)
 
     if method == "menubar":
         triggerMenuAction(mainWindow.menuBar(), "repo/add remote")
@@ -51,8 +50,9 @@ def testNewRemote(tempDir, mainWindow, method):
     assert len(repo.remotes) == 2
     assert repo.remotes[1].name == "otherremote"
     assert repo.remotes[1].url == barePath
-    assert any("origin" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
-    assert any("otherremote" == n.data for n in rw.sidebar.findNodesByKind(EItem.Remote))
+    assert rw.sidebar.countNodesByKind(SidebarItem.Remote) == 2
+    assert next(n for n in rw.sidebar.findNodesByKind(SidebarItem.Remote) if n.data == "origin")
+    assert next(n for n in rw.sidebar.findNodesByKind(SidebarItem.Remote) if n.data == "otherremote")
 
     # Ensure that fetch-after-add did work
     assert repo.branches.remote["otherremote/master"].target == repo.branches.local["master"].target
@@ -67,9 +67,9 @@ def testEditRemote(tempDir, mainWindow, method):
     # Ensure we're starting with the expected settings
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "origin"
-    assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
+    assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(SidebarItem.RemoteBranch))
 
-    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+    node = rw.sidebar.findNode(lambda n: n.kind == SidebarItem.Remote and n.data == "origin")
 
     if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
@@ -91,8 +91,8 @@ def testEditRemote(tempDir, mainWindow, method):
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "mainremote"
     assert repo.remotes[0].url == "https://127.0.0.1/example-repo.git"
-    assert any("/mainremote/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
-    assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
+    assert any("/mainremote/" in n.data for n in rw.sidebar.findNodesByKind(SidebarItem.RemoteBranch))
+    assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(SidebarItem.RemoteBranch))
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
@@ -102,9 +102,9 @@ def testDeleteRemote(tempDir, mainWindow, method):
     repo = rw.repo
 
     assert repo.remotes["origin"] is not None
-    assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
+    assert any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(SidebarItem.RemoteBranch))
 
-    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+    node = rw.sidebar.findNode(lambda n: n.kind == SidebarItem.Remote and n.data == "origin")
 
     if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
@@ -118,7 +118,7 @@ def testDeleteRemote(tempDir, mainWindow, method):
     acceptQMessageBox(rw, "really remove remote")
 
     assert len(list(repo.remotes)) == 0
-    assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(EItem.RemoteBranch))
+    assert not any("/origin/" in n.data for n in rw.sidebar.findNodesByKind(SidebarItem.RemoteBranch))
 
 
 def testRemoteCustomKeyUI(tempDir, mainWindow):
@@ -128,7 +128,7 @@ def testRemoteCustomKeyUI(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     def openRemoteDialog():
-        node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+        node = rw.sidebar.findNode(lambda n: n.kind == SidebarItem.Remote and n.data == "origin")
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "edit remote")
         dialog: RemoteDialog = findQDialog(rw, "edit remote")
@@ -182,7 +182,7 @@ def testRemoteUrlProtocolSwap(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "origin")
+    node = rw.sidebar.findNode(lambda n: n.kind == SidebarItem.Remote and n.data == "origin")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "edit remote")
     dialog: RemoteDialog = findQDialog(rw, "edit remote")

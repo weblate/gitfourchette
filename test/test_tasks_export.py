@@ -9,7 +9,7 @@ import pytest
 from . import reposcenario
 from .util import *
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 
 
 def testExportPatchFromWorkdir(tempDir, mainWindow):
@@ -19,7 +19,7 @@ def testExportPatchFromWorkdir(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     assert qlvGetRowData(rw.dirtyFiles) == ["master.txt", "untracked-file.txt"]
 
-    node = next(rw.sidebar.findNodesByKind(EItem.UncommittedChanges))
+    node = rw.sidebar.findNodeByKind(SidebarItem.UncommittedChanges)
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), r"export.+patch")
     acceptQFileDialog(rw, "export.+patch", f"{wd}/workdir.patch")
 
@@ -46,7 +46,7 @@ def testExportPatchFromEmptyWorkdir(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    node = next(rw.sidebar.findNodesByKind(EItem.UncommittedChanges))
+    node = rw.sidebar.findNodeByKind(SidebarItem.UncommittedChanges)
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), r"export.+patch")
     acceptQMessageBox(rw, "patch is empty")
 
@@ -78,7 +78,7 @@ def testExportPatchFromStash(tempDir, mainWindow):
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
 
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     node = rw.sidebar.findNodeByRef("stash@{0}")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, r"export.+patch")

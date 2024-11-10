@@ -22,7 +22,7 @@ from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.forms.remotedialog import RemoteDialog
 from gitfourchette.mainwindow import NoRepoWidgetError
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 from . import reposcenario
 from .util import *
 
@@ -135,14 +135,14 @@ def testFetchNewRemoteBranches(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     assert "localfs/master" not in rw.repo.branches.remote
-    assert all(n.data.startswith("refs/remotes/origin/") for n in rw.sidebar.walk() if n.kind == EItem.RemoteBranch)
+    assert all(n.data.startswith("refs/remotes/origin/") for n in rw.sidebar.walk() if n.kind == SidebarItem.RemoteBranch)
 
-    node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "localfs")
+    node = rw.sidebar.findNode(lambda n: n.kind == SidebarItem.Remote and n.data == "localfs")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "fetch")
 
     assert "localfs/master" in rw.repo.branches.remote
-    assert any(n.data.startswith("refs/remotes/localfs/") for n in rw.sidebar.walk() if n.kind == EItem.RemoteBranch)
+    assert any(n.data.startswith("refs/remotes/localfs/") for n in rw.sidebar.walk() if n.kind == SidebarItem.RemoteBranch)
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey"])
@@ -214,7 +214,7 @@ def testFetchRemote(tempDir, mainWindow, method):
 
     # Fetch the remote
     if method == "sidebar":
-        node = rw.sidebar.findNode(lambda n: n.kind == EItem.Remote and n.data == "localfs")
+        node = rw.sidebar.findNode(lambda n: n.kind == SidebarItem.Remote and n.data == "localfs")
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "fetch")
     elif method == "toolbar":
@@ -331,11 +331,11 @@ def testFetchRemoteHistoryWithUnbornHead(tempDir, mainWindow):
     remoteDialog.accept()
     QTest.qWait(1)
 
-    assert rw.sidebar.findNode(lambda n: n.kind == EItem.UnbornHead)
-    assert rw.sidebar.findNode(lambda n: n.kind == EItem.Remote)
+    assert rw.sidebar.findNodeByKind(SidebarItem.UnbornHead)
+    assert rw.sidebar.findNodeByKind(SidebarItem.Remote)
     assert rw.sidebar.findNodeByRef("refs/remotes/localfs/master")
-    with pytest.raises(StopIteration):
-        rw.sidebar.findNode(lambda n: n.kind == EItem.LocalBranch)
+    with pytest.raises(KeyError):
+        rw.sidebar.findNodeByKind(SidebarItem.LocalBranch)
 
 
 def testFetchRemoteBranchNoUpstream(tempDir, mainWindow):
@@ -467,7 +467,7 @@ def testPushTagOnCreate(tempDir, mainWindow):
 
     rw = mainWindow.openRepo(wd)
 
-    node = rw.sidebar.findNodeByKind(EItem.TagsHeader)
+    node = rw.sidebar.findNodeByKind(SidebarItem.TagsHeader)
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), "new tag.+HEAD")
 
     dlg: NewTagDialog = findQDialog(rw, "new tag")
@@ -513,7 +513,7 @@ def testPushAllTags(tempDir, mainWindow):
         assert "etiquette3" not in bareRepo.listall_tags()
 
     rw = mainWindow.openRepo(wd)
-    node = rw.sidebar.findNodeByKind(EItem.TagsHeader)
+    node = rw.sidebar.findNodeByKind(SidebarItem.TagsHeader)
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), "push all tags to/localfs")
 
     with RepoContext(barePath) as bareRepo:

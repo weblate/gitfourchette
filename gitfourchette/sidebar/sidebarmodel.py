@@ -28,7 +28,7 @@ UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /ref
 DefaultQModelIndex = QModelIndex()
 
 
-class EItem(enum.IntEnum):
+class SidebarItem(enum.IntEnum):
     Root = -1
     Spacer = 0
     WorkdirHeader = enum.auto()
@@ -49,64 +49,63 @@ class EItem(enum.IntEnum):
     RefFolder = enum.auto()
 
 
-HEADER_ITEMS = [
-    EItem.WorkdirHeader,
-    EItem.UncommittedChanges,
-    EItem.Spacer,
-    EItem.LocalBranchesHeader,
-    EItem.Spacer,
-    EItem.RemotesHeader,
-    EItem.Spacer,
-    EItem.TagsHeader,
-    EItem.Spacer,
-    EItem.StashesHeader,
-    EItem.Spacer,
-    EItem.SubmodulesHeader,
-]
-# HEADER_ITEMS = [i for i in HEADER_ITEMS if i != EItem.Spacer]
+class SidebarLayout:
+    RootItems = [
+        SidebarItem.WorkdirHeader,
+        SidebarItem.UncommittedChanges,
+        SidebarItem.Spacer,
+        SidebarItem.LocalBranchesHeader,
+        SidebarItem.Spacer,
+        SidebarItem.RemotesHeader,
+        SidebarItem.Spacer,
+        SidebarItem.TagsHeader,
+        SidebarItem.Spacer,
+        SidebarItem.StashesHeader,
+        SidebarItem.Spacer,
+        SidebarItem.SubmodulesHeader,
+    ]
 
-FORCE_EXPAND = [
-    EItem.WorkdirHeader
-]
-""" SidebarNode kinds to always expand (in modal sidebars only) """
+    ForceExpand = [
+        SidebarItem.WorkdirHeader
+    ]
 
-NONLEAF_ITEMS = sorted([
-    EItem.Root,
-    EItem.WorkdirHeader,
-    EItem.LocalBranchesHeader,
-    EItem.RefFolder,
-    EItem.Remote,
-    EItem.RemotesHeader,
-    EItem.StashesHeader,
-    EItem.SubmodulesHeader,
-    EItem.TagsHeader,
-])
+    NonleafItems = sorted([
+        SidebarItem.Root,
+        SidebarItem.WorkdirHeader,
+        SidebarItem.LocalBranchesHeader,
+        SidebarItem.RefFolder,
+        SidebarItem.Remote,
+        SidebarItem.RemotesHeader,
+        SidebarItem.StashesHeader,
+        SidebarItem.SubmodulesHeader,
+        SidebarItem.TagsHeader,
+    ])
 
-UNINDENT_ITEMS = {
-    EItem.LocalBranch: -1,
-    EItem.UnbornHead: -1,
-    EItem.DetachedHead: -1,
-    EItem.Stash: -1,
-    EItem.Tag: -1,
-    EItem.Submodule: -1,
-    EItem.Remote: -1,
-    EItem.RemoteBranch: -1,
-    EItem.RefFolder: -1,
-}
+    UnindentItems = {
+        SidebarItem.LocalBranch: -1,
+        SidebarItem.UnbornHead: -1,
+        SidebarItem.DetachedHead: -1,
+        SidebarItem.Stash: -1,
+        SidebarItem.Tag: -1,
+        SidebarItem.Submodule: -1,
+        SidebarItem.Remote: -1,
+        SidebarItem.RemoteBranch: -1,
+        SidebarItem.RefFolder: -1,
+    }
 
-HIDEABLE_ITEMS = sorted([
-    EItem.LocalBranch,
-    EItem.Remote,
-    EItem.RemoteBranch,
-    EItem.RefFolder,
-])
+    HideableItems = sorted([
+        SidebarItem.LocalBranch,
+        SidebarItem.Remote,
+        SidebarItem.RemoteBranch,
+        SidebarItem.RefFolder,
+    ])
 
 
 class SidebarNode:
     children: list[SidebarNode]
     parent: SidebarNode | None
     row: int
-    kind: EItem
+    kind: SidebarItem
     data: str
     warning: str
     displayName: str
@@ -119,7 +118,7 @@ class SidebarNode:
         assert isinstance(p, SidebarNode)
         return p
 
-    def __init__(self, kind: EItem, data: str = ""):
+    def __init__(self, kind: SidebarItem, data: str = ""):
         self.children = []
         self.parent = None
         self.row = -1
@@ -136,7 +135,7 @@ class SidebarNode:
         node.parent = self
         self.children.append(node)
 
-    def findChild(self, kind: EItem, data: str = "") -> SidebarNode:
+    def findChild(self, kind: SidebarItem, data: str = "") -> SidebarNode:
         """ Warning: this is inefficient - don't use this if there are many children! """
         assert self.mayHaveChildren()
         with suppress(StopIteration):
@@ -153,13 +152,13 @@ class SidebarNode:
         # so it's not suitable for persistent storage (in history.json).
 
     def mayHaveChildren(self):
-        return self.kind in NONLEAF_ITEMS
+        return self.kind in SidebarLayout.NonleafItems
 
     def wantForceExpand(self):
-        return self.kind in FORCE_EXPAND
+        return self.kind in SidebarLayout.ForceExpand
 
     def canBeHidden(self):
-        return self.kind in HIDEABLE_ITEMS
+        return self.kind in SidebarLayout.HideableItems
 
     def walk(self):
         # Unit test helper
@@ -228,7 +227,7 @@ class SidebarModel(QAbstractItemModel):
             self.beginResetModel()
 
         self.repoModel = None
-        self.rootNode = SidebarNode(EItem.Root)
+        self.rootNode = SidebarNode(SidebarItem.Root)
         self.nodesByRef = {}
         self._checkedOut = ""
         self._checkedOutUpstream = ""
@@ -240,17 +239,17 @@ class SidebarModel(QAbstractItemModel):
             self.endResetModel()
 
     def isExplicitlyHidden(self, node: SidebarNode) -> bool:
-        if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
+        if node.kind == SidebarItem.LocalBranch or node.kind == SidebarItem.RemoteBranch:
             return node.data in self.repoModel.prefs.hiddenRefPatterns
-        elif node.kind == EItem.Remote:
+        elif node.kind == SidebarItem.Remote:
             return f"{RefPrefix.REMOTES}{node.data}/" in self.repoModel.prefs.hiddenRefPatterns
-        elif node.kind == EItem.RefFolder:
+        elif node.kind == SidebarItem.RefFolder:
             return f"{node.data}/" in self.repoModel.prefs.hiddenRefPatterns
         else:
             return False
 
     def isImplicitlyHidden(self, node: SidebarNode) -> bool:
-        if node.kind == EItem.LocalBranch or node.kind == EItem.RemoteBranch:
+        if node.kind == SidebarItem.LocalBranch or node.kind == SidebarItem.RemoteBranch:
             return node.data in self.repoModel.hiddenRefs and node.data not in self.repoModel.prefs.hiddenRefPatterns
         else:
             return False
@@ -285,7 +284,7 @@ class SidebarModel(QAbstractItemModel):
 
     def refreshRepoName(self):
         if self.rootNode and self.repoModel:
-            workdirNode = self.rootNode.findChild(EItem.WorkdirHeader)
+            workdirNode = self.rootNode.findChild(SidebarItem.WorkdirHeader)
             workdirNode.displayName = settings.history.getRepoNickname(self.repo.workdir)
 
     @benchmark
@@ -306,15 +305,15 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         # Set up root nodes
         # -----------------------------
-        rootNode = SidebarNode(EItem.Root)
-        for eitem in HEADER_ITEMS:
+        rootNode = SidebarNode(SidebarItem.Root)
+        for eitem in SidebarLayout.RootItems:
             rootNode.appendChild(SidebarNode(eitem))
-        uncommittedNode = rootNode.findChild(EItem.UncommittedChanges)
-        branchRoot = rootNode.findChild(EItem.LocalBranchesHeader)
-        remoteRoot = rootNode.findChild(EItem.RemotesHeader)
-        tagRoot = rootNode.findChild(EItem.TagsHeader)
-        submoduleRoot = rootNode.findChild(EItem.SubmodulesHeader)
-        stashRoot = rootNode.findChild(EItem.StashesHeader)
+        uncommittedNode = rootNode.findChild(SidebarItem.UncommittedChanges)
+        branchRoot = rootNode.findChild(SidebarItem.LocalBranchesHeader)
+        remoteRoot = rootNode.findChild(SidebarItem.RemotesHeader)
+        tagRoot = rootNode.findChild(SidebarItem.TagsHeader)
+        submoduleRoot = rootNode.findChild(SidebarItem.SubmodulesHeader)
+        stashRoot = rootNode.findChild(SidebarItem.StashesHeader)
 
         self.rootNode = rootNode
         self.nodesByRef[UC_FAKEREF] = uncommittedNode
@@ -333,7 +332,7 @@ class SidebarModel(QAbstractItemModel):
             assert repo.head_is_unborn
             target: str = repo.lookup_reference("HEAD").target
             target = target.removeprefix(RefPrefix.HEADS)
-            node = SidebarNode(EItem.UnbornHead, target)
+            node = SidebarNode(SidebarItem.UnbornHead, target)
             branchRoot.appendChild(node)
             self.nodesByRef["HEAD"] = node
 
@@ -342,7 +341,7 @@ class SidebarModel(QAbstractItemModel):
             if checkedOut == 'HEAD':
                 # Detached head, leave self._checkedOut blank
                 assert repo.head_is_detached
-                node = SidebarNode(EItem.DetachedHead, str(repo.head.target))
+                node = SidebarNode(SidebarItem.DetachedHead, str(repo.head.target))
                 branchRoot.appendChild(node)
                 self.nodesByRef["HEAD"] = node
 
@@ -364,7 +363,7 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         for name in repoModel.remotes:
             remoteBranchesDict[name] = []
-            node = SidebarNode(EItem.Remote, name)
+            node = SidebarNode(SidebarItem.Remote, name)
             remoteRoot.appendChild(node)
 
         # -----------------------------
@@ -394,17 +393,17 @@ class SidebarModel(QAbstractItemModel):
                 warnings.warn(f"SidebarModel: unsupported ref prefix: {name}")
 
         # Populate local branch tree
-        self.populateRefNodeTree(localBranches, branchRoot, EItem.LocalBranch, RefPrefix.HEADS, repoModel.prefs.sortBranches)
+        self.populateRefNodeTree(localBranches, branchRoot, SidebarItem.LocalBranch, RefPrefix.HEADS, repoModel.prefs.sortBranches)
 
         # Populate tag tree
-        self.populateRefNodeTree(tags, tagRoot, EItem.Tag, RefPrefix.TAGS, repoModel.prefs.sortTags)
+        self.populateRefNodeTree(tags, tagRoot, SidebarItem.Tag, RefPrefix.TAGS, repoModel.prefs.sortTags)
 
         # Populate remote tree
         for remote, branches in remoteBranchesDict.items():
-            remoteNode = remoteRoot.findChild(EItem.Remote, remote)
+            remoteNode = remoteRoot.findChild(SidebarItem.Remote, remote)
             assert remoteNode is not None
             remotePrefix = f"{RefPrefix.REMOTES}{remote}/"
-            self.populateRefNodeTree(branches, remoteNode, EItem.RemoteBranch, remotePrefix, repoModel.prefs.sortRemoteBranches)
+            self.populateRefNodeTree(branches, remoteNode, SidebarItem.RemoteBranch, remotePrefix, repoModel.prefs.sortRemoteBranches)
 
         # -----------------------------
         # Stashes
@@ -413,7 +412,7 @@ class SidebarModel(QAbstractItemModel):
             message = repo[stashCommitId].message
             message = strip_stash_message(message)
             refName = f"stash@{{{i}}}"
-            node = SidebarNode(EItem.Stash, str(stashCommitId))
+            node = SidebarNode(SidebarItem.Stash, str(stashCommitId))
             node.displayName = message
             stashRoot.appendChild(node)
             self.nodesByRef[refName] = node
@@ -422,7 +421,7 @@ class SidebarModel(QAbstractItemModel):
         # Submodules
         # -----------------------------
         for submoduleKey in repoModel.submodules:
-            node = SidebarNode(EItem.Submodule, submoduleKey)
+            node = SidebarNode(SidebarItem.Submodule, submoduleKey)
             submoduleRoot.appendChild(node)
 
             if submoduleKey not in repoModel.initializedSubmodules:
@@ -433,7 +432,7 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         self.endResetModel()
 
-    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: EItem, refNamePrefix: str, sortMode: RefSort = RefSort.Default):
+    def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: SidebarItem, refNamePrefix: str, sortMode: RefSort = RefSort.Default):
         pendingFolders = {}
 
         if sortMode == RefSort.TimeAsc:
@@ -455,7 +454,7 @@ class SidebarModel(QAbstractItemModel):
                 except KeyError:
                     # Create node for folder, but add it to containerNode later
                     # so that all folders are grouped together.
-                    folderNode = SidebarNode(EItem.RefFolder, refNamePrefix + folderName)
+                    folderNode = SidebarNode(SidebarItem.RefFolder, refNamePrefix + folderName)
                     pendingFolders[folderName] = folderNode
 
             refName = refNamePrefix + sh
@@ -547,10 +546,10 @@ class SidebarModel(QAbstractItemModel):
         row = index.row()
         item = node.kind
 
-        if item == EItem.Spacer:
+        if item == SidebarItem.Spacer:
             pass
 
-        elif item == EItem.LocalBranch:
+        elif item == SidebarItem.LocalBranch:
             refName = node.data
             branchName = refName.removeprefix(RefPrefix.HEADS)
             if displayRole:
@@ -576,7 +575,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-branch" if branchName != self._checkedOut else "git-head"
 
-        elif item == EItem.UnbornHead:
+        elif item == SidebarItem.UnbornHead:
             target = node.data
             if displayRole:
                 return self.tr("[unborn]") + " " + target
@@ -588,7 +587,7 @@ class SidebarModel(QAbstractItemModel):
                 self.cacheTooltip(index, text)
                 return text
 
-        elif item == EItem.DetachedHead:
+        elif item == SidebarItem.DetachedHead:
             if displayRole:
                 return self.tr("Detached HEAD")
             elif toolTipRole:
@@ -600,7 +599,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-head-detached"
 
-        elif item == EItem.Remote:
+        elif item == SidebarItem.Remote:
             remoteName = node.data
             if displayRole:
                 return remoteName
@@ -610,7 +609,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-remote"
 
-        elif item == EItem.RemoteBranch:
+        elif item == SidebarItem.RemoteBranch:
             refName = node.data
             shorthand = refName.removeprefix(RefPrefix.REMOTES)
             remoteName, branchName = split_remote_branch_shorthand(shorthand)
@@ -637,7 +636,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-branch"
 
-        elif item == EItem.RefFolder:
+        elif item == SidebarItem.RefFolder:
             refName = node.data
             if displayRole:
                 return node.displayName
@@ -655,7 +654,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-folder"
 
-        elif item == EItem.Tag:
+        elif item == SidebarItem.Tag:
             refName = node.data
             tagName = refName.removeprefix(RefPrefix.TAGS)
             if displayRole:
@@ -671,7 +670,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-tag"
 
-        elif item == EItem.Stash:
+        elif item == SidebarItem.Stash:
             if displayRole:
                 return node.displayName
             elif refRole:
@@ -688,7 +687,7 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "git-stash"
 
-        elif item == EItem.Submodule:
+        elif item == SidebarItem.Submodule:
             if displayRole:
                 return node.data.rsplit("/", 1)[-1]
             elif toolTipRole:
@@ -703,9 +702,9 @@ class SidebarModel(QAbstractItemModel):
             elif iconKeyRole:
                 return "achtung" if node.warning else "git-submodule"
 
-        elif item == EItem.UncommittedChanges:
+        elif item == SidebarItem.UncommittedChanges:
             if displayRole:
-                changesText = TrTables.sidebarItem(EItem.UncommittedChanges)
+                changesText = TrTables.sidebarItem(SidebarItem.UncommittedChanges)
                 numUncommittedChanges = self.repoModel.numUncommittedChanges
                 if numUncommittedChanges != 0:
                     ucSuffix = f" ({numUncommittedChanges})"
@@ -721,9 +720,9 @@ class SidebarModel(QAbstractItemModel):
 
         else:
             if displayRole:
-                if item == EItem.WorkdirHeader:
+                if item == SidebarItem.WorkdirHeader:
                     return node.displayName
-                elif item == EItem.LocalBranchesHeader:
+                elif item == SidebarItem.LocalBranchesHeader:
                     return TrTables.sidebarItem(item)
                 else:
                     name = TrTables.sidebarItem(item)
@@ -749,10 +748,10 @@ class SidebarModel(QAbstractItemModel):
 
         node = SidebarNode.fromIndex(index)
 
-        if node.kind == EItem.Spacer:
+        if node.kind == SidebarItem.Spacer:
             return Qt.ItemFlag.ItemNeverHasChildren
 
-        if node.kind in FORCE_EXPAND:
+        if node.kind in SidebarLayout.ForceExpand:
             return Qt.ItemFlag.NoItemFlags
 
         f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable

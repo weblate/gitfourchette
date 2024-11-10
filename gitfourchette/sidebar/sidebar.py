@@ -5,7 +5,7 @@
 # -----------------------------------------------------------------------------
 
 import warnings
-from collections.abc import Iterable, Callable
+from collections.abc import Callable
 from contextlib import suppress
 
 from gitfourchette import porcelain
@@ -16,7 +16,7 @@ from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
 from gitfourchette.repoprefs import RefSort
 from gitfourchette.sidebar.sidebardelegate import SidebarDelegate, SidebarClickZone
-from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarModel, SidebarNode, SidebarItem
 from gitfourchette.tasks import *
 from gitfourchette.toolbox import *
 from gitfourchette.webhost import WebHost
@@ -142,10 +142,10 @@ class Sidebar(QTreeView):
         data = node.data
         isHidden = model.isExplicitlyHidden(node)
 
-        if item == EItem.WorkdirHeader:
+        if item == SidebarItem.WorkdirHeader:
             actions += self.repoWidget.contextMenuItems()
 
-        elif item == EItem.UncommittedChanges:
+        elif item == SidebarItem.UncommittedChanges:
             actions += [
                 TaskBook.action(self, NewCommit, accel="C"),
                 TaskBook.action(self, AmendCommit, accel="A"),
@@ -154,14 +154,14 @@ class Sidebar(QTreeView):
                 TaskBook.action(self, ExportWorkdirAsPatch, accel="X"),
             ]
 
-        elif item == EItem.LocalBranchesHeader:
+        elif item == SidebarItem.LocalBranchesHeader:
             actions += [
                 TaskBook.action(self, NewBranchFromHead, self.tr("&New Branch...")),
                 ActionDef.SEPARATOR,
                 ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortBranches")),
             ]
 
-        elif item == EItem.LocalBranch:
+        elif item == SidebarItem.LocalBranch:
             refName = data
             prefix, branchName = RefPrefix.split(data)
             assert prefix == RefPrefix.HEADS
@@ -246,10 +246,10 @@ class Sidebar(QTreeView):
                 ),
             ]
 
-        elif item == EItem.DetachedHead:
+        elif item == SidebarItem.DetachedHead:
             actions += [TaskBook.action(self, NewBranchFromHead, self.tr("New &Branch Here...")), ]
 
-        elif item == EItem.RemoteBranch:
+        elif item == SidebarItem.RemoteBranch:
             activeBranchName = repo.head_branch_shorthand
 
             refName = data
@@ -308,12 +308,12 @@ class Sidebar(QTreeView):
                 ),
             ]
 
-        elif item == EItem.Remote:
+        elif item == SidebarItem.Remote:
             remoteUrl = model.repo.remotes[data].url
             webUrl, webHost = WebHost.makeLink(remoteUrl)
 
             collapseActions = []
-            if any(n.kind == EItem.RefFolder for n in node.children):
+            if any(n.kind == SidebarItem.RefFolder for n in node.children):
                 collapseActions = [
                     ActionDef(
                         self.tr("Collapse All Folders"),
@@ -360,7 +360,7 @@ class Sidebar(QTreeView):
                           checkState=[-1, 1][isHidden]),
             ]
 
-        elif item == EItem.RemotesHeader:
+        elif item == SidebarItem.RemotesHeader:
             actions += [
                 TaskBook.action(self, NewRemote, accel="A"),
                 TaskBook.action(self, FetchRemotes, accel="F"),
@@ -368,7 +368,7 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("Sort Remote Branches By"), submenu=self.refSortMenu("sortRemoteBranches")),
             ]
 
-        elif item == EItem.RefFolder:
+        elif item == SidebarItem.RefFolder:
             if node.data.startswith(RefPrefix.HEADS):
                 actions += [
                     ActionDef(self.tr("Re&name Folder..."), lambda: self.wantRenameNode(node)),
@@ -382,12 +382,12 @@ class Sidebar(QTreeView):
                           checkState=[-1, 1][isHidden]),
             ]
 
-        elif item == EItem.StashesHeader:
+        elif item == SidebarItem.StashesHeader:
             actions += [
                 TaskBook.action(self, NewStash, accel="S"),
             ]
 
-        elif item == EItem.Stash:
+        elif item == SidebarItem.Stash:
             oid = Oid(hex=data)
 
             actions += [
@@ -404,7 +404,7 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("Reveal &Parent Commit"), lambda: self.revealStashParent(oid)),
             ]
 
-        elif item == EItem.TagsHeader:
+        elif item == SidebarItem.TagsHeader:
             refspecs = [ref for ref in self.sidebarModel.repoModel.refs.keys()
                         if ref.startswith(RefPrefix.TAGS)]
 
@@ -415,7 +415,7 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("Sort By"), submenu=self.refSortMenu("sortTags")),
             ]
 
-        elif item == EItem.Tag:
+        elif item == SidebarItem.Tag:
             prefix, shorthand = RefPrefix.split(data)
             assert prefix == RefPrefix.TAGS
             refspecs = [data]
@@ -429,14 +429,14 @@ class Sidebar(QTreeView):
                 ActionDef(self.tr("Push To"), submenu=self.pushRefspecMenu(refspecs)),
             ]
 
-        elif item == EItem.SubmodulesHeader:
+        elif item == SidebarItem.SubmodulesHeader:
             submodules = self.sidebarModel.repoModel.submodules
 
             actions += [
                 TaskBook.action(self, UpdateSubmodulesRecursive, enabled=bool(submodules)),
             ]
 
-        elif item == EItem.Submodule:
+        elif item == SidebarItem.Submodule:
             model = self.sidebarModel
             repo = model.repo
 
@@ -512,19 +512,19 @@ class Sidebar(QTreeView):
 
         item = node.kind
 
-        if item == EItem.UncommittedChanges:
+        if item == SidebarItem.UncommittedChanges:
             locator = NavLocator.inWorkdir()
-        elif item == EItem.UnbornHead:
+        elif item == SidebarItem.UnbornHead:
             locator = NavLocator.inWorkdir()
-        elif item == EItem.DetachedHead:
+        elif item == SidebarItem.DetachedHead:
             locator = NavLocator.inRef("HEAD")
-        elif item == EItem.LocalBranch:
+        elif item == SidebarItem.LocalBranch:
             locator = NavLocator.inRef(node.data)
-        elif item == EItem.RemoteBranch:
+        elif item == SidebarItem.RemoteBranch:
             locator = NavLocator.inRef(node.data)
-        elif item == EItem.Tag:
+        elif item == SidebarItem.Tag:
             locator = NavLocator.inRef(node.data)
-        elif item == EItem.Stash:
+        elif item == SidebarItem.Stash:
             locator = NavLocator.inCommit(Oid(hex=node.data))
         else:
             return None
@@ -539,44 +539,44 @@ class Sidebar(QTreeView):
 
         item = node.kind
 
-        if item == EItem.Spacer:
+        if item == SidebarItem.Spacer:
             pass
 
-        elif item == EItem.LocalBranch:
+        elif item == SidebarItem.LocalBranch:
             SwitchBranch.invoke(self, node.data.removeprefix(RefPrefix.HEADS))
 
-        elif item == EItem.Remote:
+        elif item == SidebarItem.Remote:
             EditRemote.invoke(self, node.data)
 
-        elif item == EItem.RemotesHeader:
+        elif item == SidebarItem.RemotesHeader:
             NewRemote.invoke(self)
 
-        elif item == EItem.LocalBranchesHeader:
+        elif item == SidebarItem.LocalBranchesHeader:
             NewBranchFromHead.invoke(self)
 
-        elif item == EItem.UncommittedChanges:
+        elif item == SidebarItem.UncommittedChanges:
             NewCommit.invoke(self)
 
-        elif item == EItem.Submodule:
+        elif item == SidebarItem.Submodule:
             self.openSubmoduleRepo.emit(node.data)
 
-        elif item == EItem.StashesHeader:
+        elif item == SidebarItem.StashesHeader:
             NewStash.invoke(self)
 
-        elif item == EItem.Stash:
+        elif item == SidebarItem.Stash:
             oid = Oid(hex=node.data)
             ApplyStash.invoke(self, oid)
 
-        elif item == EItem.RemoteBranch:
+        elif item == SidebarItem.RemoteBranch:
             NewBranchFromRef.invoke(self, node.data)
 
-        elif item == EItem.DetachedHead:
+        elif item == SidebarItem.DetachedHead:
             NewBranchFromHead.invoke(self)
 
-        elif item == EItem.TagsHeader:
+        elif item == SidebarItem.TagsHeader:
             NewTag.invoke(self)
 
-        elif item == EItem.Tag:
+        elif item == SidebarItem.Tag:
             target = self.sidebarModel.repoModel.refs[node.data]
             CheckoutCommit.invoke(self, target)
 
@@ -591,29 +591,29 @@ class Sidebar(QTreeView):
         item = node.kind
         data = node.data
 
-        if item == EItem.Spacer:
+        if item == SidebarItem.Spacer:
             pass
 
-        elif item == EItem.LocalBranch:
+        elif item == SidebarItem.LocalBranch:
             assert data.startswith(RefPrefix.HEADS)
             DeleteBranch.invoke(self, data.removeprefix(RefPrefix.HEADS))
 
-        elif item == EItem.Remote:
+        elif item == SidebarItem.Remote:
             DeleteRemote.invoke(self, data)
 
-        elif item == EItem.Stash:
+        elif item == SidebarItem.Stash:
             oid = Oid(hex=data)
             DropStash.invoke(self, oid)
 
-        elif item == EItem.RemoteBranch:
+        elif item == SidebarItem.RemoteBranch:
             assert data.startswith(RefPrefix.REMOTES)
             DeleteRemoteBranch.invoke(self, data.removeprefix(RefPrefix.REMOTES))
 
-        elif item == EItem.Tag:
+        elif item == SidebarItem.Tag:
             assert data.startswith(RefPrefix.TAGS)
             DeleteTag.invoke(self, data.removeprefix(RefPrefix.TAGS))
 
-        elif item == EItem.RefFolder:
+        elif item == SidebarItem.RefFolder:
             prefix, name = RefPrefix.split(data)
             if prefix == RefPrefix.HEADS:
                 DeleteBranchFolder.invoke(self, data)
@@ -631,21 +631,21 @@ class Sidebar(QTreeView):
         item = node.kind
         data = node.data
 
-        if item == EItem.Spacer:
+        if item == SidebarItem.Spacer:
             pass
 
-        elif item == EItem.LocalBranch:
+        elif item == SidebarItem.LocalBranch:
             prefix, name = RefPrefix.split(data)
             assert prefix == RefPrefix.HEADS
             RenameBranch.invoke(self, name)
 
-        elif item == EItem.Remote:
+        elif item == SidebarItem.Remote:
             EditRemote.invoke(self, data)
 
-        elif item == EItem.RemoteBranch:
+        elif item == SidebarItem.RemoteBranch:
             RenameRemoteBranch.invoke(self, data)
 
-        elif item == EItem.RefFolder:
+        elif item == SidebarItem.RefFolder:
             prefix, name = RefPrefix.split(data)
             if prefix == RefPrefix.HEADS:
                 RenameBranchFolder.invoke(self, data)
@@ -662,18 +662,18 @@ class Sidebar(QTreeView):
         item = node.kind
         data = node.data
 
-        if item == EItem.Spacer:
+        if item == SidebarItem.Spacer:
             pass
 
-        elif item in [EItem.LocalBranch, EItem.RemoteBranch]:
+        elif item in [SidebarItem.LocalBranch, SidebarItem.RemoteBranch]:
             self.toggleHideRefPattern.emit(data)
             self.repaint()
 
-        elif item == EItem.Remote:
+        elif item == SidebarItem.Remote:
             self.toggleHideRefPattern.emit(f"{RefPrefix.REMOTES}{data}/")
             self.repaint()
 
-        elif item == EItem.RefFolder:
+        elif item == SidebarItem.RefFolder:
             self.toggleHideRefPattern.emit(f"{data}/")
             self.repaint()
 
@@ -802,16 +802,25 @@ class Sidebar(QTreeView):
     def findNode(self, predicate: Callable[[SidebarNode], bool]) -> SidebarNode:
         return next(node for node in self.walk() if predicate(node))
 
-    def findNodesByKind(self, kind: EItem) -> Iterable[SidebarNode]:
-        return (node for node in self.walk() if node.kind == kind)
-
-    def findNodeByKind(self, kind: EItem) -> SidebarNode:
-        nodes = [node for node in self.walk() if node.kind == kind]
-        assert len(nodes) == 1
-        return nodes[0]
-
     def findNodeByRef(self, ref: str) -> SidebarNode:
         return self.sidebarModel.nodesByRef[ref]
+
+    def findNodesByKind(self, kind: SidebarItem) -> list[SidebarNode]:
+        """ Unit test helper """
+        return [node for node in self.walk() if node.kind == kind]
+
+    def findNodeByKind(self, kind: SidebarItem) -> SidebarNode:
+        """ Unit test helper """
+        nodes = self.findNodesByKind(kind)
+        if len(nodes) == 0:
+            raise KeyError(str(kind))
+        if len(nodes) != 1:
+            raise ValueError(f"{kind} is not unique")
+        return nodes[0]
+
+    def countNodesByKind(self, kind: SidebarItem):
+        """ Unit test helper """
+        return len(self.findNodesByKind(kind))
 
     def indexForRef(self, ref: str) -> QModelIndex | None:
         model = self.sidebarModel
@@ -885,13 +894,13 @@ class Sidebar(QTreeView):
 
     def collapseChildFolders(self, node: SidebarNode):
         for n in node.children:
-            if n.kind == EItem.RefFolder:
+            if n.kind == SidebarItem.RefFolder:
                 index = n.createIndex(self.sidebarModel)
                 self.collapse(index)
 
     def expandChildFolders(self, node: SidebarNode):
         for n in node.children:
-            if n.kind == EItem.RefFolder:
+            if n.kind == SidebarItem.RefFolder:
                 index = n.createIndex(self.sidebarModel)
                 self.expand(index)
 

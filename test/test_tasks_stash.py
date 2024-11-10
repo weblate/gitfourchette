@@ -6,7 +6,7 @@
 
 from . import reposcenario
 from .util import *
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 from gitfourchette.forms.stashdialog import StashDialog
 import os
 import pytest
@@ -26,11 +26,12 @@ def testNewStash(tempDir, mainWindow, method):
 
     assert len(repo.listall_stashes()) == 0
 
-    assert not list(sb.findNodesByKind(EItem.Stash))
+    with pytest.raises(KeyError):
+        sb.findNodeByKind(SidebarItem.Stash)
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/untracked.txt"]
     assert qlvGetRowData(rw.stagedFiles) == ["b/b1.txt"]
 
-    node = next(sb.findNodesByKind(EItem.StashesHeader))
+    node = sb.findNodeByKind(SidebarItem.StashesHeader)
 
     if method == "sidebarmenu":
         menu = sb.makeNodeMenu(node)
@@ -90,12 +91,11 @@ def testNewPartialStash(tempDir, mainWindow, method):
     keptFiles = dirtyFiles.union(stagedFiles).difference(stashedFiles)
 
     assert len(repo.listall_stashes()) == 0
-
-    assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert rw.sidebar.countNodesByKind(SidebarItem.Stash) == 0
     assert set(qlvGetRowData(rw.dirtyFiles)) == dirtyFiles
 
     if method == "stashcommand":
-        node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+        node = rw.sidebar.findNodeByKind(SidebarItem.StashesHeader)
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "stash changes")
     elif method == "filelist":
@@ -143,7 +143,7 @@ def testNewStashWithoutIdentity(tempDir, mainWindow):
     sb = rw.sidebar
     repo = rw.repo
 
-    node = next(sb.findNodesByKind(EItem.StashesHeader))
+    node = sb.findNodeByKind(SidebarItem.StashesHeader)
     menu = sb.makeNodeMenu(node)
     triggerMenuAction(menu, "stash changes")
 
@@ -167,7 +167,7 @@ def testNewStashNothingToStash(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
 
-    node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+    node = rw.sidebar.findNodeByKind(SidebarItem.StashesHeader)
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "stash changes")
 
@@ -180,7 +180,7 @@ def testNewStashCantStashSubmodule(tempDir, mainWindow):
     writeFile(f"{submoAbsPath}/dirty.txt", "coucou")
     rw = mainWindow.openRepo(wd)
 
-    node = next(rw.sidebar.findNodesByKind(EItem.StashesHeader))
+    node = rw.sidebar.findNodeByKind(SidebarItem.StashesHeader)
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "stash changes")
 
@@ -193,7 +193,7 @@ def testPopStash(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
     repo = rw.repo
 
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     node = rw.sidebar.findNodeByRef("stash@{0}")
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "^apply")
@@ -204,7 +204,7 @@ def testPopStash(tempDir, mainWindow):
     qmb.accept()
 
     assert 0 == len(repo.listall_stashes())
-    assert [] == list(rw.sidebar.findNodesByKind(EItem.Stash))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
@@ -214,7 +214,7 @@ def testApplyStash(tempDir, mainWindow, method):
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
 
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     node = rw.sidebar.findNodeByRef("stash@{0}")
 
     # Jump to stash
@@ -244,7 +244,7 @@ def testApplyStash(tempDir, mainWindow, method):
 
     # Check that the UI matches the expected post-apply state
     assert 1 == len(rw.repo.listall_stashes())
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt"]
 
 
@@ -253,7 +253,7 @@ def testCancelApplyStash(tempDir, mainWindow):
     reposcenario.stashedChange(wd)
     rw = mainWindow.openRepo(wd)
 
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     node = rw.sidebar.findNodeByRef("stash@{0}")
 
     # Jump to stash
@@ -280,7 +280,7 @@ def testDropStash(tempDir, mainWindow, method):
 
     assert qlvGetRowData(rw.dirtyFiles) == []
 
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     node = rw.sidebar.findNodeByRef("stash@{0}")
 
     if method == "sidebarmenu":
@@ -299,7 +299,7 @@ def testDropStash(tempDir, mainWindow, method):
     acceptQMessageBox(rw, "really delete.+stash")
 
     assert 0 == len(repo.listall_stashes())
-    assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Stash)))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.Stash)
     assert qlvGetRowData(rw.dirtyFiles) == []
 
 

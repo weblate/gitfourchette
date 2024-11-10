@@ -13,7 +13,7 @@ from pygit2.enums import SubmoduleStatus
 
 from gitfourchette.forms.registersubmoduledialog import RegisterSubmoduleDialog
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 from . import reposcenario
 from .test_tasks_stage import doStage, doDiscard
 from .util import *
@@ -28,7 +28,7 @@ def testOpenSubmoduleWithinApp(tempDir, mainWindow, method):
     rw = mainWindow.openRepo(wd)
     assert mainWindow.currentRepoWidget() is rw
 
-    submoNode = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    submoNode = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
     assert "submoname" == submoNode.data
 
     if method == "sidebarMenu":
@@ -145,7 +145,7 @@ def testSubmoduleDeletedDiff(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     assert not rw.repo.listall_submodules_dict()
-    assert [] == list(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.Submodule)
 
     rw.jump(NavLocator.inCommit(subAddId, path="submodir"))
     assert rw.specialDiffView.isVisibleTo(rw)
@@ -161,13 +161,13 @@ def testDeleteSubmodule(tempDir, mainWindow):
     reposcenario.submodule(wd)
     rw = mainWindow.openRepo(wd)
 
-    node = rw.sidebar.findNode(lambda n: n.data == "submoname")
-    assert node.kind == EItem.Submodule
+    node = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
+    assert node.data == "submoname"
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, r"remove submodule")
 
     acceptQMessageBox(rw, r"remove submodule")
-    assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.Submodule)
     assert set(qlvGetRowData(rw.stagedFiles)) == {"submodir", ".gitmodules"}
 
 
@@ -184,7 +184,7 @@ def testAbsorbSubmodule(tempDir, mainWindow):
 
     # Start with 1 submodule
     assert ["submosub"] == rw.repo.listall_submodules_fast()
-    assert ["submosub"] == [node.data for node in rw.sidebar.findNodesByKind(EItem.Submodule)]
+    assert "submosub" == rw.sidebar.findNodeByKind(SidebarItem.Submodule).data
 
     # Select subfolder in dirty files
     rw.jump(NavLocator.inUnstaged("newsubmo"))
@@ -216,7 +216,7 @@ def testAbsorbSubmodule(tempDir, mainWindow):
 
     # There must be a submodule now
     assert ["newsubmo", "submosub"] == sorted(rw.repo.listall_submodules_fast())
-    assert ["newsubmo", "submosub"] == sorted(node.data for node in rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert ["newsubmo", "submosub"] == sorted(node.data for node in rw.sidebar.findNodesByKind(SidebarItem.Submodule))
 
     # The submodule is there, but it's unstaged
     rw.jump(NavLocator.inStaged("newsubmo"))
@@ -249,7 +249,7 @@ def testSubmoduleStagingSuggestions(tempDir, mainWindow):
 
     # Start without any submodules
     assert ["submosub"] == rw.repo.listall_submodules_fast()
-    assert ["submosub"] == [node.data for node in rw.sidebar.findNodesByKind(EItem.Submodule)]
+    assert "submosub" == rw.sidebar.findNodeByKind(SidebarItem.Submodule).data
 
     # Jump to unstaged submodule entry
     submoUnstagedLoc = NavLocator.inUnstaged("newsubmo")
@@ -304,7 +304,7 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
     assert rw.repo.config["submodule.submoname.url"]
 
     # Delete the submodule
-    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    node = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
     assert node.data == "submoname"
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "remove")
@@ -312,7 +312,7 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
 
     with pytest.raises(KeyError):
         rw.repo.config["submodule.submoname.url"]
-    assert not list(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.Submodule)
     assert set(qlvGetRowData(rw.stagedFiles)) == {".gitmodules", "submodir"}
 
     # Discard submodule deletion
@@ -322,7 +322,7 @@ def testDeleteAbsorbedSubmoduleThenRestoreIt(tempDir, mainWindow):
     rw.dirtyFiles.discard()
     acceptQMessageBox(rw, "discard changes")
 
-    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    node = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
     assert node.data == "submoname"
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "update")
@@ -355,7 +355,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     assert repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED
 
     # Get sidebar node for submodule (must say "not initialized")
-    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    node = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
     assert node.data == sm
     assert "not initialized" in node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
 
@@ -369,7 +369,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     assert repo.submodule_dotgit_present(sm)
 
     # Sidebar node for the submodule shouldn't say "not initialized" anymore
-    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    node = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
     assert node.data == sm
     assert "not initialized" not in node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
 
@@ -426,12 +426,12 @@ def testUpdateSubmoduleWithMissingIncomingCommit(tempDir, mainWindow, method):
 
     # Update the submodule
     if method == "single":
-        node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+        node = rw.sidebar.findNodeByKind(SidebarItem.Submodule)
         assert node.data == sm
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "update")
     elif method == "recurse":
-        node = next(rw.sidebar.findNodesByKind(EItem.SubmodulesHeader))
+        node = rw.sidebar.findNodeByKind(SidebarItem.SubmodulesHeader)
         menu = rw.sidebar.makeNodeMenu(node)
         triggerMenuAction(menu, "update.+recursively")
     else:
@@ -505,7 +505,7 @@ def testDetachHeadBeforeFirstSubmodule(tempDir, mainWindow):
     wd = unpackRepo(tempDir, "submoroot")
     rw = mainWindow.openRepo(wd)
 
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.Submodule)))
+    assert 1 == rw.sidebar.countNodesByKind(SidebarItem.Submodule)
     rw.jump(NavLocator.inCommit(initialCommit))
 
     triggerMenuAction(rw.graphView.makeContextMenu(), "check.?out")
@@ -514,4 +514,4 @@ def testDetachHeadBeforeFirstSubmodule(tempDir, mainWindow):
     dlg.ui.recurseSubmodulesCheckBox.setChecked(True)
     dlg.accept()
 
-    assert 0 == len(list(rw.sidebar.findNodesByKind(EItem.Submodule)))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.Submodule)

@@ -12,7 +12,7 @@ from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.newbranchdialog import NewBranchDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 from . import reposcenario
 from .util import *
 
@@ -25,7 +25,7 @@ def testNewBranch(tempDir, mainWindow, method, switch):
     sb = rw.sidebar
     repo = rw.repo
 
-    node = sb.findNode(lambda n: n.kind == EItem.LocalBranchesHeader)
+    node = sb.findNodeByKind(SidebarItem.LocalBranchesHeader)
 
     if method == "sidebarmenu":
         menu = sb.makeNodeMenu(node)
@@ -64,7 +64,7 @@ def testNewBranchThenSwitchBlockedByConflicts(tempDir, mainWindow):
     sb = rw.sidebar
     repo = rw.repo
 
-    node = sb.findNode(lambda n: n.kind == EItem.LocalBranchesHeader)
+    node = sb.findNodeByKind(SidebarItem.LocalBranchesHeader)
     menu = sb.makeNodeMenu(node)
     triggerMenuAction(menu, "new branch")
 
@@ -212,7 +212,7 @@ def testRenameBranchFolder(tempDir, mainWindow, method, newName):
     repo = rw.repo
 
     node = rw.sidebar.findNode(lambda n: n.data == "refs/heads/folder1/folder2")
-    assert node.kind == EItem.RefFolder
+    assert node.kind == SidebarItem.RefFolder
 
     if method == "sidebarmenu":
         menu = rw.sidebar.makeNodeMenu(node)
@@ -397,7 +397,8 @@ def testNewBranchFromCommit(tempDir, mainWindow, method):
     localBranches = rw.repo.branches.local
 
     assert "first-merge" not in localBranches
-    assert not any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
+    with pytest.raises(KeyError):
+        rw.sidebar.findNodeByRef("refs/heads/first-merge")
 
     oid1 = Oid(hex="0966a434eb1a025db6b71485ab63a3bfbea520b6")
     rw.jump(NavLocator.inCommit(oid1))
@@ -420,7 +421,7 @@ def testNewBranchFromCommit(tempDir, mainWindow, method):
     assert "first-merge" in localBranches
     assert localBranches["first-merge"].target == oid1
     assert localBranches["first-merge"].is_checked_out()
-    assert any("first-merge" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
+    assert rw.sidebar.findNodeByRef("refs/heads/first-merge")
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "graphstart", "graphcheckout"])
@@ -436,7 +437,7 @@ def testNewBranchFromDetachedHead(tempDir, mainWindow, method):
     localBranches = rw.repo.branches.local
     rw.jump(NavLocator.inCommit(oid))
 
-    sidebarNode = next(rw.sidebar.findNodesByKind(EItem.DetachedHead))
+    sidebarNode = rw.sidebar.findNodeByKind(SidebarItem.DetachedHead)
 
     if method == "sidebarmenu":
         triggerMenuAction(rw.sidebar.makeNodeMenu(sidebarNode), r"(start|new) branch")
@@ -461,7 +462,7 @@ def testNewBranchFromDetachedHead(tempDir, mainWindow, method):
     assert "coucou" in localBranches
     assert localBranches["coucou"].target == oid
     assert localBranches["coucou"].is_checked_out()
-    assert any("coucou" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
+    assert rw.sidebar.findNodeByRef("refs/heads/coucou")
 
 
 @pytest.mark.parametrize("method", ["sidebar", "graphstart", "graphcheckout"])
@@ -499,7 +500,7 @@ def testNewBranchFromLocalBranch(tempDir, mainWindow, method):
 
     assert "no-parent-2" in localBranches
     assert localBranches["no-parent-2"].target == localBranches["no-parent"].target
-    assert any("no-parent-2" in n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch))
+    assert rw.sidebar.findNodeByRef("refs/heads/no-parent-2")
 
 
 @pytest.mark.parametrize("method", ["sidebarmenu", "sidebarkey", "graphmenu", "graphkey"])

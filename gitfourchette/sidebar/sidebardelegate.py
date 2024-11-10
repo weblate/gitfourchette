@@ -7,7 +7,7 @@
 import enum
 
 from gitfourchette.qt import *
-from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarModel, EItem, UNINDENT_ITEMS
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarModel, SidebarItem, SidebarLayout
 from gitfourchette.toolbox import stockIcon, drawFittedText
 
 PE_EXPANDED = QStyle.PrimitiveElement.PE_IndicatorArrowDown
@@ -36,16 +36,16 @@ class SidebarDelegate(QStyledItemDelegate):
         super().__init__(parent)
 
     @staticmethod
-    def unindentRect(item: EItem, rect: QRect, indentation: int):
-        if item not in UNINDENT_ITEMS:
+    def unindentRect(item: SidebarItem, rect: QRect, indentation: int):
+        if item not in SidebarLayout.UnindentItems:
             return
-        unindentLevels = UNINDENT_ITEMS[item]
+        unindentLevels = SidebarLayout.UnindentItems[item]
         unindentPixels = unindentLevels * indentation
         return rect.adjust(unindentPixels, 0, 0, 0)
 
     @staticmethod
     def getClickZone(node: SidebarNode, rect: QRect, x: int):
-        if node.kind == EItem.Spacer:
+        if node.kind == SidebarItem.Spacer:
             return SidebarClickZone.Invalid
         elif node.mayHaveChildren() and x < rect.left():
             return SidebarClickZone.Expand
@@ -74,7 +74,7 @@ class SidebarDelegate(QStyledItemDelegate):
 
         painter.save()
 
-        if node.kind == EItem.Spacer:
+        if node.kind == SidebarItem.Spacer:
             mouseOver = False
             option.state &= ~QStyle.StateFlag.State_MouseOver
 
@@ -122,7 +122,7 @@ class SidebarDelegate(QStyledItemDelegate):
         if isSelected:
             penColor = option.palette.color(colorGroup, QPalette.ColorRole.HighlightedText)
             iconColorRemapTable = f"gray={penColor.name()}"
-        elif not node.parent.parent and node.kind != EItem.UncommittedChanges:
+        elif not node.parent.parent and node.kind != SidebarItem.UncommittedChanges:
             penColor = option.palette.color(colorGroup, QPalette.ColorRole.WindowText)
             penColor.setAlphaF(.66)
         else:
@@ -146,7 +146,7 @@ class SidebarDelegate(QStyledItemDelegate):
         font: QFont = index.data(Qt.ItemDataRole.FontRole) or option.font
         painter.setFont(font)
         fullText = index.data(Qt.ItemDataRole.DisplayRole)
-        isCannedString = node.kind <= EItem.SubmodulesHeader
+        isCannedString = node.kind <= SidebarItem.SubmodulesHeader
         if not isCannedString:
             drawFittedText(painter, textRect, option.displayAlignment, fullText, option.textElideMode)
         else:

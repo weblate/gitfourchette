@@ -17,12 +17,12 @@ from gitfourchette.forms.unloadedrepoplaceholder import UnloadedRepoPlaceholder
 from gitfourchette.graphview.commitlogmodel import SpecialRow
 from gitfourchette.mainwindow import MainWindow
 from gitfourchette.nav import NavLocator, NavContext
-from gitfourchette.sidebar.sidebarmodel import EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarItem
 from .util import *
 
 
 def bringUpRepoSettings(rw):
-    node = next(rw.sidebar.findNodesByKind(EItem.WorkdirHeader))
+    node = rw.sidebar.findNodeByKind(SidebarItem.WorkdirHeader)
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), "repo.+settings")
     dlg: RepoSettingsDialog = findQDialog(rw, "repo.+settings")
     return dlg
@@ -132,8 +132,8 @@ def testNewRepo(tempDir, mainWindow):
     assert rw.uiReady
     assert rw.navLocator.context.isWorkdir()
 
-    assert not list(rw.sidebar.findNodesByKind(EItem.LocalBranch))
-    unbornNode = next(rw.sidebar.findNodesByKind(EItem.UnbornHead))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.LocalBranch)
+    unbornNode = rw.sidebar.findNodeByKind(SidebarItem.UnbornHead)
     unbornNodeIndex = unbornNode.createIndex(rw.sidebar.sidebarModel)
     assert re.search(r"branch.+will be created", unbornNodeIndex.data(Qt.ItemDataRole.ToolTipRole), re.I)
     # TODO: test that we honor "init.defaultBranch"...without touching user's git config
@@ -144,8 +144,8 @@ def testNewRepo(tempDir, mainWindow):
     commitDialog.ui.summaryEditor.setText("initial commit")
     commitDialog.accept()
 
-    assert not list(rw.sidebar.findNodesByKind(EItem.UnbornHead))
-    assert 1 == len(list(rw.sidebar.findNodesByKind(EItem.LocalBranch)))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.UnbornHead)
+    assert rw.sidebar.findNodeByKind(SidebarItem.LocalBranch)
 
 
 def testNewRepoFromExistingSources(tempDir, mainWindow):
@@ -502,7 +502,7 @@ def testRestoreSession(tempDir, mainWindow):
     assert rw.repo.repo_name() == "RepoCopy0005"
 
     # Collapse something in sidebar
-    originNode = next(rw.sidebar.findNodesByKind(EItem.Remote))
+    originNode = rw.sidebar.findNodeByKind(SidebarItem.Remote)
     originIndex = originNode.createIndex(rw.sidebar.sidebarModel)
     assert rw.sidebar.isExpanded(originIndex)
     rw.sidebar.collapse(originNode.createIndex(rw.sidebar.sidebarModel))
@@ -536,7 +536,7 @@ def testRestoreSession(tempDir, mainWindow):
     assert rw.repo.repo_name() == "RepoCopy0005"
 
     # Make sure origin node is still collapsed
-    originNode = next(rw.sidebar.findNodesByKind(EItem.Remote))
+    originNode = rw.sidebar.findNodeByKind(SidebarItem.Remote)
     originIndex = originNode.createIndex(rw.sidebar.sidebarModel)
     assert not rw.sidebar.isExpanded(originIndex)
 

@@ -7,7 +7,7 @@
 import pytest
 
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import EItem, SidebarModel, SidebarNode
+from gitfourchette.sidebar.sidebarmodel import SidebarItem, SidebarModel, SidebarNode
 from gitfourchette.toolbox import naturalSort
 from .util import *
 
@@ -33,14 +33,14 @@ def testSidebarWithDetachedHead(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     headNode = rw.sidebar.findNodeByRef("HEAD")
-    assert headNode.kind == EItem.DetachedHead
-    assert [headNode] == list(rw.sidebar.findNodesByKind(EItem.DetachedHead))
+    assert headNode.kind == SidebarItem.DetachedHead
+    assert headNode == rw.sidebar.findNodeByKind(SidebarItem.DetachedHead)
 
     toolTip = headNode.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
     assert re.search(r"detached head.+7f82283", toolTip, re.I)
 
     assert {'refs/heads/master', 'refs/heads/no-parent'
-            } == {n.data for n in rw.sidebar.findNodesByKind(EItem.LocalBranch)}
+            } == {n.data for n in rw.sidebar.findNodesByKind(SidebarItem.LocalBranch)}
 
 
 def testSidebarSelectionSync(tempDir, mainWindow):
@@ -95,13 +95,13 @@ def testRefreshKeepsSidebarNonRefSelection(tempDir, mainWindow):
     sb = rw.sidebar
     sb.setFocus()
 
-    node = next(sb.findNodesByKind(EItem.Remote))
+    node = sb.findNodeByKind(SidebarItem.Remote)
     assert node.data == "origin"
     sb.selectNode(node)
 
     rw.refreshRepo()
     node = SidebarNode.fromIndex(sb.selectedIndexes()[0])
-    assert node.kind == EItem.Remote
+    assert node.kind == SidebarItem.Remote
     assert node.data == "origin"
 
 
@@ -109,17 +109,17 @@ def testNewEmptyRemoteShowsUpInSidebar(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar
-    assert 1 == len(list(sb.findNodesByKind(EItem.Remote)))
+    assert 1 == sb.countNodesByKind(SidebarItem.Remote)
 
     rw.repo.remotes.create("toto", "https://github.com/jorio/bugdom")
     rw.refreshRepo()
-    assert 2 == len(list(sb.findNodesByKind(EItem.Remote)))
+    assert 2 == sb.countNodesByKind(SidebarItem.Remote)
 
 
 @pytest.mark.parametrize("headerKind,leafKind", [
-    (EItem.LocalBranchesHeader, EItem.LocalBranch),
-    (EItem.RemotesHeader, EItem.RemoteBranch),
-    (EItem.TagsHeader, EItem.Tag),
+    (SidebarItem.LocalBranchesHeader, SidebarItem.LocalBranch),
+    (SidebarItem.RemotesHeader, SidebarItem.RemoteBranch),
+    (SidebarItem.TagsHeader, SidebarItem.Tag),
 ])
 def testRefSortModes(tempDir, mainWindow, headerKind, leafKind):
     assert headerKind != leafKind
@@ -134,7 +134,7 @@ def testRefSortModes(tempDir, mainWindow, headerKind, leafKind):
     rw = mainWindow.openRepo(wd)
     sb = rw.sidebar
 
-    headerNode = next(sb.findNodesByKind(headerKind))
+    headerNode = sb.findNodeByKind(headerKind)
 
     def getNodeDatas():
         return [node.data for node in sb.findNodesByKind(leafKind)]
@@ -152,7 +152,7 @@ def testRefSortModes(tempDir, mainWindow, headerKind, leafKind):
     assert getNodeDatas() == sortedAlpha
 
     # Special case for tags - test natural sorting
-    if leafKind == EItem.Tag:
+    if leafKind == SidebarItem.Tag:
         assert [data.removeprefix("refs/tags/") for data in getNodeDatas()
                 ] == ["annotated_tag", "version2", "VERSION3", "version10"]
 
@@ -216,18 +216,18 @@ def testSidebarToolTips(tempDir, mainWindow):
         for pattern in patterns:
             assert re.search(pattern, tip, re.I), f"pattern missing in tooltip: {tip}"
 
-    test(EItem.LocalBranch, "refs/heads/master",
+    test(SidebarItem.LocalBranch, "refs/heads/master",
          r"local branch", r"upstream.+origin/master", r"checked.out")
 
-    test(EItem.RemoteBranch, "refs/remotes/origin/master",
+    test(SidebarItem.RemoteBranch, "refs/remotes/origin/master",
          r"origin/master", r"remote-tracking branch", r"upstream for.+checked.out.+\bmaster\b")
 
-    test(EItem.Tag, "refs/tags/annotated_tag", r"\btag\b")
-    test(EItem.UncommittedChanges, "", r"go to uncommitted changes.+(ctrl|⌘)")
-    test(EItem.Remote, "origin", r"https://github.com/libgit2/TestGitRepository")
-    test(EItem.RefFolder, "refs/heads/folder", r"local branch folder")
-    test(EItem.RefFolder, "refs/remotes/origin/folder", r"remote branch folder")
-    test(EItem.RefFolder, "refs/tags/folder", r"tag folder")
+    test(SidebarItem.Tag, "refs/tags/annotated_tag", r"\btag\b")
+    test(SidebarItem.UncommittedChanges, "", r"go to uncommitted changes.+(ctrl|⌘)")
+    test(SidebarItem.Remote, "origin", r"https://github.com/libgit2/TestGitRepository")
+    test(SidebarItem.RefFolder, "refs/heads/folder", r"local branch folder")
+    test(SidebarItem.RefFolder, "refs/remotes/origin/folder", r"remote branch folder")
+    test(SidebarItem.RefFolder, "refs/tags/folder", r"tag folder")
 
 
 def testSidebarHeadIconAfterSwitchingBranchesPointingToSameCommit(tempDir, mainWindow):

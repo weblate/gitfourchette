@@ -13,7 +13,7 @@ from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.signatureform import SignatureOverride
 from gitfourchette.graphview.commitlogmodel import CommitLogModel, SpecialRow
 from gitfourchette.nav import NavLocator
-from gitfourchette.sidebar.sidebarmodel import SidebarNode, EItem
+from gitfourchette.sidebar.sidebarmodel import SidebarNode, SidebarItem
 from . import reposcenario
 from .util import *
 
@@ -358,7 +358,7 @@ def testDetachHeadOnSameCommitAsCheckedOutBranch(tempDir, mainWindow):
 
     headId = rw.repo.head_commit_id
     assert not rw.repo.head_is_detached
-    assert not list(rw.sidebar.findNodesByKind(EItem.DetachedHead))
+    assert 0 == rw.sidebar.countNodesByKind(SidebarItem.DetachedHead)
 
     triggerMenuAction(mainWindow.menuBar(), "view/go to head commit")
     rw.graphView.setFocus()
@@ -373,7 +373,7 @@ def testDetachHeadOnSameCommitAsCheckedOutBranch(tempDir, mainWindow):
 
     # Sidebar must now reflect detached HEAD
     currentSidebarNode = SidebarNode.fromIndex(rw.sidebar.currentIndex())
-    assert currentSidebarNode.kind == EItem.DetachedHead
+    assert currentSidebarNode.kind == SidebarItem.DetachedHead
 
 
 def testCommitOnDetachedHead(tempDir, mainWindow):
