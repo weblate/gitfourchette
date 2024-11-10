@@ -103,6 +103,7 @@ class RepoModel:
         self.mergeheads = []
         self.stashes = []
         self.submodules = {}
+        self.initializedSubmodules = set()
         self.remotes = []
 
         self.hiddenRefs = set()
@@ -205,9 +206,13 @@ class RepoModel:
     @benchmark
     def syncSubmodules(self):
         submodules = self.repo.listall_submodules_dict()
-        if submodules != self.submodules:
+        initializedSubmodules = {name for name, path in submodules.items() if self.repo.submodule_dotgit_present(path)}
+
+        if submodules != self.submodules or initializedSubmodules != self.initializedSubmodules:
             self.submodules = submodules
+            self.initializedSubmodules = initializedSubmodules
             return True
+
         return False
 
     @benchmark

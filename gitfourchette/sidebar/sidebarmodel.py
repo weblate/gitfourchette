@@ -421,11 +421,11 @@ class SidebarModel(QAbstractItemModel):
         # -----------------------------
         # Submodules
         # -----------------------------
-        for submoduleKey, submodulePath in repoModel.submodules.items():
+        for submoduleKey in repoModel.submodules:
             node = SidebarNode(EItem.Submodule, submoduleKey)
             submoduleRoot.appendChild(node)
 
-            if not repo.submodule_dotgit_present(submodulePath):
+            if submoduleKey not in repoModel.initializedSubmodules:
                 node.warning = self.tr("Submodule not initialized.")
 
         # -----------------------------

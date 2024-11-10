@@ -341,7 +341,7 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     repo.free()
     del repo
 
-    # Prevent submo from hitting network
+    # Prevent submo from hitting network in this unit test
     # NOTE: We're modifying .gitmodules, NOT .git/config, so that the module appears UNinitialized!
     GitConfig(f"{wd}/.gitmodules")[f"submodule.{sm}.url"] = upstreamSub
     assert f"submodule.{sm}.url" not in GitConfig(f"{wd}/.git/config")
@@ -354,14 +354,24 @@ def testInitSubmoduleInFreshNonRecursiveClone(tempDir, mainWindow):
     assert [] == os.listdir(f"{wd}/{sm}")
     assert repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED
 
+    # Get sidebar node for submodule (must say "not initialized")
     node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
     assert node.data == sm
     assert "not initialized" in node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
+
+    # Update the submodule
     menu = rw.sidebar.makeNodeMenu(node)
     triggerMenuAction(menu, "update")
 
+    # Submodule must be initialized
     assert ".git" in os.listdir(f"{wd}/{sm}")
     assert not repo.submodules.status(sm) & SubmoduleStatus.WD_UNINITIALIZED
+    assert repo.submodule_dotgit_present(sm)
+
+    # Sidebar node for the submodule shouldn't say "not initialized" anymore
+    node = next(rw.sidebar.findNodesByKind(EItem.Submodule))
+    assert node.data == sm
+    assert "not initialized" not in node.createIndex(rw.sidebar.sidebarModel).data(Qt.ItemDataRole.ToolTipRole)
 
 
 @pytest.mark.skipif(pygit2OlderThan("1.15.1"), reason="old pygit2")
