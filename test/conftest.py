@@ -121,6 +121,9 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
 
 @pytest.fixture
 def mockDesktopServices():
+    """
+    Use this fixture to intercept calls to QDesktopServices.openUrl() in unit tests.
+    """
     from gitfourchette import qt
 
     protocols = ["http", "https", "file"]

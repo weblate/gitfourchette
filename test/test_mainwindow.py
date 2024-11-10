@@ -196,3 +196,35 @@ def testMainWindowMenuItems(tempDir, mainWindow):
     triggerMenuAction(mainWindow.menuBar(), "file/recent/clear")
     with pytest.raises(KeyError):
         findMenuAction(mainWindow.menuBar(), "file/recent/repo2")
+
+
+def testRepoWidgetTabBarActions(tempDir, mainWindow, mockDesktopServices):
+    """
+    WARNING: THIS TEST MODIFIES THE SYSTEM'S CLIPBOARD.
+    (No worries if you're running the tests offscreen.)
+    """
+
+    # Open two repos to test background and foreground tab actions
+    wd0 = unpackRepo(tempDir, renameTo="repo0")
+    wd1 = unpackRepo(tempDir, renameTo="repo1")
+
+    mainWindow.openRepo(wd0)
+    mainWindow.openRepo(wd1)
+    assert mainWindow.tabs.count() == 2
+
+    for tabIndex, wd in enumerate([wd0, wd1]):
+        wd = os.path.realpath(wd)
+
+        tabRect = mainWindow.tabs.tabs.tabRect(tabIndex)
+        clickPoint = tabRect.topLeft()
+        mainWindow.tabs.tabs.customContextMenuRequested.emit(clickPoint)
+
+        menu = findContextMenu(mainWindow)
+
+        triggerMenuAction(menu, "copy repo path")
+        assert QApplication.clipboard().text() == wd
+
+        triggerMenuAction(menu, "open repo folder")
+        assert mockDesktopServices.urls[-1] == QUrl.fromLocalFile(wd)
+
+        menu.close()

@@ -331,6 +331,14 @@ def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
     raise KeyError(f"did not find QToolButton \"{textPattern}\"")
 
 
+def findContextMenu(parent: QWidget) -> QMenu:
+    for menu in parent.findChildren(QMenu):
+        menu: QMenu
+        if menu.isVisible() and not isinstance(menu.parent(), QMenu):
+            return menu
+    raise KeyError("did not find context menu")
+
+
 def postMouseWheelEvent(target: QWidget, angleDelta: int, point=QPoint_zero, modifiers=Qt.KeyboardModifier.NoModifier):
     if QT5:
         point = QPoint(point)

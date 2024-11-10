@@ -1004,7 +1004,7 @@ class RepoWidget(QStackedWidget):
             TaskBook.action(invoker, tasks.EditRepoSettings),
 
             ActionDef(
-                invoker.tr("&Local Config Files"),
+                translate("RepoWidget", "&Local Config Files"),
                 submenu=[
                     ActionDef(".gitignore", lambda: proxy().openGitignore()),
                     ActionDef("config", lambda: proxy().openLocalConfig()),
@@ -1014,7 +1014,7 @@ class RepoWidget(QStackedWidget):
 
     @classmethod
     def pathsMenuItemsByProxy(cls, invoker, proxy):
-        superprojectLabel = invoker.tr("Open Superproject")
+        superprojectLabel = translate("RepoWidget", "Open Superproject")
         superprojectEnabled = True
 
         if isinstance(invoker, cls):
@@ -1022,20 +1022,20 @@ class RepoWidget(QStackedWidget):
             superprojectEnabled = bool(superproject)
             if superprojectEnabled:
                 superprojectName = settings.history.getRepoTabName(superproject)
-                superprojectLabel = invoker.tr("Open Superproject {0}").format(lquo(superprojectName))
+                superprojectLabel = translate("RepoWidget", "Open Superproject {0}").format(lquo(superprojectName))
 
         return [
             ActionDef(
-                invoker.tr("&Open Repo Folder"),
+                translate("RepoWidget", "&Open Repo Folder"),
                 lambda: proxy().openRepoFolder(),
                 shortcuts=GlobalShortcuts.openRepoFolder,
-                tip=invoker.tr("Open this repo’s working directory in the system’s file manager"),
+                tip=translate("RepoWidget", "Open this repo’s working directory in the system’s file manager"),
             ),
 
             ActionDef(
-                invoker.tr("Cop&y Repo Path"),
+                translate("RepoWidget", "Cop&y Repo Path"),
                 lambda: proxy().copyRepoPath(),
-                tip=invoker.tr("Copy the absolute path to this repo’s working directory to the clipboard"),
+                tip=translate("RepoWidget", "Copy the absolute path to this repo’s working directory to the clipboard"),
             ),
 
             ActionDef(

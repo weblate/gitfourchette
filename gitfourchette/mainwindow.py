@@ -445,9 +445,9 @@ class MainWindow(QMainWindow):
             ActionDef(self.tr("Close Other Tabs"), lambda: self.closeOtherTabs(i), enabled=self.tabs.count() > 1),
             ActionDef(self.tr("Unload Other Tabs"), lambda: self.unloadOtherTabs(i), enabled=self.tabs.count() > 1 and anyOtherLoadedTabs),
             ActionDef.SEPARATOR,
-            ActionDef(self.tr("Configure Tabs..."), lambda: openPrefsDialog(self, "tabCloseButton")),
+            *rw.pathsMenuItems(),
             ActionDef.SEPARATOR,
-            *self.currentRepoWidget().pathsMenuItems(),
+            ActionDef(self.tr("Configure Tabs..."), lambda: openPrefsDialog(self, "tabCloseButton")),
         )
 
         return menu
