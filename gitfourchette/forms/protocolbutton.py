@@ -13,7 +13,7 @@ class ProtocolButton(QToolButton):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.setFixedWidth(self.fontMetrics().horizontalAdvance("--https--"))
+        self.setFixedWidth(self.fontMetrics().horizontalAdvance("---https---"))
         self.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.setToolTip(self.tr("Change URL protocol"))
 

@@ -56,10 +56,7 @@ class MainToolBar(QToolBar):
             self.forwardAction,
             ActionDef.SEPARATOR,
 
-            TaskBook.toolbarAction(self, tasks.NewCommit),
-            TaskBook.toolbarAction(self, tasks.AmendCommit),
             TaskBook.toolbarAction(self, tasks.NewStash),
-            ActionDef.SEPARATOR,
             TaskBook.toolbarAction(self, tasks.NewBranchFromHead),
             ActionDef.SEPARATOR,
             TaskBook.toolbarAction(self, tasks.FetchRemotes),

@@ -269,8 +269,8 @@ class DiffArea(QWidget):
         diffViewContainerLayout = QVBoxLayout(diffViewContainer)
         diffViewContainerLayout.setSpacing(0)
         diffViewContainerLayout.setContentsMargins(0, 0, 0, 0)
-        diffViewContainerLayout.addWidget(diff)
         diffViewContainerLayout.addWidget(diff.searchBar)
+        diffViewContainerLayout.addWidget(diff)
 
         specialDiff = SpecialDiffView()
 
