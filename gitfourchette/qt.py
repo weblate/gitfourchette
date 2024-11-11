@@ -171,22 +171,10 @@ if PYQT5 or PYQT6:
     Slot = pyqtSlot
 
 if PYSIDE6:
-    # Work around PYSIDE-2234. PySide6 6.5.0+ does implement QRunnable.create, but
-    # its implementation sometimes causes random QRunnable objects to bubble up to
-    # MainWindow.eventFilter as the 'event' arg, somehow.
-    class _QRunnableFunctionWrapper(QRunnable):
-        def __init__(self, func):
-            super().__init__()
-            self._func = func
-
-        def run(self):
-            self._func()
-
     def _QCommandLineParser_addOptions(self, options):
         for o in options:
             self.addOption(o)
 
-    QRunnable.create = _QRunnableFunctionWrapper
     QCommandLineParser.addOptions = _QCommandLineParser_addOptions
 
 if QT5:
