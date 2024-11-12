@@ -53,9 +53,9 @@ def testCloneRepoWithSubmodules(tempDir, mainWindow):
     assert "unpacked-repo-bare" in cloneDialog.ui.pathEdit.text()  # autofilled after entering URL
     assert cloneDialog.ui.protocolButton.isHidden()  # protocol swap button shouldn't be visible for file URLs
 
-    # Test expanduser on manual path entry
+    # Test expanduser on manual path entry + whitespace stripping
     cloneDialog.ui.pathEdit.setFocus()
-    cloneDialog.ui.pathEdit.setText("~/thisshouldwork")
+    cloneDialog.ui.pathEdit.setText("   ~/thisshouldwork   ")
     assert cloneDialog.path == str(Path("~/thisshouldwork").expanduser())
 
     # Disallow cloning to non-empty directory

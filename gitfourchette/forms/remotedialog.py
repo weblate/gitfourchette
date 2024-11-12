@@ -83,6 +83,7 @@ class RemoteDialog(QDialog):
         if not self.allowAutoFillName:
             return
 
+        url = url.strip()
         host, path = splitRemoteUrl(url)
 
         # Sanitize host

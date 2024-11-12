@@ -83,10 +83,11 @@ def testEditRemote(tempDir, mainWindow, method):
     else:
         raise NotImplementedError(f"unknown method {method}")
 
-    q: RemoteDialog = findQDialog(rw, "edit remote")
-    q.ui.nameEdit.setText("mainremote")
-    q.ui.urlEdit.setText("https://127.0.0.1/example-repo.git")
-    q.accept()
+    dialog: RemoteDialog = findQDialog(rw, "edit remote")
+    dialog.ui.nameEdit.setText("mainremote")
+    dialog.ui.urlEdit.setText("   https://127.0.0.1/example-repo.git   ")  # test whitespace stripping
+    assert dialog.ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok).isEnabled()
+    dialog.accept()
 
     assert len(repo.remotes) == 1
     assert repo.remotes[0].name == "mainremote"
@@ -194,6 +195,7 @@ def testRemoteUrlProtocolSwap(tempDir, mainWindow):
         ("git@github.com:jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
         ("git@github.com:jorio/bugdom.git", "ssh", "https://github.com/jorio/bugdom"),
         ("github.com:jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
+        ("   github.com:jorio/bugdom   ", "ssh", "https://github.com/jorio/bugdom"),
         ("ssh://github.com:21/jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
         ("ssh://git@github.com/jorio/bugdom", "ssh", "https://github.com/jorio/bugdom"),
         ("git://github.com/jorio/bugdom", "git", "git@github.com:jorio/bugdom"),

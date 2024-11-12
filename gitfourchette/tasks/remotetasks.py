@@ -70,7 +70,7 @@ class EditRemote(RepoTask):
         yield from self.flowDialog(dlg)
 
         newRemoteName = dlg.ui.nameEdit.text()
-        newRemoteUrl = dlg.ui.urlEdit.text()
+        newRemoteUrl = dlg.ui.urlEdit.text().strip()
         newRemoteKeyfile = dlg.privateKeyFilePath
         dlg.deleteLater()
 

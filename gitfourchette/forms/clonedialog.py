@@ -26,6 +26,7 @@ from gitfourchette.trtables import TrTables
 
 
 def _projectNameFromUrl(url: str) -> str:
+    url = url.strip()
     name = url.rsplit("/", 1)[-1].removesuffix(".git")
     name = urllib.parse.unquote(name)
     # Sanitize name
@@ -222,11 +223,11 @@ class CloneDialog(QDialog):
 
     @property
     def url(self):
-        return self.ui.urlEdit.currentText()
+        return self.ui.urlEdit.currentText().strip()
 
     @property
     def path(self):
-        text = self.ui.pathEdit.text()
+        text = self.ui.pathEdit.text().strip()
         path = Path(text)
         with suppress(RuntimeError):
             path = path.expanduser()

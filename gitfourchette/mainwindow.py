@@ -972,6 +972,7 @@ class MainWindow(QMainWindow):
 
         elif mime.hasText():
             text = mime.text()
+            text = text.strip()
             if os.path.isabs(text) and os.path.exists(text):
                 return "open", text
             elif text.startswith(("ssh://", "git+ssh://", "https://", "http://")):

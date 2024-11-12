@@ -46,7 +46,7 @@ def testDropDirectoryOntoMainWindowOpensRepository(tempDir, mainWindow, mimePayl
     assert os.path.normpath(mainWindow.currentRepoWidget().repo.workdir) == os.path.normpath(wd)
 
 
-@pytest.mark.parametrize("mimePayload", ["url", "text"])
+@pytest.mark.parametrize("mimePayload", ["url", "text", "sloppytext"])
 def testDropUrlOntoMainWindowBringsUpCloneDialog(mainWindow, mimePayload):
     assert mainWindow.tabs.count() == 0
     with pytest.raises(NoRepoWidgetError):
@@ -57,8 +57,10 @@ def testDropUrlOntoMainWindowBringsUpCloneDialog(mainWindow, mimePayload):
     if mimePayload == "url":
         wdUrl = QUrl(address)
         mime.setUrls([wdUrl])
-    else:
+    elif mimePayload == "text":
         mime.setText(address)
+    elif mimePayload == "sloppytext":
+        mime.setText("  " + address + "  ")
 
     pos = QPointF(mainWindow.width()//2, mainWindow.height()//2)
     dropEvent = QDropEvent(pos, Qt.DropAction.MoveAction, mime, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)

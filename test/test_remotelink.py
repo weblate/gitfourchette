@@ -19,7 +19,7 @@ requiresNetwork = pytest.mark.skipif(not hasNetwork, reason="Requires network - 
 def testHttpsCloneRepo(tempDir, mainWindow, taskThread, qtbot):
     triggerMenuAction(mainWindow.menuBar(), "file/clone")
     cloneDialog: CloneDialog = findQDialog(mainWindow, "clone")
-    cloneDialog.ui.urlEdit.setEditText("https://github.com/libgit2/TestGitRepository")
+    cloneDialog.ui.urlEdit.setEditText("  https://github.com/libgit2/TestGitRepository  ")  # whitespace should be stripped
     cloneDialog.ui.pathEdit.setText(tempDir.name + "/cloned")
     cloneDialog.cloneButton.click()
     qtbot.waitSignal(cloneDialog.finished).wait()

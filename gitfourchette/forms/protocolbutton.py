@@ -33,6 +33,7 @@ class ProtocolButton(QToolButton):
     def onUrlChanged(self, url: str):
         """ Detect protocol when URL changes """
 
+        url = url.strip()
         protocol = remoteUrlProtocol(url)
 
         if not protocol:  # unknown protocol, hide protocol button
