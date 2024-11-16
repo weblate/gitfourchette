@@ -177,6 +177,7 @@ def testRenameRemoteBranch(tempDir, mainWindow):
     rw = mainWindow.openRepo(wd)
 
     assert "localfs/no-parent" in rw.repo.branches.remote
+    assert rw.repo.branches.local["no-parent"].upstream_name == "refs/remotes/localfs/no-parent"
 
     node = rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
     menu = rw.sidebar.makeNodeMenu(node)
@@ -191,6 +192,8 @@ def testRenameRemoteBranch(tempDir, mainWindow):
     with pytest.raises(KeyError):
         rw.sidebar.findNodeByRef("refs/remotes/localfs/no-parent")
     rw.sidebar.findNodeByRef("refs/remotes/localfs/new-name")
+
+    assert rw.repo.branches.local["no-parent"].upstream_name == "refs/remotes/localfs/new-name"
 
 
 @pytest.mark.parametrize("method", ["sidebar", "toolbar"])

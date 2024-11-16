@@ -288,8 +288,8 @@ def split_remote_branch_shorthand(remote_branch_name: str) -> tuple[str, str]:
 
     # TODO: extraction of branch name is flaky if remote name or branch name contains slashes
     try:
-        remote_name, branchName = remote_branch_name.split("/", 1)
-        return remote_name, branchName
+        remote_name, branch_name = remote_branch_name.split("/", 1)
+        return remote_name, branch_name
     except ValueError:
         # `git svn clone` creates .git/refs/remotes/git-svn, which trips up pygit2
         return remote_branch_name, ""
@@ -928,30 +928,45 @@ class Repo(_VanillaRepository):
         self.scrub_empty_config_section("remote", name)
 
     def delete_remote_branch(self, remote_branch_name: str, remoteCallbacks: RemoteCallbacks):
-        remoteName, branchName = split_remote_branch_shorthand(remote_branch_name)
+        remote_name, branch_name = split_remote_branch_shorthand(remote_branch_name)
 
-        refspec = f":{RefPrefix.HEADS}{branchName}"
+        refspec = f":{RefPrefix.HEADS}{branch_name}"
         _logger.info(f"Delete remote branch: refspec: \"{refspec}\"")
 
-        remote = self.remotes[remoteName]
+        remote = self.remotes[remote_name]
         remote.push([refspec], callbacks=remoteCallbacks)
 
-    def rename_remote_branch(self, old_remote_branch_name: str, new_name: str, remote_callbacks: RemoteCallbacks):
+    def rename_remote_branch(self, old_shorthand: str, new_name: str, remote_callbacks: RemoteCallbacks):
         """
+        Rename a branch on the remote, then adjust local branch upstreams (if any).
+
         Warning: this function does not refresh the state of the remote branch before renaming it!
         """
-        remoteName, oldBranchName = split_remote_branch_shorthand(old_remote_branch_name)
+        remote_name, old_branch_name = split_remote_branch_shorthand(old_shorthand)
+        old_remote_ref = RefPrefix.REMOTES + old_shorthand
+
+        # Find local branches using this upstream
+        adjust_upstreams = []
+        for lb in self.branches.local:
+            with _suppress(KeyError):  # KeyError if upstream branch doesn't exist
+                if self.branches.local[lb].upstream_name == old_remote_ref:
+                    adjust_upstreams.append(lb)
 
         # First, make a new branch pointing to the same ref as the old one
-        refspec1 = f"{RefPrefix.REMOTES}{old_remote_branch_name}:{RefPrefix.HEADS}{new_name}"
+        refspec1 = f"{RefPrefix.REMOTES}{old_shorthand}:{RefPrefix.HEADS}{new_name}"
 
         # Next, delete the old branch
-        refspec2 = f":{RefPrefix.HEADS}{oldBranchName}"
+        refspec2 = f":{RefPrefix.HEADS}{old_branch_name}"
 
-        _logger.info(f"Rename remote branch: remote: {remoteName}; refspec: {[refspec1, refspec2]}")
+        _logger.info(f"Rename remote branch: remote: {remote_name}; refspec: {[refspec1, refspec2]}; "
+                     f"adjust upstreams: {adjust_upstreams}")
 
-        remote = self.remotes[remoteName]
+        remote = self.remotes[remote_name]
         remote.push([refspec1, refspec2], callbacks=remote_callbacks)
+
+        new_remote_branch = self.branches.remote[remote_name + "/" + new_name]
+        for lb in adjust_upstreams:
+            self.branches.local[lb].upstream = new_remote_branch
 
     def delete_stale_remote_head_symbolic_ref(self, remote_name: str):
         """

@@ -116,12 +116,19 @@ class RenameRemoteBranch(_BaseNetTask):
         # Naked name, NOT prefixed with the name of the remote
         newBranchName = dlg.lineEdit.text()
 
-        self._showRemoteLinkDialog()
+        self._showRemoteLinkDialog(self.name())
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Remotes | TaskEffects.Refs
 
-        remote = self.repo.remotes[remoteName]
+        remote: Remote = self.repo.remotes[remoteName]
+
+        # Fetch remote branch first to avoid data loss if we're out of date
+        with self.remoteLink.remoteContext(remote):
+            self.repo.fetch_remote_branch(remoteBranchName, self.remoteLink)
+
+        # Rename the remote branch
+        # TODO: Can we reuse the connection in a single remoteContext?
         with self.remoteLink.remoteContext(remote):
             self.repo.rename_remote_branch(remoteBranchName, newBranchName, self.remoteLink)
 
