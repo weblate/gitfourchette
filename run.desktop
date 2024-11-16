@@ -5,13 +5,13 @@
 #
 # To get the icon to show up on Wayland:
 #     mkdir -p ~/.local/share/icons
-#     cp gitfourchette/assets/icons/gitfourchette.png ~/.local/share/icons/io.jor.gitfourchette.png
+#     cp gitfourchette/assets/icons/gitfourchette.png ~/.local/share/icons/org.gitfourchette.png
 
 [Desktop Entry]
 Exec=bash -c 'PYTHONPATH="$(dirname "%k")" python3 -m gitfourchette'
-Icon=io.jor.gitfourchette
+Icon=org.gitfourchette
 Name=GitFourchette (from source)
-Comment=The comfy Git UI
+Comment=The comfortable Git UI
 Comment[fr]=L’interface Git tout confort
 StartupNotify=true
 Type=Application

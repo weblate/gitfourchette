@@ -1,22 +1,22 @@
 <?xml version='1.0' encoding='utf-8'?>
 <component type="desktop">
-  <id>io.jor.gitfourchette</id>
+  <id>org.gitfourchette</id>
   <name>GitFourchette</name>
   <summary>The comfortable Git UI</summary>
   <developer_name>Iliyas Jorio</developer_name>
-  <launchable type="desktop-id">io.jor.gitfourchette.desktop</launchable>
+  <launchable type="desktop-id">org.gitfourchette.desktop</launchable>
   <metadata_license>CC0-1.0</metadata_license>
   <description>
     <p>The comfortable Git UI for Linux.</p>
   </description>
   <releases>
-    <release version="1.0.0" date="2023-12-31" type="stable">
+    <release version="1.0.0" date="2024-11-16" type="stable">
       <description>
         <p>Initial release</p>
       </description>
     </release>
   </releases>
-  <url type="homepage">https://github.com/jorio/gitfourchette</url>
+  <url type="homepage">https://gitfourchette.org</url>
   <url type="bugtracker">https://github.com/jorio/gitfourchette/issues</url>
   <url type="donation">https://ko-fi.com/jorio</url>
   <url type="vcs-browser">https://github.com/jorio/gitfourchette</url>
@@ -25,7 +25,7 @@
     <category>RevisionControl</category>
   </categories>
   <provides>
-    <id>io.jor.gitfourchette.desktop</id>
+    <id>org.gitfourchette.desktop</id>
   </provides>
   <keywords>
     <keyword>git</keyword>

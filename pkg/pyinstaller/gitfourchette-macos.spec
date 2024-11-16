@@ -57,7 +57,7 @@ app = BUNDLE(
     coll,
     name='GitFourchette.app',
     icon='gitfourchette.icns',
-    bundle_identifier='io.jor.gitfourchette',
+    bundle_identifier='org.gitfourchette',
     version=APP_VERSION,
     info_plist={
         "NSReadableCopyright": "© 2024 Iliyas Jorio",
