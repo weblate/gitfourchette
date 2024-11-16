@@ -62,6 +62,8 @@ class TaskBook:
             tasks.JumpBack: translate("task", "Navigate back"),
             tasks.JumpBackOrForward: translate("task", "Navigate forward"),
             tasks.JumpForward: translate("task", "Navigate forward"),
+            tasks.JumpToHEAD: translate("task", "Go to HEAD commit"),
+            tasks.JumpToUncommittedChanges: translate("task", "Go to Uncommitted Changes"),
             tasks.LoadCommit: translate("task", "Load commit"),
             tasks.LoadPatch: translate("task", "Load diff"),
             tasks.LoadWorkdir: translate("task", "Refresh working directory"),
@@ -104,6 +106,8 @@ class TaskBook:
             tasks.FetchRemotes: translate("task", "Fetch"),
             tasks.JumpBack: translate("task", "Back"),
             tasks.JumpForward: translate("task", "Forward"),
+            tasks.JumpToHEAD: translate("task", "HEAD"),
+            tasks.JumpToUncommittedChanges: translate("task", "Changes"),
             tasks.NewBranchFromHead: translate("task", "Branch"),
             tasks.NewStash: translate("task", "Stash"),
             tasks.PullBranch: translate("task", "Pull"),
@@ -150,17 +154,18 @@ class TaskBook:
             tasks.AmendCommit: makeMultiShortcut(QKeySequence.StandardKey.SaveAs, "Ctrl+Shift+S"),
             tasks.ApplyPatchFile: makeMultiShortcut("Ctrl+I"),
             tasks.FetchRemotes: makeMultiShortcut("Ctrl+Shift+R"),
+            tasks.JumpBack: makeMultiShortcut("Ctrl+Left" if MACOS else "Alt+Left"),
+            tasks.JumpForward: makeMultiShortcut("Ctrl+Right" if MACOS else "Alt+Right"),
+            tasks.JumpToHEAD: makeMultiShortcut("Ctrl+H"),
+            tasks.JumpToUncommittedChanges: makeMultiShortcut("Ctrl+U"),
             tasks.NewBranchFromHead: makeMultiShortcut("Ctrl+B"),
             tasks.NewCommit: makeMultiShortcut(QKeySequence.StandardKey.Save),
             tasks.NewStash: makeMultiShortcut("Ctrl+Alt+S"),
-            tasks.JumpBack: makeMultiShortcut("Ctrl+Left" if MACOS else "Alt+Left"),
-            tasks.JumpForward: makeMultiShortcut("Ctrl+Right" if MACOS else "Alt+Right"),
             tasks.PullBranch: makeMultiShortcut("Ctrl+Shift+P"),
             tasks.PushBranch: makeMultiShortcut("Ctrl+P"),
         }
 
         cls.icons = {
-            # tasks.FastForwardBranch: "media-skip-forward",
             tasks.AmendCommit: "git-commit-amend",
             tasks.CheckoutCommit: "git-checkout",
             tasks.CherrypickCommit: "git-cherrypick",
@@ -171,10 +176,12 @@ class TaskBook:
             tasks.DropStash: "SP_TrashIcon",
             tasks.EditRemote: "document-edit",
             tasks.EditRepoSettings: "configure",
-            tasks.FetchRemotes: "git-fetch",
             tasks.FetchRemoteBranch: "git-fetch",
+            tasks.FetchRemotes: "git-fetch",
             tasks.JumpBack: "back",
             tasks.JumpForward: "forward",
+            tasks.JumpToHEAD: "git-head",
+            tasks.JumpToUncommittedChanges: "git-workdir",
             tasks.MergeBranch: "git-merge",
             tasks.NewBranchFromCommit: "git-branch",
             tasks.NewBranchFromHead: "git-branch",
@@ -190,10 +197,12 @@ class TaskBook:
         }
 
         cls.noEllipsis = {
-            tasks.FetchRemoteBranch,
             tasks.FastForwardBranch,
+            tasks.FetchRemoteBranch,
             tasks.JumpBack,
             tasks.JumpForward,
+            tasks.JumpToHEAD,
+            tasks.JumpToUncommittedChanges,
         }
 
         cls.retranslate()

@@ -43,7 +43,15 @@ from gitfourchette.tasks.misctasks import (
     EditRepoSettings,
     GetCommitInfo,
 )
-from gitfourchette.tasks.jumptasks import Jump, JumpBackOrForward, JumpBack, JumpForward, RefreshRepo
+from gitfourchette.tasks.jumptasks import (
+    Jump,
+    JumpBack,
+    JumpBackOrForward,
+    JumpForward,
+    JumpToHEAD,
+    JumpToUncommittedChanges,
+    RefreshRepo,
+)
 from gitfourchette.tasks.loadtasks import PrimeRepo
 from gitfourchette.tasks.loadtasks import LoadWorkdir, LoadCommit, LoadPatch
 from gitfourchette.tasks.nettasks import (

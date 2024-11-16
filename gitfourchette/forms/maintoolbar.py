@@ -45,6 +45,10 @@ class MainToolBar(QToolBar):
 
         self.backAction = TaskBook.toolbarAction(self, tasks.JumpBack).toQAction(self)
         self.forwardAction = TaskBook.toolbarAction(self, tasks.JumpForward).toQAction(self)
+
+        self.workdirAction = TaskBook.toolbarAction(self, tasks.JumpToUncommittedChanges).toQAction(self)
+        self.headAction = TaskBook.toolbarAction(self, tasks.JumpToHEAD).toQAction(self)
+
         self.recentAction = ActionDef(
             self.tr("Open..."), self.openDialog, icon="git-folder",
             shortcuts=QKeySequence.StandardKey.Open,
@@ -54,6 +58,8 @@ class MainToolBar(QToolBar):
         defs = [
             self.backAction,
             self.forwardAction,
+            self.workdirAction,
+            self.headAction,
             ActionDef.SEPARATOR,
 
             TaskBook.toolbarAction(self, tasks.NewStash),

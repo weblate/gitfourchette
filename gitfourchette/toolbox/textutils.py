@@ -16,6 +16,8 @@ _elideMetrics: QFontMetrics | None = None
 
 _naturalSortSplit = re.compile(r"(\d+)")
 
+_titleLowercaseWords = {"a", "an", "and", "as", "but", "by", "in", "of", "on", "or", "the", "to"}
+
 
 def getElideMetrics() -> QFontMetrics:
     # Cannot initialize _elideMetrics too early for Windows offscreen unit tests
@@ -247,8 +249,20 @@ def withUniqueSuffix(
 
 
 def englishTitleCase(text: str) -> str:
-    if QLocale().language() in [QLocale.Language.C, QLocale.Language.English]:
-        text = text.title()
+    if QLocale().language() not in [QLocale.Language.C, QLocale.Language.English]:
+        return text
+
+    words = text.split()
+    text = ""
+    sep = ""
+    for word in words:
+        text += sep
+        sep = " "
+        if word in _titleLowercaseWords:
+            text += word
+        else:
+            text += word[0].upper() + word[1:]
+
     return text
 
 

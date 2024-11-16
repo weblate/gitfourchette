@@ -21,6 +21,7 @@ from gitfourchette.porcelain import DeltaStatus, NULL_OID, Oid, Patch
 from gitfourchette.qt import *
 from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
+from gitfourchette.tasks import TaskPrereqs
 from gitfourchette.tasks.loadtasks import LoadCommit, LoadPatch, LoadWorkdir
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
 from gitfourchette.toolbox import *
@@ -434,6 +435,19 @@ class JumpBack(JumpBackOrForward):
 class JumpForward(JumpBackOrForward):
     def flow(self):
         yield from JumpBackOrForward.flow(self, 1)
+
+
+class JumpToUncommittedChanges(Jump):
+    def flow(self):
+        yield from Jump.flow(self, NavLocator.inWorkdir())
+
+
+class JumpToHEAD(Jump):
+    def prereqs(self) -> TaskPrereqs:
+        return TaskPrereqs.NoUnborn
+
+    def flow(self):
+        yield from Jump.flow(self, NavLocator.inRef("HEAD"))
 
 
 class RefreshRepo(RepoTask):
