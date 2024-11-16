@@ -36,6 +36,8 @@ from gitfourchette.trash import Trash
 
 logger = logging.getLogger(__name__)
 
+USERS_GUIDE_URL = "https://gitfourchette.org/guide"
+
 
 class NoRepoWidgetError(Exception):
     pass
@@ -332,6 +334,10 @@ class MainWindow(QMainWindow):
         a = helpMenu.addAction(self.tr("&About {0}").format(qAppName()), lambda: AboutDialog.popUp(self))
         a.setIcon(stockIcon("gitfourchette"))
         a.setMenuRole(QAction.MenuRole.AboutRole)
+
+        a = helpMenu.addAction(self.tr("{0} User’s Guide").format(qAppName()),
+                               lambda: QDesktopServices.openUrl(QUrl(USERS_GUIDE_URL)))
+        a.setIcon(stockIcon("help-contents"))
 
         helpMenu.addSeparator()
 

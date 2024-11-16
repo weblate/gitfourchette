@@ -13,7 +13,7 @@ from gitfourchette.forms.ui_aboutdialog import Ui_AboutDialog
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
 
-WEBSITE_URL = "https://github.com/jorio/gitfourchette"
+WEBSITE_URL = "https://gitfourchette.org"
 DONATE_URL = "https://ko-fi.com/jorio"
 
 
