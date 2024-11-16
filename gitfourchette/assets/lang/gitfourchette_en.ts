@@ -89,14 +89,14 @@
         <source>Cannot {0} right now, because %n files contain both staged and unstaged changes.</source>
         <comment>placeholder: cannot abort the merge / reset the index / etc.</comment>
         <translation>
-            <numerusform>Cannot {0} right now, because %n file contains both staged and unstaged changes.</numerusform>
+            <numerusform>Cannot {0} right now, because a file contains both staged and unstaged changes.</numerusform>
             <numerusform>Cannot {0} right now, because %n files contain both staged and unstaged changes.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>%n files will be reset:</source>
         <translation>
-            <numerusform>%n file will be reset:</numerusform>
+            <numerusform>This file will be reset:</numerusform>
             <numerusform>%n files will be reset:</numerusform>
         </translation>
     </message>
@@ -133,13 +133,6 @@
 </context>
 <context>
     <name>CommittedFiles</name>
-    <message numerus="yes">
-        <source>E&amp;xport Diffs As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xport Diff As Patch...</numerusform>
-            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
-        </translation>
-    </message>
     <message numerus="yes">
         <source>&amp;Revert This Change...</source>
         <translation>
@@ -180,6 +173,13 @@
             <numerusform>&lt;b&gt;%n&lt;/b&gt; branches will be deleted.</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n branches deleted in folder {0}.</source>
+        <translation>
+            <numerusform>%n branch deleted in folder {0}.</numerusform>
+            <numerusform>%n branches deleted in folder {0}.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>DirtyFiles</name>
@@ -188,13 +188,6 @@
         <translation>
             <numerusform>&amp;Stage File</numerusform>
             <numerusform>&amp;Stage %n Files</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>E&amp;xport Diffs As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xport Diff As Patch...</numerusform>
-            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -237,20 +230,6 @@
             <numerusform>Open %n Submodules in New Tabs</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>&amp;Edit in {0}</source>
-        <translation>
-            <numerusform>&amp;Edit in {0}</numerusform>
-            <numerusform>&amp;Edit in {0}</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Edit HEAD Versions in {0}</source>
-        <translation>
-            <numerusform>Edit HEAD Version in {0}</numerusform>
-            <numerusform>Edit HEAD Versions in {0}</numerusform>
-        </translation>
-    </message>
 </context>
 <context>
     <name>DiscardFiles</name>
@@ -277,6 +256,13 @@
             <numerusform>Any uncommitted changes in %n submodules will be &lt;b&gt;cleared&lt;/b&gt; and the submodules’ HEAD will be reset.</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n files discarded.</source>
+        <translation>
+            <numerusform>File discarded.</numerusform>
+            <numerusform>%n files discarded.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>DiscardModeChanges</name>
@@ -285,6 +271,40 @@
         <translation>
             <numerusform>Really discard mode changes in &lt;b&gt;%n file&lt;/b&gt;?</numerusform>
             <numerusform>Really discard mode changes in &lt;b&gt;%n files&lt;/b&gt;?</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>FetchRemotes</name>
+    <message numerus="yes">
+        <source>Fetch %n remotes</source>
+        <translation>
+            <numerusform>Fetch remote</numerusform>
+            <numerusform>Fetch %n remotes</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Couldn’t fetch %n remotes:</source>
+        <translation>
+            <numerusform>Couldn‘t fetch %n remote:</numerusform>
+            <numerusform>Couldn‘t fetch %n remotes:</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>FileList</name>
+    <message numerus="yes">
+        <source>E&amp;xport Diffs As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xport Diff As Patch...</numerusform>
+            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Edit &amp;HEAD Versions in {0}</source>
+        <translation>
+            <numerusform>Edit &amp;HEAD Version in {0}</numerusform>
+            <numerusform>Edit &amp;HEAD Versions in {0}</numerusform>
         </translation>
     </message>
 </context>
@@ -362,12 +382,29 @@
     </message>
 </context>
 <context>
+    <name>NewStash</name>
+    <message numerus="yes">
+        <source>%n files stashed.</source>
+        <translation>
+            <numerusform>File stashed.</numerusform>
+            <numerusform>%n files stashed.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>RenameBranchFolder</name>
     <message numerus="yes">
         <source>Folder {0} contains %n branches.</source>
         <translation>
             <numerusform>Folder {0} contains %n branch.</numerusform>
             <numerusform>Folder {0} contains %n branches.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Branch folder {0} renamed to {1}, %n branches affected.</source>
+        <translation>
+            <numerusform>Branch folder {0} renamed to {1}, %n branch affected.</numerusform>
+            <numerusform>Branch folder {0} renamed to {1}, %n branches affected.</numerusform>
         </translation>
     </message>
 </context>
@@ -391,6 +428,13 @@
 <context>
     <name>StageFiles</name>
     <message numerus="yes">
+        <source>%n files staged.</source>
+        <translation>
+            <numerusform>File staged.</numerusform>
+            <numerusform>%n files staged.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
         <source>%n items require your attention after staging:</source>
         <translation>
             <numerusform>An item requires your attention after staging:</numerusform>
@@ -405,20 +449,6 @@
         <translation>
             <numerusform>&amp;Unstage File</numerusform>
             <numerusform>&amp;Unstage %n Files</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>E&amp;xport Diffs As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xport Diff As Patch...</numerusform>
-            <numerusform>E&amp;xport Diffs As Patch...</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Edit &amp;HEAD Versions in {0}</source>
-        <translation>
-            <numerusform>Edit &amp;HEAD Version in {0}</numerusform>
-            <numerusform>Edit &amp;HEAD Versions in {0}</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -443,6 +473,26 @@
         <translation>
             <numerusform>Open Submodule in New Tab</numerusform>
             <numerusform>Open %n Submodules in New Tabs</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>UnstageFiles</name>
+    <message numerus="yes">
+        <source>%n files unstaged.</source>
+        <translation>
+            <numerusform>File unstaged.</numerusform>
+            <numerusform>%n files unstaged.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>UpdateSubmodulesRecursive</name>
+    <message numerus="yes">
+        <source>%n submodules updated.</source>
+        <translation>
+            <numerusform>%n submodule updated.</numerusform>
+            <numerusform>%n submodules updated.</numerusform>
         </translation>
     </message>
 </context>

@@ -243,6 +243,14 @@
         <comment>generic caption suffix</comment>
         <translation>&#xa0;:</translation>
     </message>
+    <message>
+        <source>No Remotes</source>
+        <translation>Aucun serveur</translation>
+    </message>
+    <message>
+        <source>All Remotes</source>
+        <translation>Tous les serveurs</translation>
+    </message>
 </context>
 <context>
     <name>AbortMerge</name>
@@ -250,12 +258,20 @@
         <source>Reset index</source>
         <translation>Réinitialiser l’index</translation>
     </message>
+    <message>
+        <source>Reset</source>
+        <translation>Réinitialiser</translation>
+    </message>
+    <message>
+        <source>Index reset.</source>
+        <translation>Index réinitialisé.</translation>
+    </message>
     <message numerus="yes">
         <source>Cannot {0} right now, because %n files contain both staged and unstaged changes.</source>
         <comment>placeholder: cannot abort the merge / reset the index / etc.</comment>
         <translation>
-            <numerusform>Impossible de {0} pour l’instant car vous avez %n fichier comprenant des modifications indexés et non-indexées.</numerusform>
-            <numerusform>Impossible de {0} pour l’instant car vous avez %n fichiers comprenant des modifications indexés et non-indexées.</numerusform>
+            <numerusform>Impossible de {0} pour l’instant car un fichier comprend des modifications indexés et non-indexées.</numerusform>
+            <numerusform>Impossible de {0} pour l’instant car %n fichiers comprennent des modifications indexés et non-indexées.</numerusform>
         </translation>
     </message>
     <message>
@@ -277,7 +293,7 @@
     <message numerus="yes">
         <source>%n files will be reset:</source>
         <translation>
-            <numerusform>%n fichier sera réinitialisé&#xa0;:</numerusform>
+            <numerusform>Ce fichier sera réinitialisé&#xa0;:</numerusform>
             <numerusform>%n fichiers seront réinitialisés&#xa0;:</numerusform>
         </translation>
     </message>
@@ -294,6 +310,10 @@
         <translation>abandonner le picorage en cours</translation>
     </message>
     <message>
+        <source>Cherry-pick aborted.</source>
+        <translation>Picorage abandonné.</translation>
+    </message>
+    <message>
         <source>abort the ongoing merge</source>
         <translation>abandonner la fusion en cours</translation>
     </message>
@@ -302,12 +322,20 @@
         <translation>Abandonner la fusion</translation>
     </message>
     <message>
+        <source>Merge aborted.</source>
+        <translation>Fusion abandonnée.</translation>
+    </message>
+    <message>
         <source>abort the ongoing revert</source>
         <translation>abandonner l’inversion en cours</translation>
     </message>
     <message>
         <source>Abort revert</source>
         <translation>Abandonner l’inversion</translation>
+    </message>
+    <message>
+        <source>Revert aborted.</source>
+        <translation>Inversion abandonnée.</translation>
     </message>
     <message>
         <source>reset the index</source>
@@ -329,24 +357,20 @@
         <translation>À propos</translation>
     </message>
     <message>
-        <source>The author!</source>
-        <translation>L’auteur&#xa0;!</translation>
+        <source>Acknowledgments</source>
+        <translation>Remerciements</translation>
+    </message>
+    <message>
+        <source>License</source>
+        <translation>Licence</translation>
     </message>
     <message>
         <source>Components</source>
         <translation>Composants</translation>
     </message>
     <message>
-        <source>(built on {date})</source>
-        <translation>(construit le {date})</translation>
-    </message>
-    <message>
-        <source>{app} is free software that I develop in my spare time.</source>
-        <translation>{app} est un logiciel libre que je développe dans mon temps libre.</translation>
-    </message>
-    <message>
-        <source>If you enjoy using it, feel free to make a donation at {donate}. Every little bit encourages the continuation of the project!</source>
-        <translation>Si vous l’appréciez, n’hésitez pas à faire un don sur {donate}. Vos dons contribuent à la poursuite du projet&#xa0;!</translation>
+        <source>If {app} helps you get work done, please consider [making a small donation].</source>
+        <translation>Si {app} vous facilite votre travail, veuillez envisager de faire [une petit don].</translation>
     </message>
     <message>
         <source>Thank you for your support!</source>
@@ -357,8 +381,12 @@
         <translation>Fonctionne avec&#xa0;:</translation>
     </message>
     <message>
-        <source>Third-party credits:</source>
-        <translation>Crédits tiers&#xa0;:</translation>
+        <source>Special thanks to Marc-Alexandre Espiaut for beta testing.</source>
+        <translation>Remerciements spéciaux à Marc-Alexandre Espiaut pour le bêta-test.</translation>
+    </message>
+    <message>
+        <source>Portions of this software are based on [{lib}], used under [{lic} license], {copyright}.</source>
+        <translation>Des portions de ce logiciel sont basées sur [{lib}], utilisées sous [licence {lic}], {copyright}.</translation>
     </message>
 </context>
 <context>
@@ -390,9 +418,17 @@
         <source>Proceed to Amend Commit</source>
         <translation>Procéder à la rectification du commit</translation>
     </message>
+    <message>
+        <source>Commit {0} amended. New hash: {1}.</source>
+        <translation>Commit {0} rectifié. Nouveau hachage&#xa0;: {1}.</translation>
+    </message>
 </context>
 <context>
     <name>ApplyPatch</name>
+    <message>
+        <source>Can’t {verb} the selection because no red/green lines are selected.</source>
+        <translation>Impossible de {verb} la sélection car aucune ligne rouge/verte n’est sélectionnée.</translation>
+    </message>
     <message>
         <source>Really discard this hunk?</source>
         <translation>Êtes-vous sûr de jeter cette section&#xa0;?</translation>
@@ -400,22 +436,6 @@
     <message>
         <source>Really discard the selected lines?</source>
         <translation>Êtes-vous sûr de jeter les lignes sélectionnées&#xa0;?</translation>
-    </message>
-    <message>
-        <source>You are trying to {0} changes from the line-by-line editor, but you haven’t selected any red/green lines.</source>
-        <translation>Vous essayez de {0} des modifications depuis l’éditeur ligne-par-ligne, mais vous n’avez sélectionné aucune ligne rouge/verte.</translation>
-    </message>
-    <message>
-        <source>Do you want to {0} this entire file {1}?</source>
-        <translation>Voulez-vous {0} l’entièreté du fichier {1}&#xa0;?</translation>
-    </message>
-    <message>
-        <source>{0}: selection empty</source>
-        <translation>{0}&#xa0;: sélection vide</translation>
-    </message>
-    <message>
-        <source>{0} entire &amp;file</source>
-        <translation>{0} tout le &amp;fichier</translation>
     </message>
 </context>
 <context>
@@ -505,6 +525,14 @@
         <translation>&amp;Jeter la remise si elle s’applique proprement</translation>
     </message>
     <message>
+        <source>Stash {0} applied.</source>
+        <translation>Remise {0} appliquée.</translation>
+    </message>
+    <message>
+        <source>Stash {0} applied, with conflicts.</source>
+        <translation>Remise {0} appliquée, avec conflits.</translation>
+    </message>
+    <message>
         <source>Applying the stash {0} has caused merge conflicts because your files have diverged since they were stashed.</source>
         <translation>L’application de la remise {0} a provoqué un conflit de fusion car vos fichiers ont divergé depuis qu’ils ont été remisés.</translation>
     </message>
@@ -516,19 +544,15 @@
         <source>Conflicts caused by stash application</source>
         <translation>Conflits provoqués par l’application de la remise</translation>
     </message>
+    <message>
+        <source>Stash {0} applied and deleted.</source>
+        <translation>Remise {0} appliquée et supprimée.</translation>
+    </message>
 </context>
 <context>
     <name>Banner</name>
     <message>
-        <source>Abort</source>
-        <translation variants="yes">
-            <lengthvariant>Arrêter</lengthvariant>
-            <lengthvariant>Arrêt</lengthvariant>
-        </translation>
-    </message>
-    <message>
         <source>Dismiss</source>
-        <comment>clicking the Dismiss button will make the info banner disappear</comment>
         <translation>OK</translation>
     </message>
 </context>
@@ -558,6 +582,10 @@
         <source>You might lose track of this commit if you carry on checking out another commit ({1}).</source>
         <translation>Vous pourriez perdre trace de ce commit si vous basculez dans un autre commit ({1}).</translation>
     </message>
+    <message>
+        <source>Entered detached HEAD on {0}.</source>
+        <translation>Passé en HEAD détachée à {0}.</translation>
+    </message>
 </context>
 <context>
     <name>CheckoutCommitDialog</name>
@@ -570,8 +598,20 @@
         <translation>Comment voulez-vous basculer dans ce commit&#xa0;?</translation>
     </message>
     <message>
-        <source>Switch to a &amp;branch that points here:</source>
-        <translation>&amp;Basculer dans une branche pointant ici&#xa0;:</translation>
+        <source>Switch to &amp;branch:</source>
+        <translation>Basculer dans la &amp;branche&#xa0;:</translation>
+    </message>
+    <message>
+        <source>List of branches that point to this commit.</source>
+        <translation>Liste des branches qui pointent sur ce commit.</translation>
+    </message>
+    <message>
+        <source>After the checkout:</source>
+        <translation>Après avoir basculé dans le commit&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Recurse into submodules</source>
+        <translation>Mettre à jour les sous-modules récursivement</translation>
     </message>
     <message>
         <source>Start &amp;new branch here...</source>
@@ -765,6 +805,10 @@
         <translation>&lt;b&gt;HEAD détachée&lt;/b&gt; – Vous n’êtes aucune branche&#xa0;! Vous devriez créer une branche pour éviter de perdre votre commit par inadvertance.</translation>
     </message>
     <message>
+        <source>You are creating an empty commit (no staged changes).</source>
+        <translation>Vous êtes en train de créer un commit vide (aucune modification indexée).</translation>
+    </message>
+    <message>
         <source>Cannot be empty.</source>
         <translation>Ne peut être vide.</translation>
     </message>
@@ -877,17 +921,6 @@
         <translation>Ouvrir la révision avant le commit</translation>
     </message>
     <message numerus="yes">
-        <source>E&amp;xport Diffs As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
-            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Open Diff in {0}</source>
-        <translation>Ouvrir la diff dans {0}</translation>
-    </message>
-    <message numerus="yes">
         <source>&amp;Revert This Change...</source>
         <translation>
             <numerusform>&amp;Inverser cette modif...</numerusform>
@@ -989,6 +1022,57 @@
     </message>
 </context>
 <context>
+    <name>ConflictSides</name>
+    <message>
+        <source>modified by both sides</source>
+        <translation>modifié de part et d’autre</translation>
+    </message>
+    <message>
+        <source>deleted by us</source>
+        <translation>supprimé par nous</translation>
+    </message>
+    <message>
+        <source>deleted by them</source>
+        <translation>supprimé par eux</translation>
+    </message>
+    <message>
+        <source>deleted by both</source>
+        <translation>supprimé de part et d’autre</translation>
+    </message>
+    <message>
+        <source>added by us</source>
+        <translation>ajouté par nous</translation>
+    </message>
+    <message>
+        <source>added by both</source>
+        <translation>ajouté de part et d’autre</translation>
+    </message>
+    <message>
+        <source>This file has received changes from both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch.</source>
+        <translation>Ce fichier a reçu des modifications à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et dans &lt;i&gt;la leur&lt;/i&gt;.</translation>
+    </message>
+    <message>
+        <source>This file was deleted from &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch kept it and made changes to it.</source>
+        <translation>Ce fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, tandis que &lt;i&gt;leur&lt;/i&gt; branche l’a conservé et y a apporté des modifications.</translation>
+    </message>
+    <message>
+        <source>We’ve made changes to this file in &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch has deleted it.</source>
+        <translation>Nous avons modifié ce fichier dans &lt;i&gt;notre&lt;/b&gt; branche, mais &lt;i&gt;leur&lt;/i&gt; branche l’a supprimé.</translation>
+    </message>
+    <message>
+        <source>The file was deleted from &lt;i&gt;our&lt;/i&gt; branch, and &lt;i&gt;their&lt;/i&gt; branch has deleted it too.</source>
+        <translation>Le fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, et &lt;i&gt;leur&lt;/i&gt; branche l’a également supprimé.</translation>
+    </message>
+    <message>
+        <source>No common ancestor.</source>
+        <translation>Pas d’ancêtre commun.</translation>
+    </message>
+    <message>
+        <source>This file has been created in both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch, independently from each other. So, there is no common ancestor.</source>
+        <translation>Ce fichier a été créé à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et &lt;i&gt;la leur&lt;/i&gt;, indépendamment l’une de l’autre. Ainsi, il n’y a pas d’ancêtre commun.</translation>
+    </message>
+</context>
+<context>
     <name>ConflictView</name>
     <message>
         <source>Merge conflict</source>
@@ -1039,14 +1123,6 @@
         <translation>Vous devez résoudre le conflit avant de pouvoir committer ce fichier.</translation>
     </message>
     <message>
-        <source>&lt;b&gt;Deleted by us:&lt;/b&gt; this file was deleted from &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch kept it and made changes to it.</source>
-        <translation>&lt;b&gt;Supprimé par nous&#xa0;:&lt;/b&gt; ce fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, tandis que &lt;i&gt;leur&lt;/i&gt; branche l’a conservé et y a apporté des modifications.</translation>
-    </message>
-    <message>
-        <source>&lt;b&gt;Deleted by them:&lt;/b&gt; we’ve made changes to this file, but &lt;i&gt;their&lt;/i&gt; branch has deleted it.</source>
-        <translation>&lt;b&gt;Supprimé par eux&#xa0;:&lt;/b&gt; nous avons modifié ce fichier, mais &lt;i&gt;leur&lt;/i&gt; branche l’a supprimé.</translation>
-    </message>
-    <message>
         <source>You will be able to merge the changes in {tool}. When you are done merging, save the file in {tool} and come back to {app} to finish solving the conflict.</source>
         <translation>Vous pourrez fusionner les modifications dans {tool}. Lorsque vous aurez terminé, sauvegardez le fichier dans {tool}, puis revenez dans {app} pour conclure la résolution du conflit.</translation>
     </message>
@@ -1069,18 +1145,6 @@
     <message>
         <source>Select another merge tool...</source>
         <translation>Choisir un autre outil de fusion...</translation>
-    </message>
-    <message>
-        <source>&lt;b&gt;Deleted by both sides:&lt;/b&gt; the file was deleted from &lt;i&gt;our&lt;/i&gt; branch, and &lt;i&gt;their&lt;/i&gt; branch has deleted it too.</source>
-        <translation>&lt;b&gt;Supprimé de part et d’autre&#xa0;:&lt;/b&gt; le fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, et &lt;i&gt;leur&lt;/i&gt; branche l’a également supprimé.</translation>
-    </message>
-    <message>
-        <source>&lt;b&gt;Modified by both sides:&lt;/b&gt; This file has received changes from both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch.</source>
-        <translation>&lt;b&gt;Modifié de part et d’autre&#xa0;:&lt;/b&gt; ce fichier a reçu des modifications à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et dans &lt;i&gt;la leur&lt;/i&gt;.</translation>
-    </message>
-    <message>
-        <source>&lt;b&gt;Added by both sides:&lt;/b&gt; This file has been created in both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch, independently from each other. So, there is no common ancestor.</source>
-        <translation>&lt;b&gt;Ajouté de part et d’autre&#xa0;:&lt;/b&gt; ce fichier a été créé à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et &lt;i&gt;la leur&lt;/i&gt;, indépendamment l’une de l’autre. Ainsi, il n’y a pas d’ancêtre commun.</translation>
     </message>
     <message>
         <source>Reject incoming changes. The file won’t be modified from its current state in HEAD.</source>
@@ -1110,21 +1174,9 @@
         <source>The file will be deleted.</source>
         <translation>Le fichier sera supprimé.</translation>
     </message>
-    <message>
-        <source>&lt;b&gt;Added by them&lt;/b&gt;, no common ancestor.</source>
-        <translation>&lt;b&gt;Ajouté par eux&lt;/b&gt;, pas d’ancêtre commun.</translation>
-    </message>
-    <message>
-        <source>&lt;b&gt;Added by us&lt;/b&gt;, no common ancestor.</source>
-        <translation>&lt;b&gt;Ajouté par nous&lt;/b&gt;, pas d’ancêtre commun.</translation>
-    </message>
 </context>
 <context>
     <name>ContextHeader</name>
-    <message>
-        <source>Commit Info</source>
-        <translation>Infos sur le commit</translation>
-    </message>
     <message>
         <source>Maximize</source>
         <translation>Maximiser</translation>
@@ -1140,6 +1192,34 @@
     <message>
         <source>Stash</source>
         <translation>Remise</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation>Info</translation>
+    </message>
+    <message>
+        <source>Show details about this commit</source>
+        <translation>Afficher davantage d’informations sur ce commit</translation>
+    </message>
+    <message>
+        <source>Show details about this stash</source>
+        <translation>Afficher davantage d’informations sur cette remise</translation>
+    </message>
+    <message>
+        <source>Drop</source>
+        <translation>Supprimer</translation>
+    </message>
+    <message>
+        <source>Delete this stash</source>
+        <translation>Supprimer cette remise</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Appliquer</translation>
+    </message>
+    <message>
+        <source>Apply this stash</source>
+        <translation>Appliquer cette remise</translation>
     </message>
     <message>
         <source>Uncommitted changes</source>
@@ -1164,6 +1244,10 @@
         <source>Delete branch</source>
         <comment>Button label</comment>
         <translation>Supprimer la branche</translation>
+    </message>
+    <message>
+        <source>Branch {0} deleted (commit at tip was {1}).</source>
+        <translation>Branche {0} supprimée (elle pointait sur le commit {1}).</translation>
     </message>
 </context>
 <context>
@@ -1196,6 +1280,13 @@
         <comment>Button label</comment>
         <translation>Supprimer le dossier</translation>
     </message>
+    <message numerus="yes">
+        <source>%n branches deleted in folder {0}.</source>
+        <translation>
+            <numerusform>%n branche supprimée dans le dossier {0}.</numerusform>
+            <numerusform>%n branches supprimées dans le dossier {0}.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>DeleteRemote</name>
@@ -1212,6 +1303,10 @@
         <comment>Button label</comment>
         <translation>Oublier le serveur</translation>
     </message>
+    <message>
+        <source>Remote {0} removed.</source>
+        <translation>Serveur {0} oublié.</translation>
+    </message>
 </context>
 <context>
     <name>DeleteRemoteBranch</name>
@@ -1227,16 +1322,40 @@
         <source>Delete on remote</source>
         <translation>Supprimer du serveur</translation>
     </message>
+    <message>
+        <source>Remote branch {0} deleted.</source>
+        <translation>Branche distante {0} supprimée.</translation>
+    </message>
 </context>
 <context>
-    <name>DeleteTag</name>
+    <name>DeleteTagDialog</name>
+    <message>
+        <source>&amp;Delete Locally</source>
+        <translation>&amp;Supprimer localement</translation>
+    </message>
+    <message>
+        <source>&amp;Delete Locally &amp;&amp; Remotely</source>
+        <translation>&amp;Suppr. localement &amp;&amp; sur serveur</translation>
+    </message>
+    <message>
+        <source>Delete tag {0}</source>
+        <translation>Supprimer l’étiquette {0}</translation>
+    </message>
+    <message>
+        <source>Tagged commit: {0}</source>
+        <translation>Commit étiqueté&#xa0;: {0}</translation>
+    </message>
+    <message>
+        <source>Delete tag</source>
+        <translation>Supprimer l’étiquette</translation>
+    </message>
     <message>
         <source>Really delete tag {0}?</source>
         <translation>Êtes-vous sûr de supprimer l’étiquette {0}&#xa0;?</translation>
     </message>
     <message>
-        <source>Delete tag</source>
-        <translation>Supprimer l’étiquette</translation>
+        <source>&amp;Push deletion to:</source>
+        <translation>&amp;Publier la suppression sur&#xa0;:</translation>
     </message>
 </context>
 <context>
@@ -1318,6 +1437,10 @@
         <translation>Le sous-module {0} a été [ajouté.]</translation>
     </message>
     <message>
+        <source>Submodule {0} contains changes.</source>
+        <translation>Le sous-module {0} contient des modifications.</translation>
+    </message>
+    <message>
         <source>The submodule’s &lt;b&gt;HEAD&lt;/b&gt; has moved to another commit &amp;ndash; you can stage this update:</source>
         <translation>La &lt;b&gt;HEAD&lt;/b&gt; du sous-module a été déplacée sur un autre commit &amp;ndash; vous pouvez indexer cette modification&amp;nbsp;:</translation>
     </message>
@@ -1326,28 +1449,40 @@
         <translation>La &lt;b&gt;HEAD&lt;/b&gt; du sous-module a été déplacée sur un autre commit&amp;nbsp;:</translation>
     </message>
     <message>
-        <source>To delete this submodule completely, you should also &lt;b&gt;remove it from &lt;tt&gt;.gitmodules&lt;/tt&gt;&lt;/b&gt;.</source>
-        <translation>Afin d’achever la suppression de ce sous-module, vous devriez le &lt;b&gt;retirer de &lt;tt&gt;.gitmodules&lt;/tt&gt;&lt;/b&gt;.</translation>
+        <source>To complete the removal of this submodule, &lt;b&gt;remove it from {0}&lt;/b&gt;.</source>
+        <translation>Afin d’achever la suppression de ce sous-module, &lt;b&gt;retirez-le de {0}&lt;/b&gt;.</translation>
     </message>
     <message>
-        <source>To complete the addition of this submodule to your repository, you should [absorb the submodule] into the parent repository.</source>
-        <translation>Afin d’achever l’ajout de ce sous-module à votre dépôt, vous devriez [absorber le sous-module] dans le dépôt parent.</translation>
+        <source>To complete the removal of this submodule, make sure to commit &lt;b&gt;{0}&lt;/b&gt; at the same time as the submodule folder itself.</source>
+        <translation>Afin d’achever la suppression de ce sous-module, assurez-vous de committer &lt;b&gt;{0}&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
     </message>
     <message>
-        <source>To complete the addition of this submodule to your repository, you should [register it in &lt;tt&gt;.gitmodules&lt;/tt&gt;].</source>
-        <translation>Afin d’achever l’ajout de ce sous-module à votre dépôt, vous devriez [l’ajouter à &lt;tt&gt;.gitmodules&lt;/tt&gt;].</translation>
+        <source>To complete the addition of this submodule, make sure to &lt;b&gt;commit {0}&lt;/b&gt; at the same time as the submodule folder itself.</source>
+        <translation>Afin d’achever la suppression de ce sous-module, assurez-vous de &lt;b&gt;committer {0}&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
+    </message>
+    <message>
+        <source>To complete the addition of this submodule, you should [absorb the submodule] into the parent repository.</source>
+        <translation>Afin d’achever l’ajout de ce sous-module, vous devriez [absorber le sous-module] dans le dépôt parent.</translation>
+    </message>
+    <message>
+        <source>To complete the addition of this submodule, [register it in {0}].</source>
+        <translation>Afin d’achever l’ajout de ce sous-module, [inscrivez-le dans {0}]&lt;/b&gt;.</translation>
+    </message>
+    <message>
+        <source>The submodule has &lt;b&gt;uncommitted changes&lt;/b&gt;. They can’t be committed from the parent repo. You can:</source>
+        <translation>Le sous-module contient des &lt;b&gt;modifications non-committées&lt;/b&gt;. Elles ne peuvent pas être committées directement depuis le dépôt parent. Vous pouvez&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Open submodule</source>
+        <translation>Ouvrir le sous-module</translation>
+    </message>
+    <message>
+        <source>(path: {0})</source>
+        <translation>(chemin&#xa0;: {0})</translation>
     </message>
     <message>
         <source>IMPORTANT</source>
         <translation>IMPORTANT</translation>
-    </message>
-    <message>
-        <source>The submodule has &lt;b&gt;uncommitted changes&lt;/b&gt;, which cannot be committed from the parent repo.</source>
-        <translation>Le sous-module contient des &lt;b&gt;modifications non-committées&lt;/b&gt;. Elles ne peuvent pas être committées directement depuis le dépôt parent.</translation>
-    </message>
-    <message>
-        <source>You can:</source>
-        <translation>Vous pouvez&#xa0;:</translation>
     </message>
     <message>
         <source>[Open] the submodule and commit the changes.</source>
@@ -1355,7 +1490,7 @@
     </message>
     <message>
         <source>Or, [Reset] the submodule to a clean state.</source>
-        <translation>Ou bien [réinitialiser] le sous-module dans un état propre.</translation>
+        <translation>Ou bien [réinitialiser] le sous-module à un état propre.</translation>
     </message>
     <message>
         <source>Old:</source>
@@ -1364,18 +1499,6 @@
     <message>
         <source>New:</source>
         <translation>Nouveau&#xa0;:</translation>
-    </message>
-    <message>
-        <source>To delete this submodule completely, make sure to commit the modification to &lt;tt&gt;.gitmodules&lt;/tt&gt; at the same time as the submodule folder itself.</source>
-        <translation>Afin d’achever la suppression de ce sous-module, assurez-vous de committer la modification à &lt;tt&gt;.gitmodules&lt;/tt&gt; en même temps que le dossier du sous-module lui-même.</translation>
-    </message>
-    <message>
-        <source>To complete the addition of this submodule to your repository, make sure to &lt;b&gt;commit the modification to &lt;tt&gt;.gitmodules&lt;/tt&gt;&lt;/b&gt; at the same time as the submodule folder itself.</source>
-        <translation>Afin d’achever l’ajout de ce sous-module à votre dépôt, assurez-vous de &lt;b&gt;committer la modification à &lt;tt&gt;.gitmodules&lt;/tt&gt;&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
-    </message>
-    <message>
-        <source>Open submodule {0}</source>
-        <translation>Ouvrir le sous-module {0}</translation>
     </message>
     <message>
         <source>Submodule {0} was updated.</source>
@@ -1458,6 +1581,30 @@
     <message>
         <source>Export Hunk as Patch...</source>
         <translation>Exporter un correctif de cette section...</translation>
+    </message>
+    <message>
+        <source>Stage Selection</source>
+        <translation>Indexer la sélection</translation>
+    </message>
+    <message>
+        <source>Stage selected lines</source>
+        <translation>Indexer les lignes sélectionnées</translation>
+    </message>
+    <message>
+        <source>Unstage Selection</source>
+        <translation>Désindexer la sélection</translation>
+    </message>
+    <message>
+        <source>Unstage selected lines</source>
+        <translation>Désindexer les lignes sélectionnées</translation>
+    </message>
+    <message>
+        <source>Discard</source>
+        <translation>Jeter</translation>
+    </message>
+    <message>
+        <source>Discard selected lines</source>
+        <translation>Jeter les lignes sélectionnées</translation>
     </message>
     <message>
         <source>Export Lines as Patch...</source>
@@ -1560,17 +1707,6 @@
         <source>&amp;Discard Changes</source>
         <translation>&amp;Jeter la modification</translation>
     </message>
-    <message>
-        <source>Stas&amp;h Changes...</source>
-        <translation>&amp;Remiser les modifs...</translation>
-    </message>
-    <message numerus="yes">
-        <source>E&amp;xport Diffs As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
-            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
-        </translation>
-    </message>
     <message numerus="yes">
         <source>%n Merge Conflicts</source>
         <comment>singular form should simply say &apos;Merge Conflict&apos; without the %n</comment>
@@ -1603,20 +1739,9 @@
             <numerusform>Ouvrir %n sous-modules dans nouveaux onglets</numerusform>
         </translation>
     </message>
-    <message numerus="yes">
-        <source>Edit HEAD Versions in {0}</source>
-        <translation>
-            <numerusform>Éditer la version en HEAD dans {0}</numerusform>
-            <numerusform>Éditer les versions en HEAD dans {0}</numerusform>
-        </translation>
-    </message>
     <message>
         <source>Resolve by Accepting “Theirs”</source>
         <translation>Résoudre en acceptant “leur” version</translation>
-    </message>
-    <message>
-        <source>Open Diff in {0}</source>
-        <translation>Ouvrir la diff dans {0}</translation>
     </message>
     <message>
         <source>Resolve by Keeping “Ours”</source>
@@ -1635,13 +1760,6 @@
         <translation variants="yes">
             <lengthvariant>Examinez les fichiers sélectionnés un par un.</lengthvariant>
             <lengthvariant>Examinez les fichiers un par un.</lengthvariant>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>&amp;Edit in {0}</source>
-        <translation>
-            <numerusform>Édit&amp;er dans {0}</numerusform>
-            <numerusform>Édit&amp;er dans {0}</numerusform>
         </translation>
     </message>
 </context>
@@ -1713,6 +1831,13 @@
             <numerusform>Toutes les modifications non-committées dans %n sous-modules seront &lt;b&gt;effacées&lt;/b&gt; et les HEAD des sous-modules seront réinitialisées.</numerusform>
         </translation>
     </message>
+    <message numerus="yes">
+        <source>%n files discarded.</source>
+        <translation>
+            <numerusform>Fichier jeté.</numerusform>
+            <numerusform>%n fichiers jetés.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>DiscardModeChanges</name>
@@ -1734,6 +1859,35 @@
     </message>
 </context>
 <context>
+    <name>DonatePrompt</name>
+    <message>
+        <source>Hi! I hope you’re enjoying {app}.
+
+If {app} helps you get work done, please consider making a small donation! This will encourage me to keep developing it. Thank you!
+
+-Iliyas</source>
+        <translation>Bonjour&#xa0;! J’espère que vous appréciez {app}.
+
+Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. Cela m’encouragera à poursuivre le développement. Merci&#xa0;!</translation>
+    </message>
+    <message>
+        <source>Donate {amount}</source>
+        <translation>Faire un don de {amount}</translation>
+    </message>
+    <message>
+        <source>Never show this again</source>
+        <translation>Ne plus jamais afficher ceci</translation>
+    </message>
+    <message>
+        <source>Remind me in {month}</source>
+        <translation>Me rappeler en {month}</translation>
+    </message>
+    <message>
+        <source>THANK YOU!</source>
+        <translation>MERCI&#xa0;!</translation>
+    </message>
+</context>
+<context>
     <name>DropStash</name>
     <message>
         <source>Really delete stash {0}?</source>
@@ -1742,6 +1896,21 @@
     <message>
         <source>Delete stash</source>
         <translation>Supprimer la remise</translation>
+    </message>
+    <message>
+        <source>Stash {0} deleted.</source>
+        <translation>Remise {0} supprimée.</translation>
+    </message>
+</context>
+<context>
+    <name>EditUpstreamBranch</name>
+    <message>
+        <source>Branch {0} now tracks {1}.</source>
+        <translation>La branche {0} suit désormais {1}.</translation>
+    </message>
+    <message>
+        <source>Branch {0} now tracks no upstream.</source>
+        <translation>La branche {0} ne suit désormais pas de branche amont.</translation>
     </message>
 </context>
 <context>
@@ -1799,34 +1968,55 @@
     </message>
 </context>
 <context>
-    <name>FetchRemote</name>
-    <message>
-        <source>Fetch remote {0}</source>
-        <translation>Récupérer les nouveaux commits sur {0}</translation>
-    </message>
-    <message>
-        <source>Connecting to remote {0}...</source>
-        <translation>Connexion au serveur {0}...</translation>
-    </message>
-</context>
-<context>
     <name>FetchRemoteBranch</name>
     <message>
         <source>Fetch remote branch {0}</source>
         <translation>Récupérer la branche distante {0}</translation>
     </message>
     <message>
+        <source>Fetch complete.</source>
+        <translation>Récupération terminée.</translation>
+    </message>
+    <message>
+        <source>No new commits on {0}.</source>
+        <translation>Pas de nouveau commit sur {0}.</translation>
+    </message>
+    <message>
         <source>{0} has disappeared from the remote server.</source>
         <translation>{0} a disparu du serveur distant.</translation>
     </message>
+</context>
+<context>
+    <name>FetchRemotes</name>
     <message>
-        <source>There are no new commits on {0}.</source>
-        <translation>Il n’y a pas de nouveau commit sur {0}.</translation>
+        <source>To fetch remote branches, you must first add a remote to your repo.</source>
+        <translation>Pour récupérer des branches distantes (fetch), vous devez d’abord ajouter un serveur à votre dépôt.</translation>
     </message>
     <message>
-        <source>{0} has moved from {1} to {2}.</source>
-        <comment>RemoteBranch has moved from OldCommit to NewCommit</comment>
-        <translation>{0} est passé de {1} à {2}.</translation>
+        <source>You can do so via &lt;i&gt;“Repo &amp;rarr; Add Remote”&lt;/i&gt;.</source>
+        <translation>Pour ce faire, allez dans &lt;i&gt;“Dépôt &amp;rarr; Ajouter un serveur”&lt;/i&gt;.</translation>
+    </message>
+    <message>
+        <source>Fetch remote {0}</source>
+        <translation>Récupérer les nouveaux commits de {0}</translation>
+    </message>
+    <message numerus="yes">
+        <source>Fetch %n remotes</source>
+        <translation>
+            <numerusform>Récupérer %n serveur</numerusform>
+            <numerusform>Récupérer %n serveurs</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Fetch complete.</source>
+        <translation>Récupération terminée.</translation>
+    </message>
+    <message numerus="yes">
+        <source>Couldn’t fetch %n remotes:</source>
+        <translation>
+            <numerusform>Les commits n’ont pas pu être récupérés sur %n serveur&#xa0;:</numerusform>
+            <numerusform>Les commits n’ont pas pu être récupérés sur %n serveurs&#xa0;:</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -1874,6 +2064,32 @@
     <message>
         <source>Currently viewing diff of unstaged changes in this file; it also has &lt;u&gt;staged&lt;/u&gt; changes.</source>
         <translation>La diff affiche actuellement les modifs non-indexées de ce fichier ; il contient également des modifs &lt;u&gt;indexées&lt;/u&gt;.</translation>
+    </message>
+    <message>
+        <source>Stas&amp;h Changes...</source>
+        <translation>&amp;Remiser les modifs...</translation>
+    </message>
+    <message>
+        <source>Open Diff in {0}</source>
+        <translation>Ouvrir la diff dans {0}</translation>
+    </message>
+    <message numerus="yes">
+        <source>E&amp;xport Diffs As Patch...</source>
+        <translation>
+            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
+            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>&amp;Edit in {0}</source>
+        <translation>Édit&amp;er dans {0}</translation>
+    </message>
+    <message numerus="yes">
+        <source>Edit &amp;HEAD Versions in {0}</source>
+        <translation>
+            <numerusform>Éditer la version en &amp;HEAD dans {0}</numerusform>
+            <numerusform>Éditer les versions en &amp;HEAD dans {0}</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -1980,16 +2196,16 @@
         <translation>&amp;Fusionner dans {0}...</translation>
     </message>
     <message>
+        <source>New &amp;Branch Here...</source>
+        <translation>Nouvelle &amp;branche ici...</translation>
+    </message>
+    <message>
         <source>Cherry &amp;Pick...</source>
         <translation>&amp;Picorer...</translation>
     </message>
     <message>
         <source>Re&amp;vert...</source>
         <translation>In&amp;verser...</translation>
-    </message>
-    <message>
-        <source>Start &amp;Branch from Here...</source>
-        <translation>Démarrer une &amp;branche ici...</translation>
     </message>
     <message>
         <source>&amp;Reset HEAD to Here...</source>
@@ -2196,10 +2412,6 @@
         <source>Accompanying public key not found.</source>
         <translation>La clé publique associée est introuvable.</translation>
     </message>
-    <message>
-        <source>{app} doesn’t support passphrase-protected private keys yet.</source>
-        <translation>{app} ne prend pas encore en charge les clés privées protégées par une phrase secrète (passphrase).</translation>
-    </message>
 </context>
 <context>
     <name>LoadPatch</name>
@@ -2232,14 +2444,6 @@
 <context>
     <name>MainToolBar</name>
     <message>
-        <source>Push</source>
-        <translation>Publier</translation>
-    </message>
-    <message>
-        <source>Push local branch to remote</source>
-        <translation>Publier la branche locale sur le serveur</translation>
-    </message>
-    <message>
         <source>Reveal</source>
         <translation>Révéler</translation>
     </message>
@@ -2260,8 +2464,8 @@
         <translation>Réglages</translation>
     </message>
     <message>
-        <source>Edit {app} settings</source>
-        <translation>Régler les paramètres de {app}</translation>
+        <source>Configure {app}</source>
+        <translation>Configurer {app}</translation>
     </message>
     <message>
         <source>Text Position</source>
@@ -2371,6 +2575,14 @@
         <translation>Aid&amp;e</translation>
     </message>
     <message>
+        <source>Configure {app}</source>
+        <translation>Configurer {app}</translation>
+    </message>
+    <message>
+        <source>Search for a piece of text in commit messages, the current diff, or the name of a file</source>
+        <translation>Rechercher du texte dans les messages des commits, la diff ouverte, ou le nom d’un fichier</translation>
+    </message>
+    <message>
         <source>&amp;About {0}</source>
         <translation>À propos &amp;de {0}</translation>
     </message>
@@ -2450,6 +2662,22 @@
         <translation>Application des préférences</translation>
     </message>
     <message>
+        <source>You may need to restart {app} for the new settings to take effect fully.</source>
+        <translation>Il vous faudra peut-être redémarrer {app} pour que les nouveaux réglages prennent tous effet.</translation>
+    </message>
+    <message>
+        <source>The new settings won’t take effect fully until you reload the current repositories.</source>
+        <translation>Les nouveaux réglages prendront effet après avoir rechargé les dépôts ouverts.</translation>
+    </message>
+    <message>
+        <source>&amp;Reload</source>
+        <translation>&amp;Recharger</translation>
+    </message>
+    <message>
+        <source>&amp;Not Now</source>
+        <translation>&amp;Plus tard</translation>
+    </message>
+    <message>
         <source>Close Tab</source>
         <translation>Fermer l’onglet</translation>
     </message>
@@ -2478,20 +2706,12 @@
         <translation>&amp;Réglages...</translation>
     </message>
     <message>
-        <source>Edit {app} settings</source>
-        <translation>Ajuster les paramètres de {app}</translation>
-    </message>
-    <message>
         <source>Close current repository tab</source>
         <translation>Fermer l’onglet courant</translation>
     </message>
     <message>
         <source>Quit {app}</source>
         <translation>Quitter {app}</translation>
-    </message>
-    <message>
-        <source>Search for a piece of text in commit messages or in the current diff</source>
-        <translation>Rechercher du texte dans les messages des commits ou dans la diff ouverte</translation>
     </message>
     <message>
         <source>Find next occurrence</source>
@@ -2514,14 +2734,6 @@
         <translation>Afficher la barre d’état</translation>
     </message>
     <message>
-        <source>Go to &amp;Uncommitted Changes</source>
-        <translation>Aller aux &amp;Modifications non-committées</translation>
-    </message>
-    <message>
-        <source>Go to &amp;HEAD Commit</source>
-        <translation>Aller au commit en &amp;HEAD</translation>
-    </message>
-    <message>
         <source>Focus on Sidebar</source>
         <translation>Focus sur la barre latérale</translation>
     </message>
@@ -2536,6 +2748,10 @@
     <message>
         <source>Focus on Code View</source>
         <translation>Focus sur l’affichage du code</translation>
+    </message>
+    <message>
+        <source>{0} User’s Guide</source>
+        <translation>Guide de l’utilisateur de {0}</translation>
     </message>
     <message>
         <source>Open Trash...</source>
@@ -2631,14 +2847,6 @@
     <message>
         <source>&amp;Create repo here</source>
         <translation>&amp;Créer dépôt ici</translation>
-    </message>
-    <message>
-        <source>You may need to restart {app} for all new settings to take effect.</source>
-        <translation>Il vous faudra peut-être redémarrer {app} pour que tous les nouveaux réglages prennent effet.</translation>
-    </message>
-    <message>
-        <source>You may need to reload the current repository for all new settings to take effect.</source>
-        <translation>Il vous faudra peut-être recharger le dépôt courant pour que tous les nouveaux réglages prennent effet.</translation>
     </message>
     <message>
         <source>&amp;Open {0}</source>
@@ -2739,6 +2947,10 @@
         <translation>Ne peut être vide.</translation>
     </message>
     <message>
+        <source>This name is already taken by another submodule.</source>
+        <translation>Ce nom désigne déjà un autre sous-module.</translation>
+    </message>
+    <message>
         <source>Name validation error {0}</source>
         <translation>Erreur de validation du nom {0}</translation>
     </message>
@@ -2825,6 +3037,10 @@
         <translation>&amp;Créer</translation>
     </message>
     <message>
+        <source>(blocked by conflicts)</source>
+        <translation>(empêché par des conflits)</translation>
+    </message>
+    <message>
         <source>New branch</source>
         <translation>Nouvelle branche</translation>
     </message>
@@ -2843,6 +3059,10 @@
     <message>
         <source>&amp;Track upstream branch:</source>
         <translation>&amp;Suivre branche amont&#xa0;:</translation>
+    </message>
+    <message>
+        <source>...then recurse into submodules</source>
+        <translation>...puis, mettre à jour les sous-modules récursivement</translation>
     </message>
     <message>
         <source>Commit at tip:</source>
@@ -2872,8 +3092,19 @@
         <translation>Procéder au commit</translation>
     </message>
     <message>
+        <source>Commit {0} created.</source>
+        <translation>Commit {0} créé.</translation>
+    </message>
+    <message>
         <source>Empty commit</source>
         <translation>Commit vide</translation>
+    </message>
+</context>
+<context>
+    <name>NewRemote</name>
+    <message>
+        <source>Remote {0} added.</source>
+        <translation>Serveur {0} ajouté.</translation>
     </message>
 </context>
 <context>
@@ -2886,6 +3117,13 @@
         <source>There are no uncommitted changes to stash (submodules cannot be stashed).</source>
         <translation>Il n’y a aucune modification non-commitée à remiser (les sous-modules ne peuvent pas être remisés).</translation>
     </message>
+    <message numerus="yes">
+        <source>%n files stashed.</source>
+        <translation>
+            <numerusform>Fichier remisé.</numerusform>
+            <numerusform>%n fichiers remisés.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>NewTag</name>
@@ -2894,20 +3132,43 @@
         <translation>Procéder à l’étiquetage</translation>
     </message>
     <message>
+        <source>Tag {0} created on commit {1}.</source>
+        <translation>Étiquette {0} créée sur le commit {1}.</translation>
+    </message>
+</context>
+<context>
+    <name>NewTagDialog</name>
+    <message>
+        <source>&amp;Create</source>
+        <translation>&amp;Créer</translation>
+    </message>
+    <message>
+        <source>&amp;Create &amp;&amp; Push</source>
+        <translation>&amp;Créer &amp;&amp; publier</translation>
+    </message>
+    <message>
         <source>This name is already taken by another tag.</source>
         <translation>Ce nom est déjà pris par une autre étiquette.</translation>
     </message>
     <message>
         <source>New tag on commit {0}</source>
-        <translation>Nouvelle étiquette sur le commit {0}</translation>
+        <translation>Étiqueter le commit {0}</translation>
     </message>
     <message>
-        <source>Enter tag name:</source>
-        <translation>Saisissez le libellé de l’étiquette&#xa0;:</translation>
+        <source>New tag</source>
+        <translation>Nouvelle étiquette</translation>
     </message>
     <message>
-        <source>Create Tag</source>
-        <translation>Étiqueter</translation>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Enter tag name</source>
+        <translation>Saisissez le nom de l’étiquette</translation>
+    </message>
+    <message>
+        <source>&amp;Push to:</source>
+        <translation>Publier &amp;vers&#xa0;:</translation>
     </message>
 </context>
 <context>
@@ -2974,6 +3235,54 @@
     <message>
         <source>Discard file</source>
         <translation>Jeter le fichier</translation>
+    </message>
+    <message>
+        <source>Staged.</source>
+        <translation>Indexé.</translation>
+    </message>
+    <message>
+        <source>Unstaged.</source>
+        <translation>Désindexé.</translation>
+    </message>
+    <message>
+        <source>Discarded.</source>
+        <translation>Jeté.</translation>
+    </message>
+    <message>
+        <source>Lines staged.</source>
+        <translation>Lignes indexées.</translation>
+    </message>
+    <message>
+        <source>Lines unstaged.</source>
+        <translation>Lignes désindexées.</translation>
+    </message>
+    <message>
+        <source>Lines discarded.</source>
+        <translation>Lignes jetées.</translation>
+    </message>
+    <message>
+        <source>Hunk staged.</source>
+        <translation>Section indexée.</translation>
+    </message>
+    <message>
+        <source>Hunk unstaged.</source>
+        <translation>Section désindexée.</translation>
+    </message>
+    <message>
+        <source>Hunk discarded.</source>
+        <translation>Section jetée.</translation>
+    </message>
+    <message>
+        <source>File staged.</source>
+        <translation>Fichier indexé.</translation>
+    </message>
+    <message>
+        <source>File unstaged.</source>
+        <translation>Fichier désindexé.</translation>
+    </message>
+    <message>
+        <source>File discarded.</source>
+        <translation>Fichier jeté.</translation>
     </message>
 </context>
 <context>
@@ -3386,10 +3695,36 @@
     </message>
 </context>
 <context>
+    <name>ProtocolButton</name>
+    <message>
+        <source>Change URL protocol</source>
+        <translation>Changer le protocole de l’URL</translation>
+    </message>
+</context>
+<context>
     <name>PullBranch</name>
     <message>
         <source>Can’t pull new commits into {0} because this branch isn’t tracking an upstream branch.</source>
         <translation>Impossible de tirer de nouveaux commits dans {0} car cette branche ne suit pas de branche amont.</translation>
+    </message>
+</context>
+<context>
+    <name>PushBranch</name>
+    <message>
+        <source>To push a local branch to a remote, you must first add a remote to your repo.</source>
+        <translation>Pour publier (push) une branche locale sur un serveur, vous devez d’abord ajouter un serveur à votre dépôt.</translation>
+    </message>
+    <message>
+        <source>You can do so via &lt;i&gt;“Repo &amp;rarr; Add Remote”&lt;/i&gt;.</source>
+        <translation>Pour ce faire, allez dans &lt;i&gt;“Dépôt &amp;rarr; Ajouter un serveur”&lt;/i&gt;.</translation>
+    </message>
+    <message>
+        <source>Contacting remote host...</source>
+        <translation>Connexion au serveur...</translation>
+    </message>
+    <message>
+        <source>Push complete.</source>
+        <translation>Publication terminée.</translation>
     </message>
 </context>
 <context>
@@ -3417,22 +3752,6 @@
     <message>
         <source>Status</source>
         <translation>État</translation>
-    </message>
-    <message>
-        <source>To push a local branch to a remote, you must first add a remote to your repo.</source>
-        <translation>Pour publier (push) une branche locale sur un serveur, vous devez avant tout ajouter un serveur à votre dépôt.</translation>
-    </message>
-    <message>
-        <source>You can do so via &lt;i&gt;“Repo &amp;rarr; Add Remote”&lt;/i&gt;.</source>
-        <translation>Pour ce faire, allez dans &lt;i&gt;“Dépôt &amp;rarr; Ajouter un serveur”&lt;/i&gt;.</translation>
-    </message>
-    <message>
-        <source>No remotes tracked by this repository</source>
-        <translation>Aucun serveur n’est rattaché à ce dépôt</translation>
-    </message>
-    <message>
-        <source>No branch to push</source>
-        <translation>Aucune branche à publier</translation>
     </message>
     <message>
         <source>tracking {0}</source>
@@ -3473,10 +3792,6 @@
     <message>
         <source>Force push: Destructive action!</source>
         <translation>Forcer à publier&#xa0;: Action destructrice&#xa0;!</translation>
-    </message>
-    <message>
-        <source>Contacting remote host...</source>
-        <translation>Connexion au serveur...</translation>
     </message>
     <message>
         <source>New remote branch on {0}</source>
@@ -3524,6 +3839,10 @@
 <context>
     <name>RegisterSubmoduleDialog</name>
     <message>
+        <source>Reset to default name</source>
+        <translation>Remettre le nom par défaut</translation>
+    </message>
+    <message>
         <source>Absorb submodule</source>
         <translation>Absorber le sous-module</translation>
     </message>
@@ -3532,24 +3851,28 @@
         <translation>Inscrire le sous-module</translation>
     </message>
     <message>
-        <source>Submodule settings:</source>
-        <translation>Paramètres du sous-module&#xa0;:</translation>
+        <source>Workdir:</source>
+        <translation>Rép. de travail&#xa0;:</translation>
     </message>
     <message>
-        <source>Default remote:</source>
-        <translation>Serveur par défaut&#xa0;:</translation>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom&#xa0;:</translation>
     </message>
     <message>
-        <source>Custom name:</source>
-        <translation>Nom personnalisé&#xa0;:</translation>
+        <source>&amp;Remote:</source>
+        <translation>&amp;Serveur&#xa0;:</translation>
     </message>
     <message>
-        <source>Leave blank to use the default name.</source>
-        <translation>Laissez vide pour utiliser le nom par défaut.</translation>
+        <source>&lt;p&gt;This will be the default remote for this submodule. People who clone your repo will use this remote to download the submodule.</source>
+        <translation>&lt;p&gt;Cela sera le serveur par défaut pour ce sous-module. Les personnes qui cloneront votre dépôt utiliseront ce serveur pour télécharger le sous-module.</translation>
     </message>
     <message>
         <source>Once absorbed as a submodule, this copy of {sub} cannot be used independently from its superproject, {super}. This cannot be undone!</source>
         <translation>Une fois absorbée comme sous-module, cette copie de {sub} ne pourra plus être utilisée indépendamment de son super-projet, {super}. Vous ne pourrez pas annuler ceci&#xa0;!</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;This name uniquely identifies your submodule in “.gitmodules”. It can be anything you like, but common practice is to simply name it after the submodule’s workdir.</source>
+        <translation>&lt;p&gt;Ce nom identifiera votre sous-module de façon unique dans “.gitmodules”. Le choix du nom est totalement libre, mais la coutume veut qu’un sous-module ait le même nom que son répertoire de travail.</translation>
     </message>
     <message>
         <source>{0} has no remotes.</source>
@@ -3558,6 +3881,10 @@
     <message>
         <source>Please open {0} and add a remote to it before absorbing it as a submodule.</source>
         <translation>Veuillez ouvrir {0} et ajoutez-y un serveur avant de l’absorber comme sous-module.</translation>
+    </message>
+    <message>
+        <source>Settings will be saved in {0}</source>
+        <translation>Ces paramètres seront stockés dans {0}.</translation>
     </message>
 </context>
 <context>
@@ -3579,16 +3906,16 @@
         <translation>&amp;URL&#xa0;:</translation>
     </message>
     <message>
-        <source>Na&amp;me:</source>
-        <translation>No&amp;m&#xa0;:</translation>
+        <source>&amp;Name:</source>
+        <translation>&amp;Nom&#xa0;:</translation>
+    </message>
+    <message>
+        <source>&amp;Fetch remote branches after adding</source>
+        <translation>&amp;Récupérer les branches distantes après ajout du serveur</translation>
     </message>
     <message>
         <source>Log in with custom &amp;key file</source>
         <translation>Se connecter avec une clé s&amp;péciale</translation>
-    </message>
-    <message>
-        <source>Fetch remote branches after adding</source>
-        <translation>Récupérer les branches distantes après l’ajout</translation>
     </message>
     <message>
         <source>Save</source>
@@ -3614,16 +3941,8 @@
         <translation>Trop de tentatives d’authentification rejetées.</translation>
     </message>
     <message>
-        <source>Attempting login...</source>
-        <translation>Tentative d’authentification...</translation>
-    </message>
-    <message>
-        <source>Sorry, {app} does not support passphrase-protected private keys yet.</source>
-        <translation>Désolé, {app} ne prend pas encore en charge les clés privées protégées par une phrase secrète (passphrase).</translation>
-    </message>
-    <message>
-        <source>Please note that {app} does not support passphrase-protected private keys yet. You may have better luck with a decrypted private key.</source>
-        <translation>Veuillez noter que {app} ne prend pas encore en charge les clés privées protégées par une phrase secrète (passphrase). Vous aurez sans doute de meilleurs résultats avec une clé privée décryptée.</translation>
+        <source>Logging in with key:</source>
+        <translation>Connexion avec la clé&#xa0;:</translation>
     </message>
     <message>
         <source>The remote has rejected your custom key file ({0}).</source>
@@ -3655,6 +3974,34 @@
         <translation>Indexation de {0} objets sur {1}...</translation>
     </message>
     <message>
+        <source>Passphrase-protected key file</source>
+        <translation>Clé protégée par mot de passe</translation>
+    </message>
+    <message>
+        <source>Enter passphrase to use this key file:</source>
+        <translation>Saisissez le mot de passe pour utiliser cette clé&#xa0;:</translation>
+    </message>
+    <message>
+        <source>{0} is already up-to-date with {1}.</source>
+        <translation>{0} est déjà à jour avec {1}.</translation>
+    </message>
+    <message>
+        <source>{0} created: {1}.</source>
+        <translation>{0} créée&#xa0;: {1}.</translation>
+    </message>
+    <message>
+        <source>{0} deleted, was {1}.</source>
+        <translation>{0} supprimée, pointait sur {1}.</translation>
+    </message>
+    <message>
+        <source>{0}: {1} → {2}.</source>
+        <translation>{0}&#xa0;: {1} → {2}.</translation>
+    </message>
+    <message>
+        <source>No new commits.</source>
+        <translation>Aucun nouveau commit.</translation>
+    </message>
+    <message>
         <source>The remote claims to accept: {0}.</source>
         <translation>Le serveur dit accepter&#xa0;: {0}.</translation>
     </message>
@@ -3671,14 +4018,6 @@
         <translation>Le fichier de clé privée spécifique au serveur est introuvable&#xa0;:</translation>
     </message>
     <message>
-        <source>Logging in with remote-specific key...</source>
-        <translation>Connexion à l’aide de la clé spécifique au serveur...</translation>
-    </message>
-    <message>
-        <source>Logging in...</source>
-        <translation>Authentification...</translation>
-    </message>
-    <message>
         <source>Unsupported authentication type.</source>
         <translation>Type d’authentification non géré.</translation>
     </message>
@@ -3692,18 +4031,18 @@
     </message>
 </context>
 <context>
-    <name>RemoteLinkProgressDialog</name>
-    <message>
-        <source>Abort</source>
-        <translation>Arrêter</translation>
-    </message>
+    <name>RemoteLinkDialog</name>
     <message>
         <source>Remote operation</source>
         <translation>Opération sur serveur distant</translation>
     </message>
     <message>
-        <source>Connecting to remote...</source>
-        <translation>Connexion au serveur...</translation>
+        <source>Connecting...</source>
+        <translation>Connexion...</translation>
+    </message>
+    <message>
+        <source>Aborting</source>
+        <translation>Abandon en cours</translation>
     </message>
 </context>
 <context>
@@ -3740,6 +4079,10 @@
         <translation>Nom actuel&#xa0;: {0}</translation>
     </message>
     <message>
+        <source>Branch {0} renamed to {1}.</source>
+        <translation>Branche {0} renommée {1}.</translation>
+    </message>
+    <message>
         <source>This name is already taken by another local branch.</source>
         <translation>Ce nom est déjà pris par une autre branche locale.</translation>
     </message>
@@ -3773,6 +4116,13 @@
         <source>Leave blank to move the branches to the root folder.</source>
         <translation>Laissez vide pour remonter les branches dans le dossier racine.</translation>
     </message>
+    <message numerus="yes">
+        <source>Branch folder {0} renamed to {1}, %n branches affected.</source>
+        <translation>
+            <numerusform>Dossier de branche {0} renommé {1}, %n branche affectée.</numerusform>
+            <numerusform>Dossier de branches {0} renommé {1}, %n branches affectées.</numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>RenameRemoteBranch</name>
@@ -3787,6 +4137,10 @@
     <message>
         <source>Rename on remote</source>
         <translation>Renommer sur le serveur</translation>
+    </message>
+    <message>
+        <source>Remote branch {0} renamed to {1}.</source>
+        <translation>Branche distante {0} renommée {1}.</translation>
     </message>
     <message>
         <source>This name is already taken by another branch on this remote.</source>
@@ -3963,20 +4317,36 @@
         <translation>Résolvez les conflits parmi les modifications non-committées.</translation>
     </message>
     <message>
+        <source>&amp;Local Config Files</source>
+        <translation>Fichiers de config &amp;locaux</translation>
+    </message>
+    <message>
+        <source>Open Superproject {0}</source>
+        <translation>Ouvrir le super-projet {0}</translation>
+    </message>
+    <message>
+        <source>&amp;Open Repo Folder</source>
+        <translation>&amp;Ouvrir le dossier du dépôt</translation>
+    </message>
+    <message>
+        <source>Open this repo’s working directory in the system’s file manager</source>
+        <translation>Ouvrir le répertoire de travail de ce dépôt dans le gestionnaire de fichiers de votre système</translation>
+    </message>
+    <message>
+        <source>Cop&amp;y Repo Path</source>
+        <translation>Cop&amp;ier le chemin du dépôt</translation>
+    </message>
+    <message>
+        <source>Copy the absolute path to this repo’s working directory to the clipboard</source>
+        <translation>Copier le chemin absolu du répertoire de travail de ce dépôt dans le presse-papiers</translation>
+    </message>
+    <message>
         <source>unborn HEAD</source>
         <translation>HEAD non-née</translation>
     </message>
     <message>
-        <source>repo is empty</source>
-        <translation>dépôt vide</translation>
-    </message>
-    <message>
         <source>detached HEAD @ {0}</source>
         <translation>HEAD détachée @ {0}</translation>
-    </message>
-    <message>
-        <source>Merging</source>
-        <translation>Fusion en cours</translation>
     </message>
     <message>
         <source>Merging {0}</source>
@@ -3991,20 +4361,12 @@
         <translation>Abandonner la fusion</translation>
     </message>
     <message>
-        <source>Cherry-picking</source>
-        <translation>Picorage en cours</translation>
-    </message>
-    <message>
         <source>Commit to conclude the cherry-pick.</source>
         <translation>Validez le commit pour conclure le picorage.</translation>
     </message>
     <message>
         <source>Abort Cherry-Pick</source>
         <translation>Abandonner le picorage</translation>
-    </message>
-    <message>
-        <source>Reverting</source>
-        <translation>Inversion en cours</translation>
     </message>
     <message>
         <source>Commit to conclude the revert.</source>
@@ -4029,6 +4391,49 @@
     <message>
         <source>The repo is currently in state {state}, which {app} doesn’t support yet. Use &lt;code&gt;git&lt;/code&gt; on the command line to continue.</source>
         <translation>Le dépôt est actuellement dans l’état {state}, que {app} ne sait pas encore gérer. Utilisez &lt;code&gt;git&lt;/code&gt; à la ligne de commande pour continuer.</translation>
+    </message>
+</context>
+<context>
+    <name>RepositoryState</name>
+    <message>
+        <source>None</source>
+        <translation>Aucun</translation>
+    </message>
+    <message>
+        <source>Merging</source>
+        <translation>Fusion en cours</translation>
+    </message>
+    <message>
+        <source>Reverting</source>
+        <translation>Inversion en cours</translation>
+    </message>
+    <message>
+        <source>Reverting (sequence)</source>
+        <translation>Inversion (séquence) en cours</translation>
+    </message>
+    <message>
+        <source>Cherry-picking</source>
+        <translation>Picorage en cours</translation>
+    </message>
+    <message>
+        <source>Cherry-picking (sequence)</source>
+        <translation>Picorage (séquence) en cours</translation>
+    </message>
+    <message>
+        <source>Bisecting</source>
+        <translation>Bissection en cours</translation>
+    </message>
+    <message>
+        <source>Rebasing</source>
+        <translation>Rebasage en cours</translation>
+    </message>
+    <message>
+        <source>Rebasing (interactive)</source>
+        <translation>Rebasage (interactif) en cours</translation>
+    </message>
+    <message>
+        <source>Rebasing (merging)</source>
+        <translation>Rebasage (fusion) en cours</translation>
     </message>
 </context>
 <context>
@@ -4112,6 +4517,10 @@
         <source>Restore</source>
         <translation>Rétablir</translation>
     </message>
+    <message>
+        <source>File {path} {processed}.</source>
+        <translation>Fichier {path} {processed}.</translation>
+    </message>
 </context>
 <context>
     <name>RevertCommit</name>
@@ -4193,10 +4602,6 @@
         <translation>&amp;Nouvelle branche...</translation>
     </message>
     <message>
-        <source>Upload your commits to the remote server</source>
-        <translation>Envoyer vos commits au serveur</translation>
-    </message>
-    <message>
         <source>&amp;Switch to {0}</source>
         <translation>Ba&amp;sculer dans {0}</translation>
     </message>
@@ -4217,6 +4622,18 @@
         <translation>&amp;Supprimer...</translation>
     </message>
     <message>
+        <source>New &amp;Branch Here...</source>
+        <translation>Nouvelle &amp;branche ici...</translation>
+    </message>
+    <message>
+        <source>New Local &amp;Branch Here...</source>
+        <translation>Nouvelle &amp;branche locale ici...</translation>
+    </message>
+    <message>
+        <source>&amp;Fetch Remote Branches...</source>
+        <translation>Réc&amp;upérer les branches distantes (fetch)...</translation>
+    </message>
+    <message>
         <source>&amp;Hide Remote in Graph</source>
         <translation>&amp;Masquer le serveur dans le graphe</translation>
     </message>
@@ -4225,12 +4642,30 @@
         <translation>&amp;Supprimer le dossier...</translation>
     </message>
     <message>
+        <source>&amp;Apply</source>
+        <comment>apply stash</comment>
+        <translation>&amp;Appliquer</translation>
+    </message>
+    <message>
+        <source>&amp;Drop</source>
+        <comment>drop stash</comment>
+        <translation>&amp;Supprimer</translation>
+    </message>
+    <message>
         <source>&amp;New Tag on HEAD Commit...</source>
         <translation>&amp;Nouvelle étiquette sur le commit en HEAD...</translation>
     </message>
     <message>
+        <source>&amp;Push All Tags To</source>
+        <translation>&amp;Publier toutes les étiquettes vers</translation>
+    </message>
+    <message>
         <source>&amp;Delete Tag</source>
         <translation>&amp;Supprimer l’étiquette</translation>
+    </message>
+    <message>
+        <source>Push To</source>
+        <translation>Publier vers</translation>
     </message>
     <message>
         <source>&amp;Open Submodule in New Tab</source>
@@ -4301,10 +4736,6 @@
         <translation>Visiter la page web sur {0}...</translation>
     </message>
     <message>
-        <source>Start Local &amp;Branch from Here...</source>
-        <translation>Nouvelle &amp;branche locale partant d’ici...</translation>
-    </message>
-    <message>
         <source>&amp;Fetch New Commits...</source>
         <translation>Réc&amp;upérer (fetch) les nouveaux commits...</translation>
     </message>
@@ -4341,16 +4772,20 @@
         <translation>Cac&amp;her le contenu du dossier dans le graphe</translation>
     </message>
     <message>
-        <source>&amp;Apply</source>
-        <translation>&amp;Appliquer la remise</translation>
-    </message>
-    <message>
-        <source>&amp;Delete</source>
-        <translation>&amp;Supprimer</translation>
-    </message>
-    <message>
         <source>Reveal &amp;Parent Commit</source>
         <translation>Révéler le commit &amp;parent</translation>
+    </message>
+    <message>
+        <source>&amp;Check Out Tagged Commit...</source>
+        <translation>&amp;Basculer dans le commit étiqueté...</translation>
+    </message>
+    <message>
+        <source>&amp;All Remotes</source>
+        <translation>&amp;Tous les serveurs</translation>
+    </message>
+    <message>
+        <source>No Remotes</source>
+        <translation>Aucun serveur</translation>
     </message>
     <message>
         <source>Sort By</source>
@@ -4377,20 +4812,12 @@
         <translation>Avance-rapide...</translation>
     </message>
     <message>
-        <source>New &amp;Branch from Here...</source>
-        <translation>Démarrer une &amp;branche ici...</translation>
-    </message>
-    <message>
         <source>&amp;Hide in Graph</source>
         <translation>Cac&amp;her dans le graphe</translation>
     </message>
     <message>
         <source>Hide this branch from the graph (effective if no other branches/tags point here)</source>
         <translation>Cacher cette branche du graphe (n’est effectif que si aucune autre branche/étiquette ne pointe ici)</translation>
-    </message>
-    <message>
-        <source>&amp;Fetch All Remote Branches...</source>
-        <translation>Réc&amp;upérer (fetch) toutes les branches distantes...</translation>
     </message>
     <message>
         <source>E&amp;xport As Patch...</source>
@@ -4626,17 +5053,24 @@
 </context>
 <context>
     <name>StageFiles</name>
+    <message numerus="yes">
+        <source>%n files staged.</source>
+        <translation>
+            <numerusform>Fichier indexé.</numerusform>
+            <numerusform>%n fichiers indexés.</numerusform>
+        </translation>
+    </message>
     <message>
-        <source>You’ve added another Git repo inside your current repo. You probably want to absorb it as a submodule.</source>
-        <translation>Vous avez ajouté un autre dépôt Git à l’intérieur du dépôt actuel. Vous voulez probablement l’absorber comme sous-module.</translation>
+        <source>You’ve added another Git repo inside your current repo. You should absorb it as a submodule.</source>
+        <translation>Vous avez ajouté un autre dépôt Git à l’intérieur du dépôt actuel. Vous devriez l’absorber comme sous-module.</translation>
+    </message>
+    <message>
+        <source>Uncommitted changes in the submodule can’t be staged from the parent repository.</source>
+        <translation>Les modifications non-committées dans le sous-module ne peuvent pas être indexées depuis le dépôt parent.</translation>
     </message>
     <message>
         <source>Don’t forget to remove the submodule from .gitmodules to complete its deletion.</source>
         <translation>N’oubliez pas de retirer le sous-module de .gitmodules pour achever sa suppression.</translation>
-    </message>
-    <message>
-        <source>Uncommitted changes in the submodule cannot be staged from the parent repository.</source>
-        <translation>Les modifications non-committées dans le sous-module ne peuvent pas être directement indexées depuis le dépôt parent.</translation>
     </message>
     <message numerus="yes">
         <source>%n items require your attention after staging:</source>
@@ -4648,37 +5082,11 @@
 </context>
 <context>
     <name>StagedFiles</name>
-    <message>
-        <source>Stas&amp;h Changes...</source>
-        <translation>&amp;Remiser les modifs...</translation>
-    </message>
-    <message>
-        <source>&amp;Edit in {0}</source>
-        <translation>Édit&amp;er dans {0}</translation>
-    </message>
     <message numerus="yes">
         <source>&amp;Unstage %n Files</source>
         <translation>
             <numerusform>Désinde&amp;xer le fichier</numerusform>
             <numerusform>Désinde&amp;xer %n fichiers</numerusform>
-        </translation>
-    </message>
-    <message>
-        <source>Open Diff in {0}</source>
-        <translation>Ouvrir la diff dans {0}</translation>
-    </message>
-    <message numerus="yes">
-        <source>E&amp;xport Diffs As Patch...</source>
-        <translation>
-            <numerusform>E&amp;xporter un correctif de cette diff...</numerusform>
-            <numerusform>E&amp;xporter un correctif de ces diffs...</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Edit &amp;HEAD Versions in {0}</source>
-        <translation>
-            <numerusform>Éditer la version en &amp;HEAD dans {0}</numerusform>
-            <numerusform>Éditer les versions en &amp;HEAD dans {0}</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -4721,7 +5129,7 @@
     </message>
     <message>
         <source>Normally, stashed changes are removed from the working directory. Tick this to leave the stashed changes intact instead.</source>
-        <translation>Normalement, une fois la remise créée, les modifications sont effacées de la copie de travail des fichiers affectés. Cochez cette case pour que les modifications remisées restent intactes dans le répertoire de travail.</translation>
+        <translation>Normalement, une fois la remise créée, les fichiers sélectionnés sont rétablis à leur état non-modifié. Cochez cette case pour que les modifications remisées restent intactes dans le répertoire de travail.</translation>
     </message>
     <message>
         <source>&amp;Retain stashed changes in working directory</source>
@@ -4767,12 +5175,20 @@
         <translation>Basculer</translation>
     </message>
     <message>
+        <source>Recurse into submodules</source>
+        <translation>Mettre à jour les sous-modules récursivement</translation>
+    </message>
+    <message>
         <source>You are in &lt;b&gt;Detached HEAD&lt;/b&gt; mode at commit {0}.</source>
         <translation>Vous êtes en mode &lt;b&gt;HEAD détachée&lt;/b&gt; au commit {0}.</translation>
     </message>
     <message>
         <source>You might lose track of this commit if you carry on switching to {1}.</source>
         <translation>Vous pourriez perdre trace de ce commit si vous basculez dans {1}.</translation>
+    </message>
+    <message>
+        <source>Switched to branch {0}.</source>
+        <translation>Basculé dans la branche {0}.</translation>
     </message>
 </context>
 <context>
@@ -4788,6 +5204,33 @@
     <message>
         <source>Load</source>
         <translation>Charger</translation>
+    </message>
+</context>
+<context>
+    <name>UnstageFiles</name>
+    <message numerus="yes">
+        <source>%n files unstaged.</source>
+        <translation>
+            <numerusform>Fichier désindexé.</numerusform>
+            <numerusform>%n fichiers désindexés.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>UpdateSubmodule</name>
+    <message>
+        <source>Submodule updated.</source>
+        <translation>Sous-module mis à jour.</translation>
+    </message>
+</context>
+<context>
+    <name>UpdateSubmodulesRecursive</name>
+    <message numerus="yes">
+        <source>%n submodules updated.</source>
+        <translation>
+            <numerusform>%n sous-module mis à jour.</numerusform>
+            <numerusform>%n sous-modules mis à jour.</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -4819,6 +5262,10 @@
 </context>
 <context>
     <name>_NewBranchBaseTask</name>
+    <message>
+        <source>Branch {0} created on commit {1}.</source>
+        <translation>Branche {0} créée sur le commit {1}.</translation>
+    </message>
     <message>
         <source>You are in &lt;b&gt;Detached HEAD&lt;/b&gt; mode at commit {0}.</source>
         <translation>Vous êtes en mode &lt;b&gt;HEAD détachée&lt;/b&gt; au commit {0}.</translation>
@@ -4939,65 +5386,6 @@
         <comment>&apos;commit&apos; file mode 0o160000</comment>
         <translation>commit</translation>
     </message>
-    <message>
-        <source>deleted by us</source>
-        <translation>supprimé par nous</translation>
-    </message>
-    <message>
-        <source>deleted by them</source>
-        <translation>supprimé par eux</translation>
-    </message>
-    <message>
-        <source>deleted by both sides</source>
-        <translation>supprimé de part et d’autre</translation>
-    </message>
-    <message>
-        <source>added by both sides</source>
-        <translation>ajouté de part et d’autre</translation>
-    </message>
-    <message>
-        <source>modified by both sides</source>
-        <translation>modifié de part et d’autre</translation>
-    </message>
-</context>
-<context>
-    <name>invoker</name>
-    <message>
-        <source>&amp;Push Branch...</source>
-        <translation>&amp;Publier la branche (push)...</translation>
-    </message>
-    <message>
-        <source>Upload your commits on the current branch to the remote server</source>
-        <translation>Envoyer au serveur vos commits de la branche courante</translation>
-    </message>
-    <message>
-        <source>&amp;Local Config Files</source>
-        <translation>Fichiers de config &amp;locaux</translation>
-    </message>
-    <message>
-        <source>Open Superproject</source>
-        <translation>Ouvrir le super-projet</translation>
-    </message>
-    <message>
-        <source>Open Superproject {0}</source>
-        <translation>Ouvrir le super-projet {0}</translation>
-    </message>
-    <message>
-        <source>&amp;Open Repo Folder</source>
-        <translation>&amp;Ouvrir le dossier du dépôt</translation>
-    </message>
-    <message>
-        <source>Open this repo’s working directory in the system’s file manager</source>
-        <translation>Ouvrir le répertoire de travail de ce dépôt dans le gestionnaire de fichiers de votre système</translation>
-    </message>
-    <message>
-        <source>Cop&amp;y Repo Path</source>
-        <translation>Cop&amp;ier le chemin du dépôt</translation>
-    </message>
-    <message>
-        <source>Copy the absolute path to this repo’s working directory to the clipboard</source>
-        <translation>Copier le chemin absolu du répertoire de travail de ce dépôt dans le presse-papiers</translation>
-    </message>
 </context>
 <context>
     <name>task</name>
@@ -5087,12 +5475,8 @@
         <translation>Avance-rapide sur la branche</translation>
     </message>
     <message>
-        <source>Fetch remote</source>
-        <translation>Récupérer (fetch) les nouveaux commits sur le serveur</translation>
-    </message>
-    <message>
         <source>Fetch remote branch</source>
-        <translation>Récupérer les nouveautés sur la branche distante</translation>
+        <translation>Récupérer la branche distante (fetch)</translation>
     </message>
     <message>
         <source>Delete local branch folder</source>
@@ -5105,6 +5489,10 @@
     <message>
         <source>Export patch file</source>
         <translation>Exporter un fichier correctif</translation>
+    </message>
+    <message>
+        <source>Fetch remotes</source>
+        <translation>Récupérer les branches distantes (fetch)</translation>
     </message>
     <message>
         <source>Get commit information</source>
@@ -5125,6 +5513,14 @@
     <message>
         <source>Navigate forward</source>
         <translation>Naviguer en avant</translation>
+    </message>
+    <message>
+        <source>Go to HEAD commit</source>
+        <translation>Aller au commit en HEAD</translation>
+    </message>
+    <message>
+        <source>Go to Uncommitted Changes</source>
+        <translation>Aller aux Modifications non-committées</translation>
     </message>
     <message>
         <source>Load commit</source>
@@ -5175,8 +5571,12 @@
         <translation>Tirer depuis la branche distante</translation>
     </message>
     <message>
+        <source>Push branch</source>
+        <translation>Publier la branche (push)</translation>
+    </message>
+    <message>
         <source>Recall lost commit</source>
-        <translation>Récupérer commit perdu</translation>
+        <translation>Retrouver commit perdu</translation>
     </message>
     <message>
         <source>Refresh repo</source>
@@ -5216,8 +5616,24 @@
         <translation>Inverser le texte sélectionné</translation>
     </message>
     <message>
+        <source>HEAD</source>
+        <translation>HEAD</translation>
+    </message>
+    <message>
+        <source>Changes</source>
+        <translation>Modifs</translation>
+    </message>
+    <message>
+        <source>Get the latest commits on all remote branches</source>
+        <translation>Obtenir les derniers commits sur toutes les branches distantes</translation>
+    </message>
+    <message>
         <source>Revert patch file</source>
         <translation>Inverser le fichier correctif</translation>
+    </message>
+    <message>
+        <source>Push refspecs</source>
+        <translation>Publier les refspecs</translation>
     </message>
     <message>
         <source>Restore file revision</source>
@@ -5242,6 +5658,10 @@
     <message>
         <source>Update submodule</source>
         <translation>Mettre à jour le sous-module</translation>
+    </message>
+    <message>
+        <source>Update submodules recursively</source>
+        <translation>Mettre à jour les sous-modules récursivement</translation>
     </message>
     <message>
         <source>Unstage files</source>
@@ -5280,6 +5700,10 @@
         <translation>Tirer</translation>
     </message>
     <message>
+        <source>Push</source>
+        <translation>Publier</translation>
+    </message>
+    <message>
         <source>Amend the last commit on the current branch with the staged changes in the working directory</source>
         <translation>Rectifier le dernier commit de la branche courante avec les modifications indexées dans le répertoire de travail</translation>
     </message>
@@ -5293,7 +5717,7 @@
     </message>
     <message>
         <source>Restore backed up changes to the working directory</source>
-        <translation>Récupérer des modifications sauvegardées et les appliquer au répertoire de travail</translation>
+        <translation>Restaurer des modifications sauvegardées et les appliquer au répertoire de travail</translation>
     </message>
     <message>
         <source>Bring the changes introduced by this commit to the current branch</source>
@@ -5314,10 +5738,6 @@
     <message>
         <source>Advance this local branch to the tip of the remote-tracking branch</source>
         <translation>Avancer cette branche locale jusqu’à l’extrémité de la branche distante</translation>
-    </message>
-    <message>
-        <source>Get the latest commits on all remote branches from the server</source>
-        <translation>Obtenir les derniers commits sur toutes les branches distantes du serveur</translation>
     </message>
     <message>
         <source>Get the latest commits from the remote server</source>
@@ -5350,6 +5770,10 @@
     <message>
         <source>Tag this commit with a name</source>
         <translation>Étiqueter ce commit avec un nom</translation>
+    </message>
+    <message>
+        <source>Upload your commits on the current branch to the remote server</source>
+        <translation>Envoyer vos commits de la branche courante vers le serveur distant</translation>
     </message>
     <message>
         <source>Remove this submodule from .gitmodules and delete its working copy from this repo</source>
