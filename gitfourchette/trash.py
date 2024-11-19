@@ -8,6 +8,7 @@ import datetime
 import logging
 import os
 import shutil
+from tarfile import TarFile
 
 from gitfourchette import settings
 from gitfourchette.porcelain import *
@@ -114,12 +115,44 @@ class Trash:
                 # It doesn't make sense to back up a file deletion
                 continue
 
+            elif patch.delta.status == DeltaStatus.UNTRACKED and patch.delta.new_file.mode == FileMode.TREE:
+                self.backupTree(workdir, path)
+
             elif patch.delta.status == DeltaStatus.UNTRACKED or patch.delta.is_binary:
                 self.backupFile(workdir, path)
 
             else:
                 # Write text patch
                 self.backupPatch(workdir, patch.data, path)
+
+    def backupTree(self, workdir: str, treePath: str):
+        treeFullPath = os.path.join(workdir, treePath)
+
+        if not self.isTreeSmallEnough(treeFullPath):
+            return
+
+        trashFile = self.newFile(workdir, ext=".tar", originalPath=treePath)
+        if not trashFile:
+            return
+
+        with TarFile(trashFile, "w") as tarball:
+            tarball.add(treeFullPath, arcname=treePath)
+
+    def isTreeSmallEnough(self, sourcePath: str):
+        if self.maxFileSize == 0:
+            return True
+
+        totalSize = 0
+
+        for root, _dirs, files in os.walk(sourcePath):
+            for name in files:
+                fullPath = os.path.join(root, name)
+                fileSize = os.lstat(fullPath).st_size
+                totalSize += fileSize
+                if totalSize > self.maxFileSize:
+                    return False
+
+        return True
 
     def size(self) -> tuple[int, int]:
         size = 0

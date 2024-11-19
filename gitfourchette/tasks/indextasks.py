@@ -5,8 +5,9 @@
 # -----------------------------------------------------------------------------
 
 import logging
-from contextlib import suppress
 import os
+import shutil
+from contextlib import suppress
 
 from gitfourchette import reverseunidiff
 from gitfourchette.nav import NavLocator
@@ -167,10 +168,22 @@ class DiscardFiles(_BaseStagingTask):
 
         paths = [patch.delta.new_file.path for patch in patches
                  if patch not in submos]
+
+        # Restore files from index
         if paths:
             Trash.instance().backupPatches(self.repo.workdir, patches)
             self.repo.restore_files_from_index(paths)
 
+        # Discard untracked trees. They have already been backed up above,
+        # but restore_files_from_index isn't capable of removing trees.
+        untrackedTrees = [patch.delta.new_file.path for patch in patches
+                          if patch.delta.status == DeltaStatus.UNTRACKED and patch.delta.new_file.mode == FileMode.TREE]
+        for untrackedTree in untrackedTrees:
+            untrackedTreePath = self.repo.in_workdir(untrackedTree)
+            assert os.path.isdir(untrackedTreePath)
+            shutil.rmtree(untrackedTreePath)
+
+        # Restore submodules
         if submos:
             self.effects |= TaskEffects.Refs  # We don't have TaskEffects.Submodules so .Refs is the next best thing
             for patch in submos:

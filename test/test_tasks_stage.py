@@ -4,6 +4,7 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+import os.path
 import pytest
 
 from . import reposcenario
@@ -131,6 +132,25 @@ def testDiscardModeChange(tempDir, mainWindow):
 
     assert readFile(path).decode() == "keep this!"
     assert os.lstat(path).st_mode & 0o777 == 0o644
+
+
+def testDiscardUntrackedTree(tempDir, mainWindow):
+    outerWd = unpackRepo(tempDir, renameTo="outer")
+    innerWd = unpackRepo(tempDir, renameTo="inner")
+    innerWd = shutil.move(innerWd, outerWd)
+
+    rw = mainWindow.openRepo(outerWd)
+    assert rw.repo.status() == {"inner/": FileStatus.WT_NEW}
+
+    assert os.path.exists(innerWd)
+    assert qlvGetRowData(rw.dirtyFiles) == ["[tree] inner"]
+    qlvClickNthRow(rw.dirtyFiles, 0)
+    contextMenu = rw.dirtyFiles.makeContextMenu()
+    findMenuAction(contextMenu, "discard").trigger()
+    acceptQMessageBox(rw, "really delete.+inner")
+
+    assert not os.path.exists(innerWd)
+    assert rw.repo.status() == {}
 
 
 @pytest.mark.parametrize("method", ["key", "menu", "button"])
