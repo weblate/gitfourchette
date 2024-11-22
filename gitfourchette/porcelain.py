@@ -1492,8 +1492,8 @@ class Repo(_VanillaRepository):
             with RepoContext(submodule.open()) as subrepo:
                 frontier.extend(gen_frontier(subrepo))
 
-    def get_submodule_diff(self, patch: Patch, in_workdir: bool = False) -> SubmoduleDiff:
-        assert FileMode.COMMIT in (patch.delta.new_file.mode, patch.delta.old_file.mode)
+    def analyze_subtree_commit_patch(self, patch: Patch, in_workdir: bool = False) -> SubtreeCommitDiff:
+        assert SubtreeCommitDiff.is_subtree_commit_patch(patch)
 
         path = patch.delta.new_file.path
 
@@ -1522,7 +1522,7 @@ class Repo(_VanillaRepository):
         else:
             was_registered = True
 
-        return SubmoduleDiff(
+        return SubtreeCommitDiff(
             name=name,
             workdir=abs_path,
             status=patch.delta.status,
@@ -1919,7 +1919,7 @@ class DiffConflict:
 
 
 @_dataclasses.dataclass(frozen=True)
-class SubmoduleDiff:
+class SubtreeCommitDiff:
     name: str
     workdir: str
     status: DeltaStatus
@@ -1932,7 +1932,7 @@ class SubmoduleDiff:
     is_absorbed: bool
 
     @staticmethod
-    def is_submodule_patch(patch: Patch):
+    def is_subtree_commit_patch(patch: Patch):
         return FileMode.COMMIT in (patch.delta.new_file.mode, patch.delta.old_file.mode)
 
     @property
@@ -1954,3 +1954,7 @@ class SubmoduleDiff:
     @property
     def is_del(self):
         return self.status == DeltaStatus.DELETED
+
+    @property
+    def is_submodule(self):
+        return self.is_registered or self.was_registered

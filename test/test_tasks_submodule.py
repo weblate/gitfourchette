@@ -251,21 +251,31 @@ def testSubmoduleStagingSuggestions(tempDir, mainWindow):
     assert ["submosub"] == rw.repo.listall_submodules_fast()
     assert "submosub" == rw.sidebar.findNodeByKind(SidebarItem.Submodule).data
 
-    # Jump to unstaged submodule entry
+    # Jump to unstaged tree
     submoUnstagedLoc = NavLocator.inUnstaged("newsubmo")
     rw.jump(submoUnstagedLoc)
-
-    # Stage submodule without absorbing it
     assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    assert qteFind(rw.specialDiffView, r"subtree is.+root of.+git repo")
+
+    # Stage tree without absorbing it
     rw.diffArea.stageButton.click()
-    acceptQMessageBox(rw, "you should absorb")
-    print(rw.navLocator)
+    acceptQMessageBox(rw, "recommended to absorb")
 
     assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
-    qteClickLink(rw.specialDiffView, r"absorb the submodule")
+    assert qteFind(rw.specialDiffView, r"subtree.+newsubmo.+contains changes")
+
+    # Absorb tree as submodule
+    submoStagedLoc = NavLocator.inStaged("newsubmo")
+    rw.jump(submoStagedLoc)
+    assert rw.navLocator.isSimilarEnoughTo(submoStagedLoc)
+    assert qteFind(rw.specialDiffView, r"subtree.+newsubmo.+was added")
+    assert qteFind(rw.specialDiffView, r"isn.t a submodule yet")
+    qteClickLink(rw.specialDiffView, r"absorb")
     findQDialog(rw, "absorb").accept()
 
-    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    # Tree is now a submodule
+    assert rw.navLocator.isSimilarEnoughTo(submoStagedLoc)
+    assert qteFind(rw.specialDiffView, r"submodule.+newsubmo.+was added")
     assert qteFind(rw.specialDiffView, r"make sure to commit \.gitmodules")
 
     # Prompt submodule re-registration
@@ -273,12 +283,12 @@ def testSubmoduleStagingSuggestions(tempDir, mainWindow):
     rw.refreshRepo()
 
     # Register a submodule that has already been absorbed
-    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    assert rw.navLocator.isSimilarEnoughTo(submoStagedLoc)
     assert qteFind(rw.specialDiffView, r"to complete the addition.+register.+\.gitmodules")
     qteClickLink(rw.specialDiffView, r"register.+\.gitmodules")
     findQDialog(rw, "register submodule").accept()
 
-    assert rw.navLocator.isSimilarEnoughTo(submoUnstagedLoc)
+    assert rw.navLocator.isSimilarEnoughTo(submoStagedLoc)
     assert qteFind(rw.specialDiffView, r"make sure to commit \.gitmodules")
 
     # Delete another submodule and stage the deletion

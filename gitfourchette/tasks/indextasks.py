@@ -55,7 +55,7 @@ class _BaseStagingTask(RepoTask):
 
     @staticmethod
     def filterSubmodules(patches: list[Patch]) -> list[Patch]:
-        submos = [p for p in patches if SubmoduleDiff.is_submodule_patch(p)]
+        submos = [p for p in patches if SubtreeCommitDiff.is_subtree_commit_patch(p)]
         return submos
 
 
@@ -85,15 +85,14 @@ class StageFiles(_BaseStagingTask):
 
             if newFile.mode == FileMode.TREE:
                 m = self.tr("You’ve added another Git repo inside your current repo. "
-                            "You should absorb it as a submodule.")
-            elif SubmoduleDiff.is_submodule_patch(patch):
-                info = self.repo.get_submodule_diff(patch)
-                if info.is_del:
-                    m = self.tr("Don’t forget to remove the submodule from .gitmodules "
-                                "to complete its deletion.")
-                elif not info.is_trivially_indexable:
-                    m = self.tr("Uncommitted changes in the submodule "
-                                "can’t be staged from the parent repository.")
+                            "It is STRONGLY RECOMMENDED to absorb it as a submodule before committing.")
+            elif SubtreeCommitDiff.is_subtree_commit_patch(patch):
+                info = self.repo.analyze_subtree_commit_patch(patch, in_workdir=True)
+                if info.is_del and info.was_registered:
+                    m = self.tr("Don’t forget to remove the submodule from {0} to complete its deletion."
+                                ).format(tquo(DOT_GITMODULES))
+                elif not info.is_del and not info.is_trivially_indexable:
+                    m = self.tr("Uncommitted changes in the submodule can’t be staged from the parent repository.")
 
             if m:
                 debrief[newFile.path] = m
@@ -198,8 +197,7 @@ class DiscardFiles(_BaseStagingTask):
         if patch.delta.status == DeltaStatus.DELETED:
             didRestore = self.repo.restore_submodule_gitlink(path)
             if not didRestore:
-                # TODO: more user-friendly error if couldn't restore?
-                logger.warning(f"Couldn't restore gitlink for submodule {path}")
+                raise AbortTask(self.tr("Couldn’t restore gitlink file for submodule {0}.").format(lquo(path)))
 
         with RepoContext(self.repo.in_workdir(path), RepositoryOpenFlag.NO_SEARCH) as subRepo:
             # Reset HEAD to the target commit

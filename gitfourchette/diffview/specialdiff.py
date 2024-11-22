@@ -5,6 +5,9 @@
 # -----------------------------------------------------------------------------
 
 """Non-textual diffs"""
+
+from __future__ import annotations
+
 from contextlib import suppress
 import os
 
@@ -169,7 +172,7 @@ class SpecialDiffError(Exception):
 
         treePath = os.path.normpath(delta.new_file.path)
         treeName = os.path.basename(treePath)
-        message = translate("Diff", "This untracked folder is the root of another Git repository.")
+        message = translate("Diff", "This untracked subtree is the root of another Git repository.")
 
         # TODO: if we had the full path to the root repo, we could just make a standard file link, and we wouldn't need the "opensubfolder" authority
         prompt1 = translate("Diff", "Open {0}").format(bquo(treeName))
@@ -185,25 +188,43 @@ class SpecialDiffError(Exception):
             longform=toRoomyUL([linkify(prompt2, taskLink)]))
 
     @staticmethod
-    def submoduleDiff(repo: Repo, patch: Patch, locator: NavLocator):
-        from gitfourchette.tasks.indextasks import DiscardFiles
+    def submoduleDiff(repo: Repo, patch: Patch, locator: NavLocator) -> SpecialDiffError:
+        from gitfourchette.tasks import AbsorbSubmodule, DiscardFiles, RegisterSubmodule
 
-        smDiff = repo.get_submodule_diff(patch, in_workdir=locator.context.isWorkdir())
-        openLink = QUrl.fromLocalFile(smDiff.workdir)
+        smDiff = repo.analyze_subtree_commit_patch(patch, in_workdir=locator.context.isWorkdir())
+        isTree = not smDiff.is_submodule
 
+        # Compose title.
+        # Explicit permutations of "subtree"/"submodule" text so that translations
+        # can be grammatically correct (in case of different genders, etc.)
         if smDiff.is_del:
-            titleText = translate("Diff", "Submodule {0} was [removed.]")
-            titleText = tagify(titleText, "<del><b>")
+            title = (translate("Diff", "Subtree {0} was [removed.]") if isTree else
+                     translate("Diff", "Submodule {0} was [removed.]"))
+            title = tagify(title, "<del><b>")
         elif smDiff.is_add:
-            titleText = translate("Diff", "Submodule {0} was [added.]")
-            titleText = tagify(titleText, "<add><b>")
+            title = (translate("Diff", "Subtree {0} was [added.]") if isTree else
+                     translate("Diff", "Submodule {0} was [added.]"))
+            title = tagify(title, "<add><b>")
         elif smDiff.head_did_move:
-            titleText = translate("Diff", "Submodule {0} was updated.")
+            title = (translate("Diff", "Subtree {0} was updated.") if isTree else
+                     translate("Diff", "Submodule {0} was updated."))
         else:
-            titleText = translate("Diff", "Submodule {0} contains changes.")
-        titleText = titleText.format(bquo(smDiff.short_name))
+            title = (translate("Diff", "Subtree {0} contains changes.") if isTree else
+                     translate("Diff", "Submodule {0} contains changes."))
 
-        specialDiff = SpecialDiffError(titleText)
+        title = title.format(bquo(smDiff.short_name))
+
+        # Add link to open the submodule as a subtitle
+        subtitle = ""
+        openLink = QUrl.fromLocalFile(smDiff.workdir)
+        if smDiff.still_exists:
+            subtitle = translate("Diff", "Open subtree") if isTree else translate("Diff", "Open submodule")
+            if smDiff.short_name != patch.delta.new_file.path:
+                subtitle += " " + translate("Diff", "(path: {0})").format(escape(patch.delta.new_file.path))
+            subtitle = linkify(subtitle, openLink)
+
+        # Initialize SpecialDiffError (we'll return this)
+        specialDiff = SpecialDiffError(title, subtitle)
         longformParts = []
 
         # Create old/new table if the submodule's HEAD commit was moved
@@ -241,43 +262,42 @@ class SpecialDiffError(Exception):
                      f"<tr><td><add><b>{newText}</b></add> </td><td><code>{targets[1]} </code> {messages[1]}</td></tr>"
                      "</table>")
 
+            intro = (translate("Diff", "The subtree’s <b>HEAD</b> has moved to another commit.") if isTree else
+                     translate("Diff", "The submodule’s <b>HEAD</b> has moved to another commit."))
             if locator.context == NavContext.UNSTAGED:
-                intro = translate("Diff", "The submodule’s <b>HEAD</b> has moved to another commit &ndash; you can stage this update:")
-            else:
-                intro = translate("Diff", "The submodule’s <b>HEAD</b> has moved to another commit:")
+                intro += " " + translate("Diff", "You can stage this update:")
             longformParts.append(f"{intro}<p>{table}</p>")
 
+        # Show additional tips if this submodule is in the workdir.
         if locator.context.isWorkdir():
-            from gitfourchette.tasks import AbsorbSubmodule, RegisterSubmodule
-            gitmodulesTag = "<tt>.gitmodules</tt>"
-
             m = ""
             if smDiff.is_del:
                 if smDiff.is_registered:
-                    m = translate("Diff", "To complete the removal of this submodule, "
-                                          "<b>remove it from {0}</b>.").format(gitmodulesTag)
-                else:
-                    m = translate("Diff", "To complete the removal of this submodule, "
-                                          "make sure to commit <b>{0}</b> at the same time "
-                                          "as the submodule folder itself.").format(gitmodulesTag)
+                    m = translate("Diff", "To complete the removal of this submodule, <b>remove it from {gitmodules}</b>.")
+                elif smDiff.was_registered:
+                    m = translate("Diff", "To complete the removal of this submodule, make sure to <b>commit "
+                                          "{gitmodules}</b> at the same time as the submodule folder itself.")
 
             elif smDiff.is_registered and not smDiff.was_registered:
-                m = translate("Diff", "To complete the addition of this submodule, "
-                                      "make sure to <b>commit {0}</b> at the same time "
-                                      "as the submodule folder itself.").format(gitmodulesTag)
+                m = translate("Diff", "To complete the addition of this submodule, make sure to <b>commit "
+                                      "{gitmodules}</b> at the same time as the submodule folder itself.")
 
             elif not smDiff.is_absorbed:
-                m = translate("Diff", "To complete the addition of this submodule, "
-                                      "you should [absorb the submodule] into the parent repository.")
+                if isTree:
+                    m = translate("Diff", "<b>This subtree isn’t a submodule yet!</b> "
+                                          "You should [absorb this subtree] into the parent repository so it becomes a submodule.")
+                else:
+                    m = translate("Diff", "To complete the addition of this submodule, "
+                                          "you should [absorb the submodule] into the parent repository.")
                 m = linkify(m, AbsorbSubmodule.makeInternalLink(path=patch.delta.new_file.path))
 
             elif not smDiff.is_registered:
-                m = translate("Diff", "To complete the addition of this submodule, "
-                                      "[register it in {0}].").format(gitmodulesTag)
+                m = translate("Diff", "To complete the addition of this submodule, [register it in {gitmodules}].")
                 m = linkify(m, RegisterSubmodule.makeInternalLink(path=patch.delta.new_file.path))
 
             if m:
                 important = translate("Diff", "IMPORTANT")
+                m = m.format(gitmodules=f"<tt>{DOT_GITMODULES}</tt>")
                 m = f"<img src='assets:icons/achtung'> <b>{important}</b> &ndash; {m}"
                 longformParts.insert(0, m)
 
@@ -285,22 +305,18 @@ class SpecialDiffError(Exception):
             if smDiff.dirty:
                 discardLink = specialDiff.links.new(lambda invoker: DiscardFiles.invoke(invoker, [patch]))
 
-                m = translate("Diff", "The submodule has <b>uncommitted changes</b>. "
-                                      "They can’t be committed from the parent repo. You can:")
-                m += "<ul>"
-                m += "<li>" + translate("Diff", "[Open] the submodule and commit the changes.")
-                m += "<li>" + translate("Diff", "Or, [Reset] the submodule to a clean state.")
-                m += "</ul>"
+                if isTree:
+                    uc1 = translate("Diff", "The subtree contains <b>uncommitted changes</b>. They can’t be committed from the parent repo. You can:")
+                    uc2 = translate("Diff", "[Open] the subtree and commit the changes.")
+                    uc3 = translate("Diff", "Or, [Reset] the subtree to a clean state.")
+                else:
+                    uc1 = translate("Diff", "The submodule has <b>uncommitted changes</b>. They can’t be committed from the parent repo. You can:")
+                    uc2 = translate("Diff", "[Open] the submodule and commit the changes.")
+                    uc3 = translate("Diff", "Or, [Reset] the submodule to a clean state.")
+
+                m = f"{uc1}<ul><li>{uc2}</li><li>{uc3}</li></ul>"
                 m = linkify(m, openLink, discardLink)
                 longformParts.append(m)
-
-        # Add link to open the submodule as a subtitle
-        if smDiff.still_exists:
-            subtitle = translate("Diff", "Open submodule")
-            if smDiff.short_name != patch.delta.new_file.path:
-                subtitle += " " + translate("Diff", "(path: {0})").format(escape(patch.delta.new_file.path))
-            subtitle = linkify(subtitle, openLink)
-            specialDiff.details = subtitle
 
         # Compile longform parts into an unordered list
         specialDiff.longform = toRoomyUL(longformParts)

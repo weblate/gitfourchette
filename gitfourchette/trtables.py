@@ -191,8 +191,8 @@ class TrTables:
             FileMode.BLOB: translate("git", "regular file", "default file mode 0o100644"),
             FileMode.BLOB_EXECUTABLE: translate("git", "executable file", "executable file mode 0o100755"),
             FileMode.LINK: translate("git", "symbolic link", "as in 'symlink' - file mode 0o120000"),
-            FileMode.TREE: translate("git", "directory tree", "as in 'directory tree' - file mode 0o40000"),
-            FileMode.COMMIT: translate("git", "commit", "'commit' file mode 0o160000"),
+            FileMode.TREE: translate("git", "subtree", "as in 'directory tree' - file mode 0o40000"),
+            FileMode.COMMIT: translate("git", "subtree commit", "'commit' file mode 0o160000"),
         }
 
     @staticmethod
@@ -204,7 +204,7 @@ class TrTables:
             FileMode.BLOB_EXECUTABLE: "+x",
             FileMode.LINK: "link",
             FileMode.TREE: "tree",
-            FileMode.COMMIT: "commit",
+            FileMode.COMMIT: "tree",
         }
 
     @staticmethod

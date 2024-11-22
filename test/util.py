@@ -212,7 +212,7 @@ def qteFind(qte: QTextEdit, pattern: str, plainText=False):
         regex = QRegularExpression(pattern, QRegularExpression.PatternOption.CaseInsensitiveOption | QRegularExpression.PatternOption.MultilineOption | QRegularExpression.PatternOption.DotMatchesEverythingOption)
         found = qte.find(regex)
 
-    assert found
+    assert found, f"did not find pattern in QTextEdit: \"{pattern}\""
     return found
 
 
