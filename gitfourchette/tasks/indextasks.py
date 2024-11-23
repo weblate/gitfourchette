@@ -466,12 +466,14 @@ class ApplyPatchFile(RepoTask):
 
         yield from self.flowEnterUiThread()
 
-        numDeltas = len(deltas)
-        text = self.tr("Do you want to {verb} patch file {path}?")
+        text = paragraphs(
+            self.tr("Do you want to {verb} patch file {path}?"),
+            self.tr("<b>%n</b> files will be modified in your working directory:", "", len(deltas))
+        )
         text = text.format(path=bquoe(os.path.basename(path)), verb=tagify(verb.lower(), "<b>"))
-        informative = self.tr("<b>%n</b> files will be modified in your working directory:", "", numDeltas)
         details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
-        yield from self.flowConfirm(title, text, verb=verb, informativeText=informative, detailList=details)
+
+        yield from self.flowConfirm(title, text, verb=verb, detailList=details)
 
         self.effects |= TaskEffects.Workdir
 
@@ -502,12 +504,14 @@ class ApplyPatchData(RepoTask):
         title = self.tr("Revert patch") if reverse else self.tr("Apply patch")
         verb = self.tr("Revert") if reverse else self.tr("Apply")
 
-        numDeltas = len(deltas)
-        text = self.tr("Do you want to {verb} this patch?")
+        text = paragraphs(
+            self.tr("Do you want to {verb} this patch?"),
+            self.tr("<b>%n</b> files will be modified in your working directory:", "", len(deltas))
+        )
         text = text.format(verb=tagify(verb.lower(), "<b>"))
-        informative = self.tr("<b>%n</b> files will be modified in your working directory:", "", numDeltas)
         details = [f"({d.status_char()}) {escape(d.new_file.path)}" for d in deltas]
-        yield from self.flowConfirm(title, text, verb=verb, informativeText=informative, detailList=details)
+
+        yield from self.flowConfirm(title, text, verb=verb, detailList=details)
 
         self.effects |= TaskEffects.Workdir
         self.repo.apply(loadedDiff, ApplyLocation.WORKDIR)
@@ -604,15 +608,15 @@ class AbortMerge(RepoTask):
         lines = [self.tr("Do you want to {0}?").format(clause)]
 
         if not abortList:
-            informative = self.tr("No files are affected.")
+            lines.append(self.tr("No files are affected."))
         else:
-            informative = self.tr("%n files will be reset:", "", len(abortList))
             if anyConflicts:
                 lines.append(self.tr("All conflicts will be cleared and all <b>staged</b> changes will be lost."))
             else:
                 lines.append(self.tr("All <b>staged</b> changes will be lost."))
+            lines.append(self.tr("%n files will be reset:", "", len(abortList)))
 
-        yield from self.flowConfirm(title=title, text=paragraphs(lines), verb=verb, informativeText=informative,
+        yield from self.flowConfirm(title=title, text=paragraphs(lines), verb=verb,
                                     detailList=[escape(f) for f in abortList])
 
         self.effects |= TaskEffects.DefaultRefresh

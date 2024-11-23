@@ -184,7 +184,6 @@ class FetchRemotes(_BaseNetTask):
 
         if errors:
             errorMessage = self.tr("Couldn’t fetch %n remotes:", "", len(errors))
-            errorMessage = f"<span style='white-space:pre'>{errorMessage}{' ' * 70}</span>"  # hack to prevent short wrapped lines on detail list
             yield from self.flowConfirm(title, errorMessage, detailList=errors, canCancel=False, icon='warning')
 
 

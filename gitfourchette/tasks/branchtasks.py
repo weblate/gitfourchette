@@ -546,14 +546,13 @@ class MergeBranch(RepoTask):
             title = self.tr("Fast-forwarding possible")
             message = self.tr("Your branch {0} can simply be fast-forwarded to {1}."
                               ).format(bquo(myShorthand), bquo(theirShorthand))
-            details = paragraphs(
+            hint = paragraphs(
                 self.tr("<b>Fast-forwarding</b> means that the tip of your branch will be moved to a more "
                         "recent commit in a linear path, without the need to create a merge commit."),
                 self.tr("In this case, {0} will be fast-forwarded to {1}."),
             ).format(bquo(myShorthand), bquo(shortHash(target)))
             yield from self.flowConfirm(title=title, text=message, verb=self.tr("Fast-Forward"),
-                                        informativeText=details, informativeLink=self.tr("What does this mean?"),
-                                        dontShowAgainKey="MergeCanFF")
+                                        helpText=hint, dontShowAgainKey="MergeCanFF")
             yield from self.flowEnterWorkerThread()
             self.effects |= TaskEffects.Refs
             self.repo.fast_forward_branch(myShorthand, theirBranch.name)

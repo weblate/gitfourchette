@@ -467,9 +467,7 @@ class RepoTask(QObject):
             buttonIcon: str = "",
             verb: str = "",
             cancelText: str = "",
-            informativeText: str = "",
-            informativeLink: str = "",
-            detailText: str = "",
+            helpText: str = "",
             detailList: list[str] | None = None,
             dontShowAgainKey: str = "",
             canCancel: bool = True,
@@ -529,21 +527,11 @@ class RepoTask(QObject):
             assert canCancel, "don't set cancelText when canCancel is False!"
             qmb.button(QMessageBox.StandardButton.Cancel).setText(cancelText)
 
-        if not informativeText:
-            pass
-        elif not informativeLink:
-            qmb.setInformativeText(informativeText)
-        else:
-            qmb.setInformativeText(f"<a href='_'>{informativeLink}</a>")
-
-            infoLabel: QLabel = qmb.findChild(QLabel, "qt_msgbox_informativelabel")
-            if infoLabel:
-                infoLabel.setOpenExternalLinks(False)
-                infoLabel.setToolTip(informativeText)
-                infoLabel.linkActivated.connect(lambda: QToolTip.showText(QCursor.pos(), informativeText, infoLabel))
-
-        if detailText:
-            qmb.setDetailedText(detailText)
+        if helpText:
+            hintButton = QHintButton(qmb, helpText)
+            hintButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+            hintButton.setAutoRaise(False)
+            qmb.addButton(hintButton, QMessageBox.ButtonRole.HelpRole)
 
         if detailList:
             addULToMessageBox(qmb, detailList)

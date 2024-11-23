@@ -13,7 +13,7 @@ class QHintButton(QToolButton):
         super().__init__(parent)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setAutoRaise(True)
-        self.setText("\u24D8")  # circled 'i'
+        self.setText(self.tr("Help"))
         self.setIcon(stockIcon(iconKey))
         self.setToolTip(toolTip)
         self.setCursor(Qt.CursorShape.WhatsThisCursor)

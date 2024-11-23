@@ -279,7 +279,7 @@ def askConfirmation(
 def addULToMessageBox(qmb: QMessageBox, items: list[str], limit=10):
     ul = ulify(items, limit=limit, moreText=tr("...and {0} more. Click “Show Details” to view all."))
 
-    qmb.setInformativeText(qmb.informativeText() + ul)
+    qmb.setText(qmb.text() + ul)
 
     if len(items) > limit:
         overflow = ulify(items, -1)
