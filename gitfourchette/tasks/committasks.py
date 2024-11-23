@@ -8,12 +8,12 @@ import logging
 from contextlib import suppress
 
 from gitfourchette.forms.brandeddialog import convertToBrandedDialog
+from gitfourchette.forms.checkoutcommitdialog import CheckoutCommitDialog
 from gitfourchette.forms.commitdialog import CommitDialog
 from gitfourchette.forms.deletetagdialog import DeleteTagDialog
 from gitfourchette.forms.identitydialog import IdentityDialog
 from gitfourchette.forms.newtagdialog import NewTagDialog
 from gitfourchette.forms.signatureform import SignatureOverride
-from gitfourchette.forms.ui_checkoutcommitdialog import Ui_CheckoutCommitDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -222,33 +222,12 @@ class CheckoutCommit(RepoTask):
         anySubmodules = bool(self.repo.listall_submodules_fast())
         anySubmodules &= pygit2_version_at_least("1.15.1", False)  # TODO: Nuke this once we can drop support for old versions of pygit2
 
-        dlg = QDialog(self.parentWidget())
+        dlg = CheckoutCommitDialog(
+            oid=oid,
+            refs=refs,
+            anySubmodules=anySubmodules,
+            parent=self.parentWidget())
 
-        ui = Ui_CheckoutCommitDialog()
-        ui.setupUi(dlg)
-        dlg.ui = ui  # for unit tests
-        ok = ui.buttonBox.button(QDialogButtonBox.StandardButton.Ok)
-        ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setText(self.tr("Detach HEAD")))
-        ui.detachedHeadRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("git-head-detached")))
-        ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Switch Branch")))
-        ui.switchToLocalBranchRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("git-branch")))
-        ui.createBranchRadioButton.clicked.connect(lambda: ok.setText(self.tr("Create Branch...")))
-        ui.createBranchRadioButton.clicked.connect(lambda: ok.setIcon(stockIcon("vcs-branch-new")))
-        if refs:
-            ui.switchToLocalBranchComboBox.addItems(refs)
-            ui.switchToLocalBranchRadioButton.click()
-        else:
-            ui.detachedHeadRadioButton.click()
-            ui.switchToLocalBranchComboBox.setVisible(False)
-            ui.switchToLocalBranchRadioButton.setVisible(False)
-
-        if not anySubmodules:
-            ui.recurseSubmodulesSpacer.setVisible(False)
-            ui.recurseSubmodulesGroupBox.setVisible(False)
-
-        ui.createBranchRadioButton.toggled.connect(lambda t: ui.recurseSubmodulesGroupBox.setEnabled(not t))
-
-        dlg.setWindowTitle(self.tr("Check out commit {0}").format(shortHash(oid)))
         convertToBrandedDialog(dlg, subtitleText=tquo(commitMessage))
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
         yield from self.flowDialog(dlg)
@@ -256,11 +235,11 @@ class CheckoutCommit(RepoTask):
         # Make sure to copy user input from dialog UI *before* starting worker thread
         dlg.deleteLater()
 
-        wantSubmodules = anySubmodules and ui.recurseSubmodulesCheckBox.isChecked()
+        wantSubmodules = anySubmodules and dlg.ui.recurseSubmodulesCheckBox.isChecked()
 
         self.effects |= TaskEffects.Refs | TaskEffects.Head
 
-        if ui.detachedHeadRadioButton.isChecked():
+        if dlg.ui.detachedHeadRadioButton.isChecked():
             if self.repoModel.dangerouslyDetachedHead() and oid != self.repoModel.headCommitId:
                 text = paragraphs(
                     self.tr("You are in <b>Detached HEAD</b> mode at commit {0}."),
@@ -281,12 +260,12 @@ class CheckoutCommit(RepoTask):
                 yield from self.flowEnterUiThread()
                 yield from self.flowSubtask(UpdateSubmodulesRecursive)
 
-        elif ui.switchToLocalBranchRadioButton.isChecked():
-            branchName = ui.switchToLocalBranchComboBox.currentText()
+        elif dlg.ui.switchToLocalBranchRadioButton.isChecked():
+            branchName = dlg.ui.switchToLocalBranchComboBox.currentText()
             from gitfourchette.tasks import SwitchBranch
             yield from self.flowSubtask(SwitchBranch, branchName, askForConfirmation=False, recurseSubmodules=wantSubmodules)
 
-        elif ui.createBranchRadioButton.isChecked():
+        elif dlg.ui.createBranchRadioButton.isChecked():
             from gitfourchette.tasks.branchtasks import NewBranchFromCommit
             yield from self.flowSubtask(NewBranchFromCommit, oid)
 
