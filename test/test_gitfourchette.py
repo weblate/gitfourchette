@@ -416,6 +416,9 @@ def testDonatePrompt(mainWindow, mockDesktopServices):
     from gitfourchette import settings
     app = GFApplication.instance()
 
+    now = QDateTime.currentDateTime().toSecsSinceEpoch()
+    secondsInADay = 60 * 60 * 24
+
     class Session:
         def __init__(self, begin=True, end=True):
             self.begin = begin
@@ -434,18 +437,25 @@ def testDonatePrompt(mainWindow, mockDesktopServices):
                 app.mainWindow.close()
                 app.endSession(clearTempDir=False)
 
-    def schedulePromptInThePast(assertFuture=True):
-        now = QDateTime.currentDateTime().toSecsSinceEpoch()
-        if assertFuture:
-            assert settings.prefs.donatePrompt > now  # must currently be scheduled to run in the future
+    def daysToNextPrompt() -> int:
+        return (settings.prefs.donatePrompt - now) // secondsInADay
+
+    def schedulePromptInThePast():
         settings.prefs.donatePrompt = now - 1
         settings.prefs.write(True)
 
     # Launch many sessions in the same day - Donate prompt mustn't show up
-    for i in range(10):
+    for i in range(15):
+        # Don't schedule the prompt before hitting 10 launches
+        assert 0 == settings.prefs.donatePrompt
+
         with Session(begin=i != 0):
             assert not mainWindow.findChild(DonatePrompt)
-    # Force prompt to appear at the next launch (we've launched enough sessions)
+
+    # Tenth launch should schedule donate prompt to appear in 60 days
+    assert 59 <= daysToNextPrompt() <= 61
+
+    # Force prompt to appear at the next launch for this test
     schedulePromptInThePast()
 
     # Make a bogus session. A dialog is vying for our attention so the donate prompt shouldn't get in the way
@@ -463,13 +473,17 @@ def testDonatePrompt(mainWindow, mockDesktopServices):
     with Session(end=False) as mainWindow:
         assert not mainWindow.findChild(DonatePrompt)
         assert settings.prefs.donatePrompt < 0  # permanently disabled
-    # Force prompt to appear at the next launch
-    schedulePromptInThePast(assertFuture=False)
 
-    # Intercept prompt and click "remind me next month"
+    # Force prompt to appear at the next launch again
+    schedulePromptInThePast()
+
+    # Intercept prompt and click "remind me in 3 months"
     with Session() as mainWindow:
         donate: DonatePrompt = mainWindow.findChild(DonatePrompt)
         donate.ui.postponeButton.click()
+    assert 89 <= daysToNextPrompt() <= 91
+
+    # Force prompt to appear at the next launch again
     schedulePromptInThePast()
 
     # Intercept prompt and click "donate"

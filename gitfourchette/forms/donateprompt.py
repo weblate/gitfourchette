@@ -12,9 +12,9 @@ from gitfourchette import settings
 
 
 class DonatePrompt(QDialog):
-    InitialDelay = 31
-    PostponeDelay = 62
-    MinStartups = 8
+    MinStartups = 15
+    InitialDelay = 60
+    PostponeDelay = 90
     SuggestedAmount = float(3)  # float: for Qt 5 compat (QLocale.toCurrencyString)
 
     def __init__(self, parent):
@@ -63,17 +63,17 @@ class DonatePrompt(QDialog):
     def onBoot(parent: QWidget):
         scheduledTime = settings.prefs.donatePrompt
 
-        # First boot, schedule first appearance in the future
-        if scheduledTime == 0:
-            DonatePrompt.postpone(DonatePrompt.InitialDelay)
-            return
-
         # Don't show if permanently disabled
         if scheduledTime < 0:
             return
 
         # Don't show yet if app hasn't been launched enough times
         if settings.history.startups < DonatePrompt.MinStartups:
+            return
+
+        # First boot with enough launches, schedule first appearance in the future
+        if scheduledTime == 0:
+            DonatePrompt.postpone(DonatePrompt.InitialDelay)
             return
 
         # Don't show yet if scheduled time is still in the future
