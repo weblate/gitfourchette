@@ -117,8 +117,11 @@ class FlowControlToken:
 class FlowWorkerThread(QThread):
     tokenReady = Signal(FlowControlToken)
 
+    flow: RepoTask.FlowGeneratorType | None
+
     @calledFromQThread  # enable code coverage in task threads
     def run(self):
+        assert self.flow is not None, "flow not set"
         token = RepoTaskRunner._getNextToken(self.flow)
         self.flow = None
         self.tokenReady.emit(token)
@@ -718,21 +721,18 @@ class RepoTaskRunner(QObject):
         # Prime the flow (i.e. start coroutine)
         self._iterateFlow(task, FlowControlToken())
 
-    def _iterateFlow(self, task: RepoTask, nextToken: FlowControlToken):
-        while nextToken is not None:
-            token = nextToken
-            nextToken = None
-
-            flow = task._currentFlow
+    def _iterateFlow(self, task: RepoTask, token: FlowControlToken):
+        while True:
+            assert onAppThread()
             task._currentIteration += 1
 
             # Let worker thread wrap up
             self.joinWorkerThread()
 
-            assert onAppThread()
-
             assert not isinstance(token, Generator), \
                 "You're trying to yield a nested generator. Did you mean 'yield from'?"
+            assert isinstance(token, FlowControlToken), (
+                f"In a RepoTask coroutine, you can only yield FlowControlToken. You yielded: {type(token).__name__}")
 
             # Wrap up zombie task (task that was interrupted earlier)
             if task is self._zombieTask:
@@ -745,64 +745,10 @@ class RepoTaskRunner(QObject):
                     self._startTask(self._currentTask)
                 return
 
-            assert task is self._currentTask
-
-            assert isinstance(token, FlowControlToken), (
-                f"In a RepoTask coroutine, you can only yield FlowControlToken. You yielded: {type(token).__name__}")
-
-            if token.flowControl == FlowControlToken.Kind.WaitReady:
-                self.progress.emit("", False)
-                self.requestAttention.emit()
-                # When user is ready, task.uiReady will fire, and we'll re-enter _iterateFlow
-
-            elif (token.flowControl == FlowControlToken.Kind.ContinueOnUiThread or
-                  (token.flowControl == FlowControlToken.Kind.ContinueOnWorkThread and RepoTaskRunner.ForceSerial)):
-                # Get next continuation token on this thread then loop to beginning of _iterateFlow
-                nextToken = RepoTaskRunner._getNextToken(flow)
-
-                assert nextToken is not None, "Do not yield None from a RepoTask coroutine"
-
-            elif token.flowControl == FlowControlToken.Kind.ContinueOnWorkThread:
-                assert not RepoTaskRunner.ForceSerial
-                busyMessage = self.tr("Busy: {0}...").format(task.name())
-                self.progress.emit(busyMessage, True)
-
-                # Wrapper around `next(flow)`.
-                # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
-                assert not self._workerThread.isRunning()
-                self._workerThread.flow = flow
-                self._workerThread.start()
-
-            elif token.flowControl == FlowControlToken.Kind.InterruptedByException:
-                exception = token.exception
-
-                # Wait for worker thread to wrap up cleanly,
-                # otherwise we'll still appear to be busy for postTask callbacks.
-                self.joinWorkerThread()
-
-                # Stop tracking this task
-                self._releaseTask(task)
-
-                if isinstance(exception, StopIteration):
-                    # No more steps in the flow. Task completed successfully.
-                    pass
-                elif isinstance(exception, AbortTask):
-                    # Controlled exit, show message (if any)
-                    self.reportAbortTask(task, exception)
-                elif isinstance(exception, RepoGoneError):
-                    # Repo directory vanished
-                    self.repoGone.emit()
-                else:
-                    # Run task's error callback
-                    task.onError(exception)
-
-                # Emit postTask signal whether the task succeeded or not
-                self.postTask.emit(task)
-
-                task.deleteLater()
-
-            else:
-                raise NotImplementedError(f"Unsupported FlowControlToken {token.flowControl}")
+            nextToken = self._processToken(task, token)
+            if nextToken is None:
+                break
+            token = nextToken
 
         if not self.isBusy():  # might've queued up another task...
             if self._criticalTaskQueue:
@@ -811,6 +757,68 @@ class RepoTaskRunner(QObject):
                 self.put(criticalTask, *args, **kwargs)
             else:
                 self.ready.emit()
+
+    def _processToken(self, task: RepoTask, token: FlowControlToken) -> FlowControlToken | None:
+        flow = task._currentFlow
+        assert flow is not None
+        assert task is self._currentTask
+
+        if (token.flowControl == FlowControlToken.Kind.ContinueOnUiThread or
+              (token.flowControl == FlowControlToken.Kind.ContinueOnWorkThread and RepoTaskRunner.ForceSerial)):
+            # Get next continuation token on this thread then loop to beginning of _iterateFlow
+            token = RepoTaskRunner._getNextToken(flow)
+            assert token is not None, "Do not yield None from a RepoTask coroutine"
+            return token
+
+        elif token.flowControl == FlowControlToken.Kind.WaitReady:
+            self.progress.emit("", False)
+            self.requestAttention.emit()
+            # When user is ready, task.uiReady will fire, and we'll re-enter _iterateFlow
+
+        elif token.flowControl == FlowControlToken.Kind.ContinueOnWorkThread:
+            assert not RepoTaskRunner.ForceSerial
+            busyMessage = self.tr("Busy: {0}...").format(task.name())
+            self.progress.emit(busyMessage, True)
+
+            # Wrapper around `next(flow)`.
+            # It will, in turn, emit _continueFlow, which will re-enter _iterateFlow.
+            assert not self._workerThread.isRunning()
+            self._workerThread.flow = flow
+            self._workerThread.start()
+
+        elif token.flowControl == FlowControlToken.Kind.InterruptedByException:
+            exception = token.exception
+            assert exception is not None, "FlowControlToken(InterruptedByException) must provide an exception!"
+
+            # Wait for worker thread to wrap up cleanly,
+            # otherwise we'll still appear to be busy for postTask callbacks.
+            self.joinWorkerThread()
+
+            # Stop tracking this task
+            self._releaseTask(task)
+
+            if isinstance(exception, StopIteration):
+                # No more steps in the flow. Task completed successfully.
+                pass
+            elif isinstance(exception, AbortTask):
+                # Controlled exit, show message (if any)
+                self.reportAbortTask(task, exception)
+            elif isinstance(exception, RepoGoneError):
+                # Repo directory vanished
+                self.repoGone.emit()
+            else:
+                # Run task's error callback
+                task.onError(exception)
+
+            # Emit postTask signal whether the task succeeded or not
+            self.postTask.emit(task)
+
+            task.deleteLater()
+
+        else:
+            raise NotImplementedError(f"Unsupported FlowControlToken {token.flowControl}")
+
+        return None
 
     @staticmethod
     def _getNextToken(flow: RepoTask.FlowGeneratorType) -> FlowControlToken:
