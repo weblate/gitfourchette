@@ -637,42 +637,27 @@ class RepoWidget(QStackedWidget):
     # Entry point for generic "Find" command
 
     def dispatchSearchCommand(self, op: SearchBar.Op):
-        focusSinks = [
-            [self.diffArea.dirtyFiles,
-             self.diffArea.dirtyFiles.searchBar.lineEdit,
-             self.diffArea.stageButton,
-             self.diffArea.unstageButton],
-
-            [self.diffArea.stagedFiles,
-             self.diffArea.stagedFiles.searchBar.lineEdit,
-             self.diffArea.commitButton,
-             self.diffArea.unstageButton],
-
-            [self.diffArea.committedFiles,
-             self.diffArea.committedFiles.searchBar.lineEdit],
-
-            [self.diffArea.diffView,
-             self.diffArea.diffView.searchBar.lineEdit],
-
-            # Fallback (will be triggered if none of the sinks above have focus)
-            [self.graphView],
-        ]
+        searchBars = {
+            self.diffArea.dirtyFiles: self.diffArea.dirtyFiles.searchBar,
+            self.diffArea.stagedFiles: self.diffArea.stagedFiles.searchBar,
+            self.diffArea.committedFiles: self.diffArea.committedFiles.searchBar,
+            self.diffArea.diffView: self.diffArea.diffView.searchBar,
+        }
 
         # Find a sink to redirect search to
         focus = self.focusWidget()
-        for sinkList in focusSinks:
-            # If any of the widgets in sinkList have focus,
-            # .search() will be called on the first item in sinkList
-            sink = sinkList[0]
-            if sink.isVisibleTo(self) and any(focus is widget for widget in sinkList):
+        for sink, searchBar in searchBars.items():
+            # Stop scanning if this sink or searchBar have focus
+            if sink.isVisibleTo(self) and (focus is sink or focus is searchBar.lineEdit):
                 break
         else:
-            # Fallback
-            sink = focusSinks[-1][0]
+            # Fall back to searching GraphView if nothing has focus
+            sink = self.graphView
+            searchBar = self.graphView.searchBar
 
         # Forward search
         if isinstance(sink, QAbstractItemView):
-            sink.searchBar.searchItemView(op)
+            searchBar.searchItemView(op)
         else:
             sink.search(op)
 
