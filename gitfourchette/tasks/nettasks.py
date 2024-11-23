@@ -332,7 +332,6 @@ class PushBranch(RepoTask):
         remote = self.repo.remotes[dialog.currentRemoteName]
         logger.info(f"Will push to: {dialog.refspec} ({remote.name})")
         link = RemoteLink(self)
-        dialog.remoteLink = link
 
         dialog.ui.statusForm.initProgress(self.tr("Contacting remote host..."))
         link.message.connect(dialog.ui.statusForm.setProgressMessage)
@@ -343,9 +342,8 @@ class PushBranch(RepoTask):
         else:
             resetTrackingReference = None
 
-        # Disable inputs AFTER looking at checkboxes
-        dialog.enableInputs(False)
-        dialog.pushInProgress = True
+        # Look at the state of the checkboxes BEFORE calling this --  it'll disable the checkboxes!
+        dialog.setRemoteLink(link)
 
         # ----------------
         # Task meat
@@ -366,17 +364,13 @@ class PushBranch(RepoTask):
         # Debrief
 
         yield from self.flowEnterUiThread()
-        dialog.pushInProgress = False
-        dialog.enableInputs(True)
-        dialog.remoteLink = None
+        dialog.setRemoteLink(None)
         link.deleteLater()
 
         if error:
             traceback.print_exception(error)
             QApplication.beep()
             QApplication.alert(dialog, 500)
-            dialog.pushInProgress = False
-            dialog.enableInputs(True)
             dialog.ui.statusForm.setBlurb(F"<b>{TrTables.exceptionName(error)}:</b> {escape(str(error))}")
         else:
             self.postStatus = link.formatUpdatedTipsMessage(self.tr("Push complete."))

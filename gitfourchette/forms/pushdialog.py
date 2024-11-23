@@ -10,6 +10,7 @@ from gitfourchette.forms.brandeddialog import convertToBrandedDialog
 from gitfourchette.forms.ui_pushdialog import Ui_PushDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
+from gitfourchette.remotelink import RemoteLink
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,14 @@ class ERemoteItem(enum.Enum):
 
 
 class PushDialog(QDialog):
+    remoteLink: RemoteLink | None
+    """
+    The RemoteLink for an ongoing push operation.
+    None when no push is in progress.
+    Inputs are disabled during a push.
+    Call `setRemoteLink()` to set.
+    """
+
     def onPickLocalBranch(self, index: int):
         localBranch = self.currentLocalBranch
 
@@ -218,7 +227,7 @@ class PushDialog(QDialog):
 
         self.fallbackAutoNewIndex = 0
         self.trackedBranchIndex = -1
-        self.pushInProgress = False
+        self.remoteLink = None  # Set by PushBranch task while a push is in progress
 
         self.ui = Ui_PushDialog()
         self.ui.setupUi(self)
@@ -303,7 +312,12 @@ class PushDialog(QDialog):
                 w.setEnabled(enableW)
 
     def reject(self):
-        if self.pushInProgress:
+        if self.remoteLink is not None:
             self.remoteLink.raiseAbortFlag()
         else:
             super().reject()
+
+    def setRemoteLink(self, link: RemoteLink | None):
+        pushInProgress = link is not None
+        self.remoteLink = link
+        self.enableInputs(not pushInProgress)
