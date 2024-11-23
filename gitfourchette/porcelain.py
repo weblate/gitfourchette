@@ -1129,12 +1129,6 @@ class Repo(_VanillaRepository):
 
         tips: list[tuple[str, Commit]] = []
 
-        try:
-            direct_ref_type = ReferenceType.DIRECT
-        except AttributeError:  # pragma: no cover - pygit2 <= 1.14.0 compatibility
-            # TODO: Remove this when we can stop supporting pygit2 <= 1.14.0
-            direct_ref_type = ReferenceType.OID
-
         supported_prefixes = (RefPrefix.HEADS, RefPrefix.REMOTES, RefPrefix.TAGS)
 
         for ref in self.listall_reference_objects():
@@ -1147,7 +1141,7 @@ class Repo(_VanillaRepository):
                 continue
 
             # Skip symbolic references
-            if ref.type != direct_ref_type:
+            if ref.type != ReferenceType.DIRECT:
                 continue
 
             try:
