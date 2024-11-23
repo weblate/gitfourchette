@@ -111,9 +111,9 @@ class SidebarNode:
     displayName: str
 
     @staticmethod
-    def fromIndex(index: QModelIndex) -> SidebarNode | None:
+    def fromIndex(index: QModelIndex) -> SidebarNode:
         if not index.isValid():
-            return None
+            raise NotImplementedError("Can't make a SidebarNode from an invalid QModelIndex!")
         p = index.internalPointer()
         assert isinstance(p, SidebarNode)
         return p

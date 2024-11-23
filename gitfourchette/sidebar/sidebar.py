@@ -468,12 +468,13 @@ class Sidebar(QTreeView):
     def onCustomContextMenuRequested(self, localPoint: QPoint):
         globalPoint = self.mapToGlobal(localPoint)
         index: QModelIndex = self.indexAt(localPoint)
-        if index.isValid():
-            node = SidebarNode.fromIndex(index)
-            menu = self.makeNodeMenu(node, index=index)
-            if menu.actions():
-                menu.exec(globalPoint)
-            menu.deleteLater()
+        if not index.isValid():
+            return
+        node = SidebarNode.fromIndex(index)
+        menu = self.makeNodeMenu(node)
+        if menu.actions():
+            menu.exec(globalPoint)
+        menu.deleteLater()
 
     def refresh(self, repoModel: RepoModel):
         self.sidebarModel.rebuild(repoModel)
