@@ -6,6 +6,7 @@
 
 import enum
 import re
+from collections.abc import Callable
 
 from gitfourchette import colors
 from gitfourchette.forms.ui_searchbar import Ui_SearchBar
@@ -47,6 +48,9 @@ class SearchBar(QWidget):
 
     searchPulseTimer: QTimer
 
+    notFoundMessage: Callable[[str], str]
+    """ Callback that generates "not found" text. """
+
     @property
     def rawSearchTerm(self) -> str:
         return self.lineEdit.text()
@@ -56,7 +60,7 @@ class SearchBar(QWidget):
         return self.ui.lineEdit
 
     @property
-    def textChanged(self) -> Signal:
+    def textChanged(self) -> SignalInstance:
         return self.lineEdit.textChanged
 
     @property
@@ -69,6 +73,7 @@ class SearchBar(QWidget):
         self.setObjectName(f"SearchBar({buddy.objectName()})")
         self.buddy = buddy
         self.detectHashes = False
+        self.notFoundMessage = SearchBar.defaultNotFoundMessage
 
         self.ui = Ui_SearchBar()
         self.ui.setupUi(self)
@@ -175,14 +180,15 @@ class SearchBar(QWidget):
         assert hasattr(self.buddy, "searchRange"), "missing searchRange callback"
         return self.buddy.searchRange(r)
 
-    def notFoundMessage(self, searchTerm: str):
-        return self.tr("{0} not found.").format(bquo(searchTerm))
+    @staticmethod
+    def defaultNotFoundMessage(searchTerm: str) -> str:
+        return translate("SearchBar", "{0} not found.").format(bquo(searchTerm))
 
     # --------------------------------
     # Ready-made QAbstractItemView search flow
 
     def setUpItemViewBuddy(self):
-        view: QAbstractItemView = self.buddy
+        view = self.buddy
         assert isinstance(view, QAbstractItemView)
         assert hasattr(view, "searchRange"), "missing searchRange callback"
 
@@ -191,8 +197,10 @@ class SearchBar(QWidget):
         self.searchPrevious.connect(lambda: self.searchItemView(SearchBar.Op.PREVIOUS))
         self.searchPulse.connect(self.pulseItemView)
 
-    def searchItemView(self, op: Op, wrappedFrom=-1, wrapCount=0) -> QModelIndex | None:
-        view: QAbstractItemView = self.buddy
+    def searchItemView(self, op: Op, wrappedFrom=-1, wrapCount=0) -> QModelIndex:
+        NOT_FOUND = QModelIndex_default
+
+        view = self.buddy
         assert isinstance(view, QAbstractItemView)
 
         model = view.model()  # use the view's top-level model to only search filtered rows
@@ -200,10 +208,10 @@ class SearchBar(QWidget):
         self.popUp(forceSelectAll=op == SearchBar.Op.START)
 
         if op == SearchBar.Op.START:
-            return
+            return NOT_FOUND
 
         if not self.searchTerm:  # user probably hit F3 without having searched before
-            return
+            return NOT_FOUND
 
         didWrap = wrapCount > 0
 
@@ -249,8 +257,10 @@ class SearchBar(QWidget):
             qmb = asyncMessageBox(self, 'information', title, message)
             qmb.show()
 
+        return NOT_FOUND
+
     def pulseItemView(self):
-        view: QAbstractItemView = self.buddy
+        view = self.buddy
         assert isinstance(view, QAbstractItemView)
 
         def generateSearchRanges():

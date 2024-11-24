@@ -5,7 +5,7 @@
 # -----------------------------------------------------------------------------
 
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from contextlib import suppress
 
 from gitfourchette import porcelain
@@ -54,10 +54,10 @@ class Sidebar(QTreeView):
         self.customContextMenuRequested.connect(self.onCustomContextMenuRequested)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
-        self.setItemDelegate(SidebarDelegate(self))
-
         sidebarModel = SidebarModel(self)
         self.setModel(sidebarModel)
+
+        self.setItemDelegate(SidebarDelegate(self))
 
         self.expanded.connect(sidebarModel.onIndexExpanded)
         self.collapsed.connect(sidebarModel.onIndexCollapsed)
@@ -128,7 +128,7 @@ class Sidebar(QTreeView):
             submenu.append(action)
         return submenu
 
-    def makeNodeMenu(self, node: SidebarNode, menu: QMenu = None, index: QModelIndex = None):
+    def makeNodeMenu(self, node: SidebarNode, menu: QMenu | None = None):
         if menu is None:
             menu = QMenu(self)
             menu.setObjectName("SidebarContextMenu")
@@ -715,7 +715,7 @@ class Sidebar(QTreeView):
 
         self.wantSelectNode(SidebarNode.fromIndex(current))
 
-    def resolveClick(self, pos: QPoint) -> tuple[QModelIndex, SidebarNode, SidebarClickZone]:
+    def resolveClick(self, pos: QPoint) -> tuple[QModelIndex, SidebarNode | None, SidebarClickZone]:
         index = self.indexAt(pos)
         if index.isValid():
             rect = self.visualRect(index)
@@ -760,10 +760,13 @@ class Sidebar(QTreeView):
         # Clear mouse press info on release
         self.mousePressCache = INVALID_MOUSEPRESS
 
-        if not match or zone in [SidebarClickZone.Invalid, SidebarClickZone.Select]:
+        if (not match
+                or node is None
+                or zone in [SidebarClickZone.Invalid, SidebarClickZone.Select]):
             super().mouseReleaseEvent(event)
             return
-        elif zone == SidebarClickZone.Hide:
+
+        if zone == SidebarClickZone.Hide:
             self.wantHideNode(node)
             event.accept()
         elif zone == SidebarClickZone.Expand:
@@ -836,20 +839,23 @@ class Sidebar(QTreeView):
         self.setCurrentIndex(index)
         return index
 
-    def selectAnyRef(self, *refCandidates: str) -> QModelIndex | None:
+    def selectAnyRef(self, *refs: str) -> QModelIndex | None:
         # Early out if any candidate ref is already selected
         with suppress(IndexError):
             index = self.selectedIndexes()[0]
-            if index and index.data(SidebarModel.Role.Ref) in refCandidates:
+            if index and index.data(SidebarModel.Role.Ref) in refs:
                 return index
 
         # If several refs point to the same commit, attempt to select
         # the checked-out branch first (or its upstream, if any)
         model = self.sidebarModel
+        refCandidates: Iterable[str]
         if model._checkedOut:
             favorRefs = [RefPrefix.HEADS + model._checkedOut,
                          RefPrefix.REMOTES + model._checkedOutUpstream]
-            refCandidates = sorted(refCandidates, key=favorRefs.__contains__, reverse=True)
+            refCandidates = sorted(refs, key=favorRefs.__contains__, reverse=True)
+        else:
+            refCandidates = refs
 
         # Find a visible index that matches any of the candidates
         for ref in refCandidates:

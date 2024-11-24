@@ -453,7 +453,7 @@ class ApplyPatchFile(RepoTask):
         # Reverse the patch if user wants to.
         if reverse:
             patchData = reverseunidiff.reverseUnidiff(loadedDiff.patch)
-            loadedDiff: Diff = Diff.parse_diff(patchData)
+            loadedDiff = Diff.parse_diff(patchData)
 
         # Do a dry run first so we don't litter the workdir with a patch that failed halfway through.
         # If the patch doesn't apply, this raises a MultiFileError.

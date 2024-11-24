@@ -14,7 +14,7 @@ class QSignalBlockerContext:
     Context manager wrapper around QSignalBlocker.
     """
 
-    nestingLevels = {}
+    nestingLevels: dict[int, int] = {}  # Map object id to nesting depth
     concurrentBlockers = 0
 
     def __init__(self, *objectsToBlock: QObject | QWidget):

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import dataclasses
 import enum
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import ClassVar
 
 from gitfourchette.qt import *
@@ -32,13 +32,13 @@ class ActionDef:
         Spacer = enum.auto()
 
     caption: str = ""
-    callback: Signal | Callable | None = None
+    callback: SignalInstance | Callable | None = None
     icon: str = ""
     checkState: int = 0
     radioGroup: str = ""
     enabled: bool = True
     submenu: list[ActionDef] = dataclasses.field(default_factory=list)
-    shortcuts: MultiShortcut | str = dataclasses.field(default_factory=list)
+    shortcuts: MultiShortcut | QKeySequence | QKeySequence.StandardKey | Qt.Key | str = ""
     tip: str = ""
     objectName: str = ""
     menuRole: QAction.MenuRole = QAction.MenuRole.NoRole
@@ -110,7 +110,7 @@ class ActionDef:
 
     @staticmethod
     def addToQMenu(menu: QMenu, *actionDefs: ActionDef | QAction):
-        radioGroups = {}
+        radioGroups: dict[str, QActionGroup] = {}
 
         for item in actionDefs:
             if isinstance(item, QAction):
@@ -167,7 +167,7 @@ class ActionDef:
     @staticmethod
     def makeQMenu(
             parent: QWidget,
-            actionDefs: list[ActionDef | QAction],
+            actionDefs: Iterable[ActionDef | QAction],
             bottomEntries: QMenu | None = None
     ) -> QMenu:
 

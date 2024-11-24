@@ -9,11 +9,12 @@ from gitfourchette.toolbox import MultiShortcut, makeMultiShortcut
 
 
 class GlobalShortcuts:
-    NO_SHORTCUT = []
+    NO_SHORTCUT: MultiShortcut = []
 
     copy: MultiShortcut = NO_SHORTCUT
     find: MultiShortcut = NO_SHORTCUT
     refresh: MultiShortcut = NO_SHORTCUT
+    closeTab: MultiShortcut = NO_SHORTCUT
     openRepoFolder: MultiShortcut = NO_SHORTCUT
 
     stageHotkeys = [Qt.Key.Key_Return, Qt.Key.Key_Enter]  # Return: main keys; Enter: on keypad

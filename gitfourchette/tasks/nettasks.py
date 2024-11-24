@@ -49,7 +49,8 @@ class _BaseNetTask(RepoTask):
             self.remoteLinkDialog = None
 
     @property
-    def remoteLink(self):
+    def remoteLink(self) -> RemoteLink:
+        assert self.remoteLinkDialog is not None, "can't get RemoteLink without a RemoteLinkDialog"
         return self.remoteLinkDialog.remoteLink
 
     def _autoDetectUpstream(self, noUpstreamMessage: str = ""):

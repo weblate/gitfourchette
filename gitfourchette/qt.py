@@ -122,9 +122,7 @@ FREEDESKTOP = (KERNEL == "linux") or ("bsd" in KERNEL)
 # Try to import optional modules
 
 # Test mode stuff
-QAbstractItemModelTester = None
-QTest = None
-QSignalSpy = None
+HAS_QTEST = False
 with _suppress(ImportError):
     if PYQT6:
         from PyQt6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
@@ -132,6 +130,7 @@ with _suppress(ImportError):
         from PyQt5.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
     elif PYSIDE6:
         from PySide6.QtTest import QAbstractItemModelTester, QTest, QSignalSpy
+    HAS_QTEST = True
 
 # Try to import QtDBus on Linux
 HAS_QTDBUS = False

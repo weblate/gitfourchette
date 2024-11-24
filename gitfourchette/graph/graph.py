@@ -9,7 +9,7 @@ from __future__ import annotations
 import bisect
 import logging
 from dataclasses import dataclass
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Set
 from typing import ClassVar
 
 from gitfourchette.porcelain import Oid as _RealOidType
@@ -138,19 +138,19 @@ class BatchRow:
     # Comparisons
     # (BatchRows must be comparable so we can use bisect.)
 
-    def __le__(self, other: BatchRow | int):
+    def __le__(self, other: BatchRow | int) -> bool:
         return int(self) <= int(other)
 
-    def __lt__(self, other: BatchRow | int):
+    def __lt__(self, other: BatchRow | int) -> bool:
         return int(self) < int(other)
 
-    def __ge__(self, other: BatchRow | int):
+    def __ge__(self, other: BatchRow | int) -> bool:
         return int(self) >= int(other)
 
-    def __gt__(self, other: BatchRow | int):
+    def __gt__(self, other: BatchRow | int) -> bool:
         return int(self) > int(other)
 
-    def __eq__(self, other: BatchRow | int):
+    def __eq__(self, other: BatchRow | int) -> bool:
         return int(self) == int(other)
 
 
@@ -290,8 +290,8 @@ class Arc:
         return self.nextArc
 
     def __iter__(self) -> Iterator[Arc]:
-        arc = self
-        while arc:
+        arc: Arc | None = self
+        while arc is not None:
             yield arc
             assert arc.nextArc != arc, "self-referencing arc!"
             arc = arc.nextArc
@@ -319,7 +319,7 @@ class Arc:
         ca = int(self.closedAt)
         return (0 <= ca < row) or (0 <= ca == self.openedAt <= row)
 
-    def isVisible(self, hiddenCommits: set[Oid], row: int, filterJunctionRows=BatchRow.__lt__) -> bool:
+    def isVisible(self, hiddenCommits: Set[Oid], row: int, filterJunctionRows=BatchRow.__lt__) -> bool:
         # FAIL if closing commit is hidden.
         if self.closedBy in hiddenCommits:
             return False
@@ -351,7 +351,7 @@ class Frame:
     openArcs: list[Arc | None]  # Arcs that have not resolved their parent commit yet
     lastArc: Arc
 
-    def arcsClosedByCommit(self, hiddenCommits: set[Oid] | None = None):
+    def arcsClosedByCommit(self, hiddenCommits: Set[Oid] | None = None):
         if DEVDEBUG:
             # Assume that all the arcs in solvedArcs are either None, or are closed by this commit.
             assert all(arc is None or arc.closedAt == self.row for arc in self.solvedArcs)
@@ -366,7 +366,7 @@ class Frame:
 
         return gen
 
-    def arcsOpenedByCommit(self, hiddenCommits: set[Oid] | None = None):
+    def arcsOpenedByCommit(self, hiddenCommits: Set[Oid] | None = None):
         row = int(self.row)
         gen = (arc for arc in self.openArcs if arc and arc.openedAt == row)
 
@@ -378,7 +378,7 @@ class Frame:
 
         return gen
 
-    def arcsPassingByCommit(self, hiddenCommits: set[Oid] | None = None, filterJunctionRows=BatchRow.__lt__):
+    def arcsPassingByCommit(self, hiddenCommits: Set[Oid] | None = None, filterJunctionRows=BatchRow.__lt__):
         row = int(self.row)
         gen = (arc for arc in self.openArcs if arc and arc.openedAt != row)
 
@@ -388,7 +388,7 @@ class Frame:
 
         return gen
 
-    def junctionsAtCommit(self, hiddenCommits: set[Oid]):
+    def junctionsAtCommit(self, hiddenCommits: Set[Oid]):
         row = int(self.row)
         for arc in self.arcsPassingByCommit(hiddenCommits, BatchRow.__eq__):
             # TODO: We're looking at all the junctions here, but isVisible (via getArcsPassingByCommit)
@@ -474,7 +474,7 @@ class Frame:
 
         return theList
 
-    def flattenLanes(self, hiddenCommits: set[Oid]) -> tuple[list[tuple[int, int]], int]:
+    def flattenLanes(self, hiddenCommits: Set[Oid]) -> tuple[list[tuple[int, int]], int]:
         """Flatten the lanes so there are no unused columns in-between the lanes."""
 
         row = int(self.row)
@@ -538,7 +538,7 @@ class PlaybackState(Frame):
         self.solvedArcs = keyframe.solvedArcs.copy()
         self.openArcs = keyframe.openArcs.copy()
         self.callingNextWillAdvanceFrame = True
-        self.seenCommits = set()
+        self.seenCommits: set[Oid] = set()
 
     def advanceToNextRow(self):
         if not self.callingNextWillAdvanceFrame:
@@ -551,7 +551,7 @@ class PlaybackState(Frame):
 
         goalFound = False
         goalRow = BATCHROW_UNDEF
-        goalCommit = ""
+        goalCommit = None
 
         while self.lastArc.nextArc:
             arc: Arc = self.lastArc.nextArc
@@ -575,10 +575,12 @@ class PlaybackState(Frame):
             self.openArcs[arc.lane] = arc
             self.lastArc = arc
 
-        if not goalCommit:
+        if not goalFound:
             raise StopIteration()
 
         assert self.row < goalRow
+        assert goalCommit is not None
+
         self.row = goalRow
         self.commit = goalCommit
 

@@ -27,12 +27,12 @@ def getRSS():
 class Benchmark:
     """ Context manager that reports how long a piece of code takes to run. """
 
-    nesting = []
+    nesting: list[str] = []
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self.phase = ""
-        self.startTime = 0
+        self.startTime = 0.0
         self.startBytes = 0
 
     def enter(self, phase=""):
@@ -54,7 +54,7 @@ class Benchmark:
         logger.log(BENCHMARK_LOGGING_LEVEL, f"{ms:8.2f} ms {kb:6,d}K {description}")
 
         Benchmark.nesting.pop()
-        self.startTime = 0
+        self.startTime = 0.0
         self.phase = ""
 
     def __enter__(self):

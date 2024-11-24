@@ -33,7 +33,7 @@ class StagedFiles(FileList):
                 self.tr("&Unstage %n Files", "", n),
                 self.unstage,
                 icon="git-unstage",
-                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys))
+                shortcuts=GlobalShortcuts.discardHotkeys[0])
 
             actions += [
                 contextMenuActionUnstage,

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import Any
 
@@ -24,8 +25,6 @@ BRANCH_FOLDERS = True
 
 UC_FAKEREF = "UC_FAKEREF"  # actual refs are either HEAD or they start with /refs/, so this name is safe
 "Fake reference for Uncommitted Changes."
-
-DefaultQModelIndex = QModelIndex()
 
 
 class SidebarItem(enum.IntEnum):
@@ -140,6 +139,7 @@ class SidebarNode:
         assert self.mayHaveChildren()
         with suppress(StopIteration):
             return next(c for c in self.children if c.kind == kind and c.data == data)
+        raise KeyError("child node not found")
 
     def createIndex(self, model: QAbstractItemModel) -> QModelIndex:
         return model.createIndex(self.row, 0, self)
@@ -177,7 +177,7 @@ class SidebarNode:
 
 
 class SidebarModel(QAbstractItemModel):
-    repoModel: RepoModel | None
+    repoModel: RepoModel
     rootNode: SidebarNode
     nodesByRef: dict[str, SidebarNode]
     _unbornHead: str
@@ -188,22 +188,22 @@ class SidebarModel(QAbstractItemModel):
     _checkedOutUpstream: str
     "Shorthand of the checked-out branch's upstream"
 
-    _cachedTooltipIndex: QModelIndex | None
+    _cachedTooltipIndex: QModelIndex
     _cachedTooltipText: str
 
     collapseCache: set[str]
     collapseCacheValid: bool
 
     class Role:
-        Ref = Qt.ItemDataRole.UserRole + 0
-        IconKey = Qt.ItemDataRole.UserRole + 1
+        Ref = Qt.ItemDataRole(Qt.ItemDataRole.UserRole + 0)
+        IconKey = Qt.ItemDataRole(Qt.ItemDataRole.UserRole + 1)
 
     @property
     def _parentWidget(self) -> QWidget:
         return QObject.parent(self)
 
     @property
-    def repo(self):
+    def repo(self) -> Repo:
         return self.repoModel.repo
 
     def __init__(self, parent=None):
@@ -214,7 +214,7 @@ class SidebarModel(QAbstractItemModel):
 
         self.clear()
 
-        if settings.DEVDEBUG and QAbstractItemModelTester is not None:
+        if settings.DEVDEBUG and HAS_QTEST:
             self.modelTester = QAbstractItemModelTester(self)
             if not settings.TEST_MODE:
                 logger.warning("Sidebar model tester enabled. This will SIGNIFICANTLY slow down SidebarModel.rebuild!")
@@ -232,7 +232,7 @@ class SidebarModel(QAbstractItemModel):
         self._checkedOut = ""
         self._checkedOutUpstream = ""
 
-        self._cachedTooltipIndex = None
+        self._cachedTooltipIndex = QModelIndex_default
         self._cachedTooltipText = ""
 
         if emitSignals:
@@ -262,6 +262,7 @@ class SidebarModel(QAbstractItemModel):
         # My collapsed state doesn't matter here - it only affects my children.
         # So start looking at my parent.
         node = node.parent
+        assert node is not None
 
         # Walk up parent chain until root index (row -1)
         while node.parent is not None:
@@ -299,7 +300,7 @@ class SidebarModel(QAbstractItemModel):
 
         # Pending ref shorthands for _makeRefTreeNodes
         localBranches = []
-        remoteBranchesDict = {}
+        remoteBranchesDict: dict[str, list[str]] = {}
         tags = []
 
         # -----------------------------
@@ -330,7 +331,8 @@ class SidebarModel(QAbstractItemModel):
         except GitError:
             # Unborn HEAD - Get name of unborn branch
             assert repo.head_is_unborn
-            target: str = repo.lookup_reference("HEAD").target
+            target = repo.lookup_reference("HEAD").target
+            assert isinstance(target, str), "Unborn HEAD isn't a symbolic reference!"
             target = target.removeprefix(RefPrefix.HEADS)
             node = SidebarNode(SidebarItem.UnbornHead, target)
             branchRoot.appendChild(node)
@@ -433,8 +435,9 @@ class SidebarModel(QAbstractItemModel):
         self.endResetModel()
 
     def populateRefNodeTree(self, shorthands: list[str], containerNode: SidebarNode, kind: SidebarItem, refNamePrefix: str, sortMode: RefSort = RefSort.Default):
-        pendingFolders = {}
+        pendingFolders: dict[str, SidebarNode] = {}
 
+        shIter: Iterable[str]
         if sortMode == RefSort.TimeAsc:
             shIter = reversed(shorthands)
         elif sortMode == RefSort.AlphaAsc:
@@ -478,13 +481,13 @@ class SidebarModel(QAbstractItemModel):
                 folderNode.displayName = folderNode.data.removeprefix(refNamePrefix)
                 containerNode.appendChild(folderNode)
 
-    def index(self, row: int, column: int, parent: QModelIndex = None) -> QModelIndex:
+    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex_default) -> QModelIndex:
         # Return an index given a parent and a row (i.e. child number within parent)
 
         assert column == 0
         assert row >= 0
 
-        if not parent or not parent.isValid():
+        if not parent.isValid():
             parentNode = self.rootNode
         else:
             parentNode = SidebarNode.fromIndex(parent)
@@ -504,6 +507,7 @@ class SidebarModel(QAbstractItemModel):
         # Get parent node
         node = SidebarNode.fromIndex(index)
         node = node.parent
+        assert node is not None
 
         # Blank index for children of root node
         if node is self.rootNode:
@@ -535,6 +539,7 @@ class SidebarModel(QAbstractItemModel):
             return self._cachedTooltipText
 
         node = SidebarNode.fromIndex(index)
+        assert node is not None
 
         displayRole = role == Qt.ItemDataRole.DisplayRole
         toolTipRole = role == Qt.ItemDataRole.ToolTipRole

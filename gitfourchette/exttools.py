@@ -151,13 +151,13 @@ def openInExternalTool(
     command = getattr(settings.prefs, prefKey, "").strip()
 
     if not command and allowQDesktopFallback:
-        for p in positional:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(p))
-        return
+        for argument in positional:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(argument))
+        return None
 
     if not command:
         setUpMergeToolPrompt(parent, prefKey)
-        return
+        return None
 
     tokens = buildExternalToolCommand(command, replacements, positional)
 
@@ -169,10 +169,10 @@ def openInExternalTool(
 
     # Find appropriate workdir
     wd = ""
-    for p in itertools.chain(replacements.values(), positional):
-        if not p:
+    for argument in itertools.chain(replacements.values(), positional):
+        if not argument:
             continue
-        wd = os.path.dirname(p)
+        wd = os.path.dirname(argument)
         break
 
     def wrap127(code, status):

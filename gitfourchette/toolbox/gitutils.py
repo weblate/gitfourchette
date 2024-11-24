@@ -68,7 +68,8 @@ def abbreviatePerson(sig: Signature, style: AuthorDisplayStyle = AuthorDisplaySt
             return sig.name
 
         elif style == AuthorDisplayStyle.FIRST_NAME:
-            return re.match(FIRST_NAME_PATTERN, sig.name)[0]
+            match = FIRST_NAME_PATTERN.match(sig.name)
+            return match[0] if match is not None else sig.name
 
         elif style == AuthorDisplayStyle.LAST_NAME:
             return sig.name.rsplit(' ', maxsplit=1)[-1]

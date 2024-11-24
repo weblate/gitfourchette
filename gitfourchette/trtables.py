@@ -12,22 +12,23 @@ from gitfourchette.qt import translate
 
 if TYPE_CHECKING:
     from gitfourchette.toolbox import PatchPurpose
+    from gitfourchette.sidebar.sidebarmodel import SidebarItem
 
 
 class TrTables:
-    _exceptionNames = {}
-    _nameValidationCodes = {}
-    _sidebarItems = {}
-    _prefKeys = {}
-    _diffStatusChars = {}
-    _fileModes = {}
-    _shortFileModes = {}
-    _repositoryStates = {}
-    _patchPurposes = {}
-    _patchPurposesPastTense = {}
-    _conflictSides = {}
-    _conflictSidesDescription = {}
-    _conflictHelp = {}
+    _exceptionNames             : dict[str, str] = {}
+    _nameValidationCodes        : dict[int, str] = {}
+    _sidebarItems               : dict[SidebarItem, str] = {}
+    _prefKeys                   : dict[str, str] = {}
+    _diffStatusChars            : dict[str, str] = {}
+    _fileModes                  : dict[FileMode, str] = {}
+    _shortFileModes             : dict[FileMode, str] = {}
+    _repositoryStates           : dict[RepositoryState, str] = {}
+    _patchPurposes              : dict[PatchPurpose, str] = {}
+    _patchPurposesPastTense     : dict[PatchPurpose, str] = {}
+    _conflictSides              : dict[ConflictSides, str] = {}
+    _conflictSidesDescription   : dict[ConflictSides, str] = {}
+    _conflictHelp               : dict[str, str] = {}
 
     @classmethod
     def init(cls):
@@ -63,7 +64,7 @@ class TrTables:
             return translate("NameValidationError", "Name validation error {0}").format(code)
 
     @classmethod
-    def sidebarItem(cls, item: int):
+    def sidebarItem(cls, item: SidebarItem):
         try:
             return cls._sidebarItems[item]
         except KeyError:

@@ -58,7 +58,7 @@ def collectUserKeyFiles():
     else:  # pragma: no cover
         sshDirectory = QStandardPaths.locate(QStandardPaths.StandardLocation.HomeLocation, ".ssh", QStandardPaths.LocateOption.LocateDirectory)
 
-    keypairFiles = []
+    keypairFiles: list[tuple[str, str]] = []
 
     if not sshDirectory:
         return keypairFiles
@@ -82,6 +82,8 @@ class RemoteLink(QObject, RemoteCallbacks):
 
     requestSecret = Signal(str)
     secretReady = Signal(str, str)
+
+    updatedTips: dict[str, tuple[Oid, Oid]]
 
     @staticmethod
     def mayAbortNetworkOperation(f):
@@ -139,6 +141,7 @@ class RemoteLink(QObject, RemoteCallbacks):
     def discoverKeyFiles(self, remote: Remote | str = ""):
         # Find remote-specific key files
         if isinstance(remote, Remote) and not self.usingCustomKeyFile:
+            assert isinstance(remote._repo, Repo)
             self.usingCustomKeyFile = RepoPrefs.getRemoteKeyFileForRepo(remote._repo, remote.name)
 
         if self.usingCustomKeyFile:

@@ -11,8 +11,8 @@ If SVG icons don't show up, you may need to install the 'qt6-svg' package.
 from gitfourchette.qt import *
 from gitfourchette.toolbox.qtutils import isDarkTheme, writeTempFile
 
-_stockIconCache = {}
-_tempSvgFiles = []
+_stockIconCache: dict[str, QIcon] = {}
+_tempSvgFiles: list[QTemporaryFile] = []
 
 
 def assetCandidates(name: str):

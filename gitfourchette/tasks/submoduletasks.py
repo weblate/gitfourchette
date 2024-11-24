@@ -51,7 +51,7 @@ class RegisterSubmodule(RepoTask):
             ).format(bquo(subName))
             raise AbortTask(message)
 
-        reservedNames = self.repo.listall_submodules_dict().keys()
+        reservedNames = set(self.repo.listall_submodules_dict().keys())
         dlg = RegisterSubmoduleDialog(
             workdirPath=path,
             superprojectName=thisName,

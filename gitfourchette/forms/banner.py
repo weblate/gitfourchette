@@ -28,6 +28,7 @@ class Banner(QFrame):
         label = QLabel(__name__, self)
         label.setWordWrap(True)
 
+        layout: QBoxLayout
         if orientation == Qt.Orientation.Vertical:
             layout = QVBoxLayout(self)
         else:
@@ -48,17 +49,18 @@ class Banner(QFrame):
 
         self.dismissButton = self.addButton(self.tr("Dismiss"), self.dismiss, permanent=True)
 
-    def addButton(self, text: str, callback: Callable = None, permanent=False) -> QToolButton:
+    def addButton(self, text: str, callback: Callable | None = None, permanent=False) -> QToolButton:
         button = QToolButton(self)
         button.setText(text)
         button.setProperty(PERMANENT_PROPERTY, "true" if permanent else "")
         button.setAutoRaise(True)
         self.buttons.append(button)
 
-        if callback:
+        if callback is not None:
             button.clicked.connect(callback)
 
-        layout: QHBoxLayout = self.layout()
+        layout = self.layout()
+        assert isinstance(layout, QBoxLayout)
         layout.insertWidget(2, button)
 
         if self.orientation == Qt.Orientation.Horizontal:

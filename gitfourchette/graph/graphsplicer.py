@@ -6,20 +6,23 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from itertools import zip_longest
 
 from gitfourchette.graph.graph import (
+    ArcJunction,
     BATCHROW_UNDEF,
     BatchRow,
     Frame,
     Graph,
     KF_INTERVAL,
     Oid,
-    logger,
 )
 from gitfourchette.graph.graphweaver import GraphWeaver
 from gitfourchette.toolbox import Benchmark
+
+logger = logging.getLogger(__name__)
 
 
 class GraphSplicer:
@@ -41,8 +44,8 @@ class GraphSplicer:
         self.requiredNewCommits = (newHeads - oldHeads)  # heads that appeared
         self.requiredOldCommits = (oldHeads - newHeads)  # heads that disappeared
 
-        self.newCommitsSeen = set()
-        self.oldCommitsSeen = set()
+        self.newCommitsSeen: set[Oid] = set()
+        self.oldCommitsSeen: set[Oid] = set()
 
     def spliceNewCommit(self, newCommit: Oid, parentsOfNewCommit: list[Oid], keyframeInterval=KF_INTERVAL):
         assert self.keepGoing
@@ -153,7 +156,7 @@ class GraphSplicer:
 
             # Splice old junctions into new junctions
             if oldOpenArc.junctions:
-                junctions = []
+                junctions: list[ArcJunction] = []
                 junctions.extend(j for j in newOpenArc.junctions if j.joinedAt <= equilibriumNewRow)  # before eq
                 junctions.extend(j for j in oldOpenArc.junctions if j.joinedAt > equilibriumOldRow)  # after eq
                 assert all(junctions.count(x) == 1 for x in junctions), "duplicate junctions after splicing"
@@ -193,16 +196,16 @@ class GraphSplicer:
         # If we exited the loop without reaching equilibrium, the whole graph has changed.
         # In that case, steal the contents of newGraph, and bail.
 
-        self.equilibriumOldRow = self.oldPlayer.row
-        self.equilibriumNewRow = self.weaver.row
+        self.equilibriumOldRow = int(self.oldPlayer.row)
+        self.equilibriumNewRow = int(self.weaver.row)
         self.oldGraphRowOffset = 0
 
         self.oldGraph.shallowCopyFrom(self.newGraph)
 
     @staticmethod
     def isEquilibriumReached(frameA: Frame, frameB: Frame):
-        rowA = frameA.row
-        rowB = frameB.row
+        rowA = int(frameA.row)
+        rowB = int(frameB.row)
 
         for arcA, arcB in zip_longest(frameA.openArcs, frameB.openArcs):
             isStaleA = (not arcA) or arcA.isStale(rowA)

@@ -9,6 +9,7 @@ import gc
 import logging
 import os
 import re
+from collections.abc import Sequence
 from contextlib import suppress
 from typing import Literal
 
@@ -117,6 +118,7 @@ class MainWindow(QMainWindow):
         if event.type() == QEvent.Type.FileOpen:
             # Called if dragging something to dock icon on macOS.
             # Ignore in test mode - the test runner may send a bogus FileOpen before we're ready to process it.
+            assert isinstance(event, QFileOpenEvent)
             if not settings.TEST_MODE:
                 outcome = self.getDropOutcomeFromLocalFilePath(event.file())
                 self.handleDrop(*outcome)
@@ -133,10 +135,9 @@ class MainWindow(QMainWindow):
             if PYQT6 and not isinstance(event, QMouseEvent):
                 return False
 
-            mouseEvent: QMouseEvent = event
-
-            isBack = mouseEvent.button() == Qt.MouseButton.BackButton
-            isForward = mouseEvent.button() == Qt.MouseButton.ForwardButton
+            assert isinstance(event, QMouseEvent)
+            isBack = event.button() == Qt.MouseButton.BackButton
+            isForward = event.button() == Qt.MouseButton.ForwardButton
 
             if isBack or isForward:
                 if isPress:
@@ -683,7 +684,7 @@ class MainWindow(QMainWindow):
             if not os.path.exists(parentDetectionPath):
                 parentDetectionPath = os.path.dirname(parentDetectionPath)
 
-            parentRepo = pygit2.discover_repository(parentDetectionPath)
+            parentRepo = pygit2.discover_repository(parentDetectionPath) or ""
 
         if not detectParentRepo or not parentRepo:
             if not allowNonEmptyDirectory and os.path.exists(path) and os.listdir(path):
@@ -923,7 +924,7 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(activeTab)
             self.onTabCurrentWidgetChanged()  # needed to trigger loading on tab #0
 
-    def _reportSessionErrors(self, errors: list[tuple[str, BaseException]]):
+    def _reportSessionErrors(self, errors: Sequence[tuple[str, BaseException]]):
         numErrors = len(errors)
         text = self.tr("The session couldn’t be restored fully because %n repositories failed to load:", "", numErrors)
         qmb = asyncMessageBox(self, 'warning', self.tr("Restore session"), text)
@@ -932,7 +933,7 @@ class MainWindow(QMainWindow):
 
     def saveSession(self, writeNow=False):
         session = settings.Session()
-        session.windowGeometry = bytes(self.saveGeometry())
+        session.windowGeometry = self.saveGeometry().data()
         session.splitterSizes = self.sharedSplitterSizes.copy()
         session.tabs = [self.tabs.widget(i).workdir for i in range(self.tabs.count())]
         session.activeTabIndex = self.tabs.currentIndex()

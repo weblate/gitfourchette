@@ -44,26 +44,31 @@ def escamp(text: str) -> str:
     return text.replace('&', '&&')
 
 
-def paragraphs(*args) -> str:
+def paragraphs(*args: str | list[str]) -> str:
     """
     Surrounds each argument string with an HTML "P" tag
     (or BLOCKQUOTE if the argument starts with the tab character)
     and returns a concatenated string of HTML tags.
     """
 
+    lines: Iterable[str]
+
     # If passed an actual list object, use that as the argument list.
     if len(args) == 1 and isinstance(args[0], list):
-        args = args[0]
+        lines = args[0]
+    else:
+        lines = args
 
     builder = io.StringIO()
-    for arg in args:
-        if arg.startswith("\t"):
+    for line in lines:
+        assert type(line) is str
+        if line.startswith("\t"):
             builder.write("<blockquote>")
-            builder.write(arg)
+            builder.write(line)
             builder.write("</blockquote>")
         else:
             builder.write("<p>")
-            builder.write(arg)
+            builder.write(line)
             builder.write("</p>")
 
     return builder.getvalue()
@@ -192,18 +197,19 @@ def toRoomyUL(items: Iterable[str]):
     return ulify(items, -1, "<p>", "</p>")
 
 
-def linkify(text, *hrefs: str | QUrl):
-    hrefs = [h.toString() if isinstance(h, QUrl) else h for h in hrefs]
+def linkify(text, *mixedTargets: str | QUrl):
+    targets = [target.toString() if isinstance(target, QUrl) else target
+               for target in mixedTargets]
 
-    assert all('"' not in href for href in hrefs)
+    assert all('"' not in target for target in targets)
 
     if "[" not in text:
-        assert len(hrefs) == 1
-        return f"<a href=\"{hrefs[0]}\">{text}</a>"
+        assert len(targets) == 1
+        return f"<a href=\"{targets[0]}\">{text}</a>"
 
-    for href in hrefs:
+    for target in targets:
         assert "[" in text
-        text = text.replace("[", f"<a href=\"{href}\">", 1).replace("]", "</a>", 1)
+        text = text.replace("[", f"<a href=\"{target}\">", 1).replace("]", "</a>", 1)
 
     return text
 
@@ -234,6 +240,7 @@ def withUniqueSuffix(
     name = stem + ext
     i = start
 
+    isTaken: Callable[[str], bool]
     if not callable(reserved):
         isTaken = reserved.__contains__
     else:

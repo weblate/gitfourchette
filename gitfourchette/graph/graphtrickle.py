@@ -4,7 +4,9 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-from gitfourchette.porcelain import Oid
+from collections.abc import Iterable
+
+from gitfourchette.graph.graph import Oid
 
 STOP = 0
 PIPE = 1
@@ -20,7 +22,7 @@ class GraphTrickle:
     def done(self) -> bool:
         return all(v == STOP for v in self.frontier.values())
 
-    def newCommit(self, commit: Oid, parents: list[Oid]):
+    def newCommit(self, commit: Oid, parents: Iterable[Oid]):
         frontier = self.frontier
         flagged = frontier.pop(commit, STOP)
 
@@ -79,4 +81,4 @@ class GraphTrickle:
         return trickle
 
     def testFrontierInputs(self):
-        return all(type(head) in (str, Oid) for head in self.frontier)
+        return all(isinstance(head, Oid) for head in self.frontier)

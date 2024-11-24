@@ -10,7 +10,7 @@ from gitfourchette import settings, colors
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
 from gitfourchette.mergedriver import MergeDriver
-from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides
+from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides, Repo
 from gitfourchette.qt import *
 from gitfourchette.tasks import HardSolveConflicts, AcceptMergeConflictResolution
 from gitfourchette.toolbox import *
@@ -22,11 +22,13 @@ class ConflictView(QWidget):
     linkActivated = Signal(str)
 
     currentConflict: DiffConflict | None
+    repo: Repo
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.currentConflict = None
+        self.repo = None  # will be set by RepoWidget
 
         self.ui = Ui_ConflictView()
         self.ui.setupUi(self)
@@ -62,6 +64,7 @@ class ConflictView(QWidget):
             return
 
         elif conflict.deleted_by_us or conflict.added_by_them:
+            assert conflict.theirs is not None
             b = self.ui.radioGroupDbu.checkedButton()
             if not b:
                 pass
@@ -71,6 +74,7 @@ class ConflictView(QWidget):
                 self.hardSolve(conflict.theirs.path, NULL_OID)
 
         elif conflict.deleted_by_them or conflict.added_by_us:
+            assert conflict.ours is not None
             b = self.ui.radioGroupDbt.checkedButton()
             if not b:
                 pass
@@ -80,9 +84,12 @@ class ConflictView(QWidget):
                 self.hardSolve(conflict.ours.path, conflict.ours.id)
 
         elif conflict.deleted_by_both:
+            assert conflict.ancestor is not None
             self.hardSolve(conflict.ancestor.path, NULL_OID)
 
         elif conflict.modified_by_both or conflict.added_by_both:
+            assert conflict.ours is not None
+            assert conflict.theirs is not None
             b = self.ui.radioGroupBoth.checkedButton()
             if b is self.ui.radioOurs:
                 self.hardSolve(conflict.ours.path, conflict.ours.id)

@@ -68,8 +68,8 @@ class SpecialDiffError(Exception):
     @staticmethod
     def noChange(delta: DiffDelta):
         message = translate("Diff", "File contents didn’t change.")
-        details = []
-        longform = []
+        details: list[str] = []
+        longform: list[str] = []
 
         oldFile: DiffFile = delta.old_file
         newFile: DiffFile = delta.new_file

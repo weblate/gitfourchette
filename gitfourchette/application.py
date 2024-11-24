@@ -230,13 +230,13 @@ class GFApplication(QApplication):
 
         if self.mainWindow is None:
             warnings.warn(f"Ignoring task request {taskType.__name__} because we don't have a window")
-            return
+            return None
 
         assert isinstance(invoker, QObject)
         if invoker.signalsBlocked():
             logger.debug(f"Ignoring task request {taskType.__name__} from invoker with blocked signals: " +
                          (invoker.objectName() or invoker.__class__.__name__))
-            return
+            return None
 
         # Find parent in hierarchy
         candidate = invoker

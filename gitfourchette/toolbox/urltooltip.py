@@ -24,8 +24,8 @@ class UrlToolTip(QTimer):
             self.start()
 
     def install(self):
-        assert isinstance(self.parent(), QWidget)
-        for label in self.parent().findChildren(QLabel):
-            label: QLabel
+        parentWidget = self.parent()
+        assert isinstance(parentWidget, QWidget)
+        for label in parentWidget.findChildren(QLabel):
             if label.openExternalLinks():
                 label.linkHovered.connect(self.linkHovered)

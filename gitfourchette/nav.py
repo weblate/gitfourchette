@@ -350,11 +350,11 @@ class NavHistory:
 
         # If no path is specified, attempt to recall any path in the same context
         if not locator.path:
-            locator = self.recent.get(locator.contextKey, None)
+            locator = self.recent.get(locator.contextKey, NavLocator.Empty)
             if not locator:
                 locator = originalLocator
 
-        locator = self.recent.get(locator.fileKey, None) or locator
+        locator = self.recent.get(locator.fileKey, NavLocator.Empty) or locator
 
         # Restore volatile flags
         if originalLocator.flags != locator.flags:

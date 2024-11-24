@@ -136,7 +136,8 @@ class QTabWidget2(QWidget):
         self.stacked = QStackedWidget(self)
         self.shadowCurrentWidget = None
 
-        self.tabScrollArea = QScrollArea(parent=self, widgetResizable=True)
+        self.tabScrollArea = QScrollArea(self)
+        self.tabScrollArea.setWidgetResizable(True)
         self.tabScrollArea.setFrameStyle(QFrame.Shape.NoFrame)
         self.tabScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tabScrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

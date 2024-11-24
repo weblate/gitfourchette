@@ -170,7 +170,7 @@ class PrefsFile:
     @staticmethod
     def decode(o: Any, dstType: type | UnionType) -> Any:
         """ Convert a value coming from a JSON blob to a target type """
-        construct = None
+        construct: typing.Callable[[Any], Any] | None = None
 
         # Extract type from "SomeType | None" unions
         if type(dstType) is UnionType:
@@ -178,6 +178,7 @@ class PrefsFile:
             assert len(union) == 2
             dstType = next(t for t in union if t is not NoneType)
 
+        srcType: type
         if dstType is bytes:
             srcType = str
             construct = base64.b64decode

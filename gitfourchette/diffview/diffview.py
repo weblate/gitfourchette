@@ -106,7 +106,6 @@ class DiffView(QPlainTextEdit):
         self.selectionChanged.connect(self.updateRubberBand)
 
         self.searchBar = SearchBar(self, self.tr("Find in Diff"))
-        # self.searchBar.textChanged.connect(self.onSearchTextChanged)
         self.searchBar.textChanged.connect(self.highlighter.rehighlight)
         self.searchBar.searchNext.connect(lambda: self.search(SearchBar.Op.NEXT))
         self.searchBar.searchPrevious.connect(lambda: self.search(SearchBar.Op.PREVIOUS))
@@ -218,7 +217,7 @@ class DiffView(QPlainTextEdit):
         super().wheelEvent(event)
 
     def wheelZoom(self, delta: int):
-        delta /= 120
+        delta //= 120
         if delta == 0:
             return
         font = self.font()
@@ -253,12 +252,15 @@ class DiffView(QPlainTextEdit):
         super().clear()
 
     def replaceDocument(self, repo: Repo, patch: Patch, locator: NavLocator, newDoc: DiffDocument):
+        assert newDoc.document is not None
+
         oldDocument = self.document()
 
         # Detect if we're trying to load exactly the same patch - common occurrence when moving the app back to the
         # foreground. In that case, don't change the document to prevent losing any selected text.
         if self.canReuseCurrentDocument(locator, patch, newDoc):
             if settings.DEVDEBUG:  # this check can be pretty expensive!
+                assert self.currentPatch is not None
                 assert patch.data == self.currentPatch.data
 
             # Delete new document
@@ -320,6 +322,8 @@ class DiffView(QPlainTextEdit):
 
         if not self.currentLocator.isSimilarEnoughTo(newLocator):
             return False
+
+        assert self.currentPatch is not None
 
         of1: DiffFile = self.currentPatch.delta.old_file
         nf1: DiffFile = self.currentPatch.delta.new_file
@@ -458,6 +462,9 @@ class DiffView(QPlainTextEdit):
         if self.document().isEmpty():
             return None
 
+        # If we have a document, we should have a patch
+        assert self.currentPatch is not None
+
         # Get position of click in document
         clickedPosition = self.cursorForPosition(self.mapFromGlobal(globalPos)).position()
 
@@ -505,13 +512,13 @@ class DiffView(QPlainTextEdit):
                         self.tr("Stage Lines"),
                         self.stageSelection,
                         "git-stage-lines",
-                        shortcuts=GlobalShortcuts.stageHotkeys,
+                        shortcuts=GlobalShortcuts.stageHotkeys[0],
                     ),
                     ActionDef(
                         self.tr("Discard Lines"),
                         self.discardSelection,
                         "git-discard-lines",
-                        shortcuts=GlobalShortcuts.discardHotkeys,
+                        shortcuts=GlobalShortcuts.discardHotkeys[0],
                     ),
                     ActionDef(
                         self.tr("Export Lines as Patch..."),
@@ -540,7 +547,7 @@ class DiffView(QPlainTextEdit):
                         self.tr("Unstage Lines"),
                         self.unstageSelection,
                         "git-unstage-lines",
-                        shortcuts=GlobalShortcuts.discardHotkeys,
+                        shortcuts=GlobalShortcuts.discardHotkeys[0],
                     ),
                     ActionDef(
                         self.tr("Export Lines as Patch..."),
@@ -624,7 +631,10 @@ class DiffView(QPlainTextEdit):
         return False
 
     def extractSelection(self, reverse=False) -> bytes:
+        assert self.currentPatch is not None
+
         start, end = self.getSelectedLineExtents()
+
         return extractSubpatch(
             self.currentPatch,
             self.lineData[start].hunkPos,
@@ -632,6 +642,8 @@ class DiffView(QPlainTextEdit):
             reverse)
 
     def extractHunk(self, hunkID: int, reverse=False) -> bytes:
+        assert self.currentPatch is not None
+
         # Find indices of first and last LineData objects given the current hunk
         hunkFirstLineIndex = bisect_left(self.lineHunkIDCache, hunkID, 0)
         hunkLastLineIndex = bisect_left(self.lineHunkIDCache, hunkID+1, hunkFirstLineIndex) - 1
@@ -651,7 +663,7 @@ class DiffView(QPlainTextEdit):
             with open(path, "wb") as file:
                 file.write(patchData)
 
-        name = os.path.basename(self.currentPatch.delta.new_file.path) + "[partial].patch"
+        name = os.path.basename(self.currentLocator.path) + "[partial].patch"
         qfd = PersistentFileDialog.saveFile(self, "SaveFile", self.tr("Export selected lines"), name)
         qfd.fileSelected.connect(dump)
         qfd.show()
@@ -849,9 +861,10 @@ class DiffView(QPlainTextEdit):
 
         self.replaceCursor(cursor)
 
-    def selectClumpOfLinesAt(self, clickPoint: QPoint = None, textCursorPosition: int = -1):
-        assert bool(textCursorPosition >= 0) ^ bool(clickPoint)
+    def selectClumpOfLinesAt(self, clickPoint: QPoint | None = None, textCursorPosition: int = -1):
+        assert (textCursorPosition >= 0) ^ (clickPoint is not None)
         if textCursorPosition < 0:
+            assert clickPoint is not None
             textCursorPosition = self.getStartOfLineAt(clickPoint)
 
         ldList = self.lineData

@@ -55,7 +55,7 @@ class NewStash(RepoTask):
         if not status:
             raise AbortTask(self.tr("There are no uncommitted changes to stash (submodules cannot be stashed)."), "information")
 
-        dlg = StashDialog(status, paths, self.parentWidget())
+        dlg = StashDialog(status, paths or [], self.parentWidget())
         dlg.setWindowModality(Qt.WindowModality.WindowModal)
         dlg.show()
         yield from self.flowDialog(dlg)

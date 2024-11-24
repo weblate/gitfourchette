@@ -6,6 +6,7 @@
 
 import enum
 import logging
+from typing import Any
 
 from gitfourchette.exttools import validateExternalToolCommand
 from gitfourchette.porcelain import *
@@ -48,6 +49,9 @@ def hBoxWidget(*controls):
 class PrefsDialog(QDialog):
     lastOpenTab = 0
 
+    prefDiff: dict[str, Any]
+    "Delta to on-disk preferences."
+
     @benchmark
     def __init__(self, parent: QWidget, focusOn: str = ""):
         super().__init__(parent)
@@ -55,7 +59,6 @@ class PrefsDialog(QDialog):
         self.setObjectName("PrefsDialog")
         self.setWindowTitle(translate("Prefs", "{app} Settings").format(app=qAppName()))
 
-        # Delta to on-disk preferences.
         self.prefDiff = {}
 
         # Prepare main widgets & layout

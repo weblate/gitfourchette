@@ -33,8 +33,7 @@ def fitText(
         minStretch=_defaultMinStretch,
 ):
     metrics = QFontMetricsF(wideFont)
-    width = metrics.horizontalAdvance(text)
-    width = ceil(width)
+    width = ceil(metrics.horizontalAdvance(text))
 
     if width < 1:
         return text, wideFont, 0
@@ -61,8 +60,7 @@ def fitText(
         font.setStretch(stretch)
         metrics = QFontMetricsF(font)
 
-        width = metrics.horizontalAdvance(text)
-        width = ceil(width)
+        width = ceil(metrics.horizontalAdvance(text))
 
         if width < maxWidth:
             return text, font, width

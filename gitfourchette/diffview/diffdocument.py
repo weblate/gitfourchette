@@ -277,6 +277,7 @@ class DiffDocument:
                 continue
 
             assert i != ld.doppelganger, "line cannot be its own doppelganger"
+            assert ld.diffLine is not None, "line with doppelganger must have a DiffLine"
             aheadOfDoppelganger = i < ld.doppelganger
 
             if aheadOfDoppelganger:

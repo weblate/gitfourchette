@@ -82,7 +82,7 @@ class MainToolBar(QToolBar):
         ActionDef.addToQToolBar(self, *defs)
 
         self.recentAction.setIconVisibleInMenu(True)
-        recentButton: QToolButton = self.widgetForAction(self.recentAction)
+        recentButton = self.widgetForAction(self.recentAction)
         assert isinstance(recentButton, QToolButton)
         recentButton.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
 
@@ -94,7 +94,8 @@ class MainToolBar(QToolBar):
     def setToolButtonStyle(self, style: Qt.ToolButtonStyle):
         # Resolve style
         if style == Qt.ToolButtonStyle.ToolButtonFollowStyle:
-            style = QApplication.style().styleHint(QStyle.StyleHint.SH_ToolButtonStyle)
+            styleHint = QApplication.style().styleHint(QStyle.StyleHint.SH_ToolButtonStyle)
+            style = Qt.ToolButtonStyle(styleHint)
 
         super().setToolButtonStyle(style)
 

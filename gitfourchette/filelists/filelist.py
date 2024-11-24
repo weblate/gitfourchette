@@ -31,6 +31,7 @@ class FileListDelegate(QStyledItemDelegate):
     """
 
     def searchTerm(self, option: QStyleOptionViewItem):
+        assert isinstance(option.widget, FileList)
         searchBar: SearchBar = option.widget.searchBar
         return searchBar.searchTerm if searchBar.isVisible() else ""
 
@@ -94,7 +95,7 @@ class FileList(QListView):
     openSubRepo = Signal(str)
     statusMessage = Signal(str)
 
-    repo: Repo | None
+    repo: Repo
 
     navContext: NavContext
     """
@@ -113,6 +114,11 @@ class FileList(QListView):
     In large diffs, we skip rename detection.
     """
 
+    _selectionBackup: list[str]
+    """
+    Backup of selected paths before refreshing the view.
+    """
+
     def __init__(self, parent: QWidget, navContext: NavContext):
         super().__init__(parent)
 
@@ -125,7 +131,7 @@ class FileList(QListView):
         self.navContext = navContext
         self.commitId = NULL_OID
         self.skippedRenameDetection = False
-        self._selectionBackup = None
+        self._selectionBackup = []
 
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         iconSize = self.fontMetrics().height()
@@ -150,7 +156,9 @@ class FileList(QListView):
 
     @property
     def flModel(self) -> FileListModel:
-        return self.model()
+        model = self.model()
+        assert isinstance(model, FileListModel)
+        return model
 
     def isEmpty(self):
         return self.model().rowCount() == 0
@@ -609,19 +617,21 @@ class FileList(QListView):
             if path and term in path.lower():
                 return index
 
+        return None
+
     def backUpSelection(self):
         oldSelected = list(self.selectedPaths())
         self._selectionBackup = oldSelected
 
     def clearSelectionBackup(self):
-        self._selectionBackup = None
+        self._selectionBackup = []
 
     def restoreSelectionBackup(self):
-        if self._selectionBackup is None:
+        if not self._selectionBackup:
             return False
 
         paths = self._selectionBackup
-        self._selectionBackup = None
+        self._selectionBackup = []
 
         currentIndex: QModelIndex = self.currentIndex()
         cPath = currentIndex.data(FileListModel.Role.FilePath)

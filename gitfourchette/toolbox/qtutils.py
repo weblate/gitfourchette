@@ -37,15 +37,18 @@ def showInFolder(path: str):  # pragma: no cover (platform-specific)
         if iface.isValid():
             if PYQT5 or PYQT6:
                 # PyQt5/6 needs the array of strings to be spelled out explicitly.
-                stringType = QMetaType.Type.QString
-                args = QDBusArgument()
-                args.beginArray(stringType if PYQT5 else stringType.value)
-                args.add(path)
-                args.endArray()
+                if PYQT5:
+                    stringType = QMetaType.Type.QString
+                else:
+                    stringType = QMetaType.Type.QString.value
+                dbusArgs = QDBusArgument()
+                dbusArgs.beginArray(stringType)
+                dbusArgs.add(path)
+                dbusArgs.endArray()
             else:
                 # Thankfully, PySide6 is more pythonic here.
-                args = [path]
-            iface.call("ShowItems", args, "")
+                dbusArgs = [path]
+            iface.call("ShowItems", dbusArgs, "")
             iface.deleteLater()
             return
 
@@ -86,7 +89,7 @@ def isImageFormatSupported(filename: str):
     global _supportedImageFormats
 
     if _supportedImageFormats is None:
-        _supportedImageFormats = [str(fmt, 'ascii') for fmt in QImageReader.supportedImageFormats()]
+        _supportedImageFormats = [str(fmt.data(), 'ascii') for fmt in QImageReader.supportedImageFormats()]
 
     ext = os.path.splitext(filename)[-1]
     ext = ext.removeprefix(".").lower()
@@ -141,15 +144,13 @@ def isDarkTheme(palette: QPalette | None = None):
 def mutedTextColorHex(w: QWidget, alpha=.5) -> str:
     mutedColor = QApplication.palette().windowText().color()
     mutedColor.setAlphaF(alpha)
-    mutedColor = mutedColor.name(QColor.NameFormat.HexArgb)
-    return mutedColor
+    return mutedColor.name(QColor.NameFormat.HexArgb)
 
 
 def mutedToolTipColorHex() -> str:
     mutedColor = QApplication.palette().toolTipText().color()
     mutedColor.setAlphaF(.6)
-    mutedColor = mutedColor.name(QColor.NameFormat.HexArgb)
-    return mutedColor
+    return mutedColor.name(QColor.NameFormat.HexArgb)
 
 
 def appendShortcutToToolTipText(tip: str, shortcut: QKeySequence | QKeySequence.StandardKey | Qt.Key | str, singleLine=True):
@@ -241,8 +242,8 @@ class MakeNonNativeDialog(QObject):  # pragma: no cover (macOS-specific)
 
 class QScrollBackupContext:
     def __init__(self, *items: QAbstractScrollArea | QScrollBar):
-        self.scrollBars = []
-        self.values = []
+        self.scrollBars: list[QScrollBar] = []
+        self.values: list[int] = []
 
         for o in items:
             if isinstance(o, QAbstractScrollArea):
@@ -276,7 +277,7 @@ class QTabBarStyleNoRotatedText(QProxyStyle):
             s.transpose()
         return s
 
-    def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, widget: QWidget = None):
+    def drawControl(self, element: QStyle.ControlElement, option: QStyleOption, painter: QPainter, widget: QWidget | None = None):
         if element == QStyle.ControlElement.CE_TabBarTabLabel:
             assert isinstance(option, QStyleOptionTab)
             option: QStyleOptionTab = QStyleOptionTab(option)  # copy

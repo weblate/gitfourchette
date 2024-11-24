@@ -16,7 +16,7 @@ class RegisterSubmoduleDialog(QDialog):
             superprojectName: str,
             remotes: dict[str, str],
             absorb: bool,
-            reservedNames: list[str],
+            reservedNames: set[str],
             parent):
         super().__init__(parent)
         ui = Ui_RegisterSubmoduleDialog()

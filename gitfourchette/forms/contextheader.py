@@ -43,7 +43,7 @@ class ContextHeader(QFrame):
         fg = mutedTextColorHex(self, .8)
         self.setStyleSheet(f"ContextHeader {{ background-color: {bg}; }}  ContextHeader QLabel {{ color: {fg}; }}")
 
-    def addButton(self, text: str, callback: Callable = None, permanent=False) -> QToolButton:
+    def addButton(self, text: str, callback: Callable | None = None, permanent=False) -> QToolButton:
         button = QToolButton(self)
         button.setText(text)
         button.setProperty(PERMANENT_PROPERTY, "true" if permanent else "")
@@ -51,7 +51,7 @@ class ContextHeader(QFrame):
         button.setAutoRaise(True)
         self.buttons.append(button)
 
-        if callback:
+        if callback is not None:
             button.clicked.connect(callback)
 
         layout: QHBoxLayout = self.layout()

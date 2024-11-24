@@ -33,11 +33,10 @@ from gitfourchette.qt import *
 
 
 class QBusySpinner(QWidget):
-    def __init__(self, parent, centerOnParent=True, disableParentWhenSpinning=False, modality=Qt.WindowModality.NonModal):
+    def __init__(self, parent, centerOnParent=True, modality=Qt.WindowModality.NonModal):
         super().__init__(parent)
 
         self._centerOnParent = centerOnParent
-        self._disableParentWhenSpinning = disableParentWhenSpinning
 
         self._color = QColor(Qt.GlobalColor.black)
         self._minimumTrailOpacity = 3.14159265358979323846
@@ -91,9 +90,6 @@ class QBusySpinner(QWidget):
         self._isSpinning = True
         self.show()
 
-        if self.parentWidget and self._disableParentWhenSpinning:
-            self.parentWidget().setEnabled(False)
-
         if not self._timer.isActive():
             self._timer.start()
             self._currentCounter = 0
@@ -104,9 +100,6 @@ class QBusySpinner(QWidget):
 
         self._isSpinning = False
         self.hide()
-
-        if self.parentWidget() and self._disableParentWhenSpinning:
-            self.parentWidget().setEnabled(True)
 
         if self._timer.isActive():
             self._timer.stop()

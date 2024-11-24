@@ -202,7 +202,8 @@ def triggerMenuAction(menu: QMenu | QMenuBar, pattern: str):
 def qteFind(qte: QTextEdit, pattern: str, plainText=False):
     assert isinstance(qte, QTextEdit)
     if plainText:
-        found = re.search(pattern, qte.toPlainText(), re.I | re.M | re.DOTALL)
+        match = re.search(pattern, qte.toPlainText(), re.I | re.M | re.DOTALL)
+        found = bool(match)
     else:
         # qte.find() starts searching at current cursor position, so reset cursor to top of document
         textCursor = qte.textCursor()
@@ -290,7 +291,6 @@ def waitForQDialog(parent: QWidget, pattern: str) -> QDialog:
 
 def findQMessageBox(parent: QWidget, textPattern: str) -> QMessageBox:
     for qmb in parent.findChildren(QMessageBox):
-        qmb: QMessageBox
         if not qmb.isVisibleTo(parent):  # skip zombie QMBs
             continue
         haystack = "\n".join([qmb.windowTitle(), qmb.text(), qmb.informativeText()])
@@ -309,7 +309,7 @@ def rejectQMessageBox(parent: QWidget, textPattern: str):
 
 
 def acceptQFileDialog(parent: QWidget, textPattern: str, path: str, useSuggestedName=False):
-    qfd: QFileDialog = findQDialog(parent, textPattern)
+    qfd = findQDialog(parent, textPattern)
     assert isinstance(qfd, QFileDialog)
 
     if useSuggestedName:
@@ -325,7 +325,6 @@ def acceptQFileDialog(parent: QWidget, textPattern: str, path: str, useSuggested
 
 def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
     for button in parent.findChildren(QToolButton):
-        button: QToolButton
         if re.search(textPattern, button.text(), re.IGNORECASE | re.DOTALL):
             return button
     raise KeyError(f"did not find QToolButton \"{textPattern}\"")
@@ -333,7 +332,6 @@ def findQToolButton(parent: QToolButton, textPattern: str) -> QToolButton:
 
 def findContextMenu(parent: QWidget) -> QMenu:
     for menu in parent.findChildren(QMenu):
-        menu: QMenu
         if menu.isVisible() and not isinstance(menu.parent(), QMenu):
             return menu
     raise KeyError("did not find context menu")

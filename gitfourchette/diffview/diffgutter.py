@@ -94,8 +94,8 @@ class DiffGutter(QWidget):
             gutterColor = themeBG.darker(105)  # light theme
         else:
             gutterColor = themeBG.lighter(140)  # dark theme
-        lineColor = QColor(*themeFG.getRgb()[:3], 80)
-        textColor = QColor(*themeFG.getRgb()[:3], 128)
+        lineColor = QColor(themeFG.red(), themeFG.green(), themeFG.blue(), 80)
+        textColor = QColor(themeFG.red(), themeFG.green(), themeFG.blue(), 80)
 
         # Gather some metrics
         paintRect = event.rect()

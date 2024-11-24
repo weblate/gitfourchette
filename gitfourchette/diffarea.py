@@ -330,6 +330,7 @@ class DiffArea(QWidget):
 
     def selectNextFile(self, down=True):
         page = self.fileStackPage()
+        widgets: list[FileList]
         if page == "commit":
             widgets = [self.committedFiles]
         elif page == "workdir":

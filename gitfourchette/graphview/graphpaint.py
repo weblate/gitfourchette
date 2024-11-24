@@ -5,11 +5,12 @@
 # -----------------------------------------------------------------------------
 
 import logging
+from collections.abc import Set
 
 from gitfourchette import colors
 from gitfourchette import settings
 from gitfourchette.graph import Frame
-from gitfourchette.porcelain import *
+from gitfourchette.graph.graph import Oid
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel, UC_FAKEID
 
@@ -26,7 +27,7 @@ def getColor(laneID):
     return colors.rainbowBright[laneID % len(colors.rainbowBright)]
 
 
-def flattenLanes(frame: Frame, hiddenCommits: set[Oid]) -> tuple[list[tuple[int, int]], int]:
+def flattenLanes(frame: Frame, hiddenCommits: Set[Oid]) -> tuple[list[tuple[int, int]], int]:
     """
     Compute columns (horizontal positions) for each lane above and below this row.
     """
@@ -80,7 +81,7 @@ def paintGraphFrame(
 ):
     graph = repoModel.graph
     hiddenCommits = repoModel.hiddenCommits
-    assert graph
+    assert graph is not None
 
     try:
         # Get this commit's sequential index in the graph

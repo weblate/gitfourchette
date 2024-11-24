@@ -22,7 +22,7 @@ class TaskBook:
     toolbarNames: dict[type[RepoTask], str] = {}
     tips: dict[type[RepoTask], str] = {}
     shortcuts: dict[type[RepoTask], MultiShortcut] = {}
-    icons: dict[type[RepoTask], str | int] = {}
+    icons: dict[type[RepoTask], str] = {}
     noEllipsis: set[type[RepoTask]]
 
     @classmethod

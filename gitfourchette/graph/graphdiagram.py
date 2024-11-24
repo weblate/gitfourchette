@@ -28,8 +28,8 @@ class GraphDiagram:
     @staticmethod
     def parseDefinition(text: str) -> tuple[list[MockCommit], set[Oid]]:
         sequence = []
-        seen = set()
-        heads = set()
+        seen: set[Oid] = set()
+        heads: set[Oid] = set()
 
         lines = re.split(r"\s+", text)
 

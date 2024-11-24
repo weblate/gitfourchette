@@ -57,5 +57,7 @@ class StatusForm(QStackedWidget):
 
     def setProgressMessage(self, message: str):
         if message.startswith("Sideband"):
-            logger.info(f"Sideband >{message.encode('utf-8', errors='ignore')}<")
+            # Sideband messages may contain ASCII control characters, so sanitize them for printing
+            sidebandBlob = message.encode('utf-8', errors='ignore')
+            logger.info(f"Sideband >{sidebandBlob!r}<")
         self.progressMessage.setText(message)

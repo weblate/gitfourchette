@@ -38,7 +38,7 @@ class MemoryIndicator(QPushButton):
         self.clicked.connect(self.onMemoryIndicatorClicked)
         self.setToolTip("Force GC")
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.lastUpdate = 0
+        self.lastUpdate = 0.0
 
     def onMemoryIndicatorClicked(self):
         gc.collect()
@@ -48,7 +48,7 @@ class MemoryIndicator(QPushButton):
         report = f"\nTop-Level Windows:\n{windows}\nTop-Level Widgets:\n{widgets}\n"
         logging.info(report)
 
-        self.lastUpdate = 0
+        self.lastUpdate = 0.0
         self.updateMemoryIndicator()
 
     def paintEvent(self, e):

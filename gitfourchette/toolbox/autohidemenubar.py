@@ -23,7 +23,8 @@ class AutoHideMenuBar(QObject):
         self.hideScheduler.setSingleShot(True)
         self.hideScheduler.timeout.connect(self.doScheduledHide)
 
-        self.menusConnected = []
+        self.menusConnected: list[QMenu] = []
+
         self.refreshPrefs()
 
     def refreshPrefs(self):

@@ -427,9 +427,9 @@ def strip_stash_message(stash_message: str) -> str:
 
 
 def parse_submodule_patch(text: str) -> tuple[Oid, Oid, bool]:
-    def parse_subproject_line(match: _re.Match):
+    def parse_subproject_line(match: _re.Match | None):
         dirty = False
-        if not match:
+        if match is None:
             oid = NULL_OID
         else:
             capture = match.group(1)
@@ -864,7 +864,7 @@ class Repo(_VanillaRepository):
         return branch
 
     def listall_remote_branches(self, value_style: _typing.Literal["strip", "shorthand", "refname"] = "strip") -> dict[str, list[str]]:
-        names = {}
+        names: dict[str, list[str]] = {}
 
         # Create empty lists for all remotes (including branchless remotes)
         for remote in self.remotes:
@@ -1042,6 +1042,7 @@ class Repo(_VanillaRepository):
             # Both git and libgit2 store a default branch name in .git/HEAD when they init a repo,
             # so we should always have a ref name, even though it might not point to anything.
             ref_to_update = self.lookup_reference("HEAD").target
+            assert isinstance(ref_to_update, str), "HEAD isn't a symbolic reference!"
 
         # Prep parent list
         if self.head_is_unborn:
@@ -1352,7 +1353,7 @@ class Repo(_VanillaRepository):
         i = self.find_stash_index(commit_id)
         self.stash_drop(i)
 
-    def applies_breakdown(self, patch_data: bytes | str, location: int = ApplyLocation.WORKDIR) -> Diff:
+    def applies_breakdown(self, patch_data: bytes | str, location=ApplyLocation.WORKDIR) -> Diff:
         diff = Diff.parse_diff(patch_data)
         error = MultiFileError()
 
@@ -1379,19 +1380,20 @@ class Repo(_VanillaRepository):
 
         if error:
             raise error
-        else:
-            return diff
 
+        return diff
+
+    # Override pygit2.Repository.apply()
     def apply(self,
               patch_data_or_diff: bytes | str | Diff,
               location: ApplyLocation = ApplyLocation.WORKDIR
               ) -> Diff:
-        if type(patch_data_or_diff) in [bytes, str]:
+        if isinstance(patch_data_or_diff, bytes | str):
             diff = Diff.parse_diff(patch_data_or_diff)
-        elif type(patch_data_or_diff) is Diff:
+        elif isinstance(patch_data_or_diff, Diff):
             diff = patch_data_or_diff
         else:
-            raise TypeError("patchDataOrDiff must be bytes, str, or Diff")
+            raise TypeError("patch_data_or_diff must be bytes, str, or Diff")
 
         super().apply(diff, location)
         return diff
@@ -1429,7 +1431,7 @@ class Repo(_VanillaRepository):
         # We use ConfigParser instead of pygit2.Config so that we can load the
         # config from a blob in memory.
 
-        submos = {}
+        submos: dict[str, str] = {}
 
         if config_text:
             config = _configparser.ConfigParser()
@@ -1489,6 +1491,9 @@ class Repo(_VanillaRepository):
     def analyze_subtree_commit_patch(self, patch: Patch, in_workdir: bool = False) -> SubtreeCommitDiff:
         assert SubtreeCommitDiff.is_subtree_commit_patch(patch)
 
+        patchText = patch.text
+        assert patchText is not None
+
         path = patch.delta.new_file.path
 
         try:
@@ -1502,7 +1507,7 @@ class Repo(_VanillaRepository):
 
         abs_path = self.in_workdir(path)
         still_exists = _isdir(abs_path)
-        old_id, new_id, dirty = parse_submodule_patch(patch.text)
+        old_id, new_id, dirty = parse_submodule_patch(patchText)
 
         is_absorbed = still_exists and _isfile(_joinpath(abs_path, ".git"))
 
@@ -1655,9 +1660,9 @@ class Repo(_VanillaRepository):
         assert refname in self.references
         self.references.delete(refname)
 
-    def add_inner_repo_as_submodule(self, inner_w: str, remote_url: str, absorb_git_dir: bool = True, name: str = ""):
+    def add_inner_repo_as_submodule(self, inner_relative_path: str, remote_url: str, absorb_git_dir: bool = True, name: str = ""):
         outer_w = _Path(self.workdir)
-        inner_w = _Path(outer_w, inner_w)  # normalize
+        inner_w = _Path(outer_w, inner_relative_path)  # normalize
 
         if not inner_w.is_dir():
             raise FileNotFoundError(f"Inner workdir not found: {inner_w}")
@@ -1837,7 +1842,7 @@ class Repo(_VanillaRepository):
 
 
 class RepoContext:
-    def __init__(self, repo_or_path: Repo | str | _Path, flags: RepositoryOpenFlag = 0, write_index=False):
+    def __init__(self, repo_or_path: Repo | str | _Path, flags=RepositoryOpenFlag.DEFAULT, write_index=False):
         assert isinstance(repo_or_path, Repo | str | _Path)
         if isinstance(repo_or_path, Repo):
             self.repo = repo_or_path

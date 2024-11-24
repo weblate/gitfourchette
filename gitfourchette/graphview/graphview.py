@@ -92,7 +92,7 @@ class GraphView(QListView):
             ]
 
         elif kind == SpecialRow.EndOfShallowHistory:
-            return None
+            actions = []
 
         elif kind == SpecialRow.TruncatedHistory:
             expandSome = makeInternalLink("expandlog")
@@ -208,11 +208,13 @@ class GraphView(QListView):
 
     @property
     def currentCommitId(self) -> Oid | None:
+        # TODO: If pygit2 had Oid.__bool__() which returned True if the hash isn't NULL_OID,
+        #       we wouldn't have to return None for compatibility with existing code
         currentIndex = self.currentIndex()
         if not currentIndex.isValid():
-            return
+            return None
         if SpecialRow.Commit != currentIndex.data(CommitLogModel.Role.SpecialRow):
-            return
+            return None
         oid = currentIndex.data(CommitLogModel.Role.Oid)
         return oid
 
@@ -236,15 +238,15 @@ class GraphView(QListView):
         super().selectionChanged(selected, deselected)
 
         if selected.count() == 0:
-            self.onSetCurrent(None)
+            self.onSetCurrent()
         else:
             self.onSetCurrent(selected.indexes()[0])
 
-    def onSetCurrent(self, current: QModelIndex = None):
+    def onSetCurrent(self, current: QModelIndex = QModelIndex_default):
         if self.signalsBlocked():  # Don't bother with the jump if our signals are blocked
             return
 
-        if current is None or not current.isValid():
+        if not current.isValid():
             locator = NavLocator(NavContext.EMPTY)
         else:
             special = current.data(CommitLogModel.Role.SpecialRow)

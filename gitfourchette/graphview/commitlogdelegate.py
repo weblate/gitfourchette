@@ -350,7 +350,7 @@ class CommitLogDelegate(QStyledItemDelegate):
             text = refName
         color = refboxDef.color
         bgColor = QColor(color)
-        icon = refboxDef.icon
+        iconName = refboxDef.icon
 
         if dark:
             color = color.lighter(300)
@@ -360,7 +360,7 @@ class CommitLogDelegate(QStyledItemDelegate):
 
         if isHome:
             font = self.homeRefboxFont
-            icon = "git-head"
+            iconName = "git-head"
         elif refName == 'HEAD' and self.repoModel.headIsDetached:
             text = self.tr("Detached HEAD")
             font = self.homeRefboxFont
@@ -373,7 +373,7 @@ class CommitLogDelegate(QStyledItemDelegate):
         hPadding = 3
         vMargin = max(0, math.ceil((rect.height() - 16) / 4))
 
-        if icon:
+        if iconName:
             iconRect = QRect(rect)
             iconRect.adjust(hPadding, vMargin, 0, -vMargin)
             iconSize = min(16, iconRect.height())
@@ -394,8 +394,8 @@ class CommitLogDelegate(QStyledItemDelegate):
         painter.fillPath(framePath, bgColor)
         painter.drawPath(framePath)
 
-        if icon:
-            icon = stockIcon(icon, f"gray={color.name()}")
+        if iconName:
+            icon = stockIcon(iconName, f"gray={color.name()}")
             icon.paint(painter, iconRect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         textRect = QRect(boxRect)
@@ -424,9 +424,9 @@ class CommitLogDelegate(QStyledItemDelegate):
             text += " " + shortenTracebackPath(details[-2].splitlines(False)[0]) + ":: " + repr(exc)
 
         if option.state & QStyle.StateFlag.State_Selected:
-            bg, fg = Qt.GlobalColor.red, Qt.GlobalColor.white
+            bg, fg = QColor(Qt.GlobalColor.red), QColor(Qt.GlobalColor.white)
         else:
-            bg, fg = option.palette.color(QPalette.ColorRole.Base), Qt.GlobalColor.red
+            bg, fg = option.palette.color(QPalette.ColorRole.Base), QColor(Qt.GlobalColor.red)
 
         painter.fillRect(option.rect, bg)
         painter.setPen(fg)

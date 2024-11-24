@@ -10,10 +10,10 @@ import enum
 import logging
 import warnings
 from collections.abc import Generator
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, Literal, TypeVar
 
 from gitfourchette.nav import NavLocator
-from gitfourchette.porcelain import ConflictError, MultiFileError, RepositoryState
+from gitfourchette.porcelain import ConflictError, MultiFileError, RepositoryState, Repo
 from gitfourchette.qt import *
 from gitfourchette.repomodel import RepoModel
 from gitfourchette.settings import DEVDEBUG
@@ -149,12 +149,14 @@ class RepoTask(QObject):
 
     uiReady = Signal()
 
-    repoModel: RepoModel | None
+    repo: Repo
+
+    repoModel: RepoModel
 
     jumpTo: NavLocator
     """ Jump to this location when this task completes. """
 
-    effects: TaskEffects.Nothing
+    effects: TaskEffects
     """ Which parts of the UI should be refreshed when this task completes. """
 
     _postStatus: str
@@ -208,16 +210,18 @@ class RepoTask(QObject):
 
     @property
     def rw(self) -> RepoWidget:  # hack for now - assume parent is a RepoWidget
-        pw = self.parentWidget()
+        parentWidget = self.parentWidget()
         if DEVDEBUG:
             from gitfourchette.repowidget import RepoWidget
-            assert isinstance(pw, RepoWidget)
-        return pw
+            assert isinstance(parentWidget, RepoWidget)
+        return parentWidget
 
-    def setRepoModel(self, repoModel: RepoModel):
+    def setRepoModel(self, repoModel: RepoModel | None):
         self.repoModel = repoModel
-        if self.repoModel:
+        if self.repoModel is not None:
             self.repo = repoModel.repo
+        else:
+            self.repo = None
 
     def __str__(self):
         return self.objectName()
@@ -277,7 +281,8 @@ class RepoTask(QObject):
 
         The coroutine always starts on the UI thread.
         """
-        pass
+        # Dummy yield to make it a generator. You should override this function anyway!
+        yield from self.flowEnterUiThread()
 
     def cleanup(self):
         """
@@ -338,8 +343,8 @@ class RepoTask(QObject):
         self._runningOnUiThread = True
         yield FlowControlToken(FlowControlToken.Kind.ContinueOnUiThread)
 
-    def flowSubtask(self, subtaskClass: type[RepoTask], *args, **kwargs
-                    ) -> Generator[FlowControlToken, None, RepoTask]:
+    def flowSubtask(self, subtaskClass: type[RepoTaskSubtype], *args, **kwargs
+                    ) -> Generator[FlowControlToken, None, RepoTaskSubtype]:
         """
         Run a subtask's flow() method as if it were part of this task.
         Note that if the subtask raises an exception, the root task's flow will be stopped as well.
@@ -415,7 +420,7 @@ class RepoTask(QObject):
         assert self._currentFlow is not None
         assert self._isRunningOnAppThread()
 
-        parentWidget = self.parentWidget()
+        parentWidget = self.rw
         if parentWidget.isVisible():
             return
 
@@ -474,7 +479,7 @@ class RepoTask(QObject):
             detailList: list[str] | None = None,
             dontShowAgainKey: str = "",
             canCancel: bool = True,
-            icon: MessageBoxIconName = "",
+            icon: MessageBoxIconName | Literal[""] = "",
             checkbox: QCheckBox | None = None,
     ):
         """
@@ -601,7 +606,7 @@ class RepoTaskRunner(QObject):
     _zombieTask: RepoTask | None
     "Task that is being interrupted"
 
-    _currentTaskBenchmark = Benchmark | None
+    _currentTaskBenchmark: Benchmark
     "Context manager"
 
     _criticalTaskQueue: list
@@ -611,7 +616,7 @@ class RepoTaskRunner(QObject):
         self.setObjectName("RepoTaskRunner")
         self._currentTask = None
         self._zombieTask = None
-        self._currentTaskBenchmark = None
+        self._currentTaskBenchmark = Benchmark("???")
         self._criticalTaskQueue = []
 
         self._workerThread = FlowWorkerThread(self)
@@ -703,7 +708,7 @@ class RepoTaskRunner(QObject):
 
         logger.debug(f">>> {task}")
 
-        self._currentTaskBenchmark = Benchmark(str(task))
+        self._currentTaskBenchmark.name = str(task)
         self._currentTaskBenchmark.__enter__()
 
         # Prepare internal signal for coroutine continuation
@@ -879,3 +884,6 @@ class TaskInvoker(QObject):
     @staticmethod
     def invoke(invoker: QObject, taskType: type[RepoTask], *args, **kwargs):
         TaskInvoker.instance().invokeSignal.emit(invoker, taskType, args, kwargs)
+
+
+RepoTaskSubtype = TypeVar('RepoTaskSubtype', bound=RepoTask)

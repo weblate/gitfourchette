@@ -12,6 +12,7 @@ Unlike most other tasks, jump tasks directly manipulate the UI extensively, via 
 import dataclasses
 import logging
 import os
+from collections.abc import Generator
 
 from gitfourchette.diffview.diffdocument import DiffDocument
 from gitfourchette.diffview.specialdiff import SpecialDiffError, DiffConflict, DiffImagePair
@@ -23,7 +24,7 @@ from gitfourchette.repomodel import UC_FAKEID
 from gitfourchette.sidebar.sidebarmodel import UC_FAKEREF
 from gitfourchette.tasks import TaskPrereqs
 from gitfourchette.tasks.loadtasks import LoadCommit, LoadPatch, LoadWorkdir
-from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError
+from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects, RepoGoneError, FlowControlToken
 from gitfourchette.toolbox import *
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class Jump(RepoTask):
         locator: NavLocator
         header: str
         document: DiffDocument | DiffConflict | DiffImagePair | SpecialDiffError | None
-        patch: Patch = None
+        patch: Patch | None = None
 
     def canKill(self, task: RepoTask):
         return isinstance(task, Jump | RefreshRepo)
@@ -92,7 +93,7 @@ class Jump(RepoTask):
             if locator.path:
                 # Load patch in DiffView
                 patch = fileList.getPatchForFile(locator.path)
-                patchTask: LoadPatch = yield from self.flowSubtask(LoadPatch, patch, locator)
+                patchTask = yield from self.flowSubtask(LoadPatch, patch, locator)
                 result = Jump.Result(locator, patchTask.header, patchTask.result, patch)
             else:
                 # Blank path
@@ -101,8 +102,9 @@ class Jump(RepoTask):
         self.saveFinalLocator(result.locator)
         self.displayResult(result)
 
-    def showWorkdir(self, locator: NavLocator):
+    def showWorkdir(self, locator: NavLocator) -> Generator[FlowControlToken, None, NavLocator]:
         rw = self.rw
+        repoModel = self.repoModel
         previousLocator = rw.navLocator
 
         # Save selected row number for the end of the function
@@ -123,13 +125,13 @@ class Jump(RepoTask):
         # Stale workdir model - force load workdir
         if (previousLocator.context == NavContext.EMPTY
                 or locator.hasFlags(NavFlags.ForceDiff)
-                or rw.repoModel.workdirStale):
+                or repoModel.workdirStale):
             # Don't clear stale flag until AFTER we're done reloading the workdir
             # so that it stays stale if this task gets interrupted.
-            rw.repoModel.workdirStale = True
+            repoModel.workdirStale = True
 
             # Load workdir (async)
-            workdirTask: LoadWorkdir = yield from self.flowSubtask(
+            workdirTask = yield from self.flowSubtask(
                 LoadWorkdir, allowWriteIndex=locator.hasFlags(NavFlags.AllowWriteIndex))
 
             # Fill FileListViews
@@ -150,10 +152,10 @@ class Jump(RepoTask):
                 rw.diffArea.commitButton.setFont(commitButtonFont)
 
             newNumChanges = nDirty + nStaged
-            numChangesDifferent = rw.repoModel.numUncommittedChanges != newNumChanges
-            rw.repoModel.numUncommittedChanges = newNumChanges
+            numChangesDifferent = repoModel.numUncommittedChanges != newNumChanges
+            repoModel.numUncommittedChanges = newNumChanges
 
-            rw.repoModel.workdirStale = False
+            repoModel.workdirStale = False
 
             # Show number of staged changes in sidebar and graph
             if numChangesDifferent:
@@ -214,7 +216,7 @@ class Jump(RepoTask):
         elif locator.path == str(SpecialRow.TruncatedHistory):
             from gitfourchette import settings
             prefThreshold = settings.prefs.maxCommits
-            nextThreshold = rw.repoModel.nextTruncationThreshold
+            nextThreshold = self.repoModel.nextTruncationThreshold
             expandSome = makeInternalLink("expandlog")
             expandAll = makeInternalLink("expandlog", n=str(0))
             changePref = makeInternalLink("prefs", "maxCommits")
@@ -232,7 +234,7 @@ class Jump(RepoTask):
         else:
             raise NotImplementedError(f"Unsupported special locator: {locator}")
 
-    def showCommit(self, locator: NavLocator) -> NavLocator:
+    def showCommit(self, locator: NavLocator) -> Generator[FlowControlToken, None, NavLocator]:
         """
         Jump to a commit.
         Return a refined NavLocator.
@@ -246,7 +248,7 @@ class Jump(RepoTask):
         if locator.ref:
             assert locator.commit == NULL_OID
             try:
-                oid = rw.repoModel.refs[locator.ref]
+                oid = self.repoModel.refs[locator.ref]
                 locator = locator.replace(commit=oid, ref="")
             except KeyError as exc:
                 raise AbortTask(self.tr("Unknown reference {0}.").format(tquo(locator.ref))) from exc
@@ -301,7 +303,6 @@ class Jump(RepoTask):
 
             # Load commit (async)
             subtask = yield from self.flowSubtask(LoadCommit, locator)
-            assert isinstance(subtask, LoadCommit)
 
             # Get data from subtask
             diffs = subtask.diffs
@@ -358,36 +359,36 @@ class Jump(RepoTask):
             self.rw.historyChanged.emit()
 
     def displayResult(self, result: Result):
-        repo = self.rw.repo
         area = self.rw.diffArea
 
         # Set header
         area.diffHeader.setText(result.header)
 
         document = result.document
-        documentType = type(document)
 
         if document is None:
             area.clearDocument()
 
-        elif documentType is DiffDocument:
+        elif isinstance(document, DiffDocument):
+            assert result.patch is not None
             area.setDiffStackPage("text")
-            area.diffView.replaceDocument(repo, result.patch, result.locator, document)
+            area.diffView.replaceDocument(self.repo, result.patch, result.locator, document)
 
-        elif documentType is DiffConflict:
+        elif isinstance(document, DiffConflict):
             area.setDiffStackPage("conflict")
             area.conflictView.displayConflict(document)
 
-        elif documentType is SpecialDiffError:
+        elif isinstance(document, SpecialDiffError):
             area.setDiffStackPage("special")
             area.specialDiffView.displaySpecialDiffError(document)
 
-        elif documentType is DiffImagePair:
+        elif isinstance(document, DiffImagePair):
+            assert result.patch is not None
             area.setDiffStackPage("special")
             area.specialDiffView.displayImageDiff(result.patch.delta, document.oldImage, document.newImage)
 
         else:
-            raise NotImplementedError(f"Can't display {documentType}")
+            raise NotImplementedError(f"Can't display {type(document)}")
 
 
 class JumpBackOrForward(RepoTask):
@@ -460,7 +461,7 @@ class RefreshRepo(RepoTask):
 
     def flow(self, effectFlags: TaskEffects = TaskEffects.DefaultRefresh, jumpTo: NavLocator = NavLocator.Empty):
         rw = self.rw
-        repoModel = rw.repoModel
+        repoModel = self.repoModel
         assert onAppThread()
 
         if effectFlags == TaskEffects.Nothing:

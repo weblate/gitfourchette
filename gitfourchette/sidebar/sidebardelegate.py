@@ -32,8 +32,11 @@ class SidebarDelegate(QStyledItemDelegate):
     and hide/show icons.
     """
 
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QTreeView):
         super().__init__(parent)
+        self.treeView = parent
+        self.sidebarModel = parent.model()
+        assert isinstance(self.sidebarModel, SidebarModel)
 
     @staticmethod
     def unindentRect(item: SidebarItem, rect: QRect, indentation: int):
@@ -56,13 +59,16 @@ class SidebarDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         node = SidebarNode.fromIndex(index)
+        assert node.parent is not None, "can't paint root node"
 
-        view = option.widget
-        sidebarModel: SidebarModel = view.sidebarModel
+        sidebarModel = self.sidebarModel
+        view = self.treeView
+        assert view is option.widget
+
         style: QStyle = view.style()
-        hasFocus = option.state & QStyle.StateFlag.State_HasFocus
-        isSelected = option.state & QStyle.StateFlag.State_Selected
-        mouseOver = option.state & QStyle.StateFlag.State_Enabled and option.state & QStyle.StateFlag.State_MouseOver
+        hasFocus = bool(option.state & QStyle.StateFlag.State_HasFocus)
+        isSelected = bool(option.state & QStyle.StateFlag.State_Selected)
+        mouseOver = bool(option.state & QStyle.StateFlag.State_Enabled) and bool(option.state & QStyle.StateFlag.State_MouseOver)
         colorGroup = QPalette.ColorGroup.Normal if hasFocus else QPalette.ColorGroup.Inactive
 
         isExplicitlyHidden = False

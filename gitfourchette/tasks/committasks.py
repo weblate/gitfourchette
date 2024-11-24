@@ -63,6 +63,7 @@ class NewCommit(RepoTask):
         if uiPrefs.draftCommitSignatureOverride == SignatureOverride.Nothing:
             cd.ui.revealSignature.setChecked(False)
         else:
+            assert uiPrefs.draftCommitSignature is not None, "overridden Signature can't be None"
             cd.ui.revealSignature.setChecked(True)
             cd.ui.signature.setSignature(uiPrefs.draftCommitSignature)
             cd.ui.signature.ui.replaceComboBox.setCurrentIndex(int(uiPrefs.draftCommitSignatureOverride) - 1)
@@ -277,12 +278,12 @@ class NewTag(RepoTask):
     def prereqs(self):
         return TaskPrereqs.NoUnborn
 
-    def flow(self, oid: Oid = None, signIt: bool = False):
+    def flow(self, oid: Oid = NULL_OID, signIt: bool = False):
         if signIt:
             yield from self.flowSubtask(SetUpGitIdentity, self.tr("Proceed to New Tag"))
 
         repo = self.repo
-        if not oid:
+        if oid is None or oid == NULL_OID:
             oid = repo.head_commit_id
 
         reservedNames = repo.listall_tags()

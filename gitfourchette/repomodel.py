@@ -41,7 +41,7 @@ class RepoModel:
 
     truncatedHistory: bool
 
-    graph: Graph | None
+    graph: Graph
 
     refs: dict[str, Oid]
     "Get target commit ID by reference name."
@@ -54,6 +54,13 @@ class RepoModel:
     stashes: list[Oid]
 
     submodules: dict[str, str]
+    "Map of submodule names to the relative paths of their workdirs."
+
+    initializedSubmodules: set[str]
+    "Set of submodule names that are registered in .gitmodules."
+
+    remotes: list[str]
+    "List of remote names."
 
     superproject: str
     "Path of the superproject. Empty string if this isn't a submodule."
@@ -89,7 +96,7 @@ class RepoModel:
         self.truncatedHistory = True
 
         self.walker = None
-        self.graph = None
+        self.graph = Graph()
 
         self.headIsDetached = False
         self.homeBranch = ""

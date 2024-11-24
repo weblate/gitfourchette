@@ -46,7 +46,7 @@ class RepoWidget(QStackedWidget):
     statusMessage = Signal(str)
     clearStatus = Signal()
 
-    repoModel: RepoModel | None
+    repoModel: RepoModel
 
     pendingPath: str
     "Path of the repository if it isn't loaded yet (state=None)"
@@ -61,6 +61,7 @@ class RepoWidget(QStackedWidget):
 
     splittersToSave: list[QSplitter]
     sharedSplitterSizes: dict[str, list[int]]
+    centralSplitSizesBackup: list[int]
 
     def __del__(self):
         logger.debug(f"__del__ RepoWidget {self.pendingPath}")
@@ -70,11 +71,10 @@ class RepoWidget(QStackedWidget):
         return True
 
     @property
-    def repo(self) -> Repo | None:
-        if self.repoModel:
-            return self.repoModel.repo
-        else:
+    def repo(self) -> Repo:
+        if self.repoModel is None:
             return None
+        return self.repoModel.repo
 
     @property
     def isLoaded(self):
@@ -126,8 +126,8 @@ class RepoWidget(QStackedWidget):
         self.navLocator = NavLocator()
         self.navHistory = NavHistory()
 
-        # To be replaced with a shared reference
-        self.sharedSplitterSizes = {}
+        self.sharedSplitterSizes = {}  # To be replaced with a shared reference
+        self.centralSplitSizesBackup = []
 
         self.uiReady = False
         self.mainWidgetPlaceholder = None
@@ -274,13 +274,12 @@ class RepoWidget(QStackedWidget):
         repo = self.repo
         if not self.uiReady:
             return
-        widgets = [
+        for w in (
             self.diffArea.dirtyFiles,
             self.diffArea.stagedFiles,
             self.diffArea.committedFiles,
             self.diffArea.conflictView,
-        ]
-        for w in widgets:
+        ):
             w.repo = repo
 
     # -------------------------------------------------------------------------
@@ -495,7 +494,7 @@ class RepoWidget(QStackedWidget):
 
         # Don't bother with the placeholder widget if we've been lazy-initialized
         installPlaceholder &= self.uiReady
-        hasRepo = self.repoModel and self.repoModel.repo
+        hasRepo = self.repoModel is not None and self.repoModel.repo is not None
 
         # Save sidebar collapse cache (if our UI has settled)
         if hasRepo and self.uiReady:

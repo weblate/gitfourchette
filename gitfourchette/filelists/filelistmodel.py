@@ -139,8 +139,8 @@ class FileListModel(QAbstractListModel):
                 return None
 
     class Role:
-        PatchObject = Qt.ItemDataRole.UserRole + 0
-        FilePath = Qt.ItemDataRole.UserRole + 1
+        PatchObject = Qt.ItemDataRole(Qt.ItemDataRole.UserRole + 0)
+        FilePath = Qt.ItemDataRole(Qt.ItemDataRole.UserRole + 1)
 
     entries: list[Entry]
     fileRows: dict[str, int]
@@ -160,6 +160,12 @@ class FileListModel(QAbstractListModel):
     @property
     def repo(self) -> Repo:
         return self.parent().repo
+
+    @property
+    def parentWidget(self) -> QWidget:
+        parentWidget = self.parent()
+        assert isinstance(parentWidget, QWidget)
+        return parentWidget
 
     def clear(self):
         self.entries = []
@@ -227,14 +233,13 @@ class FileListModel(QAbstractListModel):
             return fileTooltip(self.repo, delta, self.navContext, isCounterpart)
 
         elif role == Qt.ItemDataRole.SizeHintRole:
-            parentWidget: QWidget = self.parent()
-            return QSize(-1, parentWidget.fontMetrics().height())
+            return QSize(-1, self.parentWidget.fontMetrics().height())
 
         elif role == Qt.ItemDataRole.FontRole:
             if index.row() == self.highlightedCounterpartRow:
-                f: QFont = self.parent().font()
-                f.setUnderline(True)
-                return f
+                font = self.parentWidget.font()
+                font.setUnderline(True)
+                return font
 
         return None
 

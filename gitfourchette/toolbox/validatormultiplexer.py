@@ -69,7 +69,7 @@ class ValidatorMultiplexer(QObject):
             showError: bool = True,
             mustBeValid: bool = True):
         assert isinstance(edit, QLineEdit)
-        assert isinstance(validate, Callable)
+        assert callable(validate)
 
         errorButton = edit.addAction(stockIcon("achtung"), QLineEdit.ActionPosition.TrailingPosition)
         errorButton.setVisible(False)

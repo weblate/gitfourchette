@@ -38,13 +38,13 @@ class DirtyFiles(FileList):
                 self.tr("&Stage %n Files", "", n),
                 self.stage,
                 icon="git-stage",
-                shortcuts=makeMultiShortcut(GlobalShortcuts.stageHotkeys))
+                shortcuts=GlobalShortcuts.stageHotkeys[0])
 
             contextMenuActionDiscard = ActionDef(
                 self.tr("&Discard Changes"),
                 self.discard,
                 icon="git-discard",
-                shortcuts=makeMultiShortcut(GlobalShortcuts.discardHotkeys))
+                shortcuts=GlobalShortcuts.discardHotkeys[0])
 
             actions += [
                 contextMenuActionStage,

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 MessageBoxIconName = Literal['warning', 'information', 'question', 'critical']
 
-_excMessageBoxQueue = []
+_excMessageBoxQueue: list[QMessageBox] = []
 
 
 def excMessageBox(
@@ -68,8 +68,8 @@ def excMessageBox(
                 TrTables.init()
                 summary = f"{TrTables.exceptionName(exc)}: {exc}"
             except:  # noqa: E722
-                summary = traceback.format_exception_only(exc.__class__, exc)
-                summary = ''.join(summary).strip()
+                summaryLines = traceback.format_exception_only(exc.__class__, exc)
+                summary = ''.join(summaryLines).strip()
 
             if len(summary) > 500:
                 summary = summary[:500] + "... " + tr("(MESSAGE TRUNCATED)")
@@ -78,9 +78,8 @@ def excMessageBox(
                 message += "<p><small>" + tr("If you want to file a bug report, please click “Show Details” "
                                              "and copy the <b>entire</b> message.")
 
-            details = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
-            details = [shortenTracebackPath(line) for line in details]
-            details = ''.join(details).strip()
+            tracebackLines = traceback.format_exception(exc.__class__, exc, exc.__traceback__)
+            details = ''.join(shortenTracebackPath(line) for line in tracebackLines).strip()
 
         qmb = asyncMessageBox(parent, icon, title, message)
 

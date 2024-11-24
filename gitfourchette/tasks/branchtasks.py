@@ -467,12 +467,12 @@ class FastForwardBranch(RepoTask):
         yield from self.flowEnterUiThread()
 
         if upToDate:
-            message = [self.tr("No fast-forwarding necessary.")]
+            lines = [self.tr("No fast-forwarding necessary.")]
             if ahead:
-                message.append(self.tr("Your local branch {0} is ahead of {1}."))
+                lines.append(self.tr("Your local branch {0} is ahead of {1}."))
             else:
-                message.append(self.tr("Your local branch {0} is already up-to-date with {1}."))
-            message = paragraphs(message).format(bquo(localBranchName), bquo(remoteBranchName))
+                lines.append(self.tr("Your local branch {0} is already up-to-date with {1}."))
+            message = paragraphs(lines).format(bquo(localBranchName), bquo(remoteBranchName))
             self.postStatus = stripHtml(message)
             yield from self.flowConfirm(text=message, canCancel=False, dontShowAgainKey="NoFastForwardingNecessary")
 
@@ -511,7 +511,9 @@ class MergeBranch(RepoTask):
         anyStagedFiles = self.repo.any_staged_changes
         anyConflicts = self.repo.any_conflicts
         myShorthand = self.repo.head_branch_shorthand
-        target: Oid = theirBranch.target
+        target = theirBranch.target
+        assert theirBranch.type == ReferenceType.DIRECT
+        assert isinstance(target, Oid), "branch isn't a direct reference!"
         analysis, pref = self.repo.merge_analysis(target)
 
         yield from self.flowEnterUiThread()

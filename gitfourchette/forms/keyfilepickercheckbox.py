@@ -23,12 +23,11 @@ class KeyFilePickerCheckBox(QFilePickerCheckBox):
 
     def fileDialog(self):
         sshDir = Path(KeyFilePickerCheckBox.DefaultSshDir).expanduser()
-        if not sshDir.exists():
-            sshDir = ""
+        fallbackPath = str(sshDir) if sshDir.exists() else ""
 
         prompt = self.tr("Select public key file for this remote")
         publicKeyFilter = self.tr("Public key file") + " (*.pub)"
-        return PersistentFileDialog.openFile(self, "KeyFile", prompt, filter=publicKeyFilter, fallbackPath=str(sshDir))
+        return PersistentFileDialog.openFile(self, "KeyFile", prompt, filter=publicKeyFilter, fallbackPath=fallbackPath)
 
     def validatePath(self, path: str):
         if not path:
