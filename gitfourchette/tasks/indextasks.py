@@ -10,6 +10,7 @@ import shutil
 from contextlib import suppress
 
 from gitfourchette import reverseunidiff
+from gitfourchette.mergedriver import MergeDriver
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -17,7 +18,6 @@ from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskEffects
 from gitfourchette.toolbox import *
 from gitfourchette.trash import Trash
 from gitfourchette.trtables import TrTables
-from gitfourchette.unmergedconflict import UnmergedConflict
 
 logger = logging.getLogger(__name__)
 
@@ -392,34 +392,30 @@ class AcceptMergeConflictResolution(RepoTask):
         """
         return True
 
-    def flow(self, umc: UnmergedConflict):
+    def flow(self, mergeDriver: MergeDriver):
+        path = mergeDriver.relativeTargetPath
+
         message = paragraphs(
             self.tr("It looks like you’ve resolved the merge conflict in {0}."),
             self.tr("Do you want to keep this resolution?")
-        ).format(bquo(umc.conflict.ours.path))
+        ).format(bquo(path))
 
-        yield from self.flowConfirm(
-            self.tr("Merge conflict resolved"), message,
-            verb=self.tr("Confirm resolution"), cancelText=self.tr("Discard resolution"))
+        # TODO: Delete mergeDriver on cancel!
+        yield from self.flowConfirm(self.tr("Merge conflict resolved"), message,
+                                    verb=self.tr("Confirm resolution"), cancelText=self.tr("Discard resolution"))
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir
 
-        repo = self.repo
+        mergeDriver.copyScratchToTarget()
+        mergeDriver.deleteLater()
 
-        path = umc.conflict.ours.path
-        with open(umc.scratchPath, "rb") as scratchFile, \
-                open(repo.in_workdir(path), "wb") as ourFile:
-            data = scratchFile.read()
-            ourFile.write(data)
-
-        del repo.index.conflicts[path]
-        repo.index.add(path)
+        del self.repo.index.conflicts[path]
+        self.repo.index.add(path)
 
         # Jump to staged file after confirming conflict resolution
         self.jumpTo = NavLocator.inStaged(path)
-
-        umc.deleteLater()
+        self.postStatus = self.tr("Merge conflict resolution completed in {0}.").format(tquo(path))
 
 
 class ApplyPatchFile(RepoTask):

@@ -9,12 +9,12 @@ import os
 from gitfourchette import settings, colors
 from gitfourchette.exttools import PREFKEY_MERGETOOL
 from gitfourchette.forms.ui_conflictview import Ui_ConflictView
+from gitfourchette.mergedriver import MergeDriver
 from gitfourchette.porcelain import NULL_OID, DiffConflict, ConflictSides
 from gitfourchette.qt import *
 from gitfourchette.tasks import HardSolveConflicts, AcceptMergeConflictResolution
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
-from gitfourchette.unmergedconflict import UnmergedConflict
 
 
 class ConflictView(QWidget):
@@ -108,10 +108,10 @@ class ConflictView(QWidget):
 
     def openMergeTool(self, conflict: DiffConflict):
         self.ui.explainer.setText(self.tr("Waiting for merge tool..."))
-        umc = UnmergedConflict(self, self.repo, conflict)
-        umc.mergeComplete.connect(lambda: AcceptMergeConflictResolution.invoke(self, umc))
-        umc.mergeFailed.connect(lambda code: self.onMergeFailed(conflict, code))
-        umc.startProcess()
+        mergeDriver = MergeDriver(self, self.repo, conflict)
+        mergeDriver.mergeComplete.connect(lambda: AcceptMergeConflictResolution.invoke(self, mergeDriver))
+        mergeDriver.mergeFailed.connect(lambda code: self.onMergeFailed(conflict, code))
+        mergeDriver.startProcess()
 
     def clear(self):
         self.currentConflict = None
@@ -154,18 +154,11 @@ class ConflictView(QWidget):
     def reformatWidgetText(self):
         formatWidgetText(self.ui.radioTool, tool=settings.getMergeToolName())
 
-        conflict = self.currentConflict
-        if not conflict:
+        if not self.currentConflict:
             return
 
-        if conflict.ours:
-            displayPath = conflict.ours.path
-        elif conflict.theirs:
-            displayPath = conflict.theirs.path
-        else:
-            displayPath = conflict.ancestor.path
-
-        formatWidgetText(self.ui.titleLabel, lquo(os.path.basename(displayPath)))
+        displayPath = os.path.basename(self.currentConflict.best_path)
+        formatWidgetText(self.ui.titleLabel, lquo(displayPath))
 
     def onRadioClicked(self):
         assert self.currentConflict

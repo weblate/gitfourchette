@@ -204,8 +204,3 @@ def openInTextEditor(parent: QWidget, path: str):
 def openInDiffTool(parent: QWidget, a: str, b: str):
     return openInExternalTool(parent, PREFKEY_DIFFTOOL, positional=[],
                               replacements={"$L": a, "$R": b})
-
-
-def openInMergeTool(parent: QWidget, ancestor: str, ours: str, theirs: str, output: str):
-    return openInExternalTool(parent, PREFKEY_MERGETOOL, positional=[],
-                              replacements={"$B": ancestor, "$L": ours, "$R": theirs, "$M": output})

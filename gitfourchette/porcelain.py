@@ -1860,13 +1860,13 @@ class RepoContext:
 
 class ConflictSides(enum.IntEnum):
     # -------------------TOA (Theirs, Ours, Ancestor)
-    MODIFIED_BY_BOTH = 0b111
-    DELETED_BY_THEM  = 0b011
-    DELETED_BY_US    = 0b101
     DELETED_BY_BOTH  = 0b001
     ADDED_BY_US      = 0b010
+    DELETED_BY_THEM  = 0b011
     ADDED_BY_THEM    = 0b100
+    DELETED_BY_US    = 0b101
     ADDED_BY_BOTH    = 0b110
+    MODIFIED_BY_BOTH = 0b111
 
 
 @_dataclasses.dataclass(frozen=True)
@@ -1910,6 +1910,16 @@ class DiffConflict:
     @property
     def added_by_both(self):
         return self.sides == ConflictSides.ADDED_BY_BOTH
+
+    @property
+    def best_path(self) -> str:
+        if self.ours:
+            return self.ours.path
+        elif self.theirs:
+            return self.theirs.path
+        elif self.ancestor:
+            return self.ancestor.path
+        raise NotImplementedError("empty conflict")
 
 
 @_dataclasses.dataclass(frozen=True)
