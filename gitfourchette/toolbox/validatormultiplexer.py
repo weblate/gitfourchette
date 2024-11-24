@@ -35,10 +35,12 @@ class ValidatorMultiplexer(QObject):
     until all QLineEdits in it are valid.
     """
 
+    CallbackFunc = Callable[[str], str]
+
     @dataclass
     class Input:
         widget: QLineEdit
-        validate: Callable[[str], str]
+        validate: ValidatorMultiplexer.CallbackFunc
         showError: bool
         mustBeValid: bool
         errorButton: QAction

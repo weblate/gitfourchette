@@ -6,14 +6,14 @@
 
 import logging
 
+from gitfourchette.forms.newbranchdialog import NewBranchDialog
 from gitfourchette.forms.resetheaddialog import ResetHeadDialog
+from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.tasks.repotask import AbortTask, RepoTask, TaskPrereqs, TaskEffects
 from gitfourchette.toolbox import *
-from gitfourchette.forms.brandeddialog import showTextInputDialog
-from gitfourchette.forms.newbranchdialog import NewBranchDialog
 
 logger = logging.getLogger(__name__)
 
@@ -74,15 +74,14 @@ class RenameBranch(RepoTask):
 
         nameTaken = self.tr("This name is already taken by another local branch.")
 
-        dlg = showTextInputDialog(
+        dlg = TextInputDialog(
             self.parentWidget(),
             self.tr("Rename local branch"),
             self.tr("Enter new name:"),
-            oldBranchName,
-            okButtonText=self.tr("Rename"),
-            validate=lambda name: nameValidationMessage(name, forbiddenBranchNames, nameTaken),
-            deleteOnClose=False,
-            subtitleText=self.tr("Current name: {0}").format(oldBranchName))
+            subtitle=self.tr("Current name: {0}").format(oldBranchName))
+        dlg.setText(oldBranchName)
+        dlg.setValidator(lambda name: nameValidationMessage(name, forbiddenBranchNames, nameTaken))
+        dlg.okButton.setText(self.tr("Rename"))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
@@ -137,16 +136,15 @@ class RenameBranchFolder(RepoTask):
         subtitle = self.tr("Folder {0} contains %n branches.", "", len(folderBranches)
                            ).format(lquoe(oldFolderName))
 
-        dlg = showTextInputDialog(
+        dlg = TextInputDialog(
             self.parentWidget(),
             self.tr("Rename branch folder"),
             self.tr("Enter new name:"),
-            oldFolderName,
-            okButtonText=self.tr("Rename"),
-            validate=validate,
-            deleteOnClose=False,
-            subtitleText=subtitle,
-            placeholderText=self.tr("Leave blank to move the branches to the root folder."))
+            subtitle=subtitle)
+        dlg.setText(oldFolderName)
+        dlg.setValidator(validate)
+        dlg.okButton.setText(self.tr("Rename"))
+        dlg.lineEdit.setPlaceholderText(self.tr("Leave blank to move the branches to the root folder."))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
@@ -577,13 +575,12 @@ class MergeBranch(RepoTask):
 
 class RecallCommit(RepoTask):
     def flow(self):
-        dlg = showTextInputDialog(
+        dlg = TextInputDialog(
             self.parentWidget(),
             self.tr("Recall lost commit"),
             self.tr("If you know the hash of a commit that isn’t part of any branches anymore, "
-                    "{app} will try to recall it for you.").format(app=qAppName()),
-            okButtonText=self.tr("Recall"),
-            deleteOnClose=False)
+                    "{app} will try to recall it for you.").format(app=qAppName()))
+        dlg.okButton.setText(self.tr("Recall"))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()

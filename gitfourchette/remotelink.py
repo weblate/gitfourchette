@@ -13,7 +13,7 @@ import re
 from contextlib import suppress
 
 from gitfourchette import settings
-from gitfourchette.forms.brandeddialog import showTextInputDialog
+from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.repoprefs import RepoPrefs
@@ -326,15 +326,16 @@ class RemoteLink(QObject, RemoteCallbacks):
 
     def requestSecretUi(self, keyfile: str):
         assert onAppThread()
-        dlg = showTextInputDialog(
+        dlg = TextInputDialog(
             findParentWidget(self),
             self.tr("Passphrase-protected key file"),
             self.tr("Enter passphrase to use this key file:"),
-            subtitleText=escape(compactPath(keyfile)),
-            onAccept=lambda secret: self.secretReady.emit(keyfile, secret))
+            subtitle=escape(compactPath(keyfile)))
+        dlg.textAccepted.connect(lambda secret: self.secretReady.emit(keyfile, secret))
         dlg.rejected.connect(lambda: self.secretReady.emit(keyfile, None))
-        lineEdit: QLineEdit = dlg.findChild(QLineEdit)
-        lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
+        dlg.lineEdit.setEchoMode(QLineEdit.EchoMode.Password)
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        dlg.show()
 
     def formatUpdatedTipsMessage(self, header, noNewCommits=""):
         messages = [header]

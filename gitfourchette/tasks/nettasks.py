@@ -12,9 +12,9 @@ import logging
 import traceback
 from contextlib import suppress
 
-from gitfourchette.forms.brandeddialog import showTextInputDialog
 from gitfourchette.forms.pushdialog import PushDialog
 from gitfourchette.forms.remotelinkdialog import RemoteLinkDialog
+from gitfourchette.forms.textinputdialog import TextInputDialog
 from gitfourchette.nav import NavLocator
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
@@ -101,14 +101,13 @@ class RenameRemoteBranch(_BaseNetTask):
             reservedNames.remove(branchName)
         nameTaken = self.tr("This name is already taken by another branch on this remote.")
 
-        dlg = showTextInputDialog(
+        dlg = TextInputDialog(
             self.parentWidget(),
             self.tr("Rename remote branch {0}").format(tquoe(remoteBranchName)),
-            self.tr("WARNING: This will rename the branch for all users of the remote!") + "<br>" + self.tr("Enter new name:"),
-            newBranchName,
-            okButtonText=self.tr("Rename on remote"),
-            validate=lambda name: nameValidationMessage(name, reservedNames, nameTaken),
-            deleteOnClose=False)
+            self.tr("WARNING: This will rename the branch for all users of the remote!") + "<br>" + self.tr("Enter new name:"))
+        dlg.setText(newBranchName)
+        dlg.setValidator(lambda name: nameValidationMessage(name, reservedNames, nameTaken))
+        dlg.okButton.setText(self.tr("Rename on remote"))
 
         yield from self.flowDialog(dlg)
         dlg.deleteLater()
