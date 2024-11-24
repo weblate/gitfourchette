@@ -397,12 +397,33 @@ class AcceptMergeConflictResolution(RepoTask):
 
         message = paragraphs(
             self.tr("It looks like you’ve resolved the merge conflict in {0}."),
-            self.tr("Do you want to keep this resolution?")
+            self.tr("Do you want to keep this merge?")
         ).format(bquo(path))
 
-        # TODO: Delete mergeDriver on cancel!
-        yield from self.flowConfirm(self.tr("Merge conflict resolved"), message,
-                                    verb=self.tr("Confirm resolution"), cancelText=self.tr("Discard resolution"))
+        qmb = asyncMessageBox(
+            self.parentWidget(),
+            "question",
+            self.tr("Merge conflict resolved"),
+            message,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Retry)
+        # Important: Need a Cancel button so that flowDialog can hook to the reject signal!
+        qmb.button(QMessageBox.StandardButton.Ok).setText("Confirm this merge")
+        qmb.button(QMessageBox.StandardButton.Cancel).setText("Ignore this merge")
+        qmb.button(QMessageBox.StandardButton.Retry).setText("Merge again")
+        yield from self.flowDialog(qmb, abortTaskIfRejected=False)
+
+        result = qmb.result()
+
+        if result == QMessageBox.StandardButton.Retry:
+            mergeDriver.startProcess()
+            self.postStatus = self.tr("Waiting for you to resolve {0} in external merge tool...").format(tquo(path))
+            return
+        elif result in [QMessageBox.StandardButton.Cancel, QDialog.DialogCode.Rejected]:
+            mergeDriver.deleteLater()
+            self.postStatus = self.tr("Ignored merge resolution in {0}.").format(tquo(path))
+            return
+
+        assert result in [QMessageBox.StandardButton.Ok, QDialog.DialogCode.Accepted]
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir

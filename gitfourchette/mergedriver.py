@@ -48,6 +48,7 @@ class MergeDriver(QObject):
         # Make sure the output path exists so the FSW can begin watching it
         shutil.copyfile(self.targetPath, self.scratchPath)
 
+        # Delete the QObject (along with its temporary directory) when the merge fails
         self.mergeFailed.connect(lambda: self.deleteLater())
 
     def startProcess(self):

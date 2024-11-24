@@ -255,11 +255,34 @@ def testMergeTool(tempDir, mainWindow):
     scratchLines = scratchText.strip().splitlines()
     QTest.qWait(100)
 
-    assert "[MERGED]" in scratchLines[0]
-    assert "[OURS]" in scratchLines[1]
-    assert "[THEIRS]" in scratchLines[2]
+    mergedPath = scratchLines[0]
+    oursPath = scratchLines[1]
+    theirsPath = scratchLines[2]
+    assert "[MERGED]" in mergedPath
+    assert "[OURS]" in oursPath
+    assert "[THEIRS]" in theirsPath
     assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
 
+    # ------------------------------
+    # Hit "Merge Again"
+    assert not os.path.exists(scratchPath)  # should have been unlinked above
+    qmb = findQMessageBox(rw, "looks like.+resolved")
+    retryButton = qmb.button(QMessageBox.StandardButton.Retry)
+    assert retryButton.text().lower() == "merge again"
+    retryButton.click()
+
+    scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
+    scratchLines = scratchText.strip().splitlines()
+    QTest.qWait(100)
+
+    # Make sure the same command was run
+    assert scratchLines[0] == mergedPath
+    assert scratchLines[1] == oursPath
+    assert scratchLines[2] == theirsPath
+    assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
+
+    # ------------------------------
+    # Accept merge resolution
     acceptQMessageBox(rw, "looks like.+resolved")
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inStaged(".gitignore"))
 
