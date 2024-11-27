@@ -32,20 +32,38 @@ class MergeDriver(QObject):
         self.process = None
 
         assert conflict.ours is not None, "MergeDriver requires an 'ours' side in DiffConflict"
+        assert conflict.theirs is not None, "MergeDriver requires a 'theirs' side in DiffConflict"
 
         # Keep a reference to mergeDir so the temporary directory doesn't vanish
         self.mergeDir = tempfile.TemporaryDirectory(dir=qTempDir(), prefix="merge-", ignore_cleanup_errors=True)
         mergeDirPath = self.mergeDir.name
 
-        self.ancestorPath = dumpTempBlob(repo, mergeDirPath, conflict.ancestor, "ANCESTOR")
+        # Dump OURS and THEIRS blobs into the temporary directory
         self.oursPath = dumpTempBlob(repo, mergeDirPath, conflict.ours, "OURS")
         self.theirsPath = dumpTempBlob(repo, mergeDirPath, conflict.theirs, "THEIRS")
 
-        self.scratchPath = os.path.join(mergeDirPath, "[MERGED]" + os.path.basename(conflict.ours.path))
-        self.relativeTargetPath = conflict.ours.path
-        self.targetPath = repo.in_workdir(self.relativeTargetPath)
+        oursPath = conflict.ours.path
+        baseName = os.path.basename(oursPath)
+        self.targetPath = repo.in_workdir(oursPath)
+        self.relativeTargetPath = oursPath
 
-        # Make sure the output path exists so the FSW can begin watching it
+        if conflict.ancestor is not None:
+            # Dump ANCESTOR blob into the temporary directory
+            self.ancestorPath = dumpTempBlob(repo, mergeDirPath, conflict.ancestor, "ANCESTOR")
+        else:
+            # There's no ancestor! Some merge tools can fake a 3-way merge without
+            # an ancestor (e.g. PyCharm), but others won't (e.g. VS Code).
+            # To make sure we get a 3-way merge, copy our current workdir file as
+            # the fake ANCESTOR file. It should contain chevron conflict markers
+            # (<<<<<<< >>>>>>>) which should trigger conflicts between OURS and
+            # THEIRS in the merge tool.
+            self.ancestorPath = os.path.join(mergeDirPath, f"[NO-ANCESTOR]{baseName}")
+            shutil.copyfile(self.targetPath, self.ancestorPath)
+
+        # Create scratch file (merge tool output).
+        # Some merge tools (such as VS Code) use the contents of this file
+        # as a starting point, so copy the workdir version for this purpose.
+        self.scratchPath = os.path.join(mergeDirPath, f"[MERGED]{baseName}")
         shutil.copyfile(self.targetPath, self.scratchPath)
 
         # Delete the QObject (along with its temporary directory) when the merge fails

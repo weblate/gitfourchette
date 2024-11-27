@@ -261,7 +261,7 @@ def testMergeTool(tempDir, mainWindow):
     assert "[MERGED]" in mergedPath
     assert "[OURS]" in oursPath
     assert "[THEIRS]" in theirsPath
-    assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
+    assert "merge complete!" == readFile(mergedPath).decode("utf-8").strip()
 
     # ------------------------------
     # Hit "Merge Again"
@@ -279,7 +279,7 @@ def testMergeTool(tempDir, mainWindow):
     assert scratchLines[0] == mergedPath
     assert scratchLines[1] == oursPath
     assert scratchLines[2] == theirsPath
-    assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
+    assert "merge complete!" == readFile(mergedPath).decode("utf-8").strip()
 
     # ------------------------------
     # Accept merge resolution
@@ -289,6 +289,50 @@ def testMergeTool(tempDir, mainWindow):
     assert rw.mergeBanner.isVisible()
     assert "all conflicts fixed" in rw.mergeBanner.label.text().lower()
     assert not rw.repo.index.conflicts
+
+
+@pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
+def testFake3WayMerge(tempDir, mainWindow):
+    mergeToolPath = getTestDataPath("merge-shim.sh")
+    scratchPath = f"{tempDir.name}/external editor scratch file.txt"
+
+    wd = unpackRepo(tempDir, "testrepoformerging")
+
+    with RepoContext(wd) as repo:
+        repo.checkout_local_branch("i18n")
+
+    rw = mainWindow.openRepo(wd)
+
+    # Initiate merge of branch-conflicts into master
+    node = rw.sidebar.findNodeByRef("refs/heads/pep8-fixes")
+    triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+i18n")
+    acceptQMessageBox(rw, "pep8-fixes.+into.+i18n.+may cause conflicts")
+    rw.jump(NavLocator.inUnstaged("bye.txt"))
+    assert rw.repo.index.conflicts
+    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged("bye.txt"))
+    assert rw.conflictView.isVisible()
+
+    mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "{scratchPath}" $M $L $R $B'})
+    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
+    rw.conflictView.ui.radioTool.click()
+    rw.conflictView.ui.confirmButton.click()
+
+    scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
+    scratchLines = scratchText.strip().splitlines()
+    QTest.qWait(100)
+
+    mergedPath = scratchLines[0]
+    oursPath = scratchLines[1]
+    theirsPath = scratchLines[2]
+    fakeAncestorPath = scratchLines[3]
+    assert "[MERGED]" in mergedPath
+    assert "[OURS]" in oursPath
+    assert "[THEIRS]" in theirsPath
+    assert "[NO-ANCESTOR]" in fakeAncestorPath
+    assert "merge complete!" == readFile(mergedPath).decode("utf-8").strip()
+    assert readFile(fakeAncestorPath) == readFile(rw.repo.in_workdir("bye.txt"))
+
+    rejectQMessageBox(rw, "it looks like you.ve resolved the merge conflict")
 
 
 @pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
