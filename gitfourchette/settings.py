@@ -82,7 +82,7 @@ MERGE_TOOL_PRESETS = {
     "JetBrains PyCharm": "pycharm merge $L $R $B $M",
     "KDiff3": "kdiff3 --merge $B $L $R --output $M",
     "MacVim": "mvim -f -d -c 'wincmd J' $M $L $B $R",
-    "Meld": "meld --auto-merge $B $L $R --output=$M",
+    "Meld": "meld --auto-merge $L $B $R --output=$M",
     "SourceGear DiffMerge": "diffmerge --merge --result=$M $L $B $R",
     "Visual Studio Code": "code --new-window --wait --merge $L $R $B $M",
     "WinMerge": "winmergeu /u /wl /wm /wr /am $B $L $R /o $M",
