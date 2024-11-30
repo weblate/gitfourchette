@@ -239,17 +239,6 @@ class RepoTask(QObject):
     def makeInternalLink(cls, **kwargs):
         return makeInternalLink("exec", urlPath=cls.__name__, urlFragment="", **kwargs)
 
-    def isCritical(self) -> bool:
-        """
-        Return true if this task must be queued up to be run at a later date
-        if the TaskRunner isn't available immediately.
-
-        This is useful if the task is invoked to respond to an external event,
-        (e.g. the task fires when an external program quits),
-        and you don't want this task to be silently dropped.
-        """
-        return False
-
     @property
     def postStatus(self):
         """ Display this message in the status bar after completion. """
@@ -609,15 +598,12 @@ class RepoTaskRunner(QObject):
     _currentTaskBenchmark: Benchmark
     "Context manager"
 
-    _criticalTaskQueue: list
-
     def __init__(self, parent: QObject):
         super().__init__(parent)
         self.setObjectName("RepoTaskRunner")
         self._currentTask = None
         self._zombieTask = None
         self._currentTaskBenchmark = Benchmark("???")
-        self._criticalTaskQueue = []
 
         self._workerThread = FlowWorkerThread(self)
         self._workerThread.flow = None
@@ -691,10 +677,6 @@ class RepoTaskRunner(QObject):
             self.killCurrentTask()
             self._currentTask = task
 
-        elif task.isCritical():
-            logger.info(f"Enqueuing critical task {task}")
-            self._criticalTaskQueue.append((task, args, kwargs))
-
         else:
             logger.info(f"Task {task} cannot kill task {self._currentTask}")
             message = self.tr("Please wait for the current operation to complete ({0})."
@@ -756,12 +738,7 @@ class RepoTaskRunner(QObject):
             token = nextToken
 
         if not self.isBusy():  # might've queued up another task...
-            if self._criticalTaskQueue:
-                criticalTask, args, kwargs = self._criticalTaskQueue.pop(0)
-                logger.debug(f"Popping critical task {criticalTask}")
-                self.put(criticalTask, *args, **kwargs)
-            else:
-                self.ready.emit()
+            self.ready.emit()
 
     def _processToken(self, task: RepoTask, token: FlowControlToken) -> FlowControlToken | None:
         flow = task._currentFlow
