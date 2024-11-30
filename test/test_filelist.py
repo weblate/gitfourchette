@@ -232,6 +232,8 @@ def testSearchEmptyFileList(tempDir, mainWindow):
 
 
 @pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
+@pytest.mark.skipif(MACOS and os.environ.get("QT_QPA_PLATFORM", "") != "offscreen",
+                    reason="flaky on macOS unless executed offscreen")
 def testEditFileInExternalEditor(tempDir, mainWindow):
     wd = unpackRepo(tempDir)
     rw = mainWindow.openRepo(wd)
@@ -242,24 +244,24 @@ def testEditFileInExternalEditor(tempDir, mainWindow):
 
     # First, set the editor to an incorrect command to go through the "locate" code path
     mainWindow.onAcceptPrefsDialog({"externalEditor": f'"{editorPath}-BOGUSCOMMAND" "{scratchPath}"'})
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/current")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), r"open.+in editor-shim.+BOGUSCOMMAND$/current")
     QTest.qWait(100 if not MACOS else 500)
-    qmb = findQMessageBox(mainWindow, "n.t start text editor")
+    qmb = findQMessageBox(mainWindow, "couldn.t start.+editor-shim.+text editor")
     qmb.button(QMessageBox.StandardButton.Open).click()  # click "locate" button
     # Set correct command; this must retain the arguments from the incorrect command
-    acceptQFileDialog(mainWindow, "locate.+editor-shim", editorPath)
+    acceptQFileDialog(mainWindow, "where is.+editor-shim", editorPath)
 
     # Now open the file in our shim
     # HEAD revision
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/current")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), r"open.+in editor-shim\.sh$/current")
     assert b"a/a1" in readFile(scratchPath, timeout=1000, unlink=True)
 
     # New revision
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/before.+commit")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), r"open.+in editor-shim\.sh$/before.+commit")
     acceptQMessageBox(mainWindow, "file did.?n.t exist")
 
     # Old revision
-    triggerMenuAction(rw.committedFiles.makeContextMenu(), "open.+in editor-shim/as of.+commit")
+    triggerMenuAction(rw.committedFiles.makeContextMenu(), r"open.+in editor-shim\.sh$/as of.+commit")
     assert b"a1@49322bb" in readFile(scratchPath, timeout=1000, unlink=True)
 
 

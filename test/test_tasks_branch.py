@@ -829,6 +829,7 @@ def testMergeConcludedByCommit(tempDir, mainWindow):
 def testMergeCausesConflicts(tempDir, mainWindow):
     wd = unpackRepo(tempDir, "testrepoformerging")
     rw = mainWindow.openRepo(wd)
+    conflictUI = rw.conflictView.ui
     node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
 
     # Initiate merge of branch-conflicts into master
@@ -851,15 +852,11 @@ def testMergeCausesConflicts(tempDir, mainWindow):
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged(".gitignore"))
     assert rw.conflictView.isVisible()
 
-    assert rw.conflictView.ui.radioTheirs.isVisible()
-    assert rw.conflictView.ui.radioOurs.isVisible()
-    assert rw.conflictView.ui.radioTool.isVisible()
-    assert rw.conflictView.ui.confirmButton.isVisible()
-    assert not rw.conflictView.ui.confirmButton.isEnabled()
+    assert conflictUI.oursButton.isVisible()
+    assert conflictUI.theirsButton.isVisible()
+    assert conflictUI.mergeButton.isVisible()
 
-    rw.conflictView.ui.radioOurs.click()
-    assert rw.conflictView.ui.confirmButton.isEnabled()
-    rw.conflictView.ui.confirmButton.click()
+    conflictUI.oursButton.click()
     assert not rw.conflictView.isVisible()
     assert re.search(r"all conflicts fixed", rw.mergeBanner.label.text(), re.I)
 

@@ -27,8 +27,6 @@ class TrTables:
     _patchPurposes              : dict[PatchPurpose, str] = {}
     _patchPurposesPastTense     : dict[PatchPurpose, str] = {}
     _conflictSides              : dict[ConflictSides, str] = {}
-    _conflictSidesDescription   : dict[ConflictSides, str] = {}
-    _conflictHelp               : dict[str, str] = {}
 
     @classmethod
     def init(cls):
@@ -48,8 +46,6 @@ class TrTables:
         cls._patchPurposes = cls._init_patchPurposes()
         cls._patchPurposesPastTense = cls._init_patchPurposesPastTense()
         cls._conflictSides = cls._init_conflictSides()
-        cls._conflictSidesDescription = cls._init_conflictSidesDescription()
-        cls._conflictHelp = cls._init_conflictHelp()
 
     @classmethod
     def exceptionName(cls, exc: BaseException):
@@ -114,14 +110,6 @@ class TrTables:
     @classmethod
     def conflictSides(cls, key: ConflictSides):
         return cls._conflictSides.get(key, f"?{key}")
-
-    @classmethod
-    def conflictSidesDescription(cls, key: ConflictSides):
-        return cls._conflictSidesDescription.get(key, f"?{key}")
-
-    @classmethod
-    def conflictHelp(cls, key: str):
-        return cls._conflictHelp.get(key, "?"+key)
 
     @staticmethod
     def _init_exceptionNames():
@@ -398,57 +386,8 @@ class TrTables:
             ConflictSides.MODIFIED_BY_BOTH: translate("ConflictSides", "modified by both sides"),
             ConflictSides.DELETED_BY_US: translate("ConflictSides", "deleted by us"),
             ConflictSides.DELETED_BY_THEM: translate("ConflictSides", "deleted by them"),
-            ConflictSides.DELETED_BY_BOTH: translate("ConflictSides", "deleted by both"),
+            ConflictSides.DELETED_BY_BOTH: translate("ConflictSides", "deleted by both sides"),
             ConflictSides.ADDED_BY_US: translate("ConflictSides", "added by us"),
-            ConflictSides.ADDED_BY_THEM: translate("ConflictSides", "added by us"),
-            ConflictSides.ADDED_BY_BOTH: translate("ConflictSides", "added by both"),
-        }
-
-    @staticmethod
-    def _init_conflictSidesDescription():
-        return {
-            ConflictSides.MODIFIED_BY_BOTH: translate("ConflictSides", "This file has received changes from both <i>our</i> branch and <i>their</i> branch."),
-            ConflictSides.DELETED_BY_US: translate("ConflictSides", "This file was deleted from <i>our</i> branch, but <i>their</i> branch kept it and made changes to it."),
-            ConflictSides.DELETED_BY_THEM: translate("ConflictSides", "We’ve made changes to this file in <i>our</i> branch, but <i>their</i> branch has deleted it."),
-            ConflictSides.DELETED_BY_BOTH: translate("ConflictSides", "The file was deleted from <i>our</i> branch, and <i>their</i> branch has deleted it too."),
-            ConflictSides.ADDED_BY_US: translate("ConflictSides", "No common ancestor."),
-            ConflictSides.ADDED_BY_THEM: translate("ConflictSides", "No common ancestor."),
-            ConflictSides.ADDED_BY_BOTH: translate("ConflictSides", "This file has been created in both <i>our</i> branch and <i>their</i> branch, independently from each other. So, there is no common ancestor."),
-        }
-
-    @staticmethod
-    def _init_conflictHelp():
-        return {
-            "tool": translate(
-                "ConflictView",
-                "You will be able to merge the changes in {tool}. When you are done merging, "
-                "save the file in {tool} and come back to {app} to finish solving the conflict."),
-
-            "ours": translate(
-                "ConflictView",
-                "Reject incoming changes. The file won’t be modified from its current state in HEAD."),
-
-            "theirs": translate(
-                "ConflictView",
-                "Accept incoming changes. The file will be <b>replaced</b> with the incoming version."),
-
-            "dbutheirs": translate(
-                "ConflictView",
-                "Accept incoming changes. The file will be added back to your branch with the incoming changes."),
-
-            "dbuours": translate(
-                "ConflictView",
-                "Reject incoming changes. The file won’t be added back to your branch."),
-
-            "dbtours": translate(
-                "ConflictView",
-                "Reject incoming deletion. Our version of the file will be kept intact."),
-
-            "dbttheirs": translate(
-                "ConflictView",
-                "Accept incoming deletion. The file will be deleted."),
-
-            "dbbnuke": translate(
-                "ConflictView",
-                "The file will be deleted."),
+            ConflictSides.ADDED_BY_THEM: translate("ConflictSides", "added by them"),
+            ConflictSides.ADDED_BY_BOTH: translate("ConflictSides", "added by both sides"),
         }

@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>555</width>
-    <height>430</height>
+    <width>600</width>
+    <height>400</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -19,27 +19,555 @@
   <property name="windowTitle">
    <string>Merge conflict</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <widget class="QLabel" name="titleLabel">
+  <layout class="QGridLayout" name="mainLayout" columnstretch="0">
+   <item row="3" column="0">
+    <widget class="QLabel" name="explainer">
      <property name="text">
-      <string>Merge conflict on {0}</string>
+      <string notr="true">&lt;b&gt;BLURB&lt;/b&gt;&lt;br&gt;BLURB</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
      </property>
     </widget>
    </item>
-   <item>
-    <spacer name="verticalSpacer_3">
+   <item row="1" column="0">
+    <spacer name="spacer">
      <property name="orientation">
-      <enum>Qt::Vertical</enum>
+      <enum>Qt::Orientation::Vertical</enum>
      </property>
      <property name="sizeType">
-      <enum>QSizePolicy::Maximum</enum>
+      <enum>QSizePolicy::Policy::Fixed</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="titleLabel">
+     <property name="text">
+      <string>Merge conflict on {0}</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignmentFlag::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QFrame" name="frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>512</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <layout class="QGridLayout" name="frameLayout" columnstretch="1,0,1">
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
+      <item row="0" column="0">
+       <layout class="QHBoxLayout" name="oursTitleLayout">
+        <item>
+         <spacer name="spacer_3">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="oursIcon">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string notr="true">ICON</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="oursLabel">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>OUR version</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="spacer_4">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="2">
+       <widget class="QPushButton" name="theirsButton">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>48</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">THEIRS</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="orLabel">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>or</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="oursArrow">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string notr="true">↘</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <layout class="QHBoxLayout" name="theirsTitleLayout">
+        <item>
+         <spacer name="spacer_5">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>1</width>
+            <height>1</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="theirsIcon">
+          <property name="text">
+           <string notr="true">ICON</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="theirsLabel">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>THEIR version</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="spacer_6">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="2">
+       <widget class="QLabel" name="theirsArrow">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string notr="true">↙</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QPushButton" name="oursButton">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>48</height>
+         </size>
+        </property>
+        <property name="text">
+         <string notr="true">OURS</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="3">
+       <widget class="QStackedWidget" name="stackedWidget">
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="mergePage">
+         <layout class="QGridLayout" name="mergeLayout">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="2" column="1">
+           <widget class="QToolButton" name="mergeToolButton">
+            <property name="toolTip">
+             <string>Select another external merge tool in the Settings.</string>
+            </property>
+            <property name="text">
+             <string>Change merge tool...</string>
+            </property>
+            <property name="autoRaise">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QPushButton" name="mergeButton">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>48</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Open {tool} so you can merge both versions by hand. When you are done, save the file and quit {tool} to resolve the conflict.</string>
+            </property>
+            <property name="text">
+             <string>Merge both versions in {tool}</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="mergeToolStatus">
+            <property name="text">
+             <string notr="true">MERGE TOOL STATUS</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <spacer name="spacer_7">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>8</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="mergeInProgressPage">
+         <layout class="QGridLayout" name="mergeInProgressLayout">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="3" column="0">
+           <spacer name="spacer_8">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>8</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="1" column="0">
+           <widget class="QProgressBar" name="progressBar">
+            <property name="maximum">
+             <number>0</number>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="cancelMergeInProgress">
+            <property name="text">
+             <string>Abort</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QLabel" name="mergeInProgressLabel">
+            <property name="text">
+             <string notr="true">MERGE IN PROGRESS</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="mergeCompletePage">
+         <layout class="QGridLayout" name="mergeCompleteLayout">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="6" column="1">
+           <spacer name="spacer_9">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>8</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="3" column="0">
+           <widget class="QPushButton" name="discardMergeButton">
+            <property name="toolTip">
+             <string>&lt;p&gt;Ignore the merge that you made in {tool} so that you can start over.</string>
+            </property>
+            <property name="text">
+             <string>Discard this merge</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0" colspan="2">
+           <widget class="QLabel" name="confirmMergeLabel">
+            <property name="text">
+             <string>It looks like you’ve finished merging this file.</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="reworkMergeButton">
+            <property name="toolTip">
+             <string>&lt;p&gt;Merge this file in {tool} again, starting where you left off.</string>
+            </property>
+            <property name="text">
+             <string>Merge again</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2">
+           <widget class="QPushButton" name="confirmMergeButton">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>48</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Resolve this conflict by accepting the merge that you’ve completed in {tool}.</string>
+            </property>
+            <property name="text">
+             <string>Resolve the conflict with your merge</string>
+            </property>
+            <property name="default">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="confirmDeletionPage">
+         <layout class="QGridLayout" name="confirmDeletionLayout">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="confirmDeletionButton">
+            <property name="text">
+             <string>Confirm deletion</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <spacer name="spacer_10">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>8</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="emptyPage">
+         <layout class="QVBoxLayout" name="emptyPageLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <spacer name="spacer_11">
+            <property name="orientation">
+             <enum>Qt::Orientation::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Policy::Expanding</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>8</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <spacer name="spacer_2">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeType">
+      <enum>QSizePolicy::Policy::Maximum</enum>
      </property>
      <property name="sizeHint" stdset="0">
       <size>
@@ -49,149 +577,19 @@
      </property>
     </spacer>
    </item>
-   <item>
-    <widget class="QLabel" name="subtitleLabel">
-     <property name="text">
-      <string notr="true">blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah </string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>How do you want to solve this conflict?</string>
-     </property>
-     <layout class="QGridLayout" name="gridLayout_4">
-      <item row="1" column="0">
-       <widget class="QRadioButton" name="radioOurs">
-        <property name="text">
-         <string>Keep “our” version intact</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupBoth</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QRadioButton" name="radioTool">
-        <property name="text">
-         <string>Merge in {tool}</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupBoth</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QRadioButton" name="radioDbuOurs">
-        <property name="text">
-         <string>Don’t add the file</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbu</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QRadioButton" name="radioDbuTheirs">
-        <property name="text">
-         <string>Add “their” version back to our branch</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbu</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QRadioButton" name="radioTheirs">
-        <property name="text">
-         <string>Use “their” version as is</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupBoth</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="8" column="0">
-       <widget class="QRadioButton" name="radioDbtTheirs">
-        <property name="text">
-         <string>Delete the file</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbt</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="7" column="0">
-       <widget class="QRadioButton" name="radioDbtOurs">
-        <property name="text">
-         <string>Keep “our” version intact</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbt</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="9" column="0">
-       <widget class="QRadioButton" name="radioDbbNuke">
-        <property name="text">
-         <string>Keep deletion</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">radioGroupDbb</string>
-        </attribute>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QPushButton" name="confirmButton">
-     <property name="enabled">
-      <bool>false</bool>
-     </property>
-     <property name="text">
-      <string>Select a resolution method</string>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <widget class="QLabel" name="explainer">
-     <property name="text">
-      <string>The conflict must be solved before you can commit the file.</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>10</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>oursButton</tabstop>
+  <tabstop>theirsButton</tabstop>
+  <tabstop>mergeButton</tabstop>
+  <tabstop>mergeToolButton</tabstop>
+  <tabstop>cancelMergeInProgress</tabstop>
+  <tabstop>confirmMergeButton</tabstop>
+  <tabstop>discardMergeButton</tabstop>
+  <tabstop>reworkMergeButton</tabstop>
+  <tabstop>confirmDeletionButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
- <buttongroups>
-  <buttongroup name="radioGroupBoth"/>
-  <buttongroup name="radioGroupDbb"/>
-  <buttongroup name="radioGroupDbt"/>
-  <buttongroup name="radioGroupDbu"/>
- </buttongroups>
 </ui>

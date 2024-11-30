@@ -222,7 +222,6 @@ class RepoWidget(QStackedWidget):
         self.graphView.statusMessage.connect(self.statusMessage)
 
         self.diffArea.committedFiles.openDiffInNewWindow.connect(self.loadPatchInNewWindow)
-        self.diffArea.conflictView.linkActivated.connect(self.processInternalLink)
         self.diffArea.conflictView.openPrefs.connect(self.openPrefs)
         self.diffArea.diffView.contextualHelp.connect(self.statusMessage)
         self.diffArea.specialDiffView.linkActivated.connect(self.processInternalLink)
@@ -458,8 +457,11 @@ class RepoWidget(QStackedWidget):
         self.navLocator = newLocator
         return self.navLocator
 
-    def jump(self, locator: NavLocator):
+    def jump(self, locator: NavLocator, check=False):
         self.runTask(tasks.Jump, locator)
+        if check:
+            self.repoTaskRunner.joinWorkerThread()
+            assert self.navLocator.isSimilarEnoughTo(locator), f"failed to jump to: {locator}"
 
     def navigateBack(self):
         self.runTask(tasks.JumpBackOrForward, -1)

@@ -404,13 +404,17 @@ def _getCmdName(command, fallback, presets):
 
     try:
         p = tokens[0]
-        p = p.removeprefix('"').removeprefix("'")
-        p = p.removesuffix('"').removesuffix("'")
-        p = os.path.basename(p)
-
-        return p
     except IndexError:
         return fallback
+
+    p = p.removeprefix('"').removeprefix("'")
+    p = p.removesuffix('"').removesuffix("'")
+    p = os.path.basename(p)
+
+    if MACOS:
+        p = p.removesuffix(".app")
+
+    return p
 
 
 def getExternalEditorName():

@@ -360,6 +360,8 @@ class HardSolveConflicts(RepoTask):
         # Write index modifications to disk
         index.write()
 
+        self.postStatus = self.tr("%n conflicts resolved.", "", len(conflictedFiles))
+
 
 class MarkConflictSolved(RepoTask):
     def flow(self, path: str):
@@ -381,62 +383,21 @@ class AcceptMergeConflictResolution(RepoTask):
         from gitfourchette.tasks import RefreshRepo, Jump
         return isinstance(task, RefreshRepo | Jump)
 
-    def isCritical(self) -> bool:
-        """
-        We can't control when this task is invoked -- it's invoked as soon as
-        the merge program exits. If the RepoTaskRunner is busy, don't interrupt
-        an active task and enqueue this one because we don't want to miss it.
-        (For example: this task is invoked while RepoTaskRunner is busy with
-        NewCommit because the commit dialog is open. Wait for NewCommit to
-        complete before executing this task.)
-        """
-        return True
-
     def flow(self, mergeDriver: MergeDriver):
         path = mergeDriver.relativeTargetPath
-
-        message = paragraphs(
-            self.tr("It looks like you’ve resolved the merge conflict in {0}."),
-            self.tr("Do you want to keep this merge?")
-        ).format(bquo(path))
-
-        qmb = asyncMessageBox(
-            self.parentWidget(),
-            "question",
-            self.tr("Merge conflict resolved"),
-            message,
-            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Retry)
-        # Important: Need a Cancel button so that flowDialog can hook to the reject signal!
-        qmb.button(QMessageBox.StandardButton.Ok).setText("Confirm this merge")
-        qmb.button(QMessageBox.StandardButton.Cancel).setText("Ignore this merge")
-        qmb.button(QMessageBox.StandardButton.Retry).setText("Merge again")
-        yield from self.flowDialog(qmb, abortTaskIfRejected=False)
-
-        result = qmb.result()
-
-        if result == QMessageBox.StandardButton.Retry:
-            mergeDriver.startProcess()
-            self.postStatus = self.tr("Waiting for you to resolve {0} in external merge tool...").format(tquo(path))
-            return
-        elif result in [QMessageBox.StandardButton.Cancel, QDialog.DialogCode.Rejected]:
-            mergeDriver.deleteLater()
-            self.postStatus = self.tr("Ignored merge resolution in {0}.").format(tquo(path))
-            return
-
-        assert result in [QMessageBox.StandardButton.Ok, QDialog.DialogCode.Accepted]
 
         yield from self.flowEnterWorkerThread()
         self.effects |= TaskEffects.Workdir
 
         mergeDriver.copyScratchToTarget()
-        mergeDriver.deleteLater()
+        mergeDriver.deleteNow()
 
         del self.repo.index.conflicts[path]
         self.repo.index.add(path)
 
         # Jump to staged file after confirming conflict resolution
         self.jumpTo = NavLocator.inStaged(path)
-        self.postStatus = self.tr("Merge conflict resolution completed in {0}.").format(tquo(path))
+        self.postStatus = self.tr("Merge conflict resolved in {0}.").format(tquo(path))
 
 
 class ApplyPatchFile(RepoTask):

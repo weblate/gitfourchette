@@ -58,17 +58,18 @@ def onExternalToolProcessError(parent: QWidget, prefKey: str):
     title = translate("exttools", "Failed to start {0}").format(translatedPrefKey)
 
     message = translate("exttools",
-                        "Couldn’t start {0} {1}. It might not be installed on your machine."
-                        ).format(translatedPrefKey, bquo(programName))
+                        "Couldn’t start {command} ({what}). It might not be installed on your machine."
+                        ).format(what=translatedPrefKey, command=bquo(programName))
 
-    configureButtonID = QMessageBox.StandardButton.Retry
+    configureButtonID = QMessageBox.StandardButton.Ok
     browseButtonID = QMessageBox.StandardButton.Open
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
-                          configureButtonID | browseButtonID | QMessageBox.StandardButton.Ok)
+                          configureButtonID | browseButtonID | QMessageBox.StandardButton.Cancel)
 
     configureButton = qmb.button(configureButtonID)
-    configureButton.setText(translate("exttools", "Pick another program"))
+    configureButton.setText(translate("exttools", "Change tools..."))
+    configureButton.setIcon(stockIcon("configure"))
 
     browseButton = qmb.button(browseButtonID)
     browseButton.setText(translate("exttools", "Locate {0}...").format(lquo(programName)))
@@ -77,7 +78,7 @@ def onExternalToolProcessError(parent: QWidget, prefKey: str):
         if result == configureButtonID:
             openPrefsDialog(parent, prefKey)
         elif result == browseButtonID:
-            qfd = QFileDialog(parent, translate("exttools", "Locate {0}...").format(lquo(programName)))
+            qfd = QFileDialog(parent, translate("exttools", "Where is {0}?").format(lquo(programName)))
             qfd.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             qfd.setFileMode(QFileDialog.FileMode.AnyFile)
             qfd.setWindowModality(Qt.WindowModality.WindowModal)

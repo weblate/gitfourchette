@@ -375,8 +375,9 @@ class Jump(RepoTask):
             area.diffView.replaceDocument(self.repo, result.patch, result.locator, document)
 
         elif isinstance(document, DiffConflict):
+            conflict = document
             area.setDiffStackPage("conflict")
-            area.conflictView.displayConflict(document)
+            area.conflictView.displayConflict(conflict)
 
         elif isinstance(document, SpecialDiffError):
             area.setDiffStackPage("special")

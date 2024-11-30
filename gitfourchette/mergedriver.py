@@ -4,12 +4,15 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
+from __future__ import annotations
+
+import enum
 import filecmp
 import logging
 import os
 import shutil
-import tempfile
 
+from gitfourchette import settings
 from gitfourchette.porcelain import Repo, DiffConflict
 from gitfourchette.qt import *
 from gitfourchette.toolbox import *
@@ -19,24 +22,42 @@ logger = logging.getLogger(__name__)
 
 
 class MergeDriver(QObject):
-    mergeFailed = Signal(int)
-    mergeComplete = Signal()
+    class State(enum.IntEnum):
+        Idle = 0
+        Busy = 1
+        Fail = 2
+        Ready = 3
 
+    _ongoingMerges: list[MergeDriver] = []
+    _mergeCounter: int = 0
+
+    statusChange = Signal()
+
+    conflict: DiffConflict
     process: QProcess | None
+    processName: str
+    state: State
+    debrief: str
 
-    def __init__(self, parent: QWidget, repo: Repo, conflict: DiffConflict):
+    def __init__(self, parent: QObject, repo: Repo, conflict: DiffConflict):
         super().__init__(parent)
 
-        self.parentWidget = parent
+        logger.info(f"Initialize MergeDriver: {conflict}")
         self.conflict = conflict
         self.process = None
+        self.processName = "?"
+        self.state = MergeDriver.State.Idle
+        self.debrief = ""
 
         assert conflict.ours is not None, "MergeDriver requires an 'ours' side in DiffConflict"
         assert conflict.theirs is not None, "MergeDriver requires a 'theirs' side in DiffConflict"
 
         # Keep a reference to mergeDir so the temporary directory doesn't vanish
-        self.mergeDir = tempfile.TemporaryDirectory(dir=qTempDir(), prefix="merge-", ignore_cleanup_errors=True)
-        mergeDirPath = self.mergeDir.name
+        self.mergeDir = QTemporaryDir(os.path.join(qTempDir(), "merge"))
+        # self.mergeDir = tempfile.TemporaryDirectory(dir=qTempDir(), prefix="merge-", ignore_cleanup_errors=True)
+        # mergeDirPath = self.mergeDir.name
+        MergeDriver._mergeCounter += 1
+        mergeDirPath = self.mergeDir.path()
 
         # Dump OURS and THEIRS blobs into the temporary directory
         self.oursPath = dumpTempBlob(repo, mergeDirPath, conflict.ours, "OURS")
@@ -66,38 +87,73 @@ class MergeDriver(QObject):
         self.scratchPath = os.path.join(mergeDirPath, f"[MERGED]{baseName}")
         shutil.copyfile(self.targetPath, self.scratchPath)
 
-        # Delete the QObject (along with its temporary directory) when the merge fails
-        self.mergeFailed.connect(lambda: self.deleteLater())
+        # Keep track of this merge
+        MergeDriver._ongoingMerges.append(self)
+        self.destroyed.connect(lambda: MergeDriver._forget(id(self)))
 
-    def startProcess(self):
+    def deleteNow(self):
+        MergeDriver._forget(id(self))
+        # TODO: Terminate process?
+        self.deleteLater()
+
+    def startProcess(self, reopenWorkInProgress=False):
         tokens = {
-            "$B": self.ancestorPath,
+            "$B": self.scratchPath if reopenWorkInProgress else self.ancestorPath,
             "$L": self.oursPath,
             "$R": self.theirsPath,
             "$M": self.scratchPath
         }
-        self.process = openInExternalTool(self.parentWidget, PREFKEY_MERGETOOL, replacements=tokens, positional=[])
+        parentWidget = findParentWidget(self)
+        self.process = openInExternalTool(parentWidget, PREFKEY_MERGETOOL, replacements=tokens, positional=[])
         if not self.process:
             return
-        self.process.errorOccurred.connect(lambda: self.mergeFailed.emit(-1))
+        self.processName = settings.getMergeToolName()
+        self.process.errorOccurred.connect(self.onMergeProcessError)
         self.process.finished.connect(self.onMergeProcessFinished)
+        self.state = MergeDriver.State.Busy
+        self.debrief = ""
+
+    def onMergeProcessError(self, error: QProcess.ProcessError):
+        logger.warning(f"Merge tool error {error}")
+
+        self.state = MergeDriver.State.Fail
+
+        if error == QProcess.ProcessError.FailedToStart:
+            self.debrief = self.tr("{0} failed to start.").format(tquo(self.processName))
+        else:
+            self.debrief = self.tr("{0} ran into error {1}.").format(tquo(self.processName), error.name)
+
+        self.flush()
 
     def onMergeProcessFinished(self, exitCode: int, exitStatus: QProcess.ExitStatus):
+        if (exitCode != 0
+                or exitStatus == QProcess.ExitStatus.CrashExit
+                or filecmp.cmp(self.scratchPath, self.targetPath)):
+            logger.warning(f"Merge tool PID {self.process.processId()} finished with code {exitCode}, {exitStatus}")
+            self.state = MergeDriver.State.Fail
+            self.debrief = self.tr("{0} didn’t complete the merge.").format(tquo(self.processName))
+            self.debrief += "\n" + self.tr("Exit code: {0}.").format(exitCode)
+        else:
+            self.state = MergeDriver.State.Ready
+            self.debrief = ""
+
+        self.flush()
+
+    def flush(self):
+        self.process.deleteLater()
         self.process = None
-
-        logger.info(f"Merge tool exited with code {exitCode}, {exitStatus}")
-
-        if exitCode != 0 or exitStatus == QProcess.ExitStatus.CrashExit:
-            self.mergeFailed.emit(exitCode)
-            return
-
-        # If output file still contains original contents,
-        # the merge tool probably hasn't done anything
-        if filecmp.cmp(self.scratchPath, self.targetPath):
-            self.mergeFailed.emit(exitCode)
-            return
-
-        self.mergeComplete.emit()
+        self.statusChange.emit()
 
     def copyScratchToTarget(self):
         shutil.copyfile(self.scratchPath, self.targetPath)
+
+    @classmethod
+    def findOngoingMerge(cls, conflict: DiffConflict) -> MergeDriver | None:
+        try:
+            return next(m for m in cls._ongoingMerges if m.conflict == conflict)
+        except StopIteration:
+            return None
+
+    @classmethod
+    def _forget(cls, deadId: int):
+        cls._ongoingMerges = [x for x in cls._ongoingMerges if id(x) != deadId]

@@ -256,8 +256,11 @@ def withUniqueSuffix(
 
 
 def englishTitleCase(text: str) -> str:
+    if not text:
+        return ""
+
     if QLocale().language() not in [QLocale.Language.C, QLocale.Language.English]:
-        return text
+        return text[0].upper() + text[1:]
 
     words = text.split()
     text = ""

@@ -118,6 +118,9 @@ def mainWindow(qtbot: QtBot) -> MainWindow:
     # Die here if any dialogs are still visible after the unit test
     assert not leakedDialog, f"Unit test has leaked dialog: '{leakedDialog}'"
 
+    from gitfourchette.mergedriver import MergeDriver
+    assert not MergeDriver._ongoingMerges, "Unit test has leaked MergeDriver objects"
+
 
 @pytest.fixture
 def mockDesktopServices():

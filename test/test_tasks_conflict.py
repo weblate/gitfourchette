@@ -33,28 +33,35 @@ def testConflictDeletedByUs(tempDir, mainWindow, viaContextMenu):
 
     rw = mainWindow.openRepo(wd)
 
+    # -------------------------
     # Keep our deletion of a1.txt
+
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     rw.jump(NavLocator.inUnstaged("a/a1.txt"))
     assert rw.conflictView.currentConflict.deleted_by_us
-    assert rw.conflictView.ui.radioDbuOurs.isVisible()
+    assert rw.conflictView.ui.oursButton.isVisible()
+    assert not rw.conflictView.ui.mergeToolButton.isVisible()
+    assert "deleted by us" in rw.conflictView.ui.explainer.text().lower()
+
     if not viaContextMenu:
-        rw.conflictView.ui.radioDbuOurs.click()
-        rw.conflictView.ui.confirmButton.click()
+        rw.conflictView.ui.oursButton.click()
     else:
         menu = rw.dirtyFiles.makeContextMenu()
         triggerMenuAction(menu, "resolve by.+ours")
 
+    # -------------------------
     # Take their a2.txt
+
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     rw.jump(NavLocator.inUnstaged("a/a2.txt"))
     assert rw.conflictView.currentConflict.deleted_by_us
-    assert rw.conflictView.ui.radioDbuOurs.isVisible()
+    assert rw.conflictView.ui.theirsButton.isVisible()
+    assert not rw.conflictView.ui.mergeToolButton.isVisible()
+
     if not viaContextMenu:
-        rw.conflictView.ui.radioDbuTheirs.click()
-        rw.conflictView.ui.confirmButton.click()
+        rw.conflictView.ui.theirsButton.click()
     else:
         menu = rw.dirtyFiles.makeContextMenu()
         triggerMenuAction(menu, "resolve by.+theirs")
@@ -88,32 +95,38 @@ def testConflictDeletedByThem(tempDir, mainWindow, viaContextMenu):
 
     rw = mainWindow.openRepo(wd)
 
+    # -------------------------
     # Keep our a1.txt
+
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a1.txt", "a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     rw.jump(NavLocator.inUnstaged("a/a1.txt"))
     assert rw.conflictView.currentConflict.deleted_by_them
-    assert rw.conflictView.ui.radioDbtOurs.isVisibleTo(rw)
+    assert rw.conflictView.ui.oursButton.isVisible()
+    assert not rw.conflictView.ui.mergeToolButton.isVisible()
+    assert "deleted by them" in rw.conflictView.ui.explainer.text().lower()
+
     if not viaContextMenu:
-        rw.conflictView.ui.radioDbtOurs.click()
-        rw.conflictView.ui.confirmButton.click()
+        rw.conflictView.ui.oursButton.click()
     else:
         triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "resolve by.+ours")
 
+    # -------------------------
     # Take their deletion of a2.txt
+
     assert qlvGetRowData(rw.dirtyFiles) == ["a/a2.txt"]
     assert qlvGetRowData(rw.stagedFiles) == []
     rw.jump(NavLocator.inUnstaged("a/a2.txt"))
     assert rw.conflictView.currentConflict.deleted_by_them
-    assert rw.conflictView.ui.radioDbtTheirs.isVisibleTo(rw)
+    assert rw.conflictView.ui.theirsButton.isVisible()
+    assert not rw.conflictView.ui.mergeToolButton.isVisible()
     if not viaContextMenu:
-        rw.conflictView.ui.radioDbtTheirs.click()
-        rw.conflictView.ui.confirmButton.click()
+        rw.conflictView.ui.theirsButton.click()
     else:
         triggerMenuAction(rw.dirtyFiles.makeContextMenu(), "resolve by.+theirs")
 
     assert not rw.repo.index.conflicts
-    assert not rw.conflictView.isVisibleTo(rw)
+    assert not rw.conflictView.isVisible()
     assert rw.repo.status() == {"a/a2.txt": FileStatus.INDEX_DELETED}
 
 
@@ -195,6 +208,7 @@ def testMergeTool(tempDir, mainWindow):
 
     wd = unpackRepo(tempDir, "testrepoformerging")
     rw = mainWindow.openRepo(wd)
+    conflictUI = rw.conflictView.ui
 
     # Initiate merge of branch-conflicts into master
     node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
@@ -209,23 +223,23 @@ def testMergeTool(tempDir, mainWindow):
     # Try merging with a tool that doesn't touch the output file
     mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{noopMergeToolPath}" "{scratchPath}" $M $L $R $B'})
 
-    assert "editor-shim" in rw.conflictView.ui.radioTool.text()
-    rw.conflictView.ui.radioTool.click()
-    rw.conflictView.ui.confirmButton.click()
+    assert "editor-shim" in conflictUI.mergeButton.text()
+    assert conflictUI.mergeButton.isVisible()
+    conflictUI.mergeButton.click()
 
     scratchLines = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8").strip().splitlines()
     QTest.qWait(100)
     assert "[MERGED]" in scratchLines[0]
     assert "[OURS]" in scratchLines[1]
     assert "[THEIRS]" in scratchLines[2]
-    assert "exited without completing" in rw.conflictView.ui.explainer.text().lower()
+    assert conflictUI.mergeToolStatus.isVisible()
+    assert re.search("didn.t complete", conflictUI.mergeToolStatus.text(), re.I)
 
     # ------------------------------
     # Try merging with a missing command
     mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{noopMergeToolPath}-BOGUSCOMMAND" "{scratchPath}" $M $L $R $B'})
-    assert "editor-shim" in rw.conflictView.ui.radioTool.text()
-    rw.conflictView.ui.radioTool.click()
-    rw.conflictView.ui.confirmButton.click()
+    assert "editor-shim" in conflictUI.mergeButton.text()
+    conflictUI.mergeButton.click()
 
     QTest.qWait(100)
     rejectQMessageBox(rw, "not.+installed on your machine")
@@ -236,20 +250,20 @@ def testMergeTool(tempDir, mainWindow):
     os.chmod(scratchPath, 0o400)
 
     mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "${scratchPath}" $M $L $R $B'})
-    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
-    rw.conflictView.ui.radioTool.click()
-    rw.conflictView.ui.confirmButton.click()
+    assert "merge-shim" in conflictUI.mergeButton.text()
+    conflictUI.mergeButton.click()
 
     QTest.qWait(100)
-    assert "exit code" in rw.conflictView.ui.explainer.text().lower()
+    assert "exit code" in conflictUI.mergeToolStatus.text().lower()
     os.unlink(scratchPath)
 
     # ------------------------------
     # Now try merging with a good tool
     mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "{scratchPath}" $M $L $R $B'})
-    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
-    rw.conflictView.ui.radioTool.click()
-    rw.conflictView.ui.confirmButton.click()
+    assert "merge-shim" in conflictUI.mergeButton.text()
+    conflictUI.mergeButton.click()
+
+    assert conflictUI.stackedWidget.currentWidget() is conflictUI.mergeInProgressPage
 
     scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
     scratchLines = scratchText.strip().splitlines()
@@ -265,11 +279,13 @@ def testMergeTool(tempDir, mainWindow):
 
     # ------------------------------
     # Hit "Merge Again"
+
     assert not os.path.exists(scratchPath)  # should have been unlinked above
-    qmb = findQMessageBox(rw, "looks like.+resolved")
-    retryButton = qmb.button(QMessageBox.StandardButton.Retry)
-    assert retryButton.text().lower() == "merge again"
-    retryButton.click()
+
+    assert conflictUI.stackedWidget.currentWidget() is conflictUI.mergeCompletePage
+    conflictUI.reworkMergeButton.click()
+
+    assert conflictUI.stackedWidget.currentWidget() is conflictUI.mergeInProgressPage
 
     scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
     scratchLines = scratchText.strip().splitlines()
@@ -283,7 +299,8 @@ def testMergeTool(tempDir, mainWindow):
 
     # ------------------------------
     # Accept merge resolution
-    acceptQMessageBox(rw, "looks like.+resolved")
+    assert conflictUI.stackedWidget.currentWidget() is conflictUI.mergeCompletePage
+    conflictUI.confirmMergeButton.click()
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inStaged(".gitignore"))
 
     assert rw.mergeBanner.isVisible()
@@ -302,6 +319,7 @@ def testFake3WayMerge(tempDir, mainWindow):
         repo.checkout_local_branch("i18n")
 
     rw = mainWindow.openRepo(wd)
+    conflictUI = rw.conflictView.ui
 
     # Initiate merge of branch-conflicts into master
     node = rw.sidebar.findNodeByRef("refs/heads/pep8-fixes")
@@ -310,12 +328,11 @@ def testFake3WayMerge(tempDir, mainWindow):
     rw.jump(NavLocator.inUnstaged("bye.txt"))
     assert rw.repo.index.conflicts
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged("bye.txt"))
-    assert rw.conflictView.isVisible()
+    assert conflictUI.mergePage.isVisible()
 
     mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "{scratchPath}" $M $L $R $B'})
-    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
-    rw.conflictView.ui.radioTool.click()
-    rw.conflictView.ui.confirmButton.click()
+    assert "merge-shim" in conflictUI.mergeButton.text()
+    conflictUI.mergeButton.click()
 
     scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
     scratchLines = scratchText.strip().splitlines()
@@ -332,35 +349,35 @@ def testFake3WayMerge(tempDir, mainWindow):
     assert "merge complete!" == readFile(mergedPath).decode("utf-8").strip()
     assert readFile(fakeAncestorPath) == readFile(rw.repo.in_workdir("bye.txt"))
 
-    rejectQMessageBox(rw, "it looks like you.ve resolved the merge conflict")
+    assert conflictUI.stackedWidget.currentWidget() is conflictUI.mergeCompletePage
 
 
 @pytest.mark.skipif(WINDOWS, reason="TODO: no editor shim for Windows yet!")
-def testMergeToolInBackgroundTab(tempDir, mainWindow):
+def testMergeToolInBackground(tempDir, mainWindow):
     mergeToolPath = getTestDataPath("merge-shim.sh")
     scratchPath = f"{tempDir.name}/external editor scratch file.txt"
     mainWindow.onAcceptPrefsDialog({"externalMerge": f'"{mergeToolPath}" "{scratchPath}" $M $L $R $B'})
 
-    otherWd = unpackRepo(tempDir, "TestEmptyRepository")
     wd = unpackRepo(tempDir, "testrepoformerging")
-    otherRw = mainWindow.openRepo(otherWd)
-    QTest.qWait(1)  # let it settle
+    writeFile(f"{wd}/SomeOtherFile.txt", "hello")
+
     rw = mainWindow.openRepo(wd)
     node = rw.sidebar.findNodeByRef("refs/heads/branch-conflicts")
 
     # Initiate merge of branch-conflicts into master
     triggerMenuAction(rw.sidebar.makeNodeMenu(node), "merge into.+master")
     acceptQMessageBox(rw, "branch-conflicts.+into.+master.+may cause conflicts")
-    rw.jump(NavLocator.inUnstaged(".gitignore"))
+    rw.jump(NavLocator.inUnstaged(".gitignore"), check=True)
     assert rw.repo.index.conflicts
-    assert rw.navLocator.isSimilarEnoughTo(NavLocator.inUnstaged(".gitignore"))
     assert rw.conflictView.isVisible()
 
-    assert "merge-shim" in rw.conflictView.ui.radioTool.text()
-    rw.conflictView.ui.radioTool.click()
-    rw.conflictView.ui.confirmButton.click()
-    mainWindow.tabs.setCurrentIndex(0)  # immediately switch to another tab
-    assert mainWindow.currentRepoWidget() is otherRw
+    assert "merge-shim" in rw.conflictView.ui.mergeButton.text()
+    assert rw.conflictView.ui.mergePage.isVisible()
+    rw.conflictView.ui.mergeButton.click()
+    assert rw.conflictView.ui.mergeInProgressPage.isVisible()
+
+    # Immediately switch to another file
+    rw.jump(NavLocator.inUnstaged("SomeOtherFile.txt"), check=True)
 
     scratchText = readFile(scratchPath, timeout=1000, unlink=True).decode("utf-8")
     scratchLines = scratchText.strip().splitlines()
@@ -370,13 +387,12 @@ def testMergeToolInBackgroundTab(tempDir, mainWindow):
     assert "merge complete!" == readFile(scratchLines[0]).decode("utf-8").strip()
     QTest.qWait(100)
 
-    # Our tab is in the background so it must NOT show a messagebox yet
-    with pytest.raises(KeyError):
-        findQMessageBox(rw, "looks like.+resolved")
+    # Switch back to the merge conflict
+    rw.jump(NavLocator.inUnstaged(".gitignore"), check=True)
+    assert rw.conflictView.ui.mergeCompletePage.isVisible()
 
-    mainWindow.tabs.setCurrentIndex(1)  # switch BACK to our tab
-    QTest.qWait(1)
-    acceptQMessageBox(rw, "looks like.+resolved")
+    # Confirm the merge
+    rw.conflictView.ui.confirmMergeButton.click()
 
     assert rw.navLocator.isSimilarEnoughTo(NavLocator.inStaged(".gitignore"))
     assert rw.mergeBanner.isVisible()
