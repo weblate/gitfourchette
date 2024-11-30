@@ -160,41 +160,55 @@ def openInExternalTool(
         setUpMergeToolPrompt(parent, prefKey)
         return None
 
-    tokens = buildExternalToolCommand(command, replacements, positional)
-
-    # macOS-specific wrapper
-    if MACOS:
-        launcherScript = QFile("assets:mactool.sh")
-        assert launcherScript.exists()
-        tokens.insert(0, launcherScript.fileName())
-
     # Find appropriate workdir
-    wd = ""
+    workingDirectory = ""
     for argument in itertools.chain(replacements.values(), positional):
         if not argument:
             continue
-        wd = os.path.dirname(argument)
+        workingDirectory = os.path.dirname(argument)
         break
+
+    tokens = buildExternalToolCommand(command, replacements, positional)
+
+    wrapper = []
+
+    # macOS-specific wrapper:
+    # - Launch ".app" bundles properly.
+    # - Wait on opendiff (Xcode FileMerge).
+    if MACOS:
+        launcherScript = QFile("assets:mactool.sh")
+        assert launcherScript.exists()
+        wrapper = [launcherScript.fileName()]
+
+    # Flatpak-specific wrapper:
+    # - Run external tool outside flatpak sandbox.
+    # - Set workdir via flatpak-spawn because QProcess.setWorkingDirectory won't work.
+    # - Run command through `env` to get return code 127 if the command is missing.
+    if FLATPAK:
+        wrapper = ["flatpak-spawn", "--watch-bus", "--host", f"--directory={workingDirectory}", "/usr/bin/env", "--"]
+
+    tokens = wrapper + tokens
+
+    process = QProcess(parent)
+    process.setProgram(tokens[0])
+    process.setArguments(tokens[1:])
+    if not FLATPAK:  # In Flatpaks, set workdir via flatpak-spawn
+        process.setWorkingDirectory(workingDirectory)
+    process.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedChannels)
 
     def wrap127(code, status):
         logger.info(f"Process done: {code} {status}")
         if not WINDOWS and code == 127:
             onExternalToolProcessError(parent, prefKey)
 
-    p = QProcess(parent)
-    p.setProgram(tokens[0])
-    p.setArguments(tokens[1:])
-    p.setWorkingDirectory(wd)
-    p.setProcessChannelMode(QProcess.ProcessChannelMode.ForwardedChannels)
-
-    p.finished.connect(wrap127)
-    p.errorOccurred.connect(lambda processError: logger.info(f"Process error: {processError}"))
-    p.errorOccurred.connect(lambda processError: onExternalToolProcessError(parent, prefKey))
+    process.finished.connect(wrap127)
+    process.errorOccurred.connect(lambda processError: logger.info(f"Process error: {processError}"))
+    process.errorOccurred.connect(lambda processError: onExternalToolProcessError(parent, prefKey))
 
     logger.info("Starting process: " + shlex.join(tokens))
-    p.start(mode=QProcess.OpenModeFlag.Unbuffered)
+    process.start(mode=QProcess.OpenModeFlag.Unbuffered)
 
-    return p
+    return process
 
 
 def openInTextEditor(parent: QWidget, path: str):

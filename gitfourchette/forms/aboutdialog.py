@@ -38,15 +38,15 @@ class AboutDialog(QDialog):
         appVersion = QApplication.applicationVersion()
         appName = qAppName()
 
-        if APP_FREEZE_COMMIT:
-            appVersion += f" ({APP_FREEZE_COMMIT[:7]})"
-
         self.setWindowTitle(self.windowTitle().format(appName))
 
-        if APP_FREEZE_DATE:
-            buildDate = f" ({APP_FREEZE_DATE})"
-        else:
-            buildDate = ""
+        buildInfoItems = [
+            "Flatpak" if FLATPAK else "",
+            APP_FREEZE_DATE,
+            APP_FREEZE_COMMIT[:7]
+        ]
+        buildInfoItems = [s for s in buildInfoItems if s]
+        buildInfo = f"({', '.join(buildInfoItems)})" if buildInfoItems else ""
 
         tagline = tr("The comfortable Git UI for Linux.")
 
@@ -62,8 +62,9 @@ class AboutDialog(QDialog):
             <br>{tagline}
             <br>{simpleLink(WEBSITE_URL)}"""))
 
+        versionText = self.tr("Version {0}").format(appVersion)
         self.ui.versionLabel.setText(dedent(f"""\
-            <span style='color:{mutedTextColorHex(self)}'><b>Version {appVersion}</b>{buildDate}
+            <span style='color:{mutedTextColorHex(self)}'><b>{versionText}</b> {buildInfo}
             <br>Copyright © 2024 Iliyas Jorio"""))
 
         # ---------------------------------------------------------------------
@@ -85,7 +86,7 @@ class AboutDialog(QDialog):
         poweredByTitle = self.tr("Powered by:")
         self.ui.componentsBlurb.setText(dedent(f"""<html>\
             {appName} {appVersion}
-            {buildDate}
+            {buildInfo}
             <br>{poweredByTitle}
             <ul style='margin: 0'>
             <li><b>pygit2</b> {pygit2.__version__}

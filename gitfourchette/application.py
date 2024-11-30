@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import os
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -110,8 +111,17 @@ class GFApplication(QApplication):
             self.setApplicationName(APP_SYSTEM_NAME + "_TESTMODE")
 
         # Prepare session-wide temporary directory
-        tempDirTemplate = Path(QDir.tempPath()) / (self.applicationName() + ".XXXXXX")
-        self.tempDir = QTemporaryDir(str(tempDirTemplate))
+        if FLATPAK:
+            # Flatpak guarantees that "/run/user/1000/app/org.gitfourchette.gitfourchette" sits on a tmpfs,
+            # and "/tmp" actually resolves to "/run/user/1000/app/org.gitfourchette.gitfourchette/tmp".
+            # Use the real path instead of "/tmp" (QDir.tempPath() default value)
+            # so that we can pass it to external tools outside our sandbox.
+            tempDirPath = Path(os.environ["XDG_RUNTIME_DIR"], "app", os.environ["FLATPAK_ID"])
+            assert tempDirPath.exists(), f"Expected to find Flatpak temp dir at: {tempDirPath}"
+        else:
+            tempDirPath = QDir.tempPath()
+        tempDirTemplate = str(Path(tempDirPath, self.applicationName()))
+        self.tempDir = QTemporaryDir(tempDirTemplate)
         self.tempDir.setAutoRemove(True)
 
         # Prime singletons
@@ -126,10 +136,17 @@ class GFApplication(QApplication):
         from gitfourchette.toolbox.messageboxes import NonCriticalOperation
         from gitfourchette.porcelain import GitConfig
         from gitfourchette import settings
+        import pygit2
 
         # Make sure the temp dir exists
         tempDirPath = Path(self.tempDir.path())
         tempDirPath.mkdir(parents=True, exist_ok=True)
+
+        # In a Flatpak, pygit2's XDG search path resolves to "~/.var/app/org.gitfourchette.gitfourchette/config/git"
+        # by default. Users are much more likely to expect "~/.config/git" instead.
+        if FLATPAK:
+            userXdgGitDir = os.path.expanduser("~/.config/git")
+            pygit2.settings.search_path[pygit2.enums.ConfigLevel.XDG] = userXdgGitDir
 
         # Prepare session-wide git config file
         self.sessionwideGitConfigPath = str(tempDirPath / "session.gitconfig")

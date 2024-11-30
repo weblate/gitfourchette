@@ -116,7 +116,8 @@ QT_BINDING_BOOTPREF = _qtBindingBootPref
 KERNEL = QSysInfo.kernelType().lower()
 MACOS = KERNEL == "darwin"
 WINDOWS = KERNEL == "winnt"
-FREEDESKTOP = (KERNEL == "linux") or ("bsd" in KERNEL)
+FREEDESKTOP = not MACOS and not WINDOWS
+FLATPAK = FREEDESKTOP and _os.path.exists("/.flatpak-info")
 
 # -----------------------------------------------------------------------------
 # Try to import optional modules

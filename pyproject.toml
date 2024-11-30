@@ -101,6 +101,7 @@ exclude_lines = [
     "if APP_FREEZE_.+:",
     "if MACOS:",
     "if WINDOWS:",
+    "if FLATPAK:",
     "if not BRANCH_FOLDERS:",
     "if not pygit2_version_at_least\\(",
 
