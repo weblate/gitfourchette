@@ -20,8 +20,11 @@ requires-python = ">= 3.10"
 dependencies = ["pygit2 >= 1.15.1"]
 
 [project.urls]
-Homepage = "https://github.com/jorio/gitfourchette"
+Homepage = "https://gitfourchette.org"
+Documentation = "https://gitfourchette.org/guide"
+Repository = "https://github.com/jorio/gitfourchette"
 Issues = "https://github.com/jorio/gitfourchette/issues"
+Changelog = "https://github.com/jorio/gitfourchette/blob/master/CHANGELOG.md"
 
 [project.gui-scripts]
 gitfourchette = "gitfourchette.__main__:main"

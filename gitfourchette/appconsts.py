@@ -8,7 +8,7 @@ APP_VERSION = "1.0.0"
 APP_SYSTEM_NAME = "gitfourchette"
 APP_DISPLAY_NAME = "GitFourchette"
 APP_URL_SCHEME = APP_SYSTEM_NAME
-APP_IDENTIFIER = "org.gitfourchette"
+APP_IDENTIFIER = "org.gitfourchette.gitfourchette"
 
 # BEGIN_FREEZE_CONSTS
 # These constants can be overwritten by `update_resources.py --freeze`

@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<component type="desktop">
+  <id>org.gitfourchette.gitfourchette</id>
+  <name>GitFourchette</name>
+  <developer_name>Iliyas Jorio</developer_name>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0</project_license>
+
+  <provides><id>org.gitfourchette.gitfourchette.desktop</id></provides>
+  <launchable type="desktop-id">org.gitfourchette.gitfourchette.desktop</launchable>
+
+  <summary>The comfortable Git UI</summary>
+  <summary xml:lang="fr">L’interface Git tout confort</summary>
+
+  <description>
+    <p>Explore your repos easily. Craft commits intuitively. GitFourchette will become your new home to get work done in your Git repositories.</p>
+    <p xml:lang="fr">Explorez vos dépôts facilement. Créez vos commits intuitivement. Vous vous sentirez comme chez vous dans GitFourchette pour accomplir toutes vos tâches dans vos dépôts Git.</p>
+
+    <ul>
+      <li>A comfortable way to explore and understand your Git repositories</li>
+      <li xml:lang="fr">Une manière conviviale d’explorer et de comprendre vos dépôts Git</li>
+
+      <li>Powerful tools to stage code, create commits, and manage branches</li>
+      <li xml:lang="fr">Des outils puissants pour indexer du code, créer des commits, et gérer vos branches</li>
+
+      <li>Snappy and intuitive Qt UI designed to fit in snugly with KDE Plasma</li>
+      <li xml:lang="fr">Une interface Qt réactive et intuitive, pensée pour bien s’intégrer dans KDE Plasma</li>
+    </ul>
+  </description>
+
+  <url type="homepage">https://gitfourchette.org</url>
+  <url type="bugtracker">https://github.com/jorio/gitfourchette/issues</url>
+  <url type="help">https://gitfourchette.org/guide</url>
+  <url type="donation">https://ko-fi.com/jorio</url>
+  <url type="vcs-browser">https://github.com/jorio/gitfourchette</url>
+  <url type="translate">https://github.com/jorio/gitfourchette-private/blob/master/gitfourchette/assets/lang/README.md</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://gitfourchette.org/_images/packshotlight.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://gitfourchette.org/_images/packshotdark.png</image>
+    </screenshot>
+  </screenshots>
+
+  <categories>
+    <category>Development</category>
+    <category>RevisionControl</category>
+  </categories>
+
+  <keywords>
+    <keyword>git</keyword>
+    <keyword>qt</keyword>
+  </keywords>
+
+  <releases>
+    <release version="1.0.0" date="2024-11-16" type="stable">
+      <url>https://github.com/jorio/gitfourchette/releases/tag/v1.0.0</url>
+      <description>
+        <p>Initial release</p>
+      </description>
+    </release>
+  </releases>
+</component>
