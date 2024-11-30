@@ -320,6 +320,16 @@
     </message>
 </context>
 <context>
+    <name>HardSolveConflicts</name>
+    <message numerus="yes">
+        <source>%n conflicts resolved.</source>
+        <translation>
+            <numerusform>Conflict resolved.</numerusform>
+            <numerusform>%n conflicts resolved.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>Jump</name>
     <message numerus="yes">
         <source>Unstaged (%n)</source>

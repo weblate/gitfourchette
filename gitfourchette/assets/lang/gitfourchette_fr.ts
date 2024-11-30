@@ -236,7 +236,7 @@
     </message>
     <message>
         <source>The comfortable Git UI for Linux.</source>
-        <translation>Le client Git tout confort pour Linux.</translation>
+        <translation>L’interface Git tout confort pour Linux.</translation>
     </message>
     <message>
         <source>:</source>
@@ -392,24 +392,8 @@
 <context>
     <name>AcceptMergeConflictResolution</name>
     <message>
-        <source>It looks like you’ve resolved the merge conflict in {0}.</source>
-        <translation>Le conflit de fusion dans {0} semble résolu.</translation>
-    </message>
-    <message>
-        <source>Do you want to keep this resolution?</source>
-        <translation>Voulez-vous conserver cette résolution&#xa0;?</translation>
-    </message>
-    <message>
-        <source>Merge conflict resolved</source>
-        <translation>Conflit de fusion résolu</translation>
-    </message>
-    <message>
-        <source>Confirm resolution</source>
-        <translation>Confirmer la résolution</translation>
-    </message>
-    <message>
-        <source>Discard resolution</source>
-        <translation>Jeter cette résolution</translation>
+        <source>Merge conflict resolved in {0}.</source>
+        <translation>Conflit de fusion résolu dans {0}.</translation>
     </message>
 </context>
 <context>
@@ -559,22 +543,6 @@
 <context>
     <name>CheckoutCommit</name>
     <message>
-        <source>Detach HEAD</source>
-        <translation>Détacher HEAD</translation>
-    </message>
-    <message>
-        <source>Switch Branch</source>
-        <translation>Basculer</translation>
-    </message>
-    <message>
-        <source>Create Branch...</source>
-        <translation>Nouvelle branche...</translation>
-    </message>
-    <message>
-        <source>Check out commit {0}</source>
-        <translation>Basculer dans le commit {0}</translation>
-    </message>
-    <message>
         <source>You are in &lt;b&gt;Detached HEAD&lt;/b&gt; mode at commit {0}.</source>
         <translation>Vous êtes en mode &lt;b&gt;HEAD détachée&lt;/b&gt; au commit {0}.</translation>
     </message>
@@ -620,6 +588,22 @@
     <message>
         <source>Enter &amp;detached HEAD here</source>
         <translation>&amp;Passer en HEAD détachée ici</translation>
+    </message>
+    <message>
+        <source>Check out commit {0}</source>
+        <translation>Basculer dans le commit {0}</translation>
+    </message>
+    <message>
+        <source>Detach HEAD</source>
+        <translation>Détacher HEAD</translation>
+    </message>
+    <message>
+        <source>Switch Branch</source>
+        <translation>Basculer</translation>
+    </message>
+    <message>
+        <source>Create Branch...</source>
+        <translation>Nouvelle branche...</translation>
     </message>
 </context>
 <context>
@@ -802,7 +786,7 @@
     </message>
     <message>
         <source>&lt;b&gt;Detached HEAD&lt;/b&gt; – You are not in any branch! You should create a branch to keep track of your commit.</source>
-        <translation>&lt;b&gt;HEAD détachée&lt;/b&gt; – Vous n’êtes aucune branche&#xa0;! Vous devriez créer une branche pour éviter de perdre votre commit par inadvertance.</translation>
+        <translation>&lt;b&gt;HEAD détachée&lt;/b&gt; – Vous n’êtes sur aucune branche&#xa0;! Vous devriez créer une branche pour éviter de perdre votre commit par inadvertance.</translation>
     </message>
     <message>
         <source>You are creating an empty commit (no staged changes).</source>
@@ -1036,40 +1020,20 @@
         <translation>supprimé par eux</translation>
     </message>
     <message>
-        <source>deleted by both</source>
+        <source>deleted by both sides</source>
         <translation>supprimé de part et d’autre</translation>
+    </message>
+    <message>
+        <source>added by them</source>
+        <translation>ajouté par eux</translation>
+    </message>
+    <message>
+        <source>added by both sides</source>
+        <translation>ajouté de part et d’autre</translation>
     </message>
     <message>
         <source>added by us</source>
         <translation>ajouté par nous</translation>
-    </message>
-    <message>
-        <source>added by both</source>
-        <translation>ajouté de part et d’autre</translation>
-    </message>
-    <message>
-        <source>This file has received changes from both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch.</source>
-        <translation>Ce fichier a reçu des modifications à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et dans &lt;i&gt;la leur&lt;/i&gt;.</translation>
-    </message>
-    <message>
-        <source>This file was deleted from &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch kept it and made changes to it.</source>
-        <translation>Ce fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, tandis que &lt;i&gt;leur&lt;/i&gt; branche l’a conservé et y a apporté des modifications.</translation>
-    </message>
-    <message>
-        <source>We’ve made changes to this file in &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch has deleted it.</source>
-        <translation>Nous avons modifié ce fichier dans &lt;i&gt;notre&lt;/b&gt; branche, mais &lt;i&gt;leur&lt;/i&gt; branche l’a supprimé.</translation>
-    </message>
-    <message>
-        <source>The file was deleted from &lt;i&gt;our&lt;/i&gt; branch, and &lt;i&gt;their&lt;/i&gt; branch has deleted it too.</source>
-        <translation>Le fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, et &lt;i&gt;leur&lt;/i&gt; branche l’a également supprimé.</translation>
-    </message>
-    <message>
-        <source>No common ancestor.</source>
-        <translation>Pas d’ancêtre commun.</translation>
-    </message>
-    <message>
-        <source>This file has been created in both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch, independently from each other. So, there is no common ancestor.</source>
-        <translation>Ce fichier a été créé à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et &lt;i&gt;la leur&lt;/i&gt;, indépendamment l’une de l’autre. Ainsi, il n’y a pas d’ancêtre commun.</translation>
     </message>
 </context>
 <context>
@@ -1079,100 +1043,168 @@
         <translation>Conflit de fusion</translation>
     </message>
     <message>
-        <source>How do you want to solve this conflict?</source>
-        <translation>Comment voulez-vous résoudre ce conflit&#xa0;?</translation>
+        <source>Select another external merge tool in the Settings.</source>
+        <translation>Choisir un autre outil de fusion dans les Réglages.</translation>
     </message>
     <message>
-        <source>Use “their” version as is</source>
-        <translation>Utiliser “leur” version telle quelle</translation>
+        <source>Change merge tool...</source>
+        <translation>Changer d’outil de fusion...</translation>
     </message>
     <message>
-        <source>Don’t add the file</source>
-        <translation>Ne pas ajouter le fichier</translation>
+        <source>&lt;p&gt;Open {tool} so you can merge both versions by hand. When you are done, save the file and quit {tool} to resolve the conflict.</source>
+        <translation>&lt;p&gt;Ouvrir {tool} afin de fusionner les deux versions à la main. Une fois que vous aurez terminé, sauvegardez le fichier puis quittez {tool} pour résoudre le conflit.</translation>
     </message>
     <message>
-        <source>Merge in {tool}</source>
-        <translation>Fusionner dans {tool}</translation>
+        <source>Merge both versions in {tool}</source>
+        <translation>Fusionner les deux versions dans {tool}</translation>
     </message>
     <message>
-        <source>Add “their” version back to our branch</source>
-        <translation>Rajouter “leur” version à notre branche</translation>
+        <source>Abort</source>
+        <translation>Abandonner</translation>
     </message>
     <message>
-        <source>Keep “our” version intact</source>
-        <translation>Garder “notre” version intacte</translation>
+        <source>&lt;p&gt;Ignore the merge that you made in {tool} so that you can start over.</source>
+        <translation>&lt;p&gt;Ignorer la fusion que vous avez achevée dans {tool} afin de recommencer.</translation>
+    </message>
+    <message>
+        <source>Discard this merge</source>
+        <translation>Jeter cette fusion</translation>
+    </message>
+    <message>
+        <source>Merge again</source>
+        <translation>Fusionner à nouveau</translation>
+    </message>
+    <message>
+        <source>Resolve the conflict with your merge</source>
+        <translation>Résoudre le conflit avec votre fusion</translation>
+    </message>
+    <message>
+        <source>It looks like you’ve finished merging this file.</source>
+        <translation>Vous semblez avoir terminé la fusion de ce fichier.</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Merge this file in {tool} again, starting where you left off.</source>
+        <translation>&lt;p&gt;Fusionner à nouveau ce fichier dans {tool}, en repartant d’où vous vous étiez arrêté.</translation>
+    </message>
+    <message>
+        <source>&lt;p&gt;Resolve this conflict by accepting the merge that you’ve completed in {tool}.</source>
+        <translation>&lt;p&gt;Résoudre ce conflit en acceptant la fusion que vous avez achevée dans {tool}.</translation>
+    </message>
+    <message>
+        <source>Confirm deletion</source>
+        <translation>Confirmer la suppression</translation>
+    </message>
+    <message>
+        <source>OUR version</source>
+        <translation>NOTRE version</translation>
+    </message>
+    <message>
+        <source>or</source>
+        <translation>ou</translation>
+    </message>
+    <message>
+        <source>THEIR version</source>
+        <translation>LEUR version</translation>
     </message>
     <message>
         <source>Merge conflict on {0}</source>
         <translation>Conflit de fusion sur {0}</translation>
     </message>
     <message>
-        <source>Delete the file</source>
-        <translation>Supprimer le fichier</translation>
+        <source>Waiting for you to finish merging this file in {0} (PID {1})...</source>
+        <translation>Veuillez achever la fusion de ce fichier dans {0} (PID {1})...</translation>
     </message>
     <message>
-        <source>Keep deletion</source>
-        <translation>Conserver la suppression</translation>
+        <source>This file has received changes from both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch.</source>
+        <translation>Ce fichier a reçu des modifications à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et dans &lt;i&gt;la leur&lt;/i&gt;.</translation>
     </message>
     <message>
-        <source>Select a resolution method</source>
-        <translation>Choisissez une méthode de résolution</translation>
+        <source>Keep OURS</source>
+        <translation>Conserver LA NÔTRE</translation>
     </message>
     <message>
-        <source>The conflict must be solved before you can commit the file.</source>
-        <translation>Vous devez résoudre le conflit avant de pouvoir committer ce fichier.</translation>
+        <source>Accept THEIRS</source>
+        <translation>Accepter LA LEUR</translation>
     </message>
     <message>
-        <source>You will be able to merge the changes in {tool}. When you are done merging, save the file in {tool} and come back to {app} to finish solving the conflict.</source>
-        <translation>Vous pourrez fusionner les modifications dans {tool}. Lorsque vous aurez terminé, sauvegardez le fichier dans {tool}, puis revenez dans {app} pour conclure la résolution du conflit.</translation>
+        <source>Resolve the conflict by &lt;b&gt;rejecting incoming changes&lt;/b&gt;.</source>
+        <translation>Résoudre le conflit en &lt;b&gt;rejetant les modifications entrantes&lt;/b&gt;.</translation>
     </message>
     <message>
-        <source>The merge tool failed to start.</source>
-        <translation>L’outil de fusion n’a pas pu démarrer.</translation>
+        <source>The file will remain unchanged from its state in HEAD.</source>
+        <translation>Le fichier restera inchangé par rapport à son état en HEAD.</translation>
     </message>
     <message>
-        <source>The merge tool exited without completing the merge (exit code {0}).</source>
-        <translation>L’outil de fusion s’est fermé sans achever la fusion (code de sortie {0}).</translation>
+        <source>Resolve the conflict by &lt;b&gt;accepting incoming changes&lt;/b&gt;.</source>
+        <translation>Résoudre le conflit en &lt;b&gt;acceptant les modifications entrantes&lt;/b&gt;.</translation>
     </message>
     <message>
-        <source>Waiting for merge tool...</source>
-        <translation>En attente de l’outil de fusion...</translation>
+        <source>The file will be &lt;b&gt;replaced&lt;/b&gt; with the incoming version.</source>
+        <translation>Le fichier sera &lt;b&gt;remplacé&lt;/b&gt; par la version entrante.</translation>
     </message>
     <message>
-        <source>Resolve Conflict</source>
-        <translation>Résoudre le conflit</translation>
+        <source>This file was deleted from &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch kept it and made changes to it.</source>
+        <translation>Ce fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, tandis que &lt;i&gt;leur&lt;/i&gt; branche l’a conservé et y a apporté des modifications.</translation>
     </message>
     <message>
-        <source>Select another merge tool...</source>
-        <translation>Choisir un autre outil de fusion...</translation>
+        <source>Keep OUR deletion</source>
+        <translation>Conserver NOTRE suppression</translation>
     </message>
     <message>
-        <source>Reject incoming changes. The file won’t be modified from its current state in HEAD.</source>
-        <translation>Rejeter les modifications entrantes. Le fichier ne sera pas changé par rapport à son état actuel sur HEAD.</translation>
+        <source>Accept THEIR version</source>
+        <translation>Accepter LEUR version</translation>
     </message>
     <message>
-        <source>Accept incoming changes. The file will be &lt;b&gt;replaced&lt;/b&gt; with the incoming version.</source>
-        <translation>Accepter les modifications entrantes. Le fichier sera &lt;b&gt;remplacé&lt;/b&gt; par la version entrante.</translation>
+        <source>The file won’t be added back to your branch.</source>
+        <translation>Le fichier ne sera pas rajouté à votre branche.</translation>
     </message>
     <message>
-        <source>Accept incoming changes. The file will be added back to your branch with the incoming changes.</source>
-        <translation>Accepter les modifications entrantes. Le fichier sera rajouté à votre branche avec les modifications entrantes.</translation>
+        <source>The file will be restored to your branch with the incoming changes.</source>
+        <translation>Le fichier sera rajouté à votre branche avec les modifications entrantes.</translation>
     </message>
     <message>
-        <source>Reject incoming changes. The file won’t be added back to your branch.</source>
-        <translation>Rejeter les modifications entrantes. Le fichier ne sera pas rajouté à votre branche.</translation>
+        <source>We’ve made changes to this file in &lt;i&gt;our&lt;/i&gt; branch, but &lt;i&gt;their&lt;/i&gt; branch has deleted it.</source>
+        <translation>Nous avons modifié ce fichier dans &lt;i&gt;notre&lt;/b&gt; branche, mais &lt;i&gt;leur&lt;/i&gt; branche l’a supprimé.</translation>
     </message>
     <message>
-        <source>Reject incoming deletion. Our version of the file will be kept intact.</source>
-        <translation>Rejeter la suppression entrante. Notre version du fichier restera intacte.</translation>
+        <source>Accept deletion</source>
+        <translation>Accepter la suppression</translation>
     </message>
     <message>
-        <source>Accept incoming deletion. The file will be deleted.</source>
-        <translation>Accepter la suppression entrante. Le fichier sera supprimé.</translation>
+        <source>Resolve the conflict by &lt;b&gt;rejecting the incoming deletion&lt;/b&gt;.</source>
+        <translation>Résoudre le conflit en &lt;b&gt;rejetant la suppression entrante&lt;/b&gt;.</translation>
+    </message>
+    <message>
+        <source>Our version of the file will be kept intact.</source>
+        <translation>Notre version du fichier restera intacte.</translation>
+    </message>
+    <message>
+        <source>Resolve the conflict by &lt;b&gt;accepting the incoming deletion&lt;/b&gt;.</source>
+        <translation>Résoudre le conflit en &lt;b&gt;acceptant la suppression entrante&lt;/b&gt;.</translation>
     </message>
     <message>
         <source>The file will be deleted.</source>
         <translation>Le fichier sera supprimé.</translation>
+    </message>
+    <message>
+        <source>No common ancestor.</source>
+        <translation>Pas d’ancêtre commun.</translation>
+    </message>
+    <message>
+        <source>Delete it</source>
+        <translation>Le supprimer</translation>
+    </message>
+    <message>
+        <source>Don’t add</source>
+        <translation>Ne pas ajouter</translation>
+    </message>
+    <message>
+        <source>This file has been created in both &lt;i&gt;our&lt;/i&gt; branch and &lt;i&gt;their&lt;/i&gt; branch, independently from each other. There is no common ancestor.</source>
+        <translation>Ce fichier a été créé à la fois dans &lt;i&gt;notre&lt;/i&gt; branche et &lt;i&gt;la leur&lt;/i&gt;, indépendamment l’une de l’autre. Il n’y a pas d’ancêtre commun.</translation>
+    </message>
+    <message>
+        <source>The file was deleted from &lt;i&gt;our&lt;/i&gt; branch, and &lt;i&gt;their&lt;/i&gt; branch has deleted it too.</source>
+        <translation>Le fichier a été supprimé de &lt;i&gt;notre&lt;/i&gt; branche, et &lt;i&gt;leur&lt;/i&gt; branche l’a également supprimé.</translation>
     </message>
 </context>
 <context>
@@ -1381,10 +1413,6 @@
         <translation>Fichier vide supprimé.</translation>
     </message>
     <message>
-        <source>This untracked folder is the root of another Git repository.</source>
-        <translation>Ce dossier non-suivi constitue la racine d’un autre dépôt Git.</translation>
-    </message>
-    <message>
         <source>Absorb {0} as submodule</source>
         <translation>Absorber {0} comme sous-module</translation>
     </message>
@@ -1425,48 +1453,44 @@
         <translation>Ouvrir {0}</translation>
     </message>
     <message>
+        <source>This untracked subtree is the root of another Git repository.</source>
+        <translation>Ce sous-arbre non-suivi constitue la racine d’un autre dépôt Git.</translation>
+    </message>
+    <message>
         <source>Recommended action:</source>
         <translation>Action recommandée&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Subtree {0} was [removed.]</source>
+        <translation>Le sous-arbre {0} a été [retiré.]</translation>
     </message>
     <message>
         <source>Submodule {0} was [removed.]</source>
         <translation>Le sous-module {0} a été [retiré.]</translation>
     </message>
     <message>
+        <source>Subtree {0} was [added.]</source>
+        <translation>Le sous-arbre {0} a été [ajouté.]</translation>
+    </message>
+    <message>
         <source>Submodule {0} was [added.]</source>
         <translation>Le sous-module {0} a été [ajouté.]</translation>
+    </message>
+    <message>
+        <source>Subtree {0} was updated.</source>
+        <translation>Le sous-arbre {0} a été mis à jour.</translation>
+    </message>
+    <message>
+        <source>Subtree {0} contains changes.</source>
+        <translation>Le sous-arbre {0} contient des modifications.</translation>
     </message>
     <message>
         <source>Submodule {0} contains changes.</source>
         <translation>Le sous-module {0} contient des modifications.</translation>
     </message>
     <message>
-        <source>The submodule’s &lt;b&gt;HEAD&lt;/b&gt; has moved to another commit &amp;ndash; you can stage this update:</source>
-        <translation>La &lt;b&gt;HEAD&lt;/b&gt; du sous-module a été déplacée sur un autre commit &amp;ndash; vous pouvez indexer cette modification&amp;nbsp;:</translation>
-    </message>
-    <message>
-        <source>The submodule’s &lt;b&gt;HEAD&lt;/b&gt; has moved to another commit:</source>
-        <translation>La &lt;b&gt;HEAD&lt;/b&gt; du sous-module a été déplacée sur un autre commit&amp;nbsp;:</translation>
-    </message>
-    <message>
-        <source>To complete the removal of this submodule, &lt;b&gt;remove it from {0}&lt;/b&gt;.</source>
-        <translation>Afin d’achever la suppression de ce sous-module, &lt;b&gt;retirez-le de {0}&lt;/b&gt;.</translation>
-    </message>
-    <message>
-        <source>To complete the removal of this submodule, make sure to commit &lt;b&gt;{0}&lt;/b&gt; at the same time as the submodule folder itself.</source>
-        <translation>Afin d’achever la suppression de ce sous-module, assurez-vous de committer &lt;b&gt;{0}&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
-    </message>
-    <message>
-        <source>To complete the addition of this submodule, make sure to &lt;b&gt;commit {0}&lt;/b&gt; at the same time as the submodule folder itself.</source>
-        <translation>Afin d’achever la suppression de ce sous-module, assurez-vous de &lt;b&gt;committer {0}&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
-    </message>
-    <message>
         <source>To complete the addition of this submodule, you should [absorb the submodule] into the parent repository.</source>
         <translation>Afin d’achever l’ajout de ce sous-module, vous devriez [absorber le sous-module] dans le dépôt parent.</translation>
-    </message>
-    <message>
-        <source>To complete the addition of this submodule, [register it in {0}].</source>
-        <translation>Afin d’achever l’ajout de ce sous-module, [inscrivez-le dans {0}]&lt;/b&gt;.</translation>
     </message>
     <message>
         <source>The submodule has &lt;b&gt;uncommitted changes&lt;/b&gt;. They can’t be committed from the parent repo. You can:</source>
@@ -1477,12 +1501,60 @@
         <translation>Ouvrir le sous-module</translation>
     </message>
     <message>
+        <source>Open subtree</source>
+        <translation>Ouvrir le sous-arbre</translation>
+    </message>
+    <message>
         <source>(path: {0})</source>
         <translation>(chemin&#xa0;: {0})</translation>
     </message>
     <message>
+        <source>The subtree’s &lt;b&gt;HEAD&lt;/b&gt; has moved to another commit.</source>
+        <translation>La &lt;b&gt;HEAD&lt;/b&gt; du sous-arbre a été déplacée sur un autre commit.</translation>
+    </message>
+    <message>
+        <source>The submodule’s &lt;b&gt;HEAD&lt;/b&gt; has moved to another commit.</source>
+        <translation>La &lt;b&gt;HEAD&lt;/b&gt; du sous-module a été déplacée sur un autre commit.</translation>
+    </message>
+    <message>
+        <source>You can stage this update:</source>
+        <translation>Vous pouvez indexer cette mise à jour&#xa0;:</translation>
+    </message>
+    <message>
+        <source>To complete the removal of this submodule, &lt;b&gt;remove it from {gitmodules}&lt;/b&gt;.</source>
+        <translation>Afin d’achever la suppression de ce sous-module, &lt;b&gt;retirez-le de {gitmodules}&lt;/b&gt;.</translation>
+    </message>
+    <message>
+        <source>To complete the removal of this submodule, make sure to &lt;b&gt;commit {gitmodules}&lt;/b&gt; at the same time as the submodule folder itself.</source>
+        <translation>Afin d’achever la suppression de ce sous-module, assurez-vous de committer &lt;b&gt;{gitmodules}&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
+    </message>
+    <message>
+        <source>To complete the addition of this submodule, make sure to &lt;b&gt;commit {gitmodules}&lt;/b&gt; at the same time as the submodule folder itself.</source>
+        <translation>Afin d’achever l’ajout de ce sous-module, assurez-vous de committer &lt;b&gt;{gitmodules}&lt;/b&gt; en même temps que le dossier du sous-module lui-même.</translation>
+    </message>
+    <message>
+        <source>&lt;b&gt;This subtree isn’t a submodule yet!&lt;/b&gt; You should [absorb this subtree] into the parent repository so it becomes a submodule.</source>
+        <translation>&lt;b&gt;Ce sous-arbre ne constitue pas encore un sous-module&#xa0;!&lt;/b&gt; Vous devriez [absorber ce sous-arbre] dans le dépôt parent afin que le sous-arbre devienne un sous-module.</translation>
+    </message>
+    <message>
+        <source>To complete the addition of this submodule, [register it in {gitmodules}].</source>
+        <translation>Afin d’achever l’ajout de ce sous-module, [inscrivez-le dans {gitmodules}].</translation>
+    </message>
+    <message>
         <source>IMPORTANT</source>
         <translation>IMPORTANT</translation>
+    </message>
+    <message>
+        <source>The subtree contains &lt;b&gt;uncommitted changes&lt;/b&gt;. They can’t be committed from the parent repo. You can:</source>
+        <translation>Le sous-arbre contient des &lt;b&gt;modifications non-committées&lt;/b&gt;. Elles ne peuvent pas être committées directement depuis le dépôt parent. Vous pouvez&#xa0;:</translation>
+    </message>
+    <message>
+        <source>[Open] the subtree and commit the changes.</source>
+        <translation>[Ouvrir] le sous-arbre et committer les modifications.</translation>
+    </message>
+    <message>
+        <source>Or, [Reset] the subtree to a clean state.</source>
+        <translation>Ou bien [réinitialiser] le sous-arbre à un état propre.</translation>
     </message>
     <message>
         <source>[Open] the submodule and commit the changes.</source>
@@ -1837,6 +1909,10 @@
             <numerusform>Fichier jeté.</numerusform>
             <numerusform>%n fichiers jetés.</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Couldn’t restore gitlink file for submodule {0}.</source>
+        <translation>Impossible de restaurer le fichier gitlink du sous-module {0}.</translation>
     </message>
 </context>
 <context>
@@ -2230,6 +2306,16 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <message>
         <source>&amp;Tag This Commit...</source>
         <translation>É&amp;tiqueter ce commit...</translation>
+    </message>
+</context>
+<context>
+    <name>HardSolveConflicts</name>
+    <message numerus="yes">
+        <source>%n conflicts resolved.</source>
+        <translation>
+            <numerusform>Conflit résolu.</numerusform>
+            <numerusform>%n conflits résolus.</numerusform>
+        </translation>
     </message>
 </context>
 <context>
@@ -2908,10 +2994,6 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>Dans ce cas précis, {0} sera déplacée vers {1}.</translation>
     </message>
     <message>
-        <source>What does this mean?</source>
-        <translation>Qu’est-ce que cela veut dire&#xa0;?</translation>
-    </message>
-    <message>
         <source>Merging may cause conflicts</source>
         <translation>La fusion pourrait entraîner des conflits</translation>
     </message>
@@ -2934,6 +3016,25 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <message>
         <source>Merge</source>
         <translation>Fusionner</translation>
+    </message>
+</context>
+<context>
+    <name>MergeDriver</name>
+    <message>
+        <source>{0} failed to start.</source>
+        <translation>Impossible de lancer {0}.</translation>
+    </message>
+    <message>
+        <source>{0} ran into error {1}.</source>
+        <translation>{0} a rencontré l’erreur {1}.</translation>
+    </message>
+    <message>
+        <source>{0} didn’t complete the merge.</source>
+        <translation>{0} n’a pas achevé la fusion.</translation>
+    </message>
+    <message>
+        <source>Exit code: {0}.</source>
+        <translation>Code de sortie&#xa0;: {0}.</translation>
     </message>
 </context>
 <context>
@@ -3812,6 +3913,13 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
     <message>
         <source>&amp;Track this remote branch after pushing</source>
         <translation>&amp;Suivre cette branche distante une fois publiée</translation>
+    </message>
+</context>
+<context>
+    <name>QHintButton</name>
+    <message>
+        <source>Help</source>
+        <translation>Aide</translation>
     </message>
 </context>
 <context>
@@ -5061,16 +5169,16 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         </translation>
     </message>
     <message>
-        <source>You’ve added another Git repo inside your current repo. You should absorb it as a submodule.</source>
-        <translation>Vous avez ajouté un autre dépôt Git à l’intérieur du dépôt actuel. Vous devriez l’absorber comme sous-module.</translation>
+        <source>You’ve added another Git repo inside your current repo. It is STRONGLY RECOMMENDED to absorb it as a submodule before committing.</source>
+        <translation>Vous avez ajouté un autre dépôt Git à l’intérieur du dépôt actuel. Il est FORTEMENT RECOMMANDÉ de l’absorber comme sous-module avant de valider le commit.</translation>
+    </message>
+    <message>
+        <source>Don’t forget to remove the submodule from {0} to complete its deletion.</source>
+        <translation>N’oubliez pas de retirer le sous-module de {0} pour achever sa suppression.</translation>
     </message>
     <message>
         <source>Uncommitted changes in the submodule can’t be staged from the parent repository.</source>
         <translation>Les modifications non-committées dans le sous-module ne peuvent pas être indexées depuis le dépôt parent.</translation>
-    </message>
-    <message>
-        <source>Don’t forget to remove the submodule from .gitmodules to complete its deletion.</source>
-        <translation>N’oubliez pas de retirer le sous-module de .gitmodules pour achever sa suppression.</translation>
     </message>
     <message numerus="yes">
         <source>%n items require your attention after staging:</source>
@@ -5290,20 +5398,24 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>Impossible de lancer {0}</translation>
     </message>
     <message>
-        <source>Couldn’t start {0} {1}. It might not be installed on your machine.</source>
-        <translation>{0} {1} n’a pas pu être lancé. Il n’est peut-être pas installé sur votre machine.</translation>
+        <source>Couldn’t start {command} ({what}). It might not be installed on your machine.</source>
+        <translation>Impossible de lancer {command} ({what}). Ce programme n’est peut-être pas installé sur votre machine.</translation>
+    </message>
+    <message>
+        <source>Change tools...</source>
+        <translation>Changer d’outil...</translation>
     </message>
     <message>
         <source>Locate {0}...</source>
         <translation>Localiser {0}...</translation>
     </message>
     <message>
-        <source>Placeholder token {0} missing.</source>
-        <translation>Le symbole de substitution {0} est manquant.</translation>
+        <source>Where is {0}?</source>
+        <translation>Où se trouve {0}&#xa0;?</translation>
     </message>
     <message>
-        <source>Pick another program</source>
-        <translation>Choisir un autre programme</translation>
+        <source>Placeholder token {0} missing.</source>
+        <translation>Le symbole de substitution {0} est manquant.</translation>
     </message>
     <message>
         <source>{0} isn’t configured in your settings yet.</source>
@@ -5377,14 +5489,14 @@ Si {app} vous facilite votre travail, veuillez envisager de faire un petit don. 
         <translation>lien symbolique</translation>
     </message>
     <message>
-        <source>directory tree</source>
+        <source>subtree</source>
         <comment>as in &apos;directory tree&apos; - file mode 0o40000</comment>
-        <translation>arborescence</translation>
+        <translation>sous-arbre</translation>
     </message>
     <message>
-        <source>commit</source>
+        <source>subtree commit</source>
         <comment>&apos;commit&apos; file mode 0o160000</comment>
-        <translation>commit</translation>
+        <translation>commit de sous-arbre</translation>
     </message>
 </context>
 <context>
