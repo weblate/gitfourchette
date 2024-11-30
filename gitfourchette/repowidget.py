@@ -187,7 +187,7 @@ class RepoWidget(QStackedWidget):
 
         sideSplitter.addWidget(sidebarContainer)
         sideSplitter.addWidget(centralSplitter)
-        sideSplitter.setSizes([100, 500])
+        sideSplitter.setSizes([220, 500])
         sideSplitter.setStretchFactor(0, 0)  # don't auto-stretch sidebar when resizing window
         sideSplitter.setStretchFactor(1, 1)
         sideSplitter.setChildrenCollapsible(False)

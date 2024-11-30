@@ -70,7 +70,7 @@ class DiffArea(QWidget):
 
         splitter.addWidget(fileStack)
         splitter.addWidget(diffContainer)
-        splitter.setSizes([100, 300])
+        splitter.setSizes([260, 500])
         splitter.setStretchFactor(0, 0)  # don't auto-stretch file lists when resizing window
         splitter.setStretchFactor(1, 1)
         splitter.setChildrenCollapsible(False)
