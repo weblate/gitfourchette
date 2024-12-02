@@ -35,6 +35,13 @@
   <url type="vcs-browser">https://github.com/jorio/gitfourchette</url>
   <url type="translate">https://github.com/jorio/gitfourchette-private/blob/master/gitfourchette/assets/lang/README.md</url>
 
+  <content_rating type="oars-1.1" />
+
+  <branding>
+    <color type="primary" scheme_preference="light">#bad6f0</color>
+    <color type="primary" scheme_preference="dark">#1d4264</color>
+  </branding>
+
   <screenshots>
     <screenshot type="default">
       <image>https://gitfourchette.org/_images/packshotlight.png</image>
@@ -55,6 +62,17 @@
   </keywords>
 
   <releases>
+    <release version="1.0.1" date="2024-12-03" type="stable">
+      <url>https://github.com/jorio/gitfourchette/releases/tag/v1.0.1</url>
+      <description>
+        <ul>
+          <li>Friendlier ConflictView UI</li>
+          <li>Improve 3-way merging with external merge tools when there's no ancestor in the conflict</li>
+          <li>Distinguish submodules and subtrees in SpecialDiff verbiage</li>
+          <li>Fix discarding untracked non-submodule subtrees (#1)</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2024-11-16" type="stable">
       <url>https://github.com/jorio/gitfourchette/releases/tag/v1.0.0</url>
       <description>
