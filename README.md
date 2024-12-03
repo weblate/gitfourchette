@@ -1,4 +1,4 @@
-# <img src="gitfourchette/assets/icons/gitfourchette.png" alt="GitFourchette" height=42 align="right"> GitFourchette
+# GitFourchette <a href="https://flathub.org/apps/org.gitfourchette.gitfourchette"><img height=42 alt="Get it on Flathub" src="https://flathub.org/api/badge?svg&locale=en" align=right><img src="gitfourchette/assets/icons/gitfourchette.png" alt="GitFourchette" height=42 align=right></a>
 
 The comfortable Git UI for Linux.
 
@@ -13,45 +13,20 @@ Learn more on GitFourchette’s homepage at [gitfourchette.org](https://gitfourc
 ## Documentation
 
 - [GitFourchette User’s Guide](https://gitfourchette.org/guide)
+- [How to install or run from source](https://gitfourchette.org/install.html)
 - [Limitations](https://gitfourchette.org/limitations.html)
 - [Changelog](CHANGELOG.md)
 
 ## Install
 
-### Prebuilt binaries (easy)
+- **Recommended: Get the [Flatpak](https://flathub.org/apps/org.gitfourchette.gitfourchette):**
+   ```sh
+   flatpak install flathub org.gitfourchette.gitfourchette
+   ```
 
-Get a prebuilt AppImage from the [releases](https://github.com/jorio/gitfourchette/releases).
+- Or, get a standalone AppImage from the [releases](https://github.com/jorio/gitfourchette/releases).
 
-### Run from source using your system’s Qt libraries (recommended)
-
-This method gives you the best integration with your desktop environment.
-
-1. With your system’s package manager, install *PyQt6* and *pygit2* (version 1.15.1 or later):
-    <br>(Note: You can substitute PyQt6 with PySide6. GitFourchette is compatible with both.)
-    <table>
-    <tr><td>Ubuntu  </td><td><code>apt install python3-pygit2 python3-pyqt6</code></td></tr>
-    <tr><td>Fedora  </td><td><code>dnf install python3-pygit2 python3-pyqt6</code></td></tr>
-    <tr><td>Arch    </td><td><code>pacman -S python-pygit2 python-pyqt6</code></td></tr>
-    </table>
-
-2. ` git clone https://github.com/jorio/gitfourchette `
-
-3. ` ./gitfourchette/run.sh `
-
-<!--
-### Install from source with pip
-
-```sh
-git clone https://github.com/jorio/gitfourchette
-pip install -e gitfourchette[pyqt6]
-```
-
-Note: If you want to use PySide6 instead of PyQt6, you can run `pip install -e gitfourchette[pyside6]`
-
-Then run `gitfourchette`.
-
-Note: Installing PyQt6 or PySide6 via pip instead of your system’s package manager may cause GitFourchette to be oblivious to your desktop environment theme.
--->
+- Or, see [how to install or run from source](https://gitfourchette.org/install.html).
 
 ## About the project
 
