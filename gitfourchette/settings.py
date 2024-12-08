@@ -9,7 +9,6 @@ import dataclasses
 import enum
 import logging
 import os
-import shlex
 import sys
 
 from gitfourchette import pycompat  # noqa: F401 - StrEnum for Python 3.10
@@ -18,6 +17,7 @@ from gitfourchette.qt import *
 from gitfourchette.toolbox.benchmark import BENCHMARK_LOGGING_LEVEL
 from gitfourchette.toolbox.gitutils import AuthorDisplayStyle
 from gitfourchette.toolbox.pathutils import PathDisplayStyle
+from gitfourchette.toolcommands import ToolCommands
 
 logger = logging.getLogger(__name__)
 
@@ -41,90 +41,6 @@ SHORT_DATE_PRESETS = {
     "European 2": "dd.MM.yy HH:mm",
     "American": "M/d/yy h:mm ap",
 }
-
-EDITOR_TOOL_PRESETS = {
-    "System default": "",
-    "BBEdit": "bbedit",
-    "GVim": "gvim",
-    "KWrite": "kwrite",
-    "Kate": "kate",
-    "MacVim": "mvim",
-    "Visual Studio Code": "code",
-}
-
-DIFF_TOOL_PRESETS = {
-    "Beyond Compare": "bcompare $L $R",
-    "FileMerge": "opendiff $L $R",
-    "GVim": "gvim -f -d $L $R",
-    "JetBrains CLion": "clion diff $L $R",
-    "JetBrains IDEA": "idea diff $L $R",
-    "JetBrains PyCharm": "pycharm diff $L $R",
-    "KDiff3": "kdiff3 $L $R",
-    "MacVim": "mvim -f -d $L $R",
-    "Meld": "meld $L $R",
-    "P4Merge": "p4merge $L $R",
-    "SourceGear DiffMerge": "diffmerge $L $R",
-    "Visual Studio Code": "code --new-window --wait --diff $L $R",
-    "WinMerge": "winmergeu /u /wl /wr $L $R",
-}
-
-# $B: ANCESTOR/BASE/CENTER
-# $L: OURS/LOCAL/LEFT
-# $R: THEIRS/REMOTE/RIGHT
-# $M: MERGED/OUTPUT
-MERGE_TOOL_PRESETS = {
-    "Beyond Compare": "bcompare $L $R $B $M",
-    "FileMerge": "opendiff -ancestor $B $L $R -merge $M",
-    "GVim": "gvim -f -d -c 'wincmd J' $M $L $B $R",
-    "Helix P4Merge": "p4merge $B $L $R $M",
-    "JetBrains CLion": "clion merge $L $R $B $M",
-    "JetBrains IDEA": "idea merge $L $R $B $M",
-    "JetBrains PyCharm": "pycharm merge $L $R $B $M",
-    "KDiff3": "kdiff3 --merge $B $L $R --output $M",
-    "MacVim": "mvim -f -d -c 'wincmd J' $M $L $B $R",
-    "Meld": "meld --auto-merge $L $B $R --output=$M",
-    "SourceGear DiffMerge": "diffmerge --merge --result=$M $L $B $R",
-    "Visual Studio Code": "code --new-window --wait --merge $L $R $B $M",
-    "WinMerge": "winmergeu /u /wl /wm /wr /am $B $L $R /o $M",
-}
-
-
-DEFAULT_DIFF_TOOL_PRESET = ""
-DEFAULT_MERGE_TOOL_PRESET = ""
-
-
-def _filterToolPresets():  # pragma: no cover
-    freedesktopTools = ["Kate", "KWrite"]
-    macTools = ["FileMerge", "MacVim", "BBEdit"]
-    winTools = ["WinMerge"]
-
-    global DEFAULT_MERGE_TOOL_PRESET
-    global DEFAULT_DIFF_TOOL_PRESET
-
-    if MACOS:
-        excludeTools = winTools + freedesktopTools
-        DEFAULT_DIFF_TOOL_PRESET = "FileMerge"
-        DEFAULT_MERGE_TOOL_PRESET = "FileMerge"
-    elif WINDOWS:
-        excludeTools = macTools + freedesktopTools
-        DEFAULT_DIFF_TOOL_PRESET = "WinMerge"
-        DEFAULT_MERGE_TOOL_PRESET = "WinMerge"
-    else:
-        excludeTools = macTools + winTools
-        DEFAULT_DIFF_TOOL_PRESET = "KDiff3"
-        DEFAULT_MERGE_TOOL_PRESET = "KDiff3"
-
-    for key in excludeTools:
-        with suppress(KeyError):
-            del EDITOR_TOOL_PRESETS[key]
-        with suppress(KeyError):
-            del DIFF_TOOL_PRESETS[key]
-        with suppress(KeyError):
-            del MERGE_TOOL_PRESETS[key]
-
-
-_filterToolPresets()
-del _filterToolPresets
 
 
 class GraphRowHeight(enum.IntEnum):
@@ -185,8 +101,8 @@ class Prefs(PrefsFile):
 
     _category_external          : int                   = 0
     externalEditor              : str                   = ""
-    externalDiff                : str                   = DIFF_TOOL_PRESETS[DEFAULT_DIFF_TOOL_PRESET]
-    externalMerge               : str                   = MERGE_TOOL_PRESETS[DEFAULT_MERGE_TOOL_PRESET]
+    externalDiff                : str                   = ToolCommands.DiffPresets[ToolCommands.DefaultDiffPreset]
+    externalMerge               : str                   = ToolCommands.MergePresets[ToolCommands.DefaultMergePreset]
 
     _category_tabs              : int                   = 0
     tabCloseButton              : bool                  = True
@@ -392,38 +308,13 @@ def qtIsNativeMacosStyle():  # pragma: no cover
     return (not prefs.qtStyle) or (prefs.qtStyle.lower() == "macos")
 
 
-def _getCmdName(command, fallback, presets):
-    if not command.strip():
-        return fallback
-
-    presetName = next((k for k, v in presets.items() if v == command), "")
-    if presetName:
-        return presetName
-
-    tokens = shlex.split(command, posix=not WINDOWS)
-
-    try:
-        p = tokens[0]
-    except IndexError:
-        return fallback
-
-    p = p.removeprefix('"').removeprefix("'")
-    p = p.removesuffix('"').removesuffix("'")
-    p = os.path.basename(p)
-
-    if MACOS:
-        p = p.removesuffix(".app")
-
-    return p
-
-
 def getExternalEditorName():
-    return _getCmdName(prefs.externalEditor, tr("External Editor"), EDITOR_TOOL_PRESETS)
+    return ToolCommands.getCommandName(prefs.externalEditor, tr("External Editor"), ToolCommands.EditorPresets)
 
 
 def getDiffToolName():
-    return _getCmdName(prefs.externalDiff, tr("Diff Tool"), DIFF_TOOL_PRESETS)
+    return ToolCommands.getCommandName(prefs.externalDiff, tr("Diff Tool"), ToolCommands.DiffPresets)
 
 
 def getMergeToolName():
-    return _getCmdName(prefs.externalMerge, tr("Merge Tool"), MERGE_TOOL_PRESETS)
+    return ToolCommands.getCommandName(prefs.externalMerge, tr("Merge Tool"), ToolCommands.MergePresets)

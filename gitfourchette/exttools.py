@@ -4,16 +4,14 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-import itertools
 import logging
-import os
-import re
 import shlex
 
 from gitfourchette.qt import *
 from gitfourchette.settings import prefs, TEST_MODE
 from gitfourchette.toolbox import *
 from gitfourchette.trtables import TrTables
+from gitfourchette.toolcommands import ToolCommands
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +32,7 @@ def openPrefsDialog(parent: QWidget, prefKey: str):
 
 def onLocateTool(prefKey: str, newPath: str):
     command = getattr(prefs, prefKey)
-
-    tokens = shlex.split(command, posix=not WINDOWS)
-    tokens[0] = newPath
-
-    newCommand = shlex.join(tokens)
-
-    # Remove single quotes added around our placeholders by shlex.join() (e.g. $L --> '$L')
-    newCommand = re.sub(r" '(\$[0-9A-Z])'", r" \1", newCommand, flags=re.I | re.A)
-
+    newCommand = ToolCommands.replaceProgramTokenInCommand(command, newPath)
     setattr(prefs, prefKey, newCommand)
     prefs.write()
 
@@ -50,8 +40,7 @@ def onLocateTool(prefKey: str, newPath: str):
 def onExternalToolProcessError(parent: QWidget, prefKey: str):
     assert isinstance(parent, QWidget)
 
-    commandTokens = shlex.split(getattr(prefs, prefKey), posix=not WINDOWS)
-    programName = os.path.basename(commandTokens[0])
+    programName = ToolCommands.getCommandName(getattr(prefs, prefKey), "", {})
 
     translatedPrefKey = TrTables.prefKey(prefKey)
 
@@ -91,50 +80,23 @@ def onExternalToolProcessError(parent: QWidget, prefKey: str):
     qmb.show()
 
 
-def setUpMergeToolPrompt(parent: QWidget, prefKey: str):
+def setUpToolCommand(parent: QWidget, prefKey: str):
     translatedPrefKey = TrTables.prefKey(prefKey)
 
     title = translatedPrefKey
 
-    message = translate("exttools", "{0} isn’t configured in your settings yet.").format(bquo(translatedPrefKey))
+    message = translate("exttools", "{0} isn’t configured in your settings yet."
+                        ).format(bquo(translatedPrefKey))
 
     qmb = asyncMessageBox(parent, 'warning', title, message,
                           QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
 
     configureButton = qmb.button(QMessageBox.StandardButton.Ok)
-    configureButton.setText(translate("exttools", "Set up {0}").format(lquo(translatedPrefKey)))
+    configureButton.setText(translate("exttools", "Set up {0}"
+                                      ).format(lquo(translatedPrefKey)))
 
     qmb.accepted.connect(lambda: openPrefsDialog(parent, prefKey))
     qmb.show()
-
-
-def validateExternalToolCommand(command: str, *placeholders: str):
-    try:
-        buildExternalToolCommand(command, {k: "PLACEHOLDER" for k in placeholders}, [])
-        return ""
-    except ValueError as e:
-        return str(e)
-
-
-def buildExternalToolCommand(command: str, replacements: dict[str, str], positional: list[str]):
-    tokens = shlex.split(command, posix=not WINDOWS)
-
-    for placeholder, replacement in replacements.items():
-        for i, tok in enumerate(tokens):  # noqa: B007
-            if tok.endswith(placeholder):
-                prefix = tok.removesuffix(placeholder)
-                break
-        else:
-            raise ValueError(translate("exttools", "Placeholder token {0} missing.").format(placeholder))
-        if replacement:
-            tokens[i] = prefix + replacement
-        else:
-            del tokens[i]
-
-    # Just append other paths to end of command line...
-    tokens.extend(positional)
-
-    return tokens
 
 
 def openInExternalTool(
@@ -157,37 +119,10 @@ def openInExternalTool(
         return None
 
     if not command:
-        setUpMergeToolPrompt(parent, prefKey)
+        setUpToolCommand(parent, prefKey)
         return None
 
-    # Find appropriate workdir
-    workingDirectory = ""
-    for argument in itertools.chain(replacements.values(), positional):
-        if not argument:
-            continue
-        workingDirectory = os.path.dirname(argument)
-        break
-
-    tokens = buildExternalToolCommand(command, replacements, positional)
-
-    wrapper = []
-
-    # macOS-specific wrapper:
-    # - Launch ".app" bundles properly.
-    # - Wait on opendiff (Xcode FileMerge).
-    if MACOS:
-        launcherScript = QFile("assets:mactool.sh")
-        assert launcherScript.exists()
-        wrapper = [launcherScript.fileName()]
-
-    # Flatpak-specific wrapper:
-    # - Run external tool outside flatpak sandbox.
-    # - Set workdir via flatpak-spawn because QProcess.setWorkingDirectory won't work.
-    # - Run command through `env` to get return code 127 if the command is missing.
-    if FLATPAK:
-        wrapper = ["flatpak-spawn", "--watch-bus", "--host", f"--directory={workingDirectory}", "/usr/bin/env", "--"]
-
-    tokens = wrapper + tokens
+    tokens, workingDirectory = ToolCommands.compileCommand(command, replacements, positional)
 
     process = QProcess(parent)
     process.setProgram(tokens[0])

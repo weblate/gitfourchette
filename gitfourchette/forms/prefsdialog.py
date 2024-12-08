@@ -4,22 +4,18 @@
 # For full terms, see the included LICENSE file.
 # -----------------------------------------------------------------------------
 
-import enum
 import logging
 from typing import Any
 
-from gitfourchette.exttools import validateExternalToolCommand
 from gitfourchette.porcelain import *
 from gitfourchette.qt import *
 from gitfourchette.settings import (
-    DIFF_TOOL_PRESETS,
-    EDITOR_TOOL_PRESETS,
-    MERGE_TOOL_PRESETS,
     SHORT_DATE_PRESETS,
     prefs,
     qtIsNativeMacosStyle,
 )
 from gitfourchette.toolbox import *
+from gitfourchette.toolcommands import ToolCommands
 from gitfourchette.trtables import TrTables
 
 logger = logging.getLogger(__name__)
@@ -256,15 +252,15 @@ class PrefsDialog(QDialog):
         elif key == "renderSvg":
             return self.boolComboBoxControl(key, value, falseName=self.tr("Text"), trueName=self.tr("Image"))
         elif key == "externalEditor":
-            return self.strControlWithPresets(key, value, EDITOR_TOOL_PRESETS, leaveBlankHint=True)
+            return self.strControlWithPresets(key, value, ToolCommands.EditorPresets, leaveBlankHint=True)
         elif key == "externalDiff":
             return self.strControlWithPresets(
-                key, value, DIFF_TOOL_PRESETS,
-                validate=lambda cmd: validateExternalToolCommand(cmd, "$L", "$R"))
+                key, value, ToolCommands.DiffPresets,
+                validate=lambda cmd: ToolCommands.checkCommand(cmd, "$L", "$R"))
         elif key == "externalMerge":
             return self.strControlWithPresets(
-                key, value, MERGE_TOOL_PRESETS,
-                validate=lambda cmd: validateExternalToolCommand(cmd, "$L", "$R", "$B", "$M"))
+                key, value, ToolCommands.MergePresets,
+                validate=lambda cmd: ToolCommands.checkCommand(cmd, "$L", "$R", "$B", "$M"))
         elif key in ["largeFileThresholdKB", "imageFileThresholdKB", "maxTrashFileKB"]:
             control = self.boundedIntControl(key, value, 0, 999_999)
             control.setSpecialValueText("\u221E")  # infinity
