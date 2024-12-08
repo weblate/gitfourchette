@@ -91,6 +91,40 @@ class ToolCommands:
                     pass
 
     @classmethod
+    def isFlatpakRunCommand(cls, tokens: Sequence[str]):
+        """
+        Return the index of the REF token (application ID) in a "flatpak run" command.
+        Return 0 if this isn't a valid "flatpak run" command.
+
+        For example, this function would return 4 for "flatpak --verbose run --arch=aarch64 com.example.app"
+        because "com.example.app" is token #4.
+        """
+
+        i = 0
+
+        try:
+            # First token must be flatpak or *bin/flatpak
+            if not (tokens[i] == "flatpak" or tokens[i].endswith("bin/flatpak")):
+                return 0
+            i += 1
+
+            # First positional argument must be `run`
+            while tokens[i].startswith("-"):  # Skip switches
+                i += 1
+            if tokens[i] != "run":
+                return 0
+            i += 1
+
+            # Get ref token (force IndexError if there's none)
+            while tokens[i].startswith("-"):  # Skip switches
+                i += 1
+            _ = tokens[i]
+            return i
+
+        except IndexError:
+            return 0
+
+    @classmethod
     def getCommandName(cls, command: str, fallback = "", presets: dict[str, str] | None = None) -> str:
         if not command.strip():
             return fallback
@@ -104,9 +138,14 @@ class ToolCommands:
                 return presetName
 
         tokens = shlex.split(command, posix=not WINDOWS)
+        interestingToken = 0
+
+        if FREEDESKTOP:
+            interestingToken = cls.isFlatpakRunCommand(tokens)
+            assert interestingToken >= 0
 
         try:
-            name = tokens[0]
+            name = tokens[interestingToken]
         except IndexError:
             return fallback
 
@@ -169,6 +208,12 @@ class ToolCommands:
             workingDirectory = os.path.dirname(argument)
             if os.path.isdir(workingDirectory):
                 break
+
+        # If we're running a Flatpak, expose the working directory to its sandbox.
+        # (Inject '--filesystem=...' argument after 'flatpak run')
+        indexAfterFlatpakRun = cls.isFlatpakRunCommand(tokens)
+        if indexAfterFlatpakRun > 0:
+            tokens.insert(indexAfterFlatpakRun, "--filesystem=" + workingDirectory)
 
         # macOS-specific wrapper:
         # - Launch ".app" bundles properly.
