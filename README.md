@@ -8,7 +8,7 @@ The comfortable Git UI for Linux.
 
 Learn more on GitFourchette’s homepage at [gitfourchette.org](https://gitfourchette.org).
 
-![Screenshot of GitFourchette running under KDE Plasma 6](readme.webp)
+![Screenshot of GitFourchette running under KDE Plasma 6](https://gitfourchette.org/_static/appstream/packshot-shadow-light.png)
 
 ## Documentation
 
