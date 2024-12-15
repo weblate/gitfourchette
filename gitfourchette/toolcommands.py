@@ -63,6 +63,19 @@ class ToolCommands:
         "WinMerge"      : "winmergeu /u /wl /wm /wr /am $B $L $R /o $M",
     }
 
+    FlatpakIDs = {
+        "CLion"             : ("CLion",         "com.jetbrains.CLion"),
+        "GVim"              : ("GVim",          "org.vim.Vim"),
+        "IntelliJ IDEA CE"  : ("IntelliJ IDEA", "com.jetbrains.IntelliJ-IDEA-Community"),
+        "PyCharm CE"        : ("PyCharm",       "com.jetbrains.PyCharm-Community"),
+        "Kate"              : ("Kate",          "org.kde.kate"),
+        "KDiff3"            : ("KDiff3",        "org.kde.kdiff3"),
+        "KWrite"            : ("KWrite",        "org.kde.kwrite"),
+        "Meld"              : ("Meld",          "org.gnome.meld"),
+        "VS Code"           : ("VS Code",       "com.visualstudio.code"),
+        "VS Code OSS"       : ("VS Code",       "com.visualstudio.code-oss"),
+    }
+
     @classmethod
     def _filterToolPresets(cls):  # pragma: no cover
         freedesktopTools = ["Kate", "KWrite"]
@@ -83,12 +96,30 @@ class ToolCommands:
             cls.DefaultDiffPreset = "Meld"
             cls.DefaultMergePreset = "Meld"
 
+        # If we're running as a Flatpak, use Flatpak as default tool as well
+        if FLATPAK:
+            cls.DefaultDiffPreset = cls.FlatpakNamePrefix + cls.DefaultDiffPreset
+            cls.DefaultMergePreset = cls.FlatpakNamePrefix + cls.DefaultMergePreset
+
         for key in excludeTools:
             for presets in allPresetDicts:
                 try:
                     del presets[key]
                 except KeyError:
                     pass
+
+        if FREEDESKTOP:
+            for name, (alias, flatpakId) in cls.FlatpakIDs.items():
+                k2 = cls.FlatpakNamePrefix + name
+                assert any(
+                    alias in presets for presets in allPresetDicts), f"missing non-flatpak preset for {alias}"
+                for presets in allPresetDicts:
+                    try:
+                        originalCommand = presets[alias]
+                    except KeyError:
+                        continue
+                    newCommand = cls.replaceProgramTokenInCommand(originalCommand, "flatpak", "run", flatpakId)
+                    presets[k2] = newCommand
 
     @classmethod
     def isFlatpakRunCommand(cls, tokens: Sequence[str]):
