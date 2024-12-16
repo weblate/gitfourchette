@@ -260,7 +260,7 @@ class Sidebar(QTreeView):
 
             remoteName, remoteBranchName = porcelain.split_remote_branch_shorthand(shorthand)
             remoteUrl = self.sidebarModel.repo.remotes[remoteName].url
-            webUrl, webHost = WebHost.makeLink(remoteUrl, shorthand)
+            webUrl, webHost = WebHost.makeLink(remoteUrl, remoteBranchName)
             webActions = []
             if webUrl:
                 webActions = [
@@ -268,6 +268,7 @@ class Sidebar(QTreeView):
                         self.tr("Visit Web Page on {0}...").format(escamp(webHost)),
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
+                        tip=f"<p style='white-space: pre'>{escape(webUrl)}</p>",
                     ),
                     ActionDef.SEPARATOR,
                 ]
@@ -332,6 +333,7 @@ class Sidebar(QTreeView):
                         self.tr("Visit Web Page on {0}...").format(escamp(webHost)),
                         lambda: QDesktopServices.openUrl(QUrl(webUrl)),
                         icon="internet-web-browser",
+                        tip=f"<p style='white-space: pre'>{escape(webUrl)}</p>",
                     ),
                 ]
 

@@ -256,3 +256,22 @@ def testSidebarHeadIconAfterSwitchingBranchesPointingToSameCommit(tempDir, mainW
     otherIcon = sm.data(otherNode.createIndex(sm), SidebarModel.Role.IconKey)
     assert masterIcon == "git-branch"
     assert otherIcon == "git-head"
+
+
+def testSidebarVisitRemoteWebPage(tempDir, mainWindow, mockDesktopServices):
+    wd = unpackRepo(tempDir)
+
+    with RepoContext(wd) as repo:
+        repo.create_branch_on_head("other-master")
+
+    rw = mainWindow.openRepo(wd)
+
+    node = rw.sidebar.findNode(lambda n: n.data == "origin" and n.kind == SidebarItem.Remote)
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "visit web page")
+    assert mockDesktopServices.urls[-1] == QUrl("https://github.com/libgit2/TestGitRepository")
+
+    node = rw.sidebar.findNodeByRef("refs/remotes/origin/master")
+    menu = rw.sidebar.makeNodeMenu(node)
+    triggerMenuAction(menu, "visit web page")
+    assert mockDesktopServices.urls[-1] == QUrl("https://github.com/libgit2/TestGitRepository/tree/master")
